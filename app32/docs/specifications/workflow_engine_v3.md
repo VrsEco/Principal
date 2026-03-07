@@ -161,6 +161,18 @@ Na Fase 4.2, o runtime também passou a expor telemetria do discovery em
 - deltas aplicados pelo reranker;
 - workflow final selecionado e motivos.
 
+Na Fase 4.3, essa telemetria passou a ser propagada também para o fluxo
+conversacional:
+
+- `MenuInterceptResult` agora transporta `metadata` estruturada;
+- respostas interceptadas pelo `menu_engine` passam a carregar:
+  - estágio do intercept;
+  - workflow selecionado;
+  - trace compacto do discovery híbrido;
+- `run_agent_with_context(...)` propaga `menu_metadata` para as respostas;
+- logs em `AgentMessage.metadata_json` passam a registrar o contexto de
+  discovery também em Web, Telegram e WhatsApp.
+
 Além disso, o fluxo de `summary.*` já foi parcialmente migrado:
 
 - o `menu_engine` atua como adapter de canal/sessão;

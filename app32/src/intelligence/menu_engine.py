@@ -101,6 +101,10 @@ from src.intelligence.workflows.summary import (
     SUMMARY_WIZARD_STATUSES,
     SummaryWorkflowCoordinator,
 )
+from src.intelligence.workflows.telemetry import (
+    build_explicit_workflow_trace,
+    build_workflow_discovery_trace,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +114,82 @@ class MenuInterceptResult:
     handled: bool = False
     response_text: Optional[str] = None
     override_message: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+def _merge_menu_metadata(
+    base_metadata: Optional[Dict[str, Any]],
+    extra_metadata: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    merged = dict(base_metadata or {})
+    extra = dict(extra_metadata or {})
+    if not extra:
+        return merged or None
+
+    merged_menu = dict(merged.get("menu_engine") or {})
+    merged_menu.update(dict(extra.get("menu_engine") or {}))
+    if merged_menu:
+        merged["menu_engine"] = merged_menu
+
+    for key, value in extra.items():
+        if key == "menu_engine":
+            continue
+        merged[key] = value
+    return merged or None
+
+
+def _build_menu_intercept_metadata(
+    *,
+    session: Optional[AgentMenuSession],
+    option: Optional[AgentMenuOption],
+    intercept_stage: Optional[str],
+    discovery_trace: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    selected_option = option or getattr(session, "selected_option", None)
+    menu_engine_metadata: Dict[str, Any] = {
+        "handled": True,
+        "intercept_stage": str(intercept_stage or getattr(session, "status", "idle") or "idle"),
+        "session_status": str(getattr(session, "status", "idle") or "idle"),
+    }
+    if session is not None:
+        menu_engine_metadata["channel"] = str(getattr(session, "channel", "") or "")
+        menu_engine_metadata["thread_id"] = str(getattr(session, "thread_id", "") or "")
+        menu_engine_metadata["user_id"] = int(getattr(session, "user_id", 0) or 0)
+        if getattr(session, "company_id", None) is not None:
+            menu_engine_metadata["company_id"] = int(session.company_id)
+
+    if selected_option is not None:
+        menu_engine_metadata["selected_option_code"] = str(selected_option.code or "").strip()
+        menu_engine_metadata["selected_action_key"] = str(selected_option.action_key or "").strip()
+
+    metadata: Dict[str, Any] = {"menu_engine": menu_engine_metadata}
+    if discovery_trace:
+        metadata["workflow_discovery"] = dict(discovery_trace)
+    return metadata
+
+
+def _attach_menu_intercept_metadata(
+    result: MenuInterceptResult,
+    *,
+    session: Optional[AgentMenuSession],
+    option: Optional[AgentMenuOption],
+    intercept_stage: Optional[str],
+    discovery_trace: Optional[Dict[str, Any]] = None,
+) -> MenuInterceptResult:
+    result.metadata = _merge_menu_metadata(
+        result.metadata,
+        _build_menu_intercept_metadata(
+            session=session,
+            option=option,
+            intercept_stage=intercept_stage,
+            discovery_trace=discovery_trace,
+        ),
+    )
+    return result
+
+
+def _safe_selected_option(session: Any) -> Optional[AgentMenuOption]:
+    return getattr(session, "selected_option", None)
 
 
 MENU_WORDS = ("menu", "opcao", "opção", "opcoes", "opções", "fluxo")
@@ -239,58 +319,153 @@ def handle_menu_message(
         ):
             _reset_session(session)
 
+        selected_option = _safe_selected_option(session)
+
         if first_word in BACK_WORDS:
-            return _handle_back_navigation(session)
+            return _attach_menu_intercept_metadata(
+                _handle_back_navigation(session),
+                session=session,
+                option=selected_option,
+                intercept_stage="back_navigation",
+            )
 
         if session.status == "awaiting_confirmation":
-            return _handle_confirmation_state(session, text, lower)
+            return _attach_menu_intercept_metadata(
+                _handle_confirmation_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage="awaiting_confirmation",
+            )
 
         if session.status == "awaiting_item_selection":
-            return _handle_item_selection_state(session, text, lower)
+            return _attach_menu_intercept_metadata(
+                _handle_item_selection_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage="awaiting_item_selection",
+            )
 
         if session.status == "awaiting_fields":
-            return _handle_missing_fields_state(session, text, lower)
+            return _attach_menu_intercept_metadata(
+                _handle_missing_fields_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage="awaiting_fields",
+            )
 
         if session.status == COMPANY_SELECTION_STATUS:
-            return _handle_operation_company_state(session, text, lower)
+            return _attach_menu_intercept_metadata(
+                _handle_operation_company_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage=COMPANY_SELECTION_STATUS,
+            )
 
         if session.status == SUMMARY_EMAIL_CONFIRM_STATUS:
-            return _handle_summary_email_confirmation_state(session, text, lower)
+            return _attach_menu_intercept_metadata(
+                _handle_summary_email_confirmation_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage=SUMMARY_EMAIL_CONFIRM_STATUS,
+            )
 
         if session.status == SUMMARY_EMAIL_CUSTOM_STATUS:
-            return _handle_summary_email_custom_state(session, text, lower)
+            return _attach_menu_intercept_metadata(
+                _handle_summary_email_custom_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage=SUMMARY_EMAIL_CUSTOM_STATUS,
+            )
 
         if session.status in SUMMARY_WIZARD_STATUSES:
-            return _handle_summary_wizard_state(session, text, lower)
+            return _attach_menu_intercept_metadata(
+                _handle_summary_wizard_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage=session.status,
+            )
 
         if explicit_code:
             option = _find_option_by_code(company_id, explicit_code)
             if not option:
-                return MenuInterceptResult(
-                    handled=True,
-                    response_text=(
-                        f"Nao encontrei o codigo de menu '{explicit_code}'.\n\n"
-                        f"{_format_root_menu(company_id)}"
+                return _attach_menu_intercept_metadata(
+                    MenuInterceptResult(
+                        handled=True,
+                        response_text=(
+                            f"Nao encontrei o codigo de menu '{explicit_code}'.\n\n"
+                            f"{_format_root_menu(company_id)}"
+                        ),
                     ),
+                    session=session,
+                    option=None,
+                    intercept_stage="explicit_code_not_found",
+                    discovery_trace={
+                        "strategy": "explicit_code",
+                        "explicit_code": explicit_code,
+                        "candidate_count": 0,
+                    },
                 )
-            return _prepare_option_flow(session, option, text, lower)
+            return _attach_menu_intercept_metadata(
+                _prepare_option_flow(session, option, text, lower),
+                session=session,
+                option=option,
+                intercept_stage="explicit_code",
+                discovery_trace=build_explicit_workflow_trace(option, explicit_code=explicit_code),
+            )
 
         if _is_menu_request(lower):
-            return MenuInterceptResult(
-                handled=True,
-                response_text=_format_root_menu(company_id),
+            return _attach_menu_intercept_metadata(
+                MenuInterceptResult(
+                    handled=True,
+                    response_text=_format_root_menu(company_id),
+                ),
+                session=session,
+                option=None,
+                intercept_stage="root_menu",
             )
 
         # Fallback de ambiguidade em modo comando: somente quando parece ação operacional.
         if _looks_like_command(lower):
-            candidates = _match_options_by_keywords(company_id, lower)
+            candidates, discovery_trace = _discover_options_by_keywords(
+                company_id,
+                lower,
+                channel=channel,
+            )
             if len(candidates) >= 2:
-                return MenuInterceptResult(
-                    handled=True,
-                    response_text=_format_ambiguous_options(candidates),
+                logger.info(
+                    "MENU DISCOVERY AMBIGUO: user=%s company=%s channel=%s thread=%s selected=%s",
+                    user_id,
+                    company_id,
+                    channel,
+                    thread_id,
+                    json.dumps(discovery_trace, ensure_ascii=False),
+                )
+                return _attach_menu_intercept_metadata(
+                    MenuInterceptResult(
+                        handled=True,
+                        response_text=_format_ambiguous_options(candidates),
+                    ),
+                    session=session,
+                    option=None,
+                    intercept_stage="implicit_discovery_ambiguous",
+                    discovery_trace=discovery_trace,
                 )
             if len(candidates) == 1:
-                return _prepare_option_flow(session, candidates[0], text, lower)
+                logger.info(
+                    "MENU DISCOVERY SELECIONADO: user=%s company=%s channel=%s thread=%s selected=%s",
+                    user_id,
+                    company_id,
+                    channel,
+                    thread_id,
+                    json.dumps(discovery_trace, ensure_ascii=False),
+                )
+                return _attach_menu_intercept_metadata(
+                    _prepare_option_flow(session, candidates[0], text, lower),
+                    session=session,
+                    option=candidates[0],
+                    intercept_stage="implicit_discovery_selected",
+                    discovery_trace=discovery_trace,
+                )
 
     except Exception as exc:
         db.session.rollback()
@@ -4128,7 +4303,12 @@ def _dedupe_by_code(options: List[AgentMenuOption], company_id: Optional[int]) -
     return list(dedupe.values())
 
 
-def _match_options_by_keywords(company_id: Optional[int], lower_text: str) -> List[AgentMenuOption]:
+def _discover_options_by_keywords(
+    company_id: Optional[int],
+    lower_text: str,
+    *,
+    channel: str = "web",
+) -> Tuple[List[AgentMenuOption], Dict[str, Any]]:
     query = AgentMenuOption.query.filter(AgentMenuOption.is_active.is_(True))
     if company_id:
         query = query.filter(
@@ -4147,6 +4327,7 @@ def _match_options_by_keywords(company_id: Optional[int], lower_text: str) -> Li
         options=options,
         preferred_company_id=company_id,
         top_k=10,
+        channel=channel,
     )
     options_by_id = {option.id: option for option in options}
     matched_options: List[AgentMenuOption] = []
@@ -4155,7 +4336,7 @@ def _match_options_by_keywords(company_id: Optional[int], lower_text: str) -> Li
         option = options_by_id.get(option_id)
         if option is not None:
             matched_options.append(option)
-    return matched_options
+    return matched_options, build_workflow_discovery_trace(discovery)
 
 
 def _indicates_execute(lower_text: str) -> bool:

@@ -192,6 +192,7 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
             final_agent_name = response.get("next_node") or "sapiens"
             if final_agent_name == "end":
                 final_agent_name = "sapiens"
+            menu_metadata = dict(response.get("menu_metadata") or {})
 
             # 3. Auditoria em banco (mesmo padrão de Telegram)
             db.session.add(
@@ -226,6 +227,7 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
                         "contact": "sapiens",
                         "phone": phone,
                         "agent": final_agent_name,
+                        **menu_metadata,
                     },
                 )
             )

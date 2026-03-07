@@ -149,6 +149,10 @@ from .summary import (
     SummaryRouteDecision,
     SummaryWorkflowCoordinator,
 )
+from .telemetry import (
+    build_explicit_workflow_trace,
+    build_workflow_discovery_trace,
+)
 
 __all__ = [
     "LexicalWorkflowMatcher",
@@ -265,12 +269,14 @@ __all__ = [
     "WorkflowSessionState",
     "SelectionRouteDecision",
     "build_assisted_selection_payload",
+    "build_explicit_workflow_trace",
     "build_session_snapshot",
     "build_confirmation_display_items",
     "build_confirmation_text",
     "build_item_selection_prompt",
     "extract_navigation_stack",
     "payload_without_navigation",
+    "build_workflow_discovery_trace",
     "build_summary_collaborator_prompt",
     "build_summary_company_prompt",
     "build_summary_period_prompt",

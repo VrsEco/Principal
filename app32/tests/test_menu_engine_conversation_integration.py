@@ -237,3 +237,109 @@ def test_handle_menu_message_back_navigation_restores_previous_steps(monkeypatch
     assert result.handled is True
     assert result.response_text == "ROOT MENU"
     assert session.status == "idle"
+
+
+def test_handle_menu_message_attaches_discovery_metadata_for_implicit_selection(monkeypatch):
+    option = _build_project_task_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+    monkeypatch.setattr(menu_engine, "_looks_like_command", lambda lower: True)
+    monkeypatch.setattr(
+        menu_engine,
+        "_discover_options_by_keywords",
+        lambda company_id, lower_text, channel="web": (
+            [option],
+            {
+                "strategy": "hybrid",
+                "candidate_count": 1,
+                "selected_code": option.code,
+                "selected_action_key": option.action_key,
+                "top_matches": [
+                    {
+                        "code": option.code,
+                        "action_key": option.action_key,
+                        "score": 96,
+                        "reasons": ["semantic:atividade", "lexical:projeto"],
+                    }
+                ],
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_prepare_option_flow",
+        lambda session, option, text, lower: menu_engine.MenuInterceptResult(
+            handled=True,
+            response_text="FLOW READY",
+        ),
+    )
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="whatsapp",
+        thread_id="thread-1",
+        message="criar atividade do projeto",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "FLOW READY"
+    assert result.metadata["menu_engine"]["intercept_stage"] == "implicit_discovery_selected"
+    assert result.metadata["menu_engine"]["selected_option_code"] == option.code
+    assert result.metadata["workflow_discovery"]["selected_action_key"] == option.action_key
+
+
+def test_handle_menu_message_attaches_discovery_metadata_for_ambiguous_selection(monkeypatch):
+    option = _build_project_task_option()
+    other = AgentMenuOption(
+        code="1.5",
+        title="Finalizar Atividade de Projeto",
+        action_key="project_task.complete",
+        required_fields=[{"key": "codigo_atividade", "label": "Codigo da Atividade"}],
+    )
+    other.id = 15
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+    monkeypatch.setattr(menu_engine, "_looks_like_command", lambda lower: True)
+    monkeypatch.setattr(
+        menu_engine,
+        "_discover_options_by_keywords",
+        lambda company_id, lower_text, channel="web": (
+            [option, other],
+            {
+                "strategy": "hybrid",
+                "candidate_count": 2,
+                "selected_code": option.code,
+                "selected_action_key": option.action_key,
+                "top_matches": [
+                    {
+                        "code": option.code,
+                        "action_key": option.action_key,
+                        "score": 72,
+                        "reasons": ["semantic:atividade"],
+                    },
+                    {
+                        "code": other.code,
+                        "action_key": other.action_key,
+                        "score": 71,
+                        "reasons": ["semantic:concluir"],
+                    },
+                ],
+            },
+        ),
+    )
+    monkeypatch.setattr(menu_engine, "_format_ambiguous_options", lambda candidates: "AMBIGUO")
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="whatsapp",
+        thread_id="thread-1",
+        message="atividade do projeto",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "AMBIGUO"
+    assert result.metadata["menu_engine"]["intercept_stage"] == "implicit_discovery_ambiguous"
+    assert result.metadata["workflow_discovery"]["candidate_count"] == 2
+    assert len(result.metadata["workflow_discovery"]["top_matches"]) == 2

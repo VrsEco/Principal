@@ -94,8 +94,15 @@ def agents_chat():
         agent_executor = response.get("next_node") or fallback_agent
         if agent_executor == "end":
             agent_executor = fallback_agent
+        menu_metadata = dict(response.get("menu_metadata") or {})
 
         # 3. Salva a resposta da IA no log de mensagens (Visual apenas)
+        outbound_metadata = {
+            "agent": agent_executor,
+            "contact": contact,
+            "thread_id": thread_id,
+        }
+        outbound_metadata.update(menu_metadata)
         ai_msg = AgentMessage(
             company_id=company_id,
             user_id=current_user.id,
@@ -104,11 +111,7 @@ def agents_chat():
             direction='outbound',
             content=final_text,
             channel='platform',
-            metadata_json={
-                "agent": agent_executor,
-                "contact": contact,
-                "thread_id": thread_id
-            }
+            metadata_json=outbound_metadata
         )
         db.session.add(ai_msg)
         db.session.commit()

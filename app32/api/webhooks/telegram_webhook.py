@@ -214,6 +214,7 @@ def process_telegram_message(app, message: telebot.types.Message):
 
             if menu_result and menu_result.handled:
                 response_text = menu_result.response_text or _fallback_root_menu(company_id)
+                menu_metadata = dict(menu_result.metadata or {})
                 logger.info(
                     "MENU INTERCEPT [TELEGRAM]: user=%s company=%s thread=%s message=%r",
                     user.id, company_id, thread_id, user_msg
@@ -221,6 +222,7 @@ def process_telegram_message(app, message: telebot.types.Message):
             elif menu_like:
                 # Garantia operacional: mensagem de menu nunca cai no LLM.
                 response_text = _fallback_root_menu(company_id)
+                menu_metadata = {}
                 logger.warning(
                     "MENU FALLBACK FORCADO [TELEGRAM]: user=%s company=%s thread=%s message=%r",
                     user.id, company_id, thread_id, user_msg
@@ -236,6 +238,7 @@ def process_telegram_message(app, message: telebot.types.Message):
                     metadata={"contact": "sapiens", "telegram_id": telegram_id}
                 )
                 response_text = extract_response_text(response)
+                menu_metadata = dict(response.get("menu_metadata") or {})
 
                 # Recupera o nome do agente que deu a palavra final
                 final_agent_name = response.get("next_node") or "sapiens"
@@ -265,7 +268,13 @@ def process_telegram_message(app, message: telebot.types.Message):
                 direction='outbound',
                 channel='telegram',
                 content=response_text,
-                metadata_json={"thread_id": thread_id, "contact": "sapiens", "telegram_id": telegram_id, "agent": final_agent_name}
+                metadata_json={
+                    "thread_id": thread_id,
+                    "contact": "sapiens",
+                    "telegram_id": telegram_id,
+                    "agent": final_agent_name,
+                    **menu_metadata,
+                }
             ))
             db.session.commit()
 

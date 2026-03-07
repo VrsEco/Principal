@@ -61,6 +61,7 @@ def run_agent_with_context(
             return {
                 "messages": [("ai", menu_result.response_text or "")],
                 "next_node": "sapiens",
+                "menu_metadata": dict(menu_result.metadata or {}),
             }
         if menu_result.override_message:
             user_msg = menu_result.override_message
@@ -77,6 +78,8 @@ def run_agent_with_context(
             
             logger.info(f"SAPIENS INVOKE [{channel.upper()}]: Thread {thread_id} | User {user_id} | Company {company_id}")
             response = graph.invoke(inputs, config=config)
+            if menu_result.metadata:
+                response["menu_metadata"] = dict(menu_result.metadata)
             return response
             
     except Exception as e:
