@@ -268,7 +268,8 @@ def register_api_resources(api):
     from api.resources.project_task import (
         ProjectTaskListResource, ProjectTaskResource, ProjectTaskStageResource,
         ProjectTaskCollaboratorListResource, ProjectTaskCollaboratorResource,
-        ProjectTaskHoursSummaryResource, ProjectAllTasksResource, ProjectTaskTransferResource
+        ProjectTaskHoursSummaryResource, ProjectAllTasksResource, ProjectTaskTransferResource,
+        ProjectTaskDependencyListResource, ProjectTaskDependencyResource
     )
 
     from api.resources.indicator import (
@@ -310,6 +311,8 @@ def register_api_resources(api):
     api.add_resource(ProjectTaskCollaboratorResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/collaborators/<int:collaborator_id>')
     api.add_resource(ProjectTaskHoursSummaryResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/hours-summary')
     api.add_resource(ProjectTaskTransferResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/transfer')
+    api.add_resource(ProjectTaskDependencyListResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/dependencies')
+    api.add_resource(ProjectTaskDependencyResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/dependencies/<int:dep_id>')
     api.add_resource(ProjectAllTasksResource, '/api/projects/all-tasks')
 
     api.add_resource(IndicatorListResource, '/api/indicators')

@@ -9,9 +9,56 @@ from datetime import datetime
 class ProjectTaskListResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id):
-        """List all tasks for a project."""
+        """List all tasks for a project with dependency status."""
+        from flask import session
+        from services.task_dependency_service import TaskDependencyService
+        from models.project import ProjectTaskDependency
+
+        from .project import get_request_company_id
+        company_id = get_request_company_id()
+            
         tasks = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc()).all()
-        return project_tasks_schema.dump(tasks), 200
+        dumped_tasks = project_tasks_schema.dump(tasks)
+        
+        # Otimização: Busca todas as dependências do projeto de uma vez para evitar N+1 queries
+        # Filtra por company_id para respeitar multi-tenancy no mapeamento de dependências
+        all_deps = []
+        if company_id:
+            all_deps = ProjectTaskDependency.query.filter_by(
+                project_id=project_id, 
+                company_id=company_id
+            ).all()
+        
+        # Mapa de bloqueio por sucessora
+        # Uma tarefa está bloqueada se tiver alguma predecessora com stage != 'completed'
+        blocked_map = {} # task_id -> list of blocking predecessors
+        
+        # Mapeamento rápido de ID para tarefa dumpada (para pegar o what/stage)
+        tasks_by_id = {t['id']: t for t in dumped_tasks}
+        
+        for dep in all_deps:
+            pred = tasks_by_id.get(dep.predecessor_task_id)
+            if pred and pred.get('stage') != 'completed':
+                if dep.successor_task_id not in blocked_map:
+                    blocked_map[dep.successor_task_id] = []
+                blocked_map[dep.successor_task_id].append({
+                    "id": dep.id,
+                    "predecessor_task_id": dep.predecessor_task_id,
+                    "predecessor_what": pred.get('what'),
+                    "predecessor_stage": pred.get('stage')
+                })
+
+        for task_data in dumped_tasks:
+            # Se a tarefa está em 'todo' (legado ou externo), mapeamos para 'inbox' para visibilidade no Kanban
+            # a menos que queiramos adicionar explicitamente a coluna 'todo' no frontend
+            if task_data.get('stage') == 'todo':
+                task_data['stage'] = 'inbox' 
+
+            blocking = blocked_map.get(task_data['id'], [])
+            task_data['is_blocked'] = len(blocking) > 0
+            task_data['blocked_by'] = blocking
+            
+        return dumped_tasks, 200
 
     @permission_required('projects', 'edit')
     def post(self, project_id):
@@ -23,7 +70,14 @@ class ProjectTaskListResource(Resource):
             # Basic validation check
             if not data.get('what'):
                 return {"error": "Description is required"}, 400
-                
+            
+            # Garantir sincronia status/stage na criação
+            if data.get('stage') == 'completed':
+                data['status'] = 'completed'
+            elif data.get('stage') == 'inbox' or data.get('stage') == 'todo':
+                data['status'] = 'planned'
+                if data.get('stage') == 'todo': data['stage'] = 'inbox'
+            
             task = project_task_schema.load(data)
             db.session.add(task)
             
@@ -75,6 +129,18 @@ class ProjectTaskResource(Resource):
             if project:
                 project.update_progress()
                 
+            # Garantir sincronia status/stage na edição
+            if 'stage' in data:
+                if data['stage'] == 'completed':
+                    task.status = 'completed'
+                    if not task.completion_date:
+                        task.completion_date = datetime.now().date()
+                elif data['stage'] == 'inbox' or data['stage'] == 'todo':
+                    task.status = 'planned'
+                    if data['stage'] == 'todo': task.stage = 'inbox'
+                else:
+                    task.status = 'in_progress'
+
             db.session.commit()
             return project_task_schema.dump(task), 200
         except ValidationError as err:
@@ -337,3 +403,102 @@ class ProjectTaskTransferResource(Resource):
             import traceback
             traceback.print_exc()
             return {"error": str(e)}, 500
+
+
+class ProjectTaskDependencyListResource(Resource):
+    """Gerencia dependências de uma atividade: predecessoras e sucessoras."""
+
+    @permission_required('projects', 'view')
+    def get(self, project_id, task_id):
+        """Lista todas as dependências (predecessoras e sucessoras) de uma atividade."""
+        from services.task_dependency_service import TaskDependencyService
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "Empresa ativa não identificada. Por favor, selecione uma empresa no portal."}, 401
+
+        # Valida que a tarefa pertence ao projeto e empresa
+        task = ProjectTask.query.filter_by(
+            id=task_id, project_id=project_id
+        ).first()
+        if not task:
+            return {"error": "Atividade não encontrada neste projeto."}, 404
+
+        result = TaskDependencyService.get_task_dependencies(
+            company_id=company_id,
+            task_id=task_id,
+        )
+        return result, 200
+
+    @permission_required('projects', 'edit')
+    def post(self, project_id, task_id):
+        """Adiciona uma dependência finish_to_start: predecessor_task_id → task_id (successor)."""
+        from flask_login import current_user
+        from services.task_dependency_service import TaskDependencyService
+        from models.employee import Employee
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "Empresa ativa não identificada. Por favor, selecione uma empresa no portal."}, 401
+
+        try:
+            data = request.get_json(force=True, silent=True) or {}
+            predecessor_task_id = data.get('predecessor_task_id')
+
+            if not predecessor_task_id:
+                return {"error": "O campo 'predecessor_task_id' é obrigatório."}, 400
+
+            # Resolve o employee do usuário logado para auditoria
+            employee = Employee.query.filter_by(
+                user_id=current_user.id,
+                company_id=company_id,
+            ).first()
+            employee_id = employee.id if employee else None
+
+            # Conversão segura para int (suporta string floats "123.0")
+            p_id = int(float(predecessor_task_id))
+            s_id = int(float(task_id))
+
+            result, error = TaskDependencyService.add_dependency(
+                company_id=company_id,
+                project_id=int(float(project_id)),
+                predecessor_task_id=p_id,
+                successor_task_id=s_id,
+                created_by_employee_id=employee_id,
+            )
+
+            if error:
+                return {"error": error}, 400
+
+            return result, 201
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"error": f"Erro interno ao processar dependência: {str(e)}"}, 500
+
+
+class ProjectTaskDependencyResource(Resource):
+    """Remove uma dependência específica."""
+
+    @permission_required('projects', 'edit')
+    def delete(self, project_id, task_id, dep_id):
+        """Remove uma dependência de atividade."""
+        from services.task_dependency_service import TaskDependencyService
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "Empresa ativa não identificada. Por favor, selecione uma empresa no portal."}, 401
+
+        success, error = TaskDependencyService.remove_dependency(
+            company_id=company_id,
+            dep_id=int(float(dep_id)),
+        )
+
+        if not success:
+            return {"error": error}, 404
+
+        return {"message": "Dependência removida com sucesso."}, 200
+

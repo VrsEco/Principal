@@ -256,3 +256,65 @@ class ProjectTaskHoursSummary(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     task = db.relationship("ProjectTask", backref=db.backref("hours_summary", uselist=False))
+
+
+class ProjectTaskDependency(db.Model):
+    """Dependência finish_to_start entre atividades do mesmo projeto.
+
+    Regra: a ``predecessor_task_id`` deve estar com stage='completed'
+    para que a ``successor_task_id`` seja considerada desbloqueada.
+    O bloqueio é SOFT — apenas visual, sem impedir a ação do usuário.
+    """
+
+    __tablename__ = "project_task_dependencies"
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(
+        db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+    )
+    project_id = db.Column(
+        db.Integer, db.ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    predecessor_task_id = db.Column(
+        db.Integer, db.ForeignKey("project_tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    successor_task_id = db.Column(
+        db.Integer, db.ForeignKey("project_tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    created_by_employee_id = db.Column(
+        db.Integer, db.ForeignKey("employees.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relacionamentos para navegação do grafo
+    predecessor = db.relationship(
+        "ProjectTask",
+        foreign_keys=[predecessor_task_id],
+        backref=db.backref("successor_deps", cascade="all, delete-orphan", passive_deletes=True),
+    )
+    successor = db.relationship(
+        "ProjectTask",
+        foreign_keys=[successor_task_id],
+        backref=db.backref("predecessor_deps", cascade="all, delete-orphan", passive_deletes=True),
+    )
+    created_by = db.relationship("Employee", foreign_keys=[created_by_employee_id])
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "project_id": self.project_id,
+            "predecessor_task_id": self.predecessor_task_id,
+            "predecessor_what": self.predecessor.what if self.predecessor else None,
+            "predecessor_stage": self.predecessor.stage if self.predecessor else None,
+            "successor_task_id": self.successor_task_id,
+            "created_by_employee_id": self.created_by_employee_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+    def __repr__(self) -> str:
+        return (
+            f"<ProjectTaskDependency predecessor={self.predecessor_task_id}"
+            f" → successor={self.successor_task_id}>"
+        )

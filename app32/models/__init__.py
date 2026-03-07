@@ -26,16 +26,21 @@ from .okr_area import OKRArea, KeyResultArea
 
 # Execution Models
 from .portfolio import Portfolio
-from .project import Project, ProjectTask, ProjectActivityCollaborator
+from .project import Project, ProjectTask, ProjectTaskDependency, ProjectActivityCollaborator
 from .process import ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator
 from .routine import Routine, RoutineCollaborator
 
 # Operations
 from .meeting import Meeting, MeetingAgendaItem
 from .note import Note
+from .activity_comment import ActivityComment
 from .activity_work_log import ActivityWorkLog
 from .occurrence import Occurrence
+from .cadastro_session import CadastroSession
 from .company_performance_settings import CompanyPerformanceSettings
+from .app_compliance_report import AppComplianceReport, AppComplianceReportItem
+from .ui_catalog import UiCatalog
+from .user_log import UserLog
 
 # AI & Agents
 from .ai_agent import AIAgent
@@ -48,9 +53,11 @@ __all__ = [
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
     'Indicator', 'IndicatorGroup', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
-    'Portfolio', 'Project', 'ProjectTask', 'ProjectActivityCollaborator',
+    'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator',
     'Routine', 'RoutineCollaborator',
-    'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityWorkLog', 'Occurrence', 'CompanyPerformanceSettings',
+    'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
+    'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
+    'UiCatalog', 'UserLog',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentMenuOption', 'AgentMenuSession'
 ]

@@ -1,4 +1,4 @@
-﻿{% extends "layouts/workspace.html" %}
+{% extends "layouts/workspace.html" %}
 
 {% block title %}{{ project.code }} - {{ project.name }} | Gestão Versus{% endblock %}
 
@@ -599,6 +599,66 @@
             grid-column: span 1;
         }
 
+        /* Dependency Styles */
+        .dependency-section {
+            padding: 1.25rem;
+            background: var(--surface-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-top: 1rem;
+        }
+        .dependency-list {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .dependency-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .dependency-item.completed {
+            border-left: 3px solid var(--success);
+        }
+        .dependency-item.pending {
+            border-left: 3px solid var(--warning);
+        }
+        .lock-indicator {
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 0.5rem;
+        }
+        .task-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 100;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .task-search-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .task-search-item:hover {
+            background: var(--surface-secondary);
+        }
+
         /* Work log form grid also single column */
         #addHoursForm .form-grid {
             grid-template-columns: 1fr !important;
@@ -881,8 +941,30 @@
                     </div>
                     <div class="form-group form-group--full">
                         <label class="form-label">Observações</label>
-                        <textarea id="taskNotes" class="form-textarea" rows="3"
+                        <textarea id="taskNotes" class="form-textarea" rows="2"
                             placeholder="Detalhes adicionais..."></textarea>
+                    </div>
+
+                    <!-- Dependências Section -->
+                    <div class="form-group form-group--full" id="dependencySection" style="display: none;">
+                        <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                            🔗 Dependências (Predecessoras)
+                        </h4>
+                        <div class="dependency-section">
+                            <div style="position: relative;">
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="depSearchInput" class="form-input" style="flex: 1;" 
+                                        placeholder="Pesquisar atividade para adicionar como predecessora..."
+                                        onfocus="showDepResults()" onkeyup="filterDepResults(this.value)">
+                                </div>
+                                <div id="depSearchResults" class="task-search-results no-scrollbar">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <div id="dependencyList" class="dependency-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1186,7 +1268,17 @@
                 </div>
             </div>
             
-            <div class="card-title">${task.what}</div>
+            <div class="card-title" style="display: flex; align-items: flex-start; gap: 6px;">
+                ${task.is_blocked ? `
+                <span title="Bloqueada por: ${task.blocked_by ? task.blocked_by.map(b => b.what).join(', ') : '?'}" style="flex-shrink: 0; margin-top: 2px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </span>
+                ` : ''}
+                <span style="flex: 1;">${task.what}</span>
+            </div>
             
             <div class="card-people" style="margin-top: 4px;">
                 <div class="person-tag" title="Responsável pela Atividade">
@@ -1531,12 +1623,18 @@
             document.getElementById('taskScoreWeight').value = task.score_weight || 1.0;
             document.getElementById('taskHow').value = task.how || '';
             document.getElementById('taskNotes').value = task.notes || '';
+            
+            // Show dependencies section only for existing tasks
+            document.getElementById('dependencySection').style.display = 'block';
+            loadTaskDependencies(task.id);
 
         } else {
             title.textContent = 'Nova Atividade';
             idField.value = '';
             taskForm.reset();
             currentTaskLogs = [];
+            // Hide dependencies section for new tasks
+            document.getElementById('dependencySection').style.display = 'none';
         }
 
         taskModal.classList.add('open');
@@ -1738,6 +1836,120 @@
     taskModal.addEventListener('click', (e) => {
         if (e.target === taskModal) {
             closeTaskModal();
+        }
+    });
+
+    // Dependency Management Logic
+    async function loadTaskDependencies(taskId) {
+        const listEl = document.getElementById('dependencyList');
+        listEl.innerHTML = '<p class="text-tertiary" style="font-size: 0.8rem;">Carregando dependências...</p>';
+        
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/dependencies`);
+            const data = await res.json();
+            
+            if (!data.predecessors || data.predecessors.length === 0) {
+                listEl.innerHTML = '<p class="text-tertiary" style="font-size: 0.8rem;">Nenhuma dependência definida.</p>';
+            } else {
+                listEl.innerHTML = data.predecessors.map(dep => `
+                    <div class="dependency-item ${dep.predecessor_stage === 'completed' ? 'completed' : 'pending'}">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 600;">${dep.predecessor_what}</span>
+                            <span style="font-size: 0.75rem; color: ${dep.predecessor_stage === 'completed' ? 'var(--success)' : 'var(--warning-dark)'};">
+                                ${dep.predecessor_stage === 'completed' ? '✅ Concluída' : '🔴 Pendente'}
+                            </span>
+                        </div>
+                        <button type="button" class="btn-icon" onclick="removeDependency(${taskId}, ${dep.id})" 
+                            style="color: var(--danger); background: #fee2e2; border-radius: 6px; padding: 4px;" title="Remover Dependência">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error(error);
+            listEl.innerHTML = '<p class="text-danger" style="font-size: 0.8rem;">Erro ao carregar dependências.</p>';
+        }
+    }
+
+    function showDepResults() {
+        const resultsEl = document.getElementById('depSearchResults');
+        resultsEl.style.display = 'block';
+        filterDepResults(document.getElementById('depSearchInput').value);
+    }
+
+    function filterDepResults(query) {
+        const currentTaskId = document.getElementById('taskId').value;
+        const resultsEl = document.getElementById('depSearchResults');
+        const q = query.toLowerCase();
+        
+        const filtered = allTasks.filter(t => 
+            t.id != currentTaskId && 
+            (t.what.toLowerCase().includes(q) || (t.code && t.code.toLowerCase().includes(q)))
+        );
+        
+        if (filtered.length === 0) {
+            resultsEl.innerHTML = '<div class="task-search-item text-tertiary">Nenhuma atividade encontrada</div>';
+        } else {
+            resultsEl.innerHTML = filtered.map(t => `
+                <div class="task-search-item" onclick="addDependency(${currentTaskId}, ${t.id})">
+                    <span style="font-weight: 700; font-size: 0.75rem; color: var(--text-tertiary);">${t.code || '#' + t.id}</span>
+                    <span style="margin-left: 8px;">${t.what}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    async function addDependency(taskId, predecessorId) {
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/dependencies`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ predecessor_task_id: predecessorId })
+            });
+            
+            if (res.ok) {
+                document.getElementById('depSearchInput').value = '';
+                document.getElementById('depSearchResults').style.display = 'none';
+                loadTaskDependencies(taskId);
+                loadTasks(); // To update locks on board
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Erro ao adicionar dependência.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão.');
+        }
+    }
+
+    async function removeDependency(taskId, depId) {
+        if (!confirm('Deseja remover esta dependência?')) return;
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/dependencies/${depId}`, {
+                method: 'DELETE'
+            });
+            
+            if (res.ok) {
+                loadTaskDependencies(taskId);
+                loadTasks(); // To update locks on board
+            } else {
+                alert('Erro ao remover dependência.');
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    // Close search results when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        const searchContainer = document.querySelector('.dependency-section');
+        if (searchContainer && !searchContainer.contains(e.target)) {
+            const resultsEl = document.getElementById('depSearchResults');
+            if (resultsEl) resultsEl.style.display = 'none';
         }
     });
 
