@@ -1991,7 +1991,7 @@ def squad_create_intervention(title: str, due_date: str, how: str, notes: str = 
     from models.employee import Employee
     from models.user import User
     from services.whatsapp_service import whatsapp_service
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     # Forçando ID 31 e contexto AA - Versus Gestão Corporativa
     project = Project.query.filter_by(id=31).first()
@@ -1999,6 +1999,21 @@ def squad_create_intervention(title: str, due_date: str, how: str, notes: str = 
         return "Erro: Projeto 'AA.J.31' não encontrado. ID=31."
         
     company_id = project.company_id
+
+    # ── GUARDA DE IDEMPOTÊNCIA ──────────────────────────────────────────────────
+    # Impede criação duplicada de tarefa com mesmo título dentro de janela de 5 minutos
+    five_min_ago = datetime.utcnow() - timedelta(minutes=5)
+    existing = ProjectTask.query.filter(
+        ProjectTask.project_id == project.id,
+        ProjectTask.what == title,
+        ProjectTask.created_at >= five_min_ago
+    ).first()
+    if existing:
+        return (
+            f"[IDEMPOTÊNCIA] Tarefa '{title}' já foi criada recentemente "
+            f"(ID: {existing.id}). Nenhuma duplicata gerada."
+        )
+    # ───────────────────────────────────────────────────────────────────────────
 
     # Tenta achar o colaborador ativo 
     emp = Employee.query.filter(Employee.company_id == company_id, Employee.name.ilike(f'%{assignee_name}%')).first()
