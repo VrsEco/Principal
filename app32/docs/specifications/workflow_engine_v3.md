@@ -182,6 +182,14 @@ real e plugável**:
   sem abrir mão do catálogo determinístico;
 - a telemetria agora informa também o `reranker_kind` efetivamente usado.
 
+Na camada seguinte de hardening, o discovery implícito passou a aplicar uma
+**política de confiança** antes de auto-selecionar um workflow:
+
+- vitória isolada segue seleção direta;
+- múltiplos candidatos com margem forte podem seguir direto;
+- candidatos próximos passam a cair em desambiguação;
+- a decisão de confiança é adicionada à telemetria compacta do discovery.
+
 Além disso, o fluxo de `summary.*` já foi parcialmente migrado:
 
 - o `menu_engine` atua como adapter de canal/sessão;

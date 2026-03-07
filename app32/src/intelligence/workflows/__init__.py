@@ -6,6 +6,13 @@ from .company_selection import (
     CompanySelectionDecision,
     OperationCompanySelectionCoordinator,
 )
+from .confidence import (
+    DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS,
+    DISCOVERY_CONFIDENCE_ROUTE_NO_MATCH,
+    DISCOVERY_CONFIDENCE_ROUTE_SELECT,
+    WorkflowDiscoveryConfidenceDecision,
+    WorkflowDiscoveryConfidencePolicy,
+)
 from .confirmation import (
     CONFIRMATION_ROUTE_CANCELLED,
     CONFIRMATION_ROUTE_DIRECT_RESPONSE,
@@ -162,6 +169,7 @@ from .summary import (
     SummaryWorkflowCoordinator,
 )
 from .telemetry import (
+    attach_confidence_decision_to_trace,
     build_explicit_workflow_trace,
     build_workflow_discovery_trace,
 )
@@ -176,6 +184,9 @@ __all__ = [
     "adjust_required_fields_for_context",
     "build_missing_fields_prompt",
     "build_operation_company_prompt",
+    "DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS",
+    "DISCOVERY_CONFIDENCE_ROUTE_NO_MATCH",
+    "DISCOVERY_CONFIDENCE_ROUTE_SELECT",
     "COMPANY_SELECTION_ROUTE_ADVANCE",
     "COMPANY_SELECTION_ROUTE_ERROR",
     "COMPANY_SELECTION_ROUTE_PROMPT",
@@ -274,6 +285,8 @@ __all__ = [
     "WorkflowLLMRerankCandidate",
     "WorkflowLLMRerankDecision",
     "WorkflowDisplayOption",
+    "WorkflowDiscoveryConfidenceDecision",
+    "WorkflowDiscoveryConfidencePolicy",
     "WorkflowDiscoveryRequest",
     "WorkflowDiscoveryResult",
     "WorkflowFieldDefinition",
@@ -285,6 +298,7 @@ __all__ = [
     "WorkflowSessionState",
     "SelectionRouteDecision",
     "build_assisted_selection_payload",
+    "attach_confidence_decision_to_trace",
     "build_explicit_workflow_trace",
     "build_session_snapshot",
     "build_confirmation_display_items",

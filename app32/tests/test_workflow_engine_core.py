@@ -11,6 +11,11 @@ from src.intelligence.workflows.evaluation import (
     WorkflowEvaluationCase,
     evaluate_workflow_discovery,
 )
+from src.intelligence.workflows.confidence import (
+    DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS,
+    DISCOVERY_CONFIDENCE_ROUTE_SELECT,
+    WorkflowDiscoveryConfidencePolicy,
+)
 from src.intelligence.workflows.registry import WorkflowRegistry
 from src.intelligence.workflows.reranker import HeuristicWorkflowReranker
 from src.intelligence.workflows.reranker import LLMWorkflowReranker
@@ -466,6 +471,35 @@ def test_workflow_runtime_accepts_callable_reranker_adapter():
 
     assert result.selected is not None
     assert result.selected.action_key == "summary.custom"
+
+
+def test_workflow_discovery_confidence_policy_selects_clear_winner():
+    policy = WorkflowDiscoveryConfidencePolicy()
+
+    decision = policy.decide(
+        [
+            {"code": "3.5.4", "action_key": "summary.custom", "score": 42},
+            {"code": "3.5.2", "action_key": "summary.week", "score": 24},
+        ]
+    )
+
+    assert decision.route == DISCOVERY_CONFIDENCE_ROUTE_SELECT
+    assert decision.selected_code == "3.5.4"
+    assert decision.reason == "clear_winner"
+
+
+def test_workflow_discovery_confidence_policy_requires_disambiguation_for_close_scores():
+    policy = WorkflowDiscoveryConfidencePolicy()
+
+    decision = policy.decide(
+        [
+            {"code": "4.1", "action_key": "meeting.schedule", "score": 27},
+            {"code": "4.2", "action_key": "meeting.start", "score": 24},
+        ]
+    )
+
+    assert decision.route == DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS
+    assert decision.reason == "needs_disambiguation"
 
 
 def test_llm_workflow_reranker_reorders_candidates_from_structured_response():

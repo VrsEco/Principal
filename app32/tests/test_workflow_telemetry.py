@@ -9,6 +9,8 @@ from src.intelligence.workflows import (
     WorkflowDiscoveryRequest,
     WorkflowDiscoveryResult,
     WorkflowMatch,
+    WorkflowDiscoveryConfidenceDecision,
+    attach_confidence_decision_to_trace,
     build_explicit_workflow_trace,
     build_workflow_discovery_trace,
 )
@@ -85,3 +87,23 @@ def test_build_explicit_workflow_trace_marks_explicit_selection():
     assert trace["explicit_code"] == "1.4"
     assert trace["selected_action_key"] == "project_task.create"
     assert trace["top_matches"][0]["reasons"] == ["explicit:code_match"]
+
+
+def test_attach_confidence_decision_to_trace_keeps_compact_payload():
+    trace = {"strategy": "hybrid", "selected_code": "1.4"}
+    decision = WorkflowDiscoveryConfidenceDecision(
+        route="select",
+        selected_code="1.4",
+        candidate_codes=["1.4", "1.5"],
+        candidate_count=2,
+        top_score=42,
+        runner_up_score=24,
+        score_margin=18,
+        score_ratio=1.75,
+        reason="clear_winner",
+    )
+
+    enriched = attach_confidence_decision_to_trace(trace, decision)
+
+    assert enriched["confidence"]["route"] == "select"
+    assert enriched["confidence"]["score_margin"] == 18

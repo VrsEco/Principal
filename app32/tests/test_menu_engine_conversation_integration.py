@@ -287,6 +287,69 @@ def test_handle_menu_message_attaches_discovery_metadata_for_implicit_selection(
     assert result.metadata["menu_engine"]["intercept_stage"] == "implicit_discovery_selected"
     assert result.metadata["menu_engine"]["selected_option_code"] == option.code
     assert result.metadata["workflow_discovery"]["selected_action_key"] == option.action_key
+    assert result.metadata["workflow_discovery"]["confidence"]["route"] == "select"
+
+
+def test_handle_menu_message_auto_selects_clear_winner_even_with_multiple_candidates(monkeypatch):
+    option = _build_project_task_option()
+    other = AgentMenuOption(
+        code="1.5",
+        title="Finalizar Atividade de Projeto",
+        action_key="project_task.complete",
+        required_fields=[{"key": "codigo_atividade", "label": "Codigo da Atividade"}],
+    )
+    other.id = 15
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+    monkeypatch.setattr(menu_engine, "_looks_like_command", lambda lower: True)
+    monkeypatch.setattr(
+        menu_engine,
+        "_discover_options_by_keywords",
+        lambda company_id, lower_text, channel="web": (
+            [option, other],
+            {
+                "strategy": "hybrid",
+                "candidate_count": 2,
+                "selected_code": option.code,
+                "selected_action_key": option.action_key,
+                "top_matches": [
+                    {
+                        "code": option.code,
+                        "action_key": option.action_key,
+                        "score": 42,
+                        "reasons": ["semantic:atividade", "lexical:cadastro"],
+                    },
+                    {
+                        "code": other.code,
+                        "action_key": other.action_key,
+                        "score": 24,
+                        "reasons": ["semantic:concluir"],
+                    },
+                ],
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_prepare_option_flow",
+        lambda session, option, text, lower: menu_engine.MenuInterceptResult(
+            handled=True,
+            response_text=f"FLOW:{option.code}",
+        ),
+    )
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="whatsapp",
+        thread_id="thread-1",
+        message="quero cadastrar atividade",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "FLOW:1.4"
+    assert result.metadata["workflow_discovery"]["confidence"]["route"] == "select"
+    assert result.metadata["workflow_discovery"]["confidence"]["reason"] == "clear_winner"
 
 
 def test_handle_menu_message_attaches_discovery_metadata_for_ambiguous_selection(monkeypatch):
@@ -343,3 +406,4 @@ def test_handle_menu_message_attaches_discovery_metadata_for_ambiguous_selection
     assert result.metadata["menu_engine"]["intercept_stage"] == "implicit_discovery_ambiguous"
     assert result.metadata["workflow_discovery"]["candidate_count"] == 2
     assert len(result.metadata["workflow_discovery"]["top_matches"]) == 2
+    assert result.metadata["workflow_discovery"]["confidence"]["route"] == "ambiguous"

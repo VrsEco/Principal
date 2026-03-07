@@ -15,6 +15,11 @@ from src.intelligence.workflows.company_selection import (
     COMPANY_SELECTION_ROUTE_PROMPT,
     OperationCompanySelectionCoordinator,
 )
+from src.intelligence.workflows.confidence import (
+    DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS,
+    DISCOVERY_CONFIDENCE_ROUTE_SELECT,
+    WorkflowDiscoveryConfidencePolicy,
+)
 from src.intelligence.workflows.confirmation import (
     CONFIRMATION_ROUTE_CANCELLED,
     CONFIRMATION_ROUTE_DIRECT_RESPONSE,
@@ -108,6 +113,7 @@ from src.intelligence.workflows.summary import (
     SummaryWorkflowCoordinator,
 )
 from src.intelligence.workflows.telemetry import (
+    attach_confidence_decision_to_trace,
     build_explicit_workflow_trace,
     build_workflow_discovery_trace,
 )
@@ -258,6 +264,10 @@ def _build_session_navigation_runtime() -> SessionNavigationRuntime:
         reset_session=_reset_session,
         prompt_renderer=_build_session_prompt_renderer(),
     )
+
+
+def _build_workflow_discovery_confidence_policy() -> WorkflowDiscoveryConfidencePolicy:
+    return WorkflowDiscoveryConfidencePolicy()
 
 
 def handle_menu_message(
@@ -437,7 +447,23 @@ def handle_menu_message(
                 lower,
                 channel=channel,
             )
-            if len(candidates) >= 2:
+            confidence_decision = _build_workflow_discovery_confidence_policy().decide(
+                discovery_trace.get("top_matches") or []
+            )
+            discovery_trace = attach_confidence_decision_to_trace(
+                discovery_trace,
+                confidence_decision,
+            )
+            candidates_by_code = {
+                str(candidate.code or "").strip(): candidate
+                for candidate in candidates
+            }
+            if confidence_decision.route == DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS:
+                ambiguous_candidates = [
+                    candidates_by_code[code]
+                    for code in confidence_decision.candidate_codes
+                    if code in candidates_by_code
+                ] or candidates
                 logger.info(
                     "MENU DISCOVERY AMBIGUO: user=%s company=%s channel=%s thread=%s selected=%s",
                     user_id,
@@ -449,14 +475,19 @@ def handle_menu_message(
                 return _attach_menu_intercept_metadata(
                     MenuInterceptResult(
                         handled=True,
-                        response_text=_format_ambiguous_options(candidates),
+                        response_text=_format_ambiguous_options(ambiguous_candidates),
                     ),
                     session=session,
                     option=None,
                     intercept_stage="implicit_discovery_ambiguous",
                     discovery_trace=discovery_trace,
                 )
-            if len(candidates) == 1:
+            if confidence_decision.route == DISCOVERY_CONFIDENCE_ROUTE_SELECT:
+                selected_candidate = candidates_by_code.get(
+                    confidence_decision.selected_code or ""
+                ) or (candidates[0] if candidates else None)
+                if selected_candidate is None:
+                    return MenuInterceptResult()
                 logger.info(
                     "MENU DISCOVERY SELECIONADO: user=%s company=%s channel=%s thread=%s selected=%s",
                     user_id,
@@ -466,9 +497,9 @@ def handle_menu_message(
                     json.dumps(discovery_trace, ensure_ascii=False),
                 )
                 return _attach_menu_intercept_metadata(
-                    _prepare_option_flow(session, candidates[0], text, lower),
+                    _prepare_option_flow(session, selected_candidate, text, lower),
                     session=session,
-                    option=candidates[0],
+                    option=selected_candidate,
                     intercept_stage="implicit_discovery_selected",
                     discovery_trace=discovery_trace,
                 )

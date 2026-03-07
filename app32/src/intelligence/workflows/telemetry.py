@@ -88,6 +88,27 @@ def build_workflow_discovery_trace(
     }
 
 
+def attach_confidence_decision_to_trace(
+    trace: Dict[str, Any],
+    decision: Any,
+) -> Dict[str, Any]:
+    enriched = dict(trace or {})
+    if decision is None:
+        return enriched
+
+    if hasattr(decision, "model_dump"):
+        payload = decision.model_dump()
+    else:
+        payload = dict(decision or {})
+
+    enriched["confidence"] = {
+        key: value
+        for key, value in dict(payload or {}).items()
+        if value not in ("", [], None)
+    }
+    return enriched
+
+
 def build_explicit_workflow_trace(
     workflow: Any,
     *,
