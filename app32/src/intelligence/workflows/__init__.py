@@ -46,10 +46,12 @@ from .field_collection import (
 )
 from .evaluation import (
     WorkflowEvaluationCase,
+    WorkflowEvaluationDomainReport,
     WorkflowEvaluationItem,
     WorkflowEvaluationReport,
     evaluate_workflow_discovery,
 )
+from .evaluation_catalog import build_default_workflow_evaluation_cases
 from .handlers import (
     MeetingScheduleExecutionHandler,
     MeetingScheduleRequest,
@@ -206,6 +208,7 @@ __all__ = [
     "build_default_workflow_reranker",
     "extract_numbered_fields_from_text",
     "evaluate_workflow_discovery",
+    "build_default_workflow_evaluation_cases",
     "AssistedSelectionCoordinator",
     "FIELD_COLLECTION_ROUTE_PROMPT_MISSING",
     "FIELD_COLLECTION_ROUTE_READY",
@@ -280,6 +283,7 @@ __all__ = [
     "WorkflowSemanticProfile",
     "WorkflowDefinition",
     "WorkflowEvaluationCase",
+    "WorkflowEvaluationDomainReport",
     "WorkflowEvaluationItem",
     "WorkflowEvaluationReport",
     "WorkflowLLMRerankCandidate",

@@ -11,6 +11,9 @@ from src.intelligence.workflows.evaluation import (
     WorkflowEvaluationCase,
     evaluate_workflow_discovery,
 )
+from src.intelligence.workflows.evaluation_catalog import (
+    build_default_workflow_evaluation_cases,
+)
 from src.intelligence.workflows.confidence import (
     DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS,
     DISCOVERY_CONFIDENCE_ROUTE_SELECT,
@@ -632,6 +635,30 @@ def test_build_default_workflow_reranker_falls_back_to_heuristic_when_disabled(m
     assert isinstance(reranker, HeuristicWorkflowReranker)
 
 
+def test_heuristic_reranker_prioritizes_overdue_for_singular_vencido():
+    registry = WorkflowRegistry.from_menu_options(
+        [
+            _option(option_id=71, code="3.1", title="Atividades em Aberto", action_key="my_work.open"),
+            _option(option_id=72, code="3.2", title="Atividades Vencidas", action_key="my_work.overdue"),
+        ]
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=20, reasons=["semantic:trabalho"]),
+        WorkflowMatch(workflow=registry.list()[1], score=19, reasons=["semantic:vencido"]),
+    ]
+    reranker = HeuristicWorkflowReranker()
+
+    reranked = list(
+        reranker.rerank(
+            WorkflowDiscoveryRequest(text="o que esta vencido no meu trabalho"),
+            matches,
+            registry,
+        )
+    )
+
+    assert reranked[0].workflow.action_key == "my_work.overdue"
+
+
 def test_evaluate_workflow_discovery_reports_accuracy():
     options = [
         _option(
@@ -670,6 +697,80 @@ def test_evaluate_workflow_discovery_reports_accuracy():
     assert report.total_cases == 2
     assert report.success_count == 2
     assert report.accuracy == 1.0
+    assert report.top_k_success_count == 2
+    assert report.top_k_accuracy == 1.0
+    assert report.mean_reciprocal_rank == 1.0
+    assert len(report.domain_breakdown) == 1
+
+
+def test_evaluate_workflow_discovery_exposes_rank_metrics_and_domains():
+    options = [
+        _option(
+            option_id=47,
+            code="4.1",
+            title="Agendar Reuniao",
+            action_key="meeting.schedule",
+            keywords=["agendar reuniao"],
+        ),
+        _option(
+            option_id=48,
+            code="4.3",
+            title="Resumir Reuniao",
+            action_key="meeting.summarize",
+            keywords=["resumir reuniao"],
+        ),
+    ]
+
+    class StubRuntime:
+        def discover_from_menu_options(self, **kwargs):
+            del kwargs
+            registry = WorkflowRegistry.from_menu_options(options)
+            return type(
+                "Result",
+                (),
+                {
+                    "selected_match": WorkflowMatch(
+                        workflow=registry.list()[0],
+                        score=20,
+                        reasons=[],
+                    ),
+                    "matches": [
+                        WorkflowMatch(workflow=registry.list()[0], score=20, reasons=[]),
+                        WorkflowMatch(workflow=registry.list()[1], score=19, reasons=[]),
+                    ],
+                },
+            )()
+
+    report = evaluate_workflow_discovery(
+        runtime=StubRuntime(),
+        options=options,
+        cases=[
+            WorkflowEvaluationCase(
+                domain="meeting",
+                label="meeting_summary_rank_2",
+                text="quero um resumo da reuniao",
+                expected_action_key="meeting.summarize",
+            ),
+        ],
+        top_k=2,
+    )
+
+    assert report.total_cases == 1
+    assert report.success_count == 0
+    assert report.top_k_success_count == 1
+    assert report.top_k_accuracy == 1.0
+    assert report.items[0].expected_rank == 2
+    assert report.items[0].reciprocal_rank == 0.5
+    assert report.domain_breakdown[0].domain == "meeting"
+
+
+def test_default_workflow_evaluation_catalog_covers_multiple_domains():
+    cases = build_default_workflow_evaluation_cases()
+
+    domains = {case.domain for case in cases}
+
+    assert len(cases) >= 12
+    assert {"summary", "my_work", "project_task", "meeting", "onboarding"} <= domains
 
 
 def test_workflow_session_state_reads_agent_menu_session_context():

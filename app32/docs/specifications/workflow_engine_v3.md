@@ -190,6 +190,13 @@ Na camada seguinte de hardening, o discovery implícito passou a aplicar uma
 - candidatos próximos passam a cair em desambiguação;
 - a decisão de confiança é adicionada à telemetria compacta do discovery.
 
+Também foi evoluída a frente de **avaliação contínua do discovery**:
+
+- métricas de `top_k_accuracy` e `mean_reciprocal_rank`;
+- breakdown por domínio operacional;
+- catálogo padrão de casos de avaliação;
+- runner utilitário em `scripts/qa/run_workflow_discovery_evaluation.py`.
+
 Além disso, o fluxo de `summary.*` já foi parcialmente migrado:
 
 - o `menu_engine` atua como adapter de canal/sessão;

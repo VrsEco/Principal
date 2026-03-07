@@ -289,7 +289,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             elif action_key in {"summary.today", "summary.week", "summary.month", "summary.custom"}:
                 score -= 4
 
-        if {"vencidas", "vencida", "atrasadas", "atrasada"} & tokens:
+        if {"vencido", "vencidos", "vencida", "vencidas", "atrasado", "atrasados", "atrasada", "atrasadas"} & tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="my_work.overdue",
@@ -298,7 +298,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="my_work=overdue",
             )
 
-        if {"abertas", "aberta", "pendentes", "pendente"} & tokens:
+        if {"aberto", "abertos", "aberta", "abertas", "pendente", "pendentes"} & tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="my_work.open",
@@ -307,7 +307,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="my_work=open",
             )
 
-        if {"concluidas", "concluida", "finalizadas", "finalizada"} & tokens:
+        if {"concluido", "concluidos", "concluida", "concluidas", "finalizado", "finalizados", "finalizada", "finalizadas"} & tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="my_work.completed_range",
@@ -316,7 +316,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="my_work=completed",
             )
 
-        if {"vencer", "vencimento", "proximos", "proximo"} & tokens:
+        if {"vencer", "vence", "vencem", "vencimento", "proximos", "proximo"} & tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="my_work.due_range",
