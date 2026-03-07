@@ -2000,6 +2000,206 @@ def list_team_workload():
 # =============================================================================
 # LISTA DE FERRAMENTAS EXPORTADAS (FASE 1 + FASE 2)
 # =============================================================================
+
+
+@tool
+def squad_create_intervention(title: str, due_date: str, how: str, notes: str = "", assignee_name: str = "Agente Squad"):
+    """
+    SQUAD DE ENGENHARIA: Cria uma nova atividade de intervenção no projeto 'AA.J.31 Agentes de Work V3'.
+    :param title: O que (Título da atividade)
+    :param due_date: Quando (Data prevista YYYY-MM-DD)
+    :param how: Como (Explicação do que será feito)
+    :param notes: Observações e informações adicionais
+    :param assignee_name: Quem (Responsável, ex: 'Agente Sapiens' ou 'QA_AUTOMATION')
+    """
+    from models.project import Project, ProjectTask
+    from models.employee import Employee
+    from models.user import User
+    from services.whatsapp_service import whatsapp_service
+    from datetime import datetime
+
+    # Forçando ID 31 e contexto AA - Versus Gestão Corporativa
+    project = Project.query.filter_by(id=31).first()
+    if not project:
+        return "Erro: Projeto 'AA.J.31' não encontrado. ID=31."
+        
+    company_id = project.company_id
+
+    # Tenta achar o colaborador ativo 
+    emp = Employee.query.filter(Employee.company_id == company_id, Employee.name.ilike(f'%{assignee_name}%')).first()
+    emp_id = emp.id if emp else None
+
+    # Tenta achar Fabiano para notificação
+    fabiano = Employee.query.join(User, User.id == Employee.user_id).filter(
+        Employee.company_id == company_id, User.name.ilike('%Fabiano%')
+    ).first()
+
+    due_dt = None
+    if due_date:
+        try:
+            due_dt = datetime.strptime(due_date.strip()[:10], '%Y-%m-%d').date()
+        except:
+            pass
+
+    task = ProjectTask(
+        project_id=project.id,
+        what=title,
+        who=emp.name if emp else assignee_name,
+        employee_id=emp_id,
+        due_date=due_dt,
+        how=how,
+        notes=notes,
+        status='planned',
+        stage='inbox',
+        priority='normal',
+        score_weight=1,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    db.session.add(task)
+    db.session.commit()
+
+    if fabiano and hasattr(fabiano, 'user') and getattr(fabiano.user, 'whatsapp', None):
+        msg = (
+            f"🛠️ *Squad de Engenharia - Nova Intervenção!*\n\n"
+            f"📌 *O Quê:* {title}\n"
+            f"👤 *Quem:* {assignee_name}\n"
+            f"📅 *Prazo:* {due_date}\n"
+            f"📋 *Como:* {how}\n"
+            f"📝 *Obs:* {notes}\n"
+        )
+        whatsapp_service.send_message(fabiano.user.whatsapp, msg)
+
+    return f"Atividade '{title}' criada com sucesso no projeto AA.J.31. ID criado da tarefa: {task.id}"
+
+@tool
+def squad_update_intervention(task_id: int, stage: str, log_history: str, hours_worked: float = 0.0):
+    """
+    SQUAD DE ENGENHARIA: Atualiza o andamento de uma intervenção, movendo de lista, inserindo histórico e lançando horas.
+    :param task_id: ID da atividade
+    :param stage: Fase (inbox, waiting, executing, pending, suspended, completed)
+    :param log_history: Histórico ou comentário para adicionar 
+    :param hours_worked: Total de horas trabalhadas na interação (lançadas no usuário Fabiano Diretor)
+    """
+    from models.project import ProjectTask, ProjectActivityCollaborator, ProjectTaskHoursSummary
+    from models.employee import Employee
+    from models.user import User
+    from models.activity_work_log import ActivityWorkLog
+    from services.whatsapp_service import whatsapp_service
+    from datetime import datetime
+    from sqlalchemy import func
+    from decimal import Decimal
+
+    task = ProjectTask.query.get(task_id)
+    if not task:
+        return f"Erro: Tarefa {task_id} não encontrada."
+
+    task.stage = stage
+    if stage == 'completed':
+        task.status = 'completed'
+    elif stage in ('executing', 'pending', 'waiting'):
+        task.status = 'in_progress'
+
+    # Add log
+    logs = list(task.logs) if task.logs else []
+    logs.append({
+        'date': datetime.utcnow().isoformat(),
+        'author': 'Squad Bot',
+        'text': log_history
+    })
+    task.logs = logs
+
+    fabiano = None
+    if task.project:
+        fabiano = Employee.query.join(User, User.id == Employee.user_id).filter(
+            Employee.company_id == task.project.company_id, User.name.ilike('%Fabiano%')
+        ).first()
+
+    if float(hours_worked) > 0 and fabiano:
+        # Lançamento de horas manual
+        log = ActivityWorkLog(
+            activity_type='project',
+            activity_id=task_id,
+            employee_id=fabiano.id,
+            employee_name=fabiano.name,
+            hours_worked=Decimal(str(hours_worked)),
+            description=log_history[:250],
+            work_date=datetime.utcnow().date(),
+            created_at=datetime.utcnow()
+        )
+        db.session.add(log)
+        
+        collab = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, employee_id=fabiano.id).first()
+        if not collab:
+            collab = ProjectActivityCollaborator(activity_id=task_id, employee_id=fabiano.id, role='executor')
+            db.session.add(collab)
+        collab.worked_hours = Decimal(str(collab.worked_hours or 0)) + Decimal(str(hours_worked))
+        db.session.flush()
+
+        task.worked_hours = (task.worked_hours or 0) + Decimal(str(hours_worked))
+        
+        sum_row = ProjectTaskHoursSummary.query.filter_by(task_id=task_id).first()
+        if not sum_row:
+            sum_row = ProjectTaskHoursSummary(task_id=task_id)
+            db.session.add(sum_row)
+        sum_row.total_worked_hours = Decimal(str(sum_row.total_worked_hours or 0)) + Decimal(str(hours_worked))
+
+    db.session.commit()
+
+    if stage in ('executing', 'in_progress'):
+        if fabiano and hasattr(fabiano, 'user') and getattr(fabiano.user, 'whatsapp', None):
+             msg = (
+                 f"⚙️ *Squad de Engenharia - Intervenção em Andamento*\n\n"
+                 f"📌 *Atividade:* {task.what}\n"
+                 f"🔄 *Fase atual:* {stage}\n"
+                 f"⏱️ *Tempo investido (agora):* {hours_worked}h\n"
+                 f"📝 *Histórico:* {log_history}"
+             )
+             whatsapp_service.send_message(fabiano.user.whatsapp, msg)
+
+    return f"Status da intervenção {task_id} atualizado para '{stage}'. {hours_worked}h lançadas com sucesso."
+
+@tool
+def squad_finish_intervention(task_id: int, remark: str, hours_worked: float = 0.0):
+    """
+    SQUAD DE ENGENHARIA: Conclui a intervenção e notifica o responsável.
+    :param task_id: ID da atividade
+    :param remark: Observação de conclusão (resultado final)
+    :param hours_worked: Quaisquer horas finais para lançamento
+    """
+    from models.project import ProjectTask
+    from models.employee import Employee
+    from models.user import User
+    from services.whatsapp_service import whatsapp_service
+    from datetime import datetime
+
+    task = ProjectTask.query.get(task_id)
+    if not task:
+        return f"Erro: Tarefa {task_id} não encontrada."
+    
+    comp_resp = squad_update_intervention.invoke({"task_id": task_id, "stage": "completed", "log_history": remark, "hours_worked": hours_worked})
+
+    task.completion_date = datetime.utcnow().date()
+    db.session.commit()
+
+    if task.project:
+        fabiano = Employee.query.join(User, User.id == Employee.user_id).filter(
+            Employee.company_id == task.project.company_id, User.name.ilike('%Fabiano%')
+        ).first()
+
+        if fabiano and hasattr(fabiano, 'user') and getattr(fabiano.user, 'whatsapp', None):
+             msg = (
+                 f"✅ *Squad de Engenharia - Intervenção Concluída!*\n\n"
+                 f"📌 *Atividade:* {task.what}\n"
+                 f"💰 *Tempo investido final:* {hours_worked}h\n"
+                 f"🏁 *Resultado/Observação:* {remark}"
+             )
+             whatsapp_service.send_message(fabiano.user.whatsapp, msg)
+             
+    return f"Atividade {task_id} concluída com sucesso! Detalhes: {comp_resp}"
+
+
+
 tools = [
     # Fase 1 — Core Intelligence
     consult_rules,
