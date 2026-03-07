@@ -13,6 +13,9 @@ from src.intelligence.workflows.evaluation import (
 )
 from src.intelligence.workflows.registry import WorkflowRegistry
 from src.intelligence.workflows.reranker import HeuristicWorkflowReranker
+from src.intelligence.workflows.reranker import LLMWorkflowReranker
+from src.intelligence.workflows.reranker import WorkflowLLMRerankDecision
+from src.intelligence.workflows.reranker import build_default_workflow_reranker
 from src.intelligence.workflows.runtime import WorkflowRuntime
 from src.intelligence.workflows.semantic_index import WorkflowSemanticIndex
 from src.intelligence.workflows.session import WorkflowSessionState
@@ -425,6 +428,7 @@ def test_workflow_runtime_exposes_discovery_telemetry():
     assert len(result.telemetry["final_top_matches"]) >= 1
     assert result.telemetry["selected_action_key"] == "onboarding.go_live_check"
     assert isinstance(result.telemetry["reranker_deltas"], list)
+    assert result.telemetry["reranker_kind"] == "HeuristicWorkflowReranker"
 
 
 def test_workflow_runtime_accepts_callable_reranker_adapter():
@@ -462,6 +466,136 @@ def test_workflow_runtime_accepts_callable_reranker_adapter():
 
     assert result.selected is not None
     assert result.selected.action_key == "summary.custom"
+
+
+def test_llm_workflow_reranker_reorders_candidates_from_structured_response():
+    matches = [
+        WorkflowMatch(
+            workflow=WorkflowRegistry.from_menu_options(
+                [
+                    _option(
+                        option_id=51,
+                        code="3.5.2",
+                        title="Esta Semana",
+                        action_key="summary.week",
+                        keywords=["resumo semana"],
+                    ),
+                    _option(
+                        option_id=52,
+                        code="3.5.4",
+                        title="Personalizado",
+                        action_key="summary.custom",
+                        keywords=["resumo personalizado"],
+                    ),
+                ]
+            ).list()[0],
+            score=30,
+            reasons=["semantic:semana"],
+        ),
+        WorkflowMatch(
+            workflow=WorkflowRegistry.from_menu_options(
+                [
+                    _option(
+                        option_id=51,
+                        code="3.5.2",
+                        title="Esta Semana",
+                        action_key="summary.week",
+                        keywords=["resumo semana"],
+                    ),
+                    _option(
+                        option_id=52,
+                        code="3.5.4",
+                        title="Personalizado",
+                        action_key="summary.custom",
+                        keywords=["resumo personalizado"],
+                    ),
+                ]
+            ).list()[1],
+            score=28,
+            reasons=["semantic:datas"],
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(
+        [
+            _option(
+                option_id=51,
+                code="3.5.2",
+                title="Esta Semana",
+                action_key="summary.week",
+                keywords=["resumo semana"],
+            ),
+            _option(
+                option_id=52,
+                code="3.5.4",
+                title="Personalizado",
+                action_key="summary.custom",
+                keywords=["resumo personalizado"],
+            ),
+        ]
+    )
+    reranker = LLMWorkflowReranker(
+        invoke_llm=lambda request, matches, registry: WorkflowLLMRerankDecision(
+            ranked=[
+                {"workflow_code": "3.5.4", "reason": "datas explicitas"},
+                {"workflow_code": "3.5.2", "reason": "periodo semanal como fallback"},
+            ]
+        )
+    )
+
+    reranked = list(
+        reranker.rerank(
+            WorkflowDiscoveryRequest(text="resumo de 01/03/2026 a 05/03/2026"),
+            matches,
+            registry,
+        )
+    )
+
+    assert reranked[0].workflow.code == "3.5.4"
+    assert any(reason == "llm_reranker:rank=1" for reason in reranked[0].reasons)
+    assert any("datas explicitas" in reason for reason in reranked[0].reasons)
+
+
+def test_llm_workflow_reranker_ignores_unknown_codes_and_preserves_remaining_order():
+    registry = WorkflowRegistry.from_menu_options(
+        [
+            _option(option_id=61, code="4.1", title="Agendar", action_key="meeting.schedule"),
+            _option(option_id=62, code="4.2", title="Iniciar", action_key="meeting.start"),
+            _option(option_id=63, code="4.3", title="Resumir", action_key="meeting.summarize"),
+        ]
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=20, reasons=["semantic:agenda"]),
+        WorkflowMatch(workflow=registry.list()[1], score=19, reasons=["semantic:iniciar"]),
+        WorkflowMatch(workflow=registry.list()[2], score=18, reasons=["semantic:ata"]),
+    ]
+    reranker = LLMWorkflowReranker(
+        invoke_llm=lambda request, matches, registry: {
+            "ranked": [
+                {"workflow_code": "4.9", "reason": "invalido"},
+                {"workflow_code": "4.3", "reason": "o usuario quer um resumo"},
+            ]
+        }
+    )
+
+    reranked = list(
+        reranker.rerank(
+            WorkflowDiscoveryRequest(text="quero resumir a reuniao"),
+            matches,
+            registry,
+        )
+    )
+
+    assert reranked[0].workflow.code == "4.3"
+    assert reranked[1].workflow.code == "4.1"
+    assert reranked[2].workflow.code == "4.2"
+
+
+def test_build_default_workflow_reranker_falls_back_to_heuristic_when_disabled(monkeypatch):
+    monkeypatch.delenv("WORKFLOW_LLM_RERANKER_ENABLED", raising=False)
+
+    reranker = build_default_workflow_reranker()
+
+    assert isinstance(reranker, HeuristicWorkflowReranker)
 
 
 def test_evaluate_workflow_discovery_reports_accuracy():

@@ -39,6 +39,7 @@ def test_build_workflow_discovery_trace_compacts_top_matches():
         telemetry={
             "strategy": "hybrid",
             "reranker_applied": True,
+            "reranker_kind": "LLMWorkflowReranker",
             "merged_match_count": 4,
             "selected_code": workflow.code,
             "selected_action_key": workflow.action_key,
@@ -65,6 +66,7 @@ def test_build_workflow_discovery_trace_compacts_top_matches():
     assert trace["candidate_count"] == 4
     assert trace["selected_action_key"] == "summary.custom"
     assert trace["reranker_applied"] is True
+    assert trace["reranker_kind"] == "LLMWorkflowReranker"
     assert len(trace["top_matches"]) == 1
     assert len(trace["top_matches"][0]["reasons"]) == 4
 

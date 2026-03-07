@@ -9,7 +9,7 @@ from .contracts import WorkflowDiscoveryRequest, WorkflowDiscoveryResult
 from .matcher import HybridWorkflowMatcher
 from .registry import WorkflowRegistry
 from .reranker import CallableWorkflowReranker
-from .reranker import HeuristicWorkflowReranker
+from .reranker import build_default_workflow_reranker
 
 
 class WorkflowRuntime:
@@ -32,7 +32,7 @@ class WorkflowRuntime:
         if resolved_reranker is None and rerank_callable is not None:
             resolved_reranker = CallableWorkflowReranker(rerank_callable)
         if resolved_reranker is None:
-            resolved_reranker = HeuristicWorkflowReranker()
+            resolved_reranker = build_default_workflow_reranker()
 
         self._matcher = HybridWorkflowMatcher(
             reranker=resolved_reranker

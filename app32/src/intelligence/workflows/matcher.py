@@ -356,6 +356,11 @@ class HybridWorkflowMatcher:
                 "semantic_match_count": len(semantic_matches.matches),
                 "merged_match_count": len(merged_matches),
                 "reranker_applied": bool(self._reranker),
+                "reranker_kind": (
+                    self._reranker.__class__.__name__
+                    if self._reranker is not None else
+                    None
+                ),
                 "lexical_top_matches": _telemetry_summary(
                     _limit_matches(lexical_matches.matches, request.top_k)
                 ),

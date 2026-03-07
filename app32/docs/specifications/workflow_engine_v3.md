@@ -173,6 +173,15 @@ conversacional:
 - logs em `AgentMessage.metadata_json` passam a registrar o contexto de
   discovery também em Web, Telegram e WhatsApp.
 
+Na evolução seguinte, o discovery passou a aceitar também um **reranker LLM
+real e plugável**:
+
+- `LLMWorkflowReranker` opera apenas sobre o top-k já fechado pelo catálogo;
+- o fallback padrão permanece seguro em `HeuristicWorkflowReranker`;
+- `WorkflowRuntime` pode habilitar o reranker LLM por configuração,
+  sem abrir mão do catálogo determinístico;
+- a telemetria agora informa também o `reranker_kind` efetivamente usado.
+
 Além disso, o fluxo de `summary.*` já foi parcialmente migrado:
 
 - o `menu_engine` atua como adapter de canal/sessão;

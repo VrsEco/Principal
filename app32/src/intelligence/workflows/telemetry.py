@@ -75,6 +75,8 @@ def build_workflow_discovery_trace(
         trace["lexical_match_count"] = int(telemetry.get("lexical_match_count") or 0)
     if "semantic_match_count" in telemetry:
         trace["semantic_match_count"] = int(telemetry.get("semantic_match_count") or 0)
+    if telemetry.get("reranker_kind"):
+        trace["reranker_kind"] = str(telemetry.get("reranker_kind") or "").strip()
     if selected_match is not None:
         trace["selected_score"] = int(selected_match.score or 0)
         trace["selected_reasons"] = _normalize_reasons(selected_match.reasons or [], limit=reason_limit)

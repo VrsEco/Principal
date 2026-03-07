@@ -109,6 +109,10 @@ from .presenters import (
 from .registry import WorkflowRegistry
 from .reranker import CallableWorkflowReranker
 from .reranker import HeuristicWorkflowReranker
+from .reranker import LLMWorkflowReranker
+from .reranker import WorkflowLLMRerankCandidate
+from .reranker import WorkflowLLMRerankDecision
+from .reranker import build_default_workflow_reranker
 from .runtime import WorkflowRuntime
 from .semantic_index import WorkflowSemanticIndex
 from .semantic_index import WorkflowSemanticProfile
@@ -167,6 +171,7 @@ __all__ = [
     "HybridWorkflowMatcher",
     "CallableWorkflowReranker",
     "HeuristicWorkflowReranker",
+    "LLMWorkflowReranker",
     "AssistedSelectionContext",
     "adjust_required_fields_for_context",
     "build_missing_fields_prompt",
@@ -187,6 +192,7 @@ __all__ = [
     "DirectExecutionResult",
     "build_direct_execution_request",
     "build_handler_executor",
+    "build_default_workflow_reranker",
     "extract_numbered_fields_from_text",
     "evaluate_workflow_discovery",
     "AssistedSelectionCoordinator",
@@ -265,6 +271,8 @@ __all__ = [
     "WorkflowEvaluationCase",
     "WorkflowEvaluationItem",
     "WorkflowEvaluationReport",
+    "WorkflowLLMRerankCandidate",
+    "WorkflowLLMRerankDecision",
     "WorkflowDisplayOption",
     "WorkflowDiscoveryRequest",
     "WorkflowDiscoveryResult",

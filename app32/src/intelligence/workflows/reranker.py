@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import os
 import re
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .contracts import WorkflowDiscoveryRequest, WorkflowMatch
 from .matcher import WorkflowMatchReranker
@@ -13,6 +16,24 @@ RerankCallable = Callable[
     [WorkflowDiscoveryRequest, Sequence[WorkflowMatch], WorkflowRegistry],
     Optional[Sequence[WorkflowMatch]],
 ]
+
+LLMRerankInvokeCallable = Callable[
+    [WorkflowDiscoveryRequest, Sequence[WorkflowMatch], WorkflowRegistry],
+    Any,
+]
+
+
+class WorkflowLLMRerankCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_code: str
+    reason: str = ""
+
+
+class WorkflowLLMRerankDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ranked: list[WorkflowLLMRerankCandidate] = Field(default_factory=list)
 
 
 class CallableWorkflowReranker(WorkflowMatchReranker):
@@ -26,6 +47,184 @@ class CallableWorkflowReranker(WorkflowMatchReranker):
         registry: WorkflowRegistry,
     ) -> Optional[Sequence[WorkflowMatch]]:
         return self._rerank_callable(request, matches, registry)
+
+
+class LLMWorkflowReranker(WorkflowMatchReranker):
+    def __init__(
+        self,
+        *,
+        invoke_llm: Optional[LLMRerankInvokeCallable] = None,
+        max_candidates: int = 5,
+        score_step: int = 4,
+        model: Optional[str] = None,
+    ):
+        self._max_candidates = max(2, int(max_candidates or 5))
+        self._score_step = max(2, int(score_step or 4))
+        self._model = str(
+            model
+            or os.getenv("WORKFLOW_LLM_RERANKER_MODEL")
+            or "gpt-4o-mini"
+        ).strip()
+        self._invoke_llm = invoke_llm or self._build_langchain_invoker()
+
+    def rerank(
+        self,
+        request: WorkflowDiscoveryRequest,
+        matches: Sequence[WorkflowMatch],
+        registry: WorkflowRegistry,
+    ) -> Optional[Sequence[WorkflowMatch]]:
+        ordered_matches = list(matches or [])
+        if len(ordered_matches) <= 1:
+            return ordered_matches
+
+        ranked_subset = ordered_matches[: self._max_candidates]
+        try:
+            raw_decision = self._invoke_llm(request, ranked_subset, registry)
+            decision = self._normalize_decision(raw_decision)
+        except Exception:
+            return ordered_matches
+
+        if not decision.ranked:
+            return ordered_matches
+
+        by_code = {
+            match.workflow.code: match
+            for match in ranked_subset
+        }
+        ordered_codes: list[str] = []
+        reasons_by_code: Dict[str, str] = {}
+        for item in decision.ranked:
+            code = str(item.workflow_code or "").strip()
+            if not code or code not in by_code or code in ordered_codes:
+                continue
+            ordered_codes.append(code)
+            reasons_by_code[code] = str(item.reason or "").strip()
+
+        if not ordered_codes:
+            return ordered_matches
+
+        base_score = max(int(match.score or 0) for match in ranked_subset) + (self._score_step * len(ranked_subset))
+        reranked_subset: list[WorkflowMatch] = []
+        used_codes = set()
+        for index, code in enumerate(ordered_codes, start=1):
+            original = by_code.get(code)
+            if original is None:
+                continue
+            used_codes.add(code)
+            new_reasons = [*original.reasons, f"llm_reranker:rank={index}"]
+            llm_reason = reasons_by_code.get(code)
+            if llm_reason:
+                new_reasons.append(f"llm_reranker:reason={llm_reason[:120]}")
+            reranked_subset.append(
+                WorkflowMatch(
+                    workflow=original.workflow,
+                    score=base_score - ((index - 1) * self._score_step),
+                    reasons=new_reasons,
+                )
+            )
+
+        for fallback_match in ranked_subset:
+            if fallback_match.workflow.code in used_codes:
+                continue
+            rank_index = len(reranked_subset) + 1
+            reranked_subset.append(
+                WorkflowMatch(
+                    workflow=fallback_match.workflow,
+                    score=base_score - ((rank_index - 1) * self._score_step),
+                    reasons=[*fallback_match.reasons, f"llm_reranker:fallback_rank={rank_index}"],
+                )
+            )
+
+        remaining_matches = ordered_matches[self._max_candidates :]
+        return [*reranked_subset, *remaining_matches]
+
+    def _build_langchain_invoker(self) -> LLMRerankInvokeCallable:
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_openai import ChatOpenAI
+
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")
+        llm = ChatOpenAI(
+            model=self._model,
+            temperature=0,
+            api_key=api_key,
+        ).with_structured_output(WorkflowLLMRerankDecision)
+
+        def _invoke(
+            request: WorkflowDiscoveryRequest,
+            matches: Sequence[WorkflowMatch],
+            registry: WorkflowRegistry,
+        ) -> WorkflowLLMRerankDecision:
+            del registry
+            prompt = self._build_prompt(request=request, matches=matches)
+            return llm.invoke(
+                [
+                    SystemMessage(content=self._system_prompt()),
+                    HumanMessage(content=prompt),
+                ]
+            )
+
+        return _invoke
+
+    @staticmethod
+    def _normalize_decision(raw_decision: Any) -> WorkflowLLMRerankDecision:
+        if isinstance(raw_decision, WorkflowLLMRerankDecision):
+            return raw_decision
+        if isinstance(raw_decision, BaseModel):
+            return WorkflowLLMRerankDecision.model_validate(raw_decision.model_dump())
+        if isinstance(raw_decision, dict):
+            return WorkflowLLMRerankDecision.model_validate(raw_decision)
+        raise TypeError("Resposta do reranker LLM em formato inválido.")
+
+    @staticmethod
+    def _system_prompt() -> str:
+        return (
+            "Você é um reranker determinístico de workflows operacionais.\n"
+            "Receberá uma intenção do usuário e uma lista FECHADA de candidatos.\n"
+            "Sua tarefa é ordenar os workflows do MELHOR para o PIOR, sem inventar códigos.\n"
+            "Critérios principais:\n"
+            "1. aderência exata à ação pedida;\n"
+            "2. período temporal citado;\n"
+            "3. natureza leitura vs execução;\n"
+            "4. entidade operacional envolvida (projeto, tarefa, reunião, onboarding, resumo);\n"
+            "5. canal e contexto descritos.\n"
+            "Retorne apenas códigos que existam na lista recebida."
+        )
+
+    def _build_prompt(
+        self,
+        *,
+        request: WorkflowDiscoveryRequest,
+        matches: Sequence[WorkflowMatch],
+    ) -> str:
+        lines = [
+            f"INTENCAO: {request.text}",
+            f"CANAL: {request.channel}",
+            f"COMPANY_ID: {request.company_id if request.company_id is not None else 'none'}",
+            "",
+            "CANDIDATOS:",
+        ]
+        for match in matches:
+            workflow = match.workflow
+            required_fields = ", ".join(
+                f"{field.key}:{field.label}"
+                for field in (workflow.required_fields or [])
+            ) or "-"
+            keywords = ", ".join(workflow.keywords or []) or "-"
+            examples = ", ".join(workflow.intent_examples or []) or "-"
+            lines.extend(
+                [
+                    f"- code={workflow.code}",
+                    f"  title={workflow.title}",
+                    f"  action_key={workflow.action_key}",
+                    f"  score={match.score}",
+                    f"  description={workflow.description or '-'}",
+                    f"  keywords={keywords}",
+                    f"  intent_examples={examples}",
+                    f"  required_fields={required_fields}",
+                    f"  current_reasons={'; '.join(match.reasons or []) or '-'}",
+                ]
+            )
+        return "\n".join(lines)
 
 
 class HeuristicWorkflowReranker(WorkflowMatchReranker):
@@ -135,7 +334,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="meeting=schedule",
             )
 
-        if {"iniciar", "comecar", "comecar"} & tokens:
+        if {"iniciar", "comecar"} & tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="meeting.start",
@@ -180,7 +379,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="onboarding=status",
             )
 
-        if {"iniciar", "comecar", "comecar"} & tokens and "onboarding" in tokens:
+        if {"iniciar", "comecar"} & tokens and "onboarding" in tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="onboarding.start",
@@ -189,15 +388,13 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="onboarding=start",
             )
 
-        if {"cadastrar", "criar", "nova", "novo"} & tokens:
-            if action_key == "project_task.create":
-                score += 8
-                reasons.append("reranker:task=create")
+        if {"cadastrar", "criar", "nova", "novo"} & tokens and action_key == "project_task.create":
+            score += 8
+            reasons.append("reranker:task=create")
 
-        if {"finalizar", "concluir", "encerrar"} & tokens:
-            if action_key in {"project_task.complete", "process_instance.complete"}:
-                score += 8
-                reasons.append(f"reranker:complete={action_key}")
+        if {"finalizar", "concluir", "encerrar"} & tokens and action_key in {"project_task.complete", "process_instance.complete"}:
+            score += 8
+            reasons.append(f"reranker:complete={action_key}")
 
         return score, reasons
 
@@ -233,3 +430,13 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
         if "mes" in normalized_text:
             return "month"
         return None
+
+
+def build_default_workflow_reranker() -> WorkflowMatchReranker:
+    enabled = str(os.getenv("WORKFLOW_LLM_RERANKER_ENABLED") or "").strip().lower()
+    if enabled in {"1", "true", "yes", "on"}:
+        try:
+            return LLMWorkflowReranker()
+        except Exception:
+            return HeuristicWorkflowReranker()
+    return HeuristicWorkflowReranker()
