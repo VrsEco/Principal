@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app
+from flask import Blueprint, current_app, jsonify
 from models import db, Company, Project, User, Employee, Indicator, IndicatorGroup, IndicatorGoal, IndicatorData, Process, ProcessInstance, OKRGlobal, KeyResult
 from datetime import datetime, timedelta
 
@@ -164,6 +164,23 @@ def seed_demo():
     db.session.commit()
 
     return {"message": "Demo data seeded successfully!"}, 200
+
+@dev_bp.route('/ping/dependencies')
+def ping_dependencies():
+    from models.project import ProjectTaskDependency
+    from models import db
+    try:
+        count = ProjectTaskDependency.query.count()
+        return jsonify({
+            "status": "ok",
+            "message": "ProjectTaskDependency table is accessible",
+            "count": count
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @dev_bp.route('/trigger-proactive')
 def trigger_proactive():
