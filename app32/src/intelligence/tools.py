@@ -268,48 +268,23 @@ def escalate_technical_issue(error_description: str, context: str):
     """
     Escalona um erro técnico ou de sistema para o Time de Engenharia. 
     Use isto quando encontrar erros de código (ex: Jinja, Python, DB) que impedem sua operação.
-    O Time de Engenharia será notificado para criar uma solução.
+    Automaticamente cria uma tarefa de Intervenção para o Líder do Squad no projeto da Engenharia.
     """
-    from models.agent_action import AgentAction
-    from services.whatsapp_service import whatsapp_service
-    from flask import session
-    
-    
-    company_id = get_active_company_id()
-    user_id = get_active_user_id()
-    
     try:
-        # 1. Cria o registro da ação de auditoria/reparo
-        action = AgentAction(
-            type='technical_fix',
-            status='pending',
-            requesting_agent='work_agent_squad',
-            handling_agent='engineering_squad',
-            title='Correção Técnica Necessária',
-            description=f"Erro detectado: {error_description}\nContexto: {context}",
-            payload={"error": error_description, "context": context},
-            company_id=company_id,
-            user_id=user_id
-        )
-        db.session.add(action)
-        db.session.commit()
+        from datetime import datetime
         
-        # 2. Notifica o usuário via WhatsApp (Simulado ou Real)
-        # Buscamos o telefone do usuário se disponível, ou usamos um placeholder
-        user = get_active_user()
-        phone = getattr(user, 'phone', None) or "5511999999999" 
+        # Chama a nossa tool de intervenção da Squad internamente
+        result = squad_create_intervention.invoke({
+            "title": f"[BUG] Inconsistência Detectada Automagicamente",
+            "due_date": str(datetime.utcnow().date()),
+            "how": f"Contexto do erro e logs para análise investigativa.",
+            "notes": f"Descrição do Erro:\n{error_description}\n\nContexto da IA:\n{context}",
+            "assignee_name": "Agente Sapiens"
+        })
         
-        wa_message = (
-            f"🚨 *Gestão Versus: Alerta de Sistema*\n\n"
-            f"O Agente Sapiens detectou um erro técnico: _{error_description}_\n\n"
-            f"O Time de Engenharia já foi acionado e está preparando um reparo. "
-            f"Você receberá uma nova mensagem para aprovar a correção em breve."
-        )
-        whatsapp_service.send_message(phone, wa_message)
-        
-        return f"Escalonamento realizado com sucesso. Ticket #{action.id} criado. O usuário foi notificado via WhatsApp."
+        return f"Escalonamento realizado com sucesso. A tarefa foi criada no Kanban da Squad de Engenharia: {result}"
     except Exception as e:
-        return f"Erro ao processar escalonamento: {str(e)}"
+        return f"Erro ao processar escalonamento para a Squad: {str(e)}"
 
 @tool
 def create_process_area(name: str, description: str = None, code: str = None):
