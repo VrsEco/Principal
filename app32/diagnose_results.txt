@@ -1,0 +1,29 @@
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: users contact backfill completed (users=0, whatsapp=0, telegram=0).
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+Mismatched tasks (status=completed, stage!=completed): 2
+ID: 29, What: Resumo Reunião - 2025.11.29 - Reunião Semanal, Status: completed, Stage: inbox
+ID: 92, What: Resumo da Reunião - Reunião Carla e Azevedo - Faturamento e Puxada de Gás., Status: completed, Stage: inbox
+
+Tasks in 'todo' stage (invisible in Kanban): 8
+ID: 152, What: Finalizar Documentação IA, Project: 25
+ID: 153, What: Finalizar Documentação IA, Project: 25
+ID: 154, What: Finalizar Documentação IA, Project: 25
+ID: 167, What: [EXEMPLO] Relatório de Desempenho Mensal, Project: 25
+ID: 168, What: [EXEMPLO] Sprint Task 1, Project: 25
+ID: 169, What: [EXEMPLO] Sprint Task 2, Project: 25
+ID: 170, What: [EXEMPLO] Sprint Task 3, Project: 25
+ID: 171, What: [DIARIO] Enviar Relatório MCP, Project: 25
+
+Dependencies for project 2: 0

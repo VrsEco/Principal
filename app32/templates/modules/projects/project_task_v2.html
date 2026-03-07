@@ -229,7 +229,32 @@
             </div>
         </div>
 
-        <!-- 3. Notas da Atividade (Card) -->
+        <!-- 3. Dependências (Card) -->
+        <div class="surface-card mb-4">
+            <div class="card-header mb-4">
+                <h2 class="text-h3">🔗 Dependências (Predecessoras)</h2>
+                <p class="text-secondary">Atividades que devem ser concluídas antes desta.</p>
+            </div>
+            
+            <div id="dependencySection">
+                <div style="position: relative; margin-bottom: 1.5rem;">
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="depSearchInput" class="form-control" style="flex: 1;" 
+                            placeholder="Adicionar atividade como predecessora..."
+                            onfocus="showDepResults()" onkeyup="filterDepResults(this.value)">
+                    </div>
+                    <div id="depSearchResults" class="task-search-results no-scrollbar">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <div id="dependencyList" class="dependency-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Notas da Atividade (Card) -->
         {% if task.notes %}
         <div class="surface-card">
             <div class="card-header mb-4">
@@ -450,6 +475,53 @@
             font-size: 0.85rem;
         }
     }
+/* Dependency Styles */
+    .dependency-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .dependency-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        transition: var(--transition);
+    }
+    .dependency-item:hover {
+        border-color: var(--primary-light);
+    }
+    .dependency-item.completed {
+        border-left: 4px solid var(--success);
+    }
+    .dependency-item.pending {
+        border-left: 4px solid var(--warning);
+    }
+    .task-search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: var(--shadow-xl);
+        z-index: 1000;
+        max-height: 250px;
+        overflow-y: auto;
+        display: none;
+    }
+    .task-search-item {
+        padding: 0.75rem 1.25rem;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-light);
+    }
+    .task-search-item:hover {
+        background: var(--surface-secondary);
+    }
 </style>
 
 <script>
@@ -480,6 +552,8 @@
         renderDiaryLogs();
         await fetchWorkLogs();
         await loadEmployeesForSelect();
+        await loadTaskDependencies();
+        await fetchAllTasksForSearch();
 
         // Set default date for completion modal
         const actualEndDate = document.getElementById('actualEndDate');
@@ -487,6 +561,142 @@
             actualEndDate.value = today;
         }
     }
+
+    // ============================================================
+    // Dependencies
+    // ============================================================
+    let allProjectTasks = [];
+
+    async function fetchAllTasksForSearch() {
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks`);
+            if (res.ok) {
+                allProjectTasks = await res.json();
+            }
+        } catch (e) {
+            console.error('Erro ao carregar lista de tarefas:', e);
+        }
+    }
+
+    async function loadTaskDependencies() {
+        const listEl = document.getElementById('dependencyList');
+        if (!listEl) return;
+        
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/dependencies`);
+            const data = await res.json();
+            
+            if (!data.predecessors || data.predecessors.length === 0) {
+                listEl.innerHTML = '<div class="text-tertiary text-center p-3">Nenhum predecessor definido.</div>';
+            } else {
+                listEl.innerHTML = data.predecessors.map(dep => `
+                    <div class="dependency-item ${dep.status === 'completed' ? 'completed' : 'pending'}">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.95rem;">${dep.what}</div>
+                            <div style="font-size: 0.75rem; color: ${dep.status === 'completed' ? 'var(--success)' : 'var(--warning-dark)'};">
+                                ${dep.status === 'completed' ? '✅ Concluída' : '🔴 Pendente'}
+                            </div>
+                        </div>
+                        <button class="btn-icon-small text-danger" onclick="removeDependency(${dep.id})" title="Remover">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                `).join('');
+                
+                // Update header lock if blocked
+                if (data.is_blocked) {
+                    const statusHeader = document.querySelector('.header-content h1');
+                    if (statusHeader && !statusHeader.querySelector('.lock-icon')) {
+                        statusHeader.insertAdjacentHTML('afterbegin', `
+                            <span class="lock-icon" style="color: var(--danger); margin-right: 8px;" title="Esta atividade está bloqueada por predecessoras ignoradas.">🔒</span>
+                        `);
+                    }
+                } else {
+                    const lock = document.querySelector('.lock-icon');
+                    if (lock) lock.remove();
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function showDepResults() {
+        const resultsEl = document.getElementById('depSearchResults');
+        resultsEl.style.display = 'block';
+        filterDepResults(document.getElementById('depSearchInput').value);
+    }
+
+    function filterDepResults(query) {
+        const resultsEl = document.getElementById('depSearchResults');
+        const q = query.toLowerCase();
+        
+        const filtered = allProjectTasks.filter(t => 
+            t.id != TASK_ID && 
+            (t.what.toLowerCase().includes(q) || (t.code && t.code.toLowerCase().includes(q)))
+        ).slice(0, 10);
+        
+        if (filtered.length === 0) {
+            resultsEl.innerHTML = '<div class="task-search-item text-tertiary">Nenhuma atividade encontrada</div>';
+        } else {
+            resultsEl.innerHTML = filtered.map(t => `
+                <div class="task-search-item" onclick="addDependency(${t.id})">
+                    <span style="font-weight: 700; color: var(--text-tertiary);">${t.code || '#' + t.id}</span>
+                    <span style="margin-left: 8px;">${t.what}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    async function addDependency(predecessorId) {
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/dependencies`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ predecessor_task_id: predecessorId })
+            });
+            
+            if (res.ok) {
+                document.getElementById('depSearchInput').value = '';
+                document.getElementById('depSearchResults').style.display = 'none';
+                await loadTaskDependencies();
+                showToast('Dependência adicionada!', 'success');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Erro ao adicionar dependência.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão.');
+        }
+    }
+
+    async function removeDependency(depId) {
+        if (!confirm('Deseja remover esta dependência?')) return;
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/dependencies/${depId}`, {
+                method: 'DELETE'
+            });
+            
+            if (res.ok) {
+                await loadTaskDependencies();
+                showToast('Dependência removida.', 'info');
+            } else {
+                alert('Erro ao remover dependência.');
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    // Close search results when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        const searchContainer = document.querySelector('#dependencySection');
+        if (searchContainer && !searchContainer.contains(e.target)) {
+            const resultsEl = document.getElementById('depSearchResults');
+            if (resultsEl) resultsEl.style.display = 'none';
+        }
+    });
 
     // ============================================================
     // Employees

@@ -1,0 +1,3 @@
+Total tasks for project 2: 2
+ID: 8, What: Fazer POPs das atividades dos postos e do financeiro, Stage: executing, Status: planned
+ID: 9, What: Instalar sistema de ponto na BR 324, Stage: executing, Status: planned

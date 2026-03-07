@@ -1,0 +1,179 @@
+Total tasks: 176
+Project: 25, ID: 151, What: Revisar Metas do Trimestre, Stage: completed, Status: completed
+Project: 26, ID: 178, What: Fase 5 - Canais WhatsApp e E-mail, Stage: completed, Status: completed
+Project: 26, ID: 179, What: Fase 4 - Assistente de Funcionamento e Onboarding, Stage: completed, Status: completed
+Project: 26, ID: 180, What: Fase 6 - Planejamento e Arquitetura Empresarial, Stage: completed, Status: completed
+Project: 11, ID: 2, What: Endreço, Stage: completed, Status: completed
+Project: 12, ID: 3, What: Visita Life Prestige, Stage: inbox, Status: planned
+Project: 10, ID: 5, What: Senhas e Informações Fiscais (Nivea), Stage: completed, Status: completed
+Project: 12, ID: 6, What: Novas Fotos Life Prestige, Stage: inbox, Status: planned
+Project: 25, ID: 152, What: Finalizar Documentação IA, Stage: todo, Status: planned
+Project: 15, ID: 112, What: Controle de Jornada - Sistema para fazer controle de jornada acoplado ao sistema de Marcel, Stage: completed, Status: completed
+Project: 11, ID: 27, What: Fazer visita no imóvel do Tribeca que irá para leilão, Stage: executing, Status: planned
+Project: 25, ID: 153, What: Finalizar Documentação IA, Stage: todo, Status: planned
+Project: 4, ID: 144, What: Operação -> Consumo estimado de insumos dos clientes, Stage: completed, Status: completed
+Project: 31, ID: 191, What: Fase 2 - Extracao do nucleo do menu_engine, Stage: inbox, Status: planned
+Project: 31, ID: 192, What: Fase 3 - Schemas e coleta deterministica de parametros, Stage: inbox, Status: planned
+Project: 31, ID: 193, What: Fase 4 - Descoberta hibrida de workflows, Stage: inbox, Status: planned
+Project: 31, ID: 194, What: Fase 5 - Handlers piloto de Summary, Task e Meeting, Stage: inbox, Status: planned
+Project: 31, ID: 190, What: Fase 1 - Modelagem do Workflow Engine V2/V3, Stage: inbox, Status: planned
+Project: 22, ID: 53, What: Plano de Cargos e Salários, Stage: completed, Status: completed
+Project: 10, ID: 57, What: Alteração VM, Stage: completed, Status: completed
+Project: 25, ID: 154, What: Finalizar Documentação IA, Stage: todo, Status: planned
+Project: 31, ID: 195, What: Fase 6 - Seguranca, observabilidade e HITL, Stage: inbox, Status: planned
+Project: 31, ID: 196, What: Fase 7 - QA, rollout controlado e documentacao, Stage: inbox, Status: planned
+Project: 31, ID: 189, What: Fase 0 - Kickoff, escopo e backlog executivo, Stage: executing, Status: in_progress
+Project: 16, ID: 131, What: Validar preço de venda do marceneiro para o cliente final e da indústria para o marceneiro., Stage: executing, Status: planned
+Project: 3, ID: 74, What: Teste Fabiano 01, Stage: completed, Status: completed
+Project: 31, ID: 197, What: Sistema de Rastreio de Intervenções (Integração Sapiens) - Fase 01, Stage: inbox, Status: planned
+Project: 21, ID: 81, What: Erro contagem de estoque, Stage: completed, Status: completed
+Project: 31, ID: 198, What: [BUG] Inconsistência Detectada Automagicamente, Stage: inbox, Status: planned
+Project: 16, ID: 118, What: Verificar sobre pagamento das máquinas na China, Stage: executing, Status: planned
+Project: 15, ID: 111, What: Trilha Estoque / Insumos -> Entrega Única, Stage: waiting, Status: planned
+Project: 16, ID: 132, What: Validar condições de compra / locação do imóvel, Stage: executing, Status: planned
+Project: 16, ID: 133, What: Validar o tamanho do mercado de Marceneiros, Stage: executing, Status: planned
+Project: 16, ID: 134, What: Verificar aportes pelos 50% da empresa, Stage: executing, Status: planned
+Project: 16, ID: 136, What: Escolher nome para a empresa, Stage: executing, Status: planned
+Project: 16, ID: 135, What: Concorrentes, Stage: completed, Status: completed
+Project: 24, ID: 1, What: Analisar outro sistema que permita 02 cnpjs, Stage: executing, Status: planned
+Project: 24, ID: 10, What: Emissão de Notas Pelo Site da Prefeitura, Stage: completed, Status: completed
+Project: 24, ID: 38, What: Configurar Itau (conta antiga e nova) com a senha de Josi / Erika, Stage: completed, Status: completed
+Project: 24, ID: 63, What: Configurar o Conta Azul para conciliar a nova conta corrente, Stage: completed, Status: completed
+Project: 10, ID: 4, What: Pendência Gas Evolution - Simões Filho, Stage: pending, Status: planned
+Project: 23, ID: 7, What: Reorganização da Loja, Stage: executing, Status: planned
+Project: 2, ID: 8, What: Fazer POPs das atividades dos postos e do financeiro, Stage: executing, Status: planned
+Project: 2, ID: 9, What: Instalar sistema de ponto na BR 324, Stage: executing, Status: planned
+Project: 11, ID: 11, What: Fazer alteração contratual, Stage: executing, Status: planned
+Project: 11, ID: 12, What: Ver outros leilões de imóveis, Stage: inbox, Status: planned
+Project: 11, ID: 13, What: Buscar novos imóveis para o mês de Janeiro, Stage: inbox, Status: planned
+Project: 5, ID: 14, What: Resumo Reunião, Stage: completed, Status: completed
+Project: 5, ID: 15, What: Endereço, Stage: completed, Status: completed
+Project: 19, ID: 16, What: Rever demonstrativos financeiros, Stage: completed, Status: completed
+Project: 5, ID: 17, What: Fazer alteração contratual, Stage: inbox, Status: planned
+Project: 5, ID: 18, What: Vender Apartamento do Itaigara, Stage: inbox, Status: planned
+Project: 5, ID: 19, What: Fazer alteração contratual, Stage: inbox, Status: planned
+Project: 11, ID: 20, What: Custo tributário para a atividade de compra e venda de imóveis, Stage: completed, Status: completed
+Project: 11, ID: 21, What: Estudo de transformação da Gandu Motor em uma Patrimonial Unipessoal, Stage: completed, Status: completed
+Project: 11, ID: 22, What: Analise do Mercado de Madeira, Stage: pending, Status: planned
+Project: 11, ID: 23, What: Integralização de Capital, Stage: waiting, Status: planned
+Project: 11, ID: 24, What: Análise de outros produtos que podem ser agregados às madeireira para venda online, Stage: pending, Status: planned
+Project: 3, ID: 49, What: Implantar sismtema nos postos que faltam, Stage: completed, Status: completed
+Project: 11, ID: 25, What: Análise de outros produtos que podem ser agregados às madeireira para venda presncial, Stage: pending, Status: planned
+Project: 11, ID: 26, What: Avaliar riscos jurídicos e processual do leilão., Stage: inbox, Status: planned
+Project: 25, ID: 167, What: [EXEMPLO] Relatório de Desempenho Mensal, Stage: todo, Status: planned
+Project: 5, ID: 28, What: Vender Apartamento do Itaigara, Stage: inbox, Status: planned
+Project: 5, ID: 29, What: Resumo Reunião - 2025.11.29 - Reunião Semanal, Stage: inbox, Status: completed
+Project: 10, ID: 30, What: Certificado Digital (Nivea), Stage: waiting, Status: planned
+Project: 10, ID: 31, What: Débitos VM, Stage: waiting, Status: planned
+Project: 14, ID: 32, What: Verificar questão do pagamento do condomínio atrasado pela caixa. Existe uma informação de que a partir de 20 meses a caixa paga., Stage: completed, Status: completed
+Project: 4, ID: 33, What: Comercial -> Business Review clientes de Recife e Região, Stage: waiting, Status: planned
+Project: 9, ID: 34, What: Ver sistema para emissão de nota fiscal de venda pela empresa nova (Save)., Stage: executing, Status: planned
+Project: 5, ID: 35, What: Endereço, Stage: completed, Status: completed
+Project: 10, ID: 36, What: Alteração Constituinte, Stage: pending, Status: planned
+Project: 23, ID: 37, What: SAC - Trello, Stage: executing, Status: planned
+Project: 20, ID: 39, What: Reunião com a equipe de Headers, Stage: completed, Status: completed
+Project: 17, ID: 40, What: Lucro Real Gas Evolution, Stage: completed, Status: completed
+Project: 22, ID: 41, What: Aprovar Mapa de Processos com Ricardo, Stage: completed, Status: completed
+Project: 20, ID: 42, What: Visitar todas as lojas para ver o funcionamento, problemas e acertos de perto, Stage: waiting, Status: planned
+Project: 3, ID: 43, What: Sistema rodando em São Tomé, Stage: completed, Status: completed
+Project: 10, ID: 44, What: Autorização ANP - RT (Cajazeiras), Stage: waiting, Status: planned
+Project: 10, ID: 45, What: Pendência IRPF Azevedo e CIDA, Stage: waiting, Status: planned
+Project: 23, ID: 46, What: Identidade Organizacional, Stage: waiting, Status: planned
+Project: 17, ID: 47, What: Planejamento Tributário - Lucro Real, Stage: completed, Status: completed
+Project: 23, ID: 48, What: SAD - Sistema Ominichanell, Stage: executing, Status: planned
+Project: 3, ID: 50, What: Divisão de Postos - Conferencia de Caixa, Stage: completed, Status: completed
+Project: 17, ID: 109, What: Criar Rotina de Obrigações Lucro Real (Gás Evolution), Stage: executing, Status: planned
+Project: 10, ID: 51, What: Pendências Contrato, Stage: waiting, Status: planned
+Project: 10, ID: 52, What: Pendência Fiscal do Gás, Stage: waiting, Status: planned
+Project: 13, ID: 54, What: Saneamento de Cadastros de Produtos do Conta Azul, Stage: completed, Status: completed
+Project: 13, ID: 55, What: Descrever os processos e atividades da operação (RTS), Stage: executing, Status: planned
+Project: 3, ID: 56, What: Contratar um auxiliar de contabilidade para ficar no lugar de Sandro, e ele ficará com a tesouraria (inclusive receber dinheiro)., Stage: completed, Status: completed
+Project: 3, ID: 59, What: Teste Fabiano 02, Stage: completed, Status: completed
+Project: 10, ID: 60, What: Solicitar Certificado Digital VM, Stage: completed, Status: completed
+Project: 10, ID: 61, What: Fazer exclusão do Simples Nacional da Evolution Gás, Stage: completed, Status: completed
+Project: 10, ID: 62, What: Lucro Real Gas Evolution, Stage: executing, Status: planned
+Project: 10, ID: 64, What: AVCB, Stage: executing, Status: planned
+Project: 4, ID: 103, What: Operação -> Fazer TTM dos Clientes para ver Capacidade Operacional, Stage: executing, Status: planned
+Project: 9, ID: 104, What: Documentação fiscal e contábil para escrituração contabilidade, Stage: completed, Status: completed
+Project: 22, ID: 105, What: Potencial de Faturamento de Cada Loja, Stage: executing, Status: planned
+Project: 21, ID: 106, What: Erro contagem de estoque, Stage: inbox, Status: planned
+Project: 21, ID: 107, What: Bruno irá enviar a foto da planilha no mesmo dia, Stage: inbox, Status: planned
+Project: 17, ID: 110, What: MEIs e PJs para emitir notas fiscais para a Gas Evolution, Stage: executing, Status: planned
+Project: 10, ID: 113, What: Tirar Pesquisa de situação fiscal (e-cac - Receita Federal) de todas as empresas do grupo (conforme planilha de controle), Stage: pending, Status: planned
+Project: 25, ID: 168, What: [EXEMPLO] Sprint Task 1, Stage: todo, Status: planned
+Project: 25, ID: 169, What: [EXEMPLO] Sprint Task 2, Stage: todo, Status: planned
+Project: 10, ID: 65, What: Alvará de todos os Postos, Stage: executing, Status: planned
+Project: 15, ID: 66, What: Reunião com os RTS., Stage: executing, Status: planned
+Project: 3, ID: 68, What: Problemas relatados pelo Financeiro - A resolver com Azevedo, Stage: completed, Status: completed
+Project: 3, ID: 70, What: Correção de Estoque do Sistema Vender Gás (saídas), Stage: completed, Status: completed
+Project: 3, ID: 72, What: Diferença de vendas entre dados informados por Carla e pelo Estoque - BR, Stage: completed, Status: completed
+Project: 3, ID: 73, What: Melhorar o desempenho do contas a pagar em relação aos pagamentos não passados por Azevedo para o financeiro, Stage: executing, Status: planned
+Project: 4, ID: 75, What: Comercial -> Business Review clientes de Aracajú (Maceió ficará para depois), Stage: executing, Status: planned
+Project: 20, ID: 76, What: Fazer um compilado de procedimentos para separar o que poderá ser utilizado, Stage: completed, Status: completed
+Project: 3, ID: 77, What: Avançar com Retirada dos Cadernos, Stage: completed, Status: completed
+Project: 20, ID: 78, What: Montar mapa de processos com a equipa para fazer a empresa funcionar, Stage: completed, Status: completed
+Project: 21, ID: 108, What: Bruno irá lançar no próprio sistema a movimentação de estoque, Stage: inbox, Status: planned
+Project: 25, ID: 170, What: [EXEMPLO] Sprint Task 3, Stage: todo, Status: planned
+Project: 10, ID: 69, What: Meta de ter estoque sem diferenças no mês 12/2025, Stage: inbox, Status: planned
+Project: 21, ID: 79, What: ðŸ“‹ Resumo da Reunião - Reunião de alinhamento de processos, Stage: completed, Status: completed
+Project: 20, ID: 80, What: Potencial de Faturamento de Cada Loja, Stage: inbox, Status: planned
+Project: 4, ID: 82, What: Comercial -> Business Review clientes de Fortaleza, Stage: waiting, Status: planned
+Project: 10, ID: 83, What: Pendências Certificado, Stage: pending, Status: planned
+Project: 9, ID: 84, What: Autorização - Molibdovanadato Reagente, Stage: completed, Status: completed
+Project: 4, ID: 85, What: Comercial -> Business Review clientes de Salvador, Stage: waiting, Status: planned
+Project: 19, ID: 86, What: Abrir lançamentos de reembolso de Lucivânia e Vicente e enviar para Manoel, Stage: executing, Status: planned
+Project: 20, ID: 87, What: Criar cenários financeiros das 04 lojas, Stage: inbox, Status: planned
+Project: 19, ID: 88, What: Interagir com o Vicente sobre a previsão do combustível dos RTS, Stage: inbox, Status: planned
+Project: 19, ID: 89, What: Criar demonstrativo para Manoel referente aos gastos e fazer curva de evolução, Stage: inbox, Status: planned
+Project: 17, ID: 90, What: Alterar Cartões de Crédito da conta da Gás Evolution para outra conta, Stage: executing, Status: planned
+Project: 10, ID: 91, What: Lembrete TFF, Stage: completed, Status: completed
+Project: 18, ID: 92, What: Resumo da Reunião - Reunião Carla e Azevedo - Faturamento e Puxada de Gás., Stage: inbox, Status: completed
+Project: 10, ID: 93, What: Certificado Digital VM (Ou Procuração), Stage: executing, Status: planned
+Project: 4, ID: 94, What: Comerciais -> Visitas aos clientes atuais, Stage: executing, Status: planned
+Project: 14, ID: 95, What: Fazer Cadastro da Gandu no Leilão da Caixa, Stage: executing, Status: planned
+Project: 4, ID: 96, What: Comercial -> Business Review e agendamento (Aracajú e Maceió), Stage: completed, Status: completed
+Project: 4, ID: 97, What: Piramide de Vendas - Todas as regionais, Stage: waiting, Status: planned
+Project: 8, ID: 98, What: Arquitetura / Mapa de Processos, Stage: waiting, Status: planned
+Project: 8, ID: 99, What: Resumo da Reunião - Reunião de Início de Contrato, Stage: completed, Status: completed
+Project: 8, ID: 100, What: Validação do Planejamento Inicial, Stage: waiting, Status: planned
+Project: 14, ID: 101, What: Fazer visita no imóvel do Tribeca que irá para leilão, Stage: completed, Status: completed
+Project: 4, ID: 102, What: Custos Por Cliente e Por RTS - Planilha / Sistemas, Stage: waiting, Status: planned
+Project: 25, ID: 171, What: [DIARIO] Enviar Relatório MCP, Stage: todo, Status: planned
+Project: 16, ID: 172, What: REPRO BUG TASK, Stage: inbox, Status: planned
+Project: 10, ID: 114, What: IPTU que precisam ser alterados para alvará, Stage: waiting, Status: planned
+Project: 17, ID: 115, What: Ajustar Sistema para emissão de Notas Fiscais, Stage: executing, Status: planned
+Project: 15, ID: 116, What: Trilha Dia a Dia -> Etapa 01, Stage: executing, Status: planned
+Project: 15, ID: 117, What: Trilha Dia a Dia -> Etapa 02, Stage: executing, Status: planned
+Project: 17, ID: 119, What: Fazer balanço de Abertura Evolution Gás, Stage: executing, Status: planned
+Project: 17, ID: 120, What: Alterar entrega nas NF e do Estoque de Carla para Quesia e depois para Carla, Stage: completed, Status: completed
+Project: 12, ID: 121, What: Live Privilege - Novo anuncio, Stage: inbox, Status: planned
+Project: 12, ID: 122, What: Live Prestige - Recuperar Diferença do ITIV, Stage: inbox, Status: planned
+Project: 15, ID: 123, What: Trilha Dia a Dia -> Etapa 03, Stage: waiting, Status: planned
+Project: 17, ID: 124, What: Colocar Dominio para funcionar para Quesia lançar questões fiscais, Stage: executing, Status: planned
+Project: 12, ID: 125, What: Life Prestige, Stage: inbox, Status: planned
+Project: 4, ID: 126, What: Comercial -> Cronograma de Business Review clientes de Salvador, Stage: pending, Status: planned
+Project: 15, ID: 127, What: Trilha Extras -> Etapa Única, Stage: executing, Status: planned
+Project: 8, ID: 128, What: Identidade Organizacional, Stage: waiting, Status: planned
+Project: 20, ID: 129, What: Avaliar planos de remuneração enviados por Adenize e Magno, Stage: completed, Status: completed
+Project: 17, ID: 130, What: Buscar informações junto ao Banco Itau sobre a migração dos contratos das maquinas de cartão para outro CNPJ, Stage: executing, Status: planned
+Project: 4, ID: 137, What: Verificar Faturamento Ideal da Empresa Nova e Atual, Stage: completed, Status: completed
+Project: 21, ID: 138, What: Bruno irá enviar a foto da planilha no mesmo dia, Stage: inbox, Status: planned
+Project: 21, ID: 139, What: Bruno irá lançar no próprio sistema a movimentação de estoque, Stage: inbox, Status: planned
+Project: 21, ID: 140, What: Consertar Estoques Postos de Sandro, Stage: executing, Status: planned
+Project: 4, ID: 141, What: Propostas Paralela e Bela Vista, Stage: pending, Status: planned
+Project: 22, ID: 142, What: Revisar as Rúbricas de Gastos para Orçamento, Stage: completed, Status: completed
+Project: 4, ID: 143, What: Operação -> Data Shett dos Clientes, Stage: executing, Status: planned
+Project: 16, ID: 173, What: REPRO BUG TASK, Stage: inbox, Status: planned
+Project: 4, ID: 145, What: 📋 Resumo da Reunião - 2025.11.04 - Reunião Gerencial Semanal, Stage: completed, Status: completed
+Project: 22, ID: 146, What: Visitar todas as lojas para ver o funcionamento, problemas e acertos de perto, Stage: waiting, Status: planned
+Project: 23, ID: 147, What: Arquitetura / Mapa de Processos, Stage: executing, Status: planned
+Project: 8, ID: 148, What: Reunião e entrevistas com colaboradores, Stage: waiting, Status: planned
+Project: 23, ID: 149, What: Reunião e entrevistas com colaboradores, Stage: completed, Status: completed
+Project: 23, ID: 150, What: Validação do Planejamento Inicial, Stage: waiting, Status: planned
+Project: 26, ID: 177, What: Fase 3 - Assistente de Reunioes em Producao, Stage: completed, Status: completed
+Project: 26, ID: 175, What: Fase 1 - Motor de Menus em Banco, Stage: completed, Status: completed
+Project: 10, ID: 71, What: Resolver questão do fiado do Cabula, Stage: inbox, Status: planned
+Project: 26, ID: 176, What: Fase 2 - Assistente de Afazeres em Producao, Stage: completed, Status: completed
+Project: 26, ID: 174, What: Fase 0 - Estabilizacao do Nucleo, Stage: completed, Status: completed
+
+States distribution: {'completed': 58, 'inbox': 36, 'todo': 8, 'executing': 42, 'waiting': 23, 'pending': 9}

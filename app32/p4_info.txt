@@ -1,0 +1,16 @@
+Project 4 Name: Reunião Semanal, Company: 1
+  Task ID: 144, What: Operação -> Consumo estimado de insumos dos clientes
+  Task ID: 33, What: Comercial -> Business Review clientes de Recife e Região
+  Task ID: 103, What: Operação -> Fazer TTM dos Clientes para ver Capacidade Operacional
+  Task ID: 75, What: Comercial -> Business Review clientes de Aracajú (Maceió ficará para depois)
+  Task ID: 82, What: Comercial -> Business Review clientes de Fortaleza
+  Task ID: 85, What: Comercial -> Business Review clientes de Salvador
+  Task ID: 94, What: Comerciais -> Visitas aos clientes atuais
+  Task ID: 96, What: Comercial -> Business Review e agendamento (Aracajú e Maceió)
+  Task ID: 97, What: Piramide de Vendas - Todas as regionais
+  Task ID: 102, What: Custos Por Cliente e Por RTS - Planilha / Sistemas
+  Task ID: 126, What: Comercial -> Cronograma de Business Review clientes de Salvador
+  Task ID: 137, What: Verificar Faturamento Ideal da Empresa Nova e Atual
+  Task ID: 141, What: Propostas Paralela e Bela Vista
+  Task ID: 143, What: Operação -> Data Shett dos Clientes
+  Task ID: 145, What: 📋 Resumo da Reunião - 2025.11.04 - Reunião Gerencial Semanal

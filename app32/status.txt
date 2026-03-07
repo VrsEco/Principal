@@ -1,0 +1,33 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	deleted:    patch_tools.py
+	modified:   src/intelligence/tools.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	../.antigravityignore
+	scripts/check_users_active.py
+	status.txt
+	../app32_env.txt
+	../app32_env_fixed.txt
+	../commit_files.txt
+	../error_trace.txt
+	../error_trace2.txt
+	../error_trace3.txt
+	../git_error.txt
+	../github_actions_deploy_key.txt
+	../github_actions_deploy_key.txt.bak_utf16
+	../github_actions_deploy_key_fixed.txt
+	../passenger_wsgi.py
+	../pip_list_remote.txt
+	../read_log.py
+	../test_modules.py
+	../tmp_uwsgi_server.ini
+	../uwsgi.ini
+	../uwsgi_fixed.ini
+
+no changes added to commit (use "git add" and/or "git commit -a")

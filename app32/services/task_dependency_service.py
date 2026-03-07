@@ -142,8 +142,8 @@ class TaskDependencyService:
         # Verificamos se o predecessor_task_id é alcançável partindo do successor_task_id
         # (ou seja, se successor já é, direta ou indiretamente, predecessora de predecessor)
         if TaskDependencyService._has_cycle_dfs(
-            start_id=predecessor_task_id,
-            target_id=successor_task_id,
+            start_id=successor_task_id,
+            target_id=predecessor_task_id,
             project_id=project_id,
         ):
             return None, (

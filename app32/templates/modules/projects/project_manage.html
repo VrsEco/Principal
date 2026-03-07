@@ -1870,8 +1870,8 @@
                 `).join('');
             }
         } catch (error) {
-            console.error(error);
-            listEl.innerHTML = '<p class="text-danger" style="font-size: 0.8rem;">Erro ao carregar dependências.</p>';
+            console.error('Error loading dependencies:', error);
+            listEl.innerHTML = '<p class="text-danger" style="font-size: 0.8rem;">Erro ao carregar dependências. Verifique sua conexão.</p>';
         }
     }
 
@@ -1905,24 +1905,31 @@
 
     async function addDependency(taskId, predecessorId) {
         try {
-            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/dependencies`, {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}/dependencies`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ predecessor_task_id: predecessorId })
             });
             
-            if (res.ok) {
+            if (response.ok) {
                 document.getElementById('depSearchInput').value = '';
                 document.getElementById('depSearchResults').style.display = 'none';
                 loadTaskDependencies(taskId);
                 loadTasks(); // To update locks on board
             } else {
-                const data = await res.json();
-                alert(data.error || 'Erro ao adicionar dependência.');
+                let errorMsg = 'Erro ao adicionar dependência.';
+                try {
+                    const data = await response.json();
+                    errorMsg = data.error || errorMsg;
+                } catch (e) {
+                    console.error('Non-JSON error:', response.status, response.statusText);
+                    errorMsg = `Erro do servidor (${response.status}): ${response.statusText}`;
+                }
+                alert(errorMsg);
             }
         } catch (error) {
-            console.error(error);
-            alert('Erro de conexão.');
+            console.error('Fetch error:', error);
+            alert('Erro de conexão. Verifique se o servidor está ativo.');
         }
     }
 
