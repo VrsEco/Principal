@@ -199,7 +199,8 @@ def create_app(config_name=None):
         from flask_login import current_user
         import os
         from datetime import datetime
-        log_path = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/request_debug.log'
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        log_path = os.path.join(base_dir, 'request_debug.log')
         
         # Public endpoints that don't require authentication
         public_endpoints = ['auth.login', 'static', 'dev.seed_demo', 'dev.debug_routes', 'telegram.telegram_webhook']
