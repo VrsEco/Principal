@@ -255,6 +255,48 @@ def list_workflow_gaps():
     })
 
 
+@agents_bp.route('/api/agents/workflow-gaps/link', methods=['GET'])
+@login_required
+def get_workflow_gap_link():
+    from flask import session
+    from services.workflow_gap_service import find_workflow_gap_by_task, serialize_workflow_gap_candidate
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para consultar vínculo operacional de workflow gap."}), 403
+
+    active_company_id = session.get('active_company_id')
+    task_id_raw = (request.args.get('task_id') or '').strip()
+    task_code = (request.args.get('task_code') or '').strip()
+
+    task_id = None
+    if task_id_raw:
+        if not task_id_raw.isdigit():
+            return jsonify({"success": False, "error": "Parâmetro task_id inválido."}), 400
+        task_id = int(task_id_raw)
+
+    if not task_id and not task_code:
+        return jsonify({"success": False, "error": "Informe task_id ou task_code para localizar o vínculo."}), 400
+
+    gap = find_workflow_gap_by_task(task_id=task_id, task_code=task_code)
+    if gap is None:
+        return jsonify({
+            "success": True,
+            "found": False,
+            "active_company_id": active_company_id,
+            "workflow_gap": None,
+        })
+
+    if active_company_id and getattr(gap, 'company_id', None) not in {None, active_company_id}:
+        return jsonify({"success": False, "error": "Workflow gap fora do contexto da empresa ativa."}), 403
+
+    return jsonify({
+        "success": True,
+        "found": True,
+        "active_company_id": active_company_id,
+        "workflow_gap": serialize_workflow_gap_candidate(gap),
+    })
+
+
 @agents_bp.route('/api/agents/actions/workflow-approvals', methods=['GET'])
 @login_required
 def list_workflow_approvals():

@@ -6,6 +6,8 @@ import re
 from typing import Any, Dict, Optional
 
 from models import db
+from datetime import datetime
+
 from models.project import ProjectTask
 from models.workflow_gap import WorkflowGapCandidate
 from services.project_task_service import ProjectTaskService
@@ -122,6 +124,43 @@ def _build_gap_task_notes(
     return "\n\n".join(parts)
 
 
+
+
+def _append_task_note(existing_notes: Optional[str], line: str) -> str:
+    base = str(existing_notes or "").strip()
+    line = str(line or "").strip()
+    if not line:
+        return base
+    if not base:
+        return line
+    if line in base:
+        return base
+    return f"{base}\n\n{line}"
+
+
+def _attach_gap_metadata_to_task(*, task: ProjectTask, gap: WorkflowGapCandidate) -> None:
+    if task is None:
+        return
+
+    notes_line = f"Origem do radar de gaps: GAP #{gap.id} | canal={gap.channel} | thread={gap.thread_id or 'N/A'}"
+    task.notes = _append_task_note(task.notes, notes_line)
+
+    logs = list(task.logs or [])
+    logs.append(
+        {
+            "date": datetime.utcnow().isoformat(),
+            "author": "workflow_gap_service",
+            "type": "workflow_gap_created",
+            "gap_id": gap.id,
+            "channel": gap.channel,
+            "thread_id": gap.thread_id,
+            "user_id": gap.user_id,
+            "request": gap.user_request_text,
+            "matched_workflow_codes": list(gap.matched_workflow_codes or []),
+        }
+    )
+    task.logs = logs
+
 class WorkflowGapService:
     @staticmethod
     def create_gap_candidate(
@@ -172,6 +211,7 @@ class WorkflowGapService:
                 response_text=response_text,
             )
             if task is not None:
+                _attach_gap_metadata_to_task(task=task, gap=gap)
                 gap.app_project_id = task.project_id
                 gap.app_task_id = task.id
                 gap.app_task_code = task.code
@@ -255,6 +295,18 @@ def serialize_workflow_gap_candidate(candidate: Any) -> Dict[str, Any]:
         "created_at": getattr(candidate, "created_at", None).isoformat() if getattr(candidate, "created_at", None) else None,
         "updated_at": getattr(candidate, "updated_at", None).isoformat() if getattr(candidate, "updated_at", None) else None,
     }
+
+
+
+def find_workflow_gap_by_task(*, task_id: Optional[int] = None, task_code: Optional[str] = None) -> Optional[WorkflowGapCandidate]:
+    query = WorkflowGapCandidate.query
+    if task_id:
+        return query.filter_by(app_task_id=int(task_id)).order_by(WorkflowGapCandidate.created_at.desc()).first()
+
+    normalized_code = str(task_code or "").strip()
+    if normalized_code:
+        return query.filter_by(app_task_code=normalized_code).order_by(WorkflowGapCandidate.created_at.desc()).first()
+    return None
 
 def capture_workflow_gap(**kwargs: Any) -> Optional[WorkflowGapCandidate]:
     return WorkflowGapService.create_gap_candidate(**kwargs)

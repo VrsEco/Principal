@@ -178,3 +178,52 @@ def test_list_workflow_gaps_validates_limit_and_user(monkeypatch):
     assert status_code == 400
     assert body['success'] is False
     assert 'user_id inválido' in body['error']
+
+
+
+def test_get_workflow_gap_link_returns_gap_for_task(monkeypatch):
+    app = _build_app()
+    gap = {
+        'id': 901,
+        'channel': 'whatsapp',
+        'app_card': {'task_id': 204, 'task_code': 'AA.J.31.204'},
+    }
+
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+
+    import services.workflow_gap_service as gap_service_module
+
+    monkeypatch.setattr(gap_service_module, 'find_workflow_gap_by_task', lambda **kwargs: SimpleNamespace(company_id=9))
+    monkeypatch.setattr(gap_service_module, 'serialize_workflow_gap_candidate', lambda candidate: gap)
+
+    with app.test_request_context('/api/agents/workflow-gaps/link?task_id=204', method='GET'):
+        session['active_company_id'] = 9
+        response = agents_route.get_workflow_gap_link.__wrapped__()
+
+    body = response.get_json()
+    assert body['success'] is True
+    assert body['found'] is True
+    assert body['workflow_gap']['app_card']['task_code'] == 'AA.J.31.204'
+
+
+def test_get_workflow_gap_link_validates_and_blocks(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=8, name='Colaborador', role='user'))
+
+    with app.test_request_context('/api/agents/workflow-gaps/link?task_id=204', method='GET'):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.get_workflow_gap_link.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 403
+    assert body['success'] is False
+
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+
+    with app.test_request_context('/api/agents/workflow-gaps/link', method='GET'):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.get_workflow_gap_link.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 400
+    assert 'Informe task_id ou task_code' in body['error']

@@ -45,7 +45,7 @@ def test_create_gap_candidate_persists_and_links_project_card(monkeypatch):
     fake_db = SimpleNamespace(session=FakeSession())
     monkeypatch.setattr(gap_service, "db", fake_db)
 
-    fake_task = SimpleNamespace(id=204, project_id=31, code="AA.J.31.204")
+    fake_task = SimpleNamespace(id=204, project_id=31, code="AA.J.31.204", notes="", logs=[])
 
     def fake_create_project_task(**kwargs):
         events.append(("project_task", kwargs))
@@ -73,9 +73,40 @@ def test_create_gap_candidate_persists_and_links_project_card(monkeypatch):
     assert gap.app_task_id == 204
     assert gap.app_task_code == "AA.J.31.204"
     assert gap.matched_workflow_codes == ["3.1"]
+    assert "Origem do radar de gaps" in fake_task.notes
+    assert fake_task.logs[-1]["type"] == "workflow_gap_created"
+    assert fake_task.logs[-1]["gap_id"] == 501
     assert any(kind == "project_task" for kind, _ in events)
     project_task_call = next(payload for kind, payload in events if kind == "project_task")
     assert project_task_call["project_code"] == "AA.J.31"
     assert project_task_call["stage"] == "inbox"
     assert "ocupação do usuário X" in project_task_call["description"]
     assert "Resposta atual entregue pela IA" in project_task_call["notes"]
+
+
+
+def test_find_workflow_gap_by_task_prefers_task_id(monkeypatch):
+    captured = {}
+
+    class _FakeOrdered:
+        def first(self):
+            return "gap-1"
+
+    class _FakeQuery:
+        def filter_by(self, **kwargs):
+            captured.update(kwargs)
+            return self
+
+        def order_by(self, *_args, **_kwargs):
+            return _FakeOrdered()
+
+    fake_gap_model = SimpleNamespace(
+        query=_FakeQuery(),
+        created_at=SimpleNamespace(desc=lambda: None),
+    )
+    monkeypatch.setattr(gap_service, 'WorkflowGapCandidate', fake_gap_model)
+
+    result = gap_service.find_workflow_gap_by_task(task_id=204)
+
+    assert result == 'gap-1'
+    assert captured == {'app_task_id': 204}
