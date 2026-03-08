@@ -375,6 +375,190 @@
         border-radius: 4px;
         font-family: monospace;
     }
+
+    .workflow-board-panel {
+        display: none;
+        background: rgba(255, 255, 255, 0.92);
+        border-bottom: 1px solid var(--tg-border);
+        padding: 0.9rem 1.2rem 1rem 1.2rem;
+        z-index: 8;
+        backdrop-filter: blur(8px);
+    }
+
+    .workflow-board-panel.visible {
+        display: block;
+    }
+
+    .workflow-board-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .workflow-board-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--tg-text-primary);
+    }
+
+    .workflow-board-subtitle {
+        font-size: 0.78rem;
+        color: var(--tg-text-secondary);
+        margin-top: 2px;
+    }
+
+    .workflow-board-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .workflow-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .workflow-summary-card {
+        border: 1px solid var(--tg-border);
+        border-radius: 14px;
+        padding: 0.75rem 0.9rem;
+        background: white;
+    }
+
+    .workflow-summary-card .label {
+        font-size: 0.74rem;
+        color: var(--tg-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .workflow-summary-card .value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--tg-text-primary);
+        margin-top: 0.15rem;
+    }
+
+    .workflow-summary-card.tone-warning { border-color: rgba(245, 158, 11, 0.35); }
+    .workflow-summary-card.tone-danger { border-color: rgba(239, 68, 68, 0.35); }
+    .workflow-summary-card.tone-info { border-color: rgba(59, 130, 246, 0.35); }
+    .workflow-summary-card.tone-success { border-color: rgba(16, 185, 129, 0.35); }
+
+    .workflow-card-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+
+    .workflow-card {
+        background: white;
+        border: 1px solid var(--tg-border);
+        border-radius: 16px;
+        padding: 0.9rem 1rem;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .workflow-card-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .workflow-card-title {
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: var(--tg-text-primary);
+    }
+
+    .workflow-card-subtitle {
+        font-size: 0.8rem;
+        color: var(--tg-text-secondary);
+        margin-top: 0.2rem;
+    }
+
+    .workflow-card-tone {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+
+    .workflow-card-tone.tone-warning { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+    .workflow-card-tone.tone-danger { background: rgba(239, 68, 68, 0.14); color: #b91c1c; }
+    .workflow-card-tone.tone-info { background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+    .workflow-card-tone.tone-success { background: rgba(16, 185, 129, 0.14); color: #047857; }
+    .workflow-card-tone.tone-muted { background: rgba(100, 116, 139, 0.14); color: #475569; }
+
+    .workflow-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-bottom: 0.65rem;
+    }
+
+    .workflow-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: #f4f4f5;
+        color: #52525b;
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+
+    .workflow-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        color: var(--tg-text-secondary);
+        margin-bottom: 0.7rem;
+    }
+
+    .workflow-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .workflow-mini-btn {
+        border: none;
+        border-radius: 10px;
+        padding: 0.45rem 0.75rem;
+        font-size: 0.74rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .workflow-mini-btn.primary { background: var(--tg-accent); color: white; }
+    .workflow-mini-btn.secondary { background: #eef2ff; color: #4338ca; }
+    .workflow-mini-btn.danger { background: #fee2e2; color: #b91c1c; }
+
+    .workflow-board-empty {
+        text-align: center;
+        font-size: 0.82rem;
+        color: var(--tg-text-secondary);
+        padding: 1rem 0.25rem 0.5rem 0.25rem;
+    }
+
+    @media (max-width: 1100px) {
+        .workflow-summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
 </style>
 {% endblock %}
 
@@ -434,6 +618,21 @@
             </div>
         </div>
 
+        <div id="workflowBoardPanel" class="workflow-board-panel">
+            <div class="workflow-board-header">
+                <div>
+                    <div class="workflow-board-title">Operação Assistida dos Agentes</div>
+                    <div class="workflow-board-subtitle">Painel visual dos approvals e métricas omnichannel</div>
+                </div>
+                <div class="workflow-board-actions">
+                    <button class="btn btn-light" type="button" onclick="refreshWorkflowBoard()" style="font-size:0.78rem; padding:0.45rem 0.8rem;">Atualizar painel</button>
+                </div>
+            </div>
+            <div class="workflow-summary-grid" id="workflowSummaryGrid"></div>
+            <div class="workflow-card-list" id="workflowCardList"></div>
+            <div class="workflow-board-empty" id="workflowBoardEmpty" style="display:none;">Nenhum approval operacional para exibir neste momento.</div>
+        </div>
+
         <div class="tg-messages-container" id="chatMessages">
             <!-- Messages will be injected here -->
         </div>
@@ -466,8 +665,103 @@
     const chatMessages = document.getElementById('chatMessages');
     const contactsList = document.getElementById('contactsList');
     const userInput = document.getElementById('userInput');
+    const workflowBoardPanel = document.getElementById('workflowBoardPanel');
+    const workflowSummaryGrid = document.getElementById('workflowSummaryGrid');
+    const workflowCardList = document.getElementById('workflowCardList');
+    const workflowBoardEmpty = document.getElementById('workflowBoardEmpty');
 
     marked.setOptions({ gfm: true, breaks: true });
+    function shouldShowWorkflowBoard() {
+        return ['sapiens', 'engineering'].includes(activeContact);
+    }
+
+    function renderWorkflowBoard(board) {
+        const summaryCards = Array.isArray(board.summary_cards) ? board.summary_cards : [];
+        const approvalCards = Array.isArray(board.approval_cards) ? board.approval_cards : [];
+
+        workflowSummaryGrid.innerHTML = summaryCards.map(card => `
+            <article class="workflow-summary-card tone-${card.tone || 'muted'}">
+                <div class="label">${escapeHtml(card.title || '')}</div>
+                <div class="value">${escapeHtml(String(card.value ?? 0))}</div>
+            </article>
+        `).join('');
+
+        workflowCardList.innerHTML = approvalCards.map(card => {
+            const badges = (card.badges || []).map(badge => `<span class="workflow-badge">${escapeHtml(badge.label || '')}</span>`).join('');
+            const actions = (card.actions || []).map(action => `
+                <button class="workflow-mini-btn ${action.style || 'secondary'}" type="button" onclick="handleWorkflowApprovalAction(${card.id}, '${action.id}')">${escapeHtml(action.label || action.id || 'Ação')}</button>
+            `).join('');
+            const meta = card.metadata || {};
+            return `
+                <article class="workflow-card">
+                    <div class="workflow-card-header">
+                        <div>
+                            <div class="workflow-card-title">${card.title || ''}</div>
+                            <div class="workflow-card-subtitle">${escapeHtml(card.subtitle || '')}</div>
+                        </div>
+                        <span class="workflow-card-tone tone-${card.tone || 'muted'}">${escapeHtml(card.status || '')}</span>
+                    </div>
+                    <div class="workflow-badges">${badges}</div>
+                    <div class="workflow-card-meta">
+                        <div><strong>Canal:</strong> ${escapeHtml(card.channel || '-')}</div>
+                        <div><strong>Solicitante:</strong> ${escapeHtml(String(meta.requester_user_id ?? '-'))}</div>
+                        <div><strong>Aprovador:</strong> ${escapeHtml(String(meta.approver_user_id ?? '-'))}</div>
+                        <div><strong>Expira em:</strong> ${escapeHtml(meta.expires_at || '-')}</div>
+                    </div>
+                    <div class="workflow-card-actions">${actions || ''}</div>
+                </article>
+            `;
+        }).join('');
+
+        workflowBoardEmpty.style.display = approvalCards.length ? 'none' : 'block';
+        workflowBoardPanel.classList.add('visible');
+    }
+
+    async function refreshWorkflowBoard() {
+        if (!shouldShowWorkflowBoard()) {
+            workflowBoardPanel.classList.remove('visible');
+            workflowSummaryGrid.innerHTML = '';
+            workflowCardList.innerHTML = '';
+            workflowBoardEmpty.style.display = 'none';
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/agents/actions/workflow-approvals/board?limit=50');
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                workflowBoardPanel.classList.remove('visible');
+                return;
+            }
+            renderWorkflowBoard(data);
+        } catch (error) {
+            console.error('Erro ao carregar workflow board:', error);
+            workflowBoardPanel.classList.remove('visible');
+        }
+    }
+
+    async function handleWorkflowApprovalAction(actionId, actionType) {
+        let payload = null;
+        if (actionType === 'reject') {
+            const feedback = window.prompt('Informe o motivo da rejeição (opcional):', '');
+            if (feedback === null) return;
+            payload = { feedback };
+        }
+
+        const resp = await fetch(`/api/agents/actions/${actionType}/${actionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload ? JSON.stringify(payload) : null,
+        });
+        const data = await resp.json();
+        if (data.success) {
+            addMessageUI('assistant', `✅ **OPERAÇÃO DE APPROVAL:** ${data.message}`, 'workflow_approval');
+            await refreshWorkflowBoard();
+            return;
+        }
+        addMessageUI('assistant', `⚠️ Falha na operação do approval: ${data.error || 'erro desconhecido'}`, 'workflow_approval');
+    }
+
 
     async function loadContacts() {
         try {
@@ -512,6 +806,8 @@
 
         if (activeContact === 'engineering') checkActions();
         else document.getElementById('techAlert').style.display = 'none';
+
+        refreshWorkflowBoard();
     }
 
     async function loadChatHistory() {
@@ -674,6 +970,7 @@
         if (data.success) {
             document.getElementById('techAlert').style.display = 'none';
             addMessageUI('assistant', `✅ **REPARO EXECUTADO:** ${data.message}`, 'engineering_squad');
+            refreshWorkflowBoard();
         }
     }
 
@@ -703,6 +1000,7 @@
         else selectContact({ id: 'sapiens', name: 'Versus Sapiens', status: 'online', avatar: '🧭', type: 'bot' });
 
         setInterval(checkActions, 30000);
+        setInterval(refreshWorkflowBoard, 45000);
     });
 </script>
 {% endblock %}
