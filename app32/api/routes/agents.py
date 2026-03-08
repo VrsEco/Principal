@@ -5,6 +5,35 @@ from services.cadastro_agent_service import CadastroAgentService
 agents_bp = Blueprint('agents', __name__)
 cadastro_service = CadastroAgentService()
 
+
+def _log_workflow_approval_message(action, message: str, metadata=None):
+    from models import db, AgentMessage
+
+    payload = dict(getattr(action, 'payload', None) or {})
+    resume_payload = dict(payload.get('resume_payload') or {})
+    approval_metadata = dict((metadata or {}).get('workflow_approval') or {})
+    channel = resume_payload.get('channel') or payload.get('channel') or 'platform'
+    thread_id = (resume_payload.get('thread_id') or payload.get('thread_id') or f"approval_{getattr(action, 'id', 'unknown')}")
+
+    db.session.add(
+        AgentMessage(
+            company_id=getattr(action, 'company_id', None),
+            user_id=getattr(action, 'user_id', None),
+            agent_type='work_agent_squad',
+            agent_name='workflow_approval',
+            direction='outbound',
+            channel=channel,
+            content=message,
+            metadata_json={
+                'thread_id': thread_id,
+                'contact': 'sapiens',
+                'agent': 'workflow_approval',
+                'workflow_action_id': getattr(action, 'id', None),
+                **({'workflow_approval': approval_metadata} if approval_metadata else {}),
+            },
+        )
+    )
+
 @agents_bp.route('/sapiens')
 @login_required
 def sapiens_page():
@@ -542,6 +571,7 @@ def approve_action(action_id):
             active_company_id=active_company_id,
         )
         if outcome.success:
+            _log_workflow_approval_message(action, outcome.message, outcome.audit_metadata)
             db.session.commit()
             return jsonify({
                 "success": True,
@@ -815,3 +845,46 @@ def finalizar_cadastro():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@agents_bp.route('/api/agents/actions/reject/<int:action_id>', methods=['POST'])
+@login_required
+def reject_action(action_id):
+    from flask import session
+    from models import db
+    from models.agent_action import AgentAction
+    from services.workflow_approval_service import WorkflowApprovalService
+    from src.intelligence.menu_engine import execute_approved_resume_payload
+
+    action = AgentAction.query.get(action_id)
+    if not action:
+        return jsonify({"success": False, "error": "Ação não encontrada."}), 404
+
+    if action.type != 'workflow_approval_request':
+        return jsonify({"success": False, "error": "Ação não suporta rejeição operacional."}), 400
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para rejeitar esta ação."}), 403
+
+    feedback = (request.get_json(silent=True) or {}).get('feedback')
+    active_company_id = session.get('active_company_id')
+    service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
+    outcome = service.reject(
+        action=action,
+        approver_user_id=current_user.id,
+        approver_name=current_user.name,
+        active_company_id=active_company_id,
+        feedback=feedback,
+    )
+    if outcome.success:
+        _log_workflow_approval_message(action, outcome.message, outcome.audit_metadata)
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": outcome.message,
+            "action": action.to_dict(),
+            "resume_payload": outcome.resume_payload,
+        }), outcome.http_status
+
+    db.session.rollback()
+    return jsonify({"success": False, "error": outcome.message}), outcome.http_status

@@ -104,3 +104,33 @@ def test_workflow_approval_service_keeps_action_approved_when_resume_does_not_ex
     assert outcome.action_status == "approved"
     assert action.status == "approved"
     assert action.payload["resume_result"]["executed"] is False
+
+
+
+def test_workflow_approval_service_rejects_and_marks_action_without_resuming():
+    called = {"resume": False}
+
+    def _resume_executor(payload):
+        called["resume"] = True
+        return DirectExecutionResult(executed=True)
+
+    service = WorkflowApprovalService(
+        resume_executor=_resume_executor,
+        now_factory=lambda: datetime(2026, 3, 8, 12, 30, 0),
+    )
+    action = _build_action()
+
+    outcome = service.reject(
+        action=action,
+        approver_user_id=7,
+        approver_name="Fabiano Ferreira",
+        active_company_id=9,
+        feedback="Executar somente após validar com o cliente.",
+    )
+
+    assert outcome.success is True
+    assert action.status == "rejected"
+    assert called["resume"] is False
+    assert action.payload["approval_status"] == "rejected"
+    assert action.payload["rejection_feedback"] == "Executar somente após validar com o cliente."
+    assert outcome.audit_metadata["workflow_approval"]["event"] == "rejected"
