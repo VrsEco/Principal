@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 import re
 from threading import Thread
 from typing import Any, Dict, Optional, Tuple
@@ -11,6 +13,17 @@ from models import db
 
 whatsapp_webhook_bp = Blueprint('whatsapp_webhook', __name__)
 logger = logging.getLogger(__name__)
+
+
+
+def _append_request_debug_log(message: str) -> None:
+    try:
+        root_path = current_app.root_path if current_app else os.getcwd()
+        log_path = os.path.join(root_path, "request_debug.log")
+        with open(log_path, "a", encoding="utf-8") as handle:
+            handle.write(f"{message}\n")
+    except Exception:
+        logger.debug("Falha ao escrever em request_debug.log", exc_info=True)
 
 
 def _first_non_empty_text(*values: Any) -> str:
@@ -76,6 +89,26 @@ def _extract_phone(payload: Dict[str, Any]) -> str:
 
 
 def _extract_message_text(payload: Dict[str, Any]) -> str:
+    message_data = payload.get("messageData")
+    if isinstance(message_data, dict):
+        text_message_data = message_data.get("textMessageData")
+        if isinstance(text_message_data, dict):
+            extracted = _first_non_empty_text(
+                text_message_data.get("textMessage"),
+                text_message_data.get("text"),
+            )
+            if extracted:
+                return extracted
+
+        extended_text_data = message_data.get("extendedTextMessageData")
+        if isinstance(extended_text_data, dict):
+            extracted = _first_non_empty_text(
+                extended_text_data.get("text"),
+                extended_text_data.get("description"),
+            )
+            if extracted:
+                return extracted
+
     text_block = payload.get("text")
     if isinstance(text_block, dict):
         extracted = _first_non_empty_text(
@@ -102,11 +135,54 @@ def _extract_message_text(payload: Dict[str, Any]) -> str:
             return extracted
 
     return _first_non_empty_text(
+        payload.get("conversation"),
         payload.get("message"),
         payload.get("body"),
         payload.get("caption"),
         payload.get("value"),
     )
+
+
+def _parse_possible_json_object(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str):
+        return {}
+
+    raw = value.strip()
+    if not raw:
+        return {}
+
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return {}
+
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _load_whatsapp_request_payload() -> Dict[str, Any]:
+    json_payload = request.get_json(silent=True)
+    if isinstance(json_payload, dict) and json_payload:
+        return json_payload
+
+    form_payload = request.form.to_dict(flat=True)
+    if form_payload:
+        for candidate_key in ("payload", "data", "body", "message", "json"):
+            parsed = _parse_possible_json_object(form_payload.get(candidate_key))
+            if parsed:
+                merged = dict(form_payload)
+                merged.pop(candidate_key, None)
+                merged.update(parsed)
+                return merged
+        return form_payload
+
+    raw_body = (request.get_data(cache=True, as_text=True) or "").strip()
+    parsed = _parse_possible_json_object(raw_body)
+    if parsed:
+        return parsed
+
+    return {}
 
 
 def _extract_whatsapp_message(data: Dict[str, Any]) -> Tuple[str, str, Dict[str, Any]]:
@@ -250,9 +326,17 @@ def handle_whatsapp():
     Webhook para recebimento de mensagens do WhatsApp (Z-API).
     Suporta também Instagram Direct se vier pelo mesmo provedor.
     """
-    data = request.get_json(silent=True) or {}
+    data = _load_whatsapp_request_payload()
     if not data:
-        logger.warning("WHATSAPP WEBHOOK sem JSON. content_type=%s", request.content_type)
+        raw_body = (request.get_data(cache=True, as_text=True) or "")[:500]
+        logger.warning(
+            "WHATSAPP WEBHOOK sem payload interpretavel. content_type=%s raw=%r",
+            request.content_type,
+            raw_body,
+        )
+        _append_request_debug_log(
+            f"WHATSAPP WEBHOOK sem payload | content_type={request.content_type} | raw={raw_body!r}"
+        )
         return jsonify({"status": "no data"}), 200
 
     phone, message_text, metadata = _extract_whatsapp_message(data)
@@ -260,11 +344,29 @@ def handle_whatsapp():
     ignored_reason = metadata.get("ignored")
     if ignored_reason:
         logger.info("WHATSAPP INBOUND ignorado: reason=%s", ignored_reason)
+        _append_request_debug_log(
+            f"WHATSAPP INBOUND ignorado | reason={ignored_reason} | keys={sorted(data.keys())}"
+        )
         return jsonify({"status": ignored_reason}), 200
 
     if not phone or not message_text:
-        logger.warning("WHATSAPP PAYLOAD INVALIDO: keys=%s", list(data.keys()))
+        logger.warning(
+            "WHATSAPP PAYLOAD INVALIDO: content_type=%s keys=%s payload=%r",
+            request.content_type,
+            list(data.keys()),
+            {k: data.get(k) for k in list(data.keys())[:12]},
+        )
+        _append_request_debug_log(
+            "WHATSAPP PAYLOAD INVALIDO | "
+            f"content_type={request.content_type} | keys={sorted(data.keys())} | payload={data!r}"
+        )
         return jsonify({"status": "invalid payload"}), 200
+
+    _append_request_debug_log(
+        "WHATSAPP INBOUND aceito | "
+        f"content_type={request.content_type} | phone={phone} | event={metadata.get('event_type')} | "
+        f"message_id={metadata.get('message_id')}"
+    )
 
     # Processa em background para reduzir timeout/retries do provedor
     app = current_app._get_current_object()
