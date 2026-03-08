@@ -1,0 +1,6 @@
+interface:
+  display_name: "Workflow Factory Versus"
+  short_description: "Constroi workflows V3 no padrao Versus"
+  default_prompt: "Use $workflow-factory-versus para criar ou evoluir um workflow deterministico no padrao Gestao Versus."
+policy:
+  allow_implicit_invocation: true
