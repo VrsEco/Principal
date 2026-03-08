@@ -2984,6 +2984,49 @@ def _try_execute_direct_option(
     return result.response_text
 
 
+def execute_approved_resume_payload(resume_payload: Dict[str, Any]) -> DirectExecutionResult:
+    """Executa payload previamente aprovado, contornando nova exigência de aprovação por canal."""
+    action_key = str((resume_payload or {}).get("action_key") or "").strip().lower()
+    user_id = (resume_payload or {}).get("user_id")
+    active_company_id = (resume_payload or {}).get("active_company_id")
+    payload = dict((resume_payload or {}).get("payload") or {})
+    requested_channel = str((resume_payload or {}).get("channel") or "web").strip().lower()
+
+    if not action_key or user_id is None:
+        return DirectExecutionResult(
+            executed=False,
+            response_text="Resume payload inválido para retomada aprovada.",
+        )
+
+    payload.setdefault("_approval_granted_action_id", (resume_payload or {}).get("approved_action_id"))
+    payload.setdefault("_approval_requested_channel", requested_channel)
+
+    dispatcher = _build_direct_execution_dispatcher()
+    result = dispatcher.execute(
+        DirectExecutionRequest(
+            action_key=action_key,
+            payload=payload,
+            active_company_id=active_company_id,
+            user_id=int(user_id),
+            channel="approval",
+        )
+    )
+    approval_metadata = {
+        "workflow_approval": {
+            "status": "resumed_execution",
+            "source_action_id": (resume_payload or {}).get("approved_action_id"),
+            "requested_channel": requested_channel,
+            "action_key": action_key,
+        }
+    }
+    merged_metadata = _merge_menu_metadata(result.metadata, approval_metadata) or approval_metadata
+    return DirectExecutionResult(
+        executed=result.executed,
+        response_text=result.response_text,
+        metadata=merged_metadata,
+    )
+
+
 def _execute_create_project_task(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
     handler = _build_project_task_create_execution_handler()
     result = handler.execute(

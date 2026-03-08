@@ -517,50 +517,45 @@ def update_agent_menu_option(option_id):
 @agents_bp.route('/api/agents/actions/approve/<int:action_id>', methods=['POST'])
 @login_required
 def approve_action(action_id):
-    from datetime import datetime
     from flask import session
     from models import db
     from models.agent_action import AgentAction
     from services.engineering_service import engineering_service
+    from services.workflow_approval_service import WorkflowApprovalService
+    from src.intelligence.menu_engine import execute_approved_resume_payload
 
     action = AgentAction.query.get(action_id)
     if not action:
         return jsonify({"success": False, "error": "Ação não encontrada."}), 404
 
     active_company_id = session.get('active_company_id')
-    if active_company_id and action.company_id != active_company_id:
-        return jsonify({"success": False, "error": "Ação não pertence à empresa ativa."}), 403
 
     if action.type == 'workflow_approval_request':
         if current_user.role not in {'admin', 'client'}:
             return jsonify({"success": False, "error": "Sem permissão para aprovar esta ação."}), 403
-        if action.status != 'pending':
+
+        service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
+        outcome = service.approve(
+            action=action,
+            approver_user_id=current_user.id,
+            approver_name=current_user.name,
+            active_company_id=active_company_id,
+        )
+        if outcome.success:
+            db.session.commit()
             return jsonify({
                 "success": True,
-                "message": f"Ação já estava em status {action.status}.",
+                "message": outcome.message,
                 "action": action.to_dict(),
-            })
+                "resume_payload": outcome.resume_payload,
+                "resume_result": outcome.resume_result,
+            }), outcome.http_status
 
-        payload = dict(action.payload or {})
-        resume_payload = dict(payload.get('resume_payload') or {})
-        resume_payload['approved_action_id'] = action.id
-        resume_payload['approved_at'] = datetime.utcnow().isoformat()
-        resume_payload['approved_by_user_id'] = current_user.id
-        payload['resume_payload'] = resume_payload
-        payload['approval_status'] = 'approved'
+        db.session.rollback()
+        return jsonify({"success": False, "error": outcome.message}), outcome.http_status
 
-        action.payload = payload
-        action.status = 'approved'
-        action.user_feedback = f'Aprovado por {current_user.name}'
-        action.resolved_at = datetime.utcnow()
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "message": "Solicitação aprovada. A retomada segura já pode usar o payload de resume registrado.",
-            "action": action.to_dict(),
-            "resume_payload": resume_payload,
-        })
+    if active_company_id and action.company_id != active_company_id:
+        return jsonify({"success": False, "error": "Ação não pertence à empresa ativa."}), 403
 
     success, message = engineering_service.execute_repair(action_id)
 
