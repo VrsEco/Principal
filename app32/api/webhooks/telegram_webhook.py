@@ -35,6 +35,7 @@ def _is_menu_like_message(text: str) -> bool:
 def _fallback_root_menu(company_id):
     try:
         from src.intelligence.menu_engine import list_menu_options
+        from src.intelligence.workflows.presenters import build_root_menu_message
 
         roots = list_menu_options(
             company_id=company_id,
@@ -42,15 +43,10 @@ def _fallback_root_menu(company_id):
             include_inactive=False,
             include_global=True,
         )
-        if not roots:
-            return "Nenhuma opcao de menu ativa encontrada."
-
-        lines = ["Selecione uma opcao do menu principal:"]
-        for opt in roots:
-            lines.append(f"{opt.code} - {opt.title}")
-        lines.append("")
-        lines.append("Voce pode responder com o codigo (ex: 1.4) ou 'menu 1.4 executar ...'.")
-        return "\n".join(lines)
+        return build_root_menu_message(
+            [f"{opt.code} - {opt.title}" for opt in roots],
+            channel="telegram",
+        )
     except Exception as exc:
         logger.exception("Falha ao montar menu fallback no Telegram: %s", exc)
         from src.intelligence.workflows.presenters import build_menu_recovery_message
@@ -97,7 +93,7 @@ def process_telegram_message(app, message: telebot.types.Message):
     """
     from models import db
     from models.user import User
-    
+
     if not bot:
         logger.warning("process_telegram_message chamado sem bot/token ativo.")
         return
@@ -106,13 +102,13 @@ def process_telegram_message(app, message: telebot.types.Message):
         try:
             telegram_id = str(message.from_user.id)
             user_msg = message.text
-            
+
             logger.info(f"Mensagem recebida do Telegram ID {telegram_id}: {user_msg}")
-            
+
             # 1. Resolve Identity (@ARQUITETO)
             from src.intelligence.identity import resolve_user_identity, get_best_company_id
             user = resolve_user_identity(telegram_id, 'telegram')
-            
+
             if not user:
                 # Fallback: Usuário não vinculado. Mandar mensagem pedindo vinculo.
                 msg = (
@@ -125,7 +121,7 @@ def process_telegram_message(app, message: telebot.types.Message):
                 except:
                     bot.send_message(message.chat.id, msg)
                 return
-            
+
             # 2. Identify Company Context
             company_id = get_best_company_id(user)
 
@@ -174,13 +170,15 @@ def process_telegram_message(app, message: telebot.types.Message):
                 except Exception:
                     bot.send_message(message.chat.id, email_confirm_response)
                 return
-            
+
             # Se encontrou o usuário: enviar confirmação imediata para reduzir percepção de latência.
             try:
+                from src.intelligence.workflows.presenters import build_processing_ack_message
                 bot.send_message(
                     message.chat.id,
-                    "Aguarde, processando sua solicitação.",
-                    reply_to_message_id=message.message_id
+                    build_processing_ack_message(channel="telegram"),
+                    reply_to_message_id=message.message_id,
+                    parse_mode='HTML'
                 )
             except Exception as ack_err:
                 logger.debug(f"Falha ao enviar mensagem intermediária de processamento: {ack_err}")
@@ -189,7 +187,7 @@ def process_telegram_message(app, message: telebot.types.Message):
             try:
                 bot.send_chat_action(message.chat.id, 'typing')
             except: pass
-            
+
             # 3. Executa o Agente com Contexto Unificado (@ARQUITETO)
             from src.intelligence.execution import (
                 run_agent_with_context,
@@ -258,7 +256,7 @@ def process_telegram_message(app, message: telebot.types.Message):
                 final_agent_name = response.get("next_node") or "sapiens"
                 if final_agent_name == "end":
                     final_agent_name = "sapiens"  # Fallback padrão
-            
+
             # 4. Auditoria de Mensagem (Log no Banco de Dados)
             from models.agent_message import AgentMessage
 
@@ -294,9 +292,6 @@ def process_telegram_message(app, message: telebot.types.Message):
 
             # 5. Responde ao Telegram (Utilizando HTML para maior robustez @ARQUITETO)
             try:
-                # Converte Markdown básico para HTML se necessário, ou apenas manda como HTML
-                # telebot suporta parse_mode='HTML'
-                # Markdown do gpt-4o às vezes quebra o parse_mode='Markdown' do Telegram (v2)
                 bot.send_message(message.chat.id, response_text, parse_mode='HTML')
             except Exception as html_err:
                 logger.warning(f"Erro ao enviar via HTML: {html_err}. Tentando Markdown.")
@@ -304,30 +299,30 @@ def process_telegram_message(app, message: telebot.types.Message):
                     bot.send_message(message.chat.id, response_text, parse_mode='Markdown')
                 except:
                     bot.send_message(message.chat.id, response_text)
-                
+
         except Exception as e:
             tb = traceback.format_exc()
             logger.error(f"❌ Erro crítico no Telegram Webhook: {str(e)}\n{tb}")
-            
+
             # Tentar escalonar para o Time de Engenharia (@AI_ENGINEER / @ARQUITETO)
             try:
                 with app.app_context():
                     error_msg = f"Crash no Webhook do Telegram: {str(e)}"
-                    
+
                     # 🔍 Recuperar company_id para conformidade multi-tenancy (@ARQUITETO)
                     from models.company import Company
                     from models.agent_action import AgentAction
                     from models import db
-                    
+
                     effective_company_id = None
                     if 'user' in locals() and user:
                         from src.intelligence.identity import get_best_company_id
                         effective_company_id = get_best_company_id(user)
-                    
+
                     if not effective_company_id:
                         first_company = Company.query.first()
                         effective_company_id = first_company.id if first_company else 1
-                    
+
                     action = AgentAction(
                         type='technical_fix',
                         status='pending',
@@ -371,7 +366,6 @@ def telegram_webhook():
             logger.warning("Webhook Telegram recebeu update vazio.")
             return '', 200
 
-        # Captura diferentes tipos de update com texto.
         incoming_message = None
         for attr in ("message", "edited_message", "channel_post", "edited_channel_post"):
             candidate = getattr(update, attr, None)
@@ -379,7 +373,6 @@ def telegram_webhook():
                 incoming_message = candidate
                 break
 
-        # Iniciar thread separada para não causar timeout no servidor do Telegram
         if incoming_message:
             from flask import current_app
             app = current_app._get_current_object()
@@ -409,8 +402,6 @@ def setup_webhook(host_url):
 
     webhook_url = f"{host_url.rstrip('/')}/webhook/telegram"
 
-    # @ARQUITETO: não removemos webhook antes de setar.
-    # Em caso de falha de rede temporária no boot, remover antes causa outage total.
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
         try:

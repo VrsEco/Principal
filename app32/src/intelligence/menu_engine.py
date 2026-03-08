@@ -79,6 +79,9 @@ from src.intelligence.workflows.presenters import (
     build_missing_fields_prompt,
     build_operation_company_prompt,
     build_recovery_message,
+    build_root_menu_message,
+    build_submenu_message,
+    build_ambiguous_options_message,
     describe_my_work_period,
     get_bullet_style,
     group_my_work_by_company,
@@ -4069,32 +4072,22 @@ def _local_now() -> datetime:
 
 def _format_root_menu(company_id: Optional[int]) -> str:
     roots = list_menu_options(company_id=company_id, parent_code=None, include_inactive=False, include_global=True)
-    if not roots:
-        return "Nenhuma opcao de menu ativa encontrada."
-    lines = ["Selecione uma opcao do menu principal:"]
-    for opt in roots:
-        lines.append(f"{opt.code} - {opt.title}")
-    lines.append("")
-    lines.append("Voce pode responder com o codigo (ex: 1.4) ou 'menu 1.4 executar ...'.")
-    return "\n".join(lines)
+    return build_root_menu_message([f"{opt.code} - {opt.title}" for opt in roots], channel="web")
 
 
 def _format_submenu(parent: AgentMenuOption, children: List[AgentMenuOption]) -> str:
-    lines = [f"Submenu {parent.code} - {parent.title}:"]
-    for child in children:
-        lines.append(f"{child.code} - {child.title}")
-    lines.append("")
-    lines.append("Digite o codigo desejado. Exemplo: menu 1.4 executar")
-    return "\n".join(lines)
+    return build_submenu_message(
+        f"Submenu {parent.code} - {parent.title}",
+        [f"{child.code} - {child.title}" for child in children],
+        channel="web",
+    )
 
 
 def _format_ambiguous_options(candidates: List[AgentMenuOption]) -> str:
-    lines = ["Nao tive certeza do que voce quer executar. Escolha uma das opcoes:"]
-    for opt in candidates[:8]:
-        lines.append(f"{opt.code} - {opt.title}")
-    lines.append("")
-    lines.append("Se preferir, envie: menu CODIGO executar com os dados necessarios.")
-    return "\n".join(lines)
+    return build_ambiguous_options_message(
+        [f"{opt.code} - {opt.title}" for opt in candidates[:8]],
+        channel="web",
+    )
 
 
 def _format_item_selection_prompt(

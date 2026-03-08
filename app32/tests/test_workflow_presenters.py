@@ -20,6 +20,8 @@ from src.intelligence.workflows.presenters import (
     build_collaborator_occupancy_report,
     build_internal_error_message,
     build_menu_recovery_message,
+    build_processing_ack_message,
+    build_root_menu_message,
     build_status_callout,
     format_channel_heading,
 )
@@ -276,3 +278,21 @@ def test_chat_contract_renders_next_step_for_telegram():
     assert 'Padrao unificado' in text
     assert 'Proximo passo:' in text
     assert '→ Responda 1 para continuar.' in text
+
+
+def test_menu_presenter_builds_root_menu_for_whatsapp():
+    text = build_root_menu_message([
+        '1 - Resumo Executivo',
+        '1.4 - Cadastrar Atividade',
+    ], channel='whatsapp')
+
+    assert '*Menu principal*' in text
+    assert '1 - Resumo Executivo' in text
+    assert 'Proximo passo:' in text
+
+
+def test_menu_presenter_builds_processing_ack_for_telegram():
+    text = build_processing_ack_message(channel='telegram')
+
+    assert '<b>Processando sua solicitacao</b>' in text
+    assert 'Estou organizando o contexto' in text

@@ -246,6 +246,7 @@ def _is_menu_like_message(text: str) -> bool:
 def _fallback_root_menu(company_id, channel: str = "whatsapp") -> str:
     try:
         from src.intelligence.menu_engine import list_menu_options
+        from src.intelligence.workflows.presenters import build_root_menu_message
 
         roots = list_menu_options(
             company_id=company_id,
@@ -253,15 +254,10 @@ def _fallback_root_menu(company_id, channel: str = "whatsapp") -> str:
             include_inactive=False,
             include_global=True,
         )
-        if not roots:
-            return "Nenhuma opcao de menu ativa encontrada."
-
-        lines = ["Selecione uma opcao do menu principal:"]
-        for opt in roots:
-            lines.append(f"{opt.code} - {opt.title}")
-        lines.append("")
-        lines.append("Voce pode responder com o codigo (ex: 1.4) ou 'menu 1.4 executar ...'.")
-        return "\n".join(lines)
+        return build_root_menu_message(
+            [f"{opt.code} - {opt.title}" for opt in roots],
+            channel=channel,
+        )
     except Exception as exc:
         logger.exception("Falha ao montar menu fallback no canal %s: %s", channel, exc)
         from src.intelligence.workflows.presenters import build_menu_recovery_message
