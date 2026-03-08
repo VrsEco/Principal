@@ -1,3 +1,9 @@
+from .chat_contract import (
+    ChatMessageBlock,
+    ChatMessageContract,
+    make_list_block,
+    render_chat_message,
+)
 from .channel_presenter import (
     build_channel_capabilities,
     format_channel_heading,
@@ -9,6 +15,7 @@ from .channel_presenter import (
 from .collaborator_presenter import build_collaborator_occupancy_report
 from .company_selection_presenter import build_operation_company_prompt
 from .conversation_presenter import (
+    build_chat_contract_message,
     build_guidance_block,
     build_key_value_lines,
     build_numbered_options,
@@ -44,9 +51,12 @@ from .summary_presenter import (
 )
 
 __all__ = [
+    "ChatMessageBlock",
+    "ChatMessageContract",
     "WorkflowDisplayOption",
     "build_collaborator_occupancy_report",
     "build_confirmation_display_items",
+    "build_chat_contract_message",
     "build_guidance_block",
     "build_key_value_lines",
     "build_numbered_options",
@@ -72,6 +82,8 @@ __all__ = [
     "normalize_channel",
     "resolve_my_work_collaborator_label",
     "sanitize_for_channel",
+    "make_list_block",
+    "render_chat_message",
     "build_summary_collaborator_prompt",
     "build_summary_company_prompt",
     "build_summary_period_prompt",

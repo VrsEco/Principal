@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterable, List
 
 from .channel_presenter import format_channel_heading, get_bullet_style, sanitize_for_channel
+from .chat_contract import ChatMessageBlock, ChatMessageContract, render_chat_message
 
 
 def build_presenter_header(title: str, subtitle: str | None = None, *, channel: str = "web") -> List[str]:
@@ -51,3 +52,18 @@ def build_status_callout(kind: str, message: str, *, channel: str = "web") -> st
         "danger": "⛔",
     }.get(str(kind or "info").strip().lower(), "ℹ️")
     return sanitize_for_channel(f"{prefix} {message}", channel)
+
+
+def build_chat_contract_message(
+    title: str,
+    *,
+    subtitle: str | None = None,
+    blocks: list[ChatMessageBlock] | None = None,
+    channel: str = "web",
+) -> str:
+    contract = ChatMessageContract(
+        title=title,
+        subtitle=subtitle,
+        blocks=list(blocks or []),
+    )
+    return render_chat_message(contract, channel=channel)

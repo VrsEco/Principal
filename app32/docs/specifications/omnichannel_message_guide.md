@@ -61,3 +61,24 @@ Aplica-se a:
 - Telegram estava sem heading forte no parse mode HTML.
 - Família chat tinha diferenças excessivas entre prompts de confirmação e coleta.
 - Instagram usa a mesma família visual de WhatsApp, mas ainda precisa convergir melhor no runtime operacional.
+
+
+## Contrato técnico
+A partir da atividade `AA.J.31.211`, o contrato explícito da família chat foi materializado em:
+- `C:\GestaoVersuspp32\src\intelligence\workflows\presenters\chat_contract.py`
+
+### Estruturas
+- `ChatMessageContract`
+- `ChatMessageBlock`
+- `render_chat_message(...)`
+
+### Blocos suportados
+- `heading`
+- `subtitle`
+- `status`
+- `body`
+- `list`
+- `next_step`
+
+### Regra arquitetural
+Presenters da família chat devem evoluir para produzir mensagens a partir desse contrato, reduzindo texto livre e consolidando previsibilidade entre canais.

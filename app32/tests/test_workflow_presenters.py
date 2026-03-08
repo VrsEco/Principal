@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.intelligence.workflows.presenters import (
+    ChatMessageBlock,
     WorkflowDisplayOption,
     build_confirmation_display_items,
     build_confirmation_text,
@@ -15,6 +16,7 @@ from src.intelligence.workflows.presenters import (
     build_summary_company_prompt,
     build_summary_period_prompt,
     build_channel_capabilities,
+    build_chat_contract_message,
     build_collaborator_occupancy_report,
     build_internal_error_message,
     build_menu_recovery_message,
@@ -257,3 +259,20 @@ def test_error_presenter_builds_menu_recovery_for_whatsapp():
     assert '*Nao consegui abrir o menu agora*' in text
     assert 'Tente novamente em alguns segundos.' in text
     assert 'Proximo passo:' in text
+
+
+def test_chat_contract_renders_next_step_for_telegram():
+    text = build_chat_contract_message(
+        'Contrato de Chat',
+        subtitle='Padrao unificado',
+        channel='telegram',
+        blocks=[
+            ChatMessageBlock(kind='status', text='ℹ️ Contexto pronto'),
+            ChatMessageBlock(kind='next_step', items=['Responda 1 para continuar.', 'Responda 0 para sair.']),
+        ],
+    )
+
+    assert '<b>Contrato de Chat</b>' in text
+    assert 'Padrao unificado' in text
+    assert 'Proximo passo:' in text
+    assert '→ Responda 1 para continuar.' in text
