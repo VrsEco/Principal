@@ -814,32 +814,46 @@
 
     .workflow-catalog-toolbar {
         display: grid;
-        grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr));
-        gap: 0.75rem;
+        grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(150px, 1fr));
+        gap: 0.65rem;
         margin-top: 0.35rem;
+        padding: 0.85rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 14px;
+        background: rgba(248, 250, 252, 0.92);
     }
 
     .workflow-catalog-list {
-        display: grid;
-        gap: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
         margin-top: 1rem;
     }
 
     .workflow-catalog-card {
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-        border: 1px solid rgba(148, 163, 184, 0.22);
-        border-radius: 18px;
-        padding: 1rem 1rem 0.95rem;
-        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
-        display: grid;
-        gap: 0.85rem;
+        background: var(--surface-primary, #ffffff);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 12px;
+        padding: 0.8rem 0.95rem;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
     }
 
     .workflow-catalog-head {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
         gap: 1rem;
+    }
+
+    .workflow-catalog-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 0.5rem;
     }
 
     .workflow-catalog-title {
@@ -869,7 +883,7 @@
     .workflow-catalog-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.45rem;
+        gap: 0.35rem;
     }
 
     .workflow-catalog-tag {
@@ -887,32 +901,52 @@
     .workflow-catalog-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.75rem;
+        gap: 0.5rem;
     }
 
     .workflow-catalog-metric {
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.82);
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        padding: 0.7rem 0.8rem;
+        border-radius: 10px;
+        background: rgba(248, 250, 252, 0.96);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        padding: 0.55rem 0.7rem;
     }
 
     .workflow-catalog-metric strong {
         display: block;
         color: #0f172a;
-        font-size: 0.94rem;
-        margin-bottom: 0.15rem;
+        font-size: 0.84rem;
+        margin-bottom: 0.1rem;
     }
 
     .workflow-catalog-metric span {
         color: #64748b;
-        font-size: 0.76rem;
+        font-size: 0.7rem;
     }
 
     .workflow-catalog-description {
-        font-size: 0.84rem;
+        font-size: 0.8rem;
         color: #334155;
-        line-height: 1.5;
+        line-height: 1.4;
+    }
+
+    .workflow-catalog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    .workflow-catalog-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 8px;
+        padding: 0.38rem 0.62rem;
+        background: rgba(15, 23, 42, 0.05);
+        color: #334155;
+        text-decoration: none;
+        font-size: 0.72rem;
+        font-weight: 700;
     }
 
     .workflow-catalog-empty {
@@ -1571,27 +1605,34 @@
         const channels = Array.isArray(usage.by_channel) && usage.by_channel.length
             ? usage.by_channel.slice(0, 3).map(entry => `${entry.channel}: ${entry.count}`).join(' · ')
             : 'sem histórico';
+        const detailUrl = `/api/agents/workflows/catalog?limit=1&include_global=true&include_inactive=true`;
         return `
             <article class="workflow-catalog-card">
-                <div class="workflow-catalog-head">
-                    <div>
-                        <div class="workflow-catalog-code">${escapeHtml(item.code || '-')}</div>
-                        <div class="workflow-catalog-title">${escapeHtml(item.title || item.action_key || 'Fluxo sem título')}</div>
+                <div class="workflow-catalog-row workflow-catalog-head">
+                    <div style="display:flex; flex-direction:column; gap:0.18rem; min-width:0;">
+                        <div class="workflow-catalog-row">
+                            <div class="workflow-catalog-code">${escapeHtml(item.code || '-')}</div>
+                            <div class="workflow-catalog-title">${escapeHtml(item.title || item.action_key || 'Fluxo sem título')}</div>
+                        </div>
                         <div class="workflow-catalog-subtitle">${escapeHtml(item.action_key || '-')} · ${escapeHtml(item.parent_code || 'raiz do catálogo')}</div>
                     </div>
-                    <span class="workflow-card-tone tone-${item.is_active ? 'success' : 'warning'}">${item.is_active ? 'ativo' : 'inativo'}</span>
+                    <div class="workflow-catalog-actions">
+                        <span class="workflow-card-tone tone-${item.is_active ? 'success' : 'warning'}">${item.is_active ? 'ativo' : 'inativo'}</span>
+                        <a class="workflow-catalog-link" href="${detailUrl}" target="_blank" rel="noopener">Ver API</a>
+                    </div>
                 </div>
-                <div class="workflow-catalog-tags">${renderWorkflowCatalogTags(item)}</div>
-                <div class="workflow-catalog-grid">
-                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(usage.count ?? 0))}</strong><span>uso(s) agregados no catálogo</span></div>
-                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(usage.log_count ?? 0))}</strong><span>execução(ões) auditadas no ledger</span></div>
-                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(item.gaps?.count ?? 0))}</strong><span>gap(s) vinculados a este fluxo</span></div>
-                    <div class="workflow-catalog-metric"><strong>${escapeHtml(formatWorkflowDate(usage.last_used_at))}</strong><span>último uso observado</span></div>
-                </div>
+                <div class="workflow-catalog-row workflow-catalog-tags">${renderWorkflowCatalogTags(item)}</div>
                 <div class="workflow-catalog-description">${escapeHtml(item.description || 'Fluxo sem descrição operacional cadastrada.')}</div>
-                <div class="workflow-card-meta">
+                <div class="workflow-catalog-grid">
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(usage.count ?? 0))}</strong><span>uso(s) agregados</span></div>
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(usage.log_count ?? 0))}</strong><span>execução(ões) auditadas</span></div>
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(item.gaps?.count ?? 0))}</strong><span>gap(s) vinculados</span></div>
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(formatWorkflowDate(usage.last_used_at))}</strong><span>último uso</span></div>
+                </div>
+                <div class="compact-meta workflow-card-meta">
+                    ${renderWorkflowMetaItem('Escopo', item.scope === 'company' ? 'Empresa ativa' : 'Global')}
                     ${renderWorkflowMetaItem('Canais', channels)}
-                    ${renderWorkflowMetaItem('Origem do roteamento', routeSources)}
+                    ${renderWorkflowMetaItem('Roteamento', routeSources)}
                     ${renderWorkflowMetaItem('Último gap', formatWorkflowDate(item.gaps?.last_gap_at))}
                     ${renderWorkflowMetaItem('Keywords', Array.isArray(item.keywords) && item.keywords.length ? item.keywords.slice(0, 5).join(', ') : '-')}
                 </div>
