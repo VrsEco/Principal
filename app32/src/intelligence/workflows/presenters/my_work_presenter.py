@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from typing import Any, Callable, Dict, List, Optional
 
 from .channel_presenter import get_bullet_style, sanitize_for_channel
+from .conversation_presenter import build_presenter_header, build_status_callout
 
 
 def group_my_work_by_company(
@@ -183,6 +184,44 @@ def describe_my_work_period(
     return f"com vencimento no periodo de {format_date_br(start_date)} a {format_date_br(end_date)}"
 
 
+def summarize_my_work_totals(
+    tasks: List[Dict[str, Any]],
+    processes: List[Dict[str, Any]],
+    meetings: List[Dict[str, Any]],
+) -> Dict[str, int]:
+    return {
+        "tasks": len(tasks or []),
+        "processes": len(processes or []),
+        "meetings": len(meetings or []),
+        "total": len(tasks or []) + len(processes or []) + len(meetings or []),
+    }
+
+
+def build_my_work_summary_lines(
+    *,
+    totals: Dict[str, int],
+    channel: str,
+) -> List[str]:
+    style = get_bullet_style(channel)
+    total_text = sanitize_for_channel(f"Total de itens: {totals['total']}", channel)
+    tasks_text = sanitize_for_channel(f"Atividades: {totals['tasks']}", channel)
+    processes_text = sanitize_for_channel(f"Instancias de processo: {totals['processes']}", channel)
+    meetings_text = sanitize_for_channel(f"Reunioes: {totals['meetings']}", channel)
+    return [
+        style["header"]("Painel Executivo"),
+        f"{style['bullet']}{total_text}",
+        f"{style['bullet']}{tasks_text}",
+        f"{style['bullet']}{processes_text}",
+        f"{style['bullet']}{meetings_text}",
+    ]
+
+
+def build_my_work_empty_report(*, title: str, channel: str) -> str:
+    lines = build_presenter_header(title, channel=channel)
+    lines.extend(["", build_status_callout("info", "Nenhum item encontrado para o filtro informado.", channel=channel)])
+    return "\n".join(lines)
+
+
 def build_my_work_report(
     *,
     action: str,
@@ -231,18 +270,34 @@ def build_my_work_report(
 
     company_groups = group_my_work_by_company(tasks=tasks, processes=processes, meetings=meetings)
     if not company_groups:
-        return f"{sanitize_for_channel(title, channel)}\n\nNenhum item encontrado para o filtro informado."
+        return build_my_work_empty_report(title=title, channel=channel)
 
+    totals = summarize_my_work_totals(tasks, processes, meetings)
     date_name = "Conclusao" if action == "my_work.completed_range" else "Prazo"
-    lines = [sanitize_for_channel(title, channel), ""]
+    lines = build_presenter_header(title, channel=channel)
+    lines.extend(["", build_status_callout("success", "Consolidacao pronta para acompanhamento operacional.", channel=channel), ""])
+    lines.extend(build_my_work_summary_lines(totals=totals, channel=channel))
+
     for group_index, company in enumerate(company_groups):
-        if group_index > 0:
+        if group_index >= 0:
             lines.append("")
 
         company_code = company.get("company_code") or "CP"
         company_name = company.get("company_name") or "Empresa"
+        company_totals = summarize_my_work_totals(
+            [activity for project in company.get("projects") or [] for activity in project.get("activities") or []],
+            [instance for process in company.get("processes") or [] for instance in process.get("instances") or []],
+            company.get("meetings") or [],
+        )
         lines.append(style["header"]("Empresa"))
         lines.append(f"{style['bullet']}{sanitize_for_channel(f'{company_code} - {company_name}', channel)}")
+        company_total_text = sanitize_for_channel(f"Total de itens: {company_totals['total']}", channel)
+        company_breakdown_text = sanitize_for_channel(
+            f"Atividades: {company_totals['tasks']} | Processos: {company_totals['processes']} | Reunioes: {company_totals['meetings']}",
+            channel,
+        )
+        lines.append(f"{style['sub_bullet']}{company_total_text}")
+        lines.append(f"{style['sub_bullet']}{company_breakdown_text}")
         lines.append("")
 
         lines.append(style["header"]("Projetos"))
@@ -251,7 +306,9 @@ def build_my_work_report(
             for project in projects:
                 project_label = f"{project['project_code']} - {project['project_name']}"
                 lines.append(f"{style['bullet']}{sanitize_for_channel(project_label, channel)}")
-                lines.append(f"{style['sub_bullet']}{sanitize_for_channel('Atividades', channel)}")
+                project_activity_count = len(project.get("activities") or [])
+                project_activity_text = sanitize_for_channel(f"Atividades no recorte: {project_activity_count}", channel)
+                lines.append(f"{style['sub_bullet']}{project_activity_text}")
                 for activity in project.get("activities") or []:
                     date_label = activity["completion_date"] if action == "my_work.completed_range" else activity["due_date"]
                     activity_line = (
@@ -269,7 +326,9 @@ def build_my_work_report(
             for process in process_groups:
                 process_label = f"{process['process_code']} - {process['process_name']}"
                 lines.append(f"{style['bullet']}{sanitize_for_channel(process_label, channel)}")
-                lines.append(f"{style['sub_bullet']}{sanitize_for_channel('Instancias', channel)}")
+                process_instance_count = len(process.get("instances") or [])
+                process_instance_text = sanitize_for_channel(f"Instancias no recorte: {process_instance_count}", channel)
+                lines.append(f"{style['sub_bullet']}{process_instance_text}")
                 for instance in process.get("instances") or []:
                     date_label = instance["completion_date"] if action == "my_work.completed_range" else instance["due_date"]
                     instance_line = (
@@ -284,6 +343,8 @@ def build_my_work_report(
         lines.append(style["header"]("Reunioes Agendadas"))
         meeting_items = company.get("meetings") or []
         if meeting_items:
+            meeting_count_text = sanitize_for_channel(f"Reunioes no recorte: {len(meeting_items)}", channel)
+            lines.append(f"{style['bullet']}{meeting_count_text}")
             for meeting in meeting_items:
                 date_label = meeting["completion_date"] if action == "my_work.completed_range" else meeting["due_date"]
                 project_ref = f"{meeting['project_code']} - {meeting['project_name']}" if meeting.get("project_code") else "-"
@@ -293,7 +354,7 @@ def build_my_work_report(
                 )
                 if action != "my_work.completed_range" and meeting.get("scheduled_time") and meeting.get("scheduled_time") != "-":
                     meeting_line += f" | Hora: {meeting['scheduled_time']}"
-                lines.append(f"{style['bullet']}{sanitize_for_channel(meeting_line, channel)}")
+                lines.append(f"{style['item_bullet']}{sanitize_for_channel(meeting_line, channel)}")
         else:
             lines.append(f"{style['bullet']}Sem reunioes agendadas no periodo.")
 

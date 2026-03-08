@@ -252,6 +252,12 @@ Na Fase 8.4, os presenters passaram a usar uma camada comum de blocos conversaci
 - blocos de guidance/CTA reutilizáveis;
 - mensagens mais consistentes entre web e família `chat` (`whatsapp`, `instagram`, `telegram`).
 
+Na Fase 8.5, a apresentação dos dados operacionais começou a sair do formato puramente textual e passou a incorporar:
+
+- painéis executivos com totais por tipo de item;
+- quebras por empresa com subtotal local;
+- densidade maior de contexto sem abrir mão do mesmo contrato entre web e canais de chat.
+
 Na sequência, a lógica de `awaiting_item_selection` também passou a migrar para
 o runtime dedicado, reduzindo ramificações específicas no `menu_engine`.
 

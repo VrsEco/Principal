@@ -1,3 +1,4 @@
+from datetime import date
 import os
 import sys
 
@@ -8,6 +9,7 @@ from src.intelligence.workflows.presenters import (
     build_confirmation_display_items,
     build_confirmation_text,
     build_missing_fields_prompt,
+    build_my_work_report,
     build_operation_company_prompt,
     build_summary_collaborator_prompt,
     build_summary_company_prompt,
@@ -158,3 +160,56 @@ def test_channel_presenter_formats_instagram_heading_like_chat():
 
 def test_conversation_presenter_builds_status_callout():
     assert build_status_callout('warning', 'Confirme antes de executar') == '⚠️ Confirme antes de executar'
+
+
+def test_my_work_presenter_builds_executive_panel():
+    text = build_my_work_report(
+        action='my_work.open',
+        company_label='empresa AA - Versus',
+        tasks=[{
+            'company_id': 9, 'company_code': 'AA', 'company_name': 'Versus',
+            'project_code': 'AA.J.31', 'project_name': 'Workflow V3',
+            'activity_code': 'AA.J.31.203', 'title': 'Fase 8.5', 'responsible': 'Fabiano', 'due_date': '2026-03-12'
+        }],
+        processes=[{
+            'company_id': 9, 'company_code': 'AA', 'company_name': 'Versus',
+            'process_code': 'AA.P.10', 'process_name': 'Onboarding',
+            'instance_code': 'AA.P.10.001', 'title': 'Aprovar escopo', 'owner': 'Fabiano', 'due_date': '2026-03-13'
+        }],
+        meetings=[{
+            'company_id': 9, 'company_code': 'AA', 'company_name': 'Versus',
+            'meeting_code': 'AA.R.12', 'meeting_name': 'Ritual V3', 'project_code': 'AA.J.31', 'project_name': 'Workflow V3',
+            'due_date': '2026-03-14', 'scheduled_time': '10:00'
+        }],
+        start_date=None,
+        end_date=None,
+        channel='whatsapp',
+        payload={'empresa': 'Versus'},
+        manager_name='Fabiano',
+        reference_date=date(2026, 3, 8),
+        format_date_br=lambda value: str(value),
+    )
+
+    assert '*Painel Executivo*' in text
+    assert 'Total de itens: 3' in text
+    assert 'Atividades: 1 | Processos: 1 | Reunioes: 1' in text
+    assert 'AA.J.31.203 - Fase 8.5' in text
+
+
+def test_my_work_presenter_builds_empty_state_report():
+    text = build_my_work_report(
+        action='my_work.open',
+        company_label='empresa AA - Versus',
+        tasks=[],
+        processes=[],
+        meetings=[],
+        start_date=None,
+        end_date=None,
+        channel='web',
+        payload={},
+        manager_name='Fabiano',
+        reference_date=date(2026, 3, 8),
+        format_date_br=lambda value: str(value),
+    )
+
+    assert 'Nenhum item encontrado para o filtro informado.' in text
