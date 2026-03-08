@@ -191,6 +191,79 @@ def get_pending_actions():
     })
 
 
+@agents_bp.route('/api/agents/workflows/catalog', methods=['GET'])
+@login_required
+def workflow_catalog():
+    from flask import session
+    from sqlalchemy import or_
+    from models.agent_menu import AgentMenuOption
+    from models.workflow_gap import WorkflowGapCandidate
+    from models.workflow_usage import WorkflowExecutionLog
+    from services.workflow_catalog_service import build_workflow_catalog
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para consultar o catálogo operacional de workflows."}), 403
+
+    active_company_id = session.get('active_company_id')
+    include_inactive = (request.args.get('include_inactive') or 'false').strip().lower() == 'true'
+    include_global = (request.args.get('include_global') or 'true').strip().lower() != 'false'
+    limit_raw = (request.args.get('limit') or '500').strip()
+
+    try:
+        limit = max(1, min(int(limit_raw), 1000))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    option_query = AgentMenuOption.query
+    if active_company_id is not None:
+        company_filters = [AgentMenuOption.company_id == active_company_id]
+        if include_global:
+            company_filters.append(AgentMenuOption.company_id.is_(None))
+        option_query = option_query.filter(or_(*company_filters))
+    elif not include_global:
+        option_query = option_query.filter(AgentMenuOption.company_id.isnot(None))
+    if not include_inactive:
+        option_query = option_query.filter_by(is_active=True)
+
+    options = option_query.order_by(AgentMenuOption.sort_order.asc(), AgentMenuOption.code.asc()).all()
+
+    codes = [str(option.code or '').strip() for option in options if str(option.action_key or '').strip()]
+    usage_logs = []
+    gap_candidates = []
+    if codes:
+        usage_query = WorkflowExecutionLog.query
+        if active_company_id is not None:
+            usage_query = usage_query.filter_by(company_id=active_company_id)
+        usage_logs = usage_query.order_by(WorkflowExecutionLog.updated_at.desc()).limit(limit).all()
+
+        gap_query = WorkflowGapCandidate.query
+        if active_company_id is not None:
+            gap_query = gap_query.filter(
+                or_(
+                    WorkflowGapCandidate.company_id == active_company_id,
+                    WorkflowGapCandidate.company_id.is_(None),
+                )
+            )
+        gap_candidates = gap_query.order_by(WorkflowGapCandidate.created_at.desc()).limit(limit).all()
+
+    catalog = build_workflow_catalog(
+        options=options,
+        usage_logs=usage_logs,
+        gap_candidates=gap_candidates,
+        preferred_company_id=active_company_id,
+    )
+    return jsonify({
+        "success": True,
+        "filters": {
+            "include_inactive": include_inactive,
+            "include_global": include_global,
+            "limit": limit,
+            "active_company_id": active_company_id,
+        },
+        **catalog,
+    })
+
+
 @agents_bp.route('/api/agents/workflow-gaps', methods=['GET'])
 @login_required
 def list_workflow_gaps():
