@@ -756,9 +756,171 @@
         margin-top: 0.85rem;
     }
 
+    .sapiens-ops-switcher {
+        display: none;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.65rem 1.5rem;
+        background: rgba(255, 255, 255, 0.94);
+        border-bottom: 1px solid var(--tg-border);
+        z-index: 9;
+    }
+
+    .sapiens-ops-switcher.visible {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .sapiens-ops-switcher-label {
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: var(--tg-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-right: 0.25rem;
+    }
+
+    .sapiens-ops-tab {
+        border: 1px solid rgba(51, 144, 236, 0.18);
+        background: #f8fafc;
+        color: #1f2937;
+        border-radius: 999px;
+        padding: 0.35rem 0.8rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .sapiens-ops-tab.active {
+        background: var(--tg-accent);
+        color: #fff;
+        border-color: var(--tg-accent);
+        box-shadow: 0 6px 18px rgba(51, 144, 236, 0.22);
+    }
+
+    .workflow-catalog-panel {
+        margin-top: 0.85rem;
+    }
+
+    .workflow-catalog-toolbar {
+        display: grid;
+        grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.35rem;
+    }
+
+    .workflow-catalog-list {
+        display: grid;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    .workflow-catalog-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 18px;
+        padding: 1rem 1rem 0.95rem;
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .workflow-catalog-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .workflow-catalog-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .workflow-catalog-subtitle {
+        font-size: 0.82rem;
+        color: #475569;
+        margin-top: 0.2rem;
+    }
+
+    .workflow-catalog-code {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.05);
+        color: #334155;
+        font-size: 0.74rem;
+        font-weight: 700;
+        padding: 0.28rem 0.62rem;
+    }
+
+    .workflow-catalog-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .workflow-catalog-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.28rem 0.62rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        background: rgba(59, 130, 246, 0.08);
+        color: #1d4ed8;
+        font-weight: 600;
+    }
+
+    .workflow-catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .workflow-catalog-metric {
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        padding: 0.7rem 0.8rem;
+    }
+
+    .workflow-catalog-metric strong {
+        display: block;
+        color: #0f172a;
+        font-size: 0.94rem;
+        margin-bottom: 0.15rem;
+    }
+
+    .workflow-catalog-metric span {
+        color: #64748b;
+        font-size: 0.76rem;
+    }
+
+    .workflow-catalog-description {
+        font-size: 0.84rem;
+        color: #334155;
+        line-height: 1.5;
+    }
+
+    .workflow-catalog-empty {
+        margin-top: 1rem;
+        padding: 1.4rem;
+        border-radius: 16px;
+        border: 1px dashed rgba(148, 163, 184, 0.55);
+        background: rgba(255, 255, 255, 0.9);
+        color: #475569;
+        font-size: 0.84rem;
+    }
+
     @media (max-width: 1100px) {
         .workflow-board-toolbar,
-        .workflow-summary-grid {
+        .workflow-summary-grid,
+        .workflow-catalog-toolbar,
+        .workflow-catalog-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
@@ -767,7 +929,9 @@
         .workflow-board-toolbar,
         .workflow-summary-grid,
         .workflow-card-meta,
-        .workflow-board-loading {
+        .workflow-board-loading,
+        .workflow-catalog-toolbar,
+        .workflow-catalog-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -830,6 +994,13 @@
             </div>
         </div>
 
+        <div id="sapiensOpsSwitcher" class="sapiens-ops-switcher">
+            <span class="sapiens-ops-switcher-label">Central Sapiens IA</span>
+            <button type="button" id="opsViewChat" class="sapiens-ops-tab active" onclick="setOperationalView('chat')">Chat</button>
+            <button type="button" id="opsViewApprovals" class="sapiens-ops-tab" onclick="setOperationalView('approvals')">Approvals</button>
+            <button type="button" id="opsViewCatalog" class="sapiens-ops-tab" onclick="setOperationalView('catalog')">Fluxos</button>
+        </div>
+
         <div id="workflowBoardPanel" class="workflow-board-panel">
             <div class="workflow-board-header">
                 <div>
@@ -860,6 +1031,46 @@
             <div class="workflow-summary-grid" id="workflowSummaryGrid"></div>
             <div class="workflow-card-list" id="workflowCardList"></div>
             <div class="workflow-board-empty" id="workflowBoardEmpty" style="display:none;"><strong>Nenhum approval operacional visível.</strong>Ajuste os filtros ou aguarde novas solicitações sensíveis dos agentes.</div>
+        </div>
+
+        <div id="workflowCatalogPanel" class="workflow-board-panel workflow-catalog-panel">
+            <div class="workflow-board-header">
+                <div>
+                    <div class="workflow-board-title">Catálogo Operacional de Fluxos</div>
+                    <div class="workflow-board-subtitle">Fluxos cadastrados no runtime V3 com uso, gaps e governança operacional.</div>
+                </div>
+                <div class="workflow-board-actions">
+                    <button class="btn btn-light" type="button" onclick="refreshWorkflowCatalog()" style="font-size:0.78rem; padding:0.45rem 0.8rem;">Atualizar catálogo</button>
+                </div>
+            </div>
+            <div class="workflow-board-status" id="workflowCatalogStatus"></div>
+            <div class="workflow-board-meta" id="workflowCatalogMeta"></div>
+            <div class="workflow-catalog-toolbar">
+                <input id="workflowCatalogSearchInput" class="workflow-board-search" type="search" placeholder="Buscar por código, título, action key, palavras-chave ou campo obrigatório" oninput="updateWorkflowCatalogFilters()" />
+                <select id="workflowCatalogScopeFilter" class="workflow-board-select" onchange="updateWorkflowCatalogFilters()">
+                    <option value="all">Todos os escopos</option>
+                    <option value="global">Globais</option>
+                    <option value="company">Da empresa ativa</option>
+                </select>
+                <select id="workflowCatalogStatusFilter" class="workflow-board-select" onchange="updateWorkflowCatalogFilters()">
+                    <option value="all">Ativos e inativos</option>
+                    <option value="active">Somente ativos</option>
+                    <option value="inactive">Somente inativos</option>
+                </select>
+                <select id="workflowCatalogUsageFilter" class="workflow-board-select" onchange="updateWorkflowCatalogFilters()">
+                    <option value="all">Com e sem uso</option>
+                    <option value="used">Somente usados</option>
+                    <option value="unused">Sem uso</option>
+                </select>
+            </div>
+            <div class="workflow-board-loading" id="workflowCatalogLoading" style="display:none;">
+                <div class="workflow-skeleton"></div>
+                <div class="workflow-skeleton"></div>
+                <div class="workflow-skeleton"></div>
+            </div>
+            <div class="workflow-summary-grid" id="workflowCatalogSummaryGrid"></div>
+            <div class="workflow-catalog-list" id="workflowCatalogList"></div>
+            <div class="workflow-catalog-empty" id="workflowCatalogEmpty" style="display:none;"><strong>Nenhum fluxo corresponde aos filtros atuais.</strong><br>Revise os filtros para visualizar o catálogo cadastrado no Sapiens IA.</div>
         </div>
 
         <div class="tg-messages-container" id="chatMessages">
@@ -905,6 +1116,10 @@
     const chatMessages = document.getElementById('chatMessages');
     const contactsList = document.getElementById('contactsList');
     const userInput = document.getElementById('userInput');
+    const sapiensOpsSwitcher = document.getElementById('sapiensOpsSwitcher');
+    const opsViewChat = document.getElementById('opsViewChat');
+    const opsViewApprovals = document.getElementById('opsViewApprovals');
+    const opsViewCatalog = document.getElementById('opsViewCatalog');
     const workflowBoardPanel = document.getElementById('workflowBoardPanel');
     const workflowSummaryGrid = document.getElementById('workflowSummaryGrid');
     const workflowCardList = document.getElementById('workflowCardList');
@@ -918,7 +1133,19 @@
     const workflowSearchInput = document.getElementById('workflowSearchInput');
     const workflowRejectModal = document.getElementById('workflowRejectModal');
     const workflowRejectFeedback = document.getElementById('workflowRejectFeedback');
+    const workflowCatalogPanel = document.getElementById('workflowCatalogPanel');
+    const workflowCatalogSummaryGrid = document.getElementById('workflowCatalogSummaryGrid');
+    const workflowCatalogList = document.getElementById('workflowCatalogList');
+    const workflowCatalogEmpty = document.getElementById('workflowCatalogEmpty');
+    const workflowCatalogStatus = document.getElementById('workflowCatalogStatus');
+    const workflowCatalogMeta = document.getElementById('workflowCatalogMeta');
+    const workflowCatalogLoading = document.getElementById('workflowCatalogLoading');
+    const workflowCatalogSearchInput = document.getElementById('workflowCatalogSearchInput');
+    const workflowCatalogScopeFilter = document.getElementById('workflowCatalogScopeFilter');
+    const workflowCatalogStatusFilter = document.getElementById('workflowCatalogStatusFilter');
+    const workflowCatalogUsageFilter = document.getElementById('workflowCatalogUsageFilter');
 
+    let activeOperationalView = 'chat';
     let workflowBoardData = null;
     let workflowBoardFilters = {
         status: 'all',
@@ -928,10 +1155,53 @@
     };
     let workflowBusyActionId = null;
     let workflowRejectActionId = null;
+    let workflowCatalogData = null;
+    let workflowCatalogFilters = {
+        search: '',
+        scope: 'all',
+        status: 'all',
+        usage: 'all',
+    };
 
     marked.setOptions({ gfm: true, breaks: true });
-    function shouldShowWorkflowBoard() {
+    function shouldShowOperationalPanels() {
         return ['sapiens', 'engineering'].includes(activeContact);
+    }
+
+    function updateOperationalViewControls() {
+        const visible = shouldShowOperationalPanels();
+        sapiensOpsSwitcher.classList.toggle('visible', visible);
+        if (!visible) {
+            activeOperationalView = 'chat';
+        }
+        opsViewChat.classList.toggle('active', activeOperationalView === 'chat');
+        opsViewApprovals.classList.toggle('active', activeOperationalView === 'approvals');
+        opsViewCatalog.classList.toggle('active', activeOperationalView === 'catalog');
+    }
+
+    function setOperationalView(view) {
+        activeOperationalView = view || 'chat';
+        updateOperationalViewControls();
+        refreshOperationalPanels();
+    }
+
+    function refreshOperationalPanels() {
+        updateOperationalViewControls();
+        if (!shouldShowOperationalPanels()) {
+            workflowBoardPanel.classList.remove('visible');
+            workflowCatalogPanel.classList.remove('visible');
+            return;
+        }
+        if (activeOperationalView === 'approvals') {
+            refreshWorkflowBoard();
+            return;
+        }
+        if (activeOperationalView === 'catalog') {
+            refreshWorkflowCatalog();
+            return;
+        }
+        workflowBoardPanel.classList.remove('visible');
+        workflowCatalogPanel.classList.remove('visible');
     }
 
     function setWorkflowBoardStatus(kind, message) {
@@ -1119,7 +1389,7 @@
     }
 
     async function refreshWorkflowBoard() {
-        if (!shouldShowWorkflowBoard()) {
+        if (!shouldShowOperationalPanels() || activeOperationalView !== 'approvals') {
             workflowBoardPanel.classList.remove('visible');
             workflowSummaryGrid.innerHTML = '';
             workflowCardList.innerHTML = '';
@@ -1129,6 +1399,7 @@
             return;
         }
 
+        workflowCatalogPanel.classList.remove('visible');
         setWorkflowBoardLoading(true);
         setWorkflowBoardStatus('info', 'Atualizando painel operacional omnichannel...');
 
@@ -1201,6 +1472,188 @@
     }
 
 
+
+    function setWorkflowCatalogStatus(kind, message) {
+        if (!message) {
+            workflowCatalogStatus.className = 'workflow-board-status';
+            workflowCatalogStatus.innerHTML = '';
+            return;
+        }
+        workflowCatalogStatus.className = `workflow-board-status visible ${kind || 'info'}`;
+        workflowCatalogStatus.innerHTML = `<span>${escapeHtml(message)}</span>`;
+    }
+
+    function setWorkflowCatalogLoading(isLoading) {
+        workflowCatalogLoading.style.display = isLoading ? 'grid' : 'none';
+        if (isLoading) {
+            workflowCatalogSummaryGrid.innerHTML = '';
+            workflowCatalogList.innerHTML = '';
+            workflowCatalogEmpty.style.display = 'none';
+        }
+    }
+
+    function buildWorkflowCatalogMeta(summary) {
+        const channels = Array.isArray(summary.channels) ? summary.channels.slice(0, 3).map(item => item.channel).join(', ') : '-';
+        const routeSources = Array.isArray(summary.route_sources) ? summary.route_sources.slice(0, 3).map(item => item.route_source).join(', ') : '-';
+        return [
+            `<span class="workflow-board-pill"><strong>${escapeHtml(String(summary.workflow_count ?? 0))}</strong> fluxos cadastrados</span>`,
+            `<span class="workflow-board-pill">Usados: ${escapeHtml(String(summary.used_workflow_count ?? 0))}</span>`,
+            `<span class="workflow-board-pill">Sem uso: ${escapeHtml(String(summary.unused_workflow_count ?? 0))}</span>`,
+            `<span class="workflow-board-pill">Canais mais ativos: ${escapeHtml(channels || '-')}</span>`,
+            `<span class="workflow-board-pill">Origens de rota: ${escapeHtml(routeSources || '-')}</span>`,
+        ].join('');
+    }
+
+    function normalizeWorkflowSearchBlob(item) {
+        const requiredFields = Array.isArray(item.required_fields) ? item.required_fields.map(field => `${field.key || ''} ${field.label || ''}`).join(' ') : '';
+        const keywords = Array.isArray(item.keywords) ? item.keywords.join(' ') : '';
+        const examples = Array.isArray(item.intent_examples) ? item.intent_examples.join(' ') : '';
+        return [
+            item.code || '',
+            item.title || '',
+            item.action_key || '',
+            item.description || '',
+            item.scope || '',
+            keywords,
+            requiredFields,
+            examples,
+        ].join(' ').toLowerCase();
+    }
+
+    function renderWorkflowCatalogSummary(summary) {
+        const cards = [
+            { title: 'Fluxos cadastrados', value: summary.workflow_count ?? 0, hint: 'Catálogo operacional ativo no runtime V3', tone: 'info' },
+            { title: 'Fluxos usados', value: summary.used_workflow_count ?? 0, hint: 'Fluxos já acionados em produção', tone: 'success' },
+            { title: 'Sem uso', value: summary.unused_workflow_count ?? 0, hint: 'Fluxos ainda sem acionamento observado', tone: 'warning' },
+            { title: 'Com gaps associados', value: summary.workflow_with_gap_count ?? 0, hint: 'Pedidos reais conectados ao backlog', tone: 'danger' },
+        ];
+        workflowCatalogSummaryGrid.innerHTML = cards.map(renderWorkflowSummaryCard).join('');
+    }
+
+    function renderWorkflowCatalogTags(item) {
+        const tags = [];
+        tags.push(`<span class="workflow-catalog-tag">${item.scope === 'company' ? 'Empresa ativa' : 'Global'}</span>`);
+        tags.push(`<span class="workflow-catalog-tag">${item.is_active ? 'Ativo' : 'Inativo'}</span>`);
+        if ((item.gaps?.count || 0) > 0) {
+            tags.push(`<span class="workflow-catalog-tag">${escapeHtml(String(item.gaps.count))} gap(s)</span>`);
+        }
+        if ((item.usage?.count || 0) > 0) {
+            tags.push(`<span class="workflow-catalog-tag">${escapeHtml(String(item.usage.count))} uso(s)</span>`);
+        }
+        const required = Array.isArray(item.required_fields) ? item.required_fields.slice(0, 3) : [];
+        required.forEach(field => {
+            tags.push(`<span class="workflow-catalog-tag">Campo: ${escapeHtml(field.label || field.key || '?')}</span>`);
+        });
+        return tags.join('');
+    }
+
+    function renderWorkflowCatalogCard(item) {
+        const usage = item.usage || {};
+        const routeSources = Array.isArray(usage.by_route_source) && usage.by_route_source.length
+            ? usage.by_route_source.slice(0, 2).map(entry => `${entry.route_source}: ${entry.count}`).join(' · ')
+            : 'sem histórico';
+        const channels = Array.isArray(usage.by_channel) && usage.by_channel.length
+            ? usage.by_channel.slice(0, 3).map(entry => `${entry.channel}: ${entry.count}`).join(' · ')
+            : 'sem histórico';
+        return `
+            <article class="workflow-catalog-card">
+                <div class="workflow-catalog-head">
+                    <div>
+                        <div class="workflow-catalog-code">${escapeHtml(item.code || '-')}</div>
+                        <div class="workflow-catalog-title">${escapeHtml(item.title || item.action_key || 'Fluxo sem título')}</div>
+                        <div class="workflow-catalog-subtitle">${escapeHtml(item.action_key || '-')} · ${escapeHtml(item.parent_code || 'raiz do catálogo')}</div>
+                    </div>
+                    <span class="workflow-card-tone tone-${item.is_active ? 'success' : 'warning'}">${item.is_active ? 'ativo' : 'inativo'}</span>
+                </div>
+                <div class="workflow-catalog-tags">${renderWorkflowCatalogTags(item)}</div>
+                <div class="workflow-catalog-grid">
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(usage.count ?? 0))}</strong><span>uso(s) agregados no catálogo</span></div>
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(usage.log_count ?? 0))}</strong><span>execução(ões) auditadas no ledger</span></div>
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(String(item.gaps?.count ?? 0))}</strong><span>gap(s) vinculados a este fluxo</span></div>
+                    <div class="workflow-catalog-metric"><strong>${escapeHtml(formatWorkflowDate(usage.last_used_at))}</strong><span>último uso observado</span></div>
+                </div>
+                <div class="workflow-catalog-description">${escapeHtml(item.description || 'Fluxo sem descrição operacional cadastrada.')}</div>
+                <div class="workflow-card-meta">
+                    ${renderWorkflowMetaItem('Canais', channels)}
+                    ${renderWorkflowMetaItem('Origem do roteamento', routeSources)}
+                    ${renderWorkflowMetaItem('Último gap', formatWorkflowDate(item.gaps?.last_gap_at))}
+                    ${renderWorkflowMetaItem('Keywords', Array.isArray(item.keywords) && item.keywords.length ? item.keywords.slice(0, 5).join(', ') : '-')}
+                </div>
+            </article>
+        `;
+    }
+
+    function filterWorkflowCatalogItems(items) {
+        return items.filter(item => {
+            const matchesScope = workflowCatalogFilters.scope === 'all' || (item.scope || '').toLowerCase() === workflowCatalogFilters.scope;
+            const matchesStatus = workflowCatalogFilters.status === 'all'
+                || (workflowCatalogFilters.status === 'active' && !!item.is_active)
+                || (workflowCatalogFilters.status === 'inactive' && !item.is_active);
+            const usageCount = Number(item.usage?.count || 0);
+            const matchesUsage = workflowCatalogFilters.usage === 'all'
+                || (workflowCatalogFilters.usage === 'used' && usageCount > 0)
+                || (workflowCatalogFilters.usage === 'unused' && usageCount === 0);
+            const search = (workflowCatalogFilters.search || '').trim().toLowerCase();
+            const matchesSearch = !search || normalizeWorkflowSearchBlob(item).includes(search);
+            return matchesScope && matchesStatus && matchesUsage && matchesSearch;
+        });
+    }
+
+    function renderWorkflowCatalog(catalog) {
+        workflowCatalogData = catalog;
+        const summary = catalog.summary || {};
+        workflowCatalogMeta.innerHTML = buildWorkflowCatalogMeta(summary);
+        renderWorkflowCatalogSummary(summary);
+        const items = filterWorkflowCatalogItems(Array.isArray(catalog.workflows) ? catalog.workflows : []);
+        workflowCatalogList.innerHTML = items.map(renderWorkflowCatalogCard).join('');
+        workflowCatalogEmpty.style.display = items.length ? 'none' : 'block';
+        workflowCatalogPanel.classList.add('visible');
+    }
+
+    function updateWorkflowCatalogFilters() {
+        workflowCatalogFilters.search = workflowCatalogSearchInput.value || '';
+        workflowCatalogFilters.scope = workflowCatalogScopeFilter.value || 'all';
+        workflowCatalogFilters.status = workflowCatalogStatusFilter.value || 'all';
+        workflowCatalogFilters.usage = workflowCatalogUsageFilter.value || 'all';
+        if (workflowCatalogData) {
+            renderWorkflowCatalog(workflowCatalogData);
+        }
+    }
+
+    async function refreshWorkflowCatalog() {
+        if (!shouldShowOperationalPanels() || activeOperationalView !== 'catalog') {
+            workflowCatalogPanel.classList.remove('visible');
+            workflowCatalogSummaryGrid.innerHTML = '';
+            workflowCatalogList.innerHTML = '';
+            workflowCatalogEmpty.style.display = 'none';
+            workflowCatalogMeta.innerHTML = '';
+            setWorkflowCatalogStatus();
+            return;
+        }
+
+        workflowBoardPanel.classList.remove('visible');
+        setWorkflowCatalogLoading(true);
+        setWorkflowCatalogStatus('info', 'Atualizando catálogo operacional dos fluxos cadastrados...');
+
+        try {
+            const resp = await fetch('/api/agents/workflows/catalog?limit=500&include_global=true&include_inactive=true');
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                workflowCatalogPanel.classList.remove('visible');
+                setWorkflowCatalogStatus('danger', data.error || 'Falha ao carregar o catálogo operacional dos fluxos.');
+                return;
+            }
+            renderWorkflowCatalog(data);
+            setWorkflowCatalogStatus('success', 'Catálogo operacional dos fluxos sincronizado com sucesso.');
+        } catch (error) {
+            console.error('Erro ao carregar workflow catalog:', error);
+            workflowCatalogPanel.classList.remove('visible');
+            setWorkflowCatalogStatus('danger', 'Falha de rede ao atualizar o catálogo operacional dos fluxos.');
+        } finally {
+            setWorkflowCatalogLoading(false);
+        }
+    }
+
     async function loadContacts() {
         try {
             const resp = await fetch('/api/agents/contacts');
@@ -1245,7 +1698,7 @@
         if (activeContact === 'engineering') checkActions();
         else document.getElementById('techAlert').style.display = 'none';
 
-        refreshWorkflowBoard();
+        refreshOperationalPanels();
     }
 
     async function loadChatHistory() {
@@ -1408,7 +1861,7 @@
         if (data.success) {
             document.getElementById('techAlert').style.display = 'none';
             addMessageUI('assistant', `✅ **REPARO EXECUTADO:** ${data.message}`, 'engineering_squad');
-            refreshWorkflowBoard();
+            refreshOperationalPanels();
         }
     }
 
@@ -1450,7 +1903,13 @@
         else selectContact({ id: 'sapiens', name: 'Versus Sapiens', status: 'online', avatar: '🧭', type: 'bot' });
 
         setInterval(checkActions, 30000);
-        setInterval(refreshWorkflowBoard, 45000);
+        setInterval(() => {
+            if (activeOperationalView === 'approvals') {
+                refreshWorkflowBoard();
+            } else if (activeOperationalView === 'catalog') {
+                refreshWorkflowCatalog();
+            }
+        }, 45000);
     });
 </script>
 {% endblock %}
