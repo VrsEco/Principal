@@ -95,6 +95,7 @@ from .matcher import HybridWorkflowMatcher
 from .matcher import SemanticWorkflowMatcher
 from .matcher import WorkflowMatchReranker
 from .matcher import WorkflowMatchReranker
+from .policy import WorkflowApprovalPolicyGuard, WorkflowApprovalRequest
 from .presenters import (
     WorkflowDisplayOption,
     build_my_work_report,
@@ -288,6 +289,8 @@ __all__ = [
     "WorkflowEvaluationReport",
     "WorkflowLLMRerankCandidate",
     "WorkflowLLMRerankDecision",
+    "WorkflowApprovalPolicyGuard",
+    "WorkflowApprovalRequest",
     "WorkflowDisplayOption",
     "WorkflowDiscoveryConfidenceDecision",
     "WorkflowDiscoveryConfidencePolicy",

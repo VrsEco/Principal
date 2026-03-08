@@ -31,6 +31,7 @@ from src.intelligence.workflows.direct_execution import (
     DirectExecutionRequest,
     build_handler_executor,
 )
+from src.intelligence.workflows.policy import WorkflowApprovalPolicyGuard
 from src.intelligence.workflows.field_collection import (
     FIELD_COLLECTION_ROUTE_PROMPT_MISSING,
     FieldCollectionCoordinator,
@@ -1744,6 +1745,10 @@ def _build_operation_company_selection_coordinator() -> OperationCompanySelectio
     )
 
 
+def _build_workflow_approval_policy_guard() -> WorkflowApprovalPolicyGuard:
+    return WorkflowApprovalPolicyGuard()
+
+
 def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
     return DirectExecutionDispatcher(
         {
@@ -1807,7 +1812,8 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                 handler_factory=_build_onboarding_go_live_check_execution_handler,
                 request_model=OnboardingGoLiveCheckRequest,
             ),
-        }
+        },
+        policy_guard=_build_workflow_approval_policy_guard().evaluate,
     )
 
 

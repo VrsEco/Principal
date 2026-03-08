@@ -9,6 +9,7 @@ from src.intelligence.workflows.direct_execution import (
     build_direct_execution_request,
     build_handler_executor,
 )
+from src.intelligence.workflows.policy import WorkflowApprovalPolicyGuard, WorkflowApprovalRequest
 from src.intelligence.workflows.handlers import MyWorkExecutionRequest
 
 
@@ -153,3 +154,71 @@ def test_build_handler_executor_builds_request_and_returns_response_text():
     assert built_request.active_company_id == 3
     assert built_request.user_id == 7
     assert built_request.channel == "email"
+
+
+def test_direct_execution_dispatcher_blocks_sensitive_action_via_policy_guard():
+    created = []
+
+    def _create_approval_request(request, context):
+        created.append((request, context))
+        return WorkflowApprovalRequest(approval_id=77, reused_existing=False)
+
+    guard = WorkflowApprovalPolicyGuard(create_approval_request=_create_approval_request)
+    dispatcher = DirectExecutionDispatcher(
+        {
+            "project_task.complete": lambda request: "nao deveria executar",
+        },
+        policy_guard=guard.evaluate,
+    )
+
+    result = dispatcher.execute(
+        DirectExecutionRequest(
+            action_key="project_task.complete",
+            payload={"codigo_atividade": "AA.J.31.202"},
+            active_company_id=9,
+            user_id=10,
+            channel="whatsapp",
+        )
+    )
+
+    assert result.executed is True
+    assert "aprovação humana" in result.response_text.lower()
+    assert "#77" in result.response_text
+    assert len(created) == 1
+    assert created[0][1]["action_key"] == "project_task.complete"
+
+
+def test_workflow_approval_policy_guard_allows_sensitive_action_on_web_channel():
+    guard = WorkflowApprovalPolicyGuard(
+        create_approval_request=lambda request, context: WorkflowApprovalRequest(approval_id=1)
+    )
+
+    response = guard.evaluate(
+        DirectExecutionRequest(
+            action_key="meeting.start",
+            payload={"codigo_reuniao": "R-15"},
+            active_company_id=9,
+            user_id=10,
+            channel="web",
+        )
+    )
+
+    assert response is None
+
+
+def test_workflow_approval_policy_guard_requires_company_for_sensitive_action():
+    guard = WorkflowApprovalPolicyGuard(
+        create_approval_request=lambda request, context: WorkflowApprovalRequest(approval_id=1)
+    )
+
+    response = guard.evaluate(
+        DirectExecutionRequest(
+            action_key="process_instance.complete",
+            payload={"codigo_instancia": "PI-9"},
+            active_company_id=None,
+            user_id=10,
+            channel="telegram",
+        )
+    )
+
+    assert "empresa ativa" in response.lower()

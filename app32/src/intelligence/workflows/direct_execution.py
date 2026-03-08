@@ -24,15 +24,17 @@ class DirectExecutionResult(BaseModel):
 
 DirectExecutionHandler = Callable[[DirectExecutionRequest], Optional[str]]
 DirectExecutionExtraFieldsBuilder = Callable[[DirectExecutionRequest], Dict[str, Any]]
+DirectExecutionPolicyGuard = Callable[[DirectExecutionRequest], Optional[str]]
 
 
 class DirectExecutionDispatcher:
-    def __init__(self, handlers: Dict[str, DirectExecutionHandler]):
+    def __init__(self, handlers: Dict[str, DirectExecutionHandler], policy_guard: Optional[DirectExecutionPolicyGuard] = None):
         self._handlers = {
             self._normalize_action_key(action_key): handler
             for action_key, handler in (handlers or {}).items()
             if self._normalize_action_key(action_key) and handler is not None
         }
+        self._policy_guard = policy_guard
 
     def execute(self, request: DirectExecutionRequest) -> DirectExecutionResult:
         action_key = self._normalize_action_key(request.action_key)
@@ -42,6 +44,11 @@ class DirectExecutionDispatcher:
         handler = self._handlers.get(action_key)
         if handler is None:
             return DirectExecutionResult(executed=False)
+
+        if self._policy_guard is not None:
+            policy_response = self._policy_guard(request)
+            if policy_response is not None:
+                return DirectExecutionResult(executed=True, response_text=str(policy_response))
 
         response_text = handler(request)
         if response_text is None:

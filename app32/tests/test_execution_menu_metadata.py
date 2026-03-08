@@ -1,10 +1,12 @@
 import os
 import sys
+from contextlib import contextmanager
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.intelligence import execution
 from src.intelligence.menu_engine import MenuInterceptResult
+from src.intelligence.tool_context import active_company_id_ctx, active_user_id_ctx
 
 
 def test_run_agent_with_context_returns_menu_metadata_on_intercept(monkeypatch):
@@ -41,3 +43,65 @@ def test_run_agent_with_context_returns_menu_metadata_on_intercept(monkeypatch):
     assert response["next_node"] == "sapiens"
     assert response["menu_metadata"]["menu_engine"]["intercept_stage"] == "implicit_discovery_selected"
     assert response["menu_metadata"]["workflow_discovery"]["selected_action_key"] == "summary.week"
+    assert response["menu_metadata"]["execution_context"]["channel"] == "web"
+    assert response["menu_metadata"]["execution_context"]["thread_id"] == "web_3_sapiens"
+    assert response["menu_metadata"]["execution_context"]["menu_intercepted"] is True
+    assert response["menu_metadata"]["execution_context"]["company_id"] == 9
+    assert response["menu_metadata"]["execution_context"]["execution_id"]
+
+
+def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch):
+    captured = {}
+
+    monkeypatch.setattr(execution, "set_sapiens_context", lambda **kwargs: "token")
+    monkeypatch.setattr(execution, "reset_sapiens_context", lambda token: None)
+    monkeypatch.setattr(
+        execution,
+        "handle_menu_message",
+        lambda **kwargs: MenuInterceptResult(handled=False, metadata={"workflow_discovery": {"strategy": "hybrid"}}),
+    )
+
+    @contextmanager
+    def fake_checkpointer():
+        yield object()
+
+    class FakeGraph:
+        def invoke(self, inputs, config=None):
+            captured["ctx_user_inside"] = active_user_id_ctx.get()
+            captured["ctx_company_inside"] = active_company_id_ctx.get()
+            captured["inputs"] = inputs
+            captured["config"] = config
+            return {"messages": [("ai", "ok")], "menu_metadata": {"agent": {"selected": "sapiens"}}}
+
+    monkeypatch.setattr(execution, "get_checkpointer", fake_checkpointer)
+    monkeypatch.setattr(execution, "create_work_agent_workflow", lambda checkpointer: FakeGraph())
+
+    os.environ.pop("ACTIVE_USER_ID", None)
+    os.environ.pop("ACTIVE_COMPANY_ID", None)
+
+    response = execution.run_agent_with_context(
+        user_id=7,
+        user_msg="teste",
+        channel="whatsapp",
+        thread_prefix="wa",
+        thread_id="wa_7_x",
+        company_id=11,
+    )
+
+    assert captured["ctx_user_inside"] == 7
+    assert captured["ctx_company_inside"] == 11
+    assert active_user_id_ctx.get() is None
+    assert active_company_id_ctx.get() is None
+    assert "ACTIVE_USER_ID" not in os.environ
+    assert "ACTIVE_COMPANY_ID" not in os.environ
+    assert response["menu_metadata"]["agent"]["selected"] == "sapiens"
+    assert response["menu_metadata"]["workflow_discovery"]["strategy"] == "hybrid"
+    assert response["menu_metadata"]["execution_context"] == {
+        "execution_id": response["menu_metadata"]["execution_context"]["execution_id"],
+        "user_id": 7,
+        "company_id": 11,
+        "channel": "whatsapp",
+        "thread_id": "wa_7_x",
+        "thread_prefix": "wa",
+        "menu_intercepted": False,
+    }

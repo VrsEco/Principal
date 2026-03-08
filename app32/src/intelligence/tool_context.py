@@ -1,5 +1,5 @@
 from contextvars import ContextVar
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 
 @dataclass
@@ -44,3 +44,20 @@ def reset_sapiens_context(token):
 # Mantemos compatibilidade legacional por enquanto
 active_user_id_ctx = ContextVar('active_user_id', default=None)
 active_company_id_ctx = ContextVar('active_company_id', default=None)
+
+
+def set_legacy_tool_context(
+    user_id: Optional[int] = None,
+    company_id: Optional[int] = None,
+) -> Tuple[Any, Any]:
+    """Define o contexto legacional de tools usando ContextVar, sem recorrer a estado global de processo."""
+    user_token = active_user_id_ctx.set(user_id)
+    company_token = active_company_id_ctx.set(company_id)
+    return user_token, company_token
+
+
+def reset_legacy_tool_context(tokens: Tuple[Any, Any]) -> None:
+    """Reseta o contexto legacional das tools com segurança."""
+    user_token, company_token = tokens
+    active_user_id_ctx.reset(user_token)
+    active_company_id_ctx.reset(company_token)
