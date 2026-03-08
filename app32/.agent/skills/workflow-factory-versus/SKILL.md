@@ -91,6 +91,7 @@ Avalie e atualize quando fizer sentido:
 Leia conforme a necessidade:
 - `references/workflow-checklist.md` para checklist de arquitetura e entrega
 - `references/workflow-blueprint.md` para mapa de arquivos e decisões de integração
+- `references/first-workflow-example.md` para o primeiro caso real recomendado (`collaborator.occupancy`)
 
 ## Uso do script
 Exemplo de scaffolding inicial:
@@ -100,3 +101,4 @@ python .agent/skills/workflow-factory-versus/scripts/init_workflow.py --module o
 ```
 
 Depois remova os placeholders e integre o fluxo ao runtime V3.
+

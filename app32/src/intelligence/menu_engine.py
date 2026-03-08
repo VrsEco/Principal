@@ -42,6 +42,8 @@ from src.intelligence.workflows.field_collection import (
     missing_required_fields as find_workflow_missing_required_fields,
 )
 from src.intelligence.workflows.handlers import (
+    CollaboratorOccupancyExecutionHandler,
+    CollaboratorOccupancyRequest,
     MeetingScheduleExecutionHandler,
     MeetingScheduleRequest,
     MeetingStartExecutionHandler,
@@ -69,6 +71,7 @@ from src.intelligence.workflows.handlers import (
 )
 from src.intelligence.workflows.presenters import (
     WorkflowDisplayOption,
+    build_collaborator_occupancy_report,
     build_my_work_report,
     build_confirmation_display_items,
     build_confirmation_text,
@@ -993,6 +996,7 @@ def _adjust_required_fields_for_context(
 def _is_read_only_action(action_key: Optional[str]) -> bool:
     action = (action_key or "").strip().lower()
     return action in {
+        "collaborator.occupancy",
         "my_work.open",
         "my_work.overdue",
         "my_work.due_range",
@@ -1777,6 +1781,10 @@ def _build_workflow_approval_policy_guard() -> WorkflowApprovalPolicyGuard:
 def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
     return DirectExecutionDispatcher(
         {
+            "collaborator.occupancy": build_handler_executor(
+                handler_factory=_build_collaborator_occupancy_execution_handler,
+                request_model=CollaboratorOccupancyRequest,
+            ),
             "project_task.create": build_handler_executor(
                 handler_factory=_build_project_task_create_execution_handler,
                 request_model=ProjectTaskCreateRequest,
@@ -1938,6 +1946,133 @@ def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
         load_process_instances_report=_load_process_instances_report,
         load_meetings_report=_load_meetings_report,
         format_my_work_report=_format_my_work_report,
+    )
+
+
+def _build_collaborator_occupancy_execution_handler() -> CollaboratorOccupancyExecutionHandler:
+    from decimal import Decimal
+
+    from models.activity_work_log import ActivityWorkLog
+    from models.employee import Employee
+    from models.project import Project, ProjectTask
+
+    def _resolve_employee_for_company(company_id: int, collaborator_term: str):
+        normalized_term = _normalize_text(collaborator_term)
+        employees = (
+            Employee.query.filter(
+                Employee.company_id == company_id,
+                Employee.status == "active",
+            )
+            .order_by(Employee.name.asc())
+            .all()
+        )
+        if not employees:
+            return None, "Nenhum colaborador ativo encontrado para a empresa selecionada."
+
+        matches = []
+        for employee in employees:
+            haystack = _normalize_text(
+                f"{getattr(employee, 'name', '')} {getattr(employee, 'email', '')} {getattr(employee, 'department', '')}"
+            )
+            score = 0
+            if normalized_term and normalized_term == _normalize_text(getattr(employee, "name", "")):
+                score += 10
+            if normalized_term and normalized_term in haystack:
+                score += 4
+            if normalized_term and all(token in haystack for token in normalized_term.split() if token):
+                score += 2
+            if score > 0:
+                matches.append((score, employee))
+
+        if not matches:
+            names = ", ".join(emp.name for emp in employees[:8])
+            return None, f"Nao encontrei colaborador para '{collaborator_term}'. Colaboradores ativos: {names}"
+
+        matches.sort(key=lambda item: (-item[0], str(item[1].name or "").lower(), item[1].id))
+        top_score = matches[0][0]
+        top_matches = [employee for score, employee in matches if score == top_score]
+        if len(top_matches) > 1:
+            names = ", ".join(emp.name for emp in top_matches[:8])
+            return None, f"Encontrei mais de um colaborador para '{collaborator_term}': {names}"
+        return top_matches[0], None
+
+    def _business_days_between(start_date: date, end_date: date) -> int:
+        if end_date < start_date:
+            start_date, end_date = end_date, start_date
+        total = 0
+        current = start_date
+        while current <= end_date:
+            if current.weekday() < 5:
+                total += 1
+            current += timedelta(days=1)
+        return total
+
+    def _calculate_available_hours(employee: Any, start_date: date, end_date: date) -> float:
+        weekly_hours = float(getattr(employee, "weekly_hours", 0) or 40.0)
+        daily_capacity = weekly_hours / 5.0 if weekly_hours else 0.0
+        return round(daily_capacity * _business_days_between(start_date, end_date), 2)
+
+    def _sum_activity_hours(employee: Any, start_date: date, end_date: date, activity_types: List[str]) -> float:
+        total = (
+            db.session.query(func.coalesce(func.sum(ActivityWorkLog.hours_worked), 0))
+            .filter(
+                ActivityWorkLog.employee_id == employee.id,
+                ActivityWorkLog.activity_type.in_(activity_types),
+                ActivityWorkLog.work_date >= start_date,
+                ActivityWorkLog.work_date <= end_date,
+            )
+            .scalar()
+        )
+        return float(total or 0.0)
+
+    def _load_project_hours_committed(employee: Any, start_date: date, end_date: date) -> float:
+        tasks = (
+            db.session.query(ProjectTask)
+            .join(Project, Project.id == ProjectTask.project_id)
+            .filter(Project.company_id == employee.company_id)
+            .filter(~ProjectTask.status.in_(["completed", "cancelled"]))
+            .filter(ProjectTask.stage != "completed")
+            .all()
+        )
+        total = Decimal("0")
+        for task in tasks:
+            assigned = False
+            if getattr(task, "employee_id", None) and int(task.employee_id) == int(employee.id):
+                assigned = True
+            if not assigned:
+                for collaborator in getattr(task, "collaborators", []) or []:
+                    if getattr(collaborator, "is_deleted", False):
+                        continue
+                    if int(getattr(collaborator, "employee_id", 0) or 0) == int(employee.id):
+                        assigned = True
+                        break
+            if not assigned:
+                continue
+            due_date = getattr(task, "due_date", None)
+            if due_date and (due_date < start_date or due_date > end_date):
+                continue
+            total += Decimal(str(getattr(task, "estimated_hours", 0) or 0))
+        return float(total)
+
+    def _format_report(**kwargs):
+        return build_collaborator_occupancy_report(
+            **kwargs,
+            format_date_br=_format_date_br,
+        )
+
+    return CollaboratorOccupancyExecutionHandler(
+        resolve_single_company_for_operation=_resolve_single_company_for_operation,
+        resolve_period_from_payload=_resolve_period_from_payload,
+        resolve_employee_for_company=_resolve_employee_for_company,
+        calculate_available_hours=_calculate_available_hours,
+        load_process_hours_taken=lambda employee, start_date, end_date: _sum_activity_hours(
+            employee, start_date, end_date, ["process", "process_instance"]
+        ),
+        load_project_hours_taken=lambda employee, start_date, end_date: _sum_activity_hours(
+            employee, start_date, end_date, ["project"]
+        ),
+        load_project_hours_committed=_load_project_hours_committed,
+        format_report=_format_report,
     )
 
 
@@ -4278,6 +4413,7 @@ def _ensure_default_menu_seed() -> None:
         {"code": "3.3", "title": "Atividades a Vencer no Periodo", "parent_code": "3", "action_key": "my_work.due_range", "required_fields": [{"key": "empresa", "label": "Empresa"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["a vencer", "proximo vencimento"], "sort_order": 33},
         {"code": "3.4", "title": "Atividades Concluidas no Periodo", "parent_code": "3", "action_key": "my_work.completed_range", "required_fields": [{"key": "empresa", "label": "Empresa"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["concluidas no periodo", "atividades concluidas"], "sort_order": 34},
         {"code": "3.5", "title": "Resumos", "parent_code": "3", "sort_order": 35},
+        {"code": "3.6", "title": "Ocupacao de Colaborador", "parent_code": "3", "action_key": "collaborator.occupancy", "required_fields": [{"key": "colaborador", "label": "Colaborador"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["ocupacao do colaborador", "ocupacao do usuario", "capacidade do colaborador", "carga do colaborador", "horas disponiveis do colaborador"], "sort_order": 40},
         {"code": "3.5.1", "title": "Hoje", "parent_code": "3.5", "action_key": "summary.today", "required_fields": [], "keywords": ["resumo hoje", "resumo do dia"], "sort_order": 36},
         {"code": "3.5.2", "title": "Esta Semana", "parent_code": "3.5", "action_key": "summary.week", "required_fields": [], "keywords": ["resumo semana", "esta semana"], "sort_order": 37},
         {"code": "3.5.3", "title": "Este Mes", "parent_code": "3.5", "action_key": "summary.month", "required_fields": [], "keywords": ["resumo mes", "este mes"], "sort_order": 38},
@@ -4328,6 +4464,24 @@ def _ensure_default_menu_upgrades() -> None:
         sort_order=30,
     )
     if root_3:
+        _ensure_menu_option_exists(
+            code="3.6",
+            title="Ocupacao de Colaborador",
+            parent_code="3",
+            action_key="collaborator.occupancy",
+            required_fields=[
+                {"key": "colaborador", "label": "Colaborador"},
+                {"key": "periodo", "label": "Periodo"},
+            ],
+            keywords=[
+                "ocupacao do colaborador",
+                "ocupacao do usuario",
+                "capacidade do colaborador",
+                "carga do colaborador",
+                "horas disponiveis do colaborador",
+            ],
+            sort_order=36,
+        )
         _ensure_menu_option_exists(
             code="3.5",
             title="Resumos",

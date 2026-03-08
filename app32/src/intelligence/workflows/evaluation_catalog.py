@@ -47,6 +47,13 @@ def build_default_workflow_evaluation_cases() -> List[WorkflowEvaluationCase]:
             expected_action_key="my_work.completed_range",
         ),
         WorkflowEvaluationCase(
+            domain="collaborator",
+            label="collaborator_occupancy",
+            text="preciso da ocupacao do colaborador Fabiano nesta semana",
+            expected_action_key="collaborator.occupancy",
+            channel="whatsapp",
+        ),
+        WorkflowEvaluationCase(
             domain="project_task",
             label="project_task_create",
             text="quero cadastrar uma nova atividade de projeto",

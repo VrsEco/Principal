@@ -53,6 +53,9 @@ from .evaluation import (
 )
 from .evaluation_catalog import build_default_workflow_evaluation_cases
 from .handlers import (
+    CollaboratorOccupancyExecutionHandler,
+    CollaboratorOccupancyRequest,
+    CollaboratorOccupancyResult,
     MeetingScheduleExecutionHandler,
     MeetingScheduleRequest,
     MeetingScheduleResult,
@@ -98,6 +101,7 @@ from .matcher import WorkflowMatchReranker
 from .policy import WorkflowApprovalPolicyGuard, WorkflowApprovalRequest
 from .presenters import (
     WorkflowDisplayOption,
+    build_collaborator_occupancy_report,
     build_my_work_report,
     build_confirmation_display_items,
     build_confirmation_text,
@@ -128,6 +132,9 @@ from .semantic_index import WorkflowSemanticIndex
 from .semantic_index import WorkflowSemanticProfile
 from .schemas import (
     AssistedSelectionContext,
+    CollaboratorOccupancyInput,
+    CollaboratorOccupancyRequest,
+    CollaboratorOccupancyResult,
     MeetingReferenceInput,
     MeetingScheduleInput,
     MyWorkExecutionInput,
@@ -184,7 +191,12 @@ __all__ = [
     "HeuristicWorkflowReranker",
     "LLMWorkflowReranker",
     "AssistedSelectionContext",
+    "CollaboratorOccupancyExecutionHandler",
+    "CollaboratorOccupancyInput",
+    "CollaboratorOccupancyRequest",
+    "CollaboratorOccupancyResult",
     "adjust_required_fields_for_context",
+    "build_collaborator_occupancy_report",
     "build_missing_fields_prompt",
     "build_operation_company_prompt",
     "DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS",

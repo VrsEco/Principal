@@ -83,6 +83,9 @@ Transformar o runtime atual em um modelo **workflow-first**, onde:
 - `handlers/my_work_handler.py`
   - handler dedicado das consultas `my_work.*`
   - consolida resolução de escopo, período e montagem do relatório final
+- `handlers/collaborator_handler.py`
+  - handler dedicado do workflow `collaborator.occupancy`
+  - consolida resolução de empresa, colaborador, período e cálculo da ocupação
 - `handlers/onboarding_handler.py`
   - handlers dedicados para:
     - `onboarding.status`
@@ -106,6 +109,8 @@ Transformar o runtime atual em um modelo **workflow-first**, onde:
   - schema canônico do payload de conclusão de instância de processo
 - `schemas/my_work.py`
   - schema canônico da ação de consulta `my_work.*`
+- `schemas/collaborator.py`
+  - schema canônico do workflow `collaborator.occupancy`
 - `schemas/onboarding.py`
   - schemas canônicos de entrada para `onboarding.start` e `onboarding.diagnose`
 - `schemas/meeting.py`
@@ -128,6 +133,8 @@ Transformar o runtime atual em um modelo **workflow-first**, onde:
   - formatação do prompt de coleta de campos pendentes
 - `presenters/company_selection_presenter.py`
   - formatação do prompt de seleção operacional de empresa
+- `presenters/collaborator_presenter.py`
+  - formatação executiva da ocupação do colaborador
 
 ### Integração inicial
 `src/intelligence/menu_engine.py`

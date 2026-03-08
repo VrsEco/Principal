@@ -6,6 +6,7 @@ from .channel_presenter import (
     normalize_channel,
     sanitize_for_channel,
 )
+from .collaborator_presenter import build_collaborator_occupancy_report
 from .company_selection_presenter import build_operation_company_prompt
 from .conversation_presenter import (
     build_guidance_block,
@@ -39,6 +40,7 @@ from .summary_presenter import (
 
 __all__ = [
     "WorkflowDisplayOption",
+    "build_collaborator_occupancy_report",
     "build_confirmation_display_items",
     "build_guidance_block",
     "build_key_value_lines",

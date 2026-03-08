@@ -1,3 +1,8 @@
+from .collaborator_handler import (
+    CollaboratorOccupancyExecutionHandler,
+    CollaboratorOccupancyRequest,
+    CollaboratorOccupancyResult,
+)
 from .project_task_handler import (
     ProjectTaskCompleteExecutionHandler,
     ProjectTaskCompleteRequest,
@@ -44,6 +49,9 @@ from .meeting_handler import (
 from .summary_handler import SummaryExecutionRequest, SummaryExecutionResult, SummaryWorkflowExecutionHandler
 
 __all__ = [
+    "CollaboratorOccupancyExecutionHandler",
+    "CollaboratorOccupancyRequest",
+    "CollaboratorOccupancyResult",
     "MeetingScheduleExecutionHandler",
     "MeetingScheduleRequest",
     "MeetingScheduleResult",

@@ -1,4 +1,9 @@
 from .company_selection import OperationCompanyChoice, OperationCompanySelectionContext
+from .collaborator import (
+    CollaboratorOccupancyInput,
+    CollaboratorOccupancyRequest,
+    CollaboratorOccupancyResult,
+)
 from .field_collection import WorkflowRequiredField, normalize_field_key
 from .meeting import MeetingReferenceInput, MeetingScheduleInput
 from .my_work import MyWorkExecutionInput
@@ -10,6 +15,9 @@ from .summary import SummaryExecutionInput
 
 __all__ = [
     "AssistedSelectionContext",
+    "CollaboratorOccupancyInput",
+    "CollaboratorOccupancyRequest",
+    "CollaboratorOccupancyResult",
     "MeetingReferenceInput",
     "MeetingScheduleInput",
     "MyWorkExecutionInput",
