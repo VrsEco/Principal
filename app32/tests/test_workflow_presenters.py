@@ -13,6 +13,7 @@ from src.intelligence.workflows.presenters import (
     build_summary_company_prompt,
     build_summary_period_prompt,
     build_channel_capabilities,
+    build_status_callout,
     format_channel_heading,
 )
 
@@ -83,9 +84,9 @@ def test_confirmation_presenter_builds_text():
         format_objective_label=lambda value: value.upper(),
     )
 
-    assert "Confirme que voce quer:" in text
-    assert "5.1 - Diagnosticar Funcionamento" in text
-    assert "- objetivo: MELHORAR VENDAS" in text
+    assert "Confirme a operacao" in text
+    assert "Fluxo selecionado: 5.1 - Diagnosticar Funcionamento" in text
+    assert "item: objetivo: MELHORAR VENDAS" in text
     assert "responda 'sim'" in text.lower()
 
 
@@ -107,8 +108,8 @@ def test_confirmation_presenter_supports_whatsapp_heading():
         channel="whatsapp",
     )
 
-    assert "*Confirme que voce quer:*" in text
-    assert "*1.4 - Cadastrar Atividade de Projeto*" in text
+    assert "*Confirme a operacao*" in text
+    assert "*Fluxo selecionado: 1.4 - Cadastrar Atividade de Projeto*" in text
 
 
 def test_summary_company_presenter_sanitizes_telegram_labels():
@@ -138,8 +139,8 @@ def test_missing_fields_and_company_prompt_support_channel_formatting():
         channel="whatsapp",
     )
 
-    assert "*Voce quer fazer 1.4 - Cadastrar Atividade.*" in fields_text
-    assert "*1.4 - Cadastrar Atividade*" in company_text
+    assert "*1.4 - Cadastrar Atividade*" in fields_text
+    assert "Escolha a empresa para continuar:" in company_text
 
 
 def test_channel_presenter_treats_instagram_as_chat_family():
@@ -153,3 +154,7 @@ def test_channel_presenter_treats_instagram_as_chat_family():
 
 def test_channel_presenter_formats_instagram_heading_like_chat():
     assert format_channel_heading('Resumo V3', 'instagram') == '*Resumo V3*'
+
+
+def test_conversation_presenter_builds_status_callout():
+    assert build_status_callout('warning', 'Confirme antes de executar') == '⚠️ Confirme antes de executar'

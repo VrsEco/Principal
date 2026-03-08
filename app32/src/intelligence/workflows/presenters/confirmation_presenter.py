@@ -5,6 +5,12 @@ from typing import Any, Callable, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict
 
 from .channel_presenter import format_channel_heading, sanitize_for_channel
+from .conversation_presenter import (
+    build_guidance_block,
+    build_key_value_lines,
+    build_presenter_header,
+    build_status_callout,
+)
 
 
 class WorkflowDisplayOption(BaseModel):
@@ -26,25 +32,35 @@ def build_confirmation_text(
     format_objective_label: Callable[[str], str],
     channel: str = "web",
 ) -> str:
-    lines = [
-        format_channel_heading("Confirme que voce quer:", channel),
-        format_channel_heading(f"{option.code} - {option.title}", channel),
-    ]
+    lines = build_presenter_header("Confirme a operacao", channel=channel)
+    lines.extend(["", format_channel_heading(f"Fluxo selecionado: {option.code} - {option.title}", channel)])
+    lines.extend(["", "Confirme que voce quer:", build_status_callout("info", "Revise os dados antes de executar.", channel=channel)])
     if payload:
-        lines.append("com os dados:")
-        for item in build_confirmation_display_items(
-            option,
-            payload,
-            format_project_choice_line=format_project_choice_line,
-            format_project_task_choice_line=format_project_task_choice_line,
-            format_process_instance_choice_line=format_process_instance_choice_line,
-            format_meeting_choice_line=format_meeting_choice_line,
-            format_objective_label=format_objective_label,
-        ):
-            lines.append(f"- {sanitize_for_channel(item, channel)}")
+        lines.extend(["", sanitize_for_channel("Dados consolidados:", channel)])
+        lines.extend(
+            build_key_value_lines(
+                [("item", item) for item in build_confirmation_display_items(
+                    option,
+                    payload,
+                    format_project_choice_line=format_project_choice_line,
+                    format_project_task_choice_line=format_project_task_choice_line,
+                    format_process_instance_choice_line=format_process_instance_choice_line,
+                    format_meeting_choice_line=format_meeting_choice_line,
+                    format_objective_label=format_objective_label,
+                )],
+                channel=channel,
+            )
+        )
     else:
-        lines.append("sem dados adicionais.")
-    lines.append("Se estiver correto, responda 'sim'. Para cancelar, responda 'nao'.")
+        lines.extend(["", sanitize_for_channel("Nenhum dado adicional foi informado.", channel)])
+    lines.extend([
+        "",
+        *build_guidance_block(
+            "Responda 'sim' para executar agora.",
+            "Responda 'nao' para cancelar com seguranca.",
+            channel=channel,
+        ),
+    ])
     return "\n".join(lines)
 
 

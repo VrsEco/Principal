@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List
 
-from .channel_presenter import format_channel_heading, sanitize_for_channel
 from .confirmation_presenter import WorkflowDisplayOption
+from .conversation_presenter import build_guidance_block, build_presenter_header, build_status_callout
+from .channel_presenter import sanitize_for_channel
 
 
 def build_item_selection_prompt(
@@ -34,13 +35,13 @@ def build_item_selection_prompt(
         )
 
     action = str(option.action_key or "").strip().lower()
-    header = format_channel_heading(f"{option.code} - {option.title}", channel)
     if selection_kind == "project_picker":
-        lines = [
-            header,
-            "",
-            f"Escolha o projeto ativo para a {sanitize_for_channel(scope_label, channel)}:",
-        ]
+        lines = build_presenter_header(
+            f"{option.code} - {option.title}",
+            f"Escolha o projeto ativo para a {scope_label}.",
+            channel=channel,
+        )
+        lines.extend(["", build_status_callout("info", "Selecione um unico projeto para continuar.", channel=channel), ""])
         for item in choices:
             code = item.get("code") or "-"
             title = item.get("title") or "-"
@@ -55,37 +56,36 @@ def build_item_selection_prompt(
                 f"{item['index']} - {sanitize_for_channel(code, channel)} - "
                 f"{sanitize_for_channel(title, channel)} | {sanitize_for_channel(' | '.join(detail_parts), channel)}"
             )
-        lines.append("")
-        lines.append("Informe apenas o numero do projeto.")
-        lines.append("Exemplo: 1")
-        lines.append("Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12")
+        lines.extend([
+            "",
+            *build_guidance_block(
+                "Informe apenas o numero do projeto.",
+                "Exemplo: 1",
+                "Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12",
+                channel=channel,
+            ),
+        ])
         return "\n".join(lines)
 
     if action == "onboarding.diagnose":
-        lines = [
-            header,
-            "",
-            "Selecione o objetivo do diagnostico:",
-        ]
+        lines = build_presenter_header(
+            f"{option.code} - {option.title}",
+            "Selecione o objetivo do diagnostico.",
+            channel=channel,
+        )
+        lines.extend(["", build_status_callout("info", "O objetivo ajuda a orientar a analise dos agentes.", channel=channel), ""])
         for item in choices:
             lines.append(f"{item['index']} - {sanitize_for_channel(item.get('title') or item.get('code') or '-', channel)}")
-        lines.append("")
-        lines.append("Informe o numero da opcao.")
-        lines.append("Exemplo: 1")
+        lines.extend(["", *build_guidance_block("Informe o numero da opcao.", "Exemplo: 1", channel=channel)])
         return "\n".join(lines)
 
-    if action in {"meeting.start", "meeting.summarize"}:
-        lines = [
-            header,
-            "",
-            f"Existem {article} seguintes {sanitize_for_channel(item_label_plural, channel)} disponiveis para a {sanitize_for_channel(scope_label, channel)}:",
-        ]
-    else:
-        lines = [
-            header,
-            "",
-            f"Existem {article} seguintes {sanitize_for_channel(item_label_plural, channel)} em aberto para a {sanitize_for_channel(scope_label, channel)}:",
-        ]
+    description = (
+        f"Existem {article} seguintes {item_label_plural} disponiveis para a {scope_label}."
+        if action in {"meeting.start", "meeting.summarize"}
+        else f"Existem {article} seguintes {item_label_plural} em aberto para a {scope_label}."
+    )
+    lines = build_presenter_header(f"{option.code} - {option.title}", description, channel=channel)
+    lines.extend(["", build_status_callout("info", "Escolha o item correto para evitar execucao sobre o registro errado.", channel=channel), ""])
     for item in choices:
         code = item.get("code") or "-"
         title = item.get("title") or "-"
@@ -111,16 +111,17 @@ def build_item_selection_prompt(
                     f"Prazo: {sanitize_for_channel(due_str, channel)}"
                 )
 
-    lines.append("")
     if action in {"meeting.start", "meeting.summarize"}:
-        lines.append("Informe o numero da reuniao no formato:")
-        lines.append("numero")
-        lines.append("Exemplo: 1")
+        lines.extend(["", *build_guidance_block("Informe o numero da reuniao.", "Exemplo: 1", channel=channel)])
     else:
-        lines.append(
-            "Informe o numero da atividade / instancia e a data que voce quer registrar como finalizacao, no formato:"
-        )
-        lines.append("numero: data")
-        lines.append("Exemplo: 1: 27/02/2026")
-        lines.append("Se quiser usar a data de hoje, envie apenas o numero. Exemplo: 1")
+        lines.extend([
+            "",
+            *build_guidance_block(
+                "Informe o numero da atividade / instancia e a data que voce quer registrar como finalizacao.",
+                "Formato: numero: data",
+                "Exemplo: 1: 27/02/2026",
+                "Se quiser usar a data de hoje, envie apenas o numero. Exemplo: 1",
+                channel=channel,
+            ),
+        ])
     return "\n".join(lines)

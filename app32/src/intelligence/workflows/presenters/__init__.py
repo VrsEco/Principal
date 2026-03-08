@@ -7,6 +7,13 @@ from .channel_presenter import (
     sanitize_for_channel,
 )
 from .company_selection_presenter import build_operation_company_prompt
+from .conversation_presenter import (
+    build_guidance_block,
+    build_key_value_lines,
+    build_numbered_options,
+    build_presenter_header,
+    build_status_callout,
+)
 from .confirmation_presenter import (
     WorkflowDisplayOption,
     build_confirmation_display_items,
@@ -30,6 +37,11 @@ from .summary_presenter import (
 __all__ = [
     "WorkflowDisplayOption",
     "build_confirmation_display_items",
+    "build_guidance_block",
+    "build_key_value_lines",
+    "build_numbered_options",
+    "build_presenter_header",
+    "build_status_callout",
     "build_confirmation_text",
     "build_my_work_report",
     "build_item_selection_prompt",

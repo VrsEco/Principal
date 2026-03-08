@@ -245,6 +245,13 @@ saída (`web`, `whatsapp`, `telegram`), com:
 - extração da montagem de `my_work.*` para presenter dedicado;
 - `SessionPromptRenderer` repassando o canal corrente ao runtime de render.
 
+Na Fase 8.4, os presenters passaram a usar uma camada comum de blocos conversacionais (`presenters/conversation_presenter.py`), padronizando:
+
+- cabeçalhos e subtítulos premium;
+- callouts de status (`info`, `warning`, `success`, `danger`);
+- blocos de guidance/CTA reutilizáveis;
+- mensagens mais consistentes entre web e família `chat` (`whatsapp`, `instagram`, `telegram`).
+
 Na sequência, a lógica de `awaiting_item_selection` também passou a migrar para
 o runtime dedicado, reduzindo ramificações específicas no `menu_engine`.
 

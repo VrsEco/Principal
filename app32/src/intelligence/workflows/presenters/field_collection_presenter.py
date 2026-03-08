@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from .channel_presenter import format_channel_heading, sanitize_for_channel
 from .confirmation_presenter import WorkflowDisplayOption
+from .conversation_presenter import (
+    build_guidance_block,
+    build_presenter_header,
+    build_status_callout,
+)
 from ..schemas.field_collection import WorkflowRequiredField
 
 
@@ -16,23 +20,26 @@ def build_missing_fields_prompt(
 ) -> str:
     fields = WorkflowRequiredField.normalize_many(missing_fields)
     action = str(option.action_key or "").strip().lower()
-    lines = [
-        format_channel_heading(f"Voce quer fazer {option.code} - {option.title}.", channel),
-        "Para executar, faltam os seguintes dados:",
-    ]
+    lines = build_presenter_header(
+        f"{option.code} - {option.title}",
+        "Faltam alguns parametros para concluir a solicitacao.",
+        channel=channel,
+    )
+    lines.extend(["", build_status_callout("warning", "Preencha somente o que ainda estiver pendente.", channel=channel)])
+    lines.extend(["", "Para executar, faltam os seguintes dados:", "", "Campos obrigatorios pendentes:"])
     for idx, field in enumerate(fields, start=1):
-        lines.append(f"{idx} - {sanitize_for_channel(field.label, channel)} ({field.key})")
+        lines.append(f"{idx} - {field.label} ({field.key})")
     if payload:
         lines.append("")
         lines.append("Dados ja recebidos:")
         for key, value in payload.items():
             if str(key).startswith("_"):
                 continue
-            lines.append(f"- {sanitize_for_channel(key, channel)}: {sanitize_for_channel(value, channel)}")
-    lines.append("")
-    lines.append("Envie no formato: numero: valor")
+            lines.append(f"- {key}: {value}")
+    lines.extend([
+        "",
+        *build_guidance_block("Envie no formato: numero: valor", channel=channel),
+    ])
     if action == "onboarding.start":
-        lines.append("Exemplos:")
-        lines.append("1: real")
-        lines.append("1: modelo")
+        lines.extend(build_guidance_block("Exemplos:", "1: real", "1: modelo", channel=channel))
     return "\n".join(lines)
