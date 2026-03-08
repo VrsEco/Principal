@@ -137,3 +137,75 @@ def test_handle_whatsapp_accepts_form_encoded_payload(monkeypatch):
     assert called["started"] is True
     assert called["args"][1] == "5511999999999"
     assert called["args"][2] == "oi sapiens"
+
+
+def test_handle_instagram_uses_menu_intercept_and_logs_messages(monkeypatch):
+    app = Flask(__name__)
+    app.register_blueprint(whatsapp_webhook_bp, url_prefix="/webhook")
+
+    recorded = {"added": [], "sent": []}
+
+    class DummyUser:
+        id = 7
+
+    class DummyMessage:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    class DummyMenuResult:
+        handled = True
+        response_text = "*Menu operacional*\n\n1 - Resumo"
+        metadata = {"workflow_code": "1"}
+        override_message = None
+
+    monkeypatch.setattr('src.intelligence.identity.resolve_user_identity', lambda contact, channel: DummyUser())
+    monkeypatch.setattr('src.intelligence.identity.get_best_company_id', lambda user: 9)
+    monkeypatch.setattr('src.intelligence.menu_engine.handle_menu_message', lambda **kwargs: DummyMenuResult())
+    monkeypatch.setattr('src.intelligence.execution._capture_workflow_usage_from_execution', lambda **kwargs: recorded.setdefault('usage', []).append(kwargs))
+    monkeypatch.setattr('services.instagram_service.instagram_service.send_message', lambda recipient, message: recorded['sent'].append((recipient, message)) or True)
+    monkeypatch.setattr('models.agent_message.AgentMessage', DummyMessage)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.add', lambda obj: recorded['added'].append(obj))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.commit', lambda: recorded.setdefault('committed', True))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.rollback', lambda: recorded.setdefault('rolled_back', True))
+
+    client = app.test_client()
+    response = client.post('/webhook/instagram', json={
+        'sender_id': 'ig-user-1',
+        'message': 'menu',
+    })
+
+    assert response.status_code == 200
+    assert response.get_json()['status'] == 'success'
+    assert recorded['sent'][0][0] == 'ig-user-1'
+    assert 'Menu operacional' in recorded['sent'][0][1]
+    assert len(recorded['added']) == 2
+    assert recorded['usage'][0]['channel'] == 'instagram'
+
+
+def test_handle_instagram_sends_operational_error_message(monkeypatch):
+    app = Flask(__name__)
+    app.register_blueprint(whatsapp_webhook_bp, url_prefix="/webhook")
+
+    recorded = {"sent": []}
+
+    class DummyUser:
+        id = 7
+
+    monkeypatch.setattr('src.intelligence.identity.resolve_user_identity', lambda contact, channel: DummyUser())
+    monkeypatch.setattr('src.intelligence.identity.get_best_company_id', lambda user: 9)
+    monkeypatch.setattr('src.intelligence.menu_engine.handle_menu_message', lambda **kwargs: None)
+    monkeypatch.setattr('src.intelligence.execution.run_agent_with_context', lambda **kwargs: (_ for _ in ()).throw(RuntimeError('boom')))
+    monkeypatch.setattr('services.instagram_service.instagram_service.send_message', lambda recipient, message: recorded['sent'].append((recipient, message)) or True)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.rollback', lambda: recorded.setdefault('rolled_back', True))
+
+    client = app.test_client()
+    response = client.post('/webhook/instagram', json={
+        'sender_id': 'ig-user-2',
+        'message': 'oi',
+    })
+
+    assert response.status_code == 200
+    assert response.get_json()['status'] == 'error'
+    assert recorded['rolled_back'] is True
+    assert recorded['sent']
+    assert 'Nao foi possivel concluir a solicitacao' in recorded['sent'][0][1]

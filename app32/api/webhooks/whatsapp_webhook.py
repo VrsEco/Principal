@@ -227,6 +227,47 @@ def _extract_whatsapp_message(data: Dict[str, Any]) -> Tuple[str, str, Dict[str,
     return phone, message_text, metadata
 
 
+def _normalize_text_basic(value: str) -> str:
+    return (value or "").strip().lower()
+
+
+def _is_menu_like_message(text: str) -> bool:
+    lower = _normalize_text_basic(text)
+    if not lower:
+        return False
+    return (
+        lower == "menu"
+        or lower.startswith("menu ")
+        or lower == "/menu"
+        or lower.startswith("/menu ")
+    )
+
+
+def _fallback_root_menu(company_id, channel: str = "whatsapp") -> str:
+    try:
+        from src.intelligence.menu_engine import list_menu_options
+
+        roots = list_menu_options(
+            company_id=company_id,
+            parent_code=None,
+            include_inactive=False,
+            include_global=True,
+        )
+        if not roots:
+            return "Nenhuma opcao de menu ativa encontrada."
+
+        lines = ["Selecione uma opcao do menu principal:"]
+        for opt in roots:
+            lines.append(f"{opt.code} - {opt.title}")
+        lines.append("")
+        lines.append("Voce pode responder com o codigo (ex: 1.4) ou 'menu 1.4 executar ...'.")
+        return "\n".join(lines)
+    except Exception as exc:
+        logger.exception("Falha ao montar menu fallback no canal %s: %s", channel, exc)
+        from src.intelligence.workflows.presenters import build_menu_recovery_message
+        return build_menu_recovery_message(channel=channel)
+
+
 def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[str, Any]):
     from src.intelligence.identity import resolve_user_identity, get_best_company_id
     from src.intelligence.execution import run_agent_with_context, extract_response_text
@@ -384,7 +425,13 @@ def handle_whatsapp():
 def handle_instagram():
     """Webhook para recebimento de mensagens do Instagram Direct."""
     from src.intelligence.identity import resolve_user_identity, get_best_company_id
-    from src.intelligence.execution import run_agent_with_context, extract_response_text
+    from src.intelligence.execution import (
+        _capture_workflow_usage_from_execution,
+        extract_response_text,
+        run_agent_with_context,
+    )
+    from src.intelligence.menu_engine import handle_menu_message
+    from models.agent_message import AgentMessage
 
     data = request.json
     if not data:
@@ -393,7 +440,6 @@ def handle_instagram():
     sender_id = None
     message_text = None
 
-    # Payload simples/custom
     sender_id = (
         data.get('sender_id')
         or data.get('instagram_id')
@@ -406,7 +452,6 @@ def handle_instagram():
         or (data.get('text') or {}).get('message')
     )
 
-    # Payload Meta (entry -> messaging)
     if not sender_id or not message_text:
         entry = (data.get('entry') or [])
         if entry and isinstance(entry, list):
@@ -426,33 +471,108 @@ def handle_instagram():
 
     logger.info(f"INSTAGRAM INBOUND: From {sender_id} | Msg: {message_text[:50]}...")
 
-    # 1. Resolve Identidade (somente users ativos e cadastrados)
     user = resolve_user_identity(sender_id, 'instagram')
     if not user:
         logger.warning(f"INSTAGRAM: ID {sender_id} não vinculado a nenhum usuário ativo.")
         return jsonify({"status": "user not found"}), 200
 
-    # 2. Executa o Agente
     try:
         company_id = get_best_company_id(user)
-        response = run_agent_with_context(
-            user_id=user.id,
-            user_msg=message_text,
-            channel="instagram",
-            thread_prefix="ig",
-            company_id=company_id,
-            metadata={"instagram_id": sender_id},
+        if not company_id:
+            logger.warning("INSTAGRAM: usuario %s sem company_id resolvido.", user.id)
+            return jsonify({"status": "company not found"}), 200
+
+        thread_id = f"ig_{sender_id}"
+        final_agent_name = "sapiens"
+        menu_like = _is_menu_like_message(message_text)
+
+        menu_result = None
+        try:
+            menu_result = handle_menu_message(
+                user_id=user.id,
+                company_id=company_id,
+                channel="instagram",
+                thread_id=thread_id,
+                message=message_text,
+            )
+        except Exception as menu_err:
+            logger.exception("Erro no handle_menu_message do Instagram: %s", menu_err)
+
+        if menu_result and menu_result.handled:
+            response_text = menu_result.response_text or _fallback_root_menu(company_id, channel="instagram")
+            menu_metadata = dict(menu_result.metadata or {})
+            _capture_workflow_usage_from_execution(
+                user_id=user.id,
+                company_id=company_id,
+                channel="instagram",
+                thread_id=thread_id,
+                user_msg=message_text,
+                response_text=response_text,
+                menu_metadata=menu_metadata,
+            )
+        elif menu_like:
+            response_text = _fallback_root_menu(company_id, channel="instagram")
+            menu_metadata = {}
+        else:
+            effective_msg = menu_result.override_message if menu_result and menu_result.override_message else message_text
+            response = run_agent_with_context(
+                user_id=user.id,
+                user_msg=effective_msg,
+                channel="instagram",
+                thread_prefix="ig",
+                thread_id=thread_id,
+                company_id=company_id,
+                metadata={"instagram_id": sender_id},
+            )
+            response_text = extract_response_text(response)
+            menu_metadata = dict(response.get("menu_metadata") or {})
+            final_agent_name = response.get("next_node") or "sapiens"
+            if final_agent_name == "end":
+                final_agent_name = "sapiens"
+
+        db.session.add(
+            AgentMessage(
+                company_id=company_id,
+                user_id=user.id,
+                agent_type="work_agent_squad",
+                agent_name="Usuário",
+                direction="inbound",
+                channel="instagram",
+                content=message_text,
+                metadata_json={
+                    "thread_id": thread_id,
+                    "contact": "sapiens",
+                    "instagram_id": sender_id,
+                },
+            )
         )
+        db.session.add(
+            AgentMessage(
+                company_id=company_id,
+                user_id=user.id,
+                agent_type="work_agent_squad",
+                agent_name=final_agent_name,
+                direction="outbound",
+                channel="instagram",
+                content=response_text,
+                metadata_json={
+                    "thread_id": thread_id,
+                    "contact": "sapiens",
+                    "instagram_id": sender_id,
+                    "agent": final_agent_name,
+                    **menu_metadata,
+                },
+            )
+        )
+        db.session.commit()
 
-        response_text = extract_response_text(response)
-
-        # 3. Envia resposta de volta via Instagram
         if response_text:
             instagram_service.send_message(sender_id, response_text)
 
         return jsonify({"status": "success"}), 200
     except Exception as e:
         logger.error(f"INSTAGRAM WEBHOOK ERROR: {str(e)}")
+        db.session.rollback()
         try:
             from src.intelligence.workflows.presenters import build_internal_error_message
             instagram_service.send_message(sender_id, build_internal_error_message(channel="instagram"))
