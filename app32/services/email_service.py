@@ -1,5 +1,7 @@
-﻿import logging
+﻿import html
+import logging
 import os
+import re
 import smtplib
 import poplib
 import imaplib
@@ -12,6 +14,7 @@ from email import encoders
 from email.utils import formataddr
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from src.core.theme_tokens import get_summary_email_theme
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +66,10 @@ class EmailService:
             True if sent successfully, False otherwise
         """
         try:
+            html_body = html_body or self.build_transactional_email_html(
+                subject=subject,
+                body=body,
+            )
             if self.provider == "smtp":
                 return self._send_smtp_email(
                     to_emails, subject, body, html_body, attachments
@@ -78,6 +85,141 @@ class EmailService:
         except Exception:
             logger.exception("Error sending email")
             return False
+
+    def build_transactional_email_html(
+        self,
+        subject: str,
+        body: str,
+        *,
+        preheader: Optional[str] = None,
+        eyebrow: str = "Sapiens • Versus Gestão Corporativa",
+        title: Optional[str] = None,
+        footer_note: str = "Mensagem automática enviada pelo Sapiens.",
+    ) -> str:
+        theme = get_summary_email_theme()
+        safe_subject = html.escape(str(subject or "Comunicação Versus"))
+        safe_title = html.escape(str(title or subject or "Comunicação Versus"))
+        safe_preheader = html.escape(
+            str(preheader or self._build_email_preheader(body=body))
+        )
+        safe_footer_note = html.escape(str(footer_note or ""))
+        body_html = self._render_transactional_body_html(body or "")
+
+        return f"""
+<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;padding:0;background:{theme['page_bg']};font-family:Segoe UI,Arial,sans-serif;color:{theme['text_primary']};">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+      {safe_preheader}
+    </div>
+    <div style="max-width:920px;margin:24px auto;padding:0 14px;">
+      <div style="background:{theme['header_gradient']};color:#fff;border-radius:16px;padding:24px 28px;box-shadow:0 8px 22px rgba(15,23,42,.22);">
+        <div style="font-size:11px;opacity:.95;letter-spacing:.8px;text-transform:uppercase;font-weight:700;">{html.escape(eyebrow)}</div>
+        <h1 style="margin:10px 0 6px;font-size:25px;line-height:1.25;font-weight:800;">{safe_title}</h1>
+        <div style="font-size:14px;opacity:.98;line-height:1.5;">
+          Assunto: <strong>{safe_subject}</strong><br>
+          Data base: <strong>{html.escape(datetime.now().strftime('%d/%m/%Y %H:%M'))}</strong>
+        </div>
+      </div>
+
+      <div style="background:{theme['card_bg']};border:1px solid {theme['card_border']};border-radius:16px;padding:22px 24px;margin-top:14px;line-height:1.65;">
+        {body_html}
+      </div>
+
+      <div style="background:{theme['card_bg']};border:1px solid {theme['card_border']};border-radius:16px;padding:18px 24px;margin-top:14px;">
+        <div style="font-size:16px;font-weight:800;color:{theme['text_primary']};">Sapiens Versus</div>
+        <div style="font-size:14px;color:{theme['signature_accent']};font-weight:700;margin-top:2px;">Versus Gestão Corporativa</div>
+        <div style="font-size:13px;color:{theme['text_secondary']};margin-top:8px;">
+          E-mail:
+          <a href="mailto:sapiens@gestaoversus.com.br" style="color:{theme['signature_accent']};text-decoration:none;">sapiens@gestaoversus.com.br</a>
+        </div>
+        <div style="font-size:13px;color:{theme['text_secondary']};margin-top:4px;">Telefone: 71 9 8238-5225</div>
+        <div style="margin-top:14px;">
+          <img src="cid:versus_signature_logo" alt="Versus Gestão Corporativa" style="max-width:280px;width:100%;height:auto;display:block;border:0;">
+        </div>
+      </div>
+
+      <div style="text-align:center;color:{theme['text_muted']};font-size:12px;margin:14px 0 6px;">
+        {safe_footer_note}
+      </div>
+    </div>
+  </body>
+</html>
+"""
+
+    def _build_email_preheader(self, body: str) -> str:
+        normalized = re.sub(r"\s+", " ", str(body or "").strip())
+        if not normalized:
+            return "Atualização automática enviada pelo Sapiens."
+        return normalized[:140]
+
+    def _render_transactional_body_html(self, body: str) -> str:
+        theme = get_summary_email_theme()
+        blocks: List[str] = []
+        current_list: List[str] = []
+
+        def flush_list() -> None:
+            nonlocal current_list
+            if not current_list:
+                return
+            items = "".join(
+                f"<li style='margin:0 0 8px;'>{item}</li>" for item in current_list
+            )
+            blocks.append(
+                f"<ul style='margin:0 0 16px 20px;padding:0;color:{theme['text_secondary']};font-size:14px;line-height:1.7;'>{items}</ul>"
+            )
+            current_list = []
+
+        for raw_line in str(body or "").splitlines():
+            line = raw_line.strip()
+            if not line:
+                flush_list()
+                continue
+
+            bullet = None
+            if line.startswith("- "):
+                bullet = line[2:].strip()
+            elif line.startswith("• "):
+                bullet = line[2:].strip()
+            elif re.match(r"^\d+\.\s+", line):
+                bullet = re.sub(r"^\d+\.\s+", "", line, count=1).strip()
+
+            if bullet is not None:
+                current_list.append(self._render_inline_email_html(bullet))
+                continue
+
+            flush_list()
+            line_html = self._render_inline_email_html(line)
+            if line.endswith(":"):
+                blocks.append(
+                    f"<div style='margin:16px 0 8px;font-size:13px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:{theme['signature_accent']};'>{line_html}</div>"
+                )
+            else:
+                blocks.append(
+                    f"<p style='margin:0 0 14px;font-size:14px;color:{theme['text_secondary']};line-height:1.7;'>{line_html}</p>"
+                )
+
+        flush_list()
+        if not blocks:
+            blocks.append(
+                f"<p style='margin:0;font-size:14px;color:{theme['text_secondary']};line-height:1.7;'>Sem conteúdo adicional.</p>"
+            )
+        return "".join(blocks)
+
+    def _render_inline_email_html(self, text: str) -> str:
+        safe = html.escape(str(text or ""))
+        safe = re.sub(
+            r"(https?://[^\s<]+)",
+            r"<a href='\1' style='color:#0f766e;text-decoration:none;font-weight:700;'>\1</a>",
+            safe,
+        )
+        safe = re.sub(
+            r"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})",
+            r"<a href='mailto:\1' style='color:#0f766e;text-decoration:none;font-weight:700;'>\1</a>",
+            safe,
+        )
+        safe = re.sub(r"\*([^\*]+)\*", r"<strong>\1</strong>", safe)
+        return safe
 
     def _send_smtp_email(
         self,
@@ -392,39 +534,32 @@ class EmailService:
         self, participant_email: str, participant_name: str, plan_name: str
     ) -> bool:
         """Send welcome email to participant"""
-        subject = f"Bem-vindo ao Planejamento EstratÃ©gico - {plan_name}"
+        subject = f"Bem-vindo ao Planejamento Estratégico - {plan_name}"
 
         body = f"""
-        OlÃ¡ {participant_name},
-        
-        Bem-vindo ao processo de planejamento estratÃ©gico da empresa!
-        
-        VocÃª foi convidado a participar do plano "{plan_name}" e sua contribuiÃ§Ã£o Ã© muito importante para o sucesso desta iniciativa.
-        
-        Em breve vocÃª receberÃ¡ mais informaÃ§Ãµes sobre como participar e contribuir com o processo.
-        
-        Se tiver alguma dÃºvida, nÃ£o hesite em entrar em contato conosco.
-        
-        Atenciosamente,
-        Equipe de Planejamento EstratÃ©gico
-        """
+Olá {participant_name},
 
-        html_body = f"""
-        <html>
-        <body>
-            <h2>Bem-vindo ao Planejamento EstratÃ©gico!</h2>
-            <p>OlÃ¡ <strong>{participant_name}</strong>,</p>
-            <p>Bem-vindo ao processo de planejamento estratÃ©gico da empresa!</p>
-            <p>VocÃª foi convidado a participar do plano <strong>"{plan_name}"</strong> e sua contribuiÃ§Ã£o Ã© muito importante para o sucesso desta iniciativa.</p>
-            <p>Em breve vocÃª receberÃ¡ mais informaÃ§Ãµes sobre como participar e contribuir com o processo.</p>
-            <p>Se tiver alguma dÃºvida, nÃ£o hesite em entrar em contato conosco.</p>
-            <br>
-            <p>Atenciosamente,<br>Equipe de Planejamento EstratÃ©gico</p>
-        </body>
-        </html>
-        """
+Bem-vindo ao processo de planejamento estratégico da empresa.
+
+Você foi convidado a participar do plano "{plan_name}" e sua contribuição é muito importante para o sucesso desta iniciativa.
+
+Em breve você receberá mais informações sobre como participar e contribuir com o processo.
+
+Se tiver alguma dúvida, não hesite em entrar em contato conosco.
+
+Atenciosamente,
+Equipe de Planejamento Estratégico
+        """.strip()
+
+        html_body = self.build_transactional_email_html(
+            subject=subject,
+            body=body,
+            title="Bem-vindo ao Planejamento Estratégico",
+            preheader=f"Convite para participação no plano {plan_name}.",
+        )
 
         return self.send_email([participant_email], subject, body, html_body)
+
 
 
 # Singleton instance
