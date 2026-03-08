@@ -12,6 +12,7 @@ from src.intelligence.workflows.confirmation import (
     CONFIRMATION_ROUTE_RECONFIRM,
     ConfirmationCoordinator,
 )
+from src.intelligence.workflows.direct_execution import DirectExecutionResult
 
 
 def _build_coordinator() -> ConfirmationCoordinator:
@@ -29,7 +30,11 @@ def _build_coordinator() -> ConfirmationCoordinator:
             key: value for key, value in (payload or {}).items() if not str(key).startswith("_")
         },
         try_execute_direct_option=lambda **kwargs: (
-            "atividade criada"
+            DirectExecutionResult(
+                executed=True,
+                response_text="atividade criada",
+                metadata={"workflow_approval": {"required": False, "status": "not_required"}},
+            )
             if kwargs.get("option") and getattr(kwargs["option"], "action_key", "") == "project_task.create"
             else None
         ),
@@ -83,6 +88,7 @@ def test_confirmation_coordinator_returns_direct_response_when_available():
     assert decision.route == CONFIRMATION_ROUTE_DIRECT_RESPONSE
     assert decision.response_text == "atividade criada"
     assert decision.payload == {"empresa": "Versus"}
+    assert decision.metadata["workflow_approval"]["status"] == "not_required"
 
 
 def test_confirmation_coordinator_builds_execution_prompt_when_direct_execution_is_not_available():

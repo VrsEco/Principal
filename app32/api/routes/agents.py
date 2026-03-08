@@ -517,13 +517,56 @@ def update_agent_menu_option(option_id):
 @agents_bp.route('/api/agents/actions/approve/<int:action_id>', methods=['POST'])
 @login_required
 def approve_action(action_id):
+    from datetime import datetime
+    from flask import session
+    from models import db
+    from models.agent_action import AgentAction
     from services.engineering_service import engineering_service
-    
+
+    action = AgentAction.query.get(action_id)
+    if not action:
+        return jsonify({"success": False, "error": "Ação não encontrada."}), 404
+
+    active_company_id = session.get('active_company_id')
+    if active_company_id and action.company_id != active_company_id:
+        return jsonify({"success": False, "error": "Ação não pertence à empresa ativa."}), 403
+
+    if action.type == 'workflow_approval_request':
+        if current_user.role not in {'admin', 'client'}:
+            return jsonify({"success": False, "error": "Sem permissão para aprovar esta ação."}), 403
+        if action.status != 'pending':
+            return jsonify({
+                "success": True,
+                "message": f"Ação já estava em status {action.status}.",
+                "action": action.to_dict(),
+            })
+
+        payload = dict(action.payload or {})
+        resume_payload = dict(payload.get('resume_payload') or {})
+        resume_payload['approved_action_id'] = action.id
+        resume_payload['approved_at'] = datetime.utcnow().isoformat()
+        resume_payload['approved_by_user_id'] = current_user.id
+        payload['resume_payload'] = resume_payload
+        payload['approval_status'] = 'approved'
+
+        action.payload = payload
+        action.status = 'approved'
+        action.user_feedback = f'Aprovado por {current_user.name}'
+        action.resolved_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Solicitação aprovada. A retomada segura já pode usar o payload de resume registrado.",
+            "action": action.to_dict(),
+            "resume_payload": resume_payload,
+        })
+
     success, message = engineering_service.execute_repair(action_id)
-    
+
     if success:
         return jsonify({
-            "success": True, 
+            "success": True,
             "message": message
         })
     else:

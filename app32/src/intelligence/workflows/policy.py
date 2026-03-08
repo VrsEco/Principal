@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Optional, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .direct_execution import DirectExecutionRequest
+from .direct_execution import DirectExecutionRequest, DirectExecutionResult
 
 
 class WorkflowApprovalRequest(BaseModel):
@@ -13,6 +13,10 @@ class WorkflowApprovalRequest(BaseModel):
 
     approval_id: int
     reused_existing: bool = False
+    approval_key: Optional[str] = None
+    action_key: Optional[str] = None
+    object_code: Optional[str] = None
+    resume_payload: Dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkflowApprovalPolicyGuard:
@@ -39,7 +43,7 @@ class WorkflowApprovalPolicyGuard:
         }
         self._create_approval_request = create_approval_request or self._create_approval_request_in_db
 
-    def evaluate(self, request: DirectExecutionRequest) -> Optional[str]:
+    def evaluate(self, request: DirectExecutionRequest) -> Optional[DirectExecutionResult]:
         action_key = str(request.action_key or "").strip().lower()
         channel = str(request.channel or "web").strip().lower()
         if action_key not in self._sensitive_action_keys:
@@ -47,18 +51,34 @@ class WorkflowApprovalPolicyGuard:
         if channel not in self._approval_channels:
             return None
         if request.active_company_id is None:
-            return (
-                "Esta ação sensível exige empresa ativa definida antes da execução. "
-                "Selecione a empresa e tente novamente."
+            return DirectExecutionResult(
+                executed=True,
+                response_text=(
+                    "Esta ação sensível exige empresa ativa definida antes da execução. "
+                    "Selecione a empresa e tente novamente."
+                ),
+                metadata={
+                    "workflow_approval": {
+                        "required": True,
+                        "status": "missing_company_context",
+                        "action_key": action_key,
+                        "channel": channel,
+                    }
+                },
             )
 
         context = self._build_context(request)
         approval = self._create_approval_request(request, context)
         reuse_text = "já existente" if approval.reused_existing else "registrada"
-        return (
-            f"⚠️ Esta ação exige aprovação humana antes da execução. "
-            f"Solicitação #{approval.approval_id} {reuse_text} para {context['object_label']}. "
-            "Após a aprovação, a execução poderá ser retomada com segurança."
+        metadata = self._build_metadata(request, context, approval)
+        return DirectExecutionResult(
+            executed=True,
+            response_text=(
+                f"⚠️ Esta ação exige aprovação humana antes da execução. "
+                f"Solicitação #{approval.approval_id} {reuse_text} para {context['object_label']}. "
+                "Após a aprovação, a execução poderá ser retomada com segurança."
+            ),
+            metadata=metadata,
         )
 
     def _build_context(self, request: DirectExecutionRequest) -> Dict[str, Any]:
@@ -80,12 +100,42 @@ class WorkflowApprovalPolicyGuard:
             "meeting.start": f"o início da reunião {object_code}",
         }.get(action_key, f"a ação {action_key}")
         approval_key = f"{action_key}|{request.user_id}|{request.active_company_id}|{object_code}"
+        resume_payload = {
+            "action_key": action_key,
+            "payload": payload,
+            "active_company_id": request.active_company_id,
+            "user_id": request.user_id,
+            "channel": request.channel,
+        }
         return {
             "action_key": action_key,
             "object_code": str(object_code),
             "object_label": object_label,
             "approval_key": approval_key,
             "payload": payload,
+            "resume_payload": resume_payload,
+        }
+
+    def _build_metadata(
+        self,
+        request: DirectExecutionRequest,
+        context: Dict[str, Any],
+        approval: WorkflowApprovalRequest,
+    ) -> Dict[str, Any]:
+        approval_key = approval.approval_key or context["approval_key"]
+        resume_payload = approval.resume_payload or context["resume_payload"]
+        return {
+            "workflow_approval": {
+                "required": True,
+                "status": "pending",
+                "approval_request_id": approval.approval_id,
+                "reused_existing": approval.reused_existing,
+                "approval_key": approval_key,
+                "action_key": approval.action_key or context["action_key"],
+                "object_code": approval.object_code or context["object_code"],
+                "channel": request.channel,
+                "resume_payload": resume_payload,
+            }
         }
 
     def _create_approval_request_in_db(
@@ -99,6 +149,7 @@ class WorkflowApprovalPolicyGuard:
         company_id = int(request.active_company_id)
         action_key = context["action_key"]
         approval_key = context["approval_key"]
+        resume_payload = context["resume_payload"]
 
         pending_actions = (
             AgentAction.query.filter_by(
@@ -114,7 +165,14 @@ class WorkflowApprovalPolicyGuard:
         for pending in pending_actions:
             payload = pending.payload or {}
             if payload.get("approval_key") == approval_key and payload.get("action_key") == action_key:
-                return WorkflowApprovalRequest(approval_id=pending.id, reused_existing=True)
+                return WorkflowApprovalRequest(
+                    approval_id=pending.id,
+                    reused_existing=True,
+                    approval_key=approval_key,
+                    action_key=action_key,
+                    object_code=context["object_code"],
+                    resume_payload=payload.get("resume_payload") or resume_payload,
+                )
 
         action = AgentAction(
             type="workflow_approval_request",
@@ -136,6 +194,7 @@ class WorkflowApprovalPolicyGuard:
                 "channel": request.channel,
                 "object_code": context["object_code"],
                 "request_payload": context["payload"],
+                "resume_payload": resume_payload,
                 "created_via": "workflow_policy_guard",
             },
             company_id=company_id,
@@ -144,4 +203,11 @@ class WorkflowApprovalPolicyGuard:
         )
         db.session.add(action)
         db.session.commit()
-        return WorkflowApprovalRequest(approval_id=action.id, reused_existing=False)
+        return WorkflowApprovalRequest(
+            approval_id=action.id,
+            reused_existing=False,
+            approval_key=approval_key,
+            action_key=action_key,
+            object_code=context["object_code"],
+            resume_payload=resume_payload,
+        )

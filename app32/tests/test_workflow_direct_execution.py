@@ -161,7 +161,7 @@ def test_direct_execution_dispatcher_blocks_sensitive_action_via_policy_guard():
 
     def _create_approval_request(request, context):
         created.append((request, context))
-        return WorkflowApprovalRequest(approval_id=77, reused_existing=False)
+        return WorkflowApprovalRequest(approval_id=77, reused_existing=False, approval_key=context['approval_key'], action_key=context['action_key'], object_code=context['object_code'], resume_payload=context['resume_payload'])
 
     guard = WorkflowApprovalPolicyGuard(create_approval_request=_create_approval_request)
     dispatcher = DirectExecutionDispatcher(
@@ -186,6 +186,8 @@ def test_direct_execution_dispatcher_blocks_sensitive_action_via_policy_guard():
     assert "#77" in result.response_text
     assert len(created) == 1
     assert created[0][1]["action_key"] == "project_task.complete"
+    assert result.metadata["workflow_approval"]["approval_request_id"] == 77
+    assert result.metadata["workflow_approval"]["resume_payload"]["payload"]["codigo_atividade"] == "AA.J.31.202"
 
 
 def test_workflow_approval_policy_guard_allows_sensitive_action_on_web_channel():
@@ -221,4 +223,5 @@ def test_workflow_approval_policy_guard_requires_company_for_sensitive_action():
         )
     )
 
-    assert "empresa ativa" in response.lower()
+    assert "empresa ativa" in response.response_text.lower()
+    assert response.metadata["workflow_approval"]["status"] == "missing_company_context"

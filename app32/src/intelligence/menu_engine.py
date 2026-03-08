@@ -29,6 +29,7 @@ from src.intelligence.workflows.confirmation import (
 from src.intelligence.workflows.direct_execution import (
     DirectExecutionDispatcher,
     DirectExecutionRequest,
+    DirectExecutionResult,
     build_handler_executor,
 )
 from src.intelligence.workflows.policy import WorkflowApprovalPolicyGuard
@@ -638,6 +639,7 @@ def _handle_confirmation_state(
         return MenuInterceptResult(
             handled=True,
             response_text=decision.response_text,
+            metadata=dict(decision.metadata or {}),
         )
 
     if decision.route == CONFIRMATION_ROUTE_EXECUTION_PROMPT:
@@ -725,18 +727,19 @@ def _advance_option_after_payload_collection(
         )
 
     if _is_read_only_action(option.action_key):
-        direct_execution = _try_execute_direct_option(
+        direct_execution = _try_execute_direct_option_result(
             option=option,
             payload=payload,
             company_id=session.company_id,
             user_id=session.user_id,
             channel=session.channel or "web",
         )
-        if direct_execution is not None:
+        if direct_execution.executed:
             _reset_session(session)
             return MenuInterceptResult(
                 handled=True,
-                response_text=direct_execution,
+                response_text=direct_execution.response_text,
+                metadata=dict(direct_execution.metadata or {}),
             )
 
     _transition_session_state(
@@ -2938,6 +2941,26 @@ def _build_execution_prompt(
     )
 
 
+def _try_execute_direct_option_result(
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+    company_id: Optional[int],
+    user_id: int,
+    channel: str = "web",
+) -> DirectExecutionResult:
+    """Executa ação determinística e devolve resultado estruturado com metadata."""
+    dispatcher = _build_direct_execution_dispatcher()
+    return dispatcher.execute(
+        DirectExecutionRequest(
+            action_key=option.action_key,
+            payload=dict(payload or {}),
+            active_company_id=company_id,
+            user_id=user_id,
+            channel=channel,
+        )
+    )
+
+
 def _try_execute_direct_option(
     option: AgentMenuOption,
     payload: Dict[str, Any],
@@ -2949,15 +2972,12 @@ def _try_execute_direct_option(
     Execução direta para ações críticas/repetitivas, reduzindo variação do LLM.
     Retorna texto de resposta quando executado; None para seguir fluxo via LLM.
     """
-    dispatcher = _build_direct_execution_dispatcher()
-    result = dispatcher.execute(
-        DirectExecutionRequest(
-            action_key=option.action_key,
-            payload=dict(payload or {}),
-            active_company_id=company_id,
-            user_id=user_id,
-            channel=channel,
-        )
+    result = _try_execute_direct_option_result(
+        option=option,
+        payload=payload,
+        company_id=company_id,
+        user_id=user_id,
+        channel=channel,
     )
     if not result.executed:
         return None

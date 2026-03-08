@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional, Set
+from typing import Any, Callable, Dict, Optional, Set, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .direct_execution import DirectExecutionResult
 from .session import WorkflowSessionState
 
 CONFIRMATION_ROUTE_CANCELLED = "cancelled"
@@ -19,6 +20,7 @@ class ConfirmationDecision(BaseModel):
     payload: Dict[str, Any] = Field(default_factory=dict)
     response_text: Optional[str] = None
     override_message: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ConfirmationCoordinator:
@@ -29,7 +31,7 @@ class ConfirmationCoordinator:
         cancel_words: Set[str],
         extract_fields_from_text: Callable[[str], Dict[str, str]],
         public_payload: Callable[[Dict[str, Any]], Dict[str, Any]],
-        try_execute_direct_option: Callable[..., Optional[str]],
+        try_execute_direct_option: Callable[..., Union[Optional[str], DirectExecutionResult]],
         build_execution_prompt: Callable[[Any, Dict[str, Any], str], str],
         cancel_response_text: str = "Acao cancelada. Se quiser, digite 'menu' para escolher outra opcao.",
     ):
@@ -40,6 +42,16 @@ class ConfirmationCoordinator:
         self._try_execute_direct_option = try_execute_direct_option
         self._build_execution_prompt = build_execution_prompt
         self._cancel_response_text = cancel_response_text
+
+    @staticmethod
+    def _coerce_direct_execution_result(
+        value: Union[Optional[str], DirectExecutionResult],
+    ) -> Optional[DirectExecutionResult]:
+        if value is None:
+            return None
+        if isinstance(value, DirectExecutionResult):
+            return value
+        return DirectExecutionResult(executed=True, response_text=str(value))
 
     def handle_reply(
         self,
@@ -60,11 +72,13 @@ class ConfirmationCoordinator:
                 user_id=workflow_state.user_id,
                 channel=workflow_state.channel or "web",
             )
-            if direct_execution is not None:
+            direct_result = self._coerce_direct_execution_result(direct_execution)
+            if direct_result is not None:
                 return ConfirmationDecision(
                     route=CONFIRMATION_ROUTE_DIRECT_RESPONSE,
                     payload=self._public_payload(payload),
-                    response_text=direct_execution,
+                    response_text=direct_result.response_text,
+                    metadata=dict(direct_result.metadata or {}),
                 )
 
             prompt = self._build_execution_prompt(

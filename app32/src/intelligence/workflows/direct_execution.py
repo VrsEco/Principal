@@ -20,11 +20,12 @@ class DirectExecutionResult(BaseModel):
 
     executed: bool = False
     response_text: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 DirectExecutionHandler = Callable[[DirectExecutionRequest], Optional[str]]
 DirectExecutionExtraFieldsBuilder = Callable[[DirectExecutionRequest], Dict[str, Any]]
-DirectExecutionPolicyGuard = Callable[[DirectExecutionRequest], Optional[str]]
+DirectExecutionPolicyGuard = Callable[[DirectExecutionRequest], Optional[DirectExecutionResult]]
 
 
 class DirectExecutionDispatcher:
@@ -48,7 +49,7 @@ class DirectExecutionDispatcher:
         if self._policy_guard is not None:
             policy_response = self._policy_guard(request)
             if policy_response is not None:
-                return DirectExecutionResult(executed=True, response_text=str(policy_response))
+                return policy_response
 
         response_text = handler(request)
         if response_text is None:
