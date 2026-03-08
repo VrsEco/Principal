@@ -4,7 +4,8 @@ from datetime import date, timedelta
 from typing import Any, Callable, Dict, List, Optional
 
 from .channel_presenter import get_bullet_style, sanitize_for_channel
-from .conversation_presenter import build_next_step_block, build_presenter_header, build_status_callout
+from .chat_contract import ChatMessageBlock, make_list_block
+from .conversation_presenter import build_chat_contract_message, build_status_callout
 
 
 def group_my_work_by_company(
@@ -217,17 +218,23 @@ def build_my_work_summary_lines(
 
 
 def build_my_work_empty_report(*, title: str, channel: str) -> str:
-    lines = build_presenter_header(title, channel=channel)
-    lines.extend(["", build_status_callout("info", "Nenhum item encontrado para o filtro informado.", channel=channel)])
-    lines.extend([
-        "",
-        *build_next_step_block(
-            "Ajuste o filtro de empresa, periodo ou colaborador.",
-            "Se preferir, solicite um novo recorte com outro periodo.",
-            channel=channel,
-        ),
-    ])
-    return "\n".join(lines)
+    return build_chat_contract_message(
+        title,
+        channel=channel,
+        blocks=[
+            ChatMessageBlock(
+                kind="status",
+                text=build_status_callout("info", "Nenhum item encontrado para o filtro informado.", channel=channel),
+            ),
+            ChatMessageBlock(
+                kind="next_step",
+                items=[
+                    "Ajuste o filtro de empresa, periodo ou colaborador.",
+                    "Se preferir, solicite um novo recorte com outro periodo.",
+                ],
+            ),
+        ],
+    )
 
 
 def build_my_work_report(
@@ -282,17 +289,26 @@ def build_my_work_report(
 
     totals = summarize_my_work_totals(tasks, processes, meetings)
     date_name = "Conclusao" if action == "my_work.completed_range" else "Prazo"
-    lines = build_presenter_header(title, channel=channel)
-    lines.extend(["", build_status_callout("success", "Consolidacao pronta para acompanhamento operacional.", channel=channel), ""])
-    lines.extend(build_my_work_summary_lines(totals=totals, channel=channel))
-    lines.extend([
-        "",
-        *build_next_step_block(
-            "Revise primeiro os totais executivos abaixo.",
-            "Depois aprofunde por empresa, projeto, processo ou reuniao.",
-            channel=channel,
-        ),
-    ])
+
+    contract_text = build_chat_contract_message(
+        title,
+        channel=channel,
+        blocks=[
+            ChatMessageBlock(
+                kind="status",
+                text=build_status_callout("success", "Consolidacao pronta para acompanhamento operacional.", channel=channel),
+            ),
+            make_list_block(build_my_work_summary_lines(totals=totals, channel=channel)),
+            ChatMessageBlock(
+                kind="next_step",
+                items=[
+                    "Revise primeiro os totais executivos abaixo.",
+                    "Depois aprofunde por empresa, projeto, processo ou reuniao.",
+                ],
+            ),
+        ],
+    )
+    lines = contract_text.splitlines()
 
     for group_index, company in enumerate(company_groups):
         if group_index >= 0:
