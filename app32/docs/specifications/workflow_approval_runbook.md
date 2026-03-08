@@ -69,7 +69,7 @@ Campos mínimos esperados em `AgentAction.payload`:
 `GET /api/agents/actions/workflow-approvals`
 
 Filtros suportados:
-- `status` (`pending`, `approved`, `executed`, `rejected`, `all`)
+- `status` (`pending`, `approved`, `executed`, `rejected`, `expired`, `all`)
 - `action_key`
 - `channel`
 - `user_id`
@@ -79,6 +79,19 @@ Retorno esperado:
 - `filters`
 - `count`
 - `workflow_approvals[]` com bloco `approval` estruturado
+
+### Revalidar
+`POST /api/agents/actions/revalidate/<action_id>`
+
+Uso recomendado:
+- quando a solicitação estiver com `approval_status = expired`;
+- quando o aprovador decidir renovar o prazo sem executar imediatamente.
+
+Retorno esperado:
+- `message`
+- `action`
+- `resume_payload`
+- `approval_metadata`
 
 ### Aprovar
 `POST /api/agents/actions/approve/<action_id>`
@@ -129,3 +142,11 @@ A trilha mínima deve existir nestes pontos:
 - retry/retomada idempotente com chave única por execução;
 - painel operacional com filtros por status/evento;
 - métricas por ação sensível, canal e aprovador.
+
+## Expiração
+Por padrão, approvals pendentes expiram em **24 horas** após a criação ou última revalidação.
+
+Quando expira:
+- a aprovação continua como `status = pending` no registro base;
+- o payload operacional passa a refletir `approval_status = expired`;
+- tentativas de aprovar/rejeitar retornam conflito (`409`) até revalidação.

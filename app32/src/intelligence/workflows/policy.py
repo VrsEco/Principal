@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .approval_utils import DEFAULT_WORKFLOW_APPROVAL_TTL_HOURS, is_workflow_approval_expired
 from .direct_execution import DirectExecutionRequest, DirectExecutionResult
 
 
@@ -26,6 +27,7 @@ class WorkflowApprovalPolicyGuard:
         sensitive_action_keys: Optional[Sequence[str]] = None,
         approval_channels: Optional[Sequence[str]] = None,
         create_approval_request: Optional[Callable[[DirectExecutionRequest, Dict[str, Any]], WorkflowApprovalRequest]] = None,
+        approval_ttl_hours: int = DEFAULT_WORKFLOW_APPROVAL_TTL_HOURS,
     ):
         self._sensitive_action_keys = {
             str(item or "").strip().lower()
@@ -42,6 +44,7 @@ class WorkflowApprovalPolicyGuard:
             if str(item or "").strip()
         }
         self._create_approval_request = create_approval_request or self._create_approval_request_in_db
+        self._approval_ttl_hours = max(int(approval_ttl_hours or DEFAULT_WORKFLOW_APPROVAL_TTL_HOURS), 1)
 
     def evaluate(self, request: DirectExecutionRequest) -> Optional[DirectExecutionResult]:
         action_key = str(request.action_key or "").strip().lower()
@@ -164,6 +167,8 @@ class WorkflowApprovalPolicyGuard:
         )
         for pending in pending_actions:
             payload = pending.payload or {}
+            if is_workflow_approval_expired(pending):
+                continue
             if payload.get("approval_key") == approval_key and payload.get("action_key") == action_key:
                 return WorkflowApprovalRequest(
                     approval_id=pending.id,
@@ -190,6 +195,8 @@ class WorkflowApprovalPolicyGuard:
             ),
             payload={
                 "approval_key": approval_key,
+                "approval_status": "pending",
+                "approval_expires_at": (datetime.utcnow() + timedelta(hours=self._approval_ttl_hours)).isoformat(),
                 "action_key": action_key,
                 "channel": request.channel,
                 "object_code": context["object_code"],

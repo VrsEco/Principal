@@ -203,6 +203,8 @@ def list_workflow_approvals():
 
     company_id = session.get('active_company_id')
     status_filter = (request.args.get('status') or 'pending').strip().lower()
+    if status_filter not in {'pending', 'approved', 'executed', 'rejected', 'all', 'expired'}:
+        return jsonify({"success": False, "error": "Parâmetro status inválido."}), 400
     action_key_filter = (request.args.get('action_key') or '').strip().lower()
     channel_filter = (request.args.get('channel') or '').strip().lower()
     user_id_filter = (request.args.get('user_id') or '').strip()
@@ -217,7 +219,7 @@ def list_workflow_approvals():
         company_id=company_id,
         type='workflow_approval_request',
     )
-    if status_filter != 'all':
+    if status_filter not in {'all', 'expired'}:
         query = query.filter_by(status=status_filter)
 
     actions = query.order_by(AgentAction.created_at.desc()).limit(limit).all()
@@ -226,6 +228,10 @@ def list_workflow_approvals():
     for action in actions:
         item = serialize_workflow_approval_action(action)
         approval = item.get('approval') or {}
+        if status_filter == 'expired' and not approval.get('expired'):
+            continue
+        if status_filter == 'pending' and approval.get('expired'):
+            continue
         if action_key_filter and str(approval.get('action_key') or '').strip().lower() != action_key_filter:
             continue
         if channel_filter and str(approval.get('channel') or '').strip().lower() != channel_filter:
@@ -654,6 +660,48 @@ def approve_action(action_id):
         })
     else:
         return jsonify({"success": False, "error": message}), 500
+
+@agents_bp.route('/api/agents/actions/revalidate/<int:action_id>', methods=['POST'])
+@login_required
+def revalidate_action(action_id):
+    from flask import session
+    from models import db
+    from models.agent_action import AgentAction
+    from services.workflow_approval_service import WorkflowApprovalService
+    from src.intelligence.menu_engine import execute_approved_resume_payload
+
+    action = AgentAction.query.get(action_id)
+    if not action:
+        return jsonify({"success": False, "error": "Ação não encontrada."}), 404
+
+    if action.type != 'workflow_approval_request':
+        return jsonify({"success": False, "error": "Ação não suporta revalidação operacional."}), 400
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para revalidar esta ação."}), 403
+
+    active_company_id = session.get('active_company_id')
+    service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
+    outcome = service.revalidate(
+        action=action,
+        approver_user_id=current_user.id,
+        approver_name=current_user.name,
+        active_company_id=active_company_id,
+    )
+    if outcome.success:
+        _log_workflow_approval_message(action, outcome.message, outcome.audit_metadata)
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": outcome.message,
+            "action": action.to_dict(),
+            "resume_payload": outcome.resume_payload,
+            "approval_metadata": outcome.audit_metadata,
+        }), outcome.http_status
+
+    db.session.rollback()
+    return jsonify({"success": False, "error": outcome.message, "approval_metadata": outcome.audit_metadata}), outcome.http_status
+
 
 @agents_bp.route('/api/agents/actions/rollback/<int:action_id>', methods=['POST'])
 @login_required

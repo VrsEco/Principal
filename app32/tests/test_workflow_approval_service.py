@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from services.workflow_approval_service import WorkflowApprovalService
+from services.workflow_approval_service import WorkflowApprovalService, is_workflow_approval_expired, serialize_workflow_approval_action
 from src.intelligence.workflows.direct_execution import DirectExecutionResult
 
 
@@ -134,3 +134,66 @@ def test_workflow_approval_service_rejects_and_marks_action_without_resuming():
     assert action.payload["approval_status"] == "rejected"
     assert action.payload["rejection_feedback"] == "Executar somente após validar com o cliente."
     assert outcome.audit_metadata["workflow_approval"]["event"] == "rejected"
+
+
+def test_workflow_approval_service_blocks_expired_approval_until_revalidated():
+    now = datetime(2026, 3, 8, 14, 0, 0)
+    service = WorkflowApprovalService(
+        resume_executor=lambda payload: DirectExecutionResult(executed=True),
+        now_factory=lambda: now,
+    )
+    action = _build_action()
+    action.created_at = datetime(2026, 3, 7, 10, 0, 0)
+
+    outcome = service.approve(
+        action=action,
+        approver_user_id=7,
+        approver_name="Fabiano Ferreira",
+        active_company_id=9,
+    )
+
+    assert outcome.success is False
+    assert outcome.http_status == 409
+    assert action.status == 'pending'
+    assert action.payload['approval_status'] == 'expired'
+    assert outcome.audit_metadata['workflow_approval']['event'] == 'expired'
+
+
+def test_workflow_approval_service_revalidates_pending_approval():
+    now = datetime(2026, 3, 8, 14, 0, 0)
+    service = WorkflowApprovalService(
+        resume_executor=lambda payload: DirectExecutionResult(executed=True),
+        now_factory=lambda: now,
+        approval_ttl_hours=12,
+    )
+    action = _build_action()
+    action.created_at = datetime(2026, 3, 7, 10, 0, 0)
+    action.payload['approval_status'] = 'expired'
+    action.payload['expired_at'] = '2026-03-08T14:00:00'
+
+    outcome = service.revalidate(
+        action=action,
+        approver_user_id=7,
+        approver_name="Fabiano Ferreira",
+        active_company_id=9,
+    )
+
+    assert outcome.success is True
+    assert action.status == 'pending'
+    assert action.payload['approval_status'] == 'pending'
+    assert action.payload['revalidated_by_user_id'] == 7
+    assert action.payload['approval_expires_at'] == '2026-03-09T02:00:00'
+    assert 'expired_at' not in action.payload
+    assert outcome.audit_metadata['workflow_approval']['event'] == 'revalidated'
+
+
+def test_serialize_workflow_approval_action_marks_expired_pending_action():
+    action = _build_action()
+    action.created_at = datetime(2026, 3, 7, 10, 0, 0)
+
+    serialized = serialize_workflow_approval_action(action, now=datetime(2026, 3, 8, 14, 0, 0))
+
+    assert serialized['approval']['expired'] is True
+    assert serialized['approval']['approval_status'] == 'expired'
+    assert serialized['approval']['expires_at'] == '2026-03-08T10:00:00'
+    assert is_workflow_approval_expired(action, now=datetime(2026, 3, 8, 14, 0, 0)) is True

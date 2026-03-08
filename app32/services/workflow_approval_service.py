@@ -1,17 +1,24 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.intelligence.workflows.approval_utils import (
+    DEFAULT_WORKFLOW_APPROVAL_TTL_HOURS,
+    get_workflow_approval_expires_at,
+    is_workflow_approval_expired,
+)
 from src.intelligence.workflows.direct_execution import DirectExecutionResult
 
 
-def serialize_workflow_approval_action(action: Any) -> Dict[str, Any]:
+def serialize_workflow_approval_action(action: Any, *, now: Optional[datetime] = None) -> Dict[str, Any]:
     payload = dict(getattr(action, "payload", None) or {})
     resume_payload = dict(payload.get("resume_payload") or {})
     resume_result = dict(payload.get("resume_result") or {})
+    expires_at = get_workflow_approval_expires_at(action)
+    expired = is_workflow_approval_expired(action, now=now)
     return {
         "id": getattr(action, "id", None),
         "type": getattr(action, "type", None),
@@ -26,7 +33,7 @@ def serialize_workflow_approval_action(action: Any) -> Dict[str, Any]:
         "resolved_at": getattr(action, "resolved_at", None).isoformat() if getattr(action, "resolved_at", None) else None,
         "executed_at": getattr(action, "executed_at", None).isoformat() if getattr(action, "executed_at", None) else None,
         "approval": {
-            "approval_status": payload.get("approval_status") or getattr(action, "status", None),
+            "approval_status": payload.get("approval_status") or ("expired" if expired else getattr(action, "status", None)),
             "approval_key": payload.get("approval_key"),
             "action_key": payload.get("action_key") or resume_payload.get("action_key"),
             "channel": payload.get("channel") or resume_payload.get("channel"),
@@ -40,8 +47,14 @@ def serialize_workflow_approval_action(action: Any) -> Dict[str, Any]:
             "rejected_at": payload.get("rejected_at"),
             "rejection_feedback": payload.get("rejection_feedback"),
             "created_via": payload.get("created_via"),
+            "expires_at": expires_at.isoformat() if expires_at else None,
+            "expired": expired,
+            "expired_at": payload.get("expired_at"),
+            "revalidated_at": payload.get("revalidated_at"),
+            "revalidated_by_user_id": payload.get("revalidated_by_user_id"),
         },
     }
+
 
 
 class WorkflowApprovalOutcome(BaseModel):
@@ -62,9 +75,11 @@ class WorkflowApprovalService:
         *,
         resume_executor: Callable[[Dict[str, Any]], DirectExecutionResult],
         now_factory: Callable[[], datetime] = datetime.utcnow,
+        approval_ttl_hours: int = DEFAULT_WORKFLOW_APPROVAL_TTL_HOURS,
     ):
         self._resume_executor = resume_executor
         self._now_factory = now_factory
+        self._approval_ttl_hours = max(int(approval_ttl_hours or DEFAULT_WORKFLOW_APPROVAL_TTL_HOURS), 1)
 
     def approve(
         self,
@@ -195,7 +210,51 @@ class WorkflowApprovalService:
             ),
         )
 
-    def _validate_action(
+    def revalidate(
+        self,
+        *,
+        action: Any,
+        approver_user_id: int,
+        approver_name: str,
+        active_company_id: Optional[int],
+    ) -> WorkflowApprovalOutcome:
+        base_error = self._validate_action_company_only(action, active_company_id)
+        if base_error is not None:
+            return base_error
+
+        if getattr(action, "status", None) != "pending":
+            return WorkflowApprovalOutcome(
+                success=False,
+                message="Somente approvals pendentes podem ser revalidados.",
+                http_status=409,
+                action_status=getattr(action, "status", None),
+                audit_metadata=self._build_audit_metadata(action=action, event="revalidation_not_allowed"),
+            )
+
+        now = self._now_factory()
+        payload = dict(getattr(action, "payload", None) or {})
+        payload["approval_status"] = "pending"
+        payload["revalidated_at"] = now.isoformat()
+        payload["revalidated_by_user_id"] = approver_user_id
+        payload["approval_expires_at"] = (now + timedelta(hours=self._approval_ttl_hours)).isoformat()
+        payload.pop("expired_at", None)
+        action.payload = payload
+        action.user_feedback = f"Revalidado por {approver_name}"
+
+        return WorkflowApprovalOutcome(
+            success=True,
+            message="Solicitação revalidada com sucesso. O prazo de aprovação foi renovado.",
+            http_status=200,
+            action_status=getattr(action, "status", None),
+            resume_payload=dict(payload.get("resume_payload") or {}),
+            audit_metadata=self._build_audit_metadata(
+                action=action,
+                event="revalidated",
+                extra={"revalidated_by_user_id": approver_user_id},
+            ),
+        )
+
+    def _validate_action_company_only(
         self,
         action: Any,
         active_company_id: Optional[int],
@@ -208,6 +267,31 @@ class WorkflowApprovalService:
                 success=False,
                 message="Ação não pertence à empresa ativa.",
                 http_status=403,
+            )
+        return None
+
+    def _validate_action(
+        self,
+        action: Any,
+        active_company_id: Optional[int],
+    ) -> Optional[WorkflowApprovalOutcome]:
+        base_error = self._validate_action_company_only(action, active_company_id)
+        if base_error is not None:
+            return base_error
+
+        now = self._now_factory()
+        if is_workflow_approval_expired(action, now=now):
+            payload = dict(getattr(action, "payload", None) or {})
+            payload["approval_status"] = "expired"
+            payload.setdefault("expired_at", now.isoformat())
+            action.payload = payload
+            return WorkflowApprovalOutcome(
+                success=False,
+                message="A solicitação de aprovação expirou e precisa ser revalidada antes da execução.",
+                http_status=409,
+                action_status=getattr(action, "status", None),
+                resume_payload=dict(payload.get("resume_payload") or {}),
+                audit_metadata=self._build_audit_metadata(action=action, event="expired"),
             )
         return None
 

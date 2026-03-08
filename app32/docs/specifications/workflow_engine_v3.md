@@ -204,6 +204,7 @@ Na Fase 6, o runtime também passou a operar com **policy guard + HITL**:
 - aprovação e rejeição têm trilha auditável em `AgentAction.payload`;
 - os endpoints operacionais retornam `approval_metadata` estruturado;
 - há listagem operacional dedicada em `/api/agents/actions/workflow-approvals`;
+- approvals pendentes agora possuem expiração/revalidação operacional;
 - o fluxo conversacional grava `AgentMessage` outbound com o evento da aprovação.
 
 Runbook operacional complementar:
