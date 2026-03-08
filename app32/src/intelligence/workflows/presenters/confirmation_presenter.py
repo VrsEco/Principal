@@ -4,14 +4,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from .channel_presenter import format_channel_heading, sanitize_for_channel
-from .conversation_presenter import (
-    build_guidance_block,
-    build_key_value_lines,
-    build_next_step_block,
-    build_presenter_header,
-    build_status_callout,
-)
+from .chat_contract import ChatMessageBlock, make_list_block
+from .conversation_presenter import build_chat_contract_message, build_status_callout
 
 
 class WorkflowDisplayOption(BaseModel):
@@ -33,41 +27,45 @@ def build_confirmation_text(
     format_objective_label: Callable[[str], str],
     channel: str = "web",
 ) -> str:
-    lines = build_presenter_header("Confirme a operacao", channel=channel)
-    lines.extend(["", format_channel_heading(f"Fluxo selecionado: {option.code} - {option.title}", channel)])
-    lines.extend(["", "Confirme que voce quer:", build_status_callout("info", "Revise os dados antes de executar.", channel=channel)])
-    if payload:
-        lines.extend(["", sanitize_for_channel("Dados consolidados:", channel)])
-        lines.extend(
-            build_key_value_lines(
-                [("item", item) for item in build_confirmation_display_items(
-                    option,
-                    payload,
-                    format_project_choice_line=format_project_choice_line,
-                    format_project_task_choice_line=format_project_task_choice_line,
-                    format_process_instance_choice_line=format_process_instance_choice_line,
-                    format_meeting_choice_line=format_meeting_choice_line,
-                    format_objective_label=format_objective_label,
-                )],
-                channel=channel,
-            )
-        )
+    consolidated_items = build_confirmation_display_items(
+        option,
+        payload,
+        format_project_choice_line=format_project_choice_line,
+        format_project_task_choice_line=format_project_task_choice_line,
+        format_process_instance_choice_line=format_process_instance_choice_line,
+        format_meeting_choice_line=format_meeting_choice_line,
+        format_objective_label=format_objective_label,
+    )
+
+    blocks: List[ChatMessageBlock] = [
+        ChatMessageBlock(kind="heading", text=f"Fluxo selecionado: {option.code} - {option.title}"),
+        ChatMessageBlock(kind="body", text="Confirme que voce quer:"),
+        ChatMessageBlock(kind="status", text=build_status_callout("info", "Revise os dados antes de executar.", channel=channel)),
+    ]
+
+    if consolidated_items:
+        blocks.append(ChatMessageBlock(kind="body", text="Dados consolidados:"))
+        blocks.append(make_list_block([f"• item: {item}" for item in consolidated_items]))
     else:
-        lines.extend(["", sanitize_for_channel("Nenhum dado adicional foi informado.", channel)])
-    lines.extend([
-        "",
-        *build_next_step_block(
-            "Responda 'sim' para executar agora.",
-            "Responda 'nao' para cancelar com seguranca.",
-            channel=channel,
-        ),
-        "",
-        *build_guidance_block(
-            "Se precisar ajustar algum dado, descreva a alteracao em uma frase curta.",
-            channel=channel,
-        ),
-    ])
-    return "\n".join(lines)
+        blocks.append(ChatMessageBlock(kind="body", text="Nenhum dado adicional foi informado."))
+
+    blocks.append(
+        ChatMessageBlock(
+            kind="next_step",
+            items=[
+                "Responda 'sim' para executar agora.",
+                "Responda 'nao' para cancelar com seguranca.",
+            ],
+        )
+    )
+    blocks.append(
+        ChatMessageBlock(
+            kind="body",
+            text="Se precisar ajustar algum dado, descreva a alteracao em uma frase curta.",
+        )
+    )
+
+    return build_chat_contract_message("Confirme a operacao", blocks=blocks, channel=channel)
 
 
 def build_confirmation_display_items(
