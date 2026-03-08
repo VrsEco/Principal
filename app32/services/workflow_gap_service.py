@@ -227,5 +227,34 @@ class WorkflowGapService:
         return task
 
 
+
+
+def serialize_workflow_gap_candidate(candidate: Any) -> Dict[str, Any]:
+    telemetry = dict(getattr(candidate, "telemetry", None) or {})
+    return {
+        "id": getattr(candidate, "id", None),
+        "company_id": getattr(candidate, "company_id", None),
+        "user_id": getattr(candidate, "user_id", None),
+        "channel": getattr(candidate, "channel", None),
+        "thread_id": getattr(candidate, "thread_id", None),
+        "source": getattr(candidate, "source", None),
+        "status": getattr(candidate, "status", None),
+        "resolution_type": getattr(candidate, "resolution_type", None),
+        "title": getattr(candidate, "title", None),
+        "user_request_text": getattr(candidate, "user_request_text", None),
+        "normalized_intent": getattr(candidate, "normalized_intent", None),
+        "suggested_flow_name": getattr(candidate, "suggested_flow_name", None),
+        "business_outcome": getattr(candidate, "business_outcome", None),
+        "matched_workflow_codes": list(getattr(candidate, "matched_workflow_codes", None) or []),
+        "telemetry": telemetry,
+        "app_card": {
+            "project_id": getattr(candidate, "app_project_id", None),
+            "task_id": getattr(candidate, "app_task_id", None),
+            "task_code": getattr(candidate, "app_task_code", None),
+        },
+        "created_at": getattr(candidate, "created_at", None).isoformat() if getattr(candidate, "created_at", None) else None,
+        "updated_at": getattr(candidate, "updated_at", None).isoformat() if getattr(candidate, "updated_at", None) else None,
+    }
+
 def capture_workflow_gap(**kwargs: Any) -> Optional[WorkflowGapCandidate]:
     return WorkflowGapService.create_gap_candidate(**kwargs)

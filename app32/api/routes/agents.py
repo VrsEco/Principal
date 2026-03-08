@@ -191,6 +191,70 @@ def get_pending_actions():
     })
 
 
+@agents_bp.route('/api/agents/workflow-gaps', methods=['GET'])
+@login_required
+def list_workflow_gaps():
+    from flask import session
+    from sqlalchemy import or_
+    from models.workflow_gap import WorkflowGapCandidate
+    from services.workflow_gap_service import serialize_workflow_gap_candidate
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para listar gaps operacionais de workflows."}), 403
+
+    active_company_id = session.get('active_company_id')
+    status_filter = (request.args.get('status') or 'all').strip().lower()
+    channel_filter = (request.args.get('channel') or '').strip().lower()
+    source_filter = (request.args.get('source') or '').strip().lower()
+    resolution_filter = (request.args.get('resolution_type') or '').strip().lower()
+    user_id_filter = (request.args.get('user_id') or '').strip()
+    limit_raw = (request.args.get('limit') or '50').strip()
+
+    try:
+        limit = max(1, min(int(limit_raw), 200))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    query = WorkflowGapCandidate.query
+    if active_company_id:
+        query = query.filter(
+            or_(
+                WorkflowGapCandidate.company_id == active_company_id,
+                WorkflowGapCandidate.company_id.is_(None),
+            )
+        )
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+    if channel_filter:
+        query = query.filter_by(channel=channel_filter)
+    if source_filter:
+        query = query.filter_by(source=source_filter)
+    if resolution_filter:
+        query = query.filter_by(resolution_type=resolution_filter)
+    if user_id_filter:
+        if not user_id_filter.isdigit():
+            return jsonify({"success": False, "error": "Parâmetro user_id inválido."}), 400
+        query = query.filter_by(user_id=int(user_id_filter))
+
+    items = query.order_by(WorkflowGapCandidate.created_at.desc()).limit(limit).all()
+    serialized = [serialize_workflow_gap_candidate(item) for item in items]
+
+    return jsonify({
+        "success": True,
+        "count": len(serialized),
+        "filters": {
+            "status": status_filter,
+            "channel": channel_filter or None,
+            "source": source_filter or None,
+            "resolution_type": resolution_filter or None,
+            "user_id": int(user_id_filter) if user_id_filter.isdigit() else None,
+            "limit": limit,
+            "active_company_id": active_company_id,
+        },
+        "workflow_gaps": serialized,
+    })
+
+
 @agents_bp.route('/api/agents/actions/workflow-approvals', methods=['GET'])
 @login_required
 def list_workflow_approvals():
