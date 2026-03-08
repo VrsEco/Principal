@@ -212,7 +212,7 @@ Na Fase 6, o runtime também passou a operar com **policy guard + HITL**:
 - o catálogo `agent_menu_options` agora mantém `usage_count` e `last_used_at`;
 - cada acionamento relevante gera trilha em `workflow_execution_logs`;
 - o backend expõe auditoria em `/api/agents/workflow-usage`;
-- o backend expõe agregados operacionais em `/api/agents/workflow-usage/metrics`.
+- o backend expõe agregados operacionais em `/api/agents/workflow-usage/metrics`, incluindo recortes por dia, usuário, empresa, origem do roteamento e confidence route.
 
 Runbook operacional complementar:
 - `docs/specifications/workflow_approval_runbook.md`

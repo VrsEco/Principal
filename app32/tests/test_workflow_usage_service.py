@@ -121,9 +121,9 @@ def test_record_workflow_usage_event_creates_log_and_updates_counter(monkeypatch
 
 def test_build_workflow_usage_metrics_aggregates_by_dimensions():
     items = [
-        SimpleNamespace(action_key='summary.week', channel='whatsapp', status='completed'),
-        SimpleNamespace(action_key='summary.week', channel='telegram', status='completed'),
-        SimpleNamespace(action_key='project_task.create', channel='whatsapp', status='collecting_parameters'),
+        SimpleNamespace(company_id=9, user_id=3, action_key='summary.week', channel='whatsapp', status='completed', route_source='semantic', confidence_route='select', created_at=datetime(2026, 3, 8, 12, 0, 0)),
+        SimpleNamespace(company_id=9, user_id=3, action_key='summary.week', channel='telegram', status='completed', route_source='semantic', confidence_route='select', created_at=datetime(2026, 3, 8, 12, 5, 0)),
+        SimpleNamespace(company_id=11, user_id=8, action_key='project_task.create', channel='whatsapp', status='collecting_parameters', route_source='lexical', confidence_route='select', created_at=datetime(2026, 3, 7, 10, 0, 0)),
     ]
 
     metrics = usage_service.build_workflow_usage_metrics(items)
@@ -132,6 +132,13 @@ def test_build_workflow_usage_metrics_aggregates_by_dimensions():
     assert metrics['by_action_key'][0] == {'action_key': 'summary.week', 'count': 2}
     assert {'channel': 'whatsapp', 'count': 2} in metrics['by_channel']
     assert {'status': 'completed', 'count': 2} in metrics['by_status']
+    assert {'route_source': 'semantic', 'count': 2} in metrics['by_route_source']
+    assert {'confidence_route': 'select', 'count': 3} in metrics['by_confidence_route']
+    assert metrics['by_user'][0]['user_id'] == 3
+    assert metrics['by_user'][0]['count'] == 2
+    assert metrics['by_company'][0]['company_id'] == 9
+    assert metrics['by_company'][0]['count'] == 2
+    assert {'date': '2026-03-08', 'count': 2} in metrics['by_day']
 
 
 def test_serialize_workflow_execution_log_returns_operational_payload():

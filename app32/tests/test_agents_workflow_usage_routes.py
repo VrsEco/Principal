@@ -145,7 +145,7 @@ def test_workflow_usage_metrics_returns_aggregated_payload(monkeypatch):
     monkeypatch.setattr(workflow_usage_module, 'WorkflowExecutionLog', fake_model)
 
     import services.workflow_usage_service as usage_service_module
-    monkeypatch.setattr(usage_service_module, 'build_workflow_usage_metrics', lambda items: {'total': len(list(items)), 'by_action_key': [{'action_key': 'summary.week', 'count': 2}]})
+    monkeypatch.setattr(usage_service_module, 'build_workflow_usage_metrics', lambda items: {'total': len(list(items)), 'by_action_key': [{'action_key': 'summary.week', 'count': 2}], 'by_route_source': [{'route_source': 'semantic', 'count': 2}], 'by_user': [{'user_id': 3, 'count': 2}], 'by_day': [{'date': '2026-03-08', 'count': 2}]})
 
     with app.test_request_context('/api/agents/workflow-usage/metrics?limit=20', method='GET'):
         session['active_company_id'] = 9
@@ -154,3 +154,5 @@ def test_workflow_usage_metrics_returns_aggregated_payload(monkeypatch):
     body = response.get_json()
     assert body['success'] is True
     assert body['metrics']['total'] == 2
+    assert body['metrics']['by_route_source'][0]['route_source'] == 'semantic'
+    assert body['metrics']['by_user'][0]['user_id'] == 3

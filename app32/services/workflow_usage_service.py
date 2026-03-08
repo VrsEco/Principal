@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from collections import defaultdict
 from typing import Any, Dict, Iterable, Optional
 
 from models import db
@@ -299,23 +300,80 @@ def serialize_workflow_execution_log(item: Any) -> Dict[str, Any]:
     }
 
 
+def _sorted_dimension_rows(label: str, values: Dict[str, int]) -> list[Dict[str, Any]]:
+    return [
+        {label: key, "count": value}
+        for key, value in sorted(values.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+
 def build_workflow_usage_metrics(items: Iterable[Any]) -> Dict[str, Any]:
     items = list(items or [])
     by_action: Dict[str, int] = {}
     by_channel: Dict[str, int] = {}
     by_status: Dict[str, int] = {}
+    by_route_source: Dict[str, int] = {}
+    by_confidence_route: Dict[str, int] = {}
+    by_user: Dict[str, Dict[str, Any]] = {}
+    by_company: Dict[str, Dict[str, Any]] = {}
+    by_day: Dict[str, int] = defaultdict(int)
 
     for item in items:
         action_key = _normalize_text(getattr(item, "action_key", None)) or "(sem_action_key)"
         channel = _normalize_text(getattr(item, "channel", None)) or "(sem_canal)"
         status = _normalize_text(getattr(item, "status", None)) or "(sem_status)"
+        route_source = _normalize_text(getattr(item, "route_source", None)) or "(sem_origem)"
+        confidence_route = _normalize_text(getattr(item, "confidence_route", None)) or "(sem_confidence_route)"
+        user_id = getattr(item, "user_id", None)
+        company_id = getattr(item, "company_id", None)
+        created_at = getattr(item, "created_at", None) or getattr(item, "updated_at", None)
+
         by_action[action_key] = by_action.get(action_key, 0) + 1
         by_channel[channel] = by_channel.get(channel, 0) + 1
         by_status[status] = by_status.get(status, 0) + 1
+        by_route_source[route_source] = by_route_source.get(route_source, 0) + 1
+        by_confidence_route[confidence_route] = by_confidence_route.get(confidence_route, 0) + 1
+
+        user_key = str(user_id) if user_id is not None else "(sem_usuario)"
+        user_row = by_user.setdefault(user_key, {"user_id": user_id, "count": 0, "channels": set(), "statuses": set()})
+        user_row["count"] += 1
+        user_row["channels"].add(channel)
+        user_row["statuses"].add(status)
+
+        company_key = str(company_id) if company_id is not None else "(sem_empresa)"
+        company_row = by_company.setdefault(company_key, {"company_id": company_id, "count": 0, "action_keys": set(), "channels": set()})
+        company_row["count"] += 1
+        company_row["action_keys"].add(action_key)
+        company_row["channels"].add(channel)
+
+        if created_at is not None:
+            by_day[str(created_at.date())] += 1
 
     return {
         "total": len(items),
-        "by_action_key": [{"action_key": key, "count": value} for key, value in sorted(by_action.items(), key=lambda item: (-item[1], item[0]))],
-        "by_channel": [{"channel": key, "count": value} for key, value in sorted(by_channel.items(), key=lambda item: (-item[1], item[0]))],
-        "by_status": [{"status": key, "count": value} for key, value in sorted(by_status.items(), key=lambda item: (-item[1], item[0]))],
+        "by_action_key": _sorted_dimension_rows("action_key", by_action),
+        "by_channel": _sorted_dimension_rows("channel", by_channel),
+        "by_status": _sorted_dimension_rows("status", by_status),
+        "by_route_source": _sorted_dimension_rows("route_source", by_route_source),
+        "by_confidence_route": _sorted_dimension_rows("confidence_route", by_confidence_route),
+        "by_user": [
+            {
+                "user_id": row["user_id"],
+                "count": row["count"],
+                "channels": sorted(row["channels"]),
+                "statuses": sorted(row["statuses"]),
+            }
+            for row in sorted(by_user.values(), key=lambda item: (-item["count"], str(item["user_id"])))
+        ],
+        "by_company": [
+            {
+                "company_id": row["company_id"],
+                "count": row["count"],
+                "action_keys": sorted(row["action_keys"]),
+                "channels": sorted(row["channels"]),
+            }
+            for row in sorted(by_company.values(), key=lambda item: (-item["count"], str(item["company_id"])))
+        ],
+        "by_day": _sorted_dimension_rows("date", dict(by_day)),
     }
