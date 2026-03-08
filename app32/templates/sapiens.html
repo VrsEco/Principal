@@ -378,15 +378,19 @@
 
     .workflow-board-panel {
         display: none;
-        background: rgba(255, 255, 255, 0.92);
+        background: rgba(255, 255, 255, 0.96);
         border-bottom: 1px solid var(--tg-border);
         padding: 0.9rem 1.2rem 1rem 1.2rem;
         z-index: 8;
         backdrop-filter: blur(8px);
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
     }
 
     .workflow-board-panel.visible {
-        display: block;
+        display: flex;
+        flex-direction: column;
     }
 
     .workflow-board-header {
@@ -800,7 +804,12 @@
     }
 
     .workflow-catalog-panel {
-        margin-top: 0.85rem;
+        margin-top: 0;
+    }
+
+    .tg-chat-area.panel-mode .tg-messages-container,
+    .tg-chat-area.panel-mode .tg-input-area {
+        display: none;
     }
 
     .workflow-catalog-toolbar {
@@ -957,7 +966,7 @@
     </aside>
 
     <!-- ÁREA DE CHAT -->
-    <section class="tg-chat-area">
+    <section class="tg-chat-area" id="sapiensChatArea">
         <header class="tg-chat-header">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <div class="tg-chat-header-info">
@@ -1077,7 +1086,7 @@
             <!-- Messages will be injected here -->
         </div>
 
-        <div class="tg-input-area">
+        <div class="tg-input-area" id="sapiensInputArea">
             <button class="attach-btn"
                 style="background:none; border:none; color: var(--tg-text-secondary); font-size: 1.4rem; cursor: pointer; padding-bottom: 5px;">
                 <i class="far fa-smile"></i>
@@ -1116,6 +1125,8 @@
     const chatMessages = document.getElementById('chatMessages');
     const contactsList = document.getElementById('contactsList');
     const userInput = document.getElementById('userInput');
+    const sapiensChatArea = document.getElementById('sapiensChatArea');
+    const sapiensInputArea = document.getElementById('sapiensInputArea');
     const sapiensOpsSwitcher = document.getElementById('sapiensOpsSwitcher');
     const opsViewChat = document.getElementById('opsViewChat');
     const opsViewApprovals = document.getElementById('opsViewApprovals');
@@ -1170,7 +1181,12 @@
 
     function updateOperationalViewControls() {
         const visible = shouldShowOperationalPanels();
+        const panelMode = visible && activeOperationalView !== 'chat';
         sapiensOpsSwitcher.classList.toggle('visible', visible);
+        sapiensChatArea.classList.toggle('panel-mode', panelMode);
+        if (sapiensInputArea) {
+            sapiensInputArea.style.display = panelMode ? 'none' : '';
+        }
         if (!visible) {
             activeOperationalView = 'chat';
         }
