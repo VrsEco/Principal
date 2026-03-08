@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List
 
 from .confirmation_presenter import WorkflowDisplayOption
-from .conversation_presenter import build_guidance_block, build_presenter_header, build_status_callout
+from .conversation_presenter import build_guidance_block, build_next_step_block, build_presenter_header, build_status_callout
 from .channel_presenter import sanitize_for_channel
 
 
@@ -58,7 +58,7 @@ def build_item_selection_prompt(
             )
         lines.extend([
             "",
-            *build_guidance_block(
+            *build_next_step_block(
                 "Informe apenas o numero do projeto.",
                 "Exemplo: 1",
                 "Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12",
@@ -76,7 +76,7 @@ def build_item_selection_prompt(
         lines.extend(["", build_status_callout("info", "O objetivo ajuda a orientar a analise dos agentes.", channel=channel), ""])
         for item in choices:
             lines.append(f"{item['index']} - {sanitize_for_channel(item.get('title') or item.get('code') or '-', channel)}")
-        lines.extend(["", *build_guidance_block("Informe o numero da opcao.", "Exemplo: 1", channel=channel)])
+        lines.extend(["", *build_next_step_block("Informe o numero da opcao.", "Exemplo: 1", channel=channel)])
         return "\n".join(lines)
 
     description = (
@@ -112,11 +112,11 @@ def build_item_selection_prompt(
                 )
 
     if action in {"meeting.start", "meeting.summarize"}:
-        lines.extend(["", *build_guidance_block("Informe o numero da reuniao.", "Exemplo: 1", channel=channel)])
+        lines.extend(["", *build_next_step_block("Informe o numero da reuniao.", "Exemplo: 1", channel=channel)])
     else:
         lines.extend([
             "",
-            *build_guidance_block(
+            *build_next_step_block(
                 "Informe o numero da atividade / instancia e a data que voce quer registrar como finalizacao.",
                 "Formato: numero: data",
                 "Exemplo: 1: 27/02/2026",

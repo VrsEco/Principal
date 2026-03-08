@@ -318,6 +318,11 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
         except Exception as e:
             logger.exception("WHATSAPP WEBHOOK ERROR: %s", str(e))
             db.session.rollback()
+            try:
+                from src.intelligence.workflows.presenters import build_internal_error_message
+                whatsapp_service.send_message(phone, build_internal_error_message(channel="whatsapp"))
+            except Exception:
+                logger.exception("WHATSAPP: falha ao enviar mensagem de erro operacional")
 
 
 @whatsapp_webhook_bp.route('/whatsapp', methods=['POST'])
@@ -448,4 +453,9 @@ def handle_instagram():
         return jsonify({"status": "success"}), 200
     except Exception as e:
         logger.error(f"INSTAGRAM WEBHOOK ERROR: {str(e)}")
+        try:
+            from src.intelligence.workflows.presenters import build_internal_error_message
+            instagram_service.send_message(sender_id, build_internal_error_message(channel="instagram"))
+        except Exception:
+            logger.exception("INSTAGRAM: falha ao enviar mensagem de erro operacional")
         return jsonify({"status": "error", "message": str(e)}), 200

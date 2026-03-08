@@ -78,6 +78,7 @@ from src.intelligence.workflows.presenters import (
     build_item_selection_prompt,
     build_missing_fields_prompt,
     build_operation_company_prompt,
+    build_recovery_message,
     describe_my_work_period,
     get_bullet_style,
     group_my_work_by_company,
@@ -820,7 +821,7 @@ def _handle_item_selection_state(
         )
     return MenuInterceptResult(
         handled=True,
-        response_text=decision.response_text or "Nao consegui processar a selecao agora.",
+        response_text=decision.response_text or build_recovery_message("Selecao nao concluida", "Nao consegui processar a selecao agora.", channel=session.channel or "web", next_steps=["Tente informar novamente apenas o numero da opcao."]),
     )
 
 
@@ -1271,7 +1272,7 @@ def _handle_operation_company_state(
             _reset_session(session)
         return MenuInterceptResult(
             handled=True,
-            response_text=decision.response_text or "Nao consegui identificar a empresa selecionada.",
+            response_text=decision.response_text or build_recovery_message("Empresa nao identificada", "Nao consegui identificar a empresa selecionada.", channel=session.channel or "web", next_steps=["Responda apenas com o numero da empresa exibida."]),
         )
 
     payload = dict(decision.payload or {})

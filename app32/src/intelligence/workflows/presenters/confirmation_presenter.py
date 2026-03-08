@@ -8,6 +8,7 @@ from .channel_presenter import format_channel_heading, sanitize_for_channel
 from .conversation_presenter import (
     build_guidance_block,
     build_key_value_lines,
+    build_next_step_block,
     build_presenter_header,
     build_status_callout,
 )
@@ -55,9 +56,14 @@ def build_confirmation_text(
         lines.extend(["", sanitize_for_channel("Nenhum dado adicional foi informado.", channel)])
     lines.extend([
         "",
-        *build_guidance_block(
+        *build_next_step_block(
             "Responda 'sim' para executar agora.",
             "Responda 'nao' para cancelar com seguranca.",
+            channel=channel,
+        ),
+        "",
+        *build_guidance_block(
+            "Se precisar ajustar algum dado, descreva a alteracao em uma frase curta.",
             channel=channel,
         ),
     ])

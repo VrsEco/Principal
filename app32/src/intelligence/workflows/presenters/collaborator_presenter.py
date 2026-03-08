@@ -4,7 +4,7 @@ from datetime import date
 from typing import Any, Callable, Dict, List
 
 from .channel_presenter import sanitize_for_channel
-from .conversation_presenter import build_key_value_lines, build_presenter_header, build_status_callout
+from .conversation_presenter import build_key_value_lines, build_next_step_block, build_presenter_header, build_status_callout
 
 
 def build_collaborator_occupancy_report(
@@ -60,6 +60,12 @@ def build_collaborator_occupancy_report(
             sanitize_for_channel(
                 "Observacao: o compromisso em projetos considera horas estimadas de atividades abertas do colaborador no periodo.",
                 channel,
+            ),
+            "",
+            *build_next_step_block(
+                "Use esse panorama para verificar capacidade disponivel no periodo.",
+                "Se quiser, solicite outro periodo ou outro colaborador.",
+                channel=channel,
             ),
         ]
     )

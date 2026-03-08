@@ -33,6 +33,16 @@ def build_guidance_block(*lines: str, channel: str = "web") -> List[str]:
     return [sanitize_for_channel(line, channel) for line in lines if str(line or "").strip()]
 
 
+def build_next_step_block(*lines: str, channel: str = "web") -> List[str]:
+    guidance = [line for line in lines if str(line or "").strip()]
+    if not guidance:
+        return []
+    return [
+        sanitize_for_channel("Proximo passo:", channel),
+        *[f"→ {sanitize_for_channel(line, channel)}" for line in guidance],
+    ]
+
+
 def build_status_callout(kind: str, message: str, *, channel: str = "web") -> str:
     prefix = {
         "info": "ℹ️",

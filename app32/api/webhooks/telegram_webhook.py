@@ -53,7 +53,8 @@ def _fallback_root_menu(company_id):
         return "\n".join(lines)
     except Exception as exc:
         logger.exception("Falha ao montar menu fallback no Telegram: %s", exc)
-        return "Nao consegui abrir o menu agora. Tente novamente em alguns segundos."
+        from src.intelligence.workflows.presenters import build_menu_recovery_message
+        return build_menu_recovery_message(channel="telegram")
 
 
 def _resolve_telegram_token():
@@ -345,7 +346,8 @@ def process_telegram_message(app, message: telebot.types.Message):
                 logger.error(f"Falha catastrófica ao escalonar erro: {esc_err}")
 
             if bot:
-                bot.send_message(message.chat.id, "Desculpe, ocorreu um erro interno ao processar sua solicitação no Gestão Versus. O time de engenharia foi notificado.", reply_to_message_id=message.message_id)
+                from src.intelligence.workflows.presenters import build_internal_error_message
+                bot.send_message(message.chat.id, build_internal_error_message(channel="telegram"), reply_to_message_id=message.message_id, parse_mode='HTML')
 
 # Rota HTTP (Webhook) que será chamada pelo servidor do Telegram
 @telegram_bp.route('/telegram', methods=['POST'])

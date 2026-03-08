@@ -40,6 +40,8 @@ def sanitize_for_channel(value: Any, channel: str) -> str:
 
 def format_channel_heading(value: Any, channel: str) -> str:
     text = sanitize_for_channel(value, channel)
+    if normalize_channel(channel) == "telegram":
+        return f"<b>{text}</b>"
     if normalize_channel(channel) in {"whatsapp", "instagram"}:
         return f"*{text}*"
     return text
@@ -47,7 +49,7 @@ def format_channel_heading(value: Any, channel: str) -> str:
 
 def get_bullet_style(channel: str) -> Dict[str, Any]:
     normalized = normalize_channel(channel)
-    if normalized in {"whatsapp", "instagram"}:
+    if normalized in {"whatsapp", "instagram", "telegram"}:
         return {
             "header": lambda text: format_channel_heading(text, normalized),
             "bullet": "• ",

@@ -15,6 +15,9 @@ from src.intelligence.workflows.presenters import (
     build_summary_company_prompt,
     build_summary_period_prompt,
     build_channel_capabilities,
+    build_collaborator_occupancy_report,
+    build_internal_error_message,
+    build_menu_recovery_message,
     build_status_callout,
     format_channel_heading,
 )
@@ -158,6 +161,10 @@ def test_channel_presenter_formats_instagram_heading_like_chat():
     assert format_channel_heading('Resumo V3', 'instagram') == '*Resumo V3*'
 
 
+def test_channel_presenter_formats_telegram_heading_as_html_bold():
+    assert format_channel_heading('Resumo V3', 'telegram') == '<b>Resumo V3</b>'
+
+
 def test_conversation_presenter_builds_status_callout():
     assert build_status_callout('warning', 'Confirme antes de executar') == '⚠️ Confirme antes de executar'
 
@@ -193,6 +200,7 @@ def test_my_work_presenter_builds_executive_panel():
     assert '*Painel Executivo*' in text
     assert 'Total de itens: 3' in text
     assert 'Atividades: 1 | Processos: 1 | Reunioes: 1' in text
+    assert 'Proximo passo:' in text
     assert 'AA.J.31.203 - Fase 8.5' in text
 
 
@@ -213,3 +221,39 @@ def test_my_work_presenter_builds_empty_state_report():
     )
 
     assert 'Nenhum item encontrado para o filtro informado.' in text
+    assert 'Proximo passo:' in text
+
+
+def test_collaborator_presenter_builds_next_step_block():
+    text = build_collaborator_occupancy_report(
+        collaborator_name='Fabiano',
+        company_label='AA - Versus',
+        start_date=date(2026, 3, 1),
+        end_date=date(2026, 3, 7),
+        available_hours=40.0,
+        process_hours_taken=10.0,
+        project_hours_taken=8.0,
+        project_hours_committed=12.0,
+        channel='telegram',
+        format_date_br=lambda value: str(value),
+    )
+
+    assert '<b>Ocupacao do Colaborador</b>' in text
+    assert 'Proximo passo:' in text
+    assert 'Horas disponiveis' in text
+
+
+def test_error_presenter_builds_internal_error_for_telegram():
+    text = build_internal_error_message(channel='telegram')
+
+    assert '<b>Nao foi possivel concluir a solicitacao</b>' in text
+    assert 'engenharia foi notificado' in text.lower()
+    assert 'Proximo passo:' in text
+
+
+def test_error_presenter_builds_menu_recovery_for_whatsapp():
+    text = build_menu_recovery_message(channel='whatsapp')
+
+    assert '*Nao consegui abrir o menu agora*' in text
+    assert 'Tente novamente em alguns segundos.' in text
+    assert 'Proximo passo:' in text

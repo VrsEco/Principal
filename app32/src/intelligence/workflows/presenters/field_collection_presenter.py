@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from .confirmation_presenter import WorkflowDisplayOption
 from .conversation_presenter import (
     build_guidance_block,
+    build_next_step_block,
     build_presenter_header,
     build_status_callout,
 )
@@ -38,7 +39,11 @@ def build_missing_fields_prompt(
             lines.append(f"- {key}: {value}")
     lines.extend([
         "",
-        *build_guidance_block("Envie no formato: numero: valor", channel=channel),
+        *build_next_step_block(
+            "Envie no formato: numero: valor",
+            "Exemplo geral: 1: valor",
+            channel=channel,
+        ),
     ])
     if action == "onboarding.start":
         lines.extend(build_guidance_block("Exemplos:", "1: real", "1: modelo", channel=channel))

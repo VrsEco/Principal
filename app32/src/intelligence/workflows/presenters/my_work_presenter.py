@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from typing import Any, Callable, Dict, List, Optional
 
 from .channel_presenter import get_bullet_style, sanitize_for_channel
-from .conversation_presenter import build_presenter_header, build_status_callout
+from .conversation_presenter import build_next_step_block, build_presenter_header, build_status_callout
 
 
 def group_my_work_by_company(
@@ -219,6 +219,14 @@ def build_my_work_summary_lines(
 def build_my_work_empty_report(*, title: str, channel: str) -> str:
     lines = build_presenter_header(title, channel=channel)
     lines.extend(["", build_status_callout("info", "Nenhum item encontrado para o filtro informado.", channel=channel)])
+    lines.extend([
+        "",
+        *build_next_step_block(
+            "Ajuste o filtro de empresa, periodo ou colaborador.",
+            "Se preferir, solicite um novo recorte com outro periodo.",
+            channel=channel,
+        ),
+    ])
     return "\n".join(lines)
 
 
@@ -277,6 +285,14 @@ def build_my_work_report(
     lines = build_presenter_header(title, channel=channel)
     lines.extend(["", build_status_callout("success", "Consolidacao pronta para acompanhamento operacional.", channel=channel), ""])
     lines.extend(build_my_work_summary_lines(totals=totals, channel=channel))
+    lines.extend([
+        "",
+        *build_next_step_block(
+            "Revise primeiro os totais executivos abaixo.",
+            "Depois aprofunde por empresa, projeto, processo ou reuniao.",
+            channel=channel,
+        ),
+    ])
 
     for group_index, company in enumerate(company_groups):
         if group_index >= 0:

@@ -21,6 +21,11 @@ from .confirmation_presenter import (
     build_confirmation_text,
 )
 from .field_collection_presenter import build_missing_fields_prompt
+from .error_presenter import (
+    build_internal_error_message,
+    build_menu_recovery_message,
+    build_recovery_message,
+)
 from .my_work_presenter import (
     build_my_work_report,
     build_my_work_summary_lines,
@@ -53,6 +58,9 @@ __all__ = [
     "build_my_work_empty_report",
     "build_my_work_summary_lines",
     "build_missing_fields_prompt",
+    "build_internal_error_message",
+    "build_menu_recovery_message",
+    "build_recovery_message",
     "build_operation_company_prompt",
     "describe_my_work_period",
     "summarize_my_work_totals",
