@@ -12,6 +12,8 @@ from src.intelligence.workflows.presenters import (
     build_summary_collaborator_prompt,
     build_summary_company_prompt,
     build_summary_period_prompt,
+    build_channel_capabilities,
+    format_channel_heading,
 )
 
 
@@ -138,3 +140,16 @@ def test_missing_fields_and_company_prompt_support_channel_formatting():
 
     assert "*Voce quer fazer 1.4 - Cadastrar Atividade.*" in fields_text
     assert "*1.4 - Cadastrar Atividade*" in company_text
+
+
+def test_channel_presenter_treats_instagram_as_chat_family():
+    caps = build_channel_capabilities('instagram')
+
+    assert caps['channel'] == 'instagram'
+    assert caps['family'] == 'chat'
+    assert caps['supports_compact_cards'] is True
+    assert caps['supports_markdown_heading'] is True
+
+
+def test_channel_presenter_formats_instagram_heading_like_chat():
+    assert format_channel_heading('Resumo V3', 'instagram') == '*Resumo V3*'

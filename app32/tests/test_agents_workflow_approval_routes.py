@@ -515,3 +515,57 @@ def test_workflow_approval_metrics_validates_limit(monkeypatch):
     assert status_code == 400
     assert body['success'] is False
     assert 'limit inválido' in body['error']
+
+
+def test_workflow_approval_board_returns_visual_payload(monkeypatch):
+    app = _build_app()
+    action_a = _FakeAction()
+    action_a.created_at = datetime(2026, 3, 8, 10, 0, 0)
+    action_a.payload = {
+        'action_key': 'meeting.start',
+        'channel': 'instagram',
+        'approval_status': 'pending',
+        'object_code': 'R-88',
+        'resume_payload': {'action_key': 'meeting.start', 'channel': 'instagram'},
+    }
+    action_a.description = 'Início de reunião sensível via Instagram.'
+
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+
+    import models.agent_action as agent_action_module
+
+    fake_agent_action_class = type(
+        'FakeAgentAction',
+        (),
+        {
+            'created_at': SimpleNamespace(desc=lambda: None),
+            'query': _FakeApprovalQuery([action_a]),
+        },
+    )
+    monkeypatch.setattr(agent_action_module, 'AgentAction', fake_agent_action_class)
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals/board?limit=40', method='GET'):
+        session['active_company_id'] = 9
+        response = agents_route.workflow_approval_board.__wrapped__()
+
+    body = response.get_json()
+    assert body['success'] is True
+    assert body['limit'] == 40
+    assert body['summary_cards'][0]['id'] == 'pending'
+    assert body['approval_cards'][0]['channel'] == 'instagram'
+    assert body['approval_cards'][0]['channel_capabilities']['family'] == 'chat'
+    assert body['approval_cards'][0]['actions'][0]['id'] == 'approve'
+
+
+def test_workflow_approval_board_blocks_unauthorized_role(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=8, name='Colaborador', role='user'))
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals/board', method='GET'):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.workflow_approval_board.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 403
+    assert body['success'] is False
+    assert 'Sem permissão' in body['error']

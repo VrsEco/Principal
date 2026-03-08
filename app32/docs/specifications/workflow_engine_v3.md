@@ -206,6 +206,8 @@ Na Fase 6, o runtime também passou a operar com **policy guard + HITL**:
 - há listagem operacional dedicada em `/api/agents/actions/workflow-approvals`;
 - approvals pendentes agora possuem expiração/revalidação operacional;
 - métricas agregadas por ação/canal/aprovador ficam disponíveis no backend operacional;
+- payload visual de painel operacional de approvals já está disponível no backend;
+- WhatsApp, Instagram e Telegram compartilham a mesma família de apresentação de chat;
 - o fluxo conversacional grava `AgentMessage` outbound com o evento da aprovação.
 
 Runbook operacional complementar:

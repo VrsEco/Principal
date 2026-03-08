@@ -253,6 +253,38 @@ def list_workflow_approvals():
         "workflow_approvals": serialized,
     })
 
+@agents_bp.route('/api/agents/actions/workflow-approvals/board', methods=['GET'])
+@login_required
+def workflow_approval_board():
+    from flask import session
+    from models.agent_action import AgentAction
+    from services.workflow_approval_service import build_workflow_approval_board
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para consultar o painel operacional."}), 403
+
+    company_id = session.get('active_company_id')
+    limit_raw = (request.args.get('limit') or '50').strip()
+    try:
+        limit = max(1, min(int(limit_raw), 200))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    actions = (
+        AgentAction.query.filter_by(company_id=company_id, type='workflow_approval_request')
+        .order_by(AgentAction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    board = build_workflow_approval_board(actions)
+    return jsonify({
+        "success": True,
+        "limit": limit,
+        **board,
+    })
+
+
 @agents_bp.route('/api/agents/actions/workflow-approvals/metrics', methods=['GET'])
 @login_required
 def workflow_approval_metrics():

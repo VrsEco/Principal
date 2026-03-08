@@ -1,6 +1,8 @@
 from .channel_presenter import (
+    build_channel_capabilities,
     format_channel_heading,
     get_bullet_style,
+    get_channel_family,
     normalize_channel,
     sanitize_for_channel,
 )
@@ -34,8 +36,10 @@ __all__ = [
     "build_missing_fields_prompt",
     "build_operation_company_prompt",
     "describe_my_work_period",
+    "build_channel_capabilities",
     "format_channel_heading",
     "get_bullet_style",
+    "get_channel_family",
     "group_my_work_by_company",
     "normalize_channel",
     "resolve_my_work_collaborator_label",

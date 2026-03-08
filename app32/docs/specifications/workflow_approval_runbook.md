@@ -98,6 +98,21 @@ Retorno esperado:
 - `metrics.by_approver_user_id`
 - `metrics.expired_pending`
 
+### Painel visual backend
+`GET /api/agents/actions/workflow-approvals/board`
+
+Objetivo:
+- alimentar painel visual de approvals no frontend;
+- padronizar payload visual para Web e canais de chat;
+- manter o mesmo runtime para WhatsApp, Instagram e Telegram, variando apenas apresentação.
+
+Retorno esperado:
+- `summary_cards[]`
+- `approval_cards[]`
+- `metrics`
+- `approval_cards[].channel_capabilities`
+- `approval_cards[].actions`
+
 ### Revalidar
 `POST /api/agents/actions/revalidate/<action_id>`
 

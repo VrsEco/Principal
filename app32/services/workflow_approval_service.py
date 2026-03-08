@@ -11,6 +11,7 @@ from src.intelligence.workflows.approval_utils import (
     is_workflow_approval_expired,
 )
 from src.intelligence.workflows.direct_execution import DirectExecutionResult
+from src.intelligence.workflows.presenters import build_channel_capabilities, format_channel_heading
 
 
 def serialize_workflow_approval_action(action: Any, *, now: Optional[datetime] = None) -> Dict[str, Any]:
@@ -89,6 +90,72 @@ def build_workflow_approval_metrics(actions: list[Any], *, now: Optional[datetim
             metrics["expired_pending"] += 1
 
     return metrics
+
+
+def build_workflow_approval_board(actions: list[Any], *, now: Optional[datetime] = None) -> Dict[str, Any]:
+    reference_now = now or datetime.utcnow()
+    serialized_actions = [serialize_workflow_approval_action(action, now=reference_now) for action in actions]
+    metrics = build_workflow_approval_metrics(actions, now=reference_now)
+
+    summary_cards = [
+        {"id": "pending", "title": "Pendentes", "value": metrics["by_status"].get("pending", 0), "tone": "warning"},
+        {"id": "expired", "title": "Expirados", "value": metrics["by_status"].get("expired", 0), "tone": "danger"},
+        {"id": "approved", "title": "Aprovados", "value": metrics["by_status"].get("approved", 0), "tone": "info"},
+        {"id": "executed", "title": "Executados", "value": metrics["by_status"].get("approved", 0) + metrics["by_status"].get("executed", 0), "tone": "success"},
+    ]
+
+    approval_cards = []
+    for item in serialized_actions:
+        approval = item.get("approval") or {}
+        channel = str(approval.get("channel") or "web")
+        action_key = str(approval.get("action_key") or "workflow")
+        status = str(approval.get("approval_status") or item.get("status") or "unknown")
+        object_code = approval.get("object_code") or item.get("title") or f"#{item.get('id')}"
+        actions_available = []
+        if status in {"pending", "expired"}:
+            if status == "expired":
+                actions_available.append({"id": "revalidate", "label": "Revalidar", "style": "primary"})
+            else:
+                actions_available.append({"id": "approve", "label": "Aprovar", "style": "primary"})
+                actions_available.append({"id": "reject", "label": "Rejeitar", "style": "danger"})
+        if status == "pending":
+            actions_available.append({"id": "revalidate", "label": "Renovar prazo", "style": "secondary"})
+
+        title = format_channel_heading(f"{action_key} · {object_code}", "instagram" if channel == "instagram" else "whatsapp")
+        approval_cards.append({
+            "id": item.get("id"),
+            "title": title,
+            "subtitle": item.get("description"),
+            "status": status,
+            "tone": {
+                "pending": "warning",
+                "expired": "danger",
+                "approved": "info",
+                "executed": "success",
+                "rejected": "muted",
+            }.get(status, "muted"),
+            "channel": channel,
+            "channel_capabilities": build_channel_capabilities(channel),
+            "badges": [
+                {"label": action_key, "kind": "action"},
+                {"label": channel, "kind": "channel"},
+                {"label": status, "kind": "status"},
+            ],
+            "metadata": {
+                "action_id": item.get("id"),
+                "requester_user_id": item.get("user_id"),
+                "approver_user_id": approval.get("approved_by_user_id") or approval.get("revalidated_by_user_id") or approval.get("rejected_by_user_id"),
+                "expires_at": approval.get("expires_at"),
+                "expired": approval.get("expired"),
+            },
+            "actions": actions_available,
+        })
+
+    return {
+        "summary_cards": summary_cards,
+        "approval_cards": approval_cards,
+        "metrics": metrics,
+    }
 
 
 class WorkflowApprovalOutcome(BaseModel):
