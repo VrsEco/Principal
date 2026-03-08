@@ -407,3 +407,36 @@ def test_handle_menu_message_attaches_discovery_metadata_for_ambiguous_selection
     assert result.metadata["workflow_discovery"]["candidate_count"] == 2
     assert len(result.metadata["workflow_discovery"]["top_matches"]) == 2
     assert result.metadata["workflow_discovery"]["confidence"]["route"] == "ambiguous"
+
+
+
+def test_handle_menu_message_attaches_discovery_metadata_for_no_match(monkeypatch):
+    option = _build_project_task_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+    monkeypatch.setattr(menu_engine, "_looks_like_command", lambda lower: True)
+    monkeypatch.setattr(
+        menu_engine,
+        "_discover_options_by_keywords",
+        lambda company_id, lower_text, channel="web": (
+            [],
+            {
+                "strategy": "hybrid",
+                "candidate_count": 0,
+                "top_matches": [],
+            },
+        ),
+    )
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="whatsapp",
+        thread_id="thread-1",
+        message="quero uma analise de ocupacao do usuario x",
+    )
+
+    assert result.handled is False
+    assert result.metadata["menu_engine"]["intercept_stage"] == "implicit_discovery_no_match"
+    assert result.metadata["menu_engine"]["handled"] is False
+    assert result.metadata["workflow_discovery"]["confidence"]["route"] == "no_match"

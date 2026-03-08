@@ -73,8 +73,15 @@ def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch
             captured["config"] = config
             return {"messages": [("ai", "ok")], "menu_metadata": {"agent": {"selected": "sapiens"}}}
 
+    captured_gap = {}
+
     monkeypatch.setattr(execution, "get_checkpointer", fake_checkpointer)
     monkeypatch.setattr(execution, "create_work_agent_workflow", lambda checkpointer: FakeGraph())
+    monkeypatch.setattr(
+        execution,
+        "_capture_workflow_gap_from_execution",
+        lambda **kwargs: captured_gap.update(kwargs),
+    )
 
     os.environ.pop("ACTIVE_USER_ID", None)
     os.environ.pop("ACTIVE_COMPANY_ID", None)
@@ -105,3 +112,10 @@ def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch
         "thread_prefix": "wa",
         "menu_intercepted": False,
     }
+    assert captured_gap["user_id"] == 7
+    assert captured_gap["company_id"] == 11
+    assert captured_gap["channel"] == "whatsapp"
+    assert captured_gap["thread_id"] == "wa_7_x"
+    assert captured_gap["user_msg"] == "teste"
+    assert captured_gap["response_text"] == "ok"
+    assert captured_gap["menu_metadata"]["workflow_discovery"]["strategy"] == "hybrid"

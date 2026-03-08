@@ -55,6 +55,41 @@ def _build_execution_metadata(
     }
 
 
+
+
+def _capture_workflow_gap_from_execution(
+    *,
+    user_id: int,
+    company_id: Optional[int],
+    channel: str,
+    thread_id: str,
+    user_msg: str,
+    response_text: str,
+    menu_metadata: Optional[Dict[str, Any]],
+) -> None:
+    from services.workflow_gap_service import capture_workflow_gap
+
+    try:
+        capture_workflow_gap(
+            user_id=user_id,
+            company_id=company_id,
+            channel=channel,
+            thread_id=thread_id,
+            request_text=user_msg,
+            response_text=response_text,
+            resolution_type="resolved_by_ai" if response_text else "not_resolved",
+            source="ai_fallback",
+            telemetry=dict(menu_metadata or {}),
+        )
+    except Exception:
+        logger.exception(
+            "Falha ao capturar workflow gap | user=%s company=%s channel=%s thread=%s",
+            user_id,
+            company_id,
+            channel,
+            thread_id,
+        )
+
 def run_agent_with_context(
     user_id: int,
     user_msg: str,
@@ -160,6 +195,15 @@ def run_agent_with_context(
                     thread_prefix=thread_prefix,
                     menu_intercepted=False,
                 ),
+            )
+            _capture_workflow_gap_from_execution(
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                user_msg=user_msg,
+                response_text=extract_response_text(response),
+                menu_metadata=response.get("menu_metadata"),
             )
             return response
 

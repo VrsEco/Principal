@@ -17,6 +17,7 @@ from src.intelligence.workflows.company_selection import (
 )
 from src.intelligence.workflows.confidence import (
     DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS,
+    DISCOVERY_CONFIDENCE_ROUTE_NO_MATCH,
     DISCOVERY_CONFIDENCE_ROUTE_SELECT,
     WorkflowDiscoveryConfidencePolicy,
 )
@@ -158,10 +159,11 @@ def _build_menu_intercept_metadata(
     option: Optional[AgentMenuOption],
     intercept_stage: Optional[str],
     discovery_trace: Optional[Dict[str, Any]] = None,
+    handled: bool = True,
 ) -> Dict[str, Any]:
     selected_option = option or getattr(session, "selected_option", None)
     menu_engine_metadata: Dict[str, Any] = {
-        "handled": True,
+        "handled": bool(handled),
         "intercept_stage": str(intercept_stage or getattr(session, "status", "idle") or "idle"),
         "session_status": str(getattr(session, "status", "idle") or "idle"),
     }
@@ -504,6 +506,26 @@ def handle_menu_message(
                     option=selected_candidate,
                     intercept_stage="implicit_discovery_selected",
                     discovery_trace=discovery_trace,
+                )
+
+            if confidence_decision.route == DISCOVERY_CONFIDENCE_ROUTE_NO_MATCH or not candidates:
+                logger.info(
+                    "MENU DISCOVERY SEM MATCH: user=%s company=%s channel=%s thread=%s selected=%s",
+                    user_id,
+                    company_id,
+                    channel,
+                    thread_id,
+                    json.dumps(discovery_trace, ensure_ascii=False),
+                )
+                return MenuInterceptResult(
+                    handled=False,
+                    metadata=_build_menu_intercept_metadata(
+                        session=session,
+                        option=None,
+                        intercept_stage="implicit_discovery_no_match",
+                        discovery_trace=discovery_trace,
+                        handled=False,
+                    ),
                 )
 
     except Exception as exc:
