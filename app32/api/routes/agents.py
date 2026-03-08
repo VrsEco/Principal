@@ -253,6 +253,38 @@ def list_workflow_approvals():
         "workflow_approvals": serialized,
     })
 
+@agents_bp.route('/api/agents/actions/workflow-approvals/metrics', methods=['GET'])
+@login_required
+def workflow_approval_metrics():
+    from flask import session
+    from models.agent_action import AgentAction
+    from services.workflow_approval_service import build_workflow_approval_metrics
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais."}), 403
+
+    company_id = session.get('active_company_id')
+    limit_raw = (request.args.get('limit') or '200').strip()
+    try:
+        limit = max(1, min(int(limit_raw), 500))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    actions = (
+        AgentAction.query.filter_by(company_id=company_id, type='workflow_approval_request')
+        .order_by(AgentAction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    metrics = build_workflow_approval_metrics(actions)
+    return jsonify({
+        "success": True,
+        "limit": limit,
+        "metrics": metrics,
+    })
+
+
 @agents_bp.route('/api/agents/history', methods=['GET'])
 @login_required
 def get_chat_history():

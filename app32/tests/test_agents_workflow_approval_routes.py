@@ -438,3 +438,80 @@ def test_list_workflow_approvals_supports_expired_filter(monkeypatch):
     assert body['count'] == 1
     assert body['workflow_approvals'][0]['approval']['expired'] is True
     assert body['workflow_approvals'][0]['approval']['approval_status'] == 'expired'
+
+
+def test_workflow_approval_metrics_returns_aggregated_view(monkeypatch):
+    app = _build_app()
+    action_a = _FakeAction()
+    action_a.created_at = datetime(2026, 3, 8, 10, 0, 0)
+    action_a.payload = {
+        'action_key': 'meeting.start',
+        'channel': 'whatsapp',
+        'approval_status': 'pending',
+        'resume_payload': {'action_key': 'meeting.start', 'channel': 'whatsapp'},
+    }
+
+    action_b = _FakeAction(action_id=92, status='executed')
+    action_b.created_at = datetime(2026, 3, 8, 9, 0, 0)
+    action_b.payload = {
+        'action_key': 'project_task.complete',
+        'channel': 'telegram',
+        'approval_status': 'approved',
+        'approved_by_user_id': 7,
+        'resume_payload': {'action_key': 'project_task.complete', 'channel': 'telegram'},
+        'resume_result': {'executed': True},
+    }
+
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+
+    import models.agent_action as agent_action_module
+
+    fake_agent_action_class = type(
+        'FakeAgentAction',
+        (),
+        {
+            'created_at': SimpleNamespace(desc=lambda: None),
+            'query': _FakeApprovalQuery([action_a, action_b]),
+        },
+    )
+    monkeypatch.setattr(agent_action_module, 'AgentAction', fake_agent_action_class)
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals/metrics?limit=150', method='GET'):
+        session['active_company_id'] = 9
+        response = agents_route.workflow_approval_metrics.__wrapped__()
+
+    body = response.get_json()
+    assert body['success'] is True
+    assert body['limit'] == 150
+    assert body['metrics']['total'] == 2
+    assert body['metrics']['by_action_key']['meeting.start'] == 1
+    assert body['metrics']['by_channel']['telegram'] == 1
+    assert body['metrics']['by_approver_user_id']['7'] == 1
+
+
+def test_workflow_approval_metrics_blocks_unauthorized_role(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=8, name='Colaborador', role='user'))
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals/metrics', method='GET'):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.workflow_approval_metrics.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 403
+    assert body['success'] is False
+    assert 'Sem permissão' in body['error']
+
+
+def test_workflow_approval_metrics_validates_limit(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals/metrics?limit=oops', method='GET'):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.workflow_approval_metrics.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 400
+    assert body['success'] is False
+    assert 'limit inválido' in body['error']

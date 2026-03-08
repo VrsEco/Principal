@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from services.workflow_approval_service import WorkflowApprovalService, is_workflow_approval_expired, serialize_workflow_approval_action
+from services.workflow_approval_service import WorkflowApprovalService, build_workflow_approval_metrics, is_workflow_approval_expired, serialize_workflow_approval_action
 from src.intelligence.workflows.direct_execution import DirectExecutionResult
 
 
@@ -197,3 +197,52 @@ def test_serialize_workflow_approval_action_marks_expired_pending_action():
     assert serialized['approval']['approval_status'] == 'expired'
     assert serialized['approval']['expires_at'] == '2026-03-08T10:00:00'
     assert is_workflow_approval_expired(action, now=datetime(2026, 3, 8, 14, 0, 0)) is True
+
+
+def test_build_workflow_approval_metrics_groups_by_status_channel_and_approver():
+    pending = _build_action()
+    pending.created_at = datetime(2026, 3, 8, 10, 0, 0)
+    pending.user_id = 3
+    pending.payload = {
+        'action_key': 'meeting.start',
+        'channel': 'whatsapp',
+        'approval_status': 'pending',
+        'resume_payload': {'action_key': 'meeting.start', 'channel': 'whatsapp'},
+    }
+
+    executed = _build_action(status='executed')
+    executed.created_at = datetime(2026, 3, 8, 9, 0, 0)
+    executed.user_id = 3
+    executed.payload = {
+        'action_key': 'project_task.complete',
+        'channel': 'telegram',
+        'approval_status': 'approved',
+        'approved_by_user_id': 7,
+        'resume_payload': {'action_key': 'project_task.complete', 'channel': 'telegram'},
+        'resume_result': {'executed': True},
+    }
+
+    expired = _build_action(action_id=101)
+    expired.created_at = datetime(2026, 3, 7, 8, 0, 0)
+    expired.user_id = 3
+    expired.payload = {
+        'action_key': 'meeting.start',
+        'channel': 'email',
+        'approval_status': 'expired',
+        'approval_expires_at': '2026-03-08T08:00:00',
+        'resume_payload': {'action_key': 'meeting.start', 'channel': 'email'},
+    }
+
+    metrics = build_workflow_approval_metrics([pending, executed, expired], now=datetime(2026, 3, 8, 12, 0, 0))
+
+    assert metrics['total'] == 3
+    assert metrics['by_status']['pending'] == 1
+    assert metrics['by_status']['approved'] == 1
+    assert metrics['by_status']['expired'] == 1
+    assert metrics['by_action_key']['meeting.start'] == 2
+    assert metrics['by_channel']['telegram'] == 1
+    assert metrics['by_channel']['email'] == 1
+    assert metrics['by_requester_user_id']['3'] == 3
+    assert metrics['by_approver_user_id']['7'] == 1
+    assert metrics['by_approver_user_id']['unassigned'] == 2
+    assert metrics['expired_pending'] == 1

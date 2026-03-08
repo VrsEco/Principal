@@ -80,6 +80,24 @@ Retorno esperado:
 - `count`
 - `workflow_approvals[]` com bloco `approval` estruturado
 
+### Métricas operacionais
+`GET /api/agents/actions/workflow-approvals/metrics`
+
+Objetivo:
+- acompanhar volume por status, ação, canal e aprovador;
+- apoiar fila operacional e revisão de gargalos;
+- medir approvals expirados pendentes.
+
+Retorno esperado:
+- `limit`
+- `metrics.total`
+- `metrics.by_status`
+- `metrics.by_action_key`
+- `metrics.by_channel`
+- `metrics.by_requester_user_id`
+- `metrics.by_approver_user_id`
+- `metrics.expired_pending`
+
 ### Revalidar
 `POST /api/agents/actions/revalidate/<action_id>`
 

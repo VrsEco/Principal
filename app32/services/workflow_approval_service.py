@@ -57,6 +57,40 @@ def serialize_workflow_approval_action(action: Any, *, now: Optional[datetime] =
 
 
 
+def build_workflow_approval_metrics(actions: list[Any], *, now: Optional[datetime] = None) -> Dict[str, Any]:
+    reference_now = now or datetime.utcnow()
+    metrics = {
+        "total": 0,
+        "by_status": {},
+        "by_action_key": {},
+        "by_channel": {},
+        "by_requester_user_id": {},
+        "by_approver_user_id": {},
+        "expired_pending": 0,
+    }
+
+    for action in actions:
+        item = serialize_workflow_approval_action(action, now=reference_now)
+        approval = item.get("approval") or {}
+        approval_status = str(approval.get("approval_status") or item.get("status") or "unknown")
+        action_key = str(approval.get("action_key") or "unknown")
+        channel = str(approval.get("channel") or "unknown")
+        requester_user_id = str(item.get("user_id") if item.get("user_id") is not None else "unknown")
+        approver_user_id = approval.get("approved_by_user_id") or approval.get("revalidated_by_user_id") or approval.get("rejected_by_user_id")
+        approver_key = str(approver_user_id if approver_user_id is not None else "unassigned")
+
+        metrics["total"] += 1
+        metrics["by_status"][approval_status] = metrics["by_status"].get(approval_status, 0) + 1
+        metrics["by_action_key"][action_key] = metrics["by_action_key"].get(action_key, 0) + 1
+        metrics["by_channel"][channel] = metrics["by_channel"].get(channel, 0) + 1
+        metrics["by_requester_user_id"][requester_user_id] = metrics["by_requester_user_id"].get(requester_user_id, 0) + 1
+        metrics["by_approver_user_id"][approver_key] = metrics["by_approver_user_id"].get(approver_key, 0) + 1
+        if approval.get("expired"):
+            metrics["expired_pending"] += 1
+
+    return metrics
+
+
 class WorkflowApprovalOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
