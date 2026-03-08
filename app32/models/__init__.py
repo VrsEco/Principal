@@ -48,6 +48,7 @@ from .agent_message import AgentMessage
 from .agent_action import AgentAction
 from .agent_menu import AgentMenuOption, AgentMenuSession
 from .workflow_gap import WorkflowGapCandidate
+from .workflow_usage import WorkflowExecutionLog
 
 __all__ = [
     'db', 'Company', 'User', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
@@ -60,5 +61,6 @@ __all__ = [
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
     'UiCatalog', 'UserLog',
-    'AIAgent', 'AgentMessage', 'AgentAction', 'AgentMenuOption', 'AgentMenuSession', 'WorkflowGapCandidate'
+    'AIAgent', 'AgentMessage', 'AgentAction', 'AgentMenuOption', 'AgentMenuSession',
+    'WorkflowGapCandidate', 'WorkflowExecutionLog'
 ]

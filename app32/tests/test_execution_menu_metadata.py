@@ -10,8 +10,15 @@ from src.intelligence.tool_context import active_company_id_ctx, active_user_id_
 
 
 def test_run_agent_with_context_returns_menu_metadata_on_intercept(monkeypatch):
+    captured_usage = {}
+
     monkeypatch.setattr(execution, "set_sapiens_context", lambda **kwargs: "token")
     monkeypatch.setattr(execution, "reset_sapiens_context", lambda token: None)
+    monkeypatch.setattr(
+        execution,
+        "_capture_workflow_usage_from_execution",
+        lambda **kwargs: captured_usage.update(kwargs),
+    )
     monkeypatch.setattr(
         execution,
         "handle_menu_message",
@@ -21,6 +28,7 @@ def test_run_agent_with_context_returns_menu_metadata_on_intercept(monkeypatch):
             metadata={
                 "menu_engine": {
                     "intercept_stage": "implicit_discovery_selected",
+                    "selected_option_code": "3.5.2",
                     "selected_action_key": "summary.week",
                 },
                 "workflow_discovery": {
@@ -48,6 +56,9 @@ def test_run_agent_with_context_returns_menu_metadata_on_intercept(monkeypatch):
     assert response["menu_metadata"]["execution_context"]["menu_intercepted"] is True
     assert response["menu_metadata"]["execution_context"]["company_id"] == 9
     assert response["menu_metadata"]["execution_context"]["execution_id"]
+    assert captured_usage["user_id"] == 3
+    assert captured_usage["company_id"] == 9
+    assert captured_usage["menu_metadata"]["menu_engine"]["selected_option_code"] == "3.5.2"
 
 
 def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch):
@@ -74,6 +85,7 @@ def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch
             return {"messages": [("ai", "ok")], "menu_metadata": {"agent": {"selected": "sapiens"}}}
 
     captured_gap = {}
+    captured_usage = {}
 
     monkeypatch.setattr(execution, "get_checkpointer", fake_checkpointer)
     monkeypatch.setattr(execution, "create_work_agent_workflow", lambda checkpointer: FakeGraph())
@@ -81,6 +93,11 @@ def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch
         execution,
         "_capture_workflow_gap_from_execution",
         lambda **kwargs: captured_gap.update(kwargs),
+    )
+    monkeypatch.setattr(
+        execution,
+        "_capture_workflow_usage_from_execution",
+        lambda **kwargs: captured_usage.update(kwargs),
     )
 
     os.environ.pop("ACTIVE_USER_ID", None)
@@ -112,6 +129,11 @@ def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch
         "thread_prefix": "wa",
         "menu_intercepted": False,
     }
+    assert captured_usage["user_id"] == 7
+    assert captured_usage["company_id"] == 11
+    assert captured_usage["channel"] == "whatsapp"
+    assert captured_usage["thread_id"] == "wa_7_x"
+    assert captured_usage["menu_metadata"]["workflow_discovery"]["strategy"] == "hybrid"
     assert captured_gap["user_id"] == 7
     assert captured_gap["company_id"] == 11
     assert captured_gap["channel"] == "whatsapp"

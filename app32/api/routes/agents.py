@@ -297,6 +297,98 @@ def get_workflow_gap_link():
     })
 
 
+@agents_bp.route('/api/agents/workflow-usage', methods=['GET'])
+@login_required
+def list_workflow_usage_logs():
+    from flask import session
+    from sqlalchemy import or_
+    from models.workflow_usage import WorkflowExecutionLog
+    from services.workflow_usage_service import serialize_workflow_execution_log
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para listar auditoria operacional de workflows."}), 403
+
+    active_company_id = session.get('active_company_id')
+    status_filter = (request.args.get('status') or 'all').strip().lower()
+    action_key_filter = (request.args.get('action_key') or '').strip().lower()
+    channel_filter = (request.args.get('channel') or '').strip().lower()
+    user_id_filter = (request.args.get('user_id') or '').strip()
+    limit_raw = (request.args.get('limit') or '50').strip()
+
+    try:
+        limit = max(1, min(int(limit_raw), 200))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    query = WorkflowExecutionLog.query
+    if active_company_id:
+        query = query.filter(
+            or_(
+                WorkflowExecutionLog.company_id == active_company_id,
+                WorkflowExecutionLog.company_id.is_(None),
+            )
+        )
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+    if action_key_filter:
+        query = query.filter_by(action_key=action_key_filter)
+    if channel_filter:
+        query = query.filter_by(channel=channel_filter)
+    if user_id_filter:
+        if not user_id_filter.isdigit():
+            return jsonify({"success": False, "error": "Parâmetro user_id inválido."}), 400
+        query = query.filter_by(user_id=int(user_id_filter))
+
+    items = query.order_by(WorkflowExecutionLog.updated_at.desc()).limit(limit).all()
+    serialized = [serialize_workflow_execution_log(item) for item in items]
+
+    return jsonify({
+        "success": True,
+        "count": len(serialized),
+        "filters": {
+            "status": status_filter,
+            "action_key": action_key_filter or None,
+            "channel": channel_filter or None,
+            "user_id": int(user_id_filter) if user_id_filter.isdigit() else None,
+            "limit": limit,
+            "active_company_id": active_company_id,
+        },
+        "workflow_usage": serialized,
+    })
+
+
+@agents_bp.route('/api/agents/workflow-usage/metrics', methods=['GET'])
+@login_required
+def workflow_usage_metrics():
+    from flask import session
+    from models.workflow_usage import WorkflowExecutionLog
+    from services.workflow_usage_service import build_workflow_usage_metrics
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais de workflows."}), 403
+
+    company_id = session.get('active_company_id')
+    limit_raw = (request.args.get('limit') or '500').strip()
+    try:
+        limit = max(1, min(int(limit_raw), 1000))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    items = (
+        WorkflowExecutionLog.query
+        .filter_by(company_id=company_id)
+        .order_by(WorkflowExecutionLog.updated_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return jsonify({
+        "success": True,
+        "limit": limit,
+        "metrics": build_workflow_usage_metrics(items),
+    })
+
+
 @agents_bp.route('/api/agents/actions/workflow-approvals', methods=['GET'])
 @login_required
 def list_workflow_approvals():

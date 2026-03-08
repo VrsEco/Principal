@@ -31,6 +31,8 @@ class AgentMenuOption(db.Model):
 
     sort_order = db.Column(db.Integer, default=0, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    usage_count = db.Column(db.Integer, default=0, nullable=False)
+    last_used_at = db.Column(db.DateTime, nullable=True)
 
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -57,6 +59,8 @@ class AgentMenuOption(db.Model):
             "execution_template": self.execution_template,
             "sort_order": self.sort_order,
             "is_active": self.is_active,
+            "usage_count": self.usage_count,
+            "last_used_at": self.last_used_at.isoformat() if self.last_used_at else None,
             "created_by_user_id": self.created_by_user_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

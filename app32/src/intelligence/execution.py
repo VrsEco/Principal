@@ -90,6 +90,38 @@ def _capture_workflow_gap_from_execution(
             thread_id,
         )
 
+
+def _capture_workflow_usage_from_execution(
+    *,
+    user_id: int,
+    company_id: Optional[int],
+    channel: str,
+    thread_id: str,
+    user_msg: str,
+    response_text: str,
+    menu_metadata: Optional[Dict[str, Any]],
+) -> None:
+    from services.workflow_usage_service import record_workflow_usage_event
+
+    try:
+        record_workflow_usage_event(
+            user_id=user_id,
+            company_id=company_id,
+            channel=channel,
+            thread_id=thread_id,
+            request_text=user_msg,
+            response_text=response_text,
+            menu_metadata=dict(menu_metadata or {}),
+        )
+    except Exception:
+        logger.exception(
+            "Falha ao auditar uso de workflow | user=%s company=%s channel=%s thread=%s",
+            user_id,
+            company_id,
+            channel,
+            thread_id,
+        )
+
 def run_agent_with_context(
     user_id: int,
     user_msg: str,
@@ -146,21 +178,31 @@ def run_agent_with_context(
             message=user_msg,
         )
         if menu_result.handled:
+            final_menu_metadata = _merge_execution_metadata(
+                menu_result.metadata,
+                _build_execution_metadata(
+                    execution_id=execution_id,
+                    user_id=user_id,
+                    company_id=company_id,
+                    channel=channel,
+                    thread_id=thread_id,
+                    thread_prefix=thread_prefix,
+                    menu_intercepted=True,
+                ),
+            )
+            _capture_workflow_usage_from_execution(
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                user_msg=user_msg,
+                response_text=menu_result.response_text or "",
+                menu_metadata=final_menu_metadata,
+            )
             return {
                 "messages": [("ai", menu_result.response_text or "")],
                 "next_node": "sapiens",
-                "menu_metadata": _merge_execution_metadata(
-                    menu_result.metadata,
-                    _build_execution_metadata(
-                        execution_id=execution_id,
-                        user_id=user_id,
-                        company_id=company_id,
-                        channel=channel,
-                        thread_id=thread_id,
-                        thread_prefix=thread_prefix,
-                        menu_intercepted=True,
-                    ),
-                ),
+                "menu_metadata": final_menu_metadata,
             }
         if menu_result.override_message:
             user_msg = menu_result.override_message
@@ -196,13 +238,23 @@ def run_agent_with_context(
                     menu_intercepted=False,
                 ),
             )
+            response_text = extract_response_text(response)
+            _capture_workflow_usage_from_execution(
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                user_msg=user_msg,
+                response_text=response_text,
+                menu_metadata=response.get("menu_metadata"),
+            )
             _capture_workflow_gap_from_execution(
                 user_id=user_id,
                 company_id=company_id,
                 channel=channel,
                 thread_id=thread_id,
                 user_msg=user_msg,
-                response_text=extract_response_text(response),
+                response_text=response_text,
                 menu_metadata=response.get("menu_metadata"),
             )
             return response

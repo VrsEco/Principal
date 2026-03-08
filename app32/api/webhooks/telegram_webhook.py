@@ -190,7 +190,11 @@ def process_telegram_message(app, message: telebot.types.Message):
             except: pass
             
             # 3. Executa o Agente com Contexto Unificado (@ARQUITETO)
-            from src.intelligence.execution import run_agent_with_context, extract_response_text
+            from src.intelligence.execution import (
+                run_agent_with_context,
+                extract_response_text,
+                _capture_workflow_usage_from_execution,
+            )
             from src.intelligence.menu_engine import handle_menu_message
 
             # Usamos tg_{telegram_id} para manter histórico vinculado ao chat do Telegram
@@ -215,6 +219,15 @@ def process_telegram_message(app, message: telebot.types.Message):
             if menu_result and menu_result.handled:
                 response_text = menu_result.response_text or _fallback_root_menu(company_id)
                 menu_metadata = dict(menu_result.metadata or {})
+                _capture_workflow_usage_from_execution(
+                    user_id=user.id,
+                    company_id=company_id,
+                    channel="telegram",
+                    thread_id=thread_id,
+                    user_msg=user_msg,
+                    response_text=response_text,
+                    menu_metadata=menu_metadata,
+                )
                 logger.info(
                     "MENU INTERCEPT [TELEGRAM]: user=%s company=%s thread=%s message=%r",
                     user.id, company_id, thread_id, user_msg
