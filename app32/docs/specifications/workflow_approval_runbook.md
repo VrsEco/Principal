@@ -110,8 +110,24 @@ Retorno esperado:
 - `summary_cards[]`
 - `approval_cards[]`
 - `metrics`
+- `quick_filters.status[]`
+- `quick_filters.channel[]`
+- `quick_filters.channel_family[]`
+- `board_meta.generated_at`
+- `board_meta.channels[]`
+- `board_meta.channel_families[]`
 - `approval_cards[].channel_capabilities`
+- `approval_cards[].channel_family`
+- `approval_cards[].experience`
 - `approval_cards[].actions`
+- `approval_cards[].search_blob`
+
+Uso de UX no frontend:
+- busca textual por ação/canal/objeto/descrição;
+- filtros rápidos por status;
+- filtros por família de canal (`chat`, `web`, `async`);
+- modal de rejeição com feedback auditável;
+- experiência única para WhatsApp, Instagram e Telegram, variando só a apresentação.
 
 ### Revalidar
 `POST /api/agents/actions/revalidate/<action_id>`

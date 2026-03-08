@@ -554,7 +554,11 @@ def test_workflow_approval_board_returns_visual_payload(monkeypatch):
     assert body['summary_cards'][0]['id'] == 'pending'
     assert body['approval_cards'][0]['channel'] == 'instagram'
     assert body['approval_cards'][0]['channel_capabilities']['family'] == 'chat'
+    assert body['approval_cards'][0]['channel_family'] == 'chat'
+    assert body['approval_cards'][0]['experience']['layout_hint'] == 'compact'
     assert body['approval_cards'][0]['actions'][0]['id'] == 'approve'
+    assert body['quick_filters']['status'][0]['id'] == 'all'
+    assert body['board_meta']['total_cards'] == 1
 
 
 def test_workflow_approval_board_blocks_unauthorized_role(monkeypatch):

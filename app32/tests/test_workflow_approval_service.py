@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from services.workflow_approval_service import WorkflowApprovalService, build_workflow_approval_metrics, is_workflow_approval_expired, serialize_workflow_approval_action
+from services.workflow_approval_service import WorkflowApprovalService, build_workflow_approval_board, build_workflow_approval_metrics, is_workflow_approval_expired, serialize_workflow_approval_action
 from src.intelligence.workflows.direct_execution import DirectExecutionResult
 
 
@@ -246,3 +246,49 @@ def test_build_workflow_approval_metrics_groups_by_status_channel_and_approver()
     assert metrics['by_approver_user_id']['7'] == 1
     assert metrics['by_approver_user_id']['unassigned'] == 2
     assert metrics['expired_pending'] == 1
+
+
+def test_build_workflow_approval_board_exposes_filters_and_channel_experience():
+    pending = _build_action()
+    pending.created_at = datetime(2026, 3, 8, 10, 0, 0)
+    pending.payload = {
+        'action_key': 'meeting.start',
+        'channel': 'instagram',
+        'approval_status': 'pending',
+        'object_code': 'R-77',
+        'resume_payload': {'action_key': 'meeting.start', 'channel': 'instagram'},
+    }
+    pending.description = 'Início de reunião sensível via Instagram.'
+
+    executed = _build_action(action_id=102, status='executed')
+    executed.created_at = datetime(2026, 3, 8, 9, 0, 0)
+    executed.payload = {
+        'action_key': 'project_task.complete',
+        'channel': 'web',
+        'approval_status': 'approved',
+        'object_code': 'AA.J.31.203',
+        'approved_by_user_id': 7,
+        'resume_payload': {'action_key': 'project_task.complete', 'channel': 'web'},
+        'resume_result': {'executed': True},
+    }
+    executed.description = 'Conclusão sensível feita via painel web.'
+
+    board = build_workflow_approval_board([pending, executed], now=datetime(2026, 3, 8, 12, 0, 0))
+
+    assert board['board_meta']['total_cards'] == 2
+    assert 'instagram' in board['board_meta']['channels']
+    assert 'chat' in board['board_meta']['channel_families']
+    assert any(item['id'] == 'all' and item['value'] == 2 for item in board['quick_filters']['status'])
+    assert any(item['id'] == 'instagram' and item['value'] == 1 for item in board['quick_filters']['channel'])
+    assert any(item['id'] == 'chat' and item['value'] == 1 for item in board['quick_filters']['channel_family'])
+
+    instagram_card = board['approval_cards'][0]
+    assert instagram_card['channel_family'] == 'chat'
+    assert instagram_card['experience']['layout_hint'] == 'compact'
+    assert 'cards compactos' in instagram_card['experience']['capability_summary']
+    assert instagram_card['search_blob'].startswith('meeting.start instagram chat')
+
+    web_card = board['approval_cards'][1]
+    assert web_card['channel_family'] == 'web'
+    assert web_card['experience']['layout_hint'] == 'rich'
+    assert 'cards ricos' in web_card['experience']['capability_summary']

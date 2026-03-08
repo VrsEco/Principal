@@ -108,6 +108,7 @@ def build_workflow_approval_board(actions: list[Any], *, now: Optional[datetime]
     for item in serialized_actions:
         approval = item.get("approval") or {}
         channel = str(approval.get("channel") or "web")
+        channel_capabilities = build_channel_capabilities(channel)
         action_key = str(approval.get("action_key") or "workflow")
         status = str(approval.get("approval_status") or item.get("status") or "unknown")
         object_code = approval.get("object_code") or item.get("title") or f"#{item.get('id')}"
@@ -122,9 +123,20 @@ def build_workflow_approval_board(actions: list[Any], *, now: Optional[datetime]
             actions_available.append({"id": "revalidate", "label": "Renovar prazo", "style": "secondary"})
 
         title = format_channel_heading(f"{action_key} · {object_code}", "instagram" if channel == "instagram" else "whatsapp")
+        capabilities_summary = []
+        if channel_capabilities.get("supports_rich_cards"):
+            capabilities_summary.append("cards ricos")
+        if channel_capabilities.get("supports_compact_cards"):
+            capabilities_summary.append("cards compactos")
+        if channel_capabilities.get("supports_markdown_heading"):
+            capabilities_summary.append("título markdown")
+        if channel_capabilities.get("supports_html_escape"):
+            capabilities_summary.append("escape HTML")
+
         approval_cards.append({
             "id": item.get("id"),
             "title": title,
+            "title_plain": f"{action_key} · {object_code}",
             "subtitle": item.get("description"),
             "status": status,
             "tone": {
@@ -135,12 +147,17 @@ def build_workflow_approval_board(actions: list[Any], *, now: Optional[datetime]
                 "rejected": "muted",
             }.get(status, "muted"),
             "channel": channel,
-            "channel_capabilities": build_channel_capabilities(channel),
+            "channel_family": channel_capabilities.get("family"),
+            "channel_capabilities": channel_capabilities,
             "badges": [
                 {"label": action_key, "kind": "action"},
                 {"label": channel, "kind": "channel"},
                 {"label": status, "kind": "status"},
             ],
+            "experience": {
+                "layout_hint": "rich" if channel_capabilities.get("supports_rich_cards") else "compact",
+                "capability_summary": capabilities_summary,
+            },
             "metadata": {
                 "action_id": item.get("id"),
                 "requester_user_id": item.get("user_id"),
@@ -148,14 +165,77 @@ def build_workflow_approval_board(actions: list[Any], *, now: Optional[datetime]
                 "expires_at": approval.get("expires_at"),
                 "expired": approval.get("expired"),
             },
+            "search_blob": " ".join(
+                str(part or "").strip()
+                for part in (
+                    action_key,
+                    channel,
+                    channel_capabilities.get("family"),
+                    object_code,
+                    item.get("title"),
+                    item.get("description"),
+                    status,
+                )
+                if str(part or "").strip()
+            ).lower(),
             "actions": actions_available,
         })
+
+    available_statuses = ["all", "pending", "expired", "approved", "executed", "rejected"]
+    available_channels = sorted({str(card.get("channel") or "web") for card in approval_cards})
+    available_families = sorted({str(card.get("channel_family") or "web") for card in approval_cards})
+
+    quick_filters = {
+        "status": [
+            {
+                "id": status,
+                "label": {
+                    "all": "Todos",
+                    "pending": "Pendentes",
+                    "expired": "Expirados",
+                    "approved": "Aprovados",
+                    "executed": "Executados",
+                    "rejected": "Rejeitados",
+                }.get(status, status.title()),
+                "value": len(approval_cards) if status == "all" else metrics["by_status"].get(status, 0),
+            }
+            for status in available_statuses
+        ],
+        "channel": [
+            {
+                "id": channel_name,
+                "label": channel_name.title(),
+                "value": metrics["by_channel"].get(channel_name, 0),
+            }
+            for channel_name in available_channels
+        ],
+        "channel_family": [
+            {
+                "id": family,
+                "label": {
+                    "chat": "Chat",
+                    "web": "Web",
+                    "async": "Assíncrono",
+                }.get(family, family.title()),
+                "value": len([card for card in approval_cards if card.get("channel_family") == family]),
+            }
+            for family in available_families
+        ],
+    }
 
     return {
         "summary_cards": summary_cards,
         "approval_cards": approval_cards,
         "metrics": metrics,
+        "quick_filters": quick_filters,
+        "board_meta": {
+            "generated_at": reference_now.isoformat(),
+            "total_cards": len(approval_cards),
+            "channels": available_channels,
+            "channel_families": available_families,
+        },
     }
+
 
 
 class WorkflowApprovalOutcome(BaseModel):
