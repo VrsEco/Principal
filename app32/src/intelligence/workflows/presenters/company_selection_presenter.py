@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from .chat_contract import ChatMessageBlock, make_list_block
 from .confirmation_presenter import WorkflowDisplayOption
-from .conversation_presenter import build_guidance_block, build_presenter_header, build_status_callout
-from .channel_presenter import sanitize_for_channel
+from .conversation_presenter import build_chat_contract_message, build_status_callout
 
 
 def build_operation_company_prompt(
@@ -13,13 +13,23 @@ def build_operation_company_prompt(
     *,
     channel: str = "web",
 ) -> str:
-    lines = build_presenter_header(
-        f"{option.code} - {option.title}",
-        "Escolha a empresa para continuar:",
-        channel=channel,
+    blocks: List[ChatMessageBlock] = [
+        ChatMessageBlock(
+            kind="status",
+            text=build_status_callout("info", "Esse passo garante multi-tenancy correta antes da execucao.", channel=channel),
+        ),
+    ]
+    if choices:
+        blocks.append(make_list_block([f"{item['index']} - {item['label']}" for item in choices]))
+    blocks.append(
+        ChatMessageBlock(
+            kind="next_step",
+            items=["Responda apenas com o numero da empresa. Exemplo: 1"],
+        )
     )
-    lines.extend(["", build_status_callout("info", "Esse passo garante multi-tenancy correta antes da execucao.", channel=channel), ""])
-    for item in choices or []:
-        lines.append(f"{item['index']} - {sanitize_for_channel(item['label'], channel)}")
-    lines.extend(["", *build_guidance_block("Responda apenas com o numero da empresa. Exemplo: 1", channel=channel)])
-    return "\n".join(lines)
+    return build_chat_contract_message(
+        f"{option.code} - {option.title}",
+        subtitle="Escolha a empresa para continuar:",
+        channel=channel,
+        blocks=blocks,
+    )

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
-from .channel_presenter import sanitize_for_channel
-from .conversation_presenter import build_key_value_lines, build_next_step_block, build_presenter_header, build_status_callout
+from .chat_contract import ChatMessageBlock, make_list_block
+from .conversation_presenter import build_chat_contract_message, build_status_callout
 
 
 def build_collaborator_occupancy_report(
@@ -24,49 +24,40 @@ def build_collaborator_occupancy_report(
     balance_hours = available_hours - total_consumption
     utilization = (total_consumption / available_hours * 100.0) if available_hours > 0 else 0.0
 
-    lines: List[str] = build_presenter_header(
+    return build_chat_contract_message(
         "Ocupacao do Colaborador",
-        f"{collaborator_name} | {company_label}",
+        subtitle=f"{collaborator_name} | {company_label}",
         channel=channel,
-    )
-    lines.extend(
-        [
-            "",
-            build_status_callout(
-                "info",
-                f"Periodo analisado: {format_date_br(start_date)} a {format_date_br(end_date)}",
-                channel=channel,
+        blocks=[
+            ChatMessageBlock(
+                kind="status",
+                text=build_status_callout(
+                    "info",
+                    f"Periodo analisado: {format_date_br(start_date)} a {format_date_br(end_date)}",
+                    channel=channel,
+                ),
             ),
-            "",
-        ]
-    )
-    lines.extend(
-        build_key_value_lines(
-            [
-                ("Horas disponiveis", f"{available_hours:.2f}h"),
-                ("Horas tomadas com processos", f"{process_hours_taken:.2f}h"),
-                ("Horas registradas em projetos", f"{project_hours_taken:.2f}h"),
-                ("Horas comprometidas com projetos", f"{project_hours_committed:.2f}h"),
-                ("Consumo total do periodo", f"{total_consumption:.2f}h"),
-                ("Saldo estimado", f"{balance_hours:.2f}h"),
-                ("Ocupacao estimada", f"{utilization:.1f}%"),
-            ],
-            channel=channel,
-        )
-    )
-    lines.extend(
-        [
-            "",
-            sanitize_for_channel(
-                "Observacao: o compromisso em projetos considera horas estimadas de atividades abertas do colaborador no periodo.",
-                channel,
+            make_list_block(
+                [
+                    f"Horas disponiveis: {available_hours:.2f}h",
+                    f"Horas tomadas com processos: {process_hours_taken:.2f}h",
+                    f"Horas registradas em projetos: {project_hours_taken:.2f}h",
+                    f"Horas comprometidas com projetos: {project_hours_committed:.2f}h",
+                    f"Consumo total do periodo: {total_consumption:.2f}h",
+                    f"Saldo estimado: {balance_hours:.2f}h",
+                    f"Ocupacao estimada: {utilization:.1f}%",
+                ]
             ),
-            "",
-            *build_next_step_block(
-                "Use esse panorama para verificar capacidade disponivel no periodo.",
-                "Se quiser, solicite outro periodo ou outro colaborador.",
-                channel=channel,
+            ChatMessageBlock(
+                kind="body",
+                text="Observacao: o compromisso em projetos considera horas estimadas de atividades abertas do colaborador no periodo.",
             ),
-        ]
+            ChatMessageBlock(
+                kind="next_step",
+                items=[
+                    "Use esse panorama para verificar capacidade disponivel no periodo.",
+                    "Se quiser, solicite outro periodo ou outro colaborador.",
+                ],
+            ),
+        ],
     )
-    return "\n".join(lines)
