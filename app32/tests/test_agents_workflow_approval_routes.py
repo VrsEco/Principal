@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 from types import SimpleNamespace
 
 from flask import Flask, session
@@ -195,3 +196,144 @@ def test_reject_action_blocks_non_workflow_action(monkeypatch):
     assert status_code == 400
     assert body["success"] is False
     assert "não suporta rejeição operacional" in body["error"]
+
+
+class _FakeApprovalQuery:
+    def __init__(self, actions):
+        self._actions = list(actions)
+        self._status = None
+        self._company_id = None
+        self._type = None
+        self._limit = None
+
+    def filter_by(self, **kwargs):
+        if 'company_id' in kwargs:
+            self._company_id = kwargs['company_id']
+        if 'type' in kwargs:
+            self._type = kwargs['type']
+        if 'status' in kwargs:
+            self._status = kwargs['status']
+        return self
+
+    def order_by(self, *_args, **_kwargs):
+        return self
+
+    def limit(self, value):
+        self._limit = value
+        return self
+
+    def all(self):
+        items = [
+            action for action in self._actions
+            if (self._company_id is None or action.company_id == self._company_id)
+            and (self._type is None or action.type == self._type)
+            and (self._status is None or action.status == self._status)
+        ]
+        if self._limit is not None:
+            items = items[: self._limit]
+        return items
+
+
+def test_list_workflow_approvals_returns_structured_payload(monkeypatch):
+    app = _build_app()
+    created_at = datetime(2026, 3, 8, 10, 15, 0)
+    action_pending = _FakeAction()
+    action_pending.created_at = created_at
+    action_pending.resolved_at = None
+    action_pending.executed_at = None
+    action_pending.title = 'Aprovação necessária: o início da reunião R-55'
+    action_pending.description = 'Fluxo sensível iniciado via WhatsApp.'
+    action_pending.requesting_agent = 'sapiens'
+    action_pending.handling_agent = 'operations'
+    action_pending.payload = {
+        'approval_key': 'meeting.start|3|9|R-55',
+        'action_key': 'meeting.start',
+        'channel': 'whatsapp',
+        'object_code': 'R-55',
+        'request_payload': {'codigo_reuniao': 'R-55'},
+        'resume_payload': {'action_key': 'meeting.start', 'channel': 'whatsapp'},
+        'created_via': 'workflow_policy_guard',
+    }
+
+    action_executed = _FakeAction(action_id=92, status='executed')
+    action_executed.created_at = created_at
+    action_executed.resolved_at = created_at
+    action_executed.executed_at = created_at
+    action_executed.title = 'Aprovação necessária: a conclusão da atividade AA.J.31.190'
+    action_executed.description = 'Fluxo sensível iniciado via Telegram.'
+    action_executed.requesting_agent = 'sapiens'
+    action_executed.handling_agent = 'operations'
+    action_executed.payload = {
+        'approval_key': 'project_task.complete|3|9|AA.J.31.190',
+        'action_key': 'project_task.complete',
+        'channel': 'telegram',
+        'object_code': 'AA.J.31.190',
+        'request_payload': {'codigo_atividade': 'AA.J.31.190'},
+        'resume_payload': {'action_key': 'project_task.complete', 'channel': 'telegram'},
+        'resume_result': {'executed': True},
+        'approval_status': 'approved',
+        'approved_by_user_id': 7,
+        'approved_at': '2026-03-08T10:20:00',
+        'created_via': 'workflow_policy_guard',
+    }
+
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+
+    import models.agent_action as agent_action_module
+    from services.workflow_approval_service import serialize_workflow_approval_action
+
+    fake_agent_action_class = type(
+        'FakeAgentAction',
+        (),
+        {
+            'created_at': SimpleNamespace(desc=lambda: None),
+            'query': _FakeApprovalQuery([action_pending, action_executed]),
+        },
+    )
+    monkeypatch.setattr(agent_action_module, 'AgentAction', fake_agent_action_class)
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals?status=all&channel=whatsapp&limit=20', method='GET'):
+        session['active_company_id'] = 9
+        response = agents_route.list_workflow_approvals.__wrapped__()
+
+    body = response.get_json()
+    assert body['success'] is True
+    assert body['count'] == 1
+    assert body['filters'] == {
+        'status': 'all',
+        'action_key': None,
+        'channel': 'whatsapp',
+        'user_id': None,
+        'limit': 20,
+    }
+    assert body['workflow_approvals'][0] == serialize_workflow_approval_action(action_pending)
+    assert body['workflow_approvals'][0]['approval']['channel'] == 'whatsapp'
+    assert body['workflow_approvals'][0]['approval']['action_key'] == 'meeting.start'
+
+
+def test_list_workflow_approvals_blocks_unauthorized_role(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=8, name='Colaborador', role='user'))
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals', method='GET'):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.list_workflow_approvals.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 403
+    assert body['success'] is False
+    assert 'Sem permissão' in body['error']
+
+
+def test_list_workflow_approvals_validates_limit(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+
+    with app.test_request_context('/api/agents/actions/workflow-approvals?limit=abc', method='GET'):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.list_workflow_approvals.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 400
+    assert body['success'] is False
+    assert 'limit inválido' in body['error']

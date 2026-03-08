@@ -8,6 +8,42 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.intelligence.workflows.direct_execution import DirectExecutionResult
 
 
+def serialize_workflow_approval_action(action: Any) -> Dict[str, Any]:
+    payload = dict(getattr(action, "payload", None) or {})
+    resume_payload = dict(payload.get("resume_payload") or {})
+    resume_result = dict(payload.get("resume_result") or {})
+    return {
+        "id": getattr(action, "id", None),
+        "type": getattr(action, "type", None),
+        "status": getattr(action, "status", None),
+        "title": getattr(action, "title", None),
+        "description": getattr(action, "description", None),
+        "company_id": getattr(action, "company_id", None),
+        "user_id": getattr(action, "user_id", None),
+        "requesting_agent": getattr(action, "requesting_agent", None),
+        "handling_agent": getattr(action, "handling_agent", None),
+        "created_at": getattr(action, "created_at", None).isoformat() if getattr(action, "created_at", None) else None,
+        "resolved_at": getattr(action, "resolved_at", None).isoformat() if getattr(action, "resolved_at", None) else None,
+        "executed_at": getattr(action, "executed_at", None).isoformat() if getattr(action, "executed_at", None) else None,
+        "approval": {
+            "approval_status": payload.get("approval_status") or getattr(action, "status", None),
+            "approval_key": payload.get("approval_key"),
+            "action_key": payload.get("action_key") or resume_payload.get("action_key"),
+            "channel": payload.get("channel") or resume_payload.get("channel"),
+            "object_code": payload.get("object_code"),
+            "request_payload": dict(payload.get("request_payload") or {}),
+            "resume_payload": resume_payload,
+            "resume_result": resume_result,
+            "approved_by_user_id": payload.get("approved_by_user_id"),
+            "approved_at": payload.get("approved_at"),
+            "rejected_by_user_id": payload.get("rejected_by_user_id"),
+            "rejected_at": payload.get("rejected_at"),
+            "rejection_feedback": payload.get("rejection_feedback"),
+            "created_via": payload.get("created_via"),
+        },
+    }
+
+
 class WorkflowApprovalOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

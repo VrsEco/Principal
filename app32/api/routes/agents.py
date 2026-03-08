@@ -190,6 +190,63 @@ def get_pending_actions():
         "actions": [a.to_dict() for a in actions]
     })
 
+
+@agents_bp.route('/api/agents/actions/workflow-approvals', methods=['GET'])
+@login_required
+def list_workflow_approvals():
+    from flask import session
+    from models.agent_action import AgentAction
+    from services.workflow_approval_service import serialize_workflow_approval_action
+
+    if current_user.role not in {'admin', 'client'}:
+        return jsonify({"success": False, "error": "Sem permissão para listar approvals operacionais."}), 403
+
+    company_id = session.get('active_company_id')
+    status_filter = (request.args.get('status') or 'pending').strip().lower()
+    action_key_filter = (request.args.get('action_key') or '').strip().lower()
+    channel_filter = (request.args.get('channel') or '').strip().lower()
+    user_id_filter = (request.args.get('user_id') or '').strip()
+    limit_raw = (request.args.get('limit') or '50').strip()
+
+    try:
+        limit = max(1, min(int(limit_raw), 100))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    query = AgentAction.query.filter_by(
+        company_id=company_id,
+        type='workflow_approval_request',
+    )
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+
+    actions = query.order_by(AgentAction.created_at.desc()).limit(limit).all()
+
+    serialized = []
+    for action in actions:
+        item = serialize_workflow_approval_action(action)
+        approval = item.get('approval') or {}
+        if action_key_filter and str(approval.get('action_key') or '').strip().lower() != action_key_filter:
+            continue
+        if channel_filter and str(approval.get('channel') or '').strip().lower() != channel_filter:
+            continue
+        if user_id_filter and str(item.get('user_id') or '') != user_id_filter:
+            continue
+        serialized.append(item)
+
+    return jsonify({
+        "success": True,
+        "filters": {
+            "status": status_filter,
+            "action_key": action_key_filter or None,
+            "channel": channel_filter or None,
+            "user_id": int(user_id_filter) if user_id_filter.isdigit() else None,
+            "limit": limit,
+        },
+        "count": len(serialized),
+        "workflow_approvals": serialized,
+    })
+
 @agents_bp.route('/api/agents/history', methods=['GET'])
 @login_required
 def get_chat_history():

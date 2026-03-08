@@ -65,6 +65,21 @@ Campos mínimos esperados em `AgentAction.payload`:
 - `rejection_feedback` (quando informado)
 
 ## Endpoints operacionais
+### Listagem operacional
+`GET /api/agents/actions/workflow-approvals`
+
+Filtros suportados:
+- `status` (`pending`, `approved`, `executed`, `rejected`, `all`)
+- `action_key`
+- `channel`
+- `user_id`
+- `limit` (1 a 100)
+
+Retorno esperado:
+- `filters`
+- `count`
+- `workflow_approvals[]` com bloco `approval` estruturado
+
 ### Aprovar
 `POST /api/agents/actions/approve/<action_id>`
 
