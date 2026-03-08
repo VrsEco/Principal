@@ -579,6 +579,7 @@ def approve_action(action_id):
                 "action": action.to_dict(),
                 "resume_payload": outcome.resume_payload,
                 "resume_result": outcome.resume_result,
+                "approval_metadata": outcome.audit_metadata,
             }), outcome.http_status
 
         db.session.rollback()
@@ -884,6 +885,7 @@ def reject_action(action_id):
             "message": outcome.message,
             "action": action.to_dict(),
             "resume_payload": outcome.resume_payload,
+            "approval_metadata": outcome.audit_metadata,
         }), outcome.http_status
 
     db.session.rollback()

@@ -197,6 +197,17 @@ Também foi evoluída a frente de **avaliação contínua do discovery**:
 - catálogo padrão de casos de avaliação;
 - runner utilitário em `scripts/qa/run_workflow_discovery_evaluation.py`.
 
+Na Fase 6, o runtime também passou a operar com **policy guard + HITL**:
+
+- `WorkflowApprovalPolicyGuard` intercepta ações sensíveis em canais conversacionais;
+- a execução gera `workflow_approval_request` com `resume_payload` seguro;
+- aprovação e rejeição têm trilha auditável em `AgentAction.payload`;
+- os endpoints operacionais retornam `approval_metadata` estruturado;
+- o fluxo conversacional grava `AgentMessage` outbound com o evento da aprovação.
+
+Runbook operacional complementar:
+- `docs/specifications/workflow_approval_runbook.md`
+
 Além disso, o fluxo de `summary.*` já foi parcialmente migrado:
 
 - o `menu_engine` atua como adapter de canal/sessão;
