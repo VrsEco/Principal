@@ -209,6 +209,20 @@ def consult_rules(query: str):
     except Exception as e:
         return f"Erro ao consultar regras: {str(e)}"
 
+def _get_meeting_in_active_company(meeting_id: int):
+    """Recupera reunião estritamente no contexto da empresa ativa."""
+    from models.meeting import Meeting
+
+    company_id = get_active_company_id()
+    if not company_id:
+        return None, "Erro: Nenhuma empresa ativa identificada."
+
+    meeting = Meeting.query.filter_by(id=meeting_id, company_id=int(company_id)).first()
+    if not meeting:
+        return None, f"Reunião ID {meeting_id} não encontrada na empresa ativa."
+
+    return meeting, None
+
 @tool
 def query_database(sql_query: str):
     """
@@ -1121,14 +1135,13 @@ def start_meeting(meeting_id: int):
     Inicia uma reunião agendada. Marca o horário real de início e vincula/cria um projeto automático.
     :param meeting_id: ID da reunião a ser iniciada (obtido ao criar a reunião).
     """
-    from models.meeting import Meeting
     from models.project import Project
     from datetime import datetime
 
     try:
-        meeting = Meeting.query.get(meeting_id)
-        if not meeting:
-            return f"Reunião ID {meeting_id} não encontrada."
+        meeting, error_message = _get_meeting_in_active_company(meeting_id)
+        if error_message:
+            return error_message
 
         now = datetime.now()
         meeting.actual_date = now.date()
@@ -1173,14 +1186,13 @@ def log_meeting_discussion(meeting_id: int, topic: str, decision: str = None, re
     :param responsible: Nome do responsável pela ação. Ex: 'Carlos'
     :param deadline: Prazo para conclusão no formato YYYY-MM-DD. Ex: '2026-03-31'
     """
-    from models.meeting import Meeting
     from models.project import ProjectTask
     import json
 
     try:
-        meeting = Meeting.query.get(meeting_id)
-        if not meeting:
-            return f"Reunião ID {meeting_id} não encontrada."
+        meeting, error_message = _get_meeting_in_active_company(meeting_id)
+        if error_message:
+            return error_message
 
         # Adiciona à lista de discussões
         discussions = json.loads(meeting.discussions_json or "[]")
@@ -1248,14 +1260,13 @@ def finish_meeting(meeting_id: int):
     Após encerrar, use 'send_meeting_minutes' para enviar a ATA aos participantes.
     :param meeting_id: ID da reunião a ser encerrada.
     """
-    from models.meeting import Meeting
     import json
     from datetime import datetime
 
     try:
-        meeting = Meeting.query.get(meeting_id)
-        if not meeting:
-            return f"Reunião ID {meeting_id} não encontrada."
+        meeting, error_message = _get_meeting_in_active_company(meeting_id)
+        if error_message:
+            return error_message
 
         meeting.status = 'completed'
         db.session.commit()
@@ -1333,15 +1344,14 @@ def send_meeting_minutes(meeting_id: int, channel: str = "email"):
     :param meeting_id: ID da reunião já encerrada.
     :param channel: Canal de envio: 'email', 'whatsapp' ou 'ambos'. Padrão: 'email'
     """
-    from models.meeting import Meeting
     from services.email_service import email_service
     from services.whatsapp_service import whatsapp_service
     import json
 
     try:
-        meeting = Meeting.query.get(meeting_id)
-        if not meeting:
-            return f"Reunião ID {meeting_id} não encontrada."
+        meeting, error_message = _get_meeting_in_active_company(meeting_id)
+        if error_message:
+            return error_message
 
         guests = json.loads(meeting.guests_json or "{}")
         ata = meeting.meeting_notes or "ATA não gerada. Encerre a reunião primeiro."

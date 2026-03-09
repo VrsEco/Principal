@@ -438,6 +438,19 @@
                                         </svg>
                                         Relatório
                                     </button>
+                                    <button type="button" class="button button-sm button-ghost"
+                                        onclick="event.stopPropagation(); excluirReuniao({{ meeting.id }}, {{ meeting.title|tojson|safe }});"
+                                        title="Excluir reunião"
+                                        aria-label="Excluir reunião {{ meeting.title }}"
+                                        style="color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.18); background: rgba(220, 38, 38, 0.08);">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                            <path d="M10 11v6"></path>
+                                            <path d="M14 11v6"></path>
+                                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -477,6 +490,18 @@
                             Nova Reunião</h3>
                     </div>
                     <div style="display: flex; gap: 12px;">
+                        <button type="button" onclick="excluirReuniaoAtual()"
+                            id="btn-excluir-reuniao-editor" class="button button-outline"
+                            style="border-color: #dc2626; color: #dc2626; display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                            </svg>
+                            Excluir
+                        </button>
                         <button type="button" onclick="gerarRelatorioReuniao(currentMeetingId)"
                             id="btn-gerar-ata-editor" class="button button-outline"
                             style="border-color: var(--accent); color: var(--accent); display: none;">
@@ -841,6 +866,7 @@
     let discussions = [];
     let activities = [];
     let employeesData = [];
+    const meetingsCompanyId = {{ company.id|tojson }};
     const projectTitleMap = {};
     const projectCodeMap = {};
     {% for project in projects %}
@@ -921,6 +947,7 @@
 
     window.novaReuniao = function () {
         document.getElementById("btn-gerar-ata-editor").style.display = "none";
+        document.getElementById("btn-excluir-reuniao-editor").style.display = "none";
         currentMeetingId = null;
         currentMeetingStatus = 'draft';
         document.getElementById('meeting-editor-title').textContent = 'Nova Reunião';
@@ -934,11 +961,12 @@
 
     window.editarReuniao = async function (meetingId) {
         document.getElementById("btn-gerar-ata-editor").style.display = "flex";
+        document.getElementById("btn-excluir-reuniao-editor").style.display = "flex";
         currentMeetingId = meetingId;
         document.getElementById('meeting-editor-title').textContent = 'Editar Reunião';
 
         try {
-            const response = await fetch(`/meetings/api/meeting/${meetingId}`);
+            const response = await fetch(`/meetings/api/meeting/${meetingId}?company_id=${meetingsCompanyId}`);
             const data = await response.json();
 
             if (data.success) {
@@ -982,6 +1010,39 @@
         } catch (error) {
             console.error('Erro ação carregar reuniao:', error);
         }
+    }
+
+
+    async function excluirReuniao(meetingId, meetingTitle) {
+        if (!meetingId) return;
+        const safeTitle = meetingTitle || 'esta reunião';
+        const confirmed = window.confirm(`Deseja realmente excluir ${safeTitle}? Esta ação não pode ser desfeita.`);
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/meetings/api/meeting/${meetingId}?company_id=${meetingsCompanyId}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                alert(result.message || 'Não foi possível excluir a reunião.');
+                return;
+            }
+            if (currentMeetingId === meetingId) {
+                fecharEditor();
+            }
+            window.location.href = `/meetings/company/${meetingsCompanyId}`;
+        } catch (error) {
+            console.error('Erro ao excluir reunião:', error);
+            alert('Erro ao excluir reunião. Tente novamente.');
+        }
+    }
+
+    window.excluirReuniao = excluirReuniao;
+    window.excluirReuniaoAtual = function () {
+        if (!currentMeetingId) return;
+        const title = document.getElementById('meeting-title')?.value?.trim() || 'esta reunião';
+        excluirReuniao(currentMeetingId, title);
     }
 
     window.fecharEditor = function () {
@@ -1113,13 +1174,13 @@
         try {
             let response;
             if (currentMeetingId) {
-                response = await fetch(`/meetings/api/meeting/${currentMeetingId}/preliminares`, {
+                response = await fetch(`/meetings/api/meeting/${currentMeetingId}/preliminares?company_id=${meetingsCompanyId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
             } else {
-                response = await fetch(`/meetings/api/company/{{ company.id }}/meeting`, {
+                response = await fetch(`/meetings/api/company/${meetingsCompanyId}/meeting`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -1188,7 +1249,7 @@
                 project_id: choice === 'existing' ? projectId : null
             };
 
-            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/iniciar`, {
+            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/iniciar?company_id=${meetingsCompanyId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1356,7 +1417,7 @@
             status: currentMeetingStatus
         };
         try {
-            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/execucação`, {
+            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/execucação?company_id=${meetingsCompanyId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1383,7 +1444,7 @@
         if (!currentMeetingId) return;
         if (!confirm('Deseja finalizar a reuniao?')) return;
         try {
-            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/finalizar`, { method: 'POST' });
+            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/finalizar?company_id=${meetingsCompanyId}`, { method: 'POST' });
             const result = await response.json();
             if (result.success) {
                 updateMeetingStatus('completed');
@@ -1395,7 +1456,7 @@
     async function atualizarAtividades() {
         if (!currentMeetingId) return;
         try {
-            const response = await fetch('/meetings/api/meeting/' + currentMeetingId + '/atividades');
+            const response = await fetch('/meetings/api/meeting/' + currentMeetingId + '/atividades?company_id=' + meetingsCompanyId);
             const result = await response.json();
             if (!result.success) return;
 
@@ -1473,7 +1534,7 @@
         if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
 
         try {
-            const checkRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/check-sync');
+            const checkRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/check-sync?company_id=' + meetingsCompanyId);
             const check = await checkRes.json();
             if (check.is_synced) {
                 alert('Atividades j sincronizadas');
@@ -1489,7 +1550,7 @@
                 actual_time: document.getElementById('meeting-actual-time').value
             };
 
-            const syncRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/sync-activities', {
+            const syncRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/sync-activities?company_id=' + meetingsCompanyId, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1507,7 +1568,7 @@
         const activity = activities[index];
         if (!confirm('Deseja remover esta atividade do projeto vinculado também?')) return;
         if (currentMeetingId && linkedProjectId && activity?.title) {
-            await fetch('/meetings/api/meeting/' + currentMeetingId + '/remove-from-project', {
+            await fetch('/meetings/api/meeting/' + currentMeetingId + '/remove-from-project?company_id=' + meetingsCompanyId, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: activity.title })

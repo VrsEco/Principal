@@ -1,17 +1,88 @@
-from flask import request
+from flask import request, session
 from flask_restful import Resource
 from flask_login import login_required, current_user
-from models import Meeting, MeetingAgendaItem, Project, db
+from models import Meeting, MeetingAgendaItem, Project, Company, Employee, db
 from datetime import datetime
 import json
 import logging
 
 logger = logging.getLogger(__name__)
 
+
+def user_can_access_company(company_id):
+    if not company_id or not current_user.is_authenticated:
+        return False
+
+    company = Company.query.get(company_id)
+    if not company or not bool(getattr(company, 'is_active', True)):
+        return False
+
+    if str(getattr(current_user, 'role', '')).lower() == 'admin':
+        return True
+
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+    return employee is not None
+
+
+def get_request_company_id():
+    """Resolve current company scope for meeting operations."""
+    val = request.args.get('company_id')
+    if val not in (None, ''):
+        try:
+            return int(float(val))
+        except (TypeError, ValueError):
+            pass
+
+    payload = request.get_json(silent=True) if request.is_json else None
+    if isinstance(payload, dict):
+        val = payload.get('company_id')
+        if val not in (None, ''):
+            try:
+                return int(float(val))
+            except (TypeError, ValueError):
+                pass
+
+    cid = session.get('active_company_id')
+    if cid not in (None, ''):
+        try:
+            return int(float(cid))
+        except (TypeError, ValueError):
+            pass
+
+    if current_user.is_authenticated:
+        employee = Employee.query.filter_by(user_id=current_user.id, status='active').first()
+        if employee:
+            return employee.company_id
+
+        if current_user.role == 'admin':
+            first = Company.query.filter_by(is_active=True).order_by(Company.id.asc()).first()
+            if first:
+                return first.id
+
+    return None
+
+
+def get_meeting_or_404(meeting_id):
+    company_id = get_request_company_id()
+    if not company_id:
+        return None, ({"success": False, "message": "Contexto de empresa ativo é obrigatório."}, 400)
+
+    if not user_can_access_company(company_id):
+        return None, ({"success": False, "message": "Você não tem acesso à empresa informada."}, 403)
+
+    meeting = Meeting.query.filter_by(id=meeting_id, company_id=company_id).first()
+    if not meeting:
+        return None, ({"success": False, "message": "Reunião não encontrada para a empresa informada."}, 404)
+
+    return meeting, None
+
 class MeetingListResource(Resource):
     @login_required
     def post(self, company_id):
         """Create a new meeting (draft)"""
+        if not user_can_access_company(company_id):
+            return {"success": False, "message": "Você não tem acesso à empresa informada."}, 403
+
         data = request.get_json()
         if not data:
             return {"success": False, "message": "No data provided"}, 400
@@ -44,13 +115,17 @@ class MeetingResource(Resource):
     @login_required
     def get(self, meeting_id):
         """Get meeting details"""
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         return {"success": True, "meeting": meeting.to_dict()}
 
     @login_required
     def put(self, meeting_id):
         """Update meeting details (preliminares)"""
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         data = request.get_json()
         
         try:
@@ -71,7 +146,9 @@ class MeetingResource(Resource):
     @login_required
     def delete(self, meeting_id):
         """Delete a meeting"""
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         try:
             db.session.delete(meeting)
             db.session.commit()
@@ -84,7 +161,9 @@ class MeetingExecutionResource(Resource):
     @login_required
     def put(self, meeting_id):
         """Save meeting execution data"""
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         data = request.get_json()
         
         try:
@@ -106,7 +185,9 @@ class MeetingStartResource(Resource):
     @login_required
     def post(self, meeting_id):
         """Start meeting and link/create project"""
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         data = request.get_json() or {}
         project_type = data.get("project_type", "new")
         chosen_project_id = data.get("project_id")
@@ -120,7 +201,10 @@ class MeetingStartResource(Resource):
             # Linking logic
             if not meeting.project_id:
                 if project_type == "existing" and chosen_project_id:
-                    meeting.project_id = int(chosen_project_id)
+                    project = Project.query.filter_by(id=int(chosen_project_id), company_id=meeting.company_id).first()
+                    if not project:
+                        return {"success": False, "message": "Projeto informado não pertence à empresa da reunião."}, 404
+                    meeting.project_id = project.id
                 else:
                     # Create new project
                     display_date = meeting.actual_date.strftime("%d/%m/%Y")
@@ -161,7 +245,9 @@ class MeetingFinishResource(Resource):
     def post(self, meeting_id):
         """Finalize meeting and create summary task in project"""
         from models import ProjectTask
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         try:
             meeting.status = 'completed'
             
@@ -213,7 +299,9 @@ class MeetingActivitiesResource(Resource):
     def get(self, meeting_id):
         """Get all activities related to this meeting (from multiple possible projects)"""
         from models import ProjectTask, Project
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         
         # 1. Activities stored in the meeting JSON (planned)
         meeting_activities = []
@@ -250,7 +338,9 @@ class MeetingSyncCheckResource(Resource):
     def get(self, meeting_id):
         """Check if meeting activities are in sync with the linked project"""
         from models import ProjectTask
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         
         if not meeting.project_id:
             return {"success": True, "is_synced": False, "message": "Sem projeto vinculado", 
@@ -283,7 +373,9 @@ class MeetingSyncActivitiesResource(Resource):
     def post(self, meeting_id):
         """Sync meeting activities with the project by creating missing ones"""
         from models import ProjectTask, Project
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         data = request.get_json() or {}
         
         if not meeting.project_id:
@@ -345,7 +437,9 @@ class MeetingRemoveFromProjectResource(Resource):
     def post(self, meeting_id):
         """Remove a specific activity/task from the project"""
         from models import ProjectTask
-        meeting = Meeting.query.get_or_404(meeting_id)
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
         data = request.get_json() or {}
         title = data.get('title')
         

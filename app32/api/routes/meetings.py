@@ -1,26 +1,41 @@
-from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, abort
 from flask_login import current_user, login_required
 from models import Company, Meeting, MeetingAgendaItem, Employee, Project, db
 from utils.permissions import permission_required
 
 meetings_bp = Blueprint('meetings', __name__)
 
+
+def user_can_access_company(company_id):
+    if not company_id or not current_user.is_authenticated:
+        return False
+    company = Company.query.get(company_id)
+    if not company or not bool(getattr(company, 'is_active', True)):
+        return False
+    if str(getattr(current_user, 'role', '')).lower() == 'admin':
+        return True
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+    return employee is not None
+
 def get_active_company():
     company_id = session.get('active_company_id')
-    if not company_id and current_user.is_authenticated:
-        emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
-        if emp:
-            company_id = emp.company_id
-        elif current_user.role == 'admin':
+    if company_id and user_can_access_company(company_id):
+        return Company.query.get(company_id)
+
+    if company_id and not user_can_access_company(company_id):
+        session.pop('active_company_id', None)
+
+    if current_user.is_authenticated:
+        emp = Employee.query.filter_by(user_id=current_user.id, status='active').order_by(Employee.id.asc()).first()
+        if emp and user_can_access_company(emp.company_id):
+            session['active_company_id'] = emp.company_id
+            return Company.query.get(emp.company_id)
+        if current_user.role == 'admin':
             first = Company.query.filter_by(is_active=True).order_by(Company.id).first()
             if first:
-                company_id = first.id
-        
-        if company_id:
-            session['active_company_id'] = company_id
-    
-    if company_id:
-        return Company.query.get(company_id)
+                session['active_company_id'] = first.id
+                return first
+
     return None
 
 @meetings_bp.route('/')
@@ -36,6 +51,9 @@ def meetings_manage_root():
 @login_required
 def meetings_company_manage(company_id):
     """Main meeting management page for APP32"""
+    if not user_can_access_company(company_id):
+        abort(403)
+
     company = Company.query.get_or_404(company_id)
     
     # Save active company to session
@@ -72,6 +90,8 @@ def meetings_company_manage(company_id):
 def meeting_report(company_id, meeting_id):
     """Render meeting report/minutes"""
     from datetime import datetime
+    if not user_can_access_company(company_id):
+        abort(403)
     meeting = Meeting.query.filter_by(id=meeting_id, company_id=company_id).first_or_404()
     company = Company.query.get_or_404(company_id)
     return render_template(
