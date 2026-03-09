@@ -117,6 +117,13 @@ def create_user():
     try:
         data = request.get_json()
         validated_data = UserCreateSchema(**data)
+        company_ids = validated_data.company_ids or []
+
+        if company_ids:
+            active_company_ids = {company.id for company in Company.query.filter(Company.id.in_(company_ids), Company.is_active == True).all()}
+            invalid_company_ids = [company_id for company_id in company_ids if company_id not in active_company_ids]
+            if invalid_company_ids:
+                return jsonify({"success": False, "message": f"Empresas inválidas ou inativas: {invalid_company_ids}"}), 400
         
         # Check if email exists
         if User.query.filter_by(email=validated_data.email).first():
@@ -137,7 +144,6 @@ def create_user():
         db.session.commit()
         
         # Vincular empresas se houver
-        company_ids = data.get('company_ids', [])
         if company_ids:
             from services.user_employee_service import UserEmployeeService
             UserEmployeeService.add_employee_to_multiple_companies(user.id, company_ids)
