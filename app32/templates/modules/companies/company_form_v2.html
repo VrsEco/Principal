@@ -163,9 +163,16 @@
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body">
                     <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 0.75rem; flex-wrap: wrap;">
                         <h3 style="font-size: 1.25rem; font-weight: 700;">Base de Colaboradores</h3>
-                        <button class="btn btn-primary" onclick="showEmployeeModal()">Novo Colaborador</button>
+                        <div style="display:flex; gap:0.75rem; align-items:center;">
+                            <button type="button" class="btn btn-secondary filter-drawer-toggle" onclick="toggleCollaboratorsFilters()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                                Filtros
+                                <span id="collaboratorsFiltersBadge" class="filter-count-badge" style="display:none;">0</span>
+                            </button>
+                            <button class="btn btn-primary" onclick="showEmployeeModal()">Novo Colaborador</button>
+                        </div>
                     </div>
                     <div style="overflow-x: auto;">
                         <table class="table-v2" style="width: 100%;">
@@ -448,7 +455,154 @@
     </div>
 </div>
 
+<div id="collaboratorsFilterOverlay" class="filter-overlay" onclick="closeCollaboratorsFilters()"></div>
+<aside id="collaboratorsFilterDrawer" class="filter-drawer-right collapsed" aria-hidden="true">
+    <div class="filter-drawer-header">
+        <div>
+            <h3>Filtros de Colaboradores</h3>
+            <p>Refine a base da unidade ativa.</p>
+        </div>
+        <button type="button" class="btn btn-icon" onclick="closeCollaboratorsFilters()">✕</button>
+    </div>
+    <div class="filter-drawer-body">
+        <div class="filter-field">
+            <label>Busca</label>
+            <input type="text" id="filterCollaboratorSearch" class="form-control" placeholder="Nome, e-mail ou telefone">
+        </div>
+        <div class="filter-field">
+            <label>Status</label>
+            <select id="filterCollaboratorStatus" class="form-control">
+                <option value="">Todos</option>
+                <option value="active">Ativo</option>
+                <option value="inactive">Inativo</option>
+                <option value="vacation">Férias</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Departamento</label>
+            <select id="filterCollaboratorDepartment" class="form-control">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Cargo</label>
+            <select id="filterCollaboratorRole" class="form-control">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Vínculo de acesso</label>
+            <select id="filterCollaboratorAccess" class="form-control">
+                <option value="">Todos</option>
+                <option value="with_access">Com acesso</option>
+                <option value="without_access">Sem acesso</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Admissão inicial</label>
+            <input type="date" id="filterCollaboratorHireStart" class="form-control">
+        </div>
+        <div class="filter-field">
+            <label>Admissão final</label>
+            <input type="date" id="filterCollaboratorHireEnd" class="form-control">
+        </div>
+        <div class="filter-actions-stack">
+            <button type="button" class="btn btn-primary" onclick="applyCollaboratorsFilters()">Aplicar filtros</button>
+            <button type="button" class="btn btn-secondary" onclick="clearCollaboratorsFilters()">Limpar filtros</button>
+        </div>
+    </div>
+</aside>
+
 <style>
+    .filter-count-badge {
+        margin-left: 8px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .filter-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.32);
+        z-index: 24998;
+        display: none;
+    }
+
+    .filter-drawer-right {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(380px, 92vw);
+        height: 100vh;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        box-shadow: -12px 0 32px rgba(15, 23, 42, 0.16);
+        z-index: 24999;
+        transition: transform 0.25s ease;
+        transform: translateX(0);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-drawer-right.collapsed {
+        transform: translateX(100%);
+    }
+
+    .filter-drawer-header {
+        padding: 1.25rem 1.25rem 1rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .filter-drawer-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .filter-drawer-header p {
+        margin: 0.35rem 0 0;
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+    }
+
+    .filter-drawer-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        overflow-y: auto;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    .filter-field label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .filter-actions-stack {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
     .tab-btn {
         background: none;
         border: none;
@@ -548,6 +702,15 @@
             const tab = urlParams.get('tab');
             if (tab) switchTab(tab);
         }
+
+        document.getElementById('filterCollaboratorSearch')?.addEventListener('input', applyCollaboratorsFilters);
+        document.getElementById('filterCollaboratorStatus')?.addEventListener('change', applyCollaboratorsFilters);
+        document.getElementById('filterCollaboratorDepartment')?.addEventListener('change', applyCollaboratorsFilters);
+        document.getElementById('filterCollaboratorRole')?.addEventListener('change', applyCollaboratorsFilters);
+        document.getElementById('filterCollaboratorAccess')?.addEventListener('change', applyCollaboratorsFilters);
+        document.getElementById('filterCollaboratorHireStart')?.addEventListener('change', applyCollaboratorsFilters);
+        document.getElementById('filterCollaboratorHireEnd')?.addEventListener('change', applyCollaboratorsFilters);
+        syncCollaboratorsFilterBadge();
     });
 
     function switchTab(tabId) {
@@ -685,12 +848,51 @@
         }
     }
 
-    async function loadEmployeesFullData() {
-        if (!companyId) return;
-        const r = await fetch(`/api/companies/${companyId}/employees/full`);
-        const emps = await r.json();
+    const collaboratorsFilterState = {
+        search: '', status: '', department: '', role: '', access: '', hireStart: '', hireEnd: ''
+    };
+    let employeesFullDataset = [];
+
+    function toggleCollaboratorsFilters(forceOpen) {
+        const drawer = document.getElementById('collaboratorsFilterDrawer');
+        const overlay = document.getElementById('collaboratorsFilterOverlay');
+        const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : drawer.classList.contains('collapsed');
+        drawer.classList.toggle('collapsed', !shouldOpen);
+        drawer.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+        overlay.style.display = shouldOpen ? 'block' : 'none';
+    }
+
+    function closeCollaboratorsFilters() {
+        toggleCollaboratorsFilters(false);
+    }
+
+    function syncCollaboratorsFilterBadge() {
+        const count = Object.values(collaboratorsFilterState).filter(Boolean).length;
+        const badge = document.getElementById('collaboratorsFiltersBadge');
+        badge.textContent = count;
+        badge.style.display = count ? 'inline-flex' : 'none';
+    }
+
+    function populateCollaboratorsFilterOptions(dataset) {
+        const departments = [...new Set((dataset || []).map(item => (item.department || '').trim()).filter(Boolean))].sort();
+        const roles = [...new Set((dataset || []).map(item => (item.role_title || '').trim()).filter(Boolean))].sort();
+        const deptSelect = document.getElementById('filterCollaboratorDepartment');
+        const roleSelect = document.getElementById('filterCollaboratorRole');
+        if (deptSelect) {
+            const current = deptSelect.value;
+            deptSelect.innerHTML = '<option value="">Todos</option>' + departments.map(item => `<option value="${item.toLowerCase()}">${item}</option>`).join('');
+            deptSelect.value = current;
+        }
+        if (roleSelect) {
+            const current = roleSelect.value;
+            roleSelect.innerHTML = '<option value="">Todos</option>' + roles.map(item => `<option value="${item.toLowerCase()}">${item}</option>`).join('');
+            roleSelect.value = current;
+        }
+    }
+
+    function renderEmployeesFullData(dataset) {
         const body = document.getElementById('employees-full-body');
-        body.innerHTML = emps.map(e => `
+        body.innerHTML = (dataset || []).map(e => `
             <tr>
                 <td>
                     <div style="font-weight: 600;">${e.name}</div>
@@ -700,7 +902,7 @@
                     <div style="font-weight: 600;">${e.role_title || '-'}</div>
                     <div style="font-size: 0.75rem; color: var(--text-tertiary);">${e.department || ''}</div>
                 </td>
-                <td><span class="badge ${e.status === 'active' ? 'badge-success' : 'badge-secondary'}">${e.status}</span><br><small>${e.weekly_hours || '-'}h/sem</small></td>
+                <td><span class="badge ${e.status === 'active' ? 'badge-success' : 'badge-secondary'}">${e.status}</span><br><small>${e.weekly_hours || '-'}h/sem${e.user_id ? ' • acesso' : ' • sem acesso'}</small></td>
                 <td>${e.hire_date || '-'}</td>
                 <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
                     <button class="btn btn-icon" onclick="editEmployee(${e.id})" title="Editar" style="color: var(--primary);">
@@ -712,6 +914,59 @@
                 </td>
             </tr>
         `).join('') || '<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary);">Nenhum colaborador encontrado.</td></tr>';
+    }
+
+    function applyCollaboratorsFilters() {
+        collaboratorsFilterState.search = document.getElementById('filterCollaboratorSearch').value.trim().toLowerCase();
+        collaboratorsFilterState.status = document.getElementById('filterCollaboratorStatus').value;
+        collaboratorsFilterState.department = document.getElementById('filterCollaboratorDepartment').value;
+        collaboratorsFilterState.role = document.getElementById('filterCollaboratorRole').value;
+        collaboratorsFilterState.access = document.getElementById('filterCollaboratorAccess').value;
+        collaboratorsFilterState.hireStart = document.getElementById('filterCollaboratorHireStart').value;
+        collaboratorsFilterState.hireEnd = document.getElementById('filterCollaboratorHireEnd').value;
+
+        const filtered = employeesFullDataset.filter(e => {
+            const haystack = `${(e.name || '').toLowerCase()} ${(e.email || '').toLowerCase()} ${(e.phone || '').toLowerCase()} ${(e.whatsapp || '').toLowerCase()}`;
+            const hireDate = e.hire_date || '';
+            return (!collaboratorsFilterState.search || haystack.includes(collaboratorsFilterState.search))
+                && (!collaboratorsFilterState.status || (e.status || '') === collaboratorsFilterState.status)
+                && (!collaboratorsFilterState.department || ((e.department || '').toLowerCase() === collaboratorsFilterState.department))
+                && (!collaboratorsFilterState.role || ((e.role_title || '').toLowerCase() === collaboratorsFilterState.role))
+                && (!collaboratorsFilterState.access
+                    || (collaboratorsFilterState.access === 'with_access' && !!e.user_id)
+                    || (collaboratorsFilterState.access === 'without_access' && !e.user_id))
+                && (!collaboratorsFilterState.hireStart || (hireDate && hireDate >= collaboratorsFilterState.hireStart))
+                && (!collaboratorsFilterState.hireEnd || (hireDate && hireDate <= collaboratorsFilterState.hireEnd));
+        });
+
+        renderEmployeesFullData(filtered);
+        syncCollaboratorsFilterBadge();
+    }
+
+    function clearCollaboratorsFilters() {
+        document.getElementById('filterCollaboratorSearch').value = '';
+        document.getElementById('filterCollaboratorStatus').value = '';
+        document.getElementById('filterCollaboratorDepartment').value = '';
+        document.getElementById('filterCollaboratorRole').value = '';
+        document.getElementById('filterCollaboratorAccess').value = '';
+        document.getElementById('filterCollaboratorHireStart').value = '';
+        document.getElementById('filterCollaboratorHireEnd').value = '';
+        collaboratorsFilterState.search = '';
+        collaboratorsFilterState.status = '';
+        collaboratorsFilterState.department = '';
+        collaboratorsFilterState.role = '';
+        collaboratorsFilterState.access = '';
+        collaboratorsFilterState.hireStart = '';
+        collaboratorsFilterState.hireEnd = '';
+        applyCollaboratorsFilters();
+    }
+
+    async function loadEmployeesFullData() {
+        if (!companyId) return;
+        const r = await fetch(`/api/companies/${companyId}/employees/full`);
+        employeesFullDataset = await r.json();
+        populateCollaboratorsFilterOptions(employeesFullDataset);
+        applyCollaboratorsFilters();
     }
 
     async function loadPerformanceSettings() {

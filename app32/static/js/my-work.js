@@ -4056,10 +4056,10 @@ function buildReportFiltersPayload() {
     filters.process_owner_ids = processOwnerCtx.selectedIds;
   }
 
-  // Delivery Tags - não enviar o padrão ["open"] (considerado default)
+  // Delivery Tags - o relatório deve respeitar exatamente o estado atual do filtro,
+  // inclusive o padrão "Em aberto" marcado por default.
   const deliveryFilters = state.selectedDeliveryTags || [];
-  const isDefaultDelivery = deliveryFilters.length === 1 && deliveryFilters[0] === 'open';
-  if (!isDefaultDelivery && deliveryFilters.length < DELIVERY_FILTER_VALUES.length) {
+  if (deliveryFilters.length < DELIVERY_FILTER_VALUES.length) {
     filters.delivery_tags = deliveryFilters;
   }
 

@@ -20,6 +20,95 @@ from src.core.theme_tokens import (
 logger = logging.getLogger(__name__)
 EMAIL_FALLBACK_SUFFIX = "Registros acima da capacidade deste canal, quer que eu te envie por e-mail?"
 EMAIL_FALLBACK_FRAGMENT = "Registros acima da capacidade deste canal"
+SUMMARY_DELIVERY_CHANNELS = ("telegram", "whatsapp", "email")
+
+
+def _resolve_summary_delivery_channels(user) -> list[str]:
+    raw_value = str(getattr(user, "summary_delivery_channels", "") or "").strip().lower()
+    if not raw_value:
+        raw_value = "telegram"
+
+    channels = []
+    for item in raw_value.split(','):
+        channel = item.strip().lower()
+        if channel in SUMMARY_DELIVERY_CHANNELS and channel not in channels:
+            channels.append(channel)
+    return channels or ["telegram"]
+
+
+def _format_summary_recipient(user, channel: str) -> str | None:
+    if channel == "telegram":
+        return str(getattr(user, "telegram", "") or "").strip() or None
+    if channel == "whatsapp":
+        return str(getattr(user, "whatsapp", "") or "").strip() or None
+    if channel == "email":
+        return str(getattr(user, "email", "") or "").strip() or None
+    return None
+
+
+def _get_available_summary_channels(user) -> list[str]:
+    available = []
+    for channel in SUMMARY_DELIVERY_CHANNELS:
+        if _format_summary_recipient(user, channel):
+            available.append(channel)
+    return available
+
+
+def _build_summary_attempt_order(user) -> list[str]:
+    preferred = _resolve_summary_delivery_channels(user)
+    available = _get_available_summary_channels(user)
+
+    ordered = []
+    for channel in preferred + available:
+        if channel in SUMMARY_DELIVERY_CHANNELS and channel not in ordered:
+            ordered.append(channel)
+    return ordered
+
+
+def _build_summary_message_for_channel(user, date_range: str, channel: str) -> dict | None:
+    normalized_channel = str(channel or "telegram").strip().lower()
+    if normalized_channel == "email":
+        return get_user_summary_email_payload(user, date_range=date_range)
+
+    message = get_user_summary_report(user, date_range=date_range, channel=normalized_channel)
+    if not message:
+        return None
+    return {"body": message}
+
+
+def _send_summary_via_channel(user, date_range: str, channel: str) -> dict:
+    normalized_channel = str(channel or "").strip().lower()
+    recipient = _format_summary_recipient(user, normalized_channel)
+    if not recipient:
+        return {"success": False, "channel": normalized_channel, "error": "destinatário não configurado"}
+
+    payload = _build_summary_message_for_channel(user, date_range=date_range, channel=normalized_channel)
+    if not payload:
+        return {"success": False, "channel": normalized_channel, "error": "resumo vazio"}
+
+    from services.notification_hub import notification_hub
+
+    if normalized_channel == "email":
+        result = notification_hub.send_email(
+            recipient,
+            payload["subject"],
+            payload["body"],
+            html_body=payload.get("html_body"),
+        )
+        result["message"] = payload["body"]
+        return result
+
+    if normalized_channel == "telegram":
+        result = notification_hub.send_telegram(recipient, payload["body"], parse_mode="HTML")
+        result["message"] = payload["body"]
+        return result
+
+    if normalized_channel == "whatsapp":
+        result = notification_hub.send_whatsapp(recipient, payload["body"])
+        result["message"] = payload["body"]
+        return result
+
+    return {"success": False, "channel": normalized_channel, "error": "canal não suportado"}
 
 
 def _format_my_work_report_compat(report_formatter, **kwargs):
@@ -749,9 +838,35 @@ def try_handle_summary_email_confirmation(user, company_id: int, incoming_text: 
     return True, "Tentei enviar o e-mail, mas houve uma falha no serviço agora. Posso tentar novamente."
 
 
-def _log_summary_agent_message(user, company_id: int, chat_id: str, message: str, date_range: str):
+def _log_summary_agent_message(user, company_id: int, channel: str, recipient: str, message: str, date_range: str, preferred_channels: list[str] | None = None, delivery_sequence: list[str] | None = None, fallback_used: bool = False, winner_channel: str | None = None):
     try:
         from models.agent_message import AgentMessage
+
+        metadata = {
+            "contact": "sapiens",
+            "summary_date_range": date_range,
+            "email_offer_available": EMAIL_FALLBACK_FRAGMENT in (message or ""),
+            "recipient": str(recipient),
+            "preferred_channels": list(preferred_channels or []),
+            "delivery_sequence": list(delivery_sequence or []),
+            "fallback_used": bool(fallback_used),
+            "winner_channel": winner_channel or channel,
+        }
+        if channel == 'telegram':
+            metadata.update({
+                "thread_id": f"tg_{recipient}",
+                "telegram_id": str(recipient),
+            })
+        elif channel == 'whatsapp':
+            metadata.update({
+                "thread_id": f"wa_{recipient}",
+                "whatsapp": str(recipient),
+            })
+        elif channel == 'email':
+            metadata.update({
+                "thread_id": f"email_{user.id}",
+                "email": str(recipient),
+            })
 
         db.session.add(AgentMessage(
             company_id=company_id,
@@ -759,61 +874,120 @@ def _log_summary_agent_message(user, company_id: int, chat_id: str, message: str
             agent_type='work_agent_squad',
             agent_name='sapiens',
             direction='outbound',
-            channel='telegram',
+            channel=channel,
             content=message,
-            metadata_json={
-                "thread_id": f"tg_{chat_id}",
-                "contact": "sapiens",
-                "telegram_id": str(chat_id),
-                "summary_date_range": date_range,
-                "email_offer_available": EMAIL_FALLBACK_FRAGMENT in (message or ""),
-            }
+            metadata_json=metadata,
         ))
         db.session.commit()
     except Exception as log_err:
         db.session.rollback()
         logger.warning("Falha ao registrar AgentMessage do resumo proativo: %s", log_err)
 
+
 def send_morning_summaries(app):
     """
-    Scans all users with a Telegram ID and sends a morning summary.
+    Scans active users and sends the morning summary using preferred channels
+    with automatic fallback to other available channels.
     """
-    if not bot:
-        logger.warning("Bot Telegram indisponível: resumo matinal não será enviado.")
-        return
-
     with app.app_context():
         logger.info("🌤️ Iniciando envio de resumos matinais proativos...")
-        users = User.query.filter(
-            User.is_active == True,
-            User.telegram.isnot(None),
-            func.trim(User.telegram) != ''
-        ).all()
+        users = User.query.filter(User.is_active == True).all()
         for user in users:
             try:
-                chat_id = (user.telegram or "").strip()
-                if not chat_id:
-                    logger.warning("Usuário %s sem chat_id Telegram válido; resumo ignorado.", user.id)
+                preferred_channels = _resolve_summary_delivery_channels(user)
+                attempt_order = _build_summary_attempt_order(user)
+                if not attempt_order:
+                    logger.warning("Usuário %s sem canais disponíveis para resumo matinal.", user.id)
                     continue
 
-                message = get_user_summary_report(user, date_range='today')
-                if message:
-                    logger.info(f"Enviando resumo matinal para {user.name} ({len(message)} chars)")
-                    bot.send_message(chat_id, message)
-                    try:
-                        from src.intelligence.identity import get_best_company_id
-                        summary_company_id = get_best_company_id(user)
-                    except Exception:
-                        summary_company_id = None
+                try:
+                    from src.intelligence.identity import get_best_company_id
+                    summary_company_id = get_best_company_id(user)
+                except Exception:
+                    summary_company_id = None
+
+                delivered_channels = []
+                fallback_channels = []
+                attempted_channels = []
+                winning_channel = None
+
+                for index, channel in enumerate(attempt_order):
+                    attempted_channels.append(channel)
+                    recipient = _format_summary_recipient(user, channel)
+                    if not recipient:
+                        logger.warning(
+                            "Usuário %s sem destino configurado para o canal %s; resumo ignorado.",
+                            user.id,
+                            channel,
+                        )
+                        continue
+
+                    result = _send_summary_via_channel(user, date_range='today', channel=channel)
+                    if not result.get('success'):
+                        logger.warning(
+                            "Falha ao enviar resumo matinal para user=%s canal=%s erro=%s",
+                            user.id,
+                            channel,
+                            result.get('error'),
+                        )
+                        continue
+
+                    delivered_channels.append(channel)
+                    winning_channel = winning_channel or channel
+                    if channel not in preferred_channels:
+                        fallback_channels.append(channel)
+
+                    message = result.get('message') or ''
+                    logger.info(
+                        "Resumo matinal enviado para %s via %s (%s chars)",
+                        user.name,
+                        channel,
+                        len(message),
+                    )
 
                     if summary_company_id:
                         _log_summary_agent_message(
                             user=user,
                             company_id=summary_company_id,
-                            chat_id=chat_id,
+                            channel=channel,
+                            recipient=recipient,
                             message=message,
                             date_range='today',
+                            preferred_channels=preferred_channels,
+                            delivery_sequence=attempted_channels,
+                            fallback_used=channel not in preferred_channels,
+                            winner_channel=winning_channel or channel,
                         )
+
+                    should_continue = channel in preferred_channels
+                    if not should_continue and index >= len(preferred_channels):
+                        break
+
+                if not delivered_channels:
+                    logger.error(
+                        "Resumo matinal não entregue ao usuário %s. Preferidos=%s Disponíveis=%s",
+                        user.id,
+                        preferred_channels,
+                        attempt_order,
+                    )
+                elif fallback_channels:
+                    logger.info(
+                        "Fallback automático aplicado para user=%s. Preferidos=%s Tentativas=%s Entregues=%s Fallback=%s Vencedor=%s",
+                        user.id,
+                        preferred_channels,
+                        attempted_channels,
+                        delivered_channels,
+                        fallback_channels,
+                        winning_channel,
+                    )
+                else:
+                    logger.info(
+                        "Resumo matinal entregue sem fallback para user=%s. Preferidos=%s Tentativas=%s Vencedor=%s",
+                        user.id,
+                        preferred_channels,
+                        attempted_channels,
+                        winning_channel,
+                    )
             except Exception as e:
                 logger.error(f"Erro ao enviar resumo para usuário {user.id}: {e}")
 

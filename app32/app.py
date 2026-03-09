@@ -130,10 +130,13 @@ def create_app(config_name=None):
             table_names = set(inspector.get_table_names())
             if "users" in table_names:
                 user_columns = {col["name"] for col in inspector.get_columns("users")}
-                if "instagram" not in user_columns:
-                    with db.engine.begin() as conn:
+                with db.engine.begin() as conn:
+                    if "instagram" not in user_columns:
                         conn.execute(text("ALTER TABLE users ADD COLUMN instagram VARCHAR(100)"))
-                    print("DEBUG: users.instagram column added successfully.")
+                        print("DEBUG: users.instagram column added successfully.")
+                    if "summary_delivery_channels" not in user_columns:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN summary_delivery_channels VARCHAR(100) NOT NULL DEFAULT 'telegram'"))
+                        print("DEBUG: users.summary_delivery_channels column added successfully.")
             if {"users", "employees"}.issubset(table_names):
                 stats = _backfill_user_channel_contacts()
                 print(

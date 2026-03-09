@@ -1,5 +1,20 @@
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import Optional, List
+
+ALLOWED_SUMMARY_CHANNELS = {"telegram", "whatsapp", "email"}
+
+
+def _normalize_summary_channels(value):
+    if value is None:
+        return None
+    items = value if isinstance(value, list) else str(value).split(',')
+    normalized = []
+    for item in items:
+        channel = str(item).strip().lower()
+        if channel in ALLOWED_SUMMARY_CHANNELS and channel not in normalized:
+            normalized.append(channel)
+    return normalized or ["telegram"]
+
 
 class UserCreateSchema(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -10,7 +25,14 @@ class UserCreateSchema(BaseModel):
     whatsapp: Optional[str] = Field(None, max_length=20)
     telegram: Optional[str] = Field(None, max_length=50)
     instagram: Optional[str] = Field(None, max_length=100)
-    role: str = Field("user", pattern="^(admin|user|client)$")
+    summary_delivery_channels: Optional[List[str]] = None
+    role: str = Field("collaborator", pattern="^(admin|user|collaborator|consultant|client)$")
+
+    @field_validator('summary_delivery_channels', mode='before')
+    @classmethod
+    def validate_summary_delivery_channels(cls, value):
+        return _normalize_summary_channels(value)
+
 
 class UserUpdateSchema(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -19,8 +41,14 @@ class UserUpdateSchema(BaseModel):
     whatsapp: Optional[str] = Field(None, max_length=20)
     telegram: Optional[str] = Field(None, max_length=50)
     instagram: Optional[str] = Field(None, max_length=100)
-    role: Optional[str] = Field(None, pattern="^(admin|user|client)$")
+    summary_delivery_channels: Optional[List[str]] = None
+    role: Optional[str] = Field(None, pattern="^(admin|user|collaborator|consultant|client)$")
     is_active: Optional[bool] = None
+
+    @field_validator('summary_delivery_channels', mode='before')
+    @classmethod
+    def validate_summary_delivery_channels(cls, value):
+        return _normalize_summary_channels(value)
 
 class CompanyRegisterSchema(BaseModel):
     model_config = ConfigDict(extra='forbid')

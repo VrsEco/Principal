@@ -6,6 +6,23 @@ from sqlalchemy.orm import joinedload
 
 auth_bp = Blueprint('auth', __name__)
 
+SUMMARY_CHANNEL_OPTIONS = {'telegram', 'whatsapp', 'email'}
+
+def _normalize_summary_delivery_channels(raw_channels):
+    if raw_channels is None:
+        return None
+    if isinstance(raw_channels, str):
+        items = [item.strip().lower() for item in raw_channels.split(',')]
+    else:
+        items = [str(item).strip().lower() for item in (raw_channels or [])]
+
+    normalized = []
+    for item in items:
+        if item in SUMMARY_CHANNEL_OPTIONS and item not in normalized:
+            normalized.append(item)
+
+    return ','.join(normalized) if normalized else 'telegram'
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page"""
@@ -188,6 +205,10 @@ def profile():
         if 'instagram' in data:
             instagram = (data.get('instagram') or '').strip()
             current_user.instagram = instagram or None
+        if 'summary_delivery_channels' in data:
+            current_user.summary_delivery_channels = _normalize_summary_delivery_channels(
+                data.get('summary_delivery_channels')
+            )
         
         try:
             db.session.commit()

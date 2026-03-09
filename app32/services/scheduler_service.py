@@ -181,7 +181,7 @@ def setup_proactive_jobs(app):
         job_id="proactive_morning_summary",
         hour=8,
         minute=0,
-        name="Resumo Matinal Proativo (Telegram)",
+        name="Resumo Matinal Proativo (Canais Configurados)",
     )
 
     logger.info("✅ Jobs proativos configurados!")

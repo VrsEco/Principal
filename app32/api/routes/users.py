@@ -7,6 +7,23 @@ from utils.permissions import admin_required
 
 usuarios_bp = Blueprint('usuarios', __name__)
 
+def _serialize_summary_channels(channels):
+    if channels is None:
+        return 'telegram'
+    if isinstance(channels, str):
+        items = [item.strip().lower() for item in channels.split(',')]
+    else:
+        items = [str(item).strip().lower() for item in channels]
+    normalized = []
+    for item in items:
+        if item in {'telegram', 'whatsapp', 'email'} and item not in normalized:
+            normalized.append(item)
+    return ','.join(normalized) if normalized else 'telegram'
+
+
+def _summary_channels_list(raw_value):
+    return [item for item in _serialize_summary_channels(raw_value).split(',') if item]
+
 @usuarios_bp.route('/usuarios')
 @login_required
 def index():
@@ -18,8 +35,24 @@ def index():
     users = User.query.all()
     employees = Employee.query.all()
     companies = Company.query.all()
+    summary_channel_labels = {
+        'telegram': 'Telegram',
+        'whatsapp': 'WhatsApp',
+        'email': 'E-mail',
+    }
+    user_summary_channels = {
+        user.id: _summary_channels_list(getattr(user, 'summary_delivery_channels', None))
+        for user in users
+    }
     
-    return render_template('usuarios/index.html', users=users, employees=employees, companies=companies)
+    return render_template(
+        'usuarios/index.html',
+        users=users,
+        employees=employees,
+        companies=companies,
+        user_summary_channels=user_summary_channels,
+        summary_channel_labels=summary_channel_labels,
+    )
 
 @usuarios_bp.route('/usuarios/cadastrar')
 @login_required
@@ -96,6 +129,7 @@ def create_user():
             whatsapp=validated_data.whatsapp,
             telegram=validated_data.telegram,
             instagram=validated_data.instagram,
+            summary_delivery_channels=_serialize_summary_channels(validated_data.summary_delivery_channels),
         )
         user.set_password(validated_data.password)
         
@@ -137,6 +171,8 @@ def update_user(user_id):
         if validated_data.whatsapp is not None: user.whatsapp = validated_data.whatsapp
         if validated_data.telegram is not None: user.telegram = validated_data.telegram
         if validated_data.instagram is not None: user.instagram = validated_data.instagram
+        if validated_data.summary_delivery_channels is not None:
+            user.summary_delivery_channels = _serialize_summary_channels(validated_data.summary_delivery_channels)
         if validated_data.is_active is not None and current_user.role == 'admin': user.is_active = validated_data.is_active
         
         db.session.commit()

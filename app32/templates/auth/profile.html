@@ -92,6 +92,34 @@
         cursor: not-allowed;
     }
 
+    .channel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .channel-option {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.9rem 1rem;
+        border: 1px solid #dfe6ee;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+    .channel-option input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+    }
+
+    .form-help {
+        font-size: 0.88rem;
+        color: #64748b;
+        margin: 0;
+    }
+
     .btn-save {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -192,6 +220,26 @@
                     placeholder="Ex: @empresa ou 1784..." data-ref="11">
             </div>
 
+            {% set summary_channels = ((user.summary_delivery_channels if user and user.summary_delivery_channels else 'telegram').split(',')) %}
+            <div class="form-group">
+                <label>Canais do resumo diário (08:00)</label>
+                <div class="channel-grid">
+                    <label class="channel-option">
+                        <input type="checkbox" name="summary_delivery_channels" value="telegram" {% if 'telegram' in summary_channels %}checked{% endif %}>
+                        <span>Telegram</span>
+                    </label>
+                    <label class="channel-option">
+                        <input type="checkbox" name="summary_delivery_channels" value="whatsapp" {% if 'whatsapp' in summary_channels %}checked{% endif %}>
+                        <span>WhatsApp</span>
+                    </label>
+                    <label class="channel-option">
+                        <input type="checkbox" name="summary_delivery_channels" value="email" {% if 'email' in summary_channels %}checked{% endif %}>
+                        <span>E-mail</span>
+                    </label>
+                </div>
+                <p class="form-help">Marque um, dois ou todos os canais. Se nada for marcado, o sistema mantém Telegram como padrão.</p>
+            </div>
+
             {% if user and user.role == 'admin' %}
             <div class="form-group">
                 <label for="role">Perfil</label>
@@ -249,11 +297,15 @@
     document.getElementById('profileForm').addEventListener('submit', async function (e) {
         e.preventDefault();
 
+        const summaryDeliveryChannels = Array.from(document.querySelectorAll('input[name="summary_delivery_channels"]:checked'))
+            .map(input => input.value);
+
         const formData = {
             name: document.getElementById('name').value,
             whatsapp: document.getElementById('whatsapp').value,
             telegram: document.getElementById('telegram').value,
             instagram: document.getElementById('instagram').value,
+            summary_delivery_channels: summaryDeliveryChannels,
         {% if user and user.role == 'admin' %}
         role: document.getElementById('role').value,
             {% endif %}

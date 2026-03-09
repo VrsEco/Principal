@@ -4,6 +4,17 @@
 
 {% block page_title %}Configurações / Usuários{% endblock %}
 
+{% block header_actions %}
+<button type="button" class="btn btn-secondary filter-drawer-toggle" onclick="toggleUsersFilters()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        style="margin-right: 8px;">
+        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+    </svg>
+    Filtros
+    <span id="usersFiltersBadge" class="filter-count-badge" style="display:none;">0</span>
+</button>
+{% endblock %}
+
 {% block content %}
 <div style="max-width: 1100px; margin: 0 auto; padding-bottom: 5rem;">
     <!-- Header -->
@@ -12,7 +23,7 @@
             <h1 class="text-h1">Gestão de Usuários</h1>
             <p class="text-subtitle">Controle de acessos, perfis e vínculos com unidades de negócio.</p>
         </div>
-        <div style="display: flex; gap: 1rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
             <a href="{{ url_for('usuarios.vincular') }}" class="btn btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     style="margin-right: 8px;">
@@ -44,12 +55,19 @@
                             <th>Identidade</th>
                             <th>Perfil</th>
                             <th>Unidades Vinculadas</th>
+                            <th>Canais do Resumo</th>
                             <th style="text-align: right;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in users %}
-                        <tr>
+                        <tr class="user-row"
+                            data-name="{{ (user.name or '') | lower }}"
+                            data-email="{{ (user.email or '') | lower }}"
+                            data-role="{{ user.role or '' }}"
+                            data-status="{{ 'active' if user.is_active else 'inactive' }}"
+                            data-companies="{% for emp in employees if emp.user_id == user.id %}{% for company in companies if company.id == emp.company_id %}{{ (company.name or '') | lower }}|{% endfor %}{% endfor %}"
+                            data-channels="{{ ','.join(user_summary_channels.get(user.id, ['telegram'])) }}">
                             <td>
                                 <div style="display: flex; align-items: center; gap: 1rem;">
                                     <div
@@ -90,6 +108,16 @@
                                     {% endif %}
                                 </div>
                             </td>
+                            <td>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    {% set channels = user_summary_channels.get(user.id, ['telegram']) %}
+                                    {% for channel in channels %}
+                                    <span class="badge badge-channel">
+                                        {{ summary_channel_labels.get(channel, channel|title) }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </td>
                             <td style="text-align: right;">
                                 <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                                     <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-icon"
@@ -118,7 +146,7 @@
                         {% endfor %}
                         {% if not users %}
                         <tr>
-                            <td colspan="4" style="text-align: center; padding: 4rem; color: var(--text-tertiary);">
+                            <td colspan="5" style="text-align: center; padding: 4rem; color: var(--text-tertiary);">
                                 <div style="margin-bottom: 1rem;">
                                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="1.5" style="opacity: 0.5;">
@@ -139,6 +167,72 @@
         </div>
     </div>
 </div>
+
+<div id="usersFilterOverlay" class="filter-overlay" onclick="closeUsersFilters()"></div>
+<aside id="usersFilterDrawer" class="filter-drawer-right collapsed" aria-hidden="true">
+    <div class="filter-drawer-header">
+        <div>
+            <h3>Filtros de Usuários</h3>
+            <p>Refine a listagem com múltiplos critérios.</p>
+        </div>
+        <button type="button" class="btn btn-icon" onclick="closeUsersFilters()">✕</button>
+    </div>
+    <div class="filter-drawer-body">
+        <div class="filter-field">
+            <label>Busca</label>
+            <input type="text" id="filterUserSearch" class="form-control" placeholder="Nome ou e-mail">
+        </div>
+        <div class="filter-field">
+            <label>Perfil</label>
+            <select id="filterUserRole" class="form-control">
+                <option value="">Todos</option>
+                <option value="admin">Administrador</option>
+                <option value="collaborator">Colaborador</option>
+                <option value="consultant">Consultor (legado)</option>
+                <option value="client">Cliente</option>
+                <option value="user">Usuário (legado)</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Status</label>
+            <select id="filterUserStatus" class="form-control">
+                <option value="">Todos</option>
+                <option value="active">Ativo</option>
+                <option value="inactive">Inativo</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Unidade vinculada</label>
+            <select id="filterUserCompany" class="form-control">
+                <option value="">Todas</option>
+                {% for company in companies %}
+                <option value="{{ (company.name or '') | lower }}">{{ company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Canal do resumo</label>
+            <select id="filterUserChannel" class="form-control">
+                <option value="">Todos</option>
+                <option value="telegram">Telegram</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="email">E-mail</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label>Tipo de vínculo</label>
+            <select id="filterUserUnitLink" class="form-control">
+                <option value="">Todos</option>
+                <option value="with_units">Com unidades</option>
+                <option value="without_units">Sem unidades</option>
+            </select>
+        </div>
+        <div class="filter-actions-stack">
+            <button type="button" class="btn btn-primary" onclick="applyUsersFilters()">Aplicar filtros</button>
+            <button type="button" class="btn btn-secondary" onclick="clearUsersFilters()">Limpar filtros</button>
+        </div>
+    </div>
+</aside>
 
 <style>
     .table-v2 td {
@@ -166,11 +260,179 @@
         color: var(--text-secondary);
         border: 1px solid var(--border);
     }
+
+    .badge-channel {
+        background: rgba(59, 130, 246, 0.1);
+        color: #1d4ed8;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    .filter-count-badge {
+        margin-left: 8px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .filter-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.32);
+        z-index: 24998;
+        display: none;
+    }
+
+    .filter-drawer-right {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(380px, 92vw);
+        height: 100vh;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        box-shadow: -12px 0 32px rgba(15, 23, 42, 0.16);
+        z-index: 24999;
+        transition: transform 0.25s ease;
+        transform: translateX(0);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-drawer-right.collapsed {
+        transform: translateX(100%);
+    }
+
+    .filter-drawer-header {
+        padding: 1.25rem 1.25rem 1rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .filter-drawer-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .filter-drawer-header p {
+        margin: 0.35rem 0 0;
+        color: var(--text-tertiary);
+        font-size: 0.85rem;
+    }
+
+    .filter-drawer-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        overflow-y: auto;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    .filter-field label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .filter-actions-stack {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    const usersFilterState = {
+        search: '', role: '', status: '', company: '', channel: '', unitLink: ''
+    };
+
+    function toggleUsersFilters(forceOpen) {
+        const drawer = document.getElementById('usersFilterDrawer');
+        const overlay = document.getElementById('usersFilterOverlay');
+        const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : drawer.classList.contains('collapsed');
+        drawer.classList.toggle('collapsed', !shouldOpen);
+        drawer.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+        overlay.style.display = shouldOpen ? 'block' : 'none';
+    }
+
+    function closeUsersFilters() {
+        toggleUsersFilters(false);
+    }
+
+    function getActiveUsersFilterCount() {
+        return Object.values(usersFilterState).filter(Boolean).length;
+    }
+
+    function syncUsersFilterBadge() {
+        const badge = document.getElementById('usersFiltersBadge');
+        const count = getActiveUsersFilterCount();
+        badge.textContent = count;
+        badge.style.display = count ? 'inline-flex' : 'none';
+    }
+
+    function applyUsersFilters() {
+        usersFilterState.search = document.getElementById('filterUserSearch').value.trim().toLowerCase();
+        usersFilterState.role = document.getElementById('filterUserRole').value;
+        usersFilterState.status = document.getElementById('filterUserStatus').value;
+        usersFilterState.company = document.getElementById('filterUserCompany').value;
+        usersFilterState.channel = document.getElementById('filterUserChannel').value;
+        usersFilterState.unitLink = document.getElementById('filterUserUnitLink').value;
+
+        document.querySelectorAll('.user-row').forEach(row => {
+            const haystack = `${row.dataset.name} ${row.dataset.email}`;
+            const companyData = row.dataset.companies || '';
+            const channelData = row.dataset.channels || '';
+            const hasUnits = companyData.trim().length > 0;
+            const visible = (!usersFilterState.search || haystack.includes(usersFilterState.search))
+                && (!usersFilterState.role || row.dataset.role === usersFilterState.role)
+                && (!usersFilterState.status || row.dataset.status === usersFilterState.status)
+                && (!usersFilterState.company || companyData.includes(usersFilterState.company))
+                && (!usersFilterState.channel || channelData.split(',').includes(usersFilterState.channel))
+                && (!usersFilterState.unitLink
+                    || (usersFilterState.unitLink === 'with_units' && hasUnits)
+                    || (usersFilterState.unitLink === 'without_units' && !hasUnits));
+            row.style.display = visible ? '' : 'none';
+        });
+
+        syncUsersFilterBadge();
+    }
+
+    function clearUsersFilters() {
+        document.getElementById('filterUserSearch').value = '';
+        document.getElementById('filterUserRole').value = '';
+        document.getElementById('filterUserStatus').value = '';
+        document.getElementById('filterUserCompany').value = '';
+        document.getElementById('filterUserChannel').value = '';
+        document.getElementById('filterUserUnitLink').value = '';
+        usersFilterState.search = '';
+        usersFilterState.role = '';
+        usersFilterState.status = '';
+        usersFilterState.company = '';
+        usersFilterState.channel = '';
+        usersFilterState.unitLink = '';
+        applyUsersFilters();
+    }
+
     async function handleDeleteUser(userId, name) {
         if (!confirm(`Tem certeza que deseja desativar o usuário "${name}"?`)) return;
 

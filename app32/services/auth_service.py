@@ -27,6 +27,7 @@ class AuthService:
         whatsapp=None,
         telegram=None,
         instagram=None,
+        summary_delivery_channels=None,
     ):
         """
         Create a new user
@@ -182,6 +183,7 @@ class AuthService:
         whatsapp=None,
         telegram=None,
         instagram=None,
+        summary_delivery_channels=None,
     ):
         """
         Update user profile
@@ -203,6 +205,7 @@ class AuthService:
                 "whatsapp": getattr(user, "whatsapp", None),
                 "telegram": getattr(user, "telegram", None),
                 "instagram": getattr(user, "instagram", None),
+                "summary_delivery_channels": getattr(user, "summary_delivery_channels", None),
             }
 
             if name is not None:
@@ -217,6 +220,8 @@ class AuthService:
                 user.telegram = telegram
             if instagram is not None:
                 user.instagram = instagram
+            if summary_delivery_channels is not None:
+                user.summary_delivery_channels = summary_delivery_channels
 
             user.updated_at = datetime.utcnow()
             db.session.commit()
@@ -234,6 +239,7 @@ class AuthService:
                     "whatsapp": getattr(user, "whatsapp", None),
                     "telegram": getattr(user, "telegram", None),
                     "instagram": getattr(user, "instagram", None),
+                    "summary_delivery_channels": getattr(user, "summary_delivery_channels", None),
                 },
                 description=f"Perfil atualizado por {user.name}",
             )

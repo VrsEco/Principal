@@ -349,8 +349,6 @@ def _build_active_filters_summary(scope: str, filters: dict, filter_options: dic
             "open": "Em aberto",
             "completed": "Concluídas",
         }
-        if delivery_tags == ["open"]:
-            delivery_tags = []
         if not delivery_tags:
             delivery_value = "Nenhum status"
         else:
