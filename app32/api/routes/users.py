@@ -42,29 +42,35 @@ def _build_channel_test_message(user, channel: str, temporary_password: str | No
     password_hint = temporary_password.strip() if temporary_password else None
     password_menu = 'Perfil > Alterar Senha'
     password_line = (
-        f"A senha temporária é {password_hint}. Ao entrar, mude-a no menu {password_menu} ou me peça auxílio que faremos juntos."
+        f"Senha: {password_hint}"
         if password_hint
-        else f"Sua senha de acesso foi definida no cadastro. Ao entrar, atualize-a no menu {password_menu} ou me peça auxílio que faremos juntos."
+        else f"Senha: a definida no cadastro. Recomendamos atualizá-la no menu {password_menu} após o primeiro acesso."
     )
 
-    subject = f"Boas-vindas • {label} • Gestão Versus"
+    subject = 'Seja bem-vindo(a) à Versus Gestão Corporativa' if normalized == 'email' else f"Boas-vindas • {label} • Gestão Versus"
     body = (
         f"Olá, {display_name}!\n\n"
-        "Sou o Sapiens, seu assistente de IA, e te desejo boas-vindas ao APP da Versus de Gestão Corporativa.\n\n"
+        "Sou o Sapiens, assistente de IA da Versus Gestão Corporativa. Seja bem-vindo(a) à plataforma.\n\n"
+        f"Seu acesso foi vinculado à(s) seguinte(s) empresa(s): {company_names}.\n\n"
+        "Acesse: app.gestaoversus.com.br\n\n"
         "Dados de acesso:\n"
-        f"- Empresa(s): {company_names}\n"
         f"- Usuário: {login_name}\n"
         f"- {password_line}\n\n"
-        "Acesso e suporte:\n"
-        "- Sistema: app.gestaoversus.com.br\n"
-        "- Atendimento: você também pode conversar comigo por aqui\n"
-        "- Se precisar de informações e auxílio, conte comigo\n\n"
-        "Tenha um bom dia!\n"
-        ";)"
+        "Suporte:\n"
+        "Sempre que precisar de informações sobre atividades, instâncias, reuniões e outros recursos do sistema, "
+        "ou se quiser ajuda para utilizá-lo, conte comigo. Podemos conversar por aqui ou pelo chat da plataforma. "
+        "Estou à sua disposição.\n\n"
+        "Tenha um excelente dia!"
     )
     html_body = None
+    if normalized == 'email':
+        html_body = notification_hub.email.build_transactional_email_html(
+            subject=subject,
+            body=body,
+            title='Bem-vindo(a) à Versus Gestão Corporativa',
+            preheader='Seu acesso à plataforma Gestão Versus foi liberado.',
+        )
     return subject, body, html_body
-
 
 def _resolve_test_recipient(user, channel: str, override_recipient: str | None = None) -> str | None:
     normalized = str(channel or '').strip().lower()

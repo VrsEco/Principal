@@ -368,7 +368,7 @@ def test_test_user_channel_route_uses_generic_password_copy_when_not_informed(mo
     body = response.get_json()
     assert response.status_code == 200
     assert body['success'] is True
-    assert 'foi definida no cadastro' in fake_hub.calls[0]['message']
+    assert 'Recomendamos atualizá-la no menu Perfil > Alterar Senha após o primeiro acesso.' in fake_hub.calls[0]['message']
     assert 'abc123' not in fake_hub.calls[0]['message']
 
 
@@ -392,9 +392,10 @@ def test_build_channel_test_message_for_email_uses_official_email_wrapper(monkey
         'SenhaTemp@123',
     )
 
-    assert subject == 'Boas-vindas • E-mail • Gestão Versus'
-    assert 'Dados de acesso:' in body
-    assert '- Empresa(s): Empresa Alpha' in body
+    assert subject == 'Seja bem-vindo(a) à Versus Gestão Corporativa'
+    assert 'Seu acesso foi vinculado à(s) seguinte(s) empresa(s): Empresa Alpha.' in body
     assert '- Usuário: novo@empresa.com' in body
-    assert 'SenhaTemp@123' in body
-    assert html_body is None
+    assert '- Senha: SenhaTemp@123' in body
+    assert 'Estou à sua disposição.' in body
+    assert html_body is not None
+    assert 'Bem-vindo(a) à Versus Gestão Corporativa' in html_body

@@ -6,24 +6,32 @@
 {{ super() }}
 <style>
     .profile-container {
-        max-width: 800px;
+        max-width: 980px;
         margin: 2rem auto;
-        padding: 0 1rem;
+        padding: 0 1rem 3rem;
     }
 
     .page-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
         padding-bottom: 1rem;
-        border-bottom: 2px solid #e0e0e0;
+        border-bottom: 2px solid #e2e8f0;
     }
 
     .page-header h1 {
-        margin: 0;
-        color: #2c3e50;
+        margin: 0 0 0.5rem;
+        color: #1e293b;
         font-size: 2rem;
+    }
+
+    .page-subtitle {
+        font-size: 0.95rem;
+        color: #64748b;
+        margin: 0;
+        max-width: 560px;
     }
 
     .btn-back {
@@ -38,6 +46,7 @@
         font-weight: 600;
         text-decoration: none;
         transition: all 0.2s;
+        white-space: nowrap;
     }
 
     .btn-back:hover {
@@ -46,18 +55,75 @@
         text-decoration: none;
     }
 
-    .profile-card {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        margin-bottom: 2rem;
+    .info-banner {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1.5rem;
     }
 
-    .profile-form {
+    .info-tile {
+        background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+        border: 1px solid #dbeafe;
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
+    }
+
+    .info-tile strong {
+        display: block;
+        color: #1e3a8a;
+        font-size: 0.92rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .info-tile span {
+        color: #475569;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+
+    .profile-layout {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .profile-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+        border: 1px solid #e2e8f0;
+    }
+
+    .section-header {
+        margin-bottom: 1.25rem;
+    }
+
+    .section-title {
+        margin: 0 0 0.3rem;
+        color: #0f172a;
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+
+    .section-description {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+
+    .profile-form,
+    .password-form {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1.25rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
     }
 
     .form-group {
@@ -67,29 +133,40 @@
     }
 
     .form-group label {
-        font-weight: 600;
-        color: #2c3e50;
+        font-weight: 700;
+        color: #1e293b;
         font-size: 0.95rem;
     }
 
     .form-group input,
     .form-group select {
-        padding: 0.75rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: border-color 0.2s;
+        width: 100%;
+        padding: 0.82rem 0.9rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 0.98rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        background: #fff;
     }
 
     .form-group input:focus,
     .form-group select:focus {
         outline: none;
-        border-color: #667eea;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
     }
 
     .form-group input:disabled {
-        background: #f5f5f5;
+        background: #f8fafc;
+        color: #64748b;
         cursor: not-allowed;
+    }
+
+    .form-help {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin: 0;
+        line-height: 1.45;
     }
 
     .channel-grid {
@@ -103,9 +180,15 @@
         align-items: center;
         gap: 0.65rem;
         padding: 0.9rem 1rem;
-        border: 1px solid #dfe6ee;
-        border-radius: 10px;
+        border: 1px solid #dbe2ea;
+        border-radius: 12px;
         background: #f8fafc;
+        transition: border-color 0.2s, background 0.2s;
+    }
+
+    .channel-option:hover {
+        border-color: #94a3b8;
+        background: #f1f5f9;
     }
 
     .channel-option input {
@@ -114,64 +197,122 @@
         margin: 0;
     }
 
-    .form-help {
-        font-size: 0.88rem;
-        color: #64748b;
-        margin: 0;
+    .password-field {
+        position: relative;
+    }
+
+    .password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 0.75rem;
+        transform: translateY(-50%);
+        border: none;
+        background: transparent;
+        color: #475569;
+        cursor: pointer;
+        padding: 0.25rem;
+    }
+
+    .password-field input {
+        padding-right: 2.75rem;
     }
 
     .btn-save {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         color: white;
-        padding: 0.75rem 1.5rem;
+        padding: 0.8rem 1.5rem;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         cursor: pointer;
-        font-weight: 600;
-        font-size: 1rem;
+        font-weight: 700;
+        font-size: 0.98rem;
         transition: transform 0.2s, box-shadow 0.2s;
         align-self: flex-start;
     }
 
     .btn-save:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(79, 70, 229, 0.24);
     }
 
     .alert {
         padding: 1rem;
-        border-radius: 8px;
+        border-radius: 10px;
         margin-bottom: 1rem;
+        border: 1px solid transparent;
     }
 
     .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
+        background: #dcfce7;
+        color: #166534;
+        border-color: #bbf7d0;
     }
 
     .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fecaca;
     }
 
-    #alert-container {
-        margin-bottom: 1rem;
+    .card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        justify-content: space-between;
     }
 
-    .password-card {
-        background: white;
-        border-radius: 12px;
-        padding: 2rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        margin-bottom: 2rem;
+    .security-note {
+        font-size: 0.88rem;
+        color: #64748b;
+        margin: 0;
     }
 
-    .password-form {
+    .password-strength {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 0.45rem;
+        margin-top: 0.2rem;
+    }
+
+    .password-strength-bar {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .password-strength-fill {
+        height: 100%;
+        width: 0;
+        border-radius: 999px;
+        background: #cbd5e1;
+        transition: width 0.2s ease, background 0.2s ease;
+    }
+
+    .password-strength-text {
+        font-size: 0.84rem;
+        color: #64748b;
+        margin: 0;
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-back,
+        .btn-save {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .card-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
     }
 </style>
 {% endblock %}
@@ -181,119 +322,259 @@
     <div class="page-header">
         <div>
             <h1>👤 Meu Perfil</h1>
-            <a href="{{ url_for('main.dashboard') }}" class="btn-back" data-ref="06">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </a>
+            <p class="page-subtitle">Atualize seus dados básicos, preferências de comunicação e credenciais de acesso em um único lugar.</p>
+        </div>
+        <a href="{{ url_for('my_work.my_work') }}" class="btn-back" data-ref="06">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="info-banner">
+        <div class="info-tile">
+            <strong>Dados pessoais</strong>
+            <span>Altere seu nome e visualize o e-mail vinculado ao seu acesso.</span>
+        </div>
+        <div class="info-tile">
+            <strong>Comunicação</strong>
+            <span>Defina os canais usados pelo Sapiens para contato e resumos operacionais.</span>
+        </div>
+        <div class="info-tile">
+            <strong>Segurança</strong>
+            <span>Atualize sua senha sempre que necessário para manter a conta protegida.</span>
         </div>
     </div>
 
     <div id="alert-container"></div>
 
-    <div class="profile-card">
-        <form id="profileForm" class="profile-form">
-            <div class="form-group">
-                <label for="name">Nome</label>
-                <input type="text" id="name" name="name" value="{{ user.name if user else '' }}" required data-ref="02">
+    {% set summary_channels = ((user.summary_delivery_channels if user and user.summary_delivery_channels else 'telegram').split(',')) %}
+
+    <div class="profile-layout">
+        <div class="profile-card">
+            <div class="section-header">
+                <h2 class="section-title">Dados pessoais</h2>
+                <p class="section-description">Essas informações identificam seu usuário dentro da plataforma.</p>
             </div>
 
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" value="{{ user.email if user else '' }}" disabled
-                    data-ref="03">
-            </div>
+            <form id="profileForm" class="profile-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Nome</label>
+                        <input type="text" id="name" name="name" value="{{ user.name if user else '' }}" required data-ref="02">
+                        <p class="form-help">Use o nome que deve aparecer em tarefas, reuniões e registros internos.</p>
+                    </div>
 
-            <div class="form-group">
-                <label for="whatsapp">WhatsApp</label>
-                <input type="text" id="whatsapp" name="whatsapp" value="{{ user.whatsapp if user else '' }}"
-                    placeholder="Ex: 5571999999999" data-ref="09">
-            </div>
-
-            <div class="form-group">
-                <label for="telegram">Telegram ID</label>
-                <input type="text" id="telegram" name="telegram" value="{{ user.telegram if user else '' }}"
-                    placeholder="Ex: 123456789" data-ref="10">
-            </div>
-
-            <div class="form-group">
-                <label for="instagram">Instagram (ID ou @usuario)</label>
-                <input type="text" id="instagram" name="instagram" value="{{ user.instagram if user else '' }}"
-                    placeholder="Ex: @empresa ou 1784..." data-ref="11">
-            </div>
-
-            {% set summary_channels = ((user.summary_delivery_channels if user and user.summary_delivery_channels else 'telegram').split(',')) %}
-            <div class="form-group">
-                <label>Canais do resumo diário (08:00)</label>
-                <div class="channel-grid">
-                    <label class="channel-option">
-                        <input type="checkbox" name="summary_delivery_channels" value="telegram" {% if 'telegram' in summary_channels %}checked{% endif %}>
-                        <span>Telegram</span>
-                    </label>
-                    <label class="channel-option">
-                        <input type="checkbox" name="summary_delivery_channels" value="whatsapp" {% if 'whatsapp' in summary_channels %}checked{% endif %}>
-                        <span>WhatsApp</span>
-                    </label>
-                    <label class="channel-option">
-                        <input type="checkbox" name="summary_delivery_channels" value="email" {% if 'email' in summary_channels %}checked{% endif %}>
-                        <span>E-mail</span>
-                    </label>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" name="email" value="{{ user.email if user else '' }}" disabled data-ref="03">
+                        <p class="form-help">O e-mail é seu identificador de acesso e não pode ser alterado nesta tela.</p>
+                    </div>
                 </div>
-                <p class="form-help">Marque um, dois ou todos os canais. Se nada for marcado, o sistema mantém Telegram como padrão.</p>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="whatsapp">WhatsApp</label>
+                        <input type="text" id="whatsapp" name="whatsapp" value="{{ user.whatsapp if user else '' }}" placeholder="Ex.: 55 71 99999-9999" inputmode="numeric" data-ref="09">
+                        <p class="form-help">A máscara é visual. No envio, o sistema salva apenas os números com DDI e DDD.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telegram">Telegram ID</label>
+                        <input type="text" id="telegram" name="telegram" value="{{ user.telegram if user else '' }}" placeholder="Ex.: 123456789" inputmode="numeric" data-ref="10">
+                        <p class="form-help">Use o ID numérico do seu usuário no Telegram.</p>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="instagram">Instagram (ID ou @usuário)</label>
+                        <input type="text" id="instagram" name="instagram" value="{{ user.instagram if user else '' }}" placeholder="Ex.: @empresa ou 1784..." data-ref="11">
+                        <p class="form-help">Aceita @usuário ou identificador técnico do Instagram Business.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="role">Perfil</label>
+                        <input type="text" id="role" value="{% if user %}{{ 'Administrador' if user.role == 'admin' else 'Colaborador' if user.role in ['collaborator', 'consultant'] else 'Cliente' }}{% endif %}" disabled data-ref="04">
+                        <p class="form-help">O perfil de acesso é controlado pela administração do sistema.</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Canais do resumo diário (08:00)</label>
+                    <div class="channel-grid">
+                        <label class="channel-option">
+                            <input type="checkbox" name="summary_delivery_channels" value="telegram" {% if 'telegram' in summary_channels %}checked{% endif %}>
+                            <span>Telegram</span>
+                        </label>
+                        <label class="channel-option">
+                            <input type="checkbox" name="summary_delivery_channels" value="whatsapp" {% if 'whatsapp' in summary_channels %}checked{% endif %}>
+                            <span>WhatsApp</span>
+                        </label>
+                        <label class="channel-option">
+                            <input type="checkbox" name="summary_delivery_channels" value="email" {% if 'email' in summary_channels %}checked{% endif %}>
+                            <span>E-mail</span>
+                        </label>
+                    </div>
+                    <p class="form-help">Marque um ou mais canais. Se nenhum for selecionado, o sistema mantém Telegram como padrão.</p>
+                </div>
+
+                <div class="card-actions">
+                    <p class="security-note">As alterações salvas aqui passam a valer no seu próximo uso dos canais integrados.</p>
+                    <button type="submit" class="btn-save" data-ref="01">
+                        <i class="fas fa-save"></i> Salvar alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="profile-card">
+            <div class="section-header">
+                <h2 class="section-title">Segurança</h2>
+                <p class="section-description">Altere sua senha com segurança. Use uma combinação forte e de uso exclusivo.</p>
             </div>
 
-            {% if user and user.role == 'admin' %}
-            <div class="form-group">
-                <label for="role">Perfil</label>
-                <select id="role" name="role" data-ref="05">
-                    <option value="admin" {% if user and user.role=='admin' %}selected{% endif %}>Administrador</option>
-                    <option value="collaborator" {% if user and user.role in ['collaborator', 'consultant' ]
-                        %}selected{% endif %}>Colaborador</option>
-                    <option value="client" {% if user and user.role=='client' %}selected{% endif %}>Cliente</option>
-                </select>
-            </div>
-            {% else %}
-            <div class="form-group">
-                <label for="role">Perfil</label>
-                <input type="text" id="role"
-                    value="{% if user %}{{ 'Administrador' if user.role == 'admin' else 'Colaborador' if user.role in ['collaborator', 'consultant'] else 'Cliente' }}{% endif %}"
-                    disabled data-ref="04">
-            </div>
-            {% endif %}
+            <div id="password-alert-container"></div>
 
-            <button type="submit" class="btn-save" data-ref="01">
-                <i class="fas fa-save"></i> Salvar Alterações
-            </button>
-        </form>
-    </div>
-    <div class="password-card">
-        <h2>Alterar Senha</h2>
-        <div id="password-alert-container"></div>
-        <form id="changePasswordForm" class="password-form">
-            <div class="form-group">
-                <label for="currentPassword">Senha Atual</label>
-                <input type="password" id="currentPassword" name="old_password" required
-                    autocomplete="current-password">
-            </div>
+            <form id="changePasswordForm" class="password-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="currentPassword">Senha atual</label>
+                        <div class="password-field">
+                            <input type="password" id="currentPassword" name="old_password" required autocomplete="current-password">
+                            <button type="button" class="password-toggle" data-target="currentPassword" aria-label="Mostrar ou ocultar senha atual">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
 
-            <div class="form-group">
-                <label for="newPassword">Nova Senha</label>
-                <input type="password" id="newPassword" name="new_password" required minlength="6"
-                    autocomplete="new-password">
-            </div>
+                    <div class="form-group">
+                        <label for="newPassword">Nova senha</label>
+                        <div class="password-field">
+                            <input type="password" id="newPassword" name="new_password" required minlength="6" autocomplete="new-password">
+                            <button type="button" class="password-toggle" data-target="newPassword" aria-label="Mostrar ou ocultar nova senha">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength">
+                            <div class="password-strength-bar">
+                                <div id="passwordStrengthFill" class="password-strength-fill"></div>
+                            </div>
+                            <p id="passwordStrengthText" class="password-strength-text">Força da senha: informe uma nova senha.</p>
+                        </div>
+                        <p class="form-help">Use pelo menos 6 caracteres. Idealmente combine letras maiúsculas, minúsculas, números e símbolos.</p>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="confirmPassword">Confirmar Nova Senha</label>
-                <input type="password" id="confirmPassword" name="confirm_password" required minlength="6"
-                    autocomplete="new-password">
-            </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar nova senha</label>
+                    <div class="password-field">
+                        <input type="password" id="confirmPassword" name="confirm_password" required minlength="6" autocomplete="new-password">
+                        <button type="button" class="password-toggle" data-target="confirmPassword" aria-label="Mostrar ou ocultar confirmação de senha">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <button type="submit" class="btn-save" data-ref="08">
-                <i class="fas fa-key"></i> Alterar Senha
-            </button>
-        </form>
+                <div class="card-actions">
+                    <p class="security-note">Após alterar sua senha, use a nova credencial em todos os seus acessos.</p>
+                    <button type="submit" class="btn-save" data-ref="08">
+                        <i class="fas fa-key"></i> Alterar senha
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
+    function showAlert(containerId, success, message) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = `
+            <div class="alert ${success ? 'alert-success' : 'alert-error'}">
+                <i class="fas ${success ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}
+            </div>
+        `;
+    }
+
+    function normalizeDigits(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
+
+    function formatWhatsapp(value) {
+        const digits = normalizeDigits(value).slice(0, 13);
+        if (!digits) return '';
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 4) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+        if (digits.length <= 9) return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4)}`;
+        return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 9)}-${digits.slice(9)}`;
+    }
+
+    function getPasswordStrengthMeta(password) {
+        const value = String(password || '');
+        if (!value) {
+            return { score: 0, width: '0%', label: 'Força da senha: informe uma nova senha.', color: '#cbd5e1' };
+        }
+
+        let score = 0;
+        if (value.length >= 6) score += 1;
+        if (value.length >= 10) score += 1;
+        if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score += 1;
+        if (/\d/.test(value)) score += 1;
+        if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+        if (score <= 1) return { score, width: '20%', label: 'Força da senha: fraca', color: '#ef4444' };
+        if (score === 2) return { score, width: '40%', label: 'Força da senha: regular', color: '#f59e0b' };
+        if (score === 3) return { score, width: '60%', label: 'Força da senha: boa', color: '#eab308' };
+        if (score === 4) return { score, width: '80%', label: 'Força da senha: muito boa', color: '#22c55e' };
+        return { score, width: '100%', label: 'Força da senha: forte', color: '#16a34a' };
+    }
+
+    const whatsappInput = document.getElementById('whatsapp');
+    if (whatsappInput) {
+        whatsappInput.value = formatWhatsapp(whatsappInput.value);
+        whatsappInput.addEventListener('input', () => {
+            whatsappInput.value = formatWhatsapp(whatsappInput.value);
+        });
+    }
+
+    const telegramInput = document.getElementById('telegram');
+    if (telegramInput) {
+        telegramInput.addEventListener('input', () => {
+            telegramInput.value = normalizeDigits(telegramInput.value);
+        });
+    }
+
+    const passwordStrengthFill = document.getElementById('passwordStrengthFill');
+    const passwordStrengthText = document.getElementById('passwordStrengthText');
+    const newPasswordInput = document.getElementById('newPassword');
+
+    function updatePasswordStrength() {
+        if (!passwordStrengthFill || !passwordStrengthText || !newPasswordInput) return;
+        const meta = getPasswordStrengthMeta(newPasswordInput.value);
+        passwordStrengthFill.style.width = meta.width;
+        passwordStrengthFill.style.background = meta.color;
+        passwordStrengthText.textContent = meta.label;
+    }
+
+    if (newPasswordInput) {
+        newPasswordInput.addEventListener('input', updatePasswordStrength);
+        updatePasswordStrength();
+    }
+
+    document.querySelectorAll('.password-toggle').forEach((button) => {
+        button.addEventListener('click', () => {
+            const targetId = button.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = button.querySelector('i');
+            if (!input || !icon) return;
+
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !isPassword);
+            icon.classList.toggle('fa-eye-slash', isPassword);
+        });
+    });
+
     document.getElementById('profileForm').addEventListener('submit', async function (e) {
         e.preventDefault();
 
@@ -301,62 +582,39 @@
             .map(input => input.value);
 
         const formData = {
-            name: document.getElementById('name').value,
-            whatsapp: document.getElementById('whatsapp').value,
-            telegram: document.getElementById('telegram').value,
-            instagram: document.getElementById('instagram').value,
+            name: document.getElementById('name').value.trim(),
+            whatsapp: normalizeDigits(document.getElementById('whatsapp').value),
+            telegram: normalizeDigits(document.getElementById('telegram').value),
+            instagram: document.getElementById('instagram').value.trim(),
             summary_delivery_channels: summaryDeliveryChannels,
-        {% if user and user.role == 'admin' %}
-        role: document.getElementById('role').value,
-            {% endif %}
-    };
+        };
 
-    try {
-        const response = await fetch('/auth/profile', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
+        try {
+            const response = await fetch('{{ url_for('auth.profile') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
 
-        const data = await response.json();
+            const data = await response.json();
+            showAlert('alert-container', data.success, data.message || (data.success ? 'Perfil atualizado com sucesso!' : 'Erro ao atualizar perfil.'));
 
-        const alertContainer = document.getElementById('alert-container');
-        if (data.success) {
-            alertContainer.innerHTML = `
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i> ${data.message || 'Perfil atualizado com sucesso!'}
-                </div>
-            `;
-            // Remover alerta após 3 segundos
-            setTimeout(() => {
-                alertContainer.innerHTML = '';
-            }, 3000);
-        } else {
-            alertContainer.innerHTML = `
-                <div class="alert alert-error">
-                    <i class="fas fa-exclamation-circle"></i> ${data.message || 'Erro ao atualizar perfil'}
-                </div>
-            `;
+            if (data.success) {
+                setTimeout(() => {
+                    document.getElementById('alert-container').innerHTML = '';
+                }, 3000);
+            }
+        } catch (error) {
+            showAlert('alert-container', false, `Erro ao atualizar perfil: ${error.message}`);
         }
-    } catch (error) {
-        const alertContainer = document.getElementById('alert-container');
-        alertContainer.innerHTML = `
-            <div class="alert alert-error">
-                <i class="fas fa-exclamation-circle"></i> Erro ao atualizar perfil: ${error.message}
-            </div>
-        `;
-    }
-});
+    });
 
     const changePasswordForm = document.getElementById('changePasswordForm');
     if (changePasswordForm) {
         changePasswordForm.addEventListener('submit', async function (e) {
             e.preventDefault();
-
-            const alertContainer = document.getElementById('password-alert-container');
-            alertContainer.innerHTML = '';
 
             const payload = {
                 old_password: document.getElementById('currentPassword').value,
@@ -364,8 +622,13 @@
                 confirm_password: document.getElementById('confirmPassword').value
             };
 
+            if (payload.new_password !== payload.confirm_password) {
+                showAlert('password-alert-container', false, 'Nova senha e confirmação não coincidem.');
+                return;
+            }
+
             try {
-                const response = await fetch('/auth/change-password', {
+                const response = await fetch('{{ url_for('auth.change_password') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -374,25 +637,23 @@
                 });
 
                 const data = await response.json();
-
-                alertContainer.innerHTML = `
-                <div class="alert ${data.success ? 'alert-success' : 'alert-error'}">
-                    <i class="fas ${data.success ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${data.message || (data.success ? 'Senha alterada com sucesso!' : 'Erro ao alterar senha.')}
-                </div>
-            `;
+                showAlert('password-alert-container', data.success, data.message || (data.success ? 'Senha alterada com sucesso!' : 'Erro ao alterar senha.'));
 
                 if (data.success) {
                     changePasswordForm.reset();
+                    document.querySelectorAll('.password-field input').forEach((input) => {
+                        input.type = 'password';
+                    });
+                    document.querySelectorAll('.password-toggle i').forEach((icon) => {
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    });
                     setTimeout(() => {
-                        alertContainer.innerHTML = '';
+                        document.getElementById('password-alert-container').innerHTML = '';
                     }, 4000);
                 }
             } catch (error) {
-                alertContainer.innerHTML = `
-                <div class="alert alert-error">
-                    <i class="fas fa-exclamation-circle"></i> Erro ao alterar senha: ${error.message}
-                </div>
-            `;
+                showAlert('password-alert-container', false, `Erro ao alterar senha: ${error.message}`);
             }
         });
     }

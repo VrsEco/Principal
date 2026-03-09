@@ -108,3 +108,34 @@ class UserChannelTestSchema(BaseModel):
             return None
         normalized = str(value).strip()
         return normalized or None
+
+
+class UserProfileUpdateSchema(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    name: str = Field(..., min_length=2, max_length=100)
+    whatsapp: Optional[str] = Field(None, max_length=20)
+    telegram: Optional[str] = Field(None, max_length=50)
+    instagram: Optional[str] = Field(None, max_length=100)
+    summary_delivery_channels: Optional[List[str]] = None
+
+    @field_validator('summary_delivery_channels', mode='before')
+    @classmethod
+    def validate_summary_delivery_channels(cls, value):
+        return _normalize_summary_channels(value)
+
+    @field_validator('whatsapp', 'telegram', 'instagram', mode='before')
+    @classmethod
+    def normalize_optional_text(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+
+class UserPasswordChangeSchema(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    old_password: str = Field(..., min_length=1, max_length=255)
+    new_password: str = Field(..., min_length=6, max_length=255)
+    confirm_password: str = Field(..., min_length=6, max_length=255)

@@ -1,8 +1,11 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, login_required, current_user
+from pydantic import ValidationError
 from models import User, Employee, Company, ProjectTask, ProcessInstance, Project
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm import joinedload
+from services.auth_service import auth_service
+from schemas.user_pydantic import UserProfileUpdateSchema, UserPasswordChangeSchema
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -181,43 +184,68 @@ def portal():
 
     return render_template('auth/portal.html', companies=companies, urgencies=activities, stats=stats)
 
+@auth_bp.route('/auth/profile', methods=['GET', 'POST'])
 @auth_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    """User profile page"""
-    from models import db
-    if request.method == 'POST':
-        data = request.get_json(silent=True) or {}
-        name = (data.get('name') or '').strip()
-        
-        if not name:
-            return jsonify({"success": False, "message": "Nome é obrigatório"}), 400
-            
-        current_user.name = name
-        # Atualiza canais somente quando informados no payload
-        # para evitar apagar valores existentes por envio parcial.
-        if 'whatsapp' in data:
-            whatsapp = (data.get('whatsapp') or '').strip()
-            current_user.whatsapp = whatsapp or None
-        if 'telegram' in data:
-            telegram = (data.get('telegram') or '').strip()
-            current_user.telegram = telegram or None
-        if 'instagram' in data:
-            instagram = (data.get('instagram') or '').strip()
-            current_user.instagram = instagram or None
-        if 'summary_delivery_channels' in data:
-            current_user.summary_delivery_channels = _normalize_summary_delivery_channels(
-                data.get('summary_delivery_channels')
-            )
-        
-        try:
-            db.session.commit()
-            return jsonify({"success": True, "message": "Perfil atualizado com sucesso!"})
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"success": False, "message": f"Erro ao salvar: {str(e)}"}), 500
-            
-    return render_template('auth/profile.html', user=current_user)
+    """Página de autoatendimento do usuário para dados básicos."""
+    if request.method == 'GET':
+        return render_template('auth/profile.html', user=current_user)
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        validated = UserProfileUpdateSchema(**payload)
+        success = auth_service.update_user_profile(
+            current_user,
+            name=validated.name.strip(),
+            whatsapp=validated.whatsapp,
+            telegram=validated.telegram,
+            instagram=validated.instagram,
+            summary_delivery_channels=_normalize_summary_delivery_channels(validated.summary_delivery_channels),
+        )
+        if not success:
+            return jsonify({"success": False, "message": "Falha ao atualizar perfil"}), 400
+
+        return jsonify({
+            "success": True,
+            "message": "Perfil atualizado com sucesso!",
+            "user": current_user.to_dict(),
+        })
+    except ValidationError as exc:
+        first_error = exc.errors()[0] if exc.errors() else {}
+        message = first_error.get('msg') or 'Dados inválidos para atualização do perfil'
+        return jsonify({"success": False, "message": message}), 400
+    except Exception as exc:
+        return jsonify({"success": False, "message": f"Erro ao salvar: {str(exc)}"}), 500
+
+
+@auth_bp.route('/auth/change-password', methods=['POST'])
+@auth_bp.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """Permite ao próprio usuário alterar sua senha."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        validated = UserPasswordChangeSchema(**payload)
+
+        if validated.new_password != validated.confirm_password:
+            return jsonify({"success": False, "message": "Nova senha e confirmação não coincidem"}), 400
+
+        success = auth_service.change_password(
+            current_user,
+            validated.old_password,
+            validated.new_password,
+        )
+        if not success:
+            return jsonify({"success": False, "message": "Senha atual incorreta"}), 400
+
+        return jsonify({"success": True, "message": "Senha alterada com sucesso"})
+    except ValidationError as exc:
+        first_error = exc.errors()[0] if exc.errors() else {}
+        message = first_error.get('msg') or 'Dados inválidos para alteração de senha'
+        return jsonify({"success": False, "message": message}), 400
+    except Exception as exc:
+        return jsonify({"success": False, "message": f"Erro ao alterar senha: {str(exc)}"}), 500
 
 @auth_bp.route('/logout')
 @login_required

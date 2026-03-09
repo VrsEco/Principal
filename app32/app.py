@@ -230,6 +230,8 @@ def create_app(config_name=None):
             # Endpoints allowed without selecting a company
             allowed_post_login = [
                 'auth.portal',
+                'auth.profile',
+                'auth.change_password',
                 'auth.logout',
                 'static',
                 'dev.seed_demo',

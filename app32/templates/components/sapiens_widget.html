@@ -452,7 +452,7 @@
 
         addWelcomeMessage() {
             const content = this.activeContact === 'sapiens'
-                ? "Olá! Sou o Sapiens. Como posso auxiliar na gestão da sua empresa hoje?"
+                ? "Olá! Sou o Sapiens, assistente de IA da Versus Gestão Corporativa. Como posso ajudar você hoje?"
                 : "Squad de Engenharia a postos. Algo parou de funcionar ou precisa de melhoria?";
             this.appendMessage(content, 'assistant', this.activeContact === 'sapiens' ? 'sapiens' : 'engineering_squad');
         },
