@@ -165,6 +165,66 @@
         flex-wrap: wrap;
     }
 
+    .capacity-status-ok { border-color: rgba(16, 185, 129, 0.35); }
+    .capacity-status-warning { border-color: rgba(245, 158, 11, 0.45); }
+    .capacity-status-danger { border-color: rgba(239, 68, 68, 0.45); }
+
+    .capacity-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .capacity-indicator::before {
+        content: '';
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        display: inline-block;
+    }
+
+    .capacity-indicator.ok::before { background: #10b981; }
+    .capacity-indicator.warning::before { background: #f59e0b; }
+    .capacity-indicator.danger::before { background: #ef4444; }
+
+    .capacity-stat-ok {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.16));
+        border-color: rgba(16, 185, 129, 0.32);
+    }
+
+    .capacity-stat-warning {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.16));
+        border-color: rgba(245, 158, 11, 0.32);
+    }
+
+    .capacity-stat-danger {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.16));
+        border-color: rgba(239, 68, 68, 0.32);
+    }
+
+    .modal-filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: end;
+        margin-bottom: 8px;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface-secondary);
+    }
+
+    .modal-filter-field {
+        display: grid;
+        gap: 6px;
+        min-width: 240px;
+        flex: 1;
+    }
+
     /* Filters (Moved to Sidebar Right in base layout if possible, but keeping inline for logic consistency as per request) */
     /* Assuming filters are inline for this specific page based on "mesmas funções" */
 
@@ -409,7 +469,20 @@
         </select>
     </div>
 
-    <div style="margin-top: 2rem;">
+    <div class="filter-group">
+        <label class="filter-label">Início do período</label>
+        <input type="date" id="filterStartDate" class="filter-input">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Fim do período</label>
+        <input type="date" id="filterEndDate" class="filter-input">
+    </div>
+
+    <div style="display: grid; gap: 0.75rem; margin-top: 2rem;">
+        <button class="btn btn-primary w-100" onclick="loadEfficiencyData()">
+            Atualizar Período
+        </button>
         <button class="btn btn-secondary w-100" onclick="clearAllFilters()">
             Limpar Filtros
         </button>
@@ -469,6 +542,21 @@
             <div class="stat-detail">
                 Global da Empresa
             </div>
+        </div>
+        <div class="stat-card" id="statContractedHoursCard">
+            <div class="stat-label">Horas Contratadas</div>
+            <div class="stat-value" id="statContractedHours">0h</div>
+            <div class="stat-detail">Período selecionado</div>
+        </div>
+        <div class="stat-card" id="statWorkedHoursCard">
+            <div class="stat-label">Horas Realizadas</div>
+            <div class="stat-value" id="statWorkedHours">0h</div>
+            <div class="stat-detail">Apontadas em projetos e processos</div>
+        </div>
+        <div class="stat-card" id="statFreeHoursCard">
+            <div class="stat-label">Capacidade Livre</div>
+            <div class="stat-value" id="statFreeHours">0h</div>
+            <div class="stat-detail" id="statUtilizationHours">Ocupação 0%</div>
         </div>
     </div>
 
@@ -561,6 +649,15 @@
             </button>
         </div>
         <div class="detail-modal-body">
+            <div class="modal-filter-bar">
+                <div class="modal-filter-field">
+                    <label class="filter-label">Filtrar colaborador no modal</label>
+                    <input type="text" id="modalEmployeeFilter" class="filter-input" placeholder="Digite o nome do colaborador...">
+                </div>
+                <div>
+                    <button class="btn btn-secondary" type="button" onclick="clearModalFilters()">Limpar filtro do modal</button>
+                </div>
+            </div>
             <div class="detail-section">
                 <div class="detail-section-title">Entregas de Projetos</div>
                 <div id="projectDetailWrapper" class="detail-table-container"></div>
@@ -568,6 +665,14 @@
             <div class="detail-section">
                 <div class="detail-section-title">Entregas de Processos</div>
                 <div id="processDetailWrapper" class="detail-table-container"></div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-section-title">Horas de Projetos</div>
+                <div id="projectHoursDetailWrapper" class="detail-table-container"></div>
+            </div>
+            <div class="detail-section">
+                <div class="detail-section-title">Horas de Processos</div>
+                <div id="processHoursDetailWrapper" class="detail-table-container"></div>
             </div>
             <div class="detail-section">
                 <div class="detail-section-title">Ocorrências</div>
@@ -591,6 +696,9 @@
     function formatScore(value) {
         return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
+    function formatHours(value) {
+        return `${formatScore(value)}h`;
+    }
     function formatDate(value) {
         if (!value) return '—';
         const d = new Date(value);
@@ -601,16 +709,73 @@
         const d = new Date(value);
         return isNaN(d) ? value : `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
     }
+    function getCapacityStatus(utilizationPercent) {
+        const value = Number(utilizationPercent || 0);
+        if (value > 90) return { key: 'danger', label: 'Sobrecarregado' };
+        if (value >= 80 && value <= 90) return { key: 'ok', label: 'Ideal' };
+        return { key: 'warning', label: 'Ocioso' };
+    }
+
+    function filterModalRecords(records) {
+        const filterValue = (document.getElementById('modalEmployeeFilter')?.value || '').trim().toLowerCase();
+        if (!filterValue) return records;
+        return records.filter(record => (record.employee_name || '').toLowerCase().includes(filterValue));
+    }
+
+    function clearModalFilters() {
+        const input = document.getElementById('modalEmployeeFilter');
+        if (input) input.value = '';
+        if (document.getElementById('detailModal')?.classList.contains('is-open')) {
+            populateDetailModal();
+        }
+    }
 
     // Logic
+    function formatDateInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function getCurrentWeekRange() {
+        const now = new Date();
+        const day = now.getDay();
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        const start = new Date(now);
+        start.setDate(now.getDate() + diffToMonday);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return {
+            start: formatDateInput(start),
+            end: formatDateInput(end),
+        };
+    }
+
+    function ensurePeriodFilters() {
+        const startInput = document.getElementById('filterStartDate');
+        const endInput = document.getElementById('filterEndDate');
+        if (startInput.value && endInput.value) return;
+        const currentWeek = getCurrentWeekRange();
+        startInput.value = startInput.value || currentWeek.start;
+        endInput.value = endInput.value || currentWeek.end;
+    }
+
     async function loadEfficiencyData() {
         try {
-            const res = await fetch(`/api/companies/${companyId}/efficiency/collaborators`);
+            ensurePeriodFilters();
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            const params = new URLSearchParams();
+            if (startDate) params.set('start_date', startDate);
+            if (endDate) params.set('end_date', endDate);
+            const queryString = params.toString();
+            const url = `/api/companies/${companyId}/efficiency/collaborators${queryString ? `?${queryString}` : ''}`;
+            const res = await fetch(url);
             if (!res.ok) throw new Error(await res.text());
             allData = await res.json();
             filteredData = allData;
-            renderCollaborators();
-            updateStats();
+            applyFilters();
         } catch (e) {
             console.error(e);
             document.getElementById('collaboratorsGrid').innerHTML = `<div class="empty-state">Erro ao carregar dados: ${e.message}</div>`;
@@ -629,10 +794,12 @@
             const occurrenceTotal = (c.positive_occurrences?.score || 0) + (c.negative_occurrences?.score || 0);
             const totalActual = deliveryTotal + occurrenceTotal;
             const totalPotential = (c.delivery_scores?.overall?.potential || 0);
-            const totalAssigned = (c.delivery_scores?.overall?.assigned || 0);
+            const periodHours = c.period_hours || {};
+            const capacityStatus = getCapacityStatus(periodHours.utilization_percent);
+            const freeCapacityClass = (periodHours.free_capacity || 0) < 0 ? 'color: var(--danger);' : 'color: var(--success);';
 
             return `
-            <div class="collaborator-card">
+            <div class="collaborator-card capacity-status-${capacityStatus.key}">
                 <div class="collaborator-header">
                     <div class="collaborator-info">
                         <h3><span class="user-avatar-mini" style="width:24px; height:24px; font-size: 0.6rem;">${c.employee_name.substring(0, 2).toUpperCase()}</span> ${c.employee_name}</h3>
@@ -641,6 +808,7 @@
                     <div class="total-score-badge">
                         <span>Total Geral / Máx</span>
                         <strong>${formatScore(totalActual)} / ${formatScore(totalPotential)}</strong>
+                        <div class="capacity-indicator ${capacityStatus.key}" style="margin-top: 8px; justify-content: flex-end;">${capacityStatus.label}</div>
                     </div>
                 </div>
                 
@@ -657,9 +825,26 @@
                         <span>Ocorrências</span>
                         <strong>${formatScore(occurrenceTotal)}</strong>
                     </div>
+                    <div class="score-card-row">
+                        <span>Horas contratadas no período</span>
+                        <strong>${formatHours(periodHours.contracted || 0)}</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Horas realizadas efetivamente</span>
+                        <strong>${formatHours(periodHours.worked_total || 0)}</strong>
+                    </div>
+                    <div class="score-card-row">
+                        <span>Capacidade operacional livre</span>
+                        <strong style="${freeCapacityClass}">${formatHours(periodHours.free_capacity || 0)}</strong>
+                    </div>
                 </div>
 
-                
+                <div class="score-card-detail">
+                    <span class="score-chip neutral">Projetos: ${formatHours(periodHours.worked_project || 0)}</span>
+                    <span class="score-chip neutral">Processos: ${formatHours(periodHours.worked_process || 0)}</span>
+                    <span class="score-chip ${(periodHours.utilization_percent || 0) > 100 ? 'negative' : 'positive'}">Ocupação: ${formatScore(periodHours.utilization_percent || 0)}%</span>
+                </div>
+
                 <div style="display: flex; gap: 8px; margin-top: auto;">
                     <div class="stat-detail" title="Concluídas no Prazo">
                         <span style="color: var(--success);">●</span> ${c.completed.on_time}
@@ -703,13 +888,18 @@
             acc.projPotential += (d.delivery_scores?.project?.potential || 0);
             acc.projAssigned += (d.delivery_scores?.project?.assigned || 0);
 
+            acc.contractedHours += (d.period_hours?.contracted || 0);
+            acc.workedHours += (d.period_hours?.worked_total || 0);
+            acc.freeHours += (d.period_hours?.free_capacity || 0);
+
             return acc;
         }, {
             inProgress: 0, inProgressOnTime: 0, inProgressLate: 0,
             completed: 0, completedOnTime: 0, completedLate: 0,
             occPos: 0, occNeg: 0, occPosCount: 0, occNegCount: 0,
             procPos: 0, procNeg: 0, procTotal: 0, procCount: 0, procPotential: 0, procAssigned: 0,
-            projPos: 0, projNeg: 0, projTotal: 0, projCount: 0, projPotential: 0, projAssigned: 0
+            projPos: 0, projNeg: 0, projTotal: 0, projCount: 0, projPotential: 0, projAssigned: 0,
+            contractedHours: 0, workedHours: 0, freeHours: 0
         });
 
         document.getElementById('statInProgress').textContent = totals.inProgress;
@@ -743,6 +933,18 @@
         document.getElementById('scoreProjectTotal').textContent = `${formatScore(totals.projTotal)} / ${formatScore(totals.projPotential)}`;
         document.getElementById('scoreProjectCount').textContent = `${totals.projCount} entregues (Max total: ${formatScore(totals.projAssigned)})`;
 
+        const utilization = totals.contractedHours > 0 ? (totals.workedHours / totals.contractedHours) * 100 : 0;
+        const capacityStatus = getCapacityStatus(utilization);
+
+        document.getElementById('statContractedHours').textContent = formatHours(totals.contractedHours);
+        document.getElementById('statWorkedHours').textContent = formatHours(totals.workedHours);
+        document.getElementById('statFreeHours').textContent = formatHours(totals.freeHours);
+        document.getElementById('statUtilizationHours').textContent = `Ocupação ${formatScore(utilization)}% · ${capacityStatus.label}`;
+        document.getElementById('statUtilizationHours').className = `stat-detail capacity-indicator ${capacityStatus.key}`;
+        document.getElementById('statWorkedHoursCard').className = `stat-card capacity-stat-${capacityStatus.key}`;
+        document.getElementById('statFreeHoursCard').className = `stat-card capacity-stat-${capacityStatus.key}`;
+        document.getElementById('statContractedHoursCard').className = 'stat-card';
+
     }
 
     function applyFilters() {
@@ -767,7 +969,10 @@
     function clearAllFilters() {
         document.getElementById('searchInput').value = '';
         document.getElementById('filterActivity').value = '';
-        applyFilters();
+        const currentWeek = getCurrentWeekRange();
+        document.getElementById('filterStartDate').value = currentWeek.start;
+        document.getElementById('filterEndDate').value = currentWeek.end;
+        loadEfficiencyData();
     }
 
     // Modal logic
@@ -783,17 +988,27 @@
         // Collect all records from filtered data
         const projects = [];
         const processes = [];
+        const projectHours = [];
+        const processHours = [];
         const occurrences = [];
 
         filteredData.forEach(c => {
             if (c.delivery_records?.project) projects.push(...c.delivery_records.project.map(r => ({ ...r, employee_name: c.employee_name })));
             if (c.delivery_records?.process) processes.push(...c.delivery_records.process.map(r => ({ ...r, employee_name: c.employee_name })));
+            if (c.period_hours?.details?.project) projectHours.push(...c.period_hours.details.project.map(r => ({ ...r, employee_name: c.employee_name })));
+            if (c.period_hours?.details?.process) processHours.push(...c.period_hours.details.process.map(r => ({ ...r, employee_name: c.employee_name })));
 
             if (c.occurrence_records?.positive) occurrences.push(...c.occurrence_records.positive.map(r => ({ ...r, employee_name: c.employee_name, sentiment: 'positive' })));
             if (c.occurrence_records?.negative) occurrences.push(...c.occurrence_records.negative.map(r => ({ ...r, employee_name: c.employee_name, sentiment: 'negative' })));
         });
 
-        renderTable('projectDetailWrapper', projects, ['Colaborador', 'Projeto', 'Atividade', 'Entrega', 'Pontos'], r => `
+        const filteredProjects = filterModalRecords(projects);
+        const filteredProcesses = filterModalRecords(processes);
+        const filteredProjectHours = filterModalRecords(projectHours);
+        const filteredProcessHours = filterModalRecords(processHours);
+        const filteredOccurrences = filterModalRecords(occurrences);
+
+        renderTable('projectDetailWrapper', filteredProjects, ['Colaborador', 'Projeto', 'Atividade', 'Entrega', 'Pontos'], r => `
             <td>${r.employee_name}</td>
             <td>${r.project_name || '-'}</td>
             <td>${r.activity_title}</td>
@@ -801,7 +1016,7 @@
             <td>${formatScore(r.points)}</td>
         `);
 
-        renderTable('processDetailWrapper', processes, ['Colaborador', 'Processo', 'Instância', 'Entrega', 'Pontos'], r => `
+        renderTable('processDetailWrapper', filteredProcesses, ['Colaborador', 'Processo', 'Instância', 'Entrega', 'Pontos'], r => `
             <td>${r.employee_name}</td>
             <td>${r.process_name || '-'}</td>
             <td>${r.instance_title}</td>
@@ -809,7 +1024,25 @@
             <td>${formatScore(r.points)}</td>
         `);
 
-        renderTable('occurrenceDetailWrapper', occurrences, ['Colaborador', 'Tipo', 'Título', 'Data', 'Pontos'], r => `
+        renderTable('projectHoursDetailWrapper', filteredProjectHours, ['Colaborador', 'Projeto', 'Atividade', 'Data', 'Horas', 'Descrição'], r => `
+            <td>${r.employee_name}</td>
+            <td>${r.project_code ? `${r.project_code} - ` : ''}${r.project_name || '-'}</td>
+            <td>${r.activity_title || '-'}</td>
+            <td>${formatDate(r.work_date)}</td>
+            <td>${formatHours(r.hours_worked)}</td>
+            <td>${r.description || '—'}</td>
+        `);
+
+        renderTable('processHoursDetailWrapper', filteredProcessHours, ['Colaborador', 'Processo', 'Instância', 'Data', 'Horas', 'Descrição'], r => `
+            <td>${r.employee_name}</td>
+            <td>${r.process_code ? `${r.process_code} - ` : ''}${r.process_name || '-'}</td>
+            <td>${r.instance_title || '-'}</td>
+            <td>${formatDate(r.work_date)}</td>
+            <td>${formatHours(r.hours_worked)}</td>
+            <td>${r.description || '—'}</td>
+        `);
+
+        renderTable('occurrenceDetailWrapper', filteredOccurrences, ['Colaborador', 'Tipo', 'Título', 'Data', 'Pontos'], r => `
             <td>${r.employee_name}</td>
             <td><span class="score-chip ${r.sentiment}">${r.type}</span></td>
             <td>${r.title}</td>
@@ -826,7 +1059,7 @@
         }
 
         // Sort by date equivalent
-        data.sort((a, b) => new Date(b.created_at || b.completion_date) - new Date(a.created_at || a.completion_date));
+        data.sort((a, b) => new Date(b.created_at || b.completion_date || b.work_date) - new Date(a.created_at || a.completion_date || a.work_date));
 
         const headerHTML = headers.map(h => `<th>${h}</th>`).join('');
         const rowsHTML = data.map(r => `<tr>${rowFn(r)}</tr>`).join('');
@@ -841,9 +1074,15 @@
 
     // Init
     document.addEventListener('DOMContentLoaded', () => {
+        ensurePeriodFilters();
         loadEfficiencyData();
         document.getElementById('searchInput').oninput = applyFilters;
         document.getElementById('filterActivity').onchange = applyFilters;
+        document.getElementById('filterStartDate').onchange = loadEfficiencyData;
+        document.getElementById('filterEndDate').onchange = loadEfficiencyData;
+        document.getElementById('modalEmployeeFilter').oninput = () => {
+            if (document.getElementById('detailModal').classList.contains('is-open')) populateDetailModal();
+        };
     });
 </script>
 {% endblock %}

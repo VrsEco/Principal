@@ -1,20 +1,63 @@
 from flask import jsonify, request
 from flask_restful import Resource
-from models import db, Employee, Project, ProjectTask, ProjectActivityCollaborator, ProcessInstance, Process, Occurrence
-from datetime import datetime, date
+from models import db, Employee, Project, ProjectTask, ProjectActivityCollaborator, ProcessInstance, Process, Occurrence, ActivityWorkLog
+from datetime import datetime, date, timedelta
+from sqlalchemy import func, text as sql_text
 import json
 
+
 class EfficiencyCollaborators(Resource):
+    @staticmethod
+    def _parse_period():
+        start_raw = request.args.get("start_date")
+        end_raw = request.args.get("end_date")
+
+        def _parse(raw_value):
+            if not raw_value:
+                return None
+            return datetime.strptime(raw_value, "%Y-%m-%d").date()
+
+        today = date.today()
+        start_date = _parse(start_raw)
+        end_date = _parse(end_raw)
+
+        if not start_date and not end_date:
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif start_date and not end_date:
+            end_date = start_date
+        elif end_date and not start_date:
+            start_date = end_date
+
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+
+        return start_date, end_date
+
+    @staticmethod
+    def _business_days_between(start_date, end_date):
+        total = 0
+        current = start_date
+        while current <= end_date:
+            if current.weekday() < 5:
+                total += 1
+            current += timedelta(days=1)
+        return total
+
     def get(self, company_id):
+        start_date, end_date = self._parse_period()
+        business_days = self._business_days_between(start_date, end_date)
         # 1. Fetch Employees
         employees = Employee.query.filter_by(company_id=company_id).all()
-        emp_map = {e.id: e.name for e in employees}
-        
+
         # Initialize results structure
         results = {}
-        for emp_id, name in emp_map.items():
+        for employee in employees:
+            emp_id = employee.id
+            weekly_hours = float(employee.weekly_hours or 40.0)
+            contracted_hours = round((weekly_hours / 5.0) * business_days, 2) if weekly_hours else 0.0
             results[emp_id] = {
-                "employee_name": name,
+                "employee_name": employee.name,
                 "in_progress": {"total": 0, "on_time": 0, "late": 0},
                 "completed": {"total": 0, "on_time": 0, "late": 0},
                 "positive_occurrences": {"count": 0, "score": 0},
@@ -25,10 +68,116 @@ class EfficiencyCollaborators(Resource):
                     "overall": {"total": 0, "positive": 0, "negative": 0, "count": 0, "potential": 0, "assigned": 0}
                 },
                 "delivery_records": {"project": [], "process": []},
-                "occurrence_records": {"positive": [], "negative": []}
+                "occurrence_records": {"positive": [], "negative": []},
+                "period_hours": {
+                    "start_date": start_date.isoformat(),
+                    "end_date": end_date.isoformat(),
+                    "business_days": business_days,
+                    "weekly_hours": round(weekly_hours, 2),
+                    "contracted": contracted_hours,
+                    "worked_project": 0.0,
+                    "worked_process": 0.0,
+                    "worked_total": 0.0,
+                    "free_capacity": contracted_hours,
+                    "utilization_percent": 0.0,
+                    "details": {"project": [], "process": []},
+                }
             }
 
         today = date.today()
+
+        log_rows = (
+            db.session.query(
+                ActivityWorkLog.employee_id,
+                ActivityWorkLog.activity_type,
+                func.coalesce(func.sum(ActivityWorkLog.hours_worked), 0).label("total_hours"),
+            )
+            .join(Employee, Employee.id == ActivityWorkLog.employee_id)
+            .filter(
+                Employee.company_id == company_id,
+                ActivityWorkLog.work_date >= start_date,
+                ActivityWorkLog.work_date <= end_date,
+            )
+            .group_by(ActivityWorkLog.employee_id, ActivityWorkLog.activity_type)
+            .all()
+        )
+
+        for row in log_rows:
+            if row.employee_id not in results:
+                continue
+            hours = round(float(row.total_hours or 0), 2)
+            if row.activity_type == "project":
+                results[row.employee_id]["period_hours"]["worked_project"] += hours
+            elif row.activity_type in ("process", "process_instance"):
+                results[row.employee_id]["period_hours"]["worked_process"] += hours
+            results[row.employee_id]["period_hours"]["worked_total"] += hours
+
+        detailed_logs = (
+            ActivityWorkLog.query
+            .join(Employee, Employee.id == ActivityWorkLog.employee_id)
+            .filter(
+                Employee.company_id == company_id,
+                ActivityWorkLog.work_date >= start_date,
+                ActivityWorkLog.work_date <= end_date,
+            )
+            .order_by(ActivityWorkLog.work_date.desc(), ActivityWorkLog.created_at.desc())
+            .all()
+        )
+
+        project_ids = sorted({int(log.activity_id) for log in detailed_logs if log.activity_type == "project"})
+        process_instance_ids = sorted({int(log.activity_id) for log in detailed_logs if log.activity_type in ("process", "process_instance")})
+
+        project_task_map = {}
+        if project_ids:
+            project_tasks = (
+                ProjectTask.query
+                .join(Project, Project.id == ProjectTask.project_id)
+                .filter(Project.company_id == company_id, ProjectTask.id.in_(project_ids))
+                .all()
+            )
+            project_task_map = {task.id: task for task in project_tasks}
+
+        process_instance_map = {}
+        if process_instance_ids:
+            process_instances = (
+                ProcessInstance.query
+                .filter(ProcessInstance.company_id == company_id, ProcessInstance.id.in_(process_instance_ids))
+                .all()
+            )
+            process_instance_map = {instance.id: instance for instance in process_instances}
+
+        for log in detailed_logs:
+            employee_data = results.get(log.employee_id)
+            if not employee_data:
+                continue
+
+            hours = round(float(log.hours_worked or 0), 2)
+            base_record = {
+                "activity_id": log.activity_id,
+                "hours_worked": hours,
+                "work_date": log.work_date.isoformat() if hasattr(log.work_date, "isoformat") else log.work_date,
+                "description": log.description or "",
+                "created_at": log.created_at.isoformat() if hasattr(log.created_at, "isoformat") else log.created_at,
+            }
+
+            if log.activity_type == "project":
+                task = project_task_map.get(int(log.activity_id))
+                project = task.project if task else None
+                employee_data["period_hours"]["details"]["project"].append({
+                    **base_record,
+                    "project_name": project.name if project else "Projeto",
+                    "project_code": getattr(project, "code", None) if project else None,
+                    "activity_title": getattr(task, "what", None) if task else None,
+                })
+            elif log.activity_type in ("process", "process_instance"):
+                instance = process_instance_map.get(int(log.activity_id))
+                process_rel = instance.process_rel if instance else None
+                employee_data["period_hours"]["details"]["process"].append({
+                    **base_record,
+                    "process_name": process_rel.name if process_rel else "Processo",
+                    "process_code": getattr(process_rel, "code", None) if process_rel else None,
+                    "instance_title": getattr(instance, "title", None) if instance else None,
+                })
 
         # 1.1 Fetch Performance Settings
         from models import CompanyPerformanceSettings
@@ -223,28 +372,63 @@ class EfficiencyCollaborators(Resource):
                         results[emp_id]["in_progress"]["on_time"] += 1
 
         # 4. Fetch Occurrences
-        occurrences = Occurrence.query.filter_by(company_id=company_id).all()
+        collaborators_column_exists = db.session.execute(
+            sql_text("""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_name = 'occurrences'
+                      AND column_name = 'collaborators_ids'
+                )
+            """)
+        ).scalar()
+
+        occurrences_sql = """
+            SELECT id, company_id, employee_id, title, type, score, created_at,
+                   {collaborators_field}
+            FROM occurrences
+            WHERE company_id = :company_id
+        """.format(
+            collaborators_field=(
+                "collaborators_ids"
+                if collaborators_column_exists
+                else "NULL::text AS collaborators_ids"
+            )
+        )
+
+        occurrences = db.session.execute(
+            sql_text(occurrences_sql),
+            {"company_id": company_id},
+        ).mappings().all()
+
         for occ in occurrences:
             involved_ids = set()
-            if occ.employee_id: involved_ids.add(occ.employee_id)
-            if occ.collaborators_ids:
+            if occ.get("employee_id"):
+                involved_ids.add(int(occ["employee_id"]))
+            collaborators_ids = occ.get("collaborators_ids")
+            if collaborators_ids:
                 try:
-                    c_ids = occ.collaborators_ids if isinstance(occ.collaborators_ids, list) else json.loads(occ.collaborators_ids)
-                    for cid in c_ids: involved_ids.add(int(cid))
-                except: pass
+                    c_ids = collaborators_ids if isinstance(collaborators_ids, list) else json.loads(collaborators_ids)
+                    for cid in c_ids:
+                        involved_ids.add(int(cid))
+                except Exception:
+                    pass
             for emp_id in involved_ids:
-                if emp_id not in results: continue
-                score = occ.score or 0
-                occ_type = (occ.type or '').lower()
+                if emp_id not in results:
+                    continue
+                score = occ.get("score") or 0
+                occ_type = str(occ.get("type") or '').lower()
+                created_at = occ.get("created_at")
+                created_at_value = created_at.isoformat() if hasattr(created_at, 'isoformat') else created_at
                 if 'positiv' in occ_type:
                     results[emp_id]["positive_occurrences"]["count"] += 1
                     results[emp_id]["positive_occurrences"]["score"] += score
-                    results[emp_id]["occurrence_records"]["positive"].append({"type": occ.type, "title": occ.title, "score": score, "created_at": occ.created_at.isoformat() if hasattr(occ.created_at, 'isoformat') else occ.created_at})
+                    results[emp_id]["occurrence_records"]["positive"].append({"type": occ.get("type"), "title": occ.get("title"), "score": score, "created_at": created_at_value})
                 elif 'negativ' in occ_type:
                     results[emp_id]["negative_occurrences"]["count"] += 1
                     neg_val = -abs(score)
                     results[emp_id]["negative_occurrences"]["score"] += neg_val
-                    results[emp_id]["occurrence_records"]["negative"].append({"type": occ.type, "title": occ.title, "score": neg_val, "created_at": occ.created_at.isoformat() if hasattr(occ.created_at, 'isoformat') else occ.created_at})
+                    results[emp_id]["occurrence_records"]["negative"].append({"type": occ.get("type"), "title": occ.get("title"), "score": neg_val, "created_at": created_at_value})
         
         # 5. Calculate Overall Totals
         for emp_id, data in results.items():
@@ -255,6 +439,13 @@ class EfficiencyCollaborators(Resource):
             ds["overall"]["count"] = ds["project"]["count"] + ds["process"]["count"]
             ds["overall"]["potential"] = ds["project"]["potential"] + ds["process"]["potential"]
             ds["overall"]["assigned"] = ds["project"]["assigned"] + ds["process"]["assigned"]
+
+            period_hours = data["period_hours"]
+            period_hours["worked_project"] = round(period_hours["worked_project"], 2)
+            period_hours["worked_process"] = round(period_hours["worked_process"], 2)
+            period_hours["worked_total"] = round(period_hours["worked_total"], 2)
+            period_hours["free_capacity"] = round(period_hours["contracted"] - period_hours["worked_total"], 2)
+            period_hours["utilization_percent"] = round((period_hours["worked_total"] / period_hours["contracted"] * 100) if period_hours["contracted"] > 0 else 0.0, 1)
 
         return list(results.values())
 
