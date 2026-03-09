@@ -1,46 +1,42 @@
+from pathlib import Path
+import sys
 
-import paramiko
-import time
+BASE_DIR = Path(__file__).resolve().parents[1]
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-HOST = "ip-69-164-205-75.cloudezapp.io"
-PORT = 22122
-USER = "app2"
-PASS = "*Paraiso1978"
+from scripts.deploy.configr_remote_helper import APP_DIR, DEPLOY_SCRIPT, HOST, PORT, USER, connect_ssh
 
-def deploy():
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+def deploy() -> int:
+    print(f"📡 Conectando ao servidor {HOST}:{PORT} como {USER}...")
+    ssh = connect_ssh()
     try:
-        print(f"📡 Conectando ao servidor {HOST}...")
-        ssh.connect(HOST, port=PORT, username=USER, password=PASS)
-        print("✅ Conectado ao servidor.")
+        print(f"🚀 Executando deploy atômico no path produtivo: {APP_DIR}")
+        stdin, stdout, stderr = ssh.exec_command(
+            f"cd {APP_DIR} && chmod +x scripts/deploy_configr.sh && bash {DEPLOY_SCRIPT}",
+            get_pty=True,
+        )
 
-        # Comando principal de deploy atômico (conforme Skill)
-        # 1. Forçar sincronia do repositório
-        # 2. Grant permission
-        # 3. Executar script oficial de deploy Configr
-        cmd = "cd /home/app2/public_html/app32 && git fetch origin main && git reset --hard origin/main && chmod +x scripts/deploy_configr.sh && bash scripts/deploy_configr.sh"
-        
-        print(f"🚀 Executando deploy atômico no servidor...")
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        
-        # Read output line by line to show progress
-        for line in stdout:
-            print(f"[SERVER]: {line.strip()}")
-            
-        for line in stderr:
-            print(f"[SERVER ERR]: {line.strip()}")
-            
+        for line in iter(lambda: stdout.readline(2048), ""):
+            if not line:
+                break
+            print(f"[SERVER] {line.rstrip()}")
+
+        err = stderr.read().decode("utf-8", "ignore").strip()
         exit_status = stdout.channel.recv_exit_status()
+        if err:
+            print("\n[SERVER ERR]")
+            print(err)
+
         if exit_status == 0:
             print("\n✨ DEPLOY REALIZADO COM SUCESSO! Sistema atualizado na produção.")
         else:
-            print(f"\n❌ ERRO NO DEPLOY: O comando encerrou com status {exit_status}.")
-            
-    except Exception as e:
-        print(f"\n❌ ERRO CRÍTICO NA CONEXÃO SSH: {str(e)}")
+            print(f"\n❌ ERRO NO DEPLOY: comando retornou status {exit_status}.")
+        return exit_status
     finally:
         ssh.close()
 
+
 if __name__ == "__main__":
-    deploy()
+    raise SystemExit(deploy())

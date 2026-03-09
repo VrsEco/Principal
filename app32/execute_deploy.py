@@ -1,28 +1,37 @@
+from pathlib import Path
+import sys
 
-import subprocess
-import os
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-key_path = r"c:\GestaoVersus\github_actions_deploy_key.txt"
-host = "app@69.164.205.75"
-port = "22122"
-remote_script = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/scripts/deploy_configr.sh"
+from scripts.deploy.configr_remote_helper import APP_DIR, DEPLOY_SCRIPT, HOST, PORT, USER, connect_ssh
 
-cmd = [
-    "ssh",
-    "-i", key_path,
-    "-p", port,
-    "-o", "StrictHostKeyChecking=no",
-    host,
-    f"bash {remote_script}"
-]
 
-print(f"Executing: {' '.join(cmd)}")
-try:
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-    print("--- STDOUT ---")
-    print(result.stdout)
-    print("--- STDERR ---")
-    print(result.stderr)
-    print(f"Exit Code: {result.returncode}")
-except Exception as e:
-    print(f"Error: {e}")
+def main() -> int:
+    print(f"📡 Conectando ao servidor {HOST}:{PORT} como {USER}...")
+    ssh = connect_ssh()
+    try:
+        print(f"🚀 Executando deploy oficial: {DEPLOY_SCRIPT}")
+        stdin, stdout, stderr = ssh.exec_command(
+            f"cd {APP_DIR} && chmod +x scripts/deploy_configr.sh && bash {DEPLOY_SCRIPT}",
+            get_pty=True,
+        )
+        for line in iter(lambda: stdout.readline(2048), ""):
+            if not line:
+                break
+            print(line.rstrip())
+
+        err = stderr.read().decode("utf-8", "ignore").strip()
+        exit_code = stdout.channel.recv_exit_status()
+        if err:
+            print("\n[STDERR]")
+            print(err)
+        print(f"\n[EXIT_CODE]={exit_code}")
+        return exit_code
+    finally:
+        ssh.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

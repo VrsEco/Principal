@@ -1,33 +1,41 @@
-import paramiko
-import time
+from pathlib import Path
+import sys
 
-HOST = "ip-69-164-205-75.cloudezapp.io"
-PORT = 22122
-USER = "app2"
-PASS = "*Paraiso1978"
+BASE_DIR = Path(__file__).resolve().parents[1]
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-def run_ssh_commands(commands):
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+from scripts.deploy.configr_remote_helper import APP_DIR, HOST, PORT, USER, connect_ssh, run_command
+
+
+def run_ssh_commands(commands: list[str]) -> int:
+    print(f"📡 Conectando ao servidor {HOST}:{PORT} como {USER}...")
+    ssh = connect_ssh()
     try:
-        client.connect(HOST, port=PORT, username=USER, password=PASS)
         for cmd in commands:
-            print(f"Executing: {cmd}")
-            stdin, stdout, stderr = client.exec_command(cmd)
-            out = stdout.read().decode('utf-8', errors='replace')
-            err = stderr.read().decode('utf-8', errors='replace')
-            if out: print(f"STDOUT: {out}")
-            if err: print(f"STDERR: {err}")
+            full_cmd = f"cd {APP_DIR} && {cmd}"
+            print(f"\n>>> {full_cmd}")
+            code, out, err = run_command(ssh, full_cmd)
+            if out:
+                print(out.strip())
+            if err:
+                print(err.strip())
+            print(f"[EXIT_CODE]={code}")
+            if code != 0:
+                return code
+        return 0
     finally:
-        client.close()
+        ssh.close()
+
 
 if __name__ == "__main__":
-    # Commands to find python and run migrations
-    cmds = [
-        "[ -f /home/app2/public_html/app.py ] && echo 'ROOT: /home/app2/public_html' || echo 'NOT IN ROOT'",
-        "[ -f /home/app2/public_html/app32/app.py ] && echo 'ROOT: /home/app2/public_html/app32' || echo 'NOT IN app32'",
-        "find /home/app2/public_html -name scripts -type d",
-        "cd /home/app2/public_html && git log --oneline -1",
-        "ls /home/app2/venv/bin/python3"
-    ]
-    run_ssh_commands(cmds)
+    raise SystemExit(
+        run_ssh_commands(
+            [
+                "whoami",
+                "pwd",
+                "git rev-parse --short HEAD",
+                "git status --short",
+            ]
+        )
+    )
