@@ -51,32 +51,21 @@ def _build_channel_test_message(user, channel: str, temporary_password: str | No
     body = (
         f"Olá, {display_name}!\n\n"
         "Sou o Sapiens, seu assistente de IA, e te desejo boas-vindas ao APP da Versus de Gestão Corporativa.\n\n"
-        f"Você foi cadastrado na(s) empresa(s): {company_names}\n\n"
-        f"Seu usuário é: {login_name}\n"
-        f"{password_line}\n\n"
-        "Você pode acessar o sistema em app.gestaoversus.com.br ou conversar comigo por aqui. Caso precise de informações e auxílio, conte comigo.\n\n"
-        "Atenciosamente,\n\n"
+        "Dados de acesso:\n"
+        f"- Empresa(s): {company_names}\n"
+        f"- Usuário: {login_name}\n"
+        f"- {password_line}\n\n"
+        "Acesso e suporte:\n"
+        "- Sistema: app.gestaoversus.com.br\n"
+        "- Atendimento: você também pode conversar comigo por aqui\n"
+        "- Se precisar de informações e auxílio, conte comigo\n\n"
+        "Atenciosamente,\n"
         "Sapiens IA\n"
         "Versus Gestão Corporativa\n"
         "sapiens@gestaoversus.com.br\n"
         "(71) 9 8238-5225"
     )
     html_body = None
-    if normalized == 'email':
-        html_password_line = (
-            f"A senha temporária é <strong>{password_hint}</strong>. Ao entrar, mude-a no menu <strong>{password_menu}</strong> ou me peça auxílio que faremos juntos."
-            if password_hint
-            else f"Sua senha de acesso foi definida no cadastro. Ao entrar, atualize-a no menu <strong>{password_menu}</strong> ou me peça auxílio que faremos juntos."
-        )
-        html_body = (
-            f"<p>Olá, <strong>{display_name}</strong>!</p>"
-            "<p>Sou o Sapiens, seu assistente de IA, e te desejo boas-vindas ao APP da Versus de Gestão Corporativa.</p>"
-            f"<p>Você foi cadastrado na(s) empresa(s): <strong>{company_names}</strong></p>"
-            f"<p>Seu usuário é: <strong>{login_name}</strong><br>{html_password_line}</p>"
-            "<p>Você pode acessar o sistema em <strong>app.gestaoversus.com.br</strong> ou conversar comigo por aqui. Caso precise de informações e auxílio, conte comigo.</p>"
-            "<p>Atenciosamente,</p>"
-            "<p><strong>Sapiens IA</strong><br>Versus Gestão Corporativa<br>sapiens@gestaoversus.com.br<br>(71) 9 8238-5225</p>"
-        )
     return subject, body, html_body
 
 

@@ -370,3 +370,31 @@ def test_test_user_channel_route_uses_generic_password_copy_when_not_informed(mo
     assert body['success'] is True
     assert 'foi definida no cadastro' in fake_hub.calls[0]['message']
     assert 'abc123' not in fake_hub.calls[0]['message']
+
+
+
+def test_build_channel_test_message_for_email_uses_official_email_wrapper(monkeypatch):
+    fake_user = SimpleNamespace(
+        id=101,
+        name='Novo Usuário',
+        email='novo@empresa.com',
+    )
+    _FakeEmployee.query = _FakeEmployeeQuery([
+        SimpleNamespace(id=201, user_id=101, company_id=8),
+    ])
+    _FakeCompany.query = _FakeCompanyQuery(active_ids={8}, company_names={8: 'Empresa Alpha'})
+    monkeypatch.setattr(users_route, 'Employee', _FakeEmployee)
+    monkeypatch.setattr(users_route, 'Company', _FakeCompany)
+
+    subject, body, html_body = users_route._build_channel_test_message(
+        fake_user,
+        'email',
+        'SenhaTemp@123',
+    )
+
+    assert subject == 'Boas-vindas • E-mail • Gestão Versus'
+    assert 'Dados de acesso:' in body
+    assert '- Empresa(s): Empresa Alpha' in body
+    assert '- Usuário: novo@empresa.com' in body
+    assert 'SenhaTemp@123' in body
+    assert html_body is None
