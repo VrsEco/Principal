@@ -21,6 +21,10 @@ def _build_handler(**overrides):
         }
         return [9], "empresa AA - Versus"
 
+    def fake_resolve_employee_ids_for_report(user_id, company_ids):
+        captured["employee_scope"] = {"user_id": user_id, "company_ids": list(company_ids)}
+        return None
+
     def fake_resolve_period_from_payload(payload):
         captured["period_payload"] = dict(payload or {})
         return date(2026, 3, 5), date(2026, 3, 19)
@@ -43,6 +47,7 @@ def _build_handler(**overrides):
 
     defaults = {
         "resolve_company_ids_for_payload": fake_resolve_company_ids_for_payload,
+        "resolve_employee_ids_for_report": fake_resolve_employee_ids_for_report,
         "resolve_period_from_payload": fake_resolve_period_from_payload,
         "load_project_tasks_report": fake_load_project_tasks_report,
         "load_process_instances_report": fake_load_process_instances_report,
@@ -126,3 +131,23 @@ def test_my_work_handler_formats_success_for_completed_range():
     assert captured["tasks_calls"][0]["start_date"] == date(2026, 3, 5)
     assert captured["tasks_calls"][0]["end_date"] == date(2026, 3, 19)
     assert result.response_text == "report:my_work.completed_range:empresa AA - Versus"
+
+
+
+def test_my_work_handler_restricts_collaborator_to_own_employee_ids():
+    handler, captured = _build_handler(
+        resolve_employee_ids_for_report=lambda user_id, company_ids: [77],
+    )
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.open",
+            payload={"empresa": "Versus"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["tasks_calls"][0]["employee_ids"] == [77]
+    assert captured["process_calls"][0]["employee_ids"] == [77]
+    assert result.response_text == "report:my_work.open:empresa AA - Versus"

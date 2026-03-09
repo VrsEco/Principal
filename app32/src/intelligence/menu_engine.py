@@ -1945,6 +1945,7 @@ def _build_process_instance_complete_execution_handler() -> ProcessInstanceCompl
 def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
     return MyWorkExecutionHandler(
         resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
+        resolve_employee_ids_for_report=_resolve_employee_ids_for_my_work_report,
         resolve_period_from_payload=_resolve_period_from_payload,
         load_project_tasks_report=_load_project_tasks_report,
         load_process_instances_report=_load_process_instances_report,
@@ -3448,11 +3449,22 @@ def _merge_report_items(items: List[Dict[str, Any]], unique_key: str) -> List[Di
     return list(merged.values())
 
 
+def _resolve_user_role_for_company_resolution(user_id: int) -> str:
+    from models.user import User
+
+    user = User.query.get(user_id)
+    role = str(getattr(user, "role", "") or "collaborator").strip().lower()
+    if role == "consultant":
+        role = "collaborator"
+    return role or "collaborator"
+
+
 def _resolve_company_ids_for_payload(
     payload: Dict[str, Any],
     active_company_id: Optional[int],
     user_id: int,
 ) -> Tuple[List[int], str]:
+    user_role = _resolve_user_role_for_company_resolution(user_id)
     accessible = [
         company
         for company in _load_accessible_companies_for_user(user_id=user_id)
@@ -3488,7 +3500,33 @@ def _resolve_company_ids_for_payload(
         label = f"{chosen.client_code} - {chosen.name}" if chosen.client_code else chosen.name
         return [chosen.id], f"empresa {label}"
 
+    if user_role == "collaborator":
+        return [], "Seu usuário está vinculado a mais de uma empresa. Informe a empresa desejada para continuar."
+
     return [c.id for c in accessible], "empresas vinculadas"
+
+
+def _resolve_employee_ids_for_my_work_report(user_id: int, company_ids: List[int]) -> Optional[List[int]]:
+    from models.employee import Employee
+    from models.user import User
+
+    user = User.query.get(user_id)
+    if not user:
+        return []
+
+    user_role = str(getattr(user, "role", "") or "").strip().lower()
+    if user_role == "consultant":
+        user_role = "collaborator"
+
+    if user_role != "collaborator":
+        return None
+
+    query = Employee.query.filter(
+        Employee.user_id == user_id,
+        Employee.company_id.in_(company_ids),
+    )
+    employee_ids = [employee.id for employee in query.all() if getattr(employee, "id", None)]
+    return employee_ids
 
 
 def _load_accessible_companies_for_user(user_id: int) -> List[Any]:

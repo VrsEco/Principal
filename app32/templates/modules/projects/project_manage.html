@@ -810,6 +810,9 @@
                 projeto.' }}</p>
         </div>
         <div class="workspace-header-actions">
+            <button class="btn btn-secondary" id="btnSendProjectSummary" onclick="sendProjectSummaryToOwner()">
+                📨 Enviar resumo ao responsável
+            </button>
             <a href="/projects" class="btn btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -1123,6 +1126,36 @@
         'suspended': 'S',
         'completed': 'CD'
     };
+
+    async function sendProjectSummaryToOwner() {
+        const button = document.getElementById('btnSendProjectSummary');
+        const originalText = button ? button.textContent : '';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Enviando...';
+        }
+
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/send-owner-summary`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert(result.message || 'Resumo do projeto enviado com sucesso.');
+            } else {
+                alert(result.message || 'Falha ao enviar resumo do projeto.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro de conexão ao enviar resumo do projeto.');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+    }
 
     async function loadTasks() {
         try {

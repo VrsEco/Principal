@@ -112,6 +112,8 @@ def test_resolve_company_ids_for_payload_ignores_inactive_companies(monkeypatch)
             self.legal_name = name
             self.is_active = is_active
 
+    monkeypatch.setattr(menu_engine, "_resolve_user_role_for_company_resolution", lambda user_id: "admin")
+    monkeypatch.setattr(menu_engine, "_resolve_user_role_for_company_resolution", lambda user_id: "admin")
     monkeypatch.setattr(
         menu_engine,
         "_load_accessible_companies_for_user",
@@ -140,6 +142,7 @@ def test_resolve_company_ids_for_payload_does_not_match_inactive_company_term(mo
             self.legal_name = name
             self.is_active = is_active
 
+    monkeypatch.setattr(menu_engine, "_resolve_user_role_for_company_resolution", lambda user_id: "admin")
     monkeypatch.setattr(
         menu_engine,
         "_load_accessible_companies_for_user",
@@ -733,3 +736,37 @@ def test_prepare_missing_field_selection_uses_selected_company_from_payload(monk
     assert session.status == "awaiting_item_selection"
     assert session.collected_data["empresa"] == "Gas Evolution"
     assert session.collected_data["_selection_field_key"] == "codigo_projeto"
+
+
+
+def test_resolve_company_ids_for_payload_requires_explicit_company_for_collaborator_with_multiple_links(monkeypatch):
+    class DummyCompany:
+        def __init__(self, company_id, name, client_code, is_active):
+            self.id = company_id
+            self.name = name
+            self.client_code = client_code
+            self.legal_name = name
+            self.is_active = is_active
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_resolve_user_role_for_company_resolution",
+        lambda user_id: "collaborator",
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_load_accessible_companies_for_user",
+        lambda user_id: [
+            DummyCompany(12, "Save Water", "SW", True),
+            DummyCompany(18, "Ventana", "VT", True),
+        ],
+    )
+
+    company_ids, label = menu_engine._resolve_company_ids_for_payload(
+        payload={},
+        active_company_id=None,
+        user_id=10,
+    )
+
+    assert company_ids == []
+    assert "mais de uma empresa" in label.lower()

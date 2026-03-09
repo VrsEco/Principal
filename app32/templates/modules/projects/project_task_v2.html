@@ -50,7 +50,10 @@
             <p class="text-secondary" style="margin-top: 0.5rem; font-size: 0.9rem;">{{ task.how }}</p>
             {% endif %}
         </div>
-        <div class="header-actions" id="mainHeaderActions">
+        <div class="header-actions" id="mainHeaderActions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnSendTaskSummary" onclick="sendTaskSummaryToResponsible()">
+                📨 Enviar resumo ao responsável
+            </button>
             {% if task.status != 'completed' %}
             <button type="button" class="btn btn-outline btn-sm" onclick="showFinalizarModal()">
                 🏁 Finalizar Atividade
@@ -933,6 +936,36 @@
             console.error(e);
             diaryLogs.shift();
             alert('Erro de conexão ao registrar.');
+        }
+    }
+
+    async function sendTaskSummaryToResponsible() {
+        const button = document.getElementById('btnSendTaskSummary');
+        const originalText = button ? button.textContent : '';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Enviando...';
+        }
+
+        try {
+            const response = await fetch(`/my-work/api/project-task/${TASK_ID}/send-summary`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast(result.message || 'Resumo da atividade enviado com sucesso.', 'success');
+            } else {
+                showToast(result.message || 'Falha ao enviar resumo da atividade.', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('Erro de conexão ao enviar resumo da atividade.', 'error');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
         }
     }
 

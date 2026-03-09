@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session
+from flask import Blueprint, render_template, session, jsonify
 from models import Company
 from flask_login import current_user
 
@@ -95,3 +95,21 @@ def project_analysis():
     return render_template('modules/projects/project_analysis.html', 
                            company=company,
                            stages=stages)
+
+
+@projects_bp.route('/api/projects/<int:project_id>/send-owner-summary', methods=['POST'])
+@permission_required('projects', 'view')
+def send_project_owner_summary(project_id):
+    from models import Project
+    from services.project_responsible_summary_service import send_project_summary_to_owner
+
+    project = Project.query.get_or_404(project_id)
+    result = send_project_summary_to_owner(project)
+    if not result.get('success'):
+        return jsonify({'success': False, 'message': result.get('error') or 'Falha ao enviar resumo', 'result': result}), 400
+
+    return jsonify({
+        'success': True,
+        'message': f"Resumo do projeto enviado com sucesso via {result.get('delivery_channel')}",
+        'result': result,
+    })

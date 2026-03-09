@@ -29,6 +29,7 @@ class MyWorkExecutionHandler:
         self,
         *,
         resolve_company_ids_for_payload: Callable[[Dict[str, Any], Optional[int], int], Tuple[List[int], str]],
+        resolve_employee_ids_for_report: Callable[[int, List[int]], Optional[List[int]]],
         resolve_period_from_payload: Callable[[Dict[str, Any]], Tuple[Optional[date], Optional[date]]],
         load_project_tasks_report: Callable[..., List[Dict[str, Any]]],
         load_process_instances_report: Callable[..., List[Dict[str, Any]]],
@@ -36,6 +37,7 @@ class MyWorkExecutionHandler:
         format_my_work_report: Callable[..., str],
     ):
         self._resolve_company_ids_for_payload = resolve_company_ids_for_payload
+        self._resolve_employee_ids_for_report = resolve_employee_ids_for_report
         self._resolve_period_from_payload = resolve_period_from_payload
         self._load_project_tasks_report = load_project_tasks_report
         self._load_process_instances_report = load_process_instances_report
@@ -62,6 +64,11 @@ class MyWorkExecutionHandler:
                 response_text=company_label_or_error or "Nao foi possivel identificar a empresa para consulta."
             )
 
+        report_employee_ids = self._resolve_employee_ids_for_report(
+            request.user_id,
+            company_ids,
+        )
+
         start_date = None
         end_date = None
         if execution_input.requires_period:
@@ -80,12 +87,14 @@ class MyWorkExecutionHandler:
             mode=execution_input.action,
             start_date=start_date,
             end_date=end_date,
+            employee_ids=report_employee_ids,
         )
         processes = self._load_process_instances_report(
             company_ids=company_ids,
             mode=execution_input.action,
             start_date=start_date,
             end_date=end_date,
+            employee_ids=report_employee_ids,
         )
         meetings = self._load_meetings_report(
             company_ids=company_ids,

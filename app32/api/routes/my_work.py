@@ -10,6 +10,19 @@ logger = logging.getLogger(__name__)
 
 my_work_bp = Blueprint('my_work', __name__)
 
+
+def _user_has_company_access(company_id: int | None) -> bool:
+    if current_user.role == 'admin':
+        return True
+    if not company_id:
+        return False
+    return Employee.query.filter_by(
+        user_id=current_user.id,
+        company_id=company_id,
+        status='active',
+    ).first() is not None
+
+
 @my_work_bp.route('/my-work')
 @login_required
 def my_work():
@@ -507,6 +520,28 @@ def project_task_view(task_id):
                            task_data=task.to_dict(),
                            project=project,
                            company=company)
+
+@my_work_bp.route('/my-work/api/project-task/<int:task_id>/send-summary', methods=['POST'])
+@login_required
+def send_project_task_summary(task_id):
+    task = ProjectTask.query.get_or_404(task_id)
+    project = Project.query.get(task.project_id) if task.project_id else None
+    company_id = project.company_id if project else None
+    if not _user_has_company_access(company_id):
+        return jsonify({'success': False, 'message': 'Acesso negado'}), 403
+
+    from services.project_responsible_summary_service import send_task_summary_to_responsible
+
+    result = send_task_summary_to_responsible(task)
+    if not result.get('success'):
+        return jsonify({'success': False, 'message': result.get('error') or 'Falha ao enviar resumo', 'result': result}), 400
+
+    return jsonify({
+        'success': True,
+        'message': f"Resumo da atividade enviado com sucesso via {result.get('delivery_channel')}",
+        'result': result,
+    })
+
 
 @my_work_bp.route('/my-work/api/filter-options')
 @login_required
