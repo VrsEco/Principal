@@ -82,6 +82,7 @@ class UserChannelTestSchema(BaseModel):
 
     channel: str = Field(...)
     recipient: Optional[str] = Field(None, max_length=255)
+    temporary_password: Optional[str] = Field(None, min_length=6, max_length=128)
 
     @field_validator('channel')
     @classmethod
@@ -95,6 +96,14 @@ class UserChannelTestSchema(BaseModel):
     @field_validator('recipient', mode='before')
     @classmethod
     def validate_recipient(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    @field_validator('temporary_password', mode='before')
+    @classmethod
+    def validate_temporary_password(cls, value):
         if value is None:
             return None
         normalized = str(value).strip()

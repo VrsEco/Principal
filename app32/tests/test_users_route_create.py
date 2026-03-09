@@ -83,8 +83,9 @@ class _FakeUserQuery:
 
 
 class _FakeCompanyQuery:
-    def __init__(self, active_ids):
+    def __init__(self, active_ids, company_names=None):
         self.active_ids = active_ids
+        self.company_names = company_names or {}
         self.requested_ids = []
 
     def filter(self, *conditions):
@@ -94,7 +95,11 @@ class _FakeCompanyQuery:
         return self
 
     def all(self):
-        return [SimpleNamespace(id=company_id) for company_id in self.requested_ids if company_id in self.active_ids]
+        return [
+            SimpleNamespace(id=company_id, name=self.company_names.get(company_id, f"Empresa {company_id}"))
+            for company_id in self.requested_ids
+            if company_id in self.active_ids
+        ]
 
 
 class _FakeEmployeeQuery:
@@ -262,16 +267,23 @@ def test_test_user_channel_route_sends_message_to_selected_channel(monkeypatch):
         is_active=True,
     )
     _FakeUser.query = _FakeUserQuery(user_obj=fake_user)
+    _FakeEmployee.query = _FakeEmployeeQuery([
+        SimpleNamespace(id=201, user_id=101, company_id=8),
+        SimpleNamespace(id=202, user_id=101, company_id=9),
+    ])
+    _FakeCompany.query = _FakeCompanyQuery(active_ids={8, 9}, company_names={8: 'Empresa Alpha', 9: 'Empresa Beta'})
     fake_hub = _FakeNotificationHub(success=True)
 
     monkeypatch.setattr(users_route, 'current_user', SimpleNamespace(id=7, role='admin', is_authenticated=True))
     monkeypatch.setattr(users_route, 'User', _FakeUser)
+    monkeypatch.setattr(users_route, 'Employee', _FakeEmployee)
+    monkeypatch.setattr(users_route, 'Company', _FakeCompany)
     monkeypatch.setattr(users_route, 'notification_hub', fake_hub)
 
     client = app.test_client()
     response = client.post(
         '/api/usuarios/101/test-channel',
-        json={'channel': 'whatsapp', 'recipient': '5511888887777'},
+        json={'channel': 'whatsapp', 'recipient': '5511888887777', 'temporary_password': 'SenhaTemp@123'},
     )
 
     body = response.get_json()
@@ -279,6 +291,9 @@ def test_test_user_channel_route_sends_message_to_selected_channel(monkeypatch):
     assert body['success'] is True
     assert 'whatsapp' in body['message']
     assert fake_hub.calls[0]['channel'] == 'whatsapp'
+    assert 'Sou o Sapiens' in fake_hub.calls[0]['message']
+    assert 'Empresa Alpha, Empresa Beta' in fake_hub.calls[0]['message']
+    assert 'SenhaTemp@123' in fake_hub.calls[0]['message']
     assert fake_hub.calls[0]['kwargs']['recipient_id'] is None
 
 
@@ -294,10 +309,17 @@ def test_test_user_channel_route_rejects_missing_recipient(monkeypatch):
         is_active=True,
     )
     _FakeUser.query = _FakeUserQuery(user_obj=fake_user)
+    _FakeEmployee.query = _FakeEmployeeQuery([
+        SimpleNamespace(id=201, user_id=101, company_id=8),
+        SimpleNamespace(id=202, user_id=101, company_id=9),
+    ])
+    _FakeCompany.query = _FakeCompanyQuery(active_ids={8, 9}, company_names={8: 'Empresa Alpha', 9: 'Empresa Beta'})
     fake_hub = _FakeNotificationHub(success=True)
 
     monkeypatch.setattr(users_route, 'current_user', SimpleNamespace(id=7, role='admin', is_authenticated=True))
     monkeypatch.setattr(users_route, 'User', _FakeUser)
+    monkeypatch.setattr(users_route, 'Employee', _FakeEmployee)
+    monkeypatch.setattr(users_route, 'Company', _FakeCompany)
     monkeypatch.setattr(users_route, 'notification_hub', fake_hub)
 
     client = app.test_client()
@@ -311,3 +333,40 @@ def test_test_user_channel_route_rejects_missing_recipient(monkeypatch):
     assert body['success'] is False
     assert 'whatsapp' in body['message'].lower()
     assert fake_hub.calls == []
+
+
+def test_test_user_channel_route_uses_generic_password_copy_when_not_informed(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=101,
+        name='Novo Usuário',
+        email='novo@empresa.com',
+        whatsapp='5511999999999',
+        telegram='8507771166',
+        instagram='ig-user-1',
+        is_active=True,
+    )
+    _FakeUser.query = _FakeUserQuery(user_obj=fake_user)
+    _FakeEmployee.query = _FakeEmployeeQuery([
+        SimpleNamespace(id=201, user_id=101, company_id=8),
+    ])
+    _FakeCompany.query = _FakeCompanyQuery(active_ids={8}, company_names={8: 'Empresa Alpha'})
+    fake_hub = _FakeNotificationHub(success=True)
+
+    monkeypatch.setattr(users_route, 'current_user', SimpleNamespace(id=7, role='admin', is_authenticated=True))
+    monkeypatch.setattr(users_route, 'User', _FakeUser)
+    monkeypatch.setattr(users_route, 'Employee', _FakeEmployee)
+    monkeypatch.setattr(users_route, 'Company', _FakeCompany)
+    monkeypatch.setattr(users_route, 'notification_hub', fake_hub)
+
+    client = app.test_client()
+    response = client.post(
+        '/api/usuarios/101/test-channel',
+        json={'channel': 'whatsapp', 'recipient': '5511888887777'},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body['success'] is True
+    assert 'foi definida no cadastro' in fake_hub.calls[0]['message']
+    assert 'abc123' not in fake_hub.calls[0]['message']

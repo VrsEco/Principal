@@ -9,7 +9,25 @@ from services.notification_hub import notification_hub
 usuarios_bp = Blueprint('usuarios', __name__)
 
 
-def _build_channel_test_message(user, channel: str) -> tuple[str, str, str | None]:
+def _list_user_company_names(user) -> list[str]:
+    user_id = getattr(user, 'id', None)
+    if not user_id:
+        return []
+
+    employees = Employee.query.filter_by(user_id=user_id).all()
+    company_ids = list({
+        employee.company_id
+        for employee in employees
+        if getattr(employee, 'company_id', None) is not None
+    })
+    if not company_ids:
+        return []
+
+    companies = Company.query.filter(Company.id.in_(company_ids)).all()
+    return [company.name for company in companies if getattr(company, 'name', None)]
+
+
+def _build_channel_test_message(user, channel: str, temporary_password: str | None = None) -> tuple[str, str, str | None]:
     channel_label_map = {
         'email': 'E-mail',
         'whatsapp': 'WhatsApp',
@@ -18,20 +36,46 @@ def _build_channel_test_message(user, channel: str) -> tuple[str, str, str | Non
     }
     normalized = str(channel or '').strip().lower()
     label = channel_label_map.get(normalized, normalized.title())
-    subject = f"Teste de canal • {label} • Gestão Versus"
+    company_names = ', '.join(_list_user_company_names(user)) or 'Empresa ainda não vinculada'
+    display_name = user.name or user.email
+    login_name = user.email or 'não informado'
+    password_hint = temporary_password.strip() if temporary_password else None
+    password_menu = 'Perfil > Alterar Senha'
+    password_line = (
+        f"A senha temporária é {password_hint}. Ao entrar, mude-a no menu {password_menu} ou me peça auxílio que faremos juntos."
+        if password_hint
+        else f"Sua senha de acesso foi definida no cadastro. Ao entrar, atualize-a no menu {password_menu} ou me peça auxílio que faremos juntos."
+    )
+
+    subject = f"Boas-vindas • {label} • Gestão Versus"
     body = (
-        f"Olá, {user.name or user.email}!\n\n"
-        f"Este é um teste manual do canal {label} realizado na Gestão Versus.\n"
-        f"Usuário validado: {user.email}.\n\n"
-        "Se você recebeu esta mensagem, o canal está operacional."
+        f"Olá, {display_name}!\n\n"
+        "Sou o Sapiens, seu assistente de IA, e te desejo boas-vindas ao APP da Versus de Gestão Corporativa.\n\n"
+        f"Você foi cadastrado na(s) empresa(s): {company_names}\n\n"
+        f"Seu usuário é: {login_name}\n"
+        f"{password_line}\n\n"
+        "Você pode acessar o sistema em app.gestaoversus.com.br ou conversar comigo por aqui. Caso precise de informações e auxílio, conte comigo.\n\n"
+        "Atenciosamente,\n\n"
+        "Sapiens IA\n"
+        "Versus Gestão Corporativa\n"
+        "sapiens@gestaoversus.com.br\n"
+        "(71) 9 8238-5225"
     )
     html_body = None
     if normalized == 'email':
+        html_password_line = (
+            f"A senha temporária é <strong>{password_hint}</strong>. Ao entrar, mude-a no menu <strong>{password_menu}</strong> ou me peça auxílio que faremos juntos."
+            if password_hint
+            else f"Sua senha de acesso foi definida no cadastro. Ao entrar, atualize-a no menu <strong>{password_menu}</strong> ou me peça auxílio que faremos juntos."
+        )
         html_body = (
-            f"<p>Olá, <strong>{user.name or user.email}</strong>!</p>"
-            f"<p>Este é um teste manual do canal <strong>{label}</strong> realizado na Gestão Versus.</p>"
-            f"<p>Usuário validado: <strong>{user.email}</strong>.</p>"
-            "<p>Se você recebeu esta mensagem, o canal está operacional.</p>"
+            f"<p>Olá, <strong>{display_name}</strong>!</p>"
+            "<p>Sou o Sapiens, seu assistente de IA, e te desejo boas-vindas ao APP da Versus de Gestão Corporativa.</p>"
+            f"<p>Você foi cadastrado na(s) empresa(s): <strong>{company_names}</strong></p>"
+            f"<p>Seu usuário é: <strong>{login_name}</strong><br>{html_password_line}</p>"
+            "<p>Você pode acessar o sistema em <strong>app.gestaoversus.com.br</strong> ou conversar comigo por aqui. Caso precise de informações e auxílio, conte comigo.</p>"
+            "<p>Atenciosamente,</p>"
+            "<p><strong>Sapiens IA</strong><br>Versus Gestão Corporativa<br>sapiens@gestaoversus.com.br<br>(71) 9 8238-5225</p>"
         )
     return subject, body, html_body
 
@@ -256,7 +300,11 @@ def test_user_channel(user_id):
                 "message": f"Usuário sem identificador configurado para o canal {validated_data.channel}",
             }), 400
 
-        subject, body, html_body = _build_channel_test_message(user, validated_data.channel)
+        subject, body, html_body = _build_channel_test_message(
+            user,
+            validated_data.channel,
+            validated_data.temporary_password,
+        )
         result = notification_hub.send_to_user(
             user,
             validated_data.channel,

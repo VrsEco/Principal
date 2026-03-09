@@ -374,6 +374,15 @@
 
 {% block scripts %}
 <script>
+    function requestTemporaryPasswordForWelcome() {
+        const value = window.prompt('Informe a senha temporária real para incluir na mensagem de boas-vindas. Deixe em branco para não enviar senha no texto.', '');
+        if (value === null) {
+            return { cancelled: true, value: null };
+        }
+        const normalized = String(value || '').trim();
+        return { cancelled: false, value: normalized || null };
+    }
+
     // System variables
     const USER_ID = {{ user.id }};
 
@@ -448,6 +457,11 @@
             return;
         }
 
+        const passwordPrompt = requestTemporaryPasswordForWelcome();
+        if (passwordPrompt.cancelled) {
+            return;
+        }
+
         const originalText = button ? button.textContent : '';
         if (button) {
             button.disabled = true;
@@ -458,7 +472,11 @@
             const response = await fetch(`/api/usuarios/${USER_ID}/test-channel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ channel, recipient })
+                body: JSON.stringify({
+                    channel,
+                    recipient,
+                    temporary_password: passwordPrompt.value,
+                })
             });
             const result = await response.json();
 
