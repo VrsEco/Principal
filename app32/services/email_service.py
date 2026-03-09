@@ -26,6 +26,8 @@ class EmailService:
         self.provider = os.environ.get("EMAIL_PROVIDER", "smtp")
         self.smtp_server = os.environ.get("MAIL_SERVER")
         self.smtp_port = int(os.environ.get("MAIL_PORT") or 587)
+        self.smtp_use_tls = os.environ.get("MAIL_USE_TLS", "true").strip().lower() == "true"
+        self.smtp_use_ssl = os.environ.get("MAIL_USE_SSL", "false").strip().lower() == "true"
         self.smtp_username = os.environ.get("MAIL_USERNAME")
         self.smtp_secret = os.environ.get("MAIL_PASSWORD")
         self.default_sender = os.environ.get("MAIL_DEFAULT_SENDER")
@@ -43,6 +45,52 @@ class EmailService:
         self.inbound_use_ssl = (
             os.environ.get("EMAIL_INBOUND_USE_SSL", "true").strip().lower() == "true"
         )
+
+    def _load_db_config_fallback(self) -> None:
+        """
+        Fallback para credenciais salvas em integrations (type='email').
+        Mantém compatibilidade com a tela de integrações do sistema.
+        """
+        try:
+            from database.postgresql_db import get_integration
+
+            record = get_integration("email_integration")
+            if not record:
+                return
+
+            config = record.get("config") if isinstance(record.get("config"), dict) else {}
+            provider = (config.get("provider") or record.get("provider") or self.provider or "smtp")
+            provider = str(provider).strip().lower() or "smtp"
+
+            self.provider = provider
+            self.smtp_server = self.smtp_server or config.get("server")
+            self.smtp_port = int(config.get("port") or self.smtp_port or 587)
+            if "use_tls" in config:
+                self.smtp_use_tls = bool(config.get("use_tls"))
+            if "use_ssl" in config:
+                self.smtp_use_ssl = bool(config.get("use_ssl"))
+            self.smtp_username = self.smtp_username or config.get("username")
+            self.smtp_secret = self.smtp_secret or config.get("password")
+            self.default_sender = self.default_sender or config.get("default_sender") or config.get("from_email")
+            self.from_name = config.get("from_name") or self.from_name
+            self.webhook_url = self.webhook_url or config.get("webhook_url")
+            self.inbound_protocol = str(config.get("inbound_protocol") or self.inbound_protocol or "").strip().lower()
+            self.inbound_host = self.inbound_host or config.get("inbound_host")
+            self.inbound_port = int(config.get("inbound_port") or self.inbound_port or 0)
+            self.inbound_username = self.inbound_username or config.get("inbound_username")
+            self.inbound_password = self.inbound_password or config.get("inbound_password")
+            if "inbound_use_ssl" in config:
+                self.inbound_use_ssl = bool(config.get("inbound_use_ssl"))
+        except Exception as err:
+            logger.debug("Falha ao carregar configuracao Email do DB: %s", err)
+
+    def _reload_runtime_config(self) -> None:
+        self.__init__()
+        provider = (self.provider or "smtp").strip().lower()
+        if provider == "smtp" and (not self.smtp_server or not self.smtp_username or not self.smtp_secret):
+            self._load_db_config_fallback()
+        elif provider == "webhook" and not self.webhook_url:
+            self._load_db_config_fallback()
 
     def send_email(
         self,
@@ -66,6 +114,7 @@ class EmailService:
             True if sent successfully, False otherwise
         """
         try:
+            self._reload_runtime_config()
             html_body = html_body or self.build_transactional_email_html(
                 subject=subject,
                 body=body,
@@ -267,8 +316,12 @@ class EmailService:
                             msg.attach(part)
 
             # Send email
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
+            if self.smtp_use_ssl:
+                server = smtplib.SMTP_SSL(self.smtp_server, self.smtp_port)
+            else:
+                server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+                if self.smtp_use_tls:
+                    server.starttls()
             server.login(self.smtp_username, self.smtp_secret)
             server.send_message(msg)
             server.quit()
@@ -469,6 +522,7 @@ class EmailService:
 
     def _test_smtp_connection(self) -> Dict[str, Any]:
         """Testa conexÃ£o SMTP"""
+        self._reload_runtime_config()
         if not all([self.smtp_server, self.smtp_username, self.smtp_secret]):
             return {
                 "success": False,
@@ -478,8 +532,12 @@ class EmailService:
 
         try:
             # Testar conexÃ£o SMTP
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
+            if self.smtp_use_ssl:
+                server = smtplib.SMTP_SSL(self.smtp_server, self.smtp_port)
+            else:
+                server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+                if self.smtp_use_tls:
+                    server.starttls()
             server.login(self.smtp_username, self.smtp_secret)
             server.quit()
 
