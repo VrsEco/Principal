@@ -1,11 +1,54 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from models import User, Employee, Company, db
-from schemas.user_pydantic import UserCreateSchema, UserUpdateSchema
+from schemas.user_pydantic import UserCreateSchema, UserUpdateSchema, UserChannelTestSchema
 from pydantic import ValidationError
 from utils.permissions import admin_required
+from services.notification_hub import notification_hub
 
 usuarios_bp = Blueprint('usuarios', __name__)
+
+
+def _build_channel_test_message(user, channel: str) -> tuple[str, str, str | None]:
+    channel_label_map = {
+        'email': 'E-mail',
+        'whatsapp': 'WhatsApp',
+        'telegram': 'Telegram',
+        'instagram': 'Instagram',
+    }
+    normalized = str(channel or '').strip().lower()
+    label = channel_label_map.get(normalized, normalized.title())
+    subject = f"Teste de canal • {label} • Gestão Versus"
+    body = (
+        f"Olá, {user.name or user.email}!\n\n"
+        f"Este é um teste manual do canal {label} realizado na Gestão Versus.\n"
+        f"Usuário validado: {user.email}.\n\n"
+        "Se você recebeu esta mensagem, o canal está operacional."
+    )
+    html_body = None
+    if normalized == 'email':
+        html_body = (
+            f"<p>Olá, <strong>{user.name or user.email}</strong>!</p>"
+            f"<p>Este é um teste manual do canal <strong>{label}</strong> realizado na Gestão Versus.</p>"
+            f"<p>Usuário validado: <strong>{user.email}</strong>.</p>"
+            "<p>Se você recebeu esta mensagem, o canal está operacional.</p>"
+        )
+    return subject, body, html_body
+
+
+def _resolve_test_recipient(user, channel: str, override_recipient: str | None = None) -> str | None:
+    normalized = str(channel or '').strip().lower()
+    if override_recipient:
+        return override_recipient.strip()
+    if normalized == 'email':
+        return getattr(user, 'email', None)
+    if normalized == 'whatsapp':
+        return getattr(user, 'whatsapp', None)
+    if normalized == 'telegram':
+        return getattr(user, 'telegram', None)
+    if normalized == 'instagram':
+        return getattr(user, 'instagram', None)
+    return None
 
 def _serialize_summary_channels(channels):
     if channels is None:
@@ -189,6 +232,58 @@ def update_user(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
+
+@usuarios_bp.route('/api/usuarios/<int:user_id>/test-channel', methods=['POST'])
+@login_required
+def test_user_channel(user_id):
+    """Envia uma mensagem de teste para um canal configurado do usuário."""
+    if current_user.role != 'admin':
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    try:
+        user = User.query.get_or_404(user_id)
+        data = request.get_json() or {}
+        validated_data = UserChannelTestSchema(**data)
+
+        recipient = _resolve_test_recipient(
+            user,
+            validated_data.channel,
+            validated_data.recipient,
+        )
+        if not recipient:
+            return jsonify({
+                "success": False,
+                "message": f"Usuário sem identificador configurado para o canal {validated_data.channel}",
+            }), 400
+
+        subject, body, html_body = _build_channel_test_message(user, validated_data.channel)
+        result = notification_hub.send_to_user(
+            user,
+            validated_data.channel,
+            body,
+            subject=subject,
+            html_body=html_body,
+            recipient_id=recipient if validated_data.channel == 'instagram' else None,
+            parse_mode='HTML',
+        )
+
+        if not result.get('success'):
+            return jsonify({
+                "success": False,
+                "message": result.get('error') or 'Falha ao enviar teste do canal',
+                "result": result,
+            }), 400
+
+        return jsonify({
+            "success": True,
+            "message": f"Teste enviado com sucesso via {validated_data.channel}",
+            "result": result,
+        })
+    except ValidationError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
 
 @usuarios_bp.route('/usuarios/api/delete/<int:user_id>', methods=['DELETE'])
 @login_required

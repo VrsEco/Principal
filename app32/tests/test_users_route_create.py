@@ -61,8 +61,9 @@ class _FakeUser:
 
 
 class _FakeUserQuery:
-    def __init__(self, existing_email=None):
+    def __init__(self, existing_email=None, user_obj=None):
         self.existing_email = existing_email
+        self.user_obj = user_obj
         self.last_filter_kwargs = None
 
     def filter_by(self, **kwargs):
@@ -74,6 +75,11 @@ class _FakeUserQuery:
         if email and email == self.existing_email:
             return SimpleNamespace(id=999, email=email)
         return None
+
+    def get_or_404(self, user_id):
+        if self.user_obj and getattr(self.user_obj, 'id', None) == user_id:
+            return self.user_obj
+        raise RuntimeError('user not found')
 
 
 class _FakeCompanyQuery:
@@ -223,3 +229,85 @@ def test_create_user_route_rejects_inactive_or_unknown_company_ids(monkeypatch):
     assert session.committed == 0
     assert _FakeUserEmployeeService.added_calls == []
     assert _FakeUserEmployeeService.assigned_calls == []
+
+
+class _FakeNotificationHub:
+    def __init__(self, success=True, error=None):
+        self.success = success
+        self.error = error
+        self.calls = []
+
+    def send_to_user(self, user, channel, message, **kwargs):
+        self.calls.append({
+            'user_id': user.id,
+            'channel': channel,
+            'message': message,
+            'kwargs': kwargs,
+        })
+        result = {'success': self.success, 'channel': channel}
+        if self.error:
+            result['error'] = self.error
+        return result
+
+
+def test_test_user_channel_route_sends_message_to_selected_channel(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=101,
+        name='Novo Usuário',
+        email='novo@empresa.com',
+        whatsapp='5511999999999',
+        telegram='8507771166',
+        instagram='ig-user-1',
+        is_active=True,
+    )
+    _FakeUser.query = _FakeUserQuery(user_obj=fake_user)
+    fake_hub = _FakeNotificationHub(success=True)
+
+    monkeypatch.setattr(users_route, 'current_user', SimpleNamespace(id=7, role='admin', is_authenticated=True))
+    monkeypatch.setattr(users_route, 'User', _FakeUser)
+    monkeypatch.setattr(users_route, 'notification_hub', fake_hub)
+
+    client = app.test_client()
+    response = client.post(
+        '/api/usuarios/101/test-channel',
+        json={'channel': 'whatsapp', 'recipient': '5511888887777'},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body['success'] is True
+    assert 'whatsapp' in body['message']
+    assert fake_hub.calls[0]['channel'] == 'whatsapp'
+    assert fake_hub.calls[0]['kwargs']['recipient_id'] is None
+
+
+def test_test_user_channel_route_rejects_missing_recipient(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=101,
+        name='Novo Usuário',
+        email='novo@empresa.com',
+        whatsapp=None,
+        telegram='8507771166',
+        instagram=None,
+        is_active=True,
+    )
+    _FakeUser.query = _FakeUserQuery(user_obj=fake_user)
+    fake_hub = _FakeNotificationHub(success=True)
+
+    monkeypatch.setattr(users_route, 'current_user', SimpleNamespace(id=7, role='admin', is_authenticated=True))
+    monkeypatch.setattr(users_route, 'User', _FakeUser)
+    monkeypatch.setattr(users_route, 'notification_hub', fake_hub)
+
+    client = app.test_client()
+    response = client.post(
+        '/api/usuarios/101/test-channel',
+        json={'channel': 'whatsapp'},
+    )
+
+    body = response.get_json()
+    assert response.status_code == 400
+    assert body['success'] is False
+    assert 'whatsapp' in body['message'].lower()
+    assert fake_hub.calls == []

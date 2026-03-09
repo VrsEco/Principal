@@ -48,8 +48,14 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">E-mail (Não editável)</label>
-                                <input type="email" class="form-control" value="{{ user.email }}" disabled
-                                    style="background: var(--bg-body); cursor: not-allowed;">
+                                <div class="channel-input-row">
+                                    <input type="email" id="email" class="form-control" value="{{ user.email }}" disabled
+                                        style="background: var(--bg-body); cursor: not-allowed;">
+                                    <button type="button" class="btn btn-secondary channel-test-btn" data-channel="email"
+                                        onclick="sendChannelTest('email')">
+                                        Testar E-mail
+                                    </button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Perfil de Acesso <span
@@ -80,13 +86,25 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">WhatsApp</label>
-                                <input type="text" id="whatsapp" class="form-control" value="{{ user.whatsapp or '' }}"
-                                    placeholder="Ex: 11988887777">
+                                <div class="channel-input-row">
+                                    <input type="text" id="whatsapp" class="form-control" value="{{ user.whatsapp or '' }}"
+                                        placeholder="Ex: 11988887777">
+                                    <button type="button" class="btn btn-secondary channel-test-btn" data-channel="whatsapp"
+                                        onclick="sendChannelTest('whatsapp')">
+                                        Testar WhatsApp
+                                    </button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Telegram ID (Numérico)</label>
-                                <input type="text" id="telegram" class="form-control" value="{{ user.telegram or '' }}"
-                                    placeholder="Ex: 8507771166">
+                                <div class="channel-input-row">
+                                    <input type="text" id="telegram" class="form-control" value="{{ user.telegram or '' }}"
+                                        placeholder="Ex: 8507771166">
+                                    <button type="button" class="btn btn-secondary channel-test-btn" data-channel="telegram"
+                                        onclick="sendChannelTest('telegram')">
+                                        Testar Telegram
+                                    </button>
+                                </div>
                                 <small style="color: var(--text-tertiary); display: block; margin-top: 4px;">
                                     Necessário para o bot <strong>Sapiens</strong>. Obtenha seu ID enviando uma mensagem
                                     para o bot do sistema.
@@ -95,8 +113,14 @@
                         </div>
                         <div class="form-group" style="margin-top: 1rem;">
                             <label class="form-label">Instagram (ID ou @usuario)</label>
-                            <input type="text" id="instagram" class="form-control" value="{{ user.instagram or '' }}"
-                                placeholder="Ex: @empresa ou 1784...">
+                            <div class="channel-input-row">
+                                <input type="text" id="instagram" class="form-control" value="{{ user.instagram or '' }}"
+                                    placeholder="Ex: @empresa ou 1784...">
+                                <button type="button" class="btn btn-secondary channel-test-btn" data-channel="instagram"
+                                    onclick="sendChannelTest('instagram')">
+                                    Testar Instagram
+                                </button>
+                            </div>
                         </div>
 
                         {% set summary_channels = ((user.summary_delivery_channels if user.summary_delivery_channels else 'telegram').split(',')) %}
@@ -297,6 +321,32 @@
         font-size: 0.85rem;
     }
 
+    .channel-input-row {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .channel-input-row .form-control {
+        flex: 1;
+    }
+
+    .channel-test-btn {
+        white-space: nowrap;
+        min-width: 148px;
+    }
+
+    @media (max-width: 768px) {
+        .channel-input-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .channel-test-btn {
+            width: 100%;
+        }
+    }
+
     .summary-channel-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -377,6 +427,53 @@
             showAlert('Erro de conexão.', 'danger');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Salvar Alterações';
+        }
+    }
+
+    async function sendChannelTest(channel) {
+        const channelFieldMap = {
+            email: 'email',
+            whatsapp: 'whatsapp',
+            telegram: 'telegram',
+            instagram: 'instagram',
+        };
+
+        const button = document.querySelector(`.channel-test-btn[data-channel="${channel}"]`);
+        const inputId = channelFieldMap[channel];
+        const input = document.getElementById(inputId);
+        const recipient = input ? input.value.trim() : '';
+
+        if (!recipient) {
+            showAlert(`Informe um valor válido para testar o canal ${channel}.`, 'danger');
+            return;
+        }
+
+        const originalText = button ? button.textContent : '';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Enviando...';
+        }
+
+        try {
+            const response = await fetch(`/api/usuarios/${USER_ID}/test-channel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel, recipient })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message || `Teste enviado com sucesso via ${channel}.`, 'success');
+            } else {
+                showAlert('Erro: ' + (result.message || 'Falha ao testar canal'), 'danger');
+            }
+        } catch (error) {
+            showAlert('Erro de conexão ao testar canal.', 'danger');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
         }
     }
 

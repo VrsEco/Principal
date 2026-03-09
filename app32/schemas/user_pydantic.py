@@ -75,3 +75,27 @@ class CompanyRegisterSchema(BaseModel):
     cnpj: Optional[str] = None
     legal_name: Optional[str] = None
     segment: Optional[str] = None
+
+
+class UserChannelTestSchema(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    channel: str = Field(...)
+    recipient: Optional[str] = Field(None, max_length=255)
+
+    @field_validator('channel')
+    @classmethod
+    def validate_channel(cls, value):
+        normalized = str(value or '').strip().lower()
+        allowed = {'email', 'whatsapp', 'telegram', 'instagram'}
+        if normalized not in allowed:
+            raise ValueError('Canal de teste inválido')
+        return normalized
+
+    @field_validator('recipient', mode='before')
+    @classmethod
+    def validate_recipient(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
