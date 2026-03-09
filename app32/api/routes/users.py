@@ -59,11 +59,8 @@ def _build_channel_test_message(user, channel: str, temporary_password: str | No
         "- Sistema: app.gestaoversus.com.br\n"
         "- Atendimento: você também pode conversar comigo por aqui\n"
         "- Se precisar de informações e auxílio, conte comigo\n\n"
-        "Atenciosamente,\n"
-        "Sapiens IA\n"
-        "Versus Gestão Corporativa\n"
-        "sapiens@gestaoversus.com.br\n"
-        "(71) 9 8238-5225"
+        "Tenha um bom dia!\n"
+        ";)"
     )
     html_body = None
     return subject, body, html_body
