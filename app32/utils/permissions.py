@@ -17,11 +17,14 @@ def has_permission(company_id, resource, action):
         return False
         
     # Superusers in their own company have all permissions
-    if employee.role == 'superuser':
+    if employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
         return True
         
     # Check specific permission in permissions JSON
-    perms = employee.permissions or {}
+    perms = {}
+    if employee.role and employee.role.permissions:
+        perms = employee.role.permissions
+        
     res_perms = perms.get(resource, [])
     return action in res_perms
 
