@@ -6,6 +6,32 @@ from schemas.project import project_task_schema, project_tasks_schema
 from utils.permissions import permission_required
 from datetime import datetime
 
+def apply_task_employee_filter(query, company_id):
+    from flask_login import current_user
+    from models.employee import Employee
+    from models.project import ProjectTask, ProjectActivityCollaborator
+    from sqlalchemy import or_
+    
+    if not current_user.is_authenticated:
+        return query
+        
+    if current_user.role == 'admin':
+        return query
+        
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
+        return query
+        
+    if employee:
+        return query.filter(
+            or_(
+                ProjectTask.employee_id == employee.id,
+                ProjectTask.collaborators.any(ProjectActivityCollaborator.employee_id == employee.id)
+            )
+        )
+        
+    return query
+
 class ProjectTaskListResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id):
@@ -17,7 +43,9 @@ class ProjectTaskListResource(Resource):
         from .project import get_request_company_id
         company_id = get_request_company_id()
             
-        tasks = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc()).all()
+        query = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc())
+        query = apply_task_employee_filter(query, company_id)
+        tasks = query.all()
         dumped_tasks = project_tasks_schema.dump(tasks)
         
         # Otimização: Busca todas as dependências do projeto de uma vez para evitar N+1 queries
@@ -98,13 +126,21 @@ class ProjectTaskResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id, task_id):
         """Get a single task."""
-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
+        from .project import get_request_company_id
+        company_id = get_request_company_id()
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = apply_task_employee_filter(query, company_id)
+        task = query.first_or_404()
         return project_task_schema.dump(task), 200
 
     @permission_required('projects', 'edit')
     def put(self, project_id, task_id):
         """Update a task."""
-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
+        from .project import get_request_company_id
+        company_id = get_request_company_id()
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = apply_task_employee_filter(query, company_id)
+        task = query.first_or_404()
         try:
             data = request.get_json()
             
@@ -157,7 +193,11 @@ class ProjectTaskResource(Resource):
     @permission_required('projects', 'edit')
     def delete(self, project_id, task_id):
         """Delete a task."""
-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
+        from .project import get_request_company_id
+        company_id = get_request_company_id()
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = apply_task_employee_filter(query, company_id)
+        task = query.first_or_404()
         try:
             db.session.delete(task)
             
@@ -176,7 +216,11 @@ class ProjectTaskStageResource(Resource):
     @permission_required('projects', 'edit')
     def patch(self, project_id, task_id):
         """Update task stage (Kanban drag & drop)."""
-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
+        from .project import get_request_company_id
+        company_id = get_request_company_id()
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = apply_task_employee_filter(query, company_id)
+        task = query.first_or_404()
         try:
             data = request.get_json()
             stage = data.get('stage')
@@ -293,7 +337,11 @@ class ProjectTaskHoursSummaryResource(Resource):
     def get(self, project_id, task_id):
         """Get summary of hours for a task."""
         from models.project import ProjectActivityCollaborator
-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
+        from .project import get_request_company_id
+        company_id = get_request_company_id()
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = apply_task_employee_filter(query, company_id)
+        task = query.first_or_404()
         
         collaborators = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, is_deleted=False).all()
         total_worked = sum(float(c.worked_hours) for c in collaborators)
@@ -328,6 +376,7 @@ class ProjectAllTasksResource(Resource):
             if not show_inactive:
                 query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
                 
+            query = apply_task_employee_filter(query, company_id)
             tasks = query.order_by(ProjectTask.id.asc()).all()
             
             return project_tasks_schema.dump(tasks), 200
@@ -340,7 +389,11 @@ class ProjectTaskTransferResource(Resource):
     @permission_required('projects', 'edit')
     def post(self, project_id, task_id):
         """Transfer a task to another project."""
-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
+        from .project import get_request_company_id
+        company_id = get_request_company_id()
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = apply_task_employee_filter(query, company_id)
+        task = query.first_or_404()
         data = request.get_json()
         target_project_id = data.get('target_project_id')
         note = data.get('note', '')

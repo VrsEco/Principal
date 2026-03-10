@@ -30,6 +30,34 @@ def get_request_company_id():
             
     return None
 
+def apply_project_employee_filter(query, company_id):
+    from flask_login import current_user
+    from models.employee import Employee
+    from models.project import Project, ProjectTask, ProjectActivityCollaborator
+    from sqlalchemy import or_
+    
+    if not current_user.is_authenticated:
+        return query
+        
+    if current_user.role == 'admin':
+        return query
+        
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
+        return query
+        
+    if employee:
+        return query.filter(
+            Project.tasks.any(
+                or_(
+                    ProjectTask.employee_id == employee.id,
+                    ProjectTask.collaborators.any(ProjectActivityCollaborator.employee_id == employee.id)
+                )
+            )
+        )
+        
+    return query
+
 class ProjectListResource(Resource):
     @permission_required('projects', 'view')
     def get(self):
@@ -42,6 +70,7 @@ class ProjectListResource(Resource):
             return [], 200
             
         query = Project.query.filter_by(company_id=company_id).order_by(Project.id.asc())
+        query = apply_project_employee_filter(query, company_id)
         
         if not show_inactive:
             query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
@@ -80,7 +109,9 @@ class ProjectResource(Resource):
         if not company_id:
             return {"message": "Active company context required"}, 400
             
-        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
+        query = Project.query.filter_by(id=project_id, company_id=company_id)
+        query = apply_project_employee_filter(query, company_id)
+        project = query.first_or_404()
         return project_schema.dump(project), 200
 
     @permission_required('projects', 'edit')
@@ -90,7 +121,9 @@ class ProjectResource(Resource):
         if not company_id:
             return {"message": "Active company context required"}, 400
             
-        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
+        query = Project.query.filter_by(id=project_id, company_id=company_id)
+        query = apply_project_employee_filter(query, company_id)
+        project = query.first_or_404()
         data = request.get_json()
         
         project.name = data.get('name', project.name)
@@ -113,7 +146,9 @@ class ProjectResource(Resource):
         if not company_id:
             return {"message": "Active company context required"}, 400
             
-        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
+        query = Project.query.filter_by(id=project_id, company_id=company_id)
+        query = apply_project_employee_filter(query, company_id)
+        project = query.first_or_404()
         db.session.delete(project)
         db.session.commit()
         return '', 204
