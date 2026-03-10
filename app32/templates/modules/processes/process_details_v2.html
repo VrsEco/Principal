@@ -919,17 +919,25 @@
     async function init() {
         try {
             await fetchProcess();
-            // Fetch employees for the dropdown using the company_id from process
+
             if (state.process && state.process.company_id) {
-                fetchEmployees(state.process.company_id);
+                await fetchEmployees(state.process.company_id);
             }
 
-            await Promise.all([
+            const results = await Promise.allSettled([
                 fetchRoutines(),
                 fetchIndicators(),
                 fetchSchedules(),
                 fetchOccurrences()
             ]);
+
+            results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                    const loaders = ['roteiros', 'indicadores', 'agendamentos', 'ocorrências'];
+                    console.warn(`Falha parcial ao carregar ${loaders[index]} do processo ${processId}:`, result.reason);
+                }
+            });
+
             renderProcess();
             renderRoutines();
             renderIndicators();
@@ -938,7 +946,7 @@
         } catch (error) {
             console.error("Error loading process details:", error);
             document.getElementById('detName').textContent = "Erro ao carregar dados";
-            document.getElementById('detDescription').textContent = "Houve um problema ao carregar as informações deste processo. Por favor, tente novamente.";
+            document.getElementById('detDescription').textContent = "Houve um problema ao carregar as informações principais deste processo. Por favor, tente novamente.";
         }
     }
 
@@ -964,10 +972,19 @@
     }
 
     async function fetchIndicators() {
-        // Now state.process is guaranteed to be loaded
-        const res = await fetch(`/api/indicators?company_id=${state.process.company_id}&process_id=${processId}`);
-        if (!res.ok) throw new Error('Falha ao carregar indicadores');
-        state.indicators = await res.json();
+        try {
+            if (!state.process || !state.process.company_id) {
+                state.indicators = [];
+                return;
+            }
+
+            const res = await fetch(`/api/indicators?company_id=${state.process.company_id}&process_id=${processId}`);
+            if (!res.ok) throw new Error('Falha ao carregar indicadores');
+            state.indicators = await res.json();
+        } catch (e) {
+            console.warn('Erro ao buscar indicadores:', e);
+            state.indicators = [];
+        }
     }
 
     async function fetchSchedules() {

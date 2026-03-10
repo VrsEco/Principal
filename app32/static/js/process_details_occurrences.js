@@ -5,9 +5,21 @@ function populateEmployeeSelect() {
 }
 
 async function fetchOccurrences() {
-    const res = await fetch(`/api/occurrences?process_id=${processId}`);
-    if (!res.ok) throw new Error('Falha ao carregar ocorrências');
-    state.occurrences = await res.json();
+    try {
+        const companyId = state.process?.company_id || window.companyId;
+        const query = new URLSearchParams({ process_id: processId });
+
+        if (companyId) {
+            query.set('company_id', companyId);
+        }
+
+        const res = await fetch(`/api/occurrences?${query.toString()}`);
+        if (!res.ok) throw new Error('Falha ao carregar ocorrências');
+        state.occurrences = await res.json();
+    } catch (e) {
+        console.warn('Erro ao buscar ocorrências:', e);
+        state.occurrences = [];
+    }
 }
 
 function renderOccurrences() {

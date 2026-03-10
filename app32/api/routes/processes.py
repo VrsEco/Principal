@@ -1,15 +1,28 @@
 import os
 
-from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
 from models import db, Company, Process, ProcessInstance, Employee
-from utils.permissions import permission_required
+from utils.permissions import permission_required, has_permission
 
 processes_bp = Blueprint('processes', __name__)
+
+
+def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
+    process = Process.query.get_or_404(process_id)
+
+    if not current_user.is_authenticated:
+        abort(403, description="Usuário não autenticado.")
+
+    if current_user.role != 'admin' and not has_permission(process.company_id, 'processes', action):
+        abort(403, description=f"Permission denied: {action} on processes")
+
+    session['active_company_id'] = process.company_id
+    return process
 
 @processes_bp.route('/api/processes/upload-flow', methods=['POST'])
 def upload_process_flow():
@@ -139,7 +152,7 @@ def process_map_compact():
 @permission_required('processes', 'view')
 def process_details(process_id):
     """Process details page (modeling/pops)"""
-    process = Process.query.get_or_404(process_id)
+    process = _get_process_with_access(process_id, action='view')
     company = Company.query.get_or_404(process.company_id)
     return render_template('modules/processes/process_details_v2.html', 
                             process_id=process_id, 

@@ -3,8 +3,9 @@ import os
 import uuid
 from datetime import datetime, date
 from decimal import Decimal
-from flask import request, current_app
+from flask import request, current_app, session
 from flask_restful import Resource
+from flask_login import current_user
 from marshmallow import ValidationError
 from werkzeug.utils import secure_filename
 from schemas.process import (
@@ -16,7 +17,7 @@ from schemas.process import (
     process_instance_schema, process_instances_schema
 )
 from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company, Indicator, ActivityWorkLog
-from utils.permissions import permission_required
+from utils.permissions import permission_required, has_permission
 from database import get_db
 
 def generate_area_code(company_id, sequence):
@@ -204,6 +205,21 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
     finally:
         if conn:
             conn.close()
+
+
+def _get_process_with_access(process_id: int, action: str = 'view', sync_session: bool = False):
+    process = Process.query.get_or_404(process_id)
+
+    if not current_user.is_authenticated:
+        return None
+
+    if current_user.role != 'admin' and not has_permission(process.company_id, 'processes', action):
+        return None
+
+    if sync_session:
+        session['active_company_id'] = process.company_id
+
+    return process
 
 
 def fetch_pop_routine_by_id(routine_id: int):
@@ -854,12 +870,16 @@ from utils.storage import save_file, delete_file
 class ProcessResource(Resource):
     @permission_required('processes', 'view')
     def get(self, process_id):
-        process = Process.query.get_or_404(process_id)
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
         return process_schema.dump(process), 200
 
     @permission_required('processes', 'edit')
     def put(self, process_id):
-        process = Process.query.get_or_404(process_id)
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
         try:
             if request.mimetype == 'multipart/form-data':
                 # Handle flow document upload
@@ -898,7 +918,9 @@ class ProcessResource(Resource):
 
     @permission_required('processes', 'delete')
     def delete(self, process_id):
-        process = Process.query.get_or_404(process_id)
+        process = _get_process_with_access(process_id, action='delete', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: delete on processes"}, 403
         try:
             db.session.delete(process)
             db.session.commit()
@@ -910,11 +932,14 @@ class ProcessResource(Resource):
 class ProcessRoutineListResource(Resource):
     @permission_required('processes', 'view')
     def get(self):
-        process_id = request.args.get('process_id')
+        process_id = request.args.get('process_id', type=int)
         if not process_id:
             return [], 200
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
         try:
-            routines = fetch_pop_routines(int(process_id))
+            routines = fetch_pop_routines(process.id)
             return routines, 200
         except Exception as e:
             import traceback
@@ -925,11 +950,12 @@ class ProcessRoutineListResource(Resource):
     def post(self):
         try:
             data = request.get_json()
-            
-            # Auto-fill company_id from Process if missing
-            if not data.get('company_id') and data.get('process_id'):
-                proc = Process.query.get(data['process_id'])
-                if proc:
+            process_id = data.get('process_id') if data else None
+            if process_id:
+                proc = _get_process_with_access(process_id, action='create', sync_session=True)
+                if not proc:
+                    return {"error": "Permission denied: create on processes"}, 403
+                if not data.get('company_id'):
                     data['company_id'] = proc.company_id
 
             routine = process_routine_schema.load(data)
@@ -1180,9 +1206,13 @@ class ProcessStepResource(Resource):
 class ProcessScheduleListResource(Resource):
     @permission_required('processes', 'view')
     def get(self):
-        process_id = request.args.get('process_id')
+        process_id = request.args.get('process_id', type=int)
         if not process_id:
             return [], 400
+
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
 
         try:
             # Busca APENAS na tabela routines (agendamentos) associados ao processo
@@ -1199,7 +1229,7 @@ class ProcessScheduleListResource(Resource):
                 WHERE process_id = %s AND (is_active = TRUE OR is_active IS NULL)
                 ORDER BY created_at DESC
                 """,
-                (process_id,)
+                (process.id,)
             )
             
             routines = [dict(row) for row in cursor.fetchall()]
