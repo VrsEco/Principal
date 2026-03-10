@@ -1,0 +1,107 @@
+commit 36fd6f05b5f150da5d9c8f58a6324dc388593064
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:17:39 2026 -0300
+
+    SQUAD: Fix JS conditional rendering for action buttons in routines and instances
+
+ .../modules/processes/process_instances_list.html  |  5 ++--
+ app32/templates/process_routines.html              | 33 +++++++++++-----------
+ 2 files changed, 20 insertions(+), 18 deletions(-)
+
+commit 1fb460ac703639ddcb36ce9084a9854362c1fb2a
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:15:56 2026 -0300
+
+    SQUAD: Restrict process routines and instances to view-only for collaborators
+
+ app32/api/routes/processes.py                      | 29 ++++++++++++++++++++--
+ .../modules/processes/process_instances_list.html  |  2 ++
+ app32/templates/process_routines.html              |  4 +++
+ 3 files changed, 33 insertions(+), 2 deletions(-)
+
+commit da9d2dc883cfd7a9c545d3b5e73fb6fc8181a0a1
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:15:08 2026 -0300
+
+    SQUAD: Block collaborator access to processes list and modeling; restrict process map view
+
+ app32/api/routes/processes.py                      | 41 ++++++++++++++++++----
+ app32/static/js/process_architecture.js            | 25 ++++++++-----
+ .../modules/processes/process_map_v2.html          |  7 ++++
+ 3 files changed, 58 insertions(+), 15 deletions(-)
+
+commit ab609fa833295ce54347ba76c199f3e8c683fb7a
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:07:34 2026 -0300
+
+    SQUAD: Restrict process instances view to owner/executor and enforce viewer-only mode
+
+ app32/api/resources/process.py | 56 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 56 insertions(+)
+
+commit e8c3a35e3ce34c5b6b9ad299b12d0e2372e5a2f6
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:54:03 2026 -0300
+
+    SQUAD: Fix projects view and filter by responsibility with ANY relationship
+
+ app32/.pytest_cache/v/cache/lastfailed |   8 +-
+ app32/.pytest_cache/v/cache/nodeids    | 221 +++++++++++++++++++++++++++++++++
+ app32/api/resources/meeting.py         |  17 +++
+ app32/api/routes/meetings.py           |  37 +++++-
+ app32/api/routes/processes.py          |  21 ++++
+ app32/models/meeting.py                |   4 +
+ app32/scripts/elite_deploy_v4.py       |   3 +
+ app32/templates/meetings_manage.html   |  46 +++++--
+ app32/templates/process_routines.html  |   8 +-
+ 9 files changed, 347 insertions(+), 18 deletions(-)
+
+commit 6456c3fbd34f1fdb8357fae8f136d178b8197781
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:53:29 2026 -0300
+
+    SQUAD: Fix projects view and filter by responsibility with ANY relationship
+
+ app32/api/resources/project.py      | 41 +++++++++++++++++++++--
+ app32/api/resources/project_task.py | 67 +++++++++++++++++++++++++++++++++----
+ 2 files changed, 98 insertions(+), 10 deletions(-)
+
+commit 28e080bc20de7321790ae0a5d8fc8a6ecebdfdcc
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:26:30 2026 -0300
+
+    SQUAD: [Backend] Filtra análise de eficiência para retornar só os dados do colaborador qnd nao tem perfil adm/viewer
+
+ app32/api/resources/efficiency.py | 19 ++++++++++++++++++-
+ 1 file changed, 18 insertions(+), 1 deletion(-)
+
+commit 0bf4285ad4ba069c98f22ebdf39c63a636659d67
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:16:23 2026 -0300
+
+    SQUAD: Impede que colaboradores acessem dados de atividades não atribuídas na visão empresa
+
+ app32/services/my_work/discovery_service.py | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+commit ae11b3d127747de7f495743cbbfa497df38684f8
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:10:11 2026 -0300
+
+    SQUAD: Fix bug de permissão que causava Erro 500 no /my-work para colaboradores
+
+ app32/utils/permissions.py | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+commit e70f3c64bc9aeb4875f91d54bfe10862cdad943a
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Mon Mar 9 21:30:33 2026 -0300
+
+    fix: harden process details tenant loading
+
+ app32/api/resources/process.py                     |  58 +++++++++---
+ app32/api/routes/processes.py                      |  19 +++-
+ app32/static/js/process_details_occurrences.js     |  18 +++-
+ .../modules/processes/process_details_v2.html      |  33 +++++--
+ app32/tests/test_process_details_scope.py          | 101 +++++++++++++++++++++
+ 5 files changed, 201 insertions(+), 28 deletions(-)

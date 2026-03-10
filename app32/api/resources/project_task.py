@@ -19,7 +19,7 @@ def apply_task_employee_filter(query, company_id):
         return query
         
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
+    if employee and employee.role and employee.role.title and employee.role.title.lower() in ['superuser', 'administrador', 'cliente']:
         return query
         
     if employee:

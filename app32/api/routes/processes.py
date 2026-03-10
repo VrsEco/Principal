@@ -50,7 +50,7 @@ def processes_list():
         if company_id:
             # Check if superuser
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-            if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
                 abort(403, description="Acesso negado: Colaboradores não podem acessar a listagem detalhada de processos.")
 
     company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
@@ -92,7 +92,7 @@ def process_map():
     is_collaborator = False
     if current_user.role != 'admin':
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             is_collaborator = True
 
     return render_template('modules/processes/process_map_v2.html', 
@@ -158,7 +158,7 @@ def process_map_compact():
     is_collaborator = False
     if current_user.role != 'admin':
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             is_collaborator = True
 
     return render_template(
@@ -176,7 +176,7 @@ def process_details(process_id):
     if current_user.role != 'admin':
         process = Process.query.get_or_404(process_id)
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=process.company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             abort(403, description="Acesso negado: Colaboradores não podem acessar os detalhes de modelagem do processo.")
 
     process = _get_process_with_access(process_id, action='view')
@@ -232,7 +232,7 @@ def process_instances_page(company_id):
     is_collaborator = False
     if current_user.role != 'admin':
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             is_collaborator = True
     return render_template('modules/processes/process_instances_list.html', company=company, is_collaborator=is_collaborator)
 
@@ -269,7 +269,7 @@ def process_routines_page(company_id):
     is_collaborator = False
     if current_user.role != 'admin':
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             is_collaborator = True
     return render_template('process_routines.html', company=company, is_collaborator=is_collaborator)
 
@@ -367,7 +367,7 @@ def api_create_process_routine(company_id):
     if current_user.role != 'admin':
         from models import Employee
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem criar rotinas."}), 403
     try:
         data = request.get_json(silent=True) or {}
@@ -425,7 +425,7 @@ def api_update_process_routine(company_id, routine_id):
     if current_user.role != 'admin':
         from models import Employee
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem editar rotinas."}), 403
     try:
         data = request.get_json(silent=True) or {}
@@ -475,7 +475,7 @@ def api_delete_process_routine(company_id, routine_id):
     if current_user.role != 'admin':
         from models import Employee
         employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
             return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem excluir rotinas."}), 403
     try:
         pg = get_db()

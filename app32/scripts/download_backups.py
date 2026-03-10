@@ -6,13 +6,13 @@ from datetime import datetime
 # --- CONFIGURAÇÕES ---
 HOST = "ip-69-164-205-75.cloudezapp.io"
 PORT = 22122
-USER = "app2"
+USER = "app"
 PASS = "*Paraiso1978"
 
 # Pastas remotas no Configr
-REMOTE_BACKUP_DIR = "/home/app2/backups"
-REMOTE_CODE_DIR = "/home/app2/public_html"
-REMOTE_UPLOADS_DIR = "/home/app2/public_html/uploads"
+REMOTE_BACKUP_DIR = "/home/app/backups"
+REMOTE_CODE_DIR = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32"
+REMOTE_UPLOADS_DIR = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/uploads"
 
 # Pasta local sincronizada (OneDrive)
 LOCAL_BACKUP_DIR = r"C:\Users\mff20\OneDrive\Versus\Versus Participações\Versus ERP\Backup_app"
@@ -110,7 +110,7 @@ def create_code_snapshot(ssh, scp):
         # Gera nome do arquivo com timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         snapshot_name = f"code_snapshot_{timestamp}.tar.gz"
-        remote_snapshot = f"/tmp/{snapshot_name}"
+        remote_snapshot = f"/home/app/{snapshot_name}"
         local_snapshot = os.path.join(local_code_dir, snapshot_name)
         
         # Verifica se já existe snapshot de hoje
@@ -123,7 +123,7 @@ def create_code_snapshot(ssh, scp):
         
         print(f"  Compactando código no servidor...")
         # Compacta o código no servidor (excluindo venv, .git, uploads)
-        cmd = f"cd {REMOTE_CODE_DIR} && tar -czf {remote_snapshot} --exclude='venv' --exclude='.venv' --exclude='.git' --exclude='uploads' --exclude='__pycache__' ."
+        cmd = f"cd {REMOTE_CODE_DIR} && tar -czf {remote_snapshot} --exclude='venv' --exclude='.venv' --exclude='.git' --exclude='uploads' --exclude='__pycache__' --exclude='*.pyc' --exclude='data' . 2>&1"
         stdin, stdout, stderr = ssh.exec_command(cmd)
         stdout.channel.recv_exit_status()  # Aguarda conclusão
         
@@ -131,7 +131,7 @@ def create_code_snapshot(ssh, scp):
         scp.get(remote_snapshot, local_snapshot)
         
         # Remove arquivo temporário do servidor
-        ssh.exec_command(f"rm {remote_snapshot}")
+        ssh.exec_command(f"rm -f {remote_snapshot}")
         
         # Verifica tamanho do arquivo baixado
         size_mb = os.path.getsize(local_snapshot) / (1024 * 1024)

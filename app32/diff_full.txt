@@ -1,0 +1,1847 @@
+commit 36fd6f05b5f150da5d9c8f58a6324dc388593064
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:17:39 2026 -0300
+
+    SQUAD: Fix JS conditional rendering for action buttons in routines and instances
+
+diff --git a/app32/templates/modules/processes/process_instances_list.html b/app32/templates/modules/processes/process_instances_list.html
+index 8dc6edc7..039a8878 100644
+--- a/app32/templates/modules/processes/process_instances_list.html
++++ b/app32/templates/modules/processes/process_instances_list.html
+@@ -208,6 +208,7 @@
+ 
+ <script>
+     const companyId = parseInt('{{ company.id if company else 0 }}') || null;
++    const isCollaborator = {{ is_collaborator | tojson }};
+     let allInstances = [];
+ 
+     async function loadInstances() {
+@@ -352,7 +353,7 @@
+                             <span class="d-none d-md-inline">Infos</span>
+                             <span class="d-inline d-md-none">ℹ️</span>
+                         </a>
+-                        {% if not is_collaborator %}
++                        ${!isCollaborator ? `
+                         <button class="btn-instance-action action-complete" onclick="openCompleteModal(${inst.id})" ${inst.status === 'completed' ? 'disabled' : ''} title="Finalizar">
+                             <span class="d-none d-md-inline">Finalizar</span>
+                             <span class="d-inline d-md-none">✅</span>
+@@ -361,7 +362,7 @@
+                             <span class="d-none d-md-inline">Excluir</span>
+                             <span class="d-inline d-md-none">🗑️</span>
+                         </button>
+-                        {% endif %}
++                        ` : ''}
+                     </div>
+                 </div>
+                 </div>
+diff --git a/app32/templates/process_routines.html b/app32/templates/process_routines.html
+index 47051210..b0d1c364 100644
+--- a/app32/templates/process_routines.html
++++ b/app32/templates/process_routines.html
+@@ -226,6 +226,7 @@
+ 
+ <script>
+   const companyId = parseInt('{{ company.id if company else 0 }}') || null;
++  const isCollaborator = {{ is_collaborator | tojson }};
+   let allRoutines = [];
+ 
+   async function loadRoutines() {
+@@ -360,22 +361,22 @@
+                         <h3 class="rt-name">${r.name}</h3>
+                         <div class="rt-process">Processo: <strong>${processLabel}</strong></div>
+                     </div>
+-                    <div class="rt-actions">
+-                        {% if not is_collaborator %}
+-                        <button class="btn-rt-action btn-rt-start" onclick="startInstance(${r.process_id}, '${r.name}', ${r.id})" title="Iniciar Agora">
+-                            ⚡ Iniciar
+-                        </button>
+-                        <a href="/companies/${companyId}/routines/${r.id}" class="btn-rt-action btn-rt-edit" title="Editar Rotina">
+-                            ✏️ Editar
+-                        </a>
+-                        <button class="btn-rt-action btn-rt-danger" onclick="deleteRoutine(${r.id}, '${r.name}')" title="Excluir Rotina">
+-                            🗑️ Excluir
+-                        </button>
+-                        {% endif %}
+-                        <a href="/process-map/process/${r.process_id}?tab=routines" class="btn-rt-action" title="Ver Detalhes">
+-                            ℹ️
+-                        </a>
+-                    </div>
++                  <div class="rt-actions">
++                      ${!isCollaborator ? `
++                      <button class="btn-rt-action btn-rt-start" onclick="startInstance(${r.process_id}, '${r.name}', ${r.id})" title="Iniciar Agora">
++                          ⚡ Iniciar
++                      </button>
++                      <a href="/companies/${companyId}/routines/${r.id}" class="btn-rt-action btn-rt-edit" title="Editar Rotina">
++                          ✏️ Editar
++                      </a>
++                      <button class="btn-rt-action btn-rt-danger" onclick="deleteRoutine(${r.id}, '${r.name}')" title="Excluir Rotina">
++                          🗑️ Excluir
++                      </button>
++                      ` : ''}
++                      <a href="/process-map/process/${r.process_id}?tab=routines" class="btn-rt-action" title="Ver Detalhes">
++                          ℹ️
++                      </a>
++                  </div>
+                 </div>
+                 
+                 <div class="rt-meta">
+
+commit 1fb460ac703639ddcb36ce9084a9854362c1fb2a
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:15:56 2026 -0300
+
+    SQUAD: Restrict process routines and instances to view-only for collaborators
+
+diff --git a/app32/api/routes/processes.py b/app32/api/routes/processes.py
+index 245d30f8..ab4ecb63 100644
+--- a/app32/api/routes/processes.py
++++ b/app32/api/routes/processes.py
+@@ -229,7 +229,12 @@ def process_instances_redirect():
+ def process_instances_page(company_id):
+     """Render the process instances management page."""
+     company = Company.query.get_or_404(company_id)
+-    return render_template('modules/processes/process_instances_list.html', company=company)
++    is_collaborator = False
++    if current_user.role != 'admin':
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            is_collaborator = True
++    return render_template('modules/processes/process_instances_list.html', company=company, is_collaborator=is_collaborator)
+ 
+ @processes_bp.route('/process-occurrences')
+ @permission_required('processes', 'view')
+@@ -261,7 +266,12 @@ def process_occurrences_page(company_id):
+ def process_routines_page(company_id):
+     """Render the process routines management page."""
+     company = Company.query.get_or_404(company_id)
+-    return render_template('process_routines.html', company=company)
++    is_collaborator = False
++    if current_user.role != 'admin':
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            is_collaborator = True
++    return render_template('process_routines.html', company=company, is_collaborator=is_collaborator)
+ 
+ @processes_bp.route('/companies/<int:company_id>/process-routines/analysis')
+ @permission_required('processes', 'view')
+@@ -354,6 +364,11 @@ def api_get_process_routines(company_id):
+ @permission_required('processes', 'create')
+ def api_create_process_routine(company_id):
+     """Create a new process routine"""
++    if current_user.role != 'admin':
++        from models import Employee
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem criar rotinas."}), 403
+     try:
+         data = request.get_json(silent=True) or {}
+         name = data.get("name", "").strip()
+@@ -407,6 +422,11 @@ def api_create_process_routine(company_id):
+ @permission_required('processes', 'edit')
+ def api_update_process_routine(company_id, routine_id):
+     """Update an existing process routine"""
++    if current_user.role != 'admin':
++        from models import Employee
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem editar rotinas."}), 403
+     try:
+         data = request.get_json(silent=True) or {}
+         pg = get_db()
+@@ -452,6 +472,11 @@ def api_update_process_routine(company_id, routine_id):
+ @permission_required('processes', 'delete')
+ def api_delete_process_routine(company_id, routine_id):
+     """Soft delete a process routine"""
++    if current_user.role != 'admin':
++        from models import Employee
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem excluir rotinas."}), 403
+     try:
+         pg = get_db()
+         conn = pg._get_connection()
+diff --git a/app32/templates/modules/processes/process_instances_list.html b/app32/templates/modules/processes/process_instances_list.html
+index f067cb0e..8dc6edc7 100644
+--- a/app32/templates/modules/processes/process_instances_list.html
++++ b/app32/templates/modules/processes/process_instances_list.html
+@@ -352,6 +352,7 @@
+                             <span class="d-none d-md-inline">Infos</span>
+                             <span class="d-inline d-md-none">ℹ️</span>
+                         </a>
++                        {% if not is_collaborator %}
+                         <button class="btn-instance-action action-complete" onclick="openCompleteModal(${inst.id})" ${inst.status === 'completed' ? 'disabled' : ''} title="Finalizar">
+                             <span class="d-none d-md-inline">Finalizar</span>
+                             <span class="d-inline d-md-none">✅</span>
+@@ -360,6 +361,7 @@
+                             <span class="d-none d-md-inline">Excluir</span>
+                             <span class="d-inline d-md-none">🗑️</span>
+                         </button>
++                        {% endif %}
+                     </div>
+                 </div>
+                 </div>
+diff --git a/app32/templates/process_routines.html b/app32/templates/process_routines.html
+index 1b7b59cb..47051210 100644
+--- a/app32/templates/process_routines.html
++++ b/app32/templates/process_routines.html
+@@ -15,12 +15,14 @@
+   </div>
+ </div>
+ 
++{% if not is_collaborator %}
+ <div class="d-flex justify-content-end mb-3" style="gap:0.75rem; flex-wrap:wrap;">
+   <a href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}"
+     class="btn btn-primary">
+     <span>➕</span> Adicionar Rotina
+   </a>
+ </div>
++{% endif %}
+ 
+ <div class="routines-grid mt-4" id="routinesGrid">
+   <div class="loading-shimmer" style="height: 120px; border-radius: 12px;"></div>
+@@ -359,6 +361,7 @@
+                         <div class="rt-process">Processo: <strong>${processLabel}</strong></div>
+                     </div>
+                     <div class="rt-actions">
++                        {% if not is_collaborator %}
+                         <button class="btn-rt-action btn-rt-start" onclick="startInstance(${r.process_id}, '${r.name}', ${r.id})" title="Iniciar Agora">
+                             ⚡ Iniciar
+                         </button>
+@@ -368,6 +371,7 @@
+                         <button class="btn-rt-action btn-rt-danger" onclick="deleteRoutine(${r.id}, '${r.name}')" title="Excluir Rotina">
+                             🗑️ Excluir
+                         </button>
++                        {% endif %}
+                         <a href="/process-map/process/${r.process_id}?tab=routines" class="btn-rt-action" title="Ver Detalhes">
+                             ℹ️
+                         </a>
+
+commit da9d2dc883cfd7a9c545d3b5e73fb6fc8181a0a1
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:15:08 2026 -0300
+
+    SQUAD: Block collaborator access to processes list and modeling; restrict process map view
+
+diff --git a/app32/api/routes/processes.py b/app32/api/routes/processes.py
+index f722954c..245d30f8 100644
+--- a/app32/api/routes/processes.py
++++ b/app32/api/routes/processes.py
+@@ -41,6 +41,18 @@ def upload_process_flow():
+ @permission_required('processes', 'view')
+ def processes_list():
+     """Processes list page"""
++    if current_user.role != 'admin':
++        company_id = session.get('active_company_id')
++        if not company_id:
++            emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
++            if emp: company_id = emp.company_id
++        
++        if company_id:
++            # Check if superuser
++            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++            if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++                abort(403, description="Acesso negado: Colaboradores não podem acessar a listagem detalhada de processos.")
++
+     company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
+     if not company_id and current_user.is_authenticated:
+         if current_user.role == 'admin':
+@@ -77,13 +89,15 @@ def process_map():
+             if emp:
+                 company_id = emp.company_id
+     
+-    if company_id:
+-        session['active_company_id'] = company_id
+-        # Se não veio na URL ou mudou, redireciona para URL explicita
+-        if not arg_company_id or arg_company_id != company_id:
+-            return redirect(url_for('processes.process_map', company_id=company_id))
++    is_collaborator = False
++    if current_user.role != 'admin':
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            is_collaborator = True
+ 
+-    return render_template('modules/processes/process_map_v2.html', company_id=company_id)
++    return render_template('modules/processes/process_map_v2.html', 
++                           company_id=company_id, 
++                           is_collaborator=is_collaborator)
+ 
+ @processes_bp.route('/process-map/compact')
+ @permission_required('processes', 'view')
+@@ -141,17 +155,30 @@ def process_map_compact():
+                 p['stage_color'] = get_stage_color(p.get('kanban_stage'))
+                 p['perf_color'] = get_perf_color(p.get('performance_level'))
+ 
++    is_collaborator = False
++    if current_user.role != 'admin':
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            is_collaborator = True
++
+     return render_template(
+         'modules/processes/process_map_compact_view.html',
+         company_name=company.name if company else "Empresa",
+         areas=map_data.get('areas', []),
+-        now=datetime.now().strftime('%d/%m/%Y %H:%M')
++        now=datetime.now().strftime('%d/%m/%Y %H:%M'),
++        is_collaborator=is_collaborator
+     )
+ 
+ @processes_bp.route('/processes/<int:process_id>')
+ @permission_required('processes', 'view')
+ def process_details(process_id):
+     """Process details page (modeling/pops)"""
++    if current_user.role != 'admin':
++        process = Process.query.get_or_404(process_id)
++        employee = Employee.query.filter_by(user_id=current_user.id, company_id=process.company_id).first()
++        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
++            abort(403, description="Acesso negado: Colaboradores não podem acessar os detalhes de modelagem do processo.")
++
+     process = _get_process_with_access(process_id, action='view')
+     company = Company.query.get_or_404(process.company_id)
+     return render_template('modules/processes/process_details_v2.html', 
+diff --git a/app32/static/js/process_architecture.js b/app32/static/js/process_architecture.js
+index a36acf7c..7fa760cb 100644
+--- a/app32/static/js/process_architecture.js
++++ b/app32/static/js/process_architecture.js
+@@ -5,6 +5,7 @@
+ 
+ // Handle 'null' string or other invalid values from data attribute
+ const rawCompanyId = document.getElementById('processArchitectureContainer')?.dataset.companyId;
++const isCollaborator = document.getElementById('processArchitectureContainer')?.dataset.isCollaborator === 'true';
+ let normalizedCompanyId = rawCompanyId;
+ if (!rawCompanyId || rawCompanyId === 'null' || rawCompanyId === 'undefined' || rawCompanyId === '') {
+     normalizedCompanyId = null;
+@@ -152,8 +153,11 @@ function renderMapClassic(container) {
+             return `
+                         <div class="macro-group">
+                             <div class="macro-title">${macro.code ? `<span style='font-family:monospace; color: var(--text-tertiary); font-size:0.75em;'>${macro.code}</span> ` : ''}${macro.name}</div>
+-                            ${macroProcesses.map(p => `
+-                                <a href="/processes/${p.id}" class="process-link-card">
++                            ${macroProcesses.map(p => {
++            const linkTag = isCollaborator ? 'div' : 'a';
++            const linkAttr = isCollaborator ? '' : `href="/processes/${p.id}"`;
++            return `
++                                <${linkTag} ${linkAttr} class="process-link-card" ${isCollaborator ? 'style="cursor: default;"' : ''}>
+                                     <span class="process-link-name">${p.code ? p.code + ' - ' : ''}${p.name}</span>
+                                     <div class="process-link-meta">
+                                         <div style="display: flex; gap: 6px; align-items: center;">
+@@ -162,8 +166,9 @@ function renderMapClassic(container) {
+                                         </div>
+                                         <span>👤 ${p.responsible ? p.responsible.split(' ')[0] : '-'}</span>
+                                     </div>
+-                                </a>
+-                            `).join('')}
++                                </${linkTag}>
++                            `;
++        }).join('')}
+                             <div class="macro-footer">Dono: ${macro.owner || '-'}</div>
+                         </div>
+                     `;
+@@ -189,15 +194,19 @@ function renderMapMP2(container) {
+                             <div class="mp2-macro-box">
+                                 <div class="mp2-macro-title">${macro.code ? macro.code + ' - ' : ''}${macro.name}</div>
+                                 <div class="mp2-processes-list">
+-                                    ${macroProcesses.map(p => `
+-                                        <a href="/processes/${p.id}" class="mp2-process-card">
++                                    ${macroProcesses.map(p => {
++                const linkTag = isCollaborator ? 'div' : 'a';
++                const linkAttr = isCollaborator ? '' : `href="/processes/${p.id}"`;
++                return `
++                                        <${linkTag} ${linkAttr} class="mp2-process-card" ${isCollaborator ? 'style="cursor: default;"' : ''}>
+                                             <div class="mp2-process-badges">
+                                                 <div class="indicator-stage" style="background: ${getStageColor(p.kanban_stage)}; width: 10px; height: 10px;"></div>
+                                                 <div class="indicator-perf" style="background: ${getPerfColor(p.performance_level)}; width: 9px; height: 9px;"></div>
+                                             </div>
+                                             <div class="mp2-process-name">${p.code ? p.code + ' - ' : ''}${p.name}</div>
+-                                        </a>
+-                                    `).join('')}
++                                        </${linkTag}>
++                                    `;
++            }).join('')}
+                                     ${macroProcesses.length === 0 ? '<div style="grid-column: 1/-1; text-align:center; font-size:0.6rem; color:var(--text-tertiary)">Sem processos</div>' : ''}
+                                 </div>
+                                 <div class="macro-footer" style="font-size: 0.6rem;">${macro.owner || '-'}</div>
+diff --git a/app32/templates/modules/processes/process_map_v2.html b/app32/templates/modules/processes/process_map_v2.html
+index af02fa79..69b05dad 100644
+--- a/app32/templates/modules/processes/process_map_v2.html
++++ b/app32/templates/modules/processes/process_map_v2.html
+@@ -5,7 +5,11 @@
+ {% block breadcrumb %}
+ <a href="/my-work">Meu Trabalho</a>
+ <span class="sep">/</span>
++{% if is_collaborator %}
++<span class="text-secondary">Processos</span>
++{% else %}
+ <a href="/processes">Processos</a>
++{% endif %}
+ <span class="sep">/</span>
+ <span class="current">Arquitetura & Mapa</span>
+ {% endblock %}
+@@ -14,6 +18,7 @@
+ 
+ {% block workspace_content %}
+ <div class="arch-container" id="processArchitectureContainer"
++    data-is-collaborator="{{ is_collaborator | tojson }}"
+     data-company-id="{{ (company_id or session.get('active_company_id') or 'null') | tojson }}">
+     <!-- Header -->
+     <div class="workspace-header" style="margin-bottom: 1rem;">
+@@ -24,9 +29,11 @@
+     <!-- Abas de Navegação Estilo App31 -->
+     <div class="arch-tabs">
+         <button class="arch-tab active" onclick="switchTab('visual')">🗺️ Mapa Geral</button>
++        {% if not is_collaborator %}
+         <button class="arch-tab" onclick="switchTab('areas')">🏢 Áreas</button>
+         <button class="arch-tab" onclick="switchTab('macros')">📊 Macroprocessos</button>
+         <button class="arch-tab" onclick="switchTab('processes')">⚙️ Processos</button>
++        {% endif %}
+     </div>
+ 
+     <!-- Painel: Mapa Visual -->
+
+commit ab609fa833295ce54347ba76c199f3e8c683fb7a
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 03:07:34 2026 -0300
+
+    SQUAD: Restrict process instances view to owner/executor and enforce viewer-only mode
+
+diff --git a/app32/api/resources/process.py b/app32/api/resources/process.py
+index df745153..49a01f79 100644
+--- a/app32/api/resources/process.py
++++ b/app32/api/resources/process.py
+@@ -19,6 +19,34 @@ from schemas.process import (
+ from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company, Indicator, ActivityWorkLog
+ from utils.permissions import permission_required, has_permission
+ from database import get_db
++from sqlalchemy import or_
++
++def apply_instance_employee_filter(query, company_id):
++    from flask_login import current_user
++    from models.employee import Employee
++    from models.process import ProcessInstance, ProcessInstanceCollaborator
++
++    if not current_user.is_authenticated:
++        return query
++
++    if current_user.role == 'admin':
++        return query
++
++    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
++        return query
++
++    if employee:
++        return query.filter(
++            or_(
++                ProcessInstance.owner_employee_id == employee.id,
++                ProcessInstance.responsible_id == employee.id,
++                ProcessInstance.executor_id == employee.id,
++                ProcessInstance.collaborators_json.contains([{"id": employee.id}]),
++                ProcessInstance.collaborators_json.contains([{"employee_id": employee.id}])
++            )
++        )
++    return query
+ 
+ def generate_area_code(company_id, sequence):
+     company = Company.query.get(company_id)
+@@ -288,6 +316,7 @@ class ProcessInstanceListResource(Resource):
+             return [], 200
+             
+         query = ProcessInstance.query.filter_by(company_id=company_id)
++        query = apply_instance_employee_filter(query, company_id)
+         
+         process_id = request.args.get('process_id')
+         if process_id:
+@@ -497,11 +526,29 @@ class ProcessInstanceResource(Resource):
+     @permission_required('processes', 'view')
+     def get(self, instance_id):
+         instance = ProcessInstance.query.get_or_404(instance_id)
++        # Apply filter to individual GET as well
++        company_id = get_request_company_id()
++        query = ProcessInstance.query.filter_by(id=instance_id)
++        query = apply_instance_employee_filter(query, company_id)
++        instance = query.first_or_404()
+         return process_instance_schema.dump(instance), 200
+ 
+     @permission_required('processes', 'edit')
+     def put(self, instance_id):
+         instance = ProcessInstance.query.get_or_404(instance_id)
++
++        # Check if user is collaborator only (viewer-only restriction)
++        # If not admin/superuser and not the owner/responsible/executor, block edit
++        if current_user.role != 'admin':
++            company_id = get_request_company_id()
++            from models.employee import Employee
++            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++            if employee and (not employee.role or employee.role.title.lower() != 'superuser'):
++                if instance.owner_employee_id != employee.id and \
++                   instance.responsible_id != employee.id and \
++                   instance.executor_id != employee.id:
++                    return {"error": "Viewer only: You can only view this process instance."}, 403
++
+         try:
+             data = request.get_json()
+             
+@@ -516,6 +563,15 @@ class ProcessInstanceResource(Resource):
+     @permission_required('processes', 'delete')
+     def delete(self, instance_id):
+         instance = ProcessInstance.query.get_or_404(instance_id)
++        
++        # Viewer only check for delete
++        if current_user.role != 'admin':
++            company_id = get_request_company_id()
++            from models.employee import Employee
++            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++            if employee and (not employee.role or employee.role.title.lower() != 'superuser'):
++                return {"error": "Viewer only: You cannot delete process instances."}, 403
++
+         try:
+             db.session.delete(instance)
+             db.session.commit()
+
+commit e8c3a35e3ce34c5b6b9ad299b12d0e2372e5a2f6
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:54:03 2026 -0300
+
+    SQUAD: Fix projects view and filter by responsibility with ANY relationship
+
+diff --git a/app32/.pytest_cache/v/cache/lastfailed b/app32/.pytest_cache/v/cache/lastfailed
+index ffa858eb..228d6b89 100644
+--- a/app32/.pytest_cache/v/cache/lastfailed
++++ b/app32/.pytest_cache/v/cache/lastfailed
+@@ -1,4 +1,10 @@
+ {
+   "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_print_statements": true,
+-  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation": true
++  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation": true,
++  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_bare_except": true,
++  "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs": true,
++  "tests/test_api_contract.py::test_api_v2_chat_contract": true,
++  "tests/test_sapiens_workflow_catalog_ui.py::test_sapiens_page_contains_workflow_catalog_panel": true,
++  "tests/test_email_service_templates.py::test_send_email_autowraps_corporate_html": true,
++  "tests/test_email_service_templates.py::test_send_email_preserves_explicit_html": true
+ }
+\ No newline at end of file
+diff --git a/app32/.pytest_cache/v/cache/nodeids b/app32/.pytest_cache/v/cache/nodeids
+index 717d28c5..867c36ab 100644
+--- a/app32/.pytest_cache/v/cache/nodeids
++++ b/app32/.pytest_cache/v/cache/nodeids
+@@ -12,12 +12,57 @@
+   "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation",
+   "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_eval_or_exec",
+   "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs",
++  "tests/test_agents_workflow_approval_routes.py::test_approve_action_returns_audit_metadata_and_logs_message",
++  "tests/test_agents_workflow_approval_routes.py::test_list_workflow_approvals_blocks_unauthorized_role",
++  "tests/test_agents_workflow_approval_routes.py::test_list_workflow_approvals_returns_structured_payload",
++  "tests/test_agents_workflow_approval_routes.py::test_list_workflow_approvals_supports_expired_filter",
++  "tests/test_agents_workflow_approval_routes.py::test_list_workflow_approvals_validates_limit",
++  "tests/test_agents_workflow_approval_routes.py::test_reject_action_blocks_non_workflow_action",
++  "tests/test_agents_workflow_approval_routes.py::test_reject_action_returns_audit_metadata_and_logs_message",
++  "tests/test_agents_workflow_approval_routes.py::test_revalidate_action_returns_audit_metadata_and_logs_message",
++  "tests/test_agents_workflow_approval_routes.py::test_workflow_approval_board_blocks_unauthorized_role",
++  "tests/test_agents_workflow_approval_routes.py::test_workflow_approval_board_returns_visual_payload",
++  "tests/test_agents_workflow_approval_routes.py::test_workflow_approval_metrics_blocks_unauthorized_role",
++  "tests/test_agents_workflow_approval_routes.py::test_workflow_approval_metrics_returns_aggregated_view",
++  "tests/test_agents_workflow_approval_routes.py::test_workflow_approval_metrics_validates_limit",
++  "tests/test_agents_workflow_catalog_routes.py::test_workflow_catalog_blocks_unauthorized_role",
++  "tests/test_agents_workflow_catalog_routes.py::test_workflow_catalog_returns_operational_payload",
++  "tests/test_agents_workflow_gap_routes.py::test_get_workflow_gap_link_returns_gap_for_task",
++  "tests/test_agents_workflow_gap_routes.py::test_get_workflow_gap_link_validates_and_blocks",
++  "tests/test_agents_workflow_gap_routes.py::test_list_workflow_gaps_blocks_unauthorized_role",
++  "tests/test_agents_workflow_gap_routes.py::test_list_workflow_gaps_returns_structured_payload",
++  "tests/test_agents_workflow_gap_routes.py::test_list_workflow_gaps_validates_limit_and_user",
++  "tests/test_agents_workflow_usage_routes.py::test_list_workflow_usage_returns_structured_payload",
++  "tests/test_agents_workflow_usage_routes.py::test_workflow_usage_metrics_blocks_unauthorized_role",
++  "tests/test_agents_workflow_usage_routes.py::test_workflow_usage_metrics_returns_aggregated_payload",
++  "tests/test_api_contract.py::test_api_v2_chat_contract",
+   "tests/test_app_compliance_service.py::test_configured_actions_capture_failures",
+   "tests/test_app_compliance_service.py::test_dynamic_route_uses_context_and_reports_errors",
+   "tests/test_app_compliance_service.py::test_format_message_filters_severity",
+   "tests/test_app_compliance_service.py::test_route_probe_adds_execution_check",
+   "tests/test_app_compliance_service.py::test_run_full_scan_returns_summary",
+   "tests/test_app_compliance_service.py::test_run_specific_page_not_found",
++  "tests/test_email_service_templates.py::test_send_email_autowraps_corporate_html",
++  "tests/test_email_service_templates.py::test_send_email_preserves_explicit_html",
++  "tests/test_email_service_templates.py::test_send_welcome_email_uses_official_layout",
++  "tests/test_execution_menu_metadata.py::test_run_agent_with_context_returns_menu_metadata_on_intercept",
++  "tests/test_execution_menu_metadata.py::test_run_agent_with_context_uses_contextvars_without_process_env",
++  "tests/test_meeting_resource_scope.py::test_get_meeting_or_404_filters_by_company",
++  "tests/test_meeting_resource_scope.py::test_get_meeting_or_404_returns_403_when_company_not_accessible",
++  "tests/test_meeting_resource_scope.py::test_get_request_company_id_prefers_query_arg",
++  "tests/test_meeting_resource_scope.py::test_meeting_delete_uses_company_scope_and_deletes",
++  "tests/test_meeting_resource_scope.py::test_meetings_template_contains_delete_action",
++  "tests/test_meeting_tools_scope.py::test_get_meeting_in_active_company_blocks_cross_company",
++  "tests/test_meeting_tools_scope.py::test_get_meeting_in_active_company_filters_by_context",
++  "tests/test_meetings_route_scope.py::test_meeting_report_blocks_cross_company_access",
++  "tests/test_meetings_route_scope.py::test_meetings_company_manage_blocks_cross_company_access",
++  "tests/test_meetings_route_scope.py::test_user_can_access_company_for_employee",
++  "tests/test_menu_engine_conversation_integration.py::test_handle_menu_message_attaches_discovery_metadata_for_ambiguous_selection",
++  "tests/test_menu_engine_conversation_integration.py::test_handle_menu_message_attaches_discovery_metadata_for_implicit_selection",
++  "tests/test_menu_engine_conversation_integration.py::test_handle_menu_message_attaches_discovery_metadata_for_no_match",
++  "tests/test_menu_engine_conversation_integration.py::test_handle_menu_message_auto_selects_clear_winner_even_with_multiple_candidates",
++  "tests/test_menu_engine_conversation_integration.py::test_handle_menu_message_back_navigation_restores_previous_steps",
++  "tests/test_menu_engine_conversation_integration.py::test_handle_menu_message_project_task_create_full_cycle",
+   "tests/test_menu_engine_my_work_report.py::test_format_my_work_report_hierarchy_with_meetings_whatsapp",
+   "tests/test_menu_engine_my_work_report.py::test_resolve_period_relative_next_15_days",
+   "tests/test_menu_engine_my_work_report.py::test_resolve_period_relative_this_month",
+@@ -42,16 +87,192 @@
+   "tests/test_menu_engine_summary_flow_helpers.py::test_prepare_missing_field_selection_uses_selected_company_from_payload",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_resolve_company_ids_for_payload_does_not_match_inactive_company_term",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_resolve_company_ids_for_payload_ignores_inactive_companies",
++  "tests/test_menu_engine_summary_flow_helpers.py::test_resolve_company_ids_for_payload_requires_explicit_company_for_collaborator_with_multiple_links",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_resolve_my_work_collaborator_label_handles_all_and_multi",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_summary_collaborator_prompt_has_all_and_multi_hint",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_summary_email_offer_has_two_options",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_summary_status_choices_contract",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_try_execute_direct_option_creates_project_task_with_canonical_code",
+   "tests/test_menu_engine_summary_flow_helpers.py::test_whatsapp_summary_status_keeps_email_confirmation_flow",
++  "tests/test_proactive_service_periods.py::test_infer_date_range_from_summary_text",
++  "tests/test_proactive_service_periods.py::test_is_affirmative_email_confirmation_variants",
++  "tests/test_proactive_service_periods.py::test_parse_custom_period_ddmmyyyy",
++  "tests/test_proactive_service_periods.py::test_resolve_summary_period_month",
++  "tests/test_proactive_service_periods.py::test_resolve_summary_period_next_15_days",
++  "tests/test_proactive_service_periods.py::test_truncate_telegram_message_keeps_short_message",
++  "tests/test_proactive_service_periods.py::test_truncate_telegram_message_uses_cta_suffix",
++  "tests/test_process_details_scope.py::test_occurrences_loader_sends_company_scope_and_falls_back_gracefully",
++  "tests/test_process_details_scope.py::test_process_details_route_syncs_active_company_from_process",
++  "tests/test_process_details_scope.py::test_process_details_template_uses_resilient_loading",
++  "tests/test_process_details_scope.py::test_process_resource_checks_permission_against_process_company",
++  "tests/test_project_responsible_summary_service.py::test_build_project_summary_payload_lists_stats_and_tasks",
++  "tests/test_project_responsible_summary_service.py::test_build_task_summary_payload_contains_5w1h",
++  "tests/test_sapiens_workflow_catalog_ui.py::test_sapiens_page_contains_workflow_catalog_panel",
++  "tests/test_sapiens_workflow_catalog_ui.py::test_sapiens_template_contains_workflow_catalog_panel",
++  "tests/test_user_schema.py::test_user_create_schema_accepts_company_ids_and_deduplicates",
++  "tests/test_user_schema.py::test_user_create_schema_rejects_invalid_company_ids_format",
++  "tests/test_user_schema.py::test_user_create_schema_rejects_unknown_fields",
++  "tests/test_users_route_create.py::test_build_channel_test_message_for_email_uses_official_email_wrapper",
++  "tests/test_users_route_create.py::test_create_user_route_accepts_company_ids_and_links_employees",
++  "tests/test_users_route_create.py::test_create_user_route_rejects_inactive_or_unknown_company_ids",
++  "tests/test_users_route_create.py::test_test_user_channel_route_rejects_missing_recipient",
++  "tests/test_users_route_create.py::test_test_user_channel_route_sends_message_to_selected_channel",
++  "tests/test_users_route_create.py::test_test_user_channel_route_uses_generic_password_copy_when_not_informed",
+   "tests/test_whatsapp_webhook_payload.py::test_extract_whatsapp_message_from_chat_id",
++  "tests/test_whatsapp_webhook_payload.py::test_extract_whatsapp_message_from_message_data",
+   "tests/test_whatsapp_webhook_payload.py::test_extract_whatsapp_message_ignores_self_message",
+   "tests/test_whatsapp_webhook_payload.py::test_extract_whatsapp_message_nested_payload",
+   "tests/test_whatsapp_webhook_payload.py::test_extract_whatsapp_message_standard_payload",
++  "tests/test_whatsapp_webhook_payload.py::test_handle_instagram_sends_operational_error_message",
++  "tests/test_whatsapp_webhook_payload.py::test_handle_instagram_uses_menu_intercept_and_logs_messages",
++  "tests/test_whatsapp_webhook_payload.py::test_handle_whatsapp_accepts_form_encoded_payload",
++  "tests/test_whatsapp_webhook_payload.py::test_load_whatsapp_request_payload_from_form_json_field",
++  "tests/test_workflow_approval_service.py::test_build_workflow_approval_board_exposes_filters_and_channel_experience",
++  "tests/test_workflow_approval_service.py::test_build_workflow_approval_metrics_groups_by_status_channel_and_approver",
++  "tests/test_workflow_approval_service.py::test_serialize_workflow_approval_action_marks_expired_pending_action",
++  "tests/test_workflow_approval_service.py::test_workflow_approval_service_blocks_company_mismatch",
++  "tests/test_workflow_approval_service.py::test_workflow_approval_service_blocks_expired_approval_until_revalidated",
++  "tests/test_workflow_approval_service.py::test_workflow_approval_service_executes_resume_payload_when_approved",
++  "tests/test_workflow_approval_service.py::test_workflow_approval_service_keeps_action_approved_when_resume_does_not_execute",
++  "tests/test_workflow_approval_service.py::test_workflow_approval_service_rejects_and_marks_action_without_resuming",
++  "tests/test_workflow_approval_service.py::test_workflow_approval_service_revalidates_pending_approval",
++  "tests/test_workflow_catalog_service.py::test_build_workflow_catalog_aggregates_usage_and_gaps",
++  "tests/test_workflow_collaborator_handler.py::test_collaborator_occupancy_formats_success",
++  "tests/test_workflow_collaborator_handler.py::test_collaborator_occupancy_handles_employee_resolution_error",
++  "tests/test_workflow_collaborator_handler.py::test_collaborator_occupancy_requires_collaborator",
++  "tests/test_workflow_collaborator_handler.py::test_collaborator_occupancy_requires_period",
++  "tests/test_workflow_company_selection.py::test_company_selection_context_builds_choices_from_hidden_payload",
++  "tests/test_workflow_company_selection.py::test_company_selection_prepare_prompts_for_non_web_without_explicit_company",
++  "tests/test_workflow_company_selection.py::test_company_selection_prepare_skips_for_web_channel",
++  "tests/test_workflow_company_selection.py::test_company_selection_select_company_adds_summary_context_when_needed",
++  "tests/test_workflow_company_selection.py::test_company_selection_select_company_denies_access_and_requires_reset",
++  "tests/test_workflow_company_selection.py::test_company_selection_select_company_returns_error_for_invalid_index",
++  "tests/test_workflow_company_selection.py::test_operation_company_presenter_builds_prompt",
++  "tests/test_workflow_confirmation.py::test_confirmation_coordinator_builds_execution_prompt_when_direct_execution_is_not_available",
++  "tests/test_workflow_confirmation.py::test_confirmation_coordinator_cancels_flow",
++  "tests/test_workflow_confirmation.py::test_confirmation_coordinator_reconfirms_with_payload_adjustments",
++  "tests/test_workflow_confirmation.py::test_confirmation_coordinator_returns_direct_response_when_available",
++  "tests/test_workflow_direct_execution.py::test_build_direct_execution_request_maps_shared_fields_and_action_override",
++  "tests/test_workflow_direct_execution.py::test_build_handler_executor_builds_request_and_returns_response_text",
++  "tests/test_workflow_direct_execution.py::test_direct_execution_dispatcher_blocks_sensitive_action_via_policy_guard",
++  "tests/test_workflow_direct_execution.py::test_direct_execution_dispatcher_executes_registered_handler",
++  "tests/test_workflow_direct_execution.py::test_direct_execution_dispatcher_normalizes_action_key_and_returns_not_executed_for_unknown",
++  "tests/test_workflow_direct_execution.py::test_direct_execution_dispatcher_treats_none_response_as_not_executed",
++  "tests/test_workflow_direct_execution.py::test_workflow_approval_policy_guard_allows_sensitive_action_on_web_channel",
++  "tests/test_workflow_direct_execution.py::test_workflow_approval_policy_guard_requires_company_for_sensitive_action",
++  "tests/test_workflow_engine_core.py::test_build_default_workflow_reranker_falls_back_to_heuristic_when_disabled",
++  "tests/test_workflow_engine_core.py::test_default_workflow_evaluation_catalog_covers_multiple_domains",
++  "tests/test_workflow_engine_core.py::test_evaluate_workflow_discovery_exposes_rank_metrics_and_domains",
++  "tests/test_workflow_engine_core.py::test_evaluate_workflow_discovery_reports_accuracy",
++  "tests/test_workflow_engine_core.py::test_heuristic_reranker_prioritizes_custom_summary_when_dates_are_explicit",
++  "tests/test_workflow_engine_core.py::test_heuristic_reranker_prioritizes_overdue_for_singular_vencido",
++  "tests/test_workflow_engine_core.py::test_hybrid_matcher_supports_optional_reranker_on_top_candidates",
++  "tests/test_workflow_engine_core.py::test_lexical_matcher_prioritizes_project_task_create_for_cadastro",
++  "tests/test_workflow_engine_core.py::test_lexical_matcher_prioritizes_summary_week_for_resumo_da_semana",
++  "tests/test_workflow_engine_core.py::test_llm_workflow_reranker_ignores_unknown_codes_and_preserves_remaining_order",
++  "tests/test_workflow_engine_core.py::test_llm_workflow_reranker_reorders_candidates_from_structured_response",
++  "tests/test_workflow_engine_core.py::test_registry_builds_semantic_index_once_and_reuses_instance",
++  "tests/test_workflow_engine_core.py::test_registry_prefers_company_specific_workflow_and_ignores_navigation_nodes",
++  "tests/test_workflow_engine_core.py::test_runtime_reuses_cached_registry_for_same_catalog_snapshot",
++  "tests/test_workflow_engine_core.py::test_semantic_matcher_recovers_operational_readiness_intent_from_description",
++  "tests/test_workflow_engine_core.py::test_summary_workflow_coordinator_advance_custom_period_to_company_when_valid",
++  "tests/test_workflow_engine_core.py::test_summary_workflow_coordinator_routes_custom_without_period_to_dates",
++  "tests/test_workflow_engine_core.py::test_summary_workflow_coordinator_routes_week_with_preselected_company_to_collaborator",
++  "tests/test_workflow_engine_core.py::test_workflow_discovery_confidence_policy_requires_disambiguation_for_close_scores",
++  "tests/test_workflow_engine_core.py::test_workflow_discovery_confidence_policy_selects_clear_winner",
++  "tests/test_workflow_engine_core.py::test_workflow_runtime_accepts_callable_reranker_adapter",
++  "tests/test_workflow_engine_core.py::test_workflow_runtime_exposes_discovery_telemetry",
++  "tests/test_workflow_engine_core.py::test_workflow_runtime_supports_explicit_code_discovery",
++  "tests/test_workflow_engine_core.py::test_workflow_session_state_reads_agent_menu_session_context",
++  "tests/test_workflow_field_collection.py::test_adjust_required_fields_for_context_ignores_empresa_for_my_work",
++  "tests/test_workflow_field_collection.py::test_build_missing_fields_prompt_renders_existing_data_and_examples",
++  "tests/test_workflow_field_collection.py::test_extract_numbered_fields_from_text_maps_reply_to_pending_keys",
++  "tests/test_workflow_field_collection.py::test_field_collection_coordinator_marks_ready_when_contextual_fields_are_optional",
++  "tests/test_workflow_field_collection.py::test_field_collection_coordinator_merge_reply_payload_combines_sources",
++  "tests/test_workflow_field_collection.py::test_field_collection_coordinator_prompts_when_required_fields_are_missing",
++  "tests/test_workflow_field_collection.py::test_workflow_required_field_normalizes_mixed_input",
++  "tests/test_workflow_gap_service.py::test_create_gap_candidate_persists_and_links_project_card",
++  "tests/test_workflow_gap_service.py::test_extract_candidate_codes_from_discovery_trace",
++  "tests/test_workflow_gap_service.py::test_find_workflow_gap_by_task_prefers_task_id",
++  "tests/test_workflow_meeting_handler.py::test_meeting_schedule_handler_formats_success",
++  "tests/test_workflow_meeting_handler.py::test_meeting_schedule_handler_requires_single_company_scope",
++  "tests/test_workflow_meeting_handler.py::test_meeting_schedule_handler_requires_title",
++  "tests/test_workflow_meeting_handler.py::test_meeting_schedule_handler_returns_parse_error",
++  "tests/test_workflow_meeting_handler.py::test_meeting_start_handler_blocks_access_outside_context",
++  "tests/test_workflow_meeting_handler.py::test_meeting_start_handler_formats_success_and_links_project",
++  "tests/test_workflow_meeting_handler.py::test_meeting_start_handler_requires_meeting_reference",
++  "tests/test_workflow_meeting_handler.py::test_meeting_summarize_handler_builds_summary_with_points_and_activities",
++  "tests/test_workflow_meeting_handler.py::test_meeting_summarize_handler_falls_back_to_notes",
++  "tests/test_workflow_my_work_handler.py::test_my_work_handler_formats_success_for_completed_range",
++  "tests/test_workflow_my_work_handler.py::test_my_work_handler_formats_success_for_open_query",
++  "tests/test_workflow_my_work_handler.py::test_my_work_handler_requires_period_for_range_queries",
++  "tests/test_workflow_my_work_handler.py::test_my_work_handler_restricts_collaborator_to_own_employee_ids",
++  "tests/test_workflow_my_work_handler.py::test_my_work_handler_returns_scope_error",
++  "tests/test_workflow_my_work_presenter.py::test_build_my_work_report_sanitizes_telegram_and_formats_structure",
++  "tests/test_workflow_my_work_presenter.py::test_describe_my_work_period_handles_relative_windows",
++  "tests/test_workflow_my_work_presenter.py::test_resolve_my_work_collaborator_label_falls_back_to_detected_names",
++  "tests/test_workflow_onboarding_handler.py::test_onboarding_diagnose_handler_reports_pending_and_suggestions",
++  "tests/test_workflow_onboarding_handler.py::test_onboarding_diagnose_handler_reports_ready_status_when_no_pending",
++  "tests/test_workflow_onboarding_handler.py::test_onboarding_go_live_check_handler_reports_blockers",
++  "tests/test_workflow_onboarding_handler.py::test_onboarding_go_live_check_handler_reports_ready_with_alerts",
++  "tests/test_workflow_onboarding_handler.py::test_onboarding_start_handler_validates_type_and_creates_real_session",
++  "tests/test_workflow_onboarding_handler.py::test_onboarding_status_handler_reports_complete",
++  "tests/test_workflow_onboarding_handler.py::test_onboarding_status_handler_reports_incomplete_fields",
++  "tests/test_workflow_presenters.py::test_channel_presenter_formats_instagram_heading_like_chat",
++  "tests/test_workflow_presenters.py::test_channel_presenter_formats_telegram_heading_as_html_bold",
++  "tests/test_workflow_presenters.py::test_channel_presenter_treats_instagram_as_chat_family",
++  "tests/test_workflow_presenters.py::test_chat_contract_renders_next_step_for_telegram",
++  "tests/test_workflow_presenters.py::test_collaborator_presenter_builds_next_step_block",
++  "tests/test_workflow_presenters.py::test_confirmation_presenter_builds_text",
++  "tests/test_workflow_presenters.py::test_confirmation_presenter_formats_project_task_create",
++  "tests/test_workflow_presenters.py::test_confirmation_presenter_supports_whatsapp_heading",
++  "tests/test_workflow_presenters.py::test_conversation_presenter_builds_status_callout",
++  "tests/test_workflow_presenters.py::test_error_presenter_builds_internal_error_for_telegram",
++  "tests/test_workflow_presenters.py::test_error_presenter_builds_menu_recovery_for_whatsapp",
++  "tests/test_workflow_presenters.py::test_menu_presenter_builds_processing_ack_for_telegram",
++  "tests/test_workflow_presenters.py::test_menu_presenter_builds_root_menu_for_whatsapp",
++  "tests/test_workflow_presenters.py::test_missing_fields_and_company_prompt_support_channel_formatting",
++  "tests/test_workflow_presenters.py::test_my_work_presenter_builds_empty_state_report",
++  "tests/test_workflow_presenters.py::test_my_work_presenter_builds_executive_panel",
++  "tests/test_workflow_presenters.py::test_summary_company_presenter_sanitizes_telegram_labels",
++  "tests/test_workflow_presenters.py::test_summary_presenter_builds_collaborator_prompt",
++  "tests/test_workflow_presenters.py::test_summary_presenter_builds_period_prompt",
++  "tests/test_workflow_process_instance_handler.py::test_process_instance_complete_handler_blocks_access_outside_context",
++  "tests/test_workflow_process_instance_handler.py::test_process_instance_complete_handler_formats_success",
++  "tests/test_workflow_process_instance_handler.py::test_process_instance_complete_handler_requires_instance_code",
++  "tests/test_workflow_project_task_handler.py::test_project_task_complete_handler_formats_success",
++  "tests/test_workflow_project_task_handler.py::test_project_task_complete_handler_requires_activity_code",
++  "tests/test_workflow_project_task_handler.py::test_project_task_complete_handler_returns_invalid_date",
++  "tests/test_workflow_project_task_handler.py::test_project_task_create_handler_calls_service_and_formats_success",
++  "tests/test_workflow_project_task_handler.py::test_project_task_create_handler_requires_project_code",
++  "tests/test_workflow_project_task_handler.py::test_project_task_create_handler_returns_scope_error",
++  "tests/test_workflow_schemas.py::test_canonical_models_forbid_unknown_fields",
++  "tests/test_workflow_schemas.py::test_meeting_reference_input_reads_alias_and_extracts_id",
++  "tests/test_workflow_schemas.py::test_meeting_schedule_input_splits_lists_and_deduplicates",
++  "tests/test_workflow_schemas.py::test_project_task_create_input_maps_aliases",
++  "tests/test_workflow_schemas.py::test_summary_execution_input_builds_from_legacy_payload",
++  "tests/test_workflow_selection.py::test_assisted_selection_context_builds_from_hidden_payload",
++  "tests/test_workflow_selection.py::test_assisted_selection_coordinator_advances_project_picker_by_index",
++  "tests/test_workflow_selection.py::test_assisted_selection_coordinator_confirms_meeting_direct_field",
++  "tests/test_workflow_selection.py::test_build_assisted_selection_payload_for_project_picker",
++  "tests/test_workflow_selection.py::test_item_selection_presenter_builds_project_picker_prompt",
++  "tests/test_workflow_session_runtime.py::test_build_session_snapshot_ignores_idle_state",
++  "tests/test_workflow_session_runtime.py::test_extract_navigation_stack_filters_invalid_items",
++  "tests/test_workflow_session_runtime.py::test_navigation_runtime_handle_back_navigation_resets_when_history_missing",
++  "tests/test_workflow_session_runtime.py::test_navigation_runtime_handle_back_navigation_restores_previous_snapshot",
++  "tests/test_workflow_session_runtime.py::test_navigation_runtime_transition_pushes_previous_snapshot",
++  "tests/test_workflow_session_runtime.py::test_payload_without_navigation_removes_only_hidden_stack",
++  "tests/test_workflow_session_runtime.py::test_prompt_renderer_sanitizes_hidden_payload_on_missing_fields",
++  "tests/test_workflow_session_runtime.py::test_session_prompt_renderer_passes_session_channel",
++  "tests/test_workflow_summary_handler.py::test_summary_execution_handler_blocks_employee_outside_company_scope",
++  "tests/test_workflow_summary_handler.py::test_summary_execution_handler_combines_open_and_completed_reports",
++  "tests/test_workflow_summary_handler.py::test_summary_execution_handler_returns_open_report",
++  "tests/test_workflow_telemetry.py::test_attach_confidence_decision_to_trace_keeps_compact_payload",
++  "tests/test_workflow_telemetry.py::test_build_explicit_workflow_trace_marks_explicit_selection",
++  "tests/test_workflow_telemetry.py::test_build_workflow_discovery_trace_compacts_top_matches",
++  "tests/test_workflow_usage_service.py::test_build_workflow_usage_metrics_aggregates_by_dimensions",
++  "tests/test_workflow_usage_service.py::test_record_workflow_usage_event_creates_log_and_updates_counter",
++  "tests/test_workflow_usage_service.py::test_serialize_workflow_execution_log_returns_operational_payload",
+   "testsprite_tests/test_all_pages_complete.py::test_all_pages_complete",
+   "testsprite_tests/test_auth_routes.py::test_auth_change_password",
+   "testsprite_tests/test_auth_routes.py::test_auth_delete_user",
+diff --git a/app32/api/resources/meeting.py b/app32/api/resources/meeting.py
+index 560f470b..b664e209 100644
+--- a/app32/api/resources/meeting.py
++++ b/app32/api/resources/meeting.py
+@@ -9,6 +9,15 @@ import logging
+ logger = logging.getLogger(__name__)
+ 
+ 
++def _parse_optional_int(value):
++    try:
++        if value in (None, '', []):
++            return None
++        return int(value)
++    except (TypeError, ValueError):
++        return None
++
++
+ def user_can_access_company(company_id):
+     if not company_id or not current_user.is_authenticated:
+         return False
+@@ -93,6 +102,7 @@ class MeetingListResource(Resource):
+                 title=data.get('title'),
+                 scheduled_date=datetime.strptime(data.get('scheduled_date'), '%Y-%m-%d').date() if data.get('scheduled_date') else None,
+                 scheduled_time=data.get('scheduled_time'),
++                planned_duration_minutes=_parse_optional_int(data.get('planned_duration_minutes')),
+                 invite_notes=data.get('invite_notes'),
+                 guests_json=json.dumps(data.get('guests', {})),
+                 agenda_json=json.dumps(data.get('agenda', [])),
+@@ -133,6 +143,7 @@ class MeetingResource(Resource):
+             if 'scheduled_date' in data: 
+                 meeting.scheduled_date = datetime.strptime(data['scheduled_date'], '%Y-%m-%d').date() if data['scheduled_date'] else None
+             if 'scheduled_time' in data: meeting.scheduled_time = data['scheduled_time']
++            if 'planned_duration_minutes' in data: meeting.planned_duration_minutes = _parse_optional_int(data.get('planned_duration_minutes'))
+             if 'invite_notes' in data: meeting.invite_notes = data['invite_notes']
+             if 'guests' in data: meeting.guests_json = json.dumps(data['guests'])
+             if 'agenda' in data: meeting.agenda_json = json.dumps(data['agenda'])
+@@ -170,7 +181,9 @@ class MeetingExecutionResource(Resource):
+             if 'actual_date' in data: 
+                 meeting.actual_date = datetime.strptime(data['actual_date'], '%Y-%m-%d').date() if data['actual_date'] else None
+             if 'actual_time' in data: meeting.actual_time = data['actual_time']
++            if 'actual_duration_minutes' in data: meeting.actual_duration_minutes = _parse_optional_int(data.get('actual_duration_minutes'))
+             if 'notes' in data: meeting.meeting_notes = data['notes']
++            if 'meeting_notes' in data: meeting.meeting_notes = data['meeting_notes']
+             if 'participants' in data: meeting.participants_json = json.dumps(data['participants'])
+             if 'discussions' in data: meeting.discussions_json = json.dumps(data['discussions'])
+             if 'activities' in data: meeting.activities_json = json.dumps(data['activities'])
+@@ -196,6 +209,8 @@ class MeetingStartResource(Resource):
+             actual_date = datetime.now()
+             meeting.actual_date = actual_date.date()
+             meeting.actual_time = actual_date.strftime("%H:%M")
++            if meeting.actual_duration_minutes is None:
++                meeting.actual_duration_minutes = meeting.planned_duration_minutes
+             meeting.status = 'in_progress'
+             
+             # Linking logic
+@@ -416,6 +431,8 @@ class MeetingSyncActivitiesResource(Resource):
+             if 'participants' in data: meeting.participants_json = json.dumps(data['participants'])
+             if 'discussions' in data: meeting.discussions_json = json.dumps(data['discussions'])
+             if 'activities' in data: meeting.activities_json = json.dumps(data['activities'])
++            if 'actual_duration_minutes' in data: meeting.actual_duration_minutes = _parse_optional_int(data.get('actual_duration_minutes'))
++            if 'planned_duration_minutes' in data: meeting.planned_duration_minutes = _parse_optional_int(data.get('planned_duration_minutes'))
+             if 'status' in data: meeting.status = data['status']
+             
+             db.session.commit()
+diff --git a/app32/api/routes/meetings.py b/app32/api/routes/meetings.py
+index 1677f46e..b2bb7856 100644
+--- a/app32/api/routes/meetings.py
++++ b/app32/api/routes/meetings.py
+@@ -61,7 +61,42 @@ def meetings_company_manage(company_id):
+     
+     # Fetch meetings (using model)
+     meetings = Meeting.query.filter_by(company_id=company_id).order_by(Meeting.created_at.desc()).all()
+-    meetings_data = [m.to_dict() for m in meetings]
++    all_meetings_data = [m.to_dict() for m in meetings]
++    
++    # Filter meetings based on user context
++    meetings_data = []
++    is_admin = str(getattr(current_user, 'role', '')).lower() == 'admin'
++    current_employee = None
++    
++    if not is_admin:
++        current_employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
++        
++    for m in all_meetings_data:
++        if is_admin:
++            meetings_data.append(m)
++            continue
++            
++        if not current_employee:
++            continue
++            
++        is_involved = False
++        emp_id = str(current_employee.id)
++        
++        # Check guests
++        guests = m.get('guests') or {}
++        internals = guests.get('internal') or []
++        if any(str(g.get('id')) == emp_id for g in internals):
++            is_involved = True
++            
++        # Check participants
++        if not is_involved:
++            participants = m.get('participants') or {}
++            p_internals = participants.get('internal') or []
++            if any(str(p.get('id')) == emp_id for p in p_internals):
++                is_involved = True
++                
++        if is_involved:
++            meetings_data.append(m)
+     
+     # Fetch employees
+     employees = Employee.query.filter_by(company_id=company_id, status='active').all()
+diff --git a/app32/api/routes/processes.py b/app32/api/routes/processes.py
+index 19d18219..f722954c 100644
+--- a/app32/api/routes/processes.py
++++ b/app32/api/routes/processes.py
+@@ -236,6 +236,27 @@ def process_routines_page(company_id):
+     company = Company.query.get_or_404(company_id)
+     return render_template('process_routines.html', company=company)
+ 
++@processes_bp.route('/companies/<int:company_id>/process-routines/analysis')
++@permission_required('processes', 'view')
++def process_routines_analysis_page(company_id):
++    """Render analytical page for routine capacity and commitments."""
++    from services.routine_analysis_service import get_routine_analysis
++
++    company = Company.query.get_or_404(company_id)
++    analysis = get_routine_analysis(company_id)
++    return render_template('modules/processes/routine_analysis.html', company=company, analysis=analysis)
++
++@processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis', methods=['GET'])
++@permission_required('processes', 'view')
++def api_get_process_routines_analysis(company_id):
++    """Return analytical payload for routine capacity and commitments."""
++    from services.routine_analysis_service import get_routine_analysis
++
++    try:
++        return jsonify({"success": True, "data": get_routine_analysis(company_id)})
++    except Exception as exc:
++        return jsonify({"success": False, "message": str(exc)}), 500
++
+ @processes_bp.route('/api/companies/<int:company_id>/process-routines', methods=['GET'])
+ @permission_required('processes', 'view')
+ def api_get_process_routines(company_id):
+diff --git a/app32/models/meeting.py b/app32/models/meeting.py
+index 72379392..80ee31b6 100644
+--- a/app32/models/meeting.py
++++ b/app32/models/meeting.py
+@@ -10,8 +10,10 @@ class Meeting(db.Model):
+     title = db.Column(db.String(255), nullable=False)
+     scheduled_date = db.Column(db.Date)
+     scheduled_time = db.Column(db.String(10))
++    planned_duration_minutes = db.Column(db.Integer)
+     actual_date = db.Column(db.Date)
+     actual_time = db.Column(db.String(10))
++    actual_duration_minutes = db.Column(db.Integer)
+     status = db.Column(db.String(50), default='draft')
+     invite_notes = db.Column(db.Text)
+     meeting_notes = db.Column(db.Text)
+@@ -45,8 +47,10 @@ class Meeting(db.Model):
+             'title': self.title,
+             'scheduled_date': self.scheduled_date.isoformat() if self.scheduled_date else None,
+             'scheduled_time': self.scheduled_time,
++            'planned_duration_minutes': self.planned_duration_minutes,
+             'actual_date': self.actual_date.isoformat() if self.actual_date else None,
+             'actual_time': self.actual_time,
++            'actual_duration_minutes': self.actual_duration_minutes,
+             'status': self.status,
+             'invite_notes': self.invite_notes,
+             'meeting_notes': self.meeting_notes,
+diff --git a/app32/scripts/elite_deploy_v4.py b/app32/scripts/elite_deploy_v4.py
+index 56d060df..46294649 100644
+--- a/app32/scripts/elite_deploy_v4.py
++++ b/app32/scripts/elite_deploy_v4.py
+@@ -23,6 +23,9 @@ def deploy():
+         # Script programático para garantir que a migração rode mesmo se 'flask db' falhar no shell
+         migrate_script = """
+ import sys, os
++VENV_SITE = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages'
++if VENV_SITE not in sys.path:
++    sys.path.insert(0, VENV_SITE)
+ sys.path.insert(0, '.')
+ os.environ.setdefault('FLASK_CONFIG', 'production')
+ try:
+diff --git a/app32/templates/meetings_manage.html b/app32/templates/meetings_manage.html
+index 3a48a916..b3501ddf 100644
+--- a/app32/templates/meetings_manage.html
++++ b/app32/templates/meetings_manage.html
+@@ -411,17 +411,23 @@
+                                         </span>
+                                         {% endif %}
+                                     </div>
+-                                    {% if meeting.status %}
+-                                    <div style="margin-top: 8px;">
+-                                        {% if meeting.status == 'draft' %}
+-                                        <span class="status-badge status-draft">Rascunho</span>
+-                                        {% elif meeting.status == 'in_progress' %}
+-                                        <span class="status-badge status-in_progress">Em Andamento</span>
+-                                        {% elif meeting.status == 'completed' %}
+-                                        <span class="status-badge status-completed">Concluída</span>
++                                    <div style="margin-top: 8px; display:flex; flex-wrap:wrap; gap:8px;">
++                                        {% if meeting.status %}
++                                            {% if meeting.status == 'draft' %}
++                                            <span class="status-badge status-draft">Rascunho</span>
++                                            {% elif meeting.status == 'in_progress' %}
++                                            <span class="status-badge status-in_progress">Em Andamento</span>
++                                            {% elif meeting.status == 'completed' %}
++                                            <span class="status-badge status-completed">Concluída</span>
++                                            {% endif %}
++                                        {% endif %}
++                                        {% if meeting.planned_duration_minutes %}
++                                        <span class="status-badge" style="background:#dbeafe; color:#1d4ed8;">Prevista: {{ meeting.planned_duration_minutes }} min</span>
++                                        {% endif %}
++                                        {% if meeting.actual_duration_minutes %}
++                                        <span class="status-badge" style="background:#dcfce7; color:#166534;">Real: {{ meeting.actual_duration_minutes }} min</span>
+                                         {% endif %}
+                                     </div>
+-                                    {% endif %}
+                                 </div>
+                                 <div style="display: flex; gap: 10px; align-items: center;">
+                                     <button type="button" class="button button-sm button-outline"
+@@ -555,7 +561,7 @@
+                                 placeholder="Ex: Planejamento Estratgico Q4">
+                         </div>
+ 
+-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
++                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                             <div class="form-group">
+                                 <label class="form-label">Data Prevista</label>
+                                 <input type="date" id="meeting-scheduled-date" class="form-input">
+@@ -564,6 +570,10 @@
+                                 <label class="form-label">Hora Prevista</label>
+                                 <input type="time" id="meeting-scheduled-time" class="form-input">
+                             </div>
++                            <div class="form-group">
++                                <label class="form-label">Duração Prevista (min)</label>
++                                <input type="number" id="meeting-planned-duration" class="form-input" min="0" step="5" placeholder="Ex: 60">
++                            </div>
+                         </div>
+ 
+                         <!-- Convidados da Organização -->
+@@ -676,7 +686,7 @@
+                             </button>
+                         </div>
+ 
+-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
++                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                             <div class="form-group">
+                                 <label class="form-label">Data da Realização</label>
+                                 <input type="date" id="meeting-actual-date" class="form-input">
+@@ -685,6 +695,10 @@
+                                 <label class="form-label">Hora da Realização</label>
+                                 <input type="time" id="meeting-actual-time" class="form-input">
+                             </div>
++                            <div class="form-group">
++                                <label class="form-label">Duração Real (min)</label>
++                                <input type="number" id="meeting-actual-duration" class="form-input" min="0" step="5" placeholder="Ex: 75">
++                            </div>
+                         </div>
+ 
+                         <!-- Participantes -->
+@@ -976,9 +990,11 @@
+                 document.getElementById('meeting-title').value = meeting.title || '';
+                 document.getElementById('meeting-scheduled-date').value = meeting.scheduled_date || '';
+                 document.getElementById('meeting-scheduled-time').value = meeting.scheduled_time || '';
++                document.getElementById('meeting-planned-duration').value = meeting.planned_duration_minutes || '';
+                 document.getElementById('meeting-invite-notes').value = meeting.invite_notes || '';
+                 document.getElementById('meeting-actual-date').value = meeting.actual_date || '';
+                 document.getElementById('meeting-actual-time').value = meeting.actual_time || '';
++                document.getElementById('meeting-actual-duration').value = meeting.actual_duration_minutes || '';
+                 document.getElementById('meeting-notes').value = meeting.meeting_notes || '';
+ 
+                 guestsInternal = meeting.guests?.internal || [];
+@@ -1166,6 +1182,7 @@
+             title,
+             scheduled_date: document.getElementById('meeting-scheduled-date').value,
+             scheduled_time: document.getElementById('meeting-scheduled-time').value,
++            planned_duration_minutes: document.getElementById('meeting-planned-duration').value || null,
+             invite_notes: document.getElementById('meeting-invite-notes').value,
+             guests: { internal: guestsInternal, external: guestsExternal },
+             agenda: agendaItems
+@@ -1412,6 +1429,7 @@
+         const payload = {
+             actual_date: document.getElementById('meeting-actual-date').value,
+             actual_time: document.getElementById('meeting-actual-time').value,
++            actual_duration_minutes: document.getElementById('meeting-actual-duration').value || null,
+             participants, discussions, activities,
+             meeting_notes: document.getElementById('meeting-notes').value,
+             status: currentMeetingStatus
+@@ -1515,7 +1533,7 @@
+ 
+     function limparFormulario() {
+         currentMeetingStatus = 'draft';
+-        ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-notes'].forEach(id => {
++        ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-planned-duration', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-actual-duration', 'meeting-notes'].forEach(id => {
+             const el = document.getElementById(id);
+             if (el) el.value = '';
+         });
+@@ -1547,7 +1565,9 @@
+                 meeting_notes: document.getElementById('meeting-notes').value,
+                 status: currentMeetingStatus,
+                 actual_date: document.getElementById('meeting-actual-date').value,
+-                actual_time: document.getElementById('meeting-actual-time').value
++                actual_time: document.getElementById('meeting-actual-time').value,
++                actual_duration_minutes: document.getElementById('meeting-actual-duration').value || null,
++                planned_duration_minutes: document.getElementById('meeting-planned-duration').value || null
+             };
+ 
+             const syncRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/sync-activities?company_id=' + meetingsCompanyId, {
+diff --git a/app32/templates/process_routines.html b/app32/templates/process_routines.html
+index e1815537..1b7b59cb 100644
+--- a/app32/templates/process_routines.html
++++ b/app32/templates/process_routines.html
+@@ -8,12 +8,14 @@
+     <h1 class="text-h1">📅 Rotina dos Processos</h1>
+     <p class="text-secondary">Visão geral dos agendamentos e procedimentos operacionais (POPs) definidos.</p>
+   </div>
+-  <div class="header-actions">
+-    <!-- Future: Add 'New Routine' button if independent creation is supported -->
++  <div class="header-actions" style="display:flex; gap:0.75rem; flex-wrap:wrap;">
++    <a href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id) }}" class="btn btn-secondary">
++      <span>📊</span> Análise da Rotina
++    </a>
+   </div>
+ </div>
+ 
+-<div class="d-flex justify-content-end mb-3">
++<div class="d-flex justify-content-end mb-3" style="gap:0.75rem; flex-wrap:wrap;">
+   <a href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}"
+     class="btn btn-primary">
+     <span>➕</span> Adicionar Rotina
+
+commit 6456c3fbd34f1fdb8357fae8f136d178b8197781
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:53:29 2026 -0300
+
+    SQUAD: Fix projects view and filter by responsibility with ANY relationship
+
+diff --git a/app32/api/resources/project.py b/app32/api/resources/project.py
+index 81c2e44e..cb8b1667 100644
+--- a/app32/api/resources/project.py
++++ b/app32/api/resources/project.py
+@@ -30,6 +30,34 @@ def get_request_company_id():
+             
+     return None
+ 
++def apply_project_employee_filter(query, company_id):
++    from flask_login import current_user
++    from models.employee import Employee
++    from models.project import Project, ProjectTask, ProjectActivityCollaborator
++    from sqlalchemy import or_
++    
++    if not current_user.is_authenticated:
++        return query
++        
++    if current_user.role == 'admin':
++        return query
++        
++    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
++        return query
++        
++    if employee:
++        return query.filter(
++            Project.tasks.any(
++                or_(
++                    ProjectTask.employee_id == employee.id,
++                    ProjectTask.collaborators.any(ProjectActivityCollaborator.employee_id == employee.id)
++                )
++            )
++        )
++        
++    return query
++
+ class ProjectListResource(Resource):
+     @permission_required('projects', 'view')
+     def get(self):
+@@ -42,6 +70,7 @@ class ProjectListResource(Resource):
+             return [], 200
+             
+         query = Project.query.filter_by(company_id=company_id).order_by(Project.id.asc())
++        query = apply_project_employee_filter(query, company_id)
+         
+         if not show_inactive:
+             query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
+@@ -80,7 +109,9 @@ class ProjectResource(Resource):
+         if not company_id:
+             return {"message": "Active company context required"}, 400
+             
+-        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
++        query = Project.query.filter_by(id=project_id, company_id=company_id)
++        query = apply_project_employee_filter(query, company_id)
++        project = query.first_or_404()
+         return project_schema.dump(project), 200
+ 
+     @permission_required('projects', 'edit')
+@@ -90,7 +121,9 @@ class ProjectResource(Resource):
+         if not company_id:
+             return {"message": "Active company context required"}, 400
+             
+-        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
++        query = Project.query.filter_by(id=project_id, company_id=company_id)
++        query = apply_project_employee_filter(query, company_id)
++        project = query.first_or_404()
+         data = request.get_json()
+         
+         project.name = data.get('name', project.name)
+@@ -113,7 +146,9 @@ class ProjectResource(Resource):
+         if not company_id:
+             return {"message": "Active company context required"}, 400
+             
+-        project = Project.query.filter_by(id=project_id, company_id=company_id).first_or_404()
++        query = Project.query.filter_by(id=project_id, company_id=company_id)
++        query = apply_project_employee_filter(query, company_id)
++        project = query.first_or_404()
+         db.session.delete(project)
+         db.session.commit()
+         return '', 204
+diff --git a/app32/api/resources/project_task.py b/app32/api/resources/project_task.py
+index d1cb748c..ef22c8ea 100644
+--- a/app32/api/resources/project_task.py
++++ b/app32/api/resources/project_task.py
+@@ -6,6 +6,32 @@ from schemas.project import project_task_schema, project_tasks_schema
+ from utils.permissions import permission_required
+ from datetime import datetime
+ 
++def apply_task_employee_filter(query, company_id):
++    from flask_login import current_user
++    from models.employee import Employee
++    from models.project import ProjectTask, ProjectActivityCollaborator
++    from sqlalchemy import or_
++    
++    if not current_user.is_authenticated:
++        return query
++        
++    if current_user.role == 'admin':
++        return query
++        
++    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
++    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
++        return query
++        
++    if employee:
++        return query.filter(
++            or_(
++                ProjectTask.employee_id == employee.id,
++                ProjectTask.collaborators.any(ProjectActivityCollaborator.employee_id == employee.id)
++            )
++        )
++        
++    return query
++
+ class ProjectTaskListResource(Resource):
+     @permission_required('projects', 'view')
+     def get(self, project_id):
+@@ -17,7 +43,9 @@ class ProjectTaskListResource(Resource):
+         from .project import get_request_company_id
+         company_id = get_request_company_id()
+             
+-        tasks = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc()).all()
++        query = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc())
++        query = apply_task_employee_filter(query, company_id)
++        tasks = query.all()
+         dumped_tasks = project_tasks_schema.dump(tasks)
+         
+         # Otimização: Busca todas as dependências do projeto de uma vez para evitar N+1 queries
+@@ -98,13 +126,21 @@ class ProjectTaskResource(Resource):
+     @permission_required('projects', 'view')
+     def get(self, project_id, task_id):
+         """Get a single task."""
+-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
++        from .project import get_request_company_id
++        company_id = get_request_company_id()
++        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
++        query = apply_task_employee_filter(query, company_id)
++        task = query.first_or_404()
+         return project_task_schema.dump(task), 200
+ 
+     @permission_required('projects', 'edit')
+     def put(self, project_id, task_id):
+         """Update a task."""
+-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
++        from .project import get_request_company_id
++        company_id = get_request_company_id()
++        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
++        query = apply_task_employee_filter(query, company_id)
++        task = query.first_or_404()
+         try:
+             data = request.get_json()
+             
+@@ -157,7 +193,11 @@ class ProjectTaskResource(Resource):
+     @permission_required('projects', 'edit')
+     def delete(self, project_id, task_id):
+         """Delete a task."""
+-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
++        from .project import get_request_company_id
++        company_id = get_request_company_id()
++        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
++        query = apply_task_employee_filter(query, company_id)
++        task = query.first_or_404()
+         try:
+             db.session.delete(task)
+             
+@@ -176,7 +216,11 @@ class ProjectTaskStageResource(Resource):
+     @permission_required('projects', 'edit')
+     def patch(self, project_id, task_id):
+         """Update task stage (Kanban drag & drop)."""
+-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
++        from .project import get_request_company_id
++        company_id = get_request_company_id()
++        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
++        query = apply_task_employee_filter(query, company_id)
++        task = query.first_or_404()
+         try:
+             data = request.get_json()
+             stage = data.get('stage')
+@@ -293,7 +337,11 @@ class ProjectTaskHoursSummaryResource(Resource):
+     def get(self, project_id, task_id):
+         """Get summary of hours for a task."""
+         from models.project import ProjectActivityCollaborator
+-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
++        from .project import get_request_company_id
++        company_id = get_request_company_id()
++        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
++        query = apply_task_employee_filter(query, company_id)
++        task = query.first_or_404()
+         
+         collaborators = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, is_deleted=False).all()
+         total_worked = sum(float(c.worked_hours) for c in collaborators)
+@@ -328,6 +376,7 @@ class ProjectAllTasksResource(Resource):
+             if not show_inactive:
+                 query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))
+                 
++            query = apply_task_employee_filter(query, company_id)
+             tasks = query.order_by(ProjectTask.id.asc()).all()
+             
+             return project_tasks_schema.dump(tasks), 200
+@@ -340,7 +389,11 @@ class ProjectTaskTransferResource(Resource):
+     @permission_required('projects', 'edit')
+     def post(self, project_id, task_id):
+         """Transfer a task to another project."""
+-        task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first_or_404()
++        from .project import get_request_company_id
++        company_id = get_request_company_id()
++        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
++        query = apply_task_employee_filter(query, company_id)
++        task = query.first_or_404()
+         data = request.get_json()
+         target_project_id = data.get('target_project_id')
+         note = data.get('note', '')
+
+commit 28e080bc20de7321790ae0a5d8fc8a6ecebdfdcc
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:26:30 2026 -0300
+
+    SQUAD: [Backend] Filtra análise de eficiência para retornar só os dados do colaborador qnd nao tem perfil adm/viewer
+
+diff --git a/app32/api/resources/efficiency.py b/app32/api/resources/efficiency.py
+index 970b7cac..8eeab5f1 100644
+--- a/app32/api/resources/efficiency.py
++++ b/app32/api/resources/efficiency.py
+@@ -45,10 +45,27 @@ class EfficiencyCollaborators(Resource):
+         return total
+ 
+     def get(self, company_id):
++        from flask_login import current_user
++        from utils.permissions import has_permission
++
+         start_date, end_date = self._parse_period()
+         business_days = self._business_days_between(start_date, end_date)
++        
++        # Determine if user can view all employees
++        can_view_all = False
++        if current_user.is_authenticated:
++            if current_user.role == 'admin':
++                can_view_all = True
++            elif has_permission(company_id, 'companies', 'view'):
++                can_view_all = True
++                
+         # 1. Fetch Employees
+-        employees = Employee.query.filter_by(company_id=company_id).all()
++        if can_view_all:
++            employees = Employee.query.filter_by(company_id=company_id).all()
++        else:
++            if not current_user.is_authenticated:
++                return []
++            employees = Employee.query.filter_by(company_id=company_id, user_id=current_user.id).all()
+ 
+         # Initialize results structure
+         results = {}
+
+commit 0bf4285ad4ba069c98f22ebdf39c63a636659d67
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:16:23 2026 -0300
+
+    SQUAD: Impede que colaboradores acessem dados de atividades não atribuídas na visão empresa
+
+diff --git a/app32/services/my_work/discovery_service.py b/app32/services/my_work/discovery_service.py
+index 12425ad2..e3d651d0 100644
+--- a/app32/services/my_work/discovery_service.py
++++ b/app32/services/my_work/discovery_service.py
+@@ -166,6 +166,14 @@ def get_user_activities_v2(
+     if not active_company_id and allowed_company_ids:
+         active_company_id = allowed_company_ids[0]
+ 
++    from utils.permissions import has_permission
++    can_view_by_cid = {}
++    for cid in allowed_company_ids:
++        if user_role == 'admin':
++            can_view_by_cid[cid] = True
++        else:
++            can_view_by_cid[cid] = has_permission(cid, 'companies', 'view')
++
+     # 3. Build lookup for identity resolution
+     directory, lookup = build_employee_lookup_v2(allowed_company_ids)
+     
+@@ -299,14 +307,18 @@ def get_user_activities_v2(
+         # Determine if it's in active company context
+         is_in_active_company = (active_company_id and act.get("company_id") == active_company_id)
+         
++        can_view_all = can_view_by_cid.get(act.get("company_id"), False)
++        
+         # C. Update Counters (Only for items that matched A)
+         if is_mine:
+             me_count += 1
+             
+         if is_in_active_company:
+-            company_scope_count += 1
++            if can_view_all or is_mine:
++                company_scope_count += 1
+             
+-        general_count += 1
++        if can_view_all or is_mine:
++            general_count += 1
+ 
+         # D. Determine if it enters the final list based on requested scope
+         include = False
+@@ -316,11 +328,11 @@ def get_user_activities_v2(
+             if is_mine:
+                 include = True
+         elif scope == "company":
+-            if is_in_active_company:
++            if is_in_active_company and (can_view_all or is_mine):
+                 include = True
+         elif scope == "general":
+             # Geral scope respects sidebar company filter
+-            if not company_ids or act.get("company_id") in company_ids:
++            if (not company_ids or act.get("company_id") in company_ids) and (can_view_all or is_mine):
+                 include = True
+             
+         if include:
+
+commit ae11b3d127747de7f495743cbbfa497df38684f8
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Tue Mar 10 02:10:11 2026 -0300
+
+    SQUAD: Fix bug de permissão que causava Erro 500 no /my-work para colaboradores
+
+diff --git a/app32/utils/permissions.py b/app32/utils/permissions.py
+index e01f6a50..6ec9808d 100644
+--- a/app32/utils/permissions.py
++++ b/app32/utils/permissions.py
+@@ -17,11 +17,14 @@ def has_permission(company_id, resource, action):
+         return False
+         
+     # Superusers in their own company have all permissions
+-    if employee.role == 'superuser':
++    if employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
+         return True
+         
+     # Check specific permission in permissions JSON
+-    perms = employee.permissions or {}
++    perms = {}
++    if employee.role and employee.role.permissions:
++        perms = employee.role.permissions
++        
+     res_perms = perms.get(resource, [])
+     return action in res_perms
+ 
+
+commit e70f3c64bc9aeb4875f91d54bfe10862cdad943a
+Author: Fabiano Ferreira <mff2000@gmail.com>
+Date:   Mon Mar 9 21:30:33 2026 -0300
+
+    fix: harden process details tenant loading
+
+diff --git a/app32/api/resources/process.py b/app32/api/resources/process.py
+index 3766f2cd..df745153 100644
+--- a/app32/api/resources/process.py
++++ b/app32/api/resources/process.py
+@@ -3,8 +3,9 @@ import os
+ import uuid
+ from datetime import datetime, date
+ from decimal import Decimal
+-from flask import request, current_app
++from flask import request, current_app, session
+ from flask_restful import Resource
++from flask_login import current_user
+ from marshmallow import ValidationError
+ from werkzeug.utils import secure_filename
+ from schemas.process import (
+@@ -16,7 +17,7 @@ from schemas.process import (
+     process_instance_schema, process_instances_schema
+ )
+ from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company, Indicator, ActivityWorkLog
+-from utils.permissions import permission_required
++from utils.permissions import permission_required, has_permission
+ from database import get_db
+ 
+ def generate_area_code(company_id, sequence):
+@@ -206,6 +207,21 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
+             conn.close()
+ 
+ 
++def _get_process_with_access(process_id: int, action: str = 'view', sync_session: bool = False):
++    process = Process.query.get_or_404(process_id)
++
++    if not current_user.is_authenticated:
++        return None
++
++    if current_user.role != 'admin' and not has_permission(process.company_id, 'processes', action):
++        return None
++
++    if sync_session:
++        session['active_company_id'] = process.company_id
++
++    return process
++
++
+ def fetch_pop_routine_by_id(routine_id: int):
+     """Busca uma rotina específica (POP) em ambas as tabelas e anexa passos."""
+     if not routine_id:
+@@ -854,12 +870,16 @@ from utils.storage import save_file, delete_file
+ class ProcessResource(Resource):
+     @permission_required('processes', 'view')
+     def get(self, process_id):
+-        process = Process.query.get_or_404(process_id)
++        process = _get_process_with_access(process_id, action='view', sync_session=True)
++        if not process:
++            return {"error": "Permission denied: view on processes"}, 403
+         return process_schema.dump(process), 200
+ 
+     @permission_required('processes', 'edit')
+     def put(self, process_id):
+-        process = Process.query.get_or_404(process_id)
++        process = _get_process_with_access(process_id, action='edit', sync_session=True)
++        if not process:
++            return {"error": "Permission denied: edit on processes"}, 403
+         try:
+             if request.mimetype == 'multipart/form-data':
+                 # Handle flow document upload
+@@ -898,7 +918,9 @@ class ProcessResource(Resource):
+ 
+     @permission_required('processes', 'delete')
+     def delete(self, process_id):
+-        process = Process.query.get_or_404(process_id)
++        process = _get_process_with_access(process_id, action='delete', sync_session=True)
++        if not process:
++            return {"error": "Permission denied: delete on processes"}, 403
+         try:
+             db.session.delete(process)
+             db.session.commit()
+@@ -910,11 +932,14 @@ class ProcessResource(Resource):
+ class ProcessRoutineListResource(Resource):
+     @permission_required('processes', 'view')
+     def get(self):
+-        process_id = request.args.get('process_id')
++        process_id = request.args.get('process_id', type=int)
+         if not process_id:
+             return [], 200
++        process = _get_process_with_access(process_id, action='view', sync_session=True)
++        if not process:
++            return {"error": "Permission denied: view on processes"}, 403
+         try:
+-            routines = fetch_pop_routines(int(process_id))
++            routines = fetch_pop_routines(process.id)
+             return routines, 200
+         except Exception as e:
+             import traceback
+@@ -925,11 +950,12 @@ class ProcessRoutineListResource(Resource):
+     def post(self):
+         try:
+             data = request.get_json()
+-            
+-            # Auto-fill company_id from Process if missing
+-            if not data.get('company_id') and data.get('process_id'):
+-                proc = Process.query.get(data['process_id'])
+-                if proc:
++            process_id = data.get('process_id') if data else None
++            if process_id:
++                proc = _get_process_with_access(process_id, action='create', sync_session=True)
++                if not proc:
++                    return {"error": "Permission denied: create on processes"}, 403
++                if not data.get('company_id'):
+                     data['company_id'] = proc.company_id
+ 
+             routine = process_routine_schema.load(data)
+@@ -1180,10 +1206,14 @@ class ProcessStepResource(Resource):
+ class ProcessScheduleListResource(Resource):
+     @permission_required('processes', 'view')
+     def get(self):
+-        process_id = request.args.get('process_id')
++        process_id = request.args.get('process_id', type=int)
+         if not process_id:
+             return [], 400
+ 
++        process = _get_process_with_access(process_id, action='view', sync_session=True)
++        if not process:
++            return {"error": "Permission denied: view on processes"}, 403
++
+         try:
+             # Busca APENAS na tabela routines (agendamentos) associados ao processo
+             pg = get_db()
+@@ -1199,7 +1229,7 @@ class ProcessScheduleListResource(Resource):
+                 WHERE process_id = %s AND (is_active = TRUE OR is_active IS NULL)
+                 ORDER BY created_at DESC
+                 """,
+-                (process_id,)
++                (process.id,)
+             )
+             
+             routines = [dict(row) for row in cursor.fetchall()]
+diff --git a/app32/api/routes/processes.py b/app32/api/routes/processes.py
+index dfd8b1d3..19d18219 100644
+--- a/app32/api/routes/processes.py
++++ b/app32/api/routes/processes.py
+@@ -1,16 +1,29 @@
+ import os
+ 
+-from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for
++from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort
+ from flask_login import current_user
+ from werkzeug.utils import secure_filename
+ from datetime import datetime
+ 
+ from database import get_db
+ from models import db, Company, Process, ProcessInstance, Employee
+-from utils.permissions import permission_required
++from utils.permissions import permission_required, has_permission
+ 
+ processes_bp = Blueprint('processes', __name__)
+ 
++
++def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
++    process = Process.query.get_or_404(process_id)
++
++    if not current_user.is_authenticated:
++        abort(403, description="Usuário não autenticado.")
++
++    if current_user.role != 'admin' and not has_permission(process.company_id, 'processes', action):
++        abort(403, description=f"Permission denied: {action} on processes")
++
++    session['active_company_id'] = process.company_id
++    return process
++
+ @processes_bp.route('/api/processes/upload-flow', methods=['POST'])
+ def upload_process_flow():
+     if 'file' not in request.files:
+@@ -139,7 +152,7 @@ def process_map_compact():
+ @permission_required('processes', 'view')
+ def process_details(process_id):
+     """Process details page (modeling/pops)"""
+-    process = Process.query.get_or_404(process_id)
++    process = _get_process_with_access(process_id, action='view')
+     company = Company.query.get_or_404(process.company_id)
+     return render_template('modules/processes/process_details_v2.html', 
+                             process_id=process_id, 
+diff --git a/app32/static/js/process_details_occurrences.js b/app32/static/js/process_details_occurrences.js
+index b9dc614f..2ab07467 100644
+--- a/app32/static/js/process_details_occurrences.js
++++ b/app32/static/js/process_details_occurrences.js
+@@ -5,9 +5,21 @@ function populateEmployeeSelect() {
+ }
+ 
+ async function fetchOccurrences() {
+-    const res = await fetch(`/api/occurrences?process_id=${processId}`);
+-    if (!res.ok) throw new Error('Falha ao carregar ocorrências');
+-    state.occurrences = await res.json();
++    try {
++        const companyId = state.process?.company_id || window.companyId;
++        const query = new URLSearchParams({ process_id: processId });
++
++        if (companyId) {
++            query.set('company_id', companyId);
++        }
++
++        const res = await fetch(`/api/occurrences?${query.toString()}`);
++        if (!res.ok) throw new Error('Falha ao carregar ocorrências');
++        state.occurrences = await res.json();
++    } catch (e) {
++        console.warn('Erro ao buscar ocorrências:', e);
++        state.occurrences = [];
++    }
+ }
+ 
+ function renderOccurrences() {
+diff --git a/app32/templates/modules/processes/process_details_v2.html b/app32/templates/modules/processes/process_details_v2.html
+index 6b8318e9..269647fd 100644
+--- a/app32/templates/modules/processes/process_details_v2.html
++++ b/app32/templates/modules/processes/process_details_v2.html
+@@ -919,17 +919,25 @@
+     async function init() {
+         try {
+             await fetchProcess();
+-            // Fetch employees for the dropdown using the company_id from process
++
+             if (state.process && state.process.company_id) {
+-                fetchEmployees(state.process.company_id);
++                await fetchEmployees(state.process.company_id);
+             }
+ 
+-            await Promise.all([
++            const results = await Promise.allSettled([
+                 fetchRoutines(),
+                 fetchIndicators(),
+                 fetchSchedules(),
+                 fetchOccurrences()
+             ]);
++
++            results.forEach((result, index) => {
++                if (result.status === 'rejected') {
++                    const loaders = ['roteiros', 'indicadores', 'agendamentos', 'ocorrências'];
++                    console.warn(`Falha parcial ao carregar ${loaders[index]} do processo ${processId}:`, result.reason);
++                }
++            });
++
+             renderProcess();
+             renderRoutines();
+             renderIndicators();
+@@ -938,7 +946,7 @@
+         } catch (error) {
+             console.error("Error loading process details:", error);
+             document.getElementById('detName').textContent = "Erro ao carregar dados";
+-            document.getElementById('detDescription').textContent = "Houve um problema ao carregar as informações deste processo. Por favor, tente novamente.";
++            document.getElementById('detDescription').textContent = "Houve um problema ao carregar as informações principais deste processo. Por favor, tente novamente.";
+         }
+     }
+ 
+@@ -964,10 +972,19 @@
+     }
+ 
+     async function fetchIndicators() {
+-        // Now state.process is guaranteed to be loaded
+-        const res = await fetch(`/api/indicators?company_id=${state.process.company_id}&process_id=${processId}`);
+-        if (!res.ok) throw new Error('Falha ao carregar indicadores');
+-        state.indicators = await res.json();
++        try {
++            if (!state.process || !state.process.company_id) {
++                state.indicators = [];
++                return;
++            }
++
++            const res = await fetch(`/api/indicators?company_id=${state.process.company_id}&process_id=${processId}`);
++            if (!res.ok) throw new Error('Falha ao carregar indicadores');
++            state.indicators = await res.json();
++        } catch (e) {
++            console.warn('Erro ao buscar indicadores:', e);
++            state.indicators = [];
++        }
+     }
+ 
+     async function fetchSchedules() {
+diff --git a/app32/tests/test_process_details_scope.py b/app32/tests/test_process_details_scope.py
+new file mode 100644
+index 00000000..625e98b3
+--- /dev/null
++++ b/app32/tests/test_process_details_scope.py
+@@ -0,0 +1,101 @@
++import os
++import sys
++from types import SimpleNamespace
++
++from flask import Flask, session
++
++sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
++
++from api.routes import processes as process_routes
++from api.resources import process as process_resource
++
++
++class _FakeProcessQuery:
++    def __init__(self, process_obj):
++        self.process_obj = process_obj
++        self.requested_id = None
++
++    def get_or_404(self, process_id):
++        self.requested_id = process_id
++        return self.process_obj
++
++
++class _FakeCompanyQuery:
++    def __init__(self, company_obj):
++        self.company_obj = company_obj
++        self.requested_id = None
++
++    def get_or_404(self, company_id):
++        self.requested_id = company_id
++        return self.company_obj
++
++
++def _build_app():
++    app = Flask(__name__)
++    app.config['SECRET_KEY'] = 'test'
++    app.config['TESTING'] = True
++    app.config['LOGIN_DISABLED'] = True
++    return app
++
++
++def test_process_details_route_syncs_active_company_from_process(monkeypatch):
++    app = _build_app()
++    fake_process = SimpleNamespace(id=287, company_id=22, name='Processo X')
++    fake_company = SimpleNamespace(id=22, name='Empresa X')
++
++    monkeypatch.setattr(process_routes, 'current_user', SimpleNamespace(is_authenticated=True, role='collaborator'))
++    monkeypatch.setattr(process_routes, 'has_permission', lambda company_id, resource, action: company_id == 22)
++    monkeypatch.setattr(process_routes, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
++    monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
++    monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
++
++    with app.test_request_context('/processes/287'):
++        response = process_routes.process_details.__wrapped__(287)
++        active_company_id = session['active_company_id']
++
++    assert active_company_id == 22
++    assert response['template'] == 'modules/processes/process_details_v2.html'
++    assert response['context']['process'].company_id == 22
++    assert response['context']['company'].id == 22
++
++
++def test_process_resource_checks_permission_against_process_company(monkeypatch):
++    app = _build_app()
++    fake_process = SimpleNamespace(id=287, company_id=44)
++    checked = {}
++
++    monkeypatch.setattr(process_resource, 'current_user', SimpleNamespace(is_authenticated=True, role='collaborator'))
++    monkeypatch.setattr(process_resource, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
++
++    def fake_has_permission(company_id, resource, action):
++        checked['company_id'] = company_id
++        checked['resource'] = resource
++        checked['action'] = action
++        return False
++
++    monkeypatch.setattr(process_resource, 'has_permission', fake_has_permission)
++
++    with app.test_request_context('/api/processes/287'):
++        response, status = process_resource.ProcessResource().get.__wrapped__(process_resource.ProcessResource(), 287)
++
++    assert status == 403
++    assert response['error'] == 'Permission denied: view on processes'
++    assert checked == {'company_id': 44, 'resource': 'processes', 'action': 'view'}
++
++
++def test_process_details_template_uses_resilient_loading():
++    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
++    with open(template_path, 'r', encoding='utf-8') as handle:
++        content = handle.read()
++
++    assert 'Promise.allSettled' in content
++    assert 'Falha parcial ao carregar' in content
++
++
++def test_occurrences_loader_sends_company_scope_and_falls_back_gracefully():
++    js_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'process_details_occurrences.js'))
++    with open(js_path, 'r', encoding='utf-8') as handle:
++        content = handle.read()
++
++    assert "query.set('company_id', companyId)" in content
++    assert 'state.occurrences = []' in content

@@ -16,8 +16,8 @@ def has_permission(company_id, resource, action):
     if not employee:
         return False
         
-    # Superusers in their own company have all permissions
-    if employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
+    # Superusers, Admins, and Clients in their own company have all permissions
+    if employee.role and employee.role.title and employee.role.title.lower() in ['superuser', 'administrador', 'cliente']:
         return True
         
     # Check specific permission in permissions JSON

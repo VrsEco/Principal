@@ -1,8 +1,8 @@
 ----------------------------------------------------
-🚀 INICIANDO ATUALIZAÇÃO: Sun Mar  1 05:04:25 PM -03 2026
+🚀 INICIANDO ATUALIZAÇÃO: Tue Mar 10 03:07:49 AM -03 2026
 ----------------------------------------------------
 📂 Sincronizando código com repositório central...
-HEAD is now at f034575f SQUAD: Fix Unicode crashes on Windows and robustness in Telegram Webhook escalation. Fixed missing company_id in AgentAction creation for system errors.
+HEAD is now at ab609fa8 SQUAD: Restrict process instances view to owner/executor and enforce viewer-only mode
 ✅ Código atualizado com sucesso.
 📦 Atualizando dependências Python...
 ✅ Dependências em conformidade.
@@ -17,22 +17,22 @@ INFO:services.scheduler_service:✅ Job 'check_overdue_tasks' adicionado: cron {
 INFO:services.scheduler_service:✅ Jobs de rotina configurados!
 INFO:services.scheduler_service:🔧 Configurando jobs proativos do Sapiens...
 INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
-INFO:services.scheduler_service:✅ Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Telegram)'}
+INFO:services.scheduler_service:✅ Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Canais Configurados)'}
 INFO:services.scheduler_service:✅ Jobs proativos configurados!
 INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
 INFO:services.scheduler_service:✅ Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
 INFO:services.scheduler_service:✅ Job de Timeout de Chat configurado!
 INFO:apscheduler.scheduler:Added job "Processamento Diário de Rotinas" to job store "default"
 INFO:apscheduler.scheduler:Added job "Verificação de Tarefas Atrasadas" to job store "default"
-INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Telegram)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Canais Configurados)" to job store "default"
 INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
 INFO:apscheduler.scheduler:Scheduler started
 INFO:services.scheduler_service:✅ Scheduler iniciado com sucesso
 INFO:services.scheduler_service:📋 Jobs agendados: 4
-INFO:services.scheduler_service:  - chat_timeout_monitor: próxima execução em 2026-03-01 17:05:02.456980-03:00
-INFO:services.scheduler_service:  - check_overdue_tasks: próxima execução em 2026-03-01 18:00:00-03:00
-INFO:services.scheduler_service:  - process_daily_routines: próxima execução em 2026-03-02 00:01:00-03:00
-INFO:services.scheduler_service:  - proactive_morning_summary: próxima execução em 2026-03-02 08:00:00-03:00
+INFO:services.scheduler_service:  - chat_timeout_monitor: próxima execução em 2026-03-10 03:08:35.362952-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: próxima execução em 2026-03-10 04:00:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: próxima execução em 2026-03-10 08:00:00-03:00
+INFO:services.scheduler_service:  - process_daily_routines: próxima execução em 2026-03-11 00:01:00-03:00
 INFO:services.scheduler_service:================================================================================
 INFO:services.scheduler_service:✅ SCHEDULER ATIVO E FUNCIONANDO!
 INFO:services.scheduler_service:================================================================================
@@ -42,8 +42,10 @@ DEBUG: Registering Jinja filters...
 DEBUG: Registering API resources...
 DEBUG: API resources registered.
 DEBUG: Registering blueprints...
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
 DEBUG: Blueprints registered.
 DEBUG: Checking DB connection and creating tables...
+DEBUG: users contact backfill completed (users=0, whatsapp=0, telegram=0).
 DEBUG: DB tables verified/created successfully.
 DEBUG: Starting Engineering Service worker...
 [SQUAD ENGENHARIA] Monitorando sistema...
@@ -52,7 +54,12 @@ DEBUG: Initializing Scheduler...
 DEBUG: Scheduler initialized.
 DEBUG: create_app() finished successfully.
 ✅ Migrations aplicadas/verificadas com sucesso.
-🔄 Reiniciando servidor uWSGI (Passenger/Configr)...
+🔄 Reiniciando servidor uWSGI (Configr)...
+   - Encerrando workers/vassal atuais: 1422192
+1463038
+   - Aguardando Emperor recriar o vassal...
+   - uWSGI ativo novamente com PID(s): 1422192
+1463038
 ----------------------------------------------------
 ✨ DEPLOY CONCLUÍDO COM SUCESSO!
 ----------------------------------------------------

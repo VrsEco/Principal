@@ -33,7 +33,7 @@ def apply_instance_employee_filter(query, company_id):
         return query
 
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
+    if employee and employee.role and employee.role.title and employee.role.title.lower() in ['superuser', 'administrador', 'cliente']:
         return query
 
     if employee:
@@ -543,7 +543,7 @@ class ProcessInstanceResource(Resource):
             company_id = get_request_company_id()
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-            if employee and (not employee.role or employee.role.title.lower() != 'superuser'):
+            if employee and (not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']):
                 if instance.owner_employee_id != employee.id and \
                    instance.responsible_id != employee.id and \
                    instance.executor_id != employee.id:
@@ -569,7 +569,7 @@ class ProcessInstanceResource(Resource):
             company_id = get_request_company_id()
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-            if employee and (not employee.role or employee.role.title.lower() != 'superuser'):
+            if employee and (not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']):
                 return {"error": "Viewer only: You cannot delete process instances."}, 403
 
         try:
