@@ -166,6 +166,14 @@ def get_user_activities_v2(
     if not active_company_id and allowed_company_ids:
         active_company_id = allowed_company_ids[0]
 
+    from utils.permissions import has_permission
+    can_view_by_cid = {}
+    for cid in allowed_company_ids:
+        if user_role == 'admin':
+            can_view_by_cid[cid] = True
+        else:
+            can_view_by_cid[cid] = has_permission(cid, 'companies', 'view')
+
     # 3. Build lookup for identity resolution
     directory, lookup = build_employee_lookup_v2(allowed_company_ids)
     
@@ -299,14 +307,18 @@ def get_user_activities_v2(
         # Determine if it's in active company context
         is_in_active_company = (active_company_id and act.get("company_id") == active_company_id)
         
+        can_view_all = can_view_by_cid.get(act.get("company_id"), False)
+        
         # C. Update Counters (Only for items that matched A)
         if is_mine:
             me_count += 1
             
         if is_in_active_company:
-            company_scope_count += 1
+            if can_view_all or is_mine:
+                company_scope_count += 1
             
-        general_count += 1
+        if can_view_all or is_mine:
+            general_count += 1
 
         # D. Determine if it enters the final list based on requested scope
         include = False
@@ -316,11 +328,11 @@ def get_user_activities_v2(
             if is_mine:
                 include = True
         elif scope == "company":
-            if is_in_active_company:
+            if is_in_active_company and (can_view_all or is_mine):
                 include = True
         elif scope == "general":
             # Geral scope respects sidebar company filter
-            if not company_ids or act.get("company_id") in company_ids:
+            if (not company_ids or act.get("company_id") in company_ids) and (can_view_all or is_mine):
                 include = True
             
         if include:
