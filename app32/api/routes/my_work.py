@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, User, Company, Employee, Project, ProjectTask, Process, ProcessInstance
+from utils.permissions import can_access_company
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,15 +13,9 @@ my_work_bp = Blueprint('my_work', __name__)
 
 
 def _user_has_company_access(company_id: int | None) -> bool:
-    if current_user.role == 'admin':
-        return True
     if not company_id:
         return False
-    return Employee.query.filter_by(
-        user_id=current_user.id,
-        company_id=company_id,
-        status='active',
-    ).first() is not None
+    return can_access_company(company_id)
 
 
 @my_work_bp.route('/my-work')

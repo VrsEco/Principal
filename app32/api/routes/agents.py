@@ -1,9 +1,14 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from services.cadastro_agent_service import CadastroAgentService
+from utils.permissions import has_company_full_access, is_platform_admin
 
 agents_bp = Blueprint('agents', __name__)
 cadastro_service = CadastroAgentService()
+
+
+def _has_operational_full_access(company_id=None):
+    return has_company_full_access(company_id)
 
 
 def _log_workflow_approval_message(action, message: str, metadata=None):
@@ -201,7 +206,7 @@ def workflow_catalog():
     from models.workflow_usage import WorkflowExecutionLog
     from services.workflow_catalog_service import build_workflow_catalog
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para consultar o catálogo operacional de workflows."}), 403
 
     active_company_id = session.get('active_company_id')
@@ -272,7 +277,7 @@ def list_workflow_gaps():
     from models.workflow_gap import WorkflowGapCandidate
     from services.workflow_gap_service import serialize_workflow_gap_candidate
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para listar gaps operacionais de workflows."}), 403
 
     active_company_id = session.get('active_company_id')
@@ -334,7 +339,7 @@ def get_workflow_gap_link():
     from flask import session
     from services.workflow_gap_service import find_workflow_gap_by_task, serialize_workflow_gap_candidate
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para consultar vínculo operacional de workflow gap."}), 403
 
     active_company_id = session.get('active_company_id')
@@ -378,7 +383,7 @@ def list_workflow_usage_logs():
     from models.workflow_usage import WorkflowExecutionLog
     from services.workflow_usage_service import serialize_workflow_execution_log
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para listar auditoria operacional de workflows."}), 403
 
     active_company_id = session.get('active_company_id')
@@ -437,7 +442,7 @@ def workflow_usage_metrics():
     from models.workflow_usage import WorkflowExecutionLog
     from services.workflow_usage_service import build_workflow_usage_metrics
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais de workflows."}), 403
 
     company_id = session.get('active_company_id')
@@ -469,7 +474,7 @@ def list_workflow_approvals():
     from models.agent_action import AgentAction
     from services.workflow_approval_service import serialize_workflow_approval_action
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para listar approvals operacionais."}), 403
 
     company_id = session.get('active_company_id')
@@ -531,7 +536,7 @@ def workflow_approval_board():
     from models.agent_action import AgentAction
     from services.workflow_approval_service import build_workflow_approval_board
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para consultar o painel operacional."}), 403
 
     company_id = session.get('active_company_id')
@@ -563,7 +568,7 @@ def workflow_approval_metrics():
     from models.agent_action import AgentAction
     from services.workflow_approval_service import build_workflow_approval_metrics
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais."}), 403
 
     company_id = session.get('active_company_id')
@@ -600,7 +605,7 @@ def get_chat_history():
     
     # Se não for especificado user_id, usa o atual
     # Se for admin, pode ver de outros, senão, apenas o seu
-    if not target_user_id or current_user.role != 'admin':
+    if not target_user_id or not is_platform_admin():
         target_user_id = current_user.id
     
     agent_type = 'work_agent_squad'
@@ -662,7 +667,7 @@ def get_agents_contacts():
     ]
     
     # 2. Usuários que interagiram (apenas para Admins)
-    if current_user.role == 'admin':
+    if is_platform_admin():
         # Busca subquery de usuários com mensagens
         user_ids_query = db.session.query(AgentMessage.user_id).filter(
             AgentMessage.company_id == company_id
@@ -744,7 +749,7 @@ def test_agent(agent_id):
 
 
 def _menu_admin_guard():
-    if current_user.role != 'admin':
+    if not is_platform_admin():
         return jsonify({
             "success": False,
             "error": "Apenas administradores podem editar o menu de agentes."
@@ -773,7 +778,7 @@ def list_agent_menu_options():
 
     # Admin pode consultar menu de qualquer empresa explicitamente
     company_id_param = request.args.get('company_id')
-    if current_user.role == 'admin' and company_id_param is not None:
+    if is_platform_admin() and company_id_param is not None:
         try:
             company_id = int(company_id_param)
         except ValueError:
@@ -958,7 +963,7 @@ def approve_action(action_id):
     active_company_id = session.get('active_company_id')
 
     if action.type == 'workflow_approval_request':
-        if current_user.role not in {'admin', 'client'}:
+        if not _has_operational_full_access(active_company_id):
             return jsonify({"success": False, "error": "Sem permissão para aprovar esta ação."}), 403
 
         service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
@@ -1012,7 +1017,7 @@ def revalidate_action(action_id):
     if action.type != 'workflow_approval_request':
         return jsonify({"success": False, "error": "Ação não suporta revalidação operacional."}), 400
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para revalidar esta ação."}), 403
 
     active_company_id = session.get('active_company_id')
@@ -1304,7 +1309,7 @@ def reject_action(action_id):
     if action.type != 'workflow_approval_request':
         return jsonify({"success": False, "error": "Ação não suporta rejeição operacional."}), 400
 
-    if current_user.role not in {'admin', 'client'}:
+    if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para rejeitar esta ação."}), 403
 
     feedback = (request.get_json(silent=True) or {}).get('feedback')

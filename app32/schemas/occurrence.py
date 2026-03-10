@@ -21,6 +21,7 @@ class OccurrenceSchema(ma.SQLAlchemyAutoSchema):
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
     
+    collaborators_ids = fields.List(fields.Raw(), allow_none=True)
     collaborators_info = fields.Method("get_collaborators_info")
 
     def get_collaborators_info(self, obj):

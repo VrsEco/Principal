@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import joinedload
 from services.auth_service import auth_service
 from schemas.user_pydantic import UserProfileUpdateSchema, UserPasswordChangeSchema
+from utils.permissions import can_access_company, get_default_company_id, is_platform_admin
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -44,7 +45,7 @@ def login():
             employee_records = Employee.query.filter_by(user_id=user.id, status='active').all()
             
             # Always go to portal so user can see their global notes
-            if len(employee_records) > 0 or user.role == 'admin':
+            if len(employee_records) > 0 or is_platform_admin():
                 return jsonify({"success": True, "redirect": "/portal"})
             else:
                 return jsonify({"success": False, "message": "Usuário não possui empresas vinculadas."}), 403
@@ -65,24 +66,25 @@ def portal():
             return jsonify({"success": False, "message": "Empresa não informada"}), 400
             
         # Verify if user has access to this company
-        if current_user.role != 'admin':
-            access = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
-            if not access:
-                return jsonify({"success": False, "message": "Acesso negado a esta empresa"}), 403
+        if not can_access_company(company_id):
+            return jsonify({"success": False, "message": "Acesso negado a esta empresa"}), 403
         
         session['active_company_id'] = company_id
         return jsonify({"success": True, "redirect": "/my-work"})
 
     # GET: Show list of companies
-    if current_user.role == 'admin':
+    employee_records = Employee.query.filter_by(user_id=current_user.id, status='active').all()
+    employee_ids = [e.id for e in employee_records]
+
+    if is_platform_admin():
         companies = Company.query.filter_by(is_active=True).all()
-        employee_records = Employee.query.filter_by(user_id=current_user.id, status='active').all()
-        employee_ids = [e.id for e in employee_records]
     else:
-        employee_records = Employee.query.filter_by(user_id=current_user.id, status='active').all()
-        employee_ids = [e.id for e in employee_records]
         company_ids = [e.company_id for e in employee_records]
-        companies = Company.query.filter(Company.id.in_(company_ids), Company.is_active==True).all()
+        companies = Company.query.filter(Company.id.in_(company_ids), Company.is_active == True).all()
+
+    default_company_id = get_default_company_id()
+    if default_company_id and 'active_company_id' not in session:
+        session['active_company_id'] = default_company_id
 
     # Fetch activities (Todas as atividades não concluídas)
     activities = []

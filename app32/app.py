@@ -152,31 +152,43 @@ def create_app(config_name=None):
 
     @app.context_processor
     def inject_permissions():
-        from utils.permissions import has_permission
         from flask import session
         from flask_login import current_user
-        
+        from utils.permissions import (
+            get_access_profile,
+            get_default_company_id,
+            has_company_full_access,
+            has_permission,
+            is_administrator,
+            is_client_user,
+            is_collaborator_in_company,
+            is_platform_admin,
+        )
+
+        def _resolve_company_id(company_id=None):
+            return company_id or session.get('active_company_id') or get_default_company_id()
+
         def check_perm(resource, action, company_id=None):
             if not current_user.is_authenticated:
                 return False
-            if current_user.role == 'admin':
-                return True
-            
-            # Use active company from session if not provided
-            cid = company_id or session.get('active_company_id')
-            
+
+            cid = _resolve_company_id(company_id)
             if cid:
                 return has_permission(cid, resource, action)
-            
-            # If no company context, check if they have permission in ANY associated company
-            from models import Employee
-            user_employees = Employee.query.filter_by(user_id=current_user.id).all()
-            for emp in user_employees:
-                if has_permission(emp.company_id, resource, action):
-                    return True
-            return False
-            
-        return dict(has_permission=check_perm)
+            return has_permission(None, resource, action)
+
+        def current_access_profile(company_id=None):
+            return get_access_profile(_resolve_company_id(company_id))
+
+        return dict(
+            has_permission=check_perm,
+            current_access_profile=current_access_profile,
+            is_platform_admin=is_platform_admin,
+            is_client_user=is_client_user,
+            is_administrator=lambda company_id=None: is_administrator(_resolve_company_id(company_id)),
+            has_company_full_access=lambda company_id=None: has_company_full_access(_resolve_company_id(company_id)),
+            is_collaborator_in_company=lambda company_id=None: is_collaborator_in_company(_resolve_company_id(company_id)),
+        )
 
     @app.context_processor
     def inject_active_company():

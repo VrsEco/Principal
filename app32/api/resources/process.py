@@ -17,34 +17,40 @@ from schemas.process import (
     process_instance_schema, process_instances_schema
 )
 from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company, Indicator, ActivityWorkLog
-from utils.permissions import permission_required, has_permission
+from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required
 from database import get_db
 from sqlalchemy import or_
 
+def _instance_visible_to_employee(instance, employee_id):
+    if not instance or not employee_id:
+        return False
+    if instance.owner_employee_id == employee_id or instance.responsible_id == employee_id or instance.executor_id == employee_id:
+        return True
+
+    collaborators = instance.collaborators_json or []
+    if isinstance(collaborators, list):
+        for item in collaborators:
+            if item == employee_id:
+                return True
+            if isinstance(item, dict):
+                raw_id = item.get('employee_id') or item.get('id')
+                try:
+                    if raw_id is not None and int(raw_id) == int(employee_id):
+                        return True
+                except (TypeError, ValueError):
+                    continue
+    return False
+
 def apply_instance_employee_filter(query, company_id):
     from flask_login import current_user
-    from models.employee import Employee
-    from models.process import ProcessInstance, ProcessInstanceCollaborator
 
     if not current_user.is_authenticated:
+        return query.filter(ProcessInstance.id == None)
+
+    if has_company_full_access(company_id):
         return query
 
-    # Admin e Client vêem tudo
-    if current_user.role in ('admin', 'client'):
-        return query
-
-    # Colaborador: filtra apenas instâncias onde é dono, responsável ou executor
-    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-    if employee:
-        return query.filter(
-            or_(
-                ProcessInstance.owner_employee_id == employee.id,
-                ProcessInstance.responsible_id == employee.id,
-                ProcessInstance.executor_id == employee.id,
-                ProcessInstance.collaborators_json.contains([{"id": employee.id}]),
-                ProcessInstance.collaborators_json.contains([{"employee_id": employee.id}])
-            )
-        )
+    # Para colaborador, a filtragem final é feita em Python para suportar collaborators_json no PostgreSQL.
     return query
 
 def generate_area_code(company_id, sequence):
@@ -111,14 +117,9 @@ def get_request_company_id():
 
     # 4. Fallback: pick a company the user can access
     if current_user.is_authenticated:
-        if current_user.role == 'admin':
-            first = Company.query.order_by(Company.id).first()
-            if first:
-                return first.id
-        else:
-            emp = Employee.query.filter_by(user_id=current_user.id, status='active').order_by(Employee.company_id).first()
-            if emp:
-                return emp.company_id
+        default_company_id = get_default_company_id()
+        if default_company_id:
+            return default_company_id
 
     return None
 
@@ -240,7 +241,7 @@ def _get_process_with_access(process_id: int, action: str = 'view', sync_session
     if not current_user.is_authenticated:
         return None
 
-    if current_user.role != 'admin' and not has_permission(process.company_id, 'processes', action):
+    if not has_permission(process.company_id, 'processes', action):
         return None
 
     if sync_session:
@@ -322,6 +323,13 @@ class ProcessInstanceListResource(Resource):
             query = query.filter_by(process_id=process_id)
             
         instances = query.all()
+        if not has_company_full_access(company_id):
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+            if employee:
+                instances = [inst for inst in instances if _instance_visible_to_employee(inst, employee.id)]
+            else:
+                instances = []
         
         # Enrich with normalized collaborators (Owner, Responsible, Executors)
         from models.employee import Employee
@@ -525,27 +533,27 @@ class ProcessInstanceResource(Resource):
     @permission_required('processes', 'view')
     def get(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
-        # Apply filter to individual GET as well
-        company_id = get_request_company_id()
-        query = ProcessInstance.query.filter_by(id=instance_id)
-        query = apply_instance_employee_filter(query, company_id)
-        instance = query.first_or_404()
+        if not has_company_full_access(instance.company_id):
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
+            if not employee or not _instance_visible_to_employee(instance, employee.id):
+                return {"error": "Acesso negado à instância."}, 403
         return process_instance_schema.dump(instance), 200
 
     @permission_required('processes', 'edit')
     def put(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
 
-        # Colaboradores não podem editar se não são dono/responsável/executor
-        if current_user.role not in ('admin', 'client'):
-            company_id = get_request_company_id()
+        # Colaboradores restritos só podem editar se participarem diretamente
+        if not has_company_full_access(instance.company_id):
             from models.employee import Employee
-            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-            if employee:
-                if instance.owner_employee_id != employee.id and \
-                   instance.responsible_id != employee.id and \
-                   instance.executor_id != employee.id:
-                    return {"error": "Viewer only: You can only view this process instance."}, 403
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
+            if not employee:
+                return {"error": "Viewer only: You can only view this process instance."}, 403
+            if instance.owner_employee_id != employee.id and \
+               instance.responsible_id != employee.id and \
+               instance.executor_id != employee.id:
+                return {"error": "Viewer only: You can only view this process instance."}, 403
 
         try:
             data = request.get_json()
@@ -562,8 +570,7 @@ class ProcessInstanceResource(Resource):
     def delete(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
         
-        # Colaboradores não podem deletar
-        if current_user.role not in ('admin', 'client'):
+        if not has_company_full_access(instance.company_id):
             return {"error": "Viewer only: You cannot delete process instances."}, 403
 
         try:

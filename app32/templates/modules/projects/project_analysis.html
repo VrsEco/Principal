@@ -574,13 +574,13 @@
             </svg>
             Atualizar
         </button>
-        <button class="btn btn-primary btn-with-icon" onclick="openTaskModal()">
+        {% if not is_collaborator %}<button class="btn btn-primary btn-with-icon" onclick="openTaskModal()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
             Nova Atividade
-        </button>
+        </button>{% endif %}
     </div>
 </div>
 
@@ -827,6 +827,7 @@
 {% block scripts %}
 <script>
     const COMPANY_ID = parseInt("{{ company.id if company else '0' }}");
+    const IS_COLLABORATOR = {{ 'true' if is_collaborator else 'false' }};
     let allTasks = [];
     let allProjects = [];
     let employeeNames = {};
@@ -1001,7 +1002,7 @@
     function createCard(task) {
         const card = document.createElement('div');
         card.className = 'kanban-card-ws';
-        card.draggable = true;
+        card.draggable = !IS_COLLABORATOR;
         card.dataset.id = task.id;
         card.classList.add(`prio-${task.priority || 'normal'}`);
 
@@ -1228,6 +1229,10 @@
     const taskForm = document.getElementById('taskForm');
 
     function openTaskModal(taskId = null) {
+        if (IS_COLLABORATOR && !taskId) {
+            alert('Colaborador não pode criar novas atividades nesta tela.');
+            return;
+        }
         const modalTitle = document.getElementById('modalTitle');
         const idField = document.getElementById('taskId');
 
@@ -1261,6 +1266,14 @@
             document.getElementById('btnDeleteTask').style.display = 'none';
             currentTaskLogs = [];
         }
+                const saveButton = document.querySelector('#taskModal .btn-primary');
+        if (saveButton) saveButton.style.display = IS_COLLABORATOR ? 'none' : 'inline-flex';
+        const deleteButton = document.getElementById('btnDeleteTask');
+        if (deleteButton) deleteButton.style.display = (IS_COLLABORATOR || !taskId) ? 'none' : deleteButton.style.display;
+        ['taskProjectId','taskWhat','taskEmployeeId','taskDueDate','taskEstimatedHours','taskScoreWeight','taskHow','taskNotes'].forEach((fieldId) => {
+            const field = document.getElementById(fieldId);
+            if (field) field.disabled = !!IS_COLLABORATOR;
+        });
         taskModal.classList.add('open');
     }
 
@@ -1269,6 +1282,10 @@
     }
 
     async function submitTask() {
+        if (IS_COLLABORATOR) {
+            alert('Colaborador não pode salvar atividades nesta tela.');
+            return;
+        }
         const taskId = document.getElementById('taskId').value;
         const projectId = document.getElementById('taskProjectId').value;
 
@@ -1305,6 +1322,10 @@
     }
 
     async function deleteTask(taskId) {
+        if (IS_COLLABORATOR) {
+            alert('Colaborador não pode excluir atividades nesta tela.');
+            return;
+        }
         if (!confirm('Excluir esta atividade permanentemente?')) return;
         const task = allTasks.find(t => t.id == taskId);
         try {

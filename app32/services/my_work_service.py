@@ -2535,29 +2535,35 @@ def _datetime_sort_key(value: Optional[datetime]) -> int:
 
 def _get_user_role_from_employee(employee_id: int) -> Optional[str]:
     """
-    Obtém o role do usuário a partir do employee_id
-    
-    Returns:
-        str: 'admin', 'client', 'collaborator' ou None
+    Obtém o perfil efetivo do usuário a partir do employee_id.
     """
     from models.user import User
     from models.employee import Employee
-    
+    from utils.permissions import _normalize_role_title
+
     try:
         employee = Employee.query.get(employee_id)
         if not employee or not employee.user_id:
             return None
-        
+
         user = User.query.get(employee.user_id)
         if not user:
             return None
-        
-        # Normalizar 'consultant' legado para 'collaborator'
-        role = user.role
+
+        role = (user.role or 'collaborator').strip().lower()
         if role == 'consultant':
             role = 'collaborator'
-        
-        return role
+
+        if role == 'admin':
+            return 'admin'
+        if role == 'client':
+            return 'client'
+
+        role_title = _normalize_role_title(employee.role.title if employee and employee.role else None)
+        if role_title in {'superuser', 'administrador', 'administrator', 'admin'}:
+            return 'admin'
+
+        return 'collaborator'
     except Exception as e:
         logger.warning(f"Erro ao obter role do usuário para employee {employee_id}: {e}")
         return None
@@ -3652,9 +3658,23 @@ def process_my_work_filters(
     if not user:
         raise ValueError(f"Usuário {user_id} não encontrado")
     
-    user_role = user.role
+    from models.employee import Employee
+    from sqlalchemy import func, or_
+    from utils.permissions import _normalize_role_title
+
+    user_role = (user.role or 'collaborator').strip().lower()
     if user_role == "consultant":
         user_role = "collaborator"
+
+    if user_role not in {"admin", "client"}:
+        employee_query = Employee.query.filter(Employee.user_id == user_id).filter(
+            or_(Employee.status.is_(None), func.lower(Employee.status) == 'active')
+        )
+        for employee in employee_query.all():
+            role_title = _normalize_role_title(employee.role.title if employee and employee.role else None)
+            if role_title in {'superuser', 'administrador', 'administrator', 'admin'}:
+                user_role = 'admin'
+                break
 
     def _fetch_all_company_ids() -> List[int]:
         """Retorna todos IDs de empresas cadastradas."""

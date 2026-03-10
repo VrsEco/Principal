@@ -9,6 +9,7 @@ from models import db
 from models.user import User
 from models.company import Company
 from models.employee import Employee
+from utils.permissions import admin_required, can_access_company, is_platform_admin
 
 user_employee_bp = Blueprint('user_employee', __name__, url_prefix='/api/user-employee')
 
@@ -70,6 +71,7 @@ def register_user_with_company():
 
 @user_employee_bp.route('/add-to-company', methods=['POST'])
 @login_required
+@admin_required
 def add_user_to_company():
     """
     Adiciona um usuário existente como colaborador de uma empresa
@@ -91,7 +93,7 @@ def add_user_to_company():
             }), 400
         
         # Apenas admins podem adicionar usuários a empresas
-        if current_user.role != 'admin':
+        if not is_platform_admin():
             return jsonify({
                 'success': False,
                 'error': 'Apenas administradores podem executar esta ação'
@@ -179,7 +181,7 @@ def get_company_employees(company_id):
             company_id=company_id
         ).first()
         
-        if not user_employee and current_user.role != 'admin':
+        if not user_employee and not is_platform_admin():
             return jsonify({
                 'success': False,
                 'error': 'Você não tem acesso a esta empresa'
@@ -224,7 +226,7 @@ def update_employee(employee_id):
             }), 404
         
         # Verificar permissão
-        if current_user.role != 'admin' and employee.user_id != current_user.id:
+        if not is_platform_admin() and employee.user_id != current_user.id:
             return jsonify({
                 'success': False,
                 'error': 'Você não tem permissão para editar este colaborador'
@@ -285,6 +287,7 @@ def update_employee(employee_id):
 
 @user_employee_bp.route('/employee/<int:employee_id>/link-user', methods=['POST'])
 @login_required
+@admin_required
 def link_employee_to_user(employee_id):
     """
     Vincula um colaborador a um usuário do sistema
@@ -296,7 +299,7 @@ def link_employee_to_user(employee_id):
     """
     try:
         # Apenas admins podem vincular
-        if current_user.role != 'admin':
+        if not is_platform_admin():
             return jsonify({
                 'success': False,
                 'error': 'Apenas administradores podem executar esta ação'

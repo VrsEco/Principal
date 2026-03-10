@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from services.log_service import log_service
 from services.auth_service import auth_service
+from utils.permissions import admin_required, is_platform_admin
 
 logs_bp = Blueprint("logs", __name__, url_prefix="/logs")
 
@@ -48,7 +49,7 @@ def list_logs():
         offset = request.args.get("offset", 0, type=int)
 
         # Restrict to current user unless admin
-        if current_user.role != "admin":
+        if not is_platform_admin():
             user_id = current_user.id
 
         # Get logs
@@ -98,7 +99,7 @@ def get_log_stats():
         start_date = end_date - timedelta(days=days)
 
         # Restrict to current user unless admin
-        if current_user.role != "admin":
+        if not is_platform_admin():
             # Non-admin users can only see their own stats
             user_id = current_user.id
             stats = log_service.get_log_stats(
@@ -150,7 +151,7 @@ def user_activity():
     user_id = request.args.get("user_id", type=int)
 
     # Restrict to current user unless admin
-    if current_user.role != "admin":
+    if not is_platform_admin():
         user_id = current_user.id
     elif not user_id:
         user_id = current_user.id
@@ -197,21 +198,10 @@ def entity_activity(entity_type, entity_id):
 
 @logs_bp.route("/export", methods=["GET"])
 @login_required
+@admin_required
 def export_logs():
     """Export logs to CSV"""
     try:
-        # Only admin can export all logs
-        if current_user.role != "admin":
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Acesso negado. Apenas administradores podem exportar logs.",
-                    }
-                ),
-                403,
-            )
-
         # Get query parameters
         entity_type = request.args.get("entity_type")
         action = request.args.get("action")

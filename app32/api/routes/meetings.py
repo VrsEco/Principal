@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, abort
 from flask_login import current_user, login_required
 from models import Company, Meeting, MeetingAgendaItem, Employee, Project, db
-from utils.permissions import permission_required
+from utils.permissions import can_access_company, get_default_company_id, has_company_full_access, permission_required
 
 meetings_bp = Blueprint('meetings', __name__)
 
@@ -12,11 +12,7 @@ def user_can_access_company(company_id):
     company = Company.query.get(company_id)
     if not company or not bool(getattr(company, 'is_active', True)):
         return False
-    # Admin e Client têm acesso total
-    if str(getattr(current_user, 'role', '')).lower() in ['admin', 'client']:
-        return True
-    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
-    return employee is not None
+    return can_access_company(company_id)
 
 def get_active_company():
     company_id = session.get('active_company_id')
@@ -27,16 +23,10 @@ def get_active_company():
         session.pop('active_company_id', None)
 
     if current_user.is_authenticated:
-        emp = Employee.query.filter_by(user_id=current_user.id, status='active').order_by(Employee.id.asc()).first()
-        if emp and user_can_access_company(emp.company_id):
-            session['active_company_id'] = emp.company_id
-            return Company.query.get(emp.company_id)
-        if current_user.role in ['admin', 'client']:
-            # For admins and clients, handle company context appropriately
-            first = Company.query.filter_by(is_active=True).order_by(Company.id).first()
-            if first:
-                session['active_company_id'] = first.id
-                return first
+        default_company_id = get_default_company_id()
+        if default_company_id and user_can_access_company(default_company_id):
+            session['active_company_id'] = default_company_id
+            return Company.query.get(default_company_id)
 
     return None
 
@@ -67,7 +57,7 @@ def meetings_company_manage(company_id):
     
     # Filter meetings based on user context
     meetings_data = []
-    is_full_access = str(getattr(current_user, 'role', '')).lower() in ['admin', 'client']
+    is_full_access = has_company_full_access(company_id)
     current_employee = None
     
     if not is_full_access:

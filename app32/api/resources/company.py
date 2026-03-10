@@ -3,10 +3,11 @@ Company API Resources - REST endpoints for Company CRUD operations.
 """
 
 from flask import request
+from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import ValidationError
-from utils.permissions import permission_required
-from models import db, Company
+from utils.permissions import is_platform_admin, permission_required
+from models import db, Company, Employee
 from schemas.company import company_schema, companies_schema
 
 
@@ -30,11 +31,27 @@ class CompanyListResource(Resource):
             200: List of companies
         """
         include_all = request.args.get('all', 'false').lower() == 'true'
-        
+
         query = Company.query
         if not include_all:
             query = query.filter_by(is_active=True)
-            
+
+        if current_user.is_authenticated and not is_platform_admin():
+            linked_company_ids = [
+                row.company_id
+                for row in Employee.query.with_entities(Employee.company_id)
+                .filter(Employee.user_id == current_user.id)
+                .filter(db.or_(Employee.status.is_(None), Employee.status == 'active'))
+                .distinct()
+                .all()
+                if row.company_id is not None
+            ]
+
+            if not linked_company_ids:
+                return [], 200
+
+            query = query.filter(Company.id.in_(linked_company_ids))
+
         companies = query.order_by(Company.name).all()
         return companies_schema.dump(companies), 200
     

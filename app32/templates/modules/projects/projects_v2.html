@@ -6,6 +6,7 @@
 {% if company %}
 <!-- DEBUG: Active Company: {{ active_company.name if active_company else 'NONE' }} (ID: {{ active_company.id if active_company else 'NONE' }}) -->
 <meta name="company-id" content="{{ active_company.id if active_company else '' }}">
+<meta name="is-collaborator" content="{{ 'true' if is_collaborator else 'false' }}">
 {% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
 
@@ -362,6 +363,7 @@
 
         <div class="workspace-header-actions">
 
+            {% if not is_collaborator %}
             <button class="btn btn-primary" onclick="window.location.href='/projects/new'">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -369,6 +371,7 @@
                 </svg>
                 Novo Projeto
             </button>
+            {% endif %}
         </div>
     </div>
 

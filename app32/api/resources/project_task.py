@@ -1,10 +1,29 @@
 from flask import request
 from flask_restful import Resource
 from marshmallow import ValidationError
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from models import db, ProjectTask, Project
 from schemas.project import project_task_schema, project_tasks_schema
-from utils.permissions import permission_required
+from utils.permissions import has_company_full_access, permission_required
 from datetime import datetime
+
+def _sync_table_sequence(table_name: str, pk_column: str = 'id'):
+    seq_row = db.session.execute(
+        text("SELECT pg_get_serial_sequence(:table_name, :pk_column) AS seq"),
+        {"table_name": table_name, "pk_column": pk_column}
+    ).mappings().first()
+    seq_name = seq_row['seq'] if seq_row else None
+    if not seq_name:
+        return False
+
+    db.session.execute(
+        text("SELECT setval(:seq_name, COALESCE((SELECT MAX(id) FROM project_tasks), 0) + 1, false)"),
+        {"seq_name": seq_name}
+    )
+    db.session.commit()
+    return True
+
 
 def apply_task_employee_filter(query, company_id):
     from flask_login import current_user
@@ -15,8 +34,8 @@ def apply_task_employee_filter(query, company_id):
     if not current_user.is_authenticated:
         return query
 
-    # Admin e Client veem todas as tarefas
-    if current_user.role in ('admin', 'client'):
+    # Perfis com acesso total na empresa veem todas as tarefas
+    if company_id and has_company_full_access(company_id):
         return query
 
     # Colaborador: só tarefas onde é executor ou colaborador
@@ -104,18 +123,30 @@ class ProjectTaskListResource(Resource):
             elif data.get('stage') == 'inbox' or data.get('stage') == 'todo':
                 data['status'] = 'planned'
                 if data.get('stage') == 'todo': data['stage'] = 'inbox'
-            
-            task = project_task_schema.load(data)
-            db.session.add(task)
-            
-            # Update project progress
-            project = Project.query.get(project_id)
-            if project:
-                project.update_progress()
-                
-            db.session.commit()
+
+            def _build_task():
+                task_obj = project_task_schema.load(data)
+                db.session.add(task_obj)
+                project = Project.query.get(project_id)
+                if project:
+                    project.update_progress()
+                return task_obj
+
+            try:
+                task = _build_task()
+                db.session.commit()
+            except IntegrityError as exc:
+                db.session.rollback()
+                error_text = str(exc.orig) if getattr(exc, 'orig', None) else str(exc)
+                if 'project_tasks_pkey' not in error_text and 'duplicate key value' not in error_text:
+                    raise
+                _sync_table_sequence('project_tasks')
+                task = _build_task()
+                db.session.commit()
+
             return project_task_schema.dump(task), 201
         except ValidationError as err:
+            db.session.rollback()
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from models import db, Company, Employee, User, Role, CompanyPerformanceSettings
 from services.user_employee_service import UserEmployeeService
-from utils.permissions import permission_required
+from utils.permissions import can_access_company, is_platform_admin, permission_required
 from flask_login import login_required, current_user
 from utils.logo_processor import resize_and_save_logo, get_logo_url
 
@@ -32,12 +32,9 @@ def company_edit(company_id):
 @companies_bp.route('/api/companies/<int:company_id>/users', methods=['GET'])
 @permission_required('companies', 'view')
 def get_company_users(company_id):
-    # Security check: User must have access to this company or be admin
-    if current_user.role != 'admin':
-        # Check if current_user is employee of this company
-        is_employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not is_employee:
-            return jsonify({"error": "Acesso negado"}), 403
+    # Security check: User must have access to this company
+    if not can_access_company(company_id):
+        return jsonify({"error": "Acesso negado"}), 403
 
     # Display all employees that actually have a user_id vinculated, including inactive ones
     employees = Employee.query.filter(Employee.company_id==company_id, Employee.user_id.isnot(None)).all()

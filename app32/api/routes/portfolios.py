@@ -1,5 +1,5 @@
 """Portfolio API routes"""
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, abort
 from flask_login import login_required, current_user
 from models import db
 from models.portfolio import Portfolio
@@ -10,7 +10,7 @@ from schemas.portfolio import (
     PortfolioUpdateSchema,
 )
 from marshmallow import ValidationError
-from utils.permissions import permission_required
+from utils.permissions import permission_required, has_company_full_access
 
 portfolios_bp = Blueprint("portfolios", __name__)
 
@@ -48,15 +48,19 @@ def portfolios_page_redirect():
 @permission_required("projects", "view")
 def portfolios_page(company_id):
     """Portfolio management page"""
+    if not has_company_full_access(company_id):
+        abort(403, description='Acesso negado: colaboradores não podem acessar portfólios de projetos.')
     company = Company.query.get_or_404(company_id)
     return render_template("project_portfolios.html", company=company)
 
 
 @portfolios_bp.route("/api/companies/<int:company_id>/portfolios", methods=["GET"])
-@login_required
+@permission_required("projects", "view")
 def list_portfolios(company_id):
     """List all portfolios for a company"""
     try:
+        if not has_company_full_access(company_id):
+            return jsonify({"success": False, "message": "Acesso negado: colaboradores não podem acessar portfólios de projetos."}), 403
         # Verify company access
         company = Company.query.get_or_404(company_id)
 
@@ -75,10 +79,12 @@ def list_portfolios(company_id):
 
 
 @portfolios_bp.route("/api/companies/<int:company_id>/portfolios", methods=["POST"])
-@login_required
+@permission_required("projects", "create")
 def create_portfolio(company_id):
     """Create a new portfolio"""
     try:
+        if not has_company_full_access(company_id):
+            return jsonify({"success": False, "message": "Acesso negado: colaboradores não podem criar portfólios."}), 403
         # Verify company access
         company = Company.query.get_or_404(company_id)
 
@@ -127,10 +133,12 @@ def create_portfolio(company_id):
 @portfolios_bp.route(
     "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>", methods=["GET"]
 )
-@login_required
+@permission_required("projects", "view")
 def get_portfolio(company_id, portfolio_id):
     """Get a specific portfolio"""
     try:
+        if not has_company_full_access(company_id):
+            return jsonify({"success": False, "message": "Acesso negado: colaboradores não podem acessar portfólios de projetos."}), 403
         portfolio = Portfolio.query.filter_by(
             id=portfolio_id, company_id=company_id
         ).first_or_404()
@@ -149,10 +157,12 @@ def get_portfolio(company_id, portfolio_id):
 @portfolios_bp.route(
     "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>", methods=["PUT"]
 )
-@login_required
+@permission_required("projects", "edit")
 def update_portfolio(company_id, portfolio_id):
     """Update a portfolio"""
     try:
+        if not has_company_full_access(company_id):
+            return jsonify({"success": False, "message": "Acesso negado: colaboradores não podem editar portfólios."}), 403
         portfolio = Portfolio.query.filter_by(
             id=portfolio_id, company_id=company_id
         ).first_or_404()
@@ -205,10 +215,12 @@ def update_portfolio(company_id, portfolio_id):
     "/api/companies/<int:company_id>/portfolios/<int:portfolio_id>",
     methods=["DELETE"],
 )
-@login_required
+@permission_required("projects", "delete")
 def delete_portfolio(company_id, portfolio_id):
     """Delete a portfolio"""
     try:
+        if not has_company_full_access(company_id):
+            return jsonify({"success": False, "message": "Acesso negado: colaboradores não podem excluir portfólios."}), 403
         portfolio = Portfolio.query.filter_by(
             id=portfolio_id, company_id=company_id
         ).first_or_404()

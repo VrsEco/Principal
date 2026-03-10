@@ -1,18 +1,29 @@
-from flask import Blueprint, render_template, session, redirect, url_for, request
+from flask import Blueprint, render_template, session, redirect, url_for, request, abort
 from flask_login import login_required, current_user
 from services.plan_service import PlanService
 from api.routes.projects import get_active_company
+from utils.permissions import has_company_full_access
 
 plans_bp = Blueprint('plans', __name__, url_prefix='/plans')
+
+
+
+def _ensure_plans_access(company):
+    if not company:
+        return
+    if not has_company_full_access(company.id):
+        abort(403, description='Acesso negado: Colaboradores não podem acessar planos.')
+
 
 @plans_bp.route('/')
 @login_required
 def plans_list():
     """List all plans for the active company."""
     company = get_active_company()
+    _ensure_plans_access(company)
     if not company:
         return redirect(url_for('auth.portal'))
-    
+
     plans = PlanService.list_plans(company.id)
     return render_template('modules/plans/plans_list.html', company=company, plans=plans)
 
@@ -22,7 +33,8 @@ def growth_dashboard(plan_id):
     """Growth planning dashboard."""
     company = get_active_company()
     company_id = company.id if company else None
-    
+    _ensure_plans_access(company)
+
     data = PlanService.get_plan_dashboard_data(plan_id, company_id)
     if not data or data['plan']['mode'] != 'growth':
         return redirect(url_for('plans.plans_list'))
@@ -42,6 +54,7 @@ def growth_dashboard(plan_id):
 def growth_section(plan_id, section):
     """Render a specific section of the growth plan."""
     company = get_active_company()
+    _ensure_plans_access(company)
     plan = PlanService.get_plan(plan_id, company.id if company else None)
     
     if not plan or plan.mode != 'growth':
@@ -107,7 +120,8 @@ def implantation_dashboard(plan_id):
     """Implantation planning dashboard."""
     company = get_active_company()
     company_id = company.id if company else None
-    
+    _ensure_plans_access(company)
+
     data = PlanService.get_plan_dashboard_data(plan_id, company_id)
     if not data or data['plan']['mode'] != 'implantation':
         return redirect(url_for('plans.plans_list'))
@@ -129,6 +143,7 @@ def implantation_dashboard(plan_id):
 def implantation_section(plan_id, section):
     """Render a specific section of the implantation plan."""
     company = get_active_company()
+    _ensure_plans_access(company)
     plan = PlanService.get_plan(plan_id, company.id if company else None)
     
     if not plan or plan.mode != 'implantation':
@@ -231,6 +246,7 @@ def implantation_section(plan_id, section):
 def complete_section(plan_id, section_key):
     """Mark a section as completed."""
     company = get_active_company()
+    _ensure_plans_access(company)
     plan = PlanService.get_plan(plan_id, company.id if company else None)
     
     if not plan:
@@ -245,6 +261,7 @@ def complete_section(plan_id, section_key):
 def update_plan(plan_id):
     """Update plan title and description."""
     company = get_active_company()
+    _ensure_plans_access(company)
     if not company:
         return {"error": "Empresa não encontrada"}, 404
         

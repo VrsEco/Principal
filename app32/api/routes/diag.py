@@ -2,6 +2,7 @@ from flask import Blueprint, session, jsonify
 from flask_login import current_user, login_required
 
 from models import db, Company, Project, Indicator, Process, ProcessInstance
+from utils.permissions import get_access_profile, has_company_full_access
 
 
 diag_bp = Blueprint('diag', __name__)
@@ -9,10 +10,13 @@ diag_bp = Blueprint('diag', __name__)
 @diag_bp.route('/api/debug-session')
 @login_required
 def debug_session():
+    active_company_id = session.get('active_company_id')
     return jsonify({
         "user_id": current_user.id if current_user.is_authenticated else None,
         "user_role": current_user.role if current_user.is_authenticated else None,
-        "active_company_id": session.get('active_company_id'),
+        "access_profile": get_access_profile(active_company_id) if current_user.is_authenticated else None,
+        "has_company_full_access": has_company_full_access(active_company_id) if current_user.is_authenticated and active_company_id else False,
+        "active_company_id": active_company_id,
         "all_session_keys": list(session.keys())
     })
 

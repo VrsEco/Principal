@@ -46,19 +46,14 @@ class EfficiencyCollaborators(Resource):
 
     def get(self, company_id):
         from flask_login import current_user
-        from utils.permissions import has_permission
+        from utils.permissions import has_company_full_access
 
         start_date, end_date = self._parse_period()
         business_days = self._business_days_between(start_date, end_date)
         
         # Determine if user can view all employees
-        can_view_all = False
-        if current_user.is_authenticated:
-            if current_user.role == 'admin':
-                can_view_all = True
-            elif has_permission(company_id, 'companies', 'view'):
-                can_view_all = True
-                
+        can_view_all = bool(current_user.is_authenticated and has_company_full_access(company_id))
+
         # 1. Fetch Employees
         if can_view_all:
             employees = Employee.query.filter_by(company_id=company_id).all()

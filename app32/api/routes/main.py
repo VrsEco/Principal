@@ -210,7 +210,7 @@ def dashboard_filter_options():
         from flask_login import current_user
         company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
 
-        if current_user.role == 'admin':
+        if company_id and has_company_full_access(company_id):
             if company_id:
                 companies = Company.query.filter_by(id=company_id, is_active=True).all()
                 employees = Employee.query.filter_by(company_id=company_id, status='active').all()

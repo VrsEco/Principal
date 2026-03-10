@@ -5,6 +5,7 @@ Provides endpoints for auditing and managing route logging
 
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
+from utils.permissions import admin_required, is_platform_admin
 from services.route_audit_service import route_audit_service
 from middleware.auto_log_decorator import (
     enable_auto_logging_for_entity,
@@ -261,7 +262,7 @@ def enable_entity_logging(entity_type):
     """Habilita logging automático para um tipo de entidade"""
     try:
         # Apenas administradores podem modificar
-        if current_user.role != "admin":
+        if not is_platform_admin():
             return (
                 jsonify(
                     {
@@ -297,7 +298,7 @@ def disable_entity_logging(entity_type):
     """Desabilita logging automático para um tipo de entidade"""
     try:
         # Apenas administradores podem modificar
-        if current_user.role != "admin":
+        if not is_platform_admin():
             return (
                 jsonify(
                     {
@@ -329,11 +330,12 @@ def disable_entity_logging(entity_type):
 
 @route_audit_bp.route("/api/export-report", methods=["GET"])
 @login_required
+@admin_required
 def export_audit_report():
     """Exporta relatório de auditoria em formato CSV"""
     try:
         # Apenas administradores podem exportar
-        if current_user.role != "admin":
+        if not is_platform_admin():
             return (
                 jsonify(
                     {

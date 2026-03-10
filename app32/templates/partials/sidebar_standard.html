@@ -82,7 +82,7 @@
                         de
                         Processos</a>
                     <a href="/process-routines"
-                        class="sub-nav-link {{ 'active' if '/process-routines' in request.path }}">Rotina de
+                        class="sub-nav-link {{ 'active' if request.path == '/process-routines' }}">Rotina de
                         Processos</a>
                     <a href="/process-instances"
                         class="sub-nav-link {{ 'active' if '/process-instances' in request.path }}">Instâncias de
@@ -109,6 +109,13 @@
             <a href="/process-occurrences" class="sub-nav-link {{ 'active' if '/process-occurrences' in request.path }}"
                 style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1rem; color: var(--text-secondary); font-weight: 500;">
                 Gestão de Ocorrências
+            </a>
+
+            <!-- Análise da Rotina -->
+            <a href="{{ url_for('processes.process_routines_analysis_page', company_id=session.get('active_company_id')) if session.get('active_company_id') else '/process-routines' }}"
+                class="sub-nav-link {{ 'active' if '/process-routines/analysis' in request.path }}"
+                style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between; padding-right: 1rem; color: var(--text-secondary); font-weight: 500;">
+                Análise da Rotina
             </a>
 
             <!-- Análise de Eficiência -->
@@ -208,12 +215,12 @@
             <a href="/companies" class="sub-nav-link {{ 'active' if '/companies' in request.path }}">Empresas</a>
             {% endif %}
 
-            {% if current_user.role == 'admin' %}
+            {% if is_platform_admin() %}
             <a href="{{ url_for('usuarios.index') }}"
                 class="sub-nav-link {{ 'active' if request.path == '/usuarios' }}">Usuários</a>
             {% endif %}
 
-            {% if current_user.role == 'admin' %}
+            {% if is_platform_admin() %}
             <a href="{{ url_for('integrations.integrations_page') }}"
                 class="sub-nav-link {{ 'active' if '/integrations' in request.path }}">Integrações</a>
             <a href="{{ url_for('configs.system_settings') }}"
