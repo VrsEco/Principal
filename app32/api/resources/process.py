@@ -19,6 +19,34 @@ from schemas.process import (
 from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company, Indicator, ActivityWorkLog
 from utils.permissions import permission_required, has_permission
 from database import get_db
+from sqlalchemy import or_
+
+def apply_instance_employee_filter(query, company_id):
+    from flask_login import current_user
+    from models.employee import Employee
+    from models.process import ProcessInstance, ProcessInstanceCollaborator
+
+    if not current_user.is_authenticated:
+        return query
+
+    if current_user.role == 'admin':
+        return query
+
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+    if employee and employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
+        return query
+
+    if employee:
+        return query.filter(
+            or_(
+                ProcessInstance.owner_employee_id == employee.id,
+                ProcessInstance.responsible_id == employee.id,
+                ProcessInstance.executor_id == employee.id,
+                ProcessInstance.collaborators_json.contains([{"id": employee.id}]),
+                ProcessInstance.collaborators_json.contains([{"employee_id": employee.id}])
+            )
+        )
+    return query
 
 def generate_area_code(company_id, sequence):
     company = Company.query.get(company_id)
@@ -288,6 +316,7 @@ class ProcessInstanceListResource(Resource):
             return [], 200
             
         query = ProcessInstance.query.filter_by(company_id=company_id)
+        query = apply_instance_employee_filter(query, company_id)
         
         process_id = request.args.get('process_id')
         if process_id:
@@ -497,11 +526,29 @@ class ProcessInstanceResource(Resource):
     @permission_required('processes', 'view')
     def get(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
+        # Apply filter to individual GET as well
+        company_id = get_request_company_id()
+        query = ProcessInstance.query.filter_by(id=instance_id)
+        query = apply_instance_employee_filter(query, company_id)
+        instance = query.first_or_404()
         return process_instance_schema.dump(instance), 200
 
     @permission_required('processes', 'edit')
     def put(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
+
+        # Check if user is collaborator only (viewer-only restriction)
+        # If not admin/superuser and not the owner/responsible/executor, block edit
+        if current_user.role != 'admin':
+            company_id = get_request_company_id()
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+            if employee and (not employee.role or employee.role.title.lower() != 'superuser'):
+                if instance.owner_employee_id != employee.id and \
+                   instance.responsible_id != employee.id and \
+                   instance.executor_id != employee.id:
+                    return {"error": "Viewer only: You can only view this process instance."}, 403
+
         try:
             data = request.get_json()
             
@@ -516,6 +563,15 @@ class ProcessInstanceResource(Resource):
     @permission_required('processes', 'delete')
     def delete(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
+        
+        # Viewer only check for delete
+        if current_user.role != 'admin':
+            company_id = get_request_company_id()
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+            if employee and (not employee.role or employee.role.title.lower() != 'superuser'):
+                return {"error": "Viewer only: You cannot delete process instances."}, 403
+
         try:
             db.session.delete(instance)
             db.session.commit()
