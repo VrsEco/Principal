@@ -5,7 +5,11 @@
 {% block breadcrumb %}
 <a href="/my-work">Meu Trabalho</a>
 <span class="sep">/</span>
+{% if is_collaborator %}
+<span class="text-secondary">Processos</span>
+{% else %}
 <a href="/processes">Processos</a>
+{% endif %}
 <span class="sep">/</span>
 <span class="current">Arquitetura & Mapa</span>
 {% endblock %}
@@ -14,6 +18,7 @@
 
 {% block workspace_content %}
 <div class="arch-container" id="processArchitectureContainer"
+    data-is-collaborator="{{ is_collaborator | tojson }}"
     data-company-id="{{ (company_id or session.get('active_company_id') or 'null') | tojson }}">
     <!-- Header -->
     <div class="workspace-header" style="margin-bottom: 1rem;">
@@ -24,9 +29,11 @@
     <!-- Abas de Navegação Estilo App31 -->
     <div class="arch-tabs">
         <button class="arch-tab active" onclick="switchTab('visual')">🗺️ Mapa Geral</button>
+        {% if not is_collaborator %}
         <button class="arch-tab" onclick="switchTab('areas')">🏢 Áreas</button>
         <button class="arch-tab" onclick="switchTab('macros')">📊 Macroprocessos</button>
         <button class="arch-tab" onclick="switchTab('processes')">⚙️ Processos</button>
+        {% endif %}
     </div>
 
     <!-- Painel: Mapa Visual -->

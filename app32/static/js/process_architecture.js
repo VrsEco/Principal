@@ -5,6 +5,7 @@
 
 // Handle 'null' string or other invalid values from data attribute
 const rawCompanyId = document.getElementById('processArchitectureContainer')?.dataset.companyId;
+const isCollaborator = document.getElementById('processArchitectureContainer')?.dataset.isCollaborator === 'true';
 let normalizedCompanyId = rawCompanyId;
 if (!rawCompanyId || rawCompanyId === 'null' || rawCompanyId === 'undefined' || rawCompanyId === '') {
     normalizedCompanyId = null;
@@ -152,8 +153,11 @@ function renderMapClassic(container) {
             return `
                         <div class="macro-group">
                             <div class="macro-title">${macro.code ? `<span style='font-family:monospace; color: var(--text-tertiary); font-size:0.75em;'>${macro.code}</span> ` : ''}${macro.name}</div>
-                            ${macroProcesses.map(p => `
-                                <a href="/processes/${p.id}" class="process-link-card">
+                            ${macroProcesses.map(p => {
+            const linkTag = isCollaborator ? 'div' : 'a';
+            const linkAttr = isCollaborator ? '' : `href="/processes/${p.id}"`;
+            return `
+                                <${linkTag} ${linkAttr} class="process-link-card" ${isCollaborator ? 'style="cursor: default;"' : ''}>
                                     <span class="process-link-name">${p.code ? p.code + ' - ' : ''}${p.name}</span>
                                     <div class="process-link-meta">
                                         <div style="display: flex; gap: 6px; align-items: center;">
@@ -162,8 +166,9 @@ function renderMapClassic(container) {
                                         </div>
                                         <span>👤 ${p.responsible ? p.responsible.split(' ')[0] : '-'}</span>
                                     </div>
-                                </a>
-                            `).join('')}
+                                </${linkTag}>
+                            `;
+        }).join('')}
                             <div class="macro-footer">Dono: ${macro.owner || '-'}</div>
                         </div>
                     `;
@@ -189,15 +194,19 @@ function renderMapMP2(container) {
                             <div class="mp2-macro-box">
                                 <div class="mp2-macro-title">${macro.code ? macro.code + ' - ' : ''}${macro.name}</div>
                                 <div class="mp2-processes-list">
-                                    ${macroProcesses.map(p => `
-                                        <a href="/processes/${p.id}" class="mp2-process-card">
+                                    ${macroProcesses.map(p => {
+                const linkTag = isCollaborator ? 'div' : 'a';
+                const linkAttr = isCollaborator ? '' : `href="/processes/${p.id}"`;
+                return `
+                                        <${linkTag} ${linkAttr} class="mp2-process-card" ${isCollaborator ? 'style="cursor: default;"' : ''}>
                                             <div class="mp2-process-badges">
                                                 <div class="indicator-stage" style="background: ${getStageColor(p.kanban_stage)}; width: 10px; height: 10px;"></div>
                                                 <div class="indicator-perf" style="background: ${getPerfColor(p.performance_level)}; width: 9px; height: 9px;"></div>
                                             </div>
                                             <div class="mp2-process-name">${p.code ? p.code + ' - ' : ''}${p.name}</div>
-                                        </a>
-                                    `).join('')}
+                                        </${linkTag}>
+                                    `;
+            }).join('')}
                                     ${macroProcesses.length === 0 ? '<div style="grid-column: 1/-1; text-align:center; font-size:0.6rem; color:var(--text-tertiary)">Sem processos</div>' : ''}
                                 </div>
                                 <div class="macro-footer" style="font-size: 0.6rem;">${macro.owner || '-'}</div>

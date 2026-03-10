@@ -41,6 +41,18 @@ def upload_process_flow():
 @permission_required('processes', 'view')
 def processes_list():
     """Processes list page"""
+    if current_user.role != 'admin':
+        company_id = session.get('active_company_id')
+        if not company_id:
+            emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
+            if emp: company_id = emp.company_id
+        
+        if company_id:
+            # Check if superuser
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+            if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+                abort(403, description="Acesso negado: Colaboradores não podem acessar a listagem detalhada de processos.")
+
     company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
     if not company_id and current_user.is_authenticated:
         if current_user.role == 'admin':
@@ -77,13 +89,15 @@ def process_map():
             if emp:
                 company_id = emp.company_id
     
-    if company_id:
-        session['active_company_id'] = company_id
-        # Se não veio na URL ou mudou, redireciona para URL explicita
-        if not arg_company_id or arg_company_id != company_id:
-            return redirect(url_for('processes.process_map', company_id=company_id))
+    is_collaborator = False
+    if current_user.role != 'admin':
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            is_collaborator = True
 
-    return render_template('modules/processes/process_map_v2.html', company_id=company_id)
+    return render_template('modules/processes/process_map_v2.html', 
+                           company_id=company_id, 
+                           is_collaborator=is_collaborator)
 
 @processes_bp.route('/process-map/compact')
 @permission_required('processes', 'view')
@@ -141,17 +155,30 @@ def process_map_compact():
                 p['stage_color'] = get_stage_color(p.get('kanban_stage'))
                 p['perf_color'] = get_perf_color(p.get('performance_level'))
 
+    is_collaborator = False
+    if current_user.role != 'admin':
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            is_collaborator = True
+
     return render_template(
         'modules/processes/process_map_compact_view.html',
         company_name=company.name if company else "Empresa",
         areas=map_data.get('areas', []),
-        now=datetime.now().strftime('%d/%m/%Y %H:%M')
+        now=datetime.now().strftime('%d/%m/%Y %H:%M'),
+        is_collaborator=is_collaborator
     )
 
 @processes_bp.route('/processes/<int:process_id>')
 @permission_required('processes', 'view')
 def process_details(process_id):
     """Process details page (modeling/pops)"""
+    if current_user.role != 'admin':
+        process = Process.query.get_or_404(process_id)
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=process.company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            abort(403, description="Acesso negado: Colaboradores não podem acessar os detalhes de modelagem do processo.")
+
     process = _get_process_with_access(process_id, action='view')
     company = Company.query.get_or_404(process.company_id)
     return render_template('modules/processes/process_details_v2.html', 
