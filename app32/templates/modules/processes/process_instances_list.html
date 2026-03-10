@@ -208,6 +208,7 @@
 
 <script>
     const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+    const isCollaborator = {{ is_collaborator | tojson }};
     let allInstances = [];
 
     async function loadInstances() {
@@ -352,7 +353,7 @@
                             <span class="d-none d-md-inline">Infos</span>
                             <span class="d-inline d-md-none">ℹ️</span>
                         </a>
-                        {% if not is_collaborator %}
+                        ${!isCollaborator ? `
                         <button class="btn-instance-action action-complete" onclick="openCompleteModal(${inst.id})" ${inst.status === 'completed' ? 'disabled' : ''} title="Finalizar">
                             <span class="d-none d-md-inline">Finalizar</span>
                             <span class="d-inline d-md-none">✅</span>
@@ -361,7 +362,7 @@
                             <span class="d-none d-md-inline">Excluir</span>
                             <span class="d-inline d-md-none">🗑️</span>
                         </button>
-                        {% endif %}
+                        ` : ''}
                     </div>
                 </div>
                 </div>

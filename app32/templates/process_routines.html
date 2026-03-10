@@ -226,6 +226,7 @@
 
 <script>
   const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+  const isCollaborator = {{ is_collaborator | tojson }};
   let allRoutines = [];
 
   async function loadRoutines() {
@@ -360,22 +361,22 @@
                         <h3 class="rt-name">${r.name}</h3>
                         <div class="rt-process">Processo: <strong>${processLabel}</strong></div>
                     </div>
-                    <div class="rt-actions">
-                        {% if not is_collaborator %}
-                        <button class="btn-rt-action btn-rt-start" onclick="startInstance(${r.process_id}, '${r.name}', ${r.id})" title="Iniciar Agora">
-                            ⚡ Iniciar
-                        </button>
-                        <a href="/companies/${companyId}/routines/${r.id}" class="btn-rt-action btn-rt-edit" title="Editar Rotina">
-                            ✏️ Editar
-                        </a>
-                        <button class="btn-rt-action btn-rt-danger" onclick="deleteRoutine(${r.id}, '${r.name}')" title="Excluir Rotina">
-                            🗑️ Excluir
-                        </button>
-                        {% endif %}
-                        <a href="/process-map/process/${r.process_id}?tab=routines" class="btn-rt-action" title="Ver Detalhes">
-                            ℹ️
-                        </a>
-                    </div>
+                  <div class="rt-actions">
+                      ${!isCollaborator ? `
+                      <button class="btn-rt-action btn-rt-start" onclick="startInstance(${r.process_id}, '${r.name}', ${r.id})" title="Iniciar Agora">
+                          ⚡ Iniciar
+                      </button>
+                      <a href="/companies/${companyId}/routines/${r.id}" class="btn-rt-action btn-rt-edit" title="Editar Rotina">
+                          ✏️ Editar
+                      </a>
+                      <button class="btn-rt-action btn-rt-danger" onclick="deleteRoutine(${r.id}, '${r.name}')" title="Excluir Rotina">
+                          🗑️ Excluir
+                      </button>
+                      ` : ''}
+                      <a href="/process-map/process/${r.process_id}?tab=routines" class="btn-rt-action" title="Ver Detalhes">
+                          ℹ️
+                      </a>
+                  </div>
                 </div>
                 
                 <div class="rt-meta">
