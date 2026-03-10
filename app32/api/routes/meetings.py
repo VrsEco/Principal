@@ -61,7 +61,42 @@ def meetings_company_manage(company_id):
     
     # Fetch meetings (using model)
     meetings = Meeting.query.filter_by(company_id=company_id).order_by(Meeting.created_at.desc()).all()
-    meetings_data = [m.to_dict() for m in meetings]
+    all_meetings_data = [m.to_dict() for m in meetings]
+    
+    # Filter meetings based on user context
+    meetings_data = []
+    is_admin = str(getattr(current_user, 'role', '')).lower() == 'admin'
+    current_employee = None
+    
+    if not is_admin:
+        current_employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+        
+    for m in all_meetings_data:
+        if is_admin:
+            meetings_data.append(m)
+            continue
+            
+        if not current_employee:
+            continue
+            
+        is_involved = False
+        emp_id = str(current_employee.id)
+        
+        # Check guests
+        guests = m.get('guests') or {}
+        internals = guests.get('internal') or []
+        if any(str(g.get('id')) == emp_id for g in internals):
+            is_involved = True
+            
+        # Check participants
+        if not is_involved:
+            participants = m.get('participants') or {}
+            p_internals = participants.get('internal') or []
+            if any(str(p.get('id')) == emp_id for p in p_internals):
+                is_involved = True
+                
+        if is_involved:
+            meetings_data.append(m)
     
     # Fetch employees
     employees = Employee.query.filter_by(company_id=company_id, status='active').all()

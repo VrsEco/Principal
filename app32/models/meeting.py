@@ -10,8 +10,10 @@ class Meeting(db.Model):
     title = db.Column(db.String(255), nullable=False)
     scheduled_date = db.Column(db.Date)
     scheduled_time = db.Column(db.String(10))
+    planned_duration_minutes = db.Column(db.Integer)
     actual_date = db.Column(db.Date)
     actual_time = db.Column(db.String(10))
+    actual_duration_minutes = db.Column(db.Integer)
     status = db.Column(db.String(50), default='draft')
     invite_notes = db.Column(db.Text)
     meeting_notes = db.Column(db.Text)
@@ -45,8 +47,10 @@ class Meeting(db.Model):
             'title': self.title,
             'scheduled_date': self.scheduled_date.isoformat() if self.scheduled_date else None,
             'scheduled_time': self.scheduled_time,
+            'planned_duration_minutes': self.planned_duration_minutes,
             'actual_date': self.actual_date.isoformat() if self.actual_date else None,
             'actual_time': self.actual_time,
+            'actual_duration_minutes': self.actual_duration_minutes,
             'status': self.status,
             'invite_notes': self.invite_notes,
             'meeting_notes': self.meeting_notes,

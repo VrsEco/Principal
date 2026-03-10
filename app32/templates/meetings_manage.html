@@ -411,17 +411,23 @@
                                         </span>
                                         {% endif %}
                                     </div>
-                                    {% if meeting.status %}
-                                    <div style="margin-top: 8px;">
-                                        {% if meeting.status == 'draft' %}
-                                        <span class="status-badge status-draft">Rascunho</span>
-                                        {% elif meeting.status == 'in_progress' %}
-                                        <span class="status-badge status-in_progress">Em Andamento</span>
-                                        {% elif meeting.status == 'completed' %}
-                                        <span class="status-badge status-completed">Concluída</span>
+                                    <div style="margin-top: 8px; display:flex; flex-wrap:wrap; gap:8px;">
+                                        {% if meeting.status %}
+                                            {% if meeting.status == 'draft' %}
+                                            <span class="status-badge status-draft">Rascunho</span>
+                                            {% elif meeting.status == 'in_progress' %}
+                                            <span class="status-badge status-in_progress">Em Andamento</span>
+                                            {% elif meeting.status == 'completed' %}
+                                            <span class="status-badge status-completed">Concluída</span>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if meeting.planned_duration_minutes %}
+                                        <span class="status-badge" style="background:#dbeafe; color:#1d4ed8;">Prevista: {{ meeting.planned_duration_minutes }} min</span>
+                                        {% endif %}
+                                        {% if meeting.actual_duration_minutes %}
+                                        <span class="status-badge" style="background:#dcfce7; color:#166534;">Real: {{ meeting.actual_duration_minutes }} min</span>
                                         {% endif %}
                                     </div>
-                                    {% endif %}
                                 </div>
                                 <div style="display: flex; gap: 10px; align-items: center;">
                                     <button type="button" class="button button-sm button-outline"
@@ -555,7 +561,7 @@
                                 placeholder="Ex: Planejamento Estratgico Q4">
                         </div>
 
-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                             <div class="form-group">
                                 <label class="form-label">Data Prevista</label>
                                 <input type="date" id="meeting-scheduled-date" class="form-input">
@@ -563,6 +569,10 @@
                             <div class="form-group">
                                 <label class="form-label">Hora Prevista</label>
                                 <input type="time" id="meeting-scheduled-time" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Duração Prevista (min)</label>
+                                <input type="number" id="meeting-planned-duration" class="form-input" min="0" step="5" placeholder="Ex: 60">
                             </div>
                         </div>
 
@@ -676,7 +686,7 @@
                             </button>
                         </div>
 
-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                             <div class="form-group">
                                 <label class="form-label">Data da Realização</label>
                                 <input type="date" id="meeting-actual-date" class="form-input">
@@ -684,6 +694,10 @@
                             <div class="form-group">
                                 <label class="form-label">Hora da Realização</label>
                                 <input type="time" id="meeting-actual-time" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Duração Real (min)</label>
+                                <input type="number" id="meeting-actual-duration" class="form-input" min="0" step="5" placeholder="Ex: 75">
                             </div>
                         </div>
 
@@ -976,9 +990,11 @@
                 document.getElementById('meeting-title').value = meeting.title || '';
                 document.getElementById('meeting-scheduled-date').value = meeting.scheduled_date || '';
                 document.getElementById('meeting-scheduled-time').value = meeting.scheduled_time || '';
+                document.getElementById('meeting-planned-duration').value = meeting.planned_duration_minutes || '';
                 document.getElementById('meeting-invite-notes').value = meeting.invite_notes || '';
                 document.getElementById('meeting-actual-date').value = meeting.actual_date || '';
                 document.getElementById('meeting-actual-time').value = meeting.actual_time || '';
+                document.getElementById('meeting-actual-duration').value = meeting.actual_duration_minutes || '';
                 document.getElementById('meeting-notes').value = meeting.meeting_notes || '';
 
                 guestsInternal = meeting.guests?.internal || [];
@@ -1166,6 +1182,7 @@
             title,
             scheduled_date: document.getElementById('meeting-scheduled-date').value,
             scheduled_time: document.getElementById('meeting-scheduled-time').value,
+            planned_duration_minutes: document.getElementById('meeting-planned-duration').value || null,
             invite_notes: document.getElementById('meeting-invite-notes').value,
             guests: { internal: guestsInternal, external: guestsExternal },
             agenda: agendaItems
@@ -1412,6 +1429,7 @@
         const payload = {
             actual_date: document.getElementById('meeting-actual-date').value,
             actual_time: document.getElementById('meeting-actual-time').value,
+            actual_duration_minutes: document.getElementById('meeting-actual-duration').value || null,
             participants, discussions, activities,
             meeting_notes: document.getElementById('meeting-notes').value,
             status: currentMeetingStatus
@@ -1515,7 +1533,7 @@
 
     function limparFormulario() {
         currentMeetingStatus = 'draft';
-        ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-notes'].forEach(id => {
+        ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-planned-duration', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-actual-duration', 'meeting-notes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -1547,7 +1565,9 @@
                 meeting_notes: document.getElementById('meeting-notes').value,
                 status: currentMeetingStatus,
                 actual_date: document.getElementById('meeting-actual-date').value,
-                actual_time: document.getElementById('meeting-actual-time').value
+                actual_time: document.getElementById('meeting-actual-time').value,
+                actual_duration_minutes: document.getElementById('meeting-actual-duration').value || null,
+                planned_duration_minutes: document.getElementById('meeting-planned-duration').value || null
             };
 
             const syncRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/sync-activities?company_id=' + meetingsCompanyId, {

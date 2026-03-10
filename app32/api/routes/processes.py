@@ -236,6 +236,27 @@ def process_routines_page(company_id):
     company = Company.query.get_or_404(company_id)
     return render_template('process_routines.html', company=company)
 
+@processes_bp.route('/companies/<int:company_id>/process-routines/analysis')
+@permission_required('processes', 'view')
+def process_routines_analysis_page(company_id):
+    """Render analytical page for routine capacity and commitments."""
+    from services.routine_analysis_service import get_routine_analysis
+
+    company = Company.query.get_or_404(company_id)
+    analysis = get_routine_analysis(company_id)
+    return render_template('modules/processes/routine_analysis.html', company=company, analysis=analysis)
+
+@processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis', methods=['GET'])
+@permission_required('processes', 'view')
+def api_get_process_routines_analysis(company_id):
+    """Return analytical payload for routine capacity and commitments."""
+    from services.routine_analysis_service import get_routine_analysis
+
+    try:
+        return jsonify({"success": True, "data": get_routine_analysis(company_id)})
+    except Exception as exc:
+        return jsonify({"success": False, "message": str(exc)}), 500
+
 @processes_bp.route('/api/companies/<int:company_id>/process-routines', methods=['GET'])
 @permission_required('processes', 'view')
 def api_get_process_routines(company_id):

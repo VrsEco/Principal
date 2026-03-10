@@ -23,6 +23,9 @@ def deploy():
         # Script programático para garantir que a migração rode mesmo se 'flask db' falhar no shell
         migrate_script = """
 import sys, os
+VENV_SITE = '/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages'
+if VENV_SITE not in sys.path:
+    sys.path.insert(0, VENV_SITE)
 sys.path.insert(0, '.')
 os.environ.setdefault('FLASK_CONFIG', 'production')
 try:

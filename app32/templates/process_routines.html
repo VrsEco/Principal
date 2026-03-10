@@ -8,12 +8,14 @@
     <h1 class="text-h1">📅 Rotina dos Processos</h1>
     <p class="text-secondary">Visão geral dos agendamentos e procedimentos operacionais (POPs) definidos.</p>
   </div>
-  <div class="header-actions">
-    <!-- Future: Add 'New Routine' button if independent creation is supported -->
+  <div class="header-actions" style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+    <a href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id) }}" class="btn btn-secondary">
+      <span>📊</span> Análise da Rotina
+    </a>
   </div>
 </div>
 
-<div class="d-flex justify-content-end mb-3">
+<div class="d-flex justify-content-end mb-3" style="gap:0.75rem; flex-wrap:wrap;">
   <a href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}"
     class="btn btn-primary">
     <span>➕</span> Adicionar Rotina

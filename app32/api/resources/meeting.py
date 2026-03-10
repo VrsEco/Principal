@@ -9,6 +9,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _parse_optional_int(value):
+    try:
+        if value in (None, '', []):
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def user_can_access_company(company_id):
     if not company_id or not current_user.is_authenticated:
         return False
@@ -93,6 +102,7 @@ class MeetingListResource(Resource):
                 title=data.get('title'),
                 scheduled_date=datetime.strptime(data.get('scheduled_date'), '%Y-%m-%d').date() if data.get('scheduled_date') else None,
                 scheduled_time=data.get('scheduled_time'),
+                planned_duration_minutes=_parse_optional_int(data.get('planned_duration_minutes')),
                 invite_notes=data.get('invite_notes'),
                 guests_json=json.dumps(data.get('guests', {})),
                 agenda_json=json.dumps(data.get('agenda', [])),
@@ -133,6 +143,7 @@ class MeetingResource(Resource):
             if 'scheduled_date' in data: 
                 meeting.scheduled_date = datetime.strptime(data['scheduled_date'], '%Y-%m-%d').date() if data['scheduled_date'] else None
             if 'scheduled_time' in data: meeting.scheduled_time = data['scheduled_time']
+            if 'planned_duration_minutes' in data: meeting.planned_duration_minutes = _parse_optional_int(data.get('planned_duration_minutes'))
             if 'invite_notes' in data: meeting.invite_notes = data['invite_notes']
             if 'guests' in data: meeting.guests_json = json.dumps(data['guests'])
             if 'agenda' in data: meeting.agenda_json = json.dumps(data['agenda'])
@@ -170,7 +181,9 @@ class MeetingExecutionResource(Resource):
             if 'actual_date' in data: 
                 meeting.actual_date = datetime.strptime(data['actual_date'], '%Y-%m-%d').date() if data['actual_date'] else None
             if 'actual_time' in data: meeting.actual_time = data['actual_time']
+            if 'actual_duration_minutes' in data: meeting.actual_duration_minutes = _parse_optional_int(data.get('actual_duration_minutes'))
             if 'notes' in data: meeting.meeting_notes = data['notes']
+            if 'meeting_notes' in data: meeting.meeting_notes = data['meeting_notes']
             if 'participants' in data: meeting.participants_json = json.dumps(data['participants'])
             if 'discussions' in data: meeting.discussions_json = json.dumps(data['discussions'])
             if 'activities' in data: meeting.activities_json = json.dumps(data['activities'])
@@ -196,6 +209,8 @@ class MeetingStartResource(Resource):
             actual_date = datetime.now()
             meeting.actual_date = actual_date.date()
             meeting.actual_time = actual_date.strftime("%H:%M")
+            if meeting.actual_duration_minutes is None:
+                meeting.actual_duration_minutes = meeting.planned_duration_minutes
             meeting.status = 'in_progress'
             
             # Linking logic
@@ -416,6 +431,8 @@ class MeetingSyncActivitiesResource(Resource):
             if 'participants' in data: meeting.participants_json = json.dumps(data['participants'])
             if 'discussions' in data: meeting.discussions_json = json.dumps(data['discussions'])
             if 'activities' in data: meeting.activities_json = json.dumps(data['activities'])
+            if 'actual_duration_minutes' in data: meeting.actual_duration_minutes = _parse_optional_int(data.get('actual_duration_minutes'))
+            if 'planned_duration_minutes' in data: meeting.planned_duration_minutes = _parse_optional_int(data.get('planned_duration_minutes'))
             if 'status' in data: meeting.status = data['status']
             
             db.session.commit()
