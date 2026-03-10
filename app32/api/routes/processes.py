@@ -229,7 +229,12 @@ def process_instances_redirect():
 def process_instances_page(company_id):
     """Render the process instances management page."""
     company = Company.query.get_or_404(company_id)
-    return render_template('modules/processes/process_instances_list.html', company=company)
+    is_collaborator = False
+    if current_user.role != 'admin':
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            is_collaborator = True
+    return render_template('modules/processes/process_instances_list.html', company=company, is_collaborator=is_collaborator)
 
 @processes_bp.route('/process-occurrences')
 @permission_required('processes', 'view')
@@ -261,7 +266,12 @@ def process_occurrences_page(company_id):
 def process_routines_page(company_id):
     """Render the process routines management page."""
     company = Company.query.get_or_404(company_id)
-    return render_template('process_routines.html', company=company)
+    is_collaborator = False
+    if current_user.role != 'admin':
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            is_collaborator = True
+    return render_template('process_routines.html', company=company, is_collaborator=is_collaborator)
 
 @processes_bp.route('/companies/<int:company_id>/process-routines/analysis')
 @permission_required('processes', 'view')
@@ -354,6 +364,11 @@ def api_get_process_routines(company_id):
 @permission_required('processes', 'create')
 def api_create_process_routine(company_id):
     """Create a new process routine"""
+    if current_user.role != 'admin':
+        from models import Employee
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem criar rotinas."}), 403
     try:
         data = request.get_json(silent=True) or {}
         name = data.get("name", "").strip()
@@ -407,6 +422,11 @@ def api_create_process_routine(company_id):
 @permission_required('processes', 'edit')
 def api_update_process_routine(company_id, routine_id):
     """Update an existing process routine"""
+    if current_user.role != 'admin':
+        from models import Employee
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem editar rotinas."}), 403
     try:
         data = request.get_json(silent=True) or {}
         pg = get_db()
@@ -452,6 +472,11 @@ def api_update_process_routine(company_id, routine_id):
 @permission_required('processes', 'delete')
 def api_delete_process_routine(company_id, routine_id):
     """Soft delete a process routine"""
+    if current_user.role != 'admin':
+        from models import Employee
+        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+        if not employee or not employee.role or employee.role.title.lower() != 'superuser':
+            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem excluir rotinas."}), 403
     try:
         pg = get_db()
         conn = pg._get_connection()

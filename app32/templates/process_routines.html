@@ -15,12 +15,14 @@
   </div>
 </div>
 
+{% if not is_collaborator %}
 <div class="d-flex justify-content-end mb-3" style="gap:0.75rem; flex-wrap:wrap;">
   <a href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}"
     class="btn btn-primary">
     <span>➕</span> Adicionar Rotina
   </a>
 </div>
+{% endif %}
 
 <div class="routines-grid mt-4" id="routinesGrid">
   <div class="loading-shimmer" style="height: 120px; border-radius: 12px;"></div>
@@ -359,6 +361,7 @@
                         <div class="rt-process">Processo: <strong>${processLabel}</strong></div>
                     </div>
                     <div class="rt-actions">
+                        {% if not is_collaborator %}
                         <button class="btn-rt-action btn-rt-start" onclick="startInstance(${r.process_id}, '${r.name}', ${r.id})" title="Iniciar Agora">
                             ⚡ Iniciar
                         </button>
@@ -368,6 +371,7 @@
                         <button class="btn-rt-action btn-rt-danger" onclick="deleteRoutine(${r.id}, '${r.name}')" title="Excluir Rotina">
                             🗑️ Excluir
                         </button>
+                        {% endif %}
                         <a href="/process-map/process/${r.process_id}?tab=routines" class="btn-rt-action" title="Ver Detalhes">
                             ℹ️
                         </a>
