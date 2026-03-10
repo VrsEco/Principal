@@ -4,23 +4,30 @@ from flask_login import current_user
 def has_permission(company_id, resource, action):
     """
     Checks if the current user has a specific permission in a company.
+    
+    Hierarquia de acesso (User.role no modelo User):
+      - 'admin'        → acesso total (sem restrição)
+      - 'client'       → acesso total às empresas vinculadas (Cliente)
+      - 'collaborator' → acesso restrito: somente objetos onde é responsável/executor
+      - 'user'         → idem ao collaborator (acesso via permissões do cargo)
     """
     from models.employee import Employee
     if not current_user.is_authenticated:
         return False
     
-    if current_user.role == 'admin':
+    # Admin e Client têm acesso irrestrito
+    if current_user.role in ('admin', 'client'):
         return True
         
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
     if not employee:
         return False
         
-    # Superusers, Admins, and Clients in their own company have all permissions
-    if employee.role and employee.role.title and employee.role.title.lower() in ['superuser', 'administrador', 'cliente']:
+    # Superusers no cargo do employee também têm acesso irrestrito
+    if employee.role and employee.role.title and employee.role.title.lower() == 'superuser':
         return True
         
-    # Check specific permission in permissions JSON
+    # Demais: verifica permissões específicas do cargo (JSON)
     perms = {}
     if employee.role and employee.role.permissions:
         perms = employee.role.permissions
@@ -49,11 +56,11 @@ def permission_required(resource, action):
                     pass
 
             if not company_id:
-                # 1. Admins have access to everything
-                if current_user.role == 'admin':
+                # Admins e Clients têm acesso a tudo
+                if current_user.role in ('admin', 'client'):
                     return f(*args, **kwargs)
                 
-                # 2. For non-admins, check if they have permission in ANY company they belong to
+                # Para os demais, verifica permissão em ALGUMA empresa vinculada
                 from models.employee import Employee
                 user_employees = Employee.query.filter_by(user_id=current_user.id).all()
                 if not user_employees:
@@ -82,6 +89,38 @@ def permission_required(resource, action):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def is_collaborator_only():
+    """
+    Retorna True se o usuário atual é tratado como Colaborador restrito:
+    - user.role == 'collaborator' (não é admin nem client)
+    - E não tem cargo 'superuser' em nenhuma empresa vinculada
+    """
+    if not current_user.is_authenticated:
+        return True
+    if current_user.role in ('admin', 'client'):
+        return False
+    # Verifica se tem cargo superuser em alguma empresa
+    from models.employee import Employee
+    emps = Employee.query.filter_by(user_id=current_user.id).all()
+    for emp in emps:
+        if emp.role and emp.role.title and emp.role.title.lower() == 'superuser':
+            return False
+    return True
+
+def is_collaborator_in_company(company_id):
+    """
+    Retorna True se o usuário atual é tratado como Colaborador restrito na empresa específica.
+    """
+    if not current_user.is_authenticated:
+        return True
+    if current_user.role in ('admin', 'client'):
+        return False
+    from models.employee import Employee
+    emp = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+    if emp and emp.role and emp.role.title and emp.role.title.lower() == 'superuser':
+        return False
+    return True
 
 def admin_required(f):
     """Decorator to require admin role"""

@@ -34,7 +34,7 @@ def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
         user_role = 'collaborator'
 
     # 1. Resolve Companies based on Role
-    if user_role == 'admin':
+    if user_role in ('admin', 'client'):
         all_comps = Company.query.filter(Company.is_active == True).order_by(Company.name).all()
         unique_companies = [
             {
@@ -92,7 +92,7 @@ def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
                     "company_name": employee.company.name if employee.company else "Empresa",
                 }]
     else:
-        # Admin and Client: all collaborators for target companies
+        # Admin e Client: todos os colaboradores das empresas alvo
         result["collaborators"] = fetch_collaborator_directory(company_ids)
 
         # 3. Resolve Projects and Processes
@@ -141,8 +141,8 @@ def get_user_activities_v2(
             company_ids = [c["company_id"] for c in associated if c.get("company_id") and c.get("is_active") is not False]
             logger.info(f"👤 Regular Search: Linked to {len(company_ids)} active companies.")
     else:
-        # If company_ids provided, ensure they are within user access (skip for admin)
-        if user_role != 'admin':
+        # Se company_ids fornecidos, valida que estão dentro do acesso do user (exceto admin e client)
+        if user_role not in ('admin', 'client'):
             my_cids = set([c["company_id"] for c in associated if c.get("company_id") and c.get("is_active") is not False])
             company_ids = [cid for cid in company_ids if cid in my_cids]
         else:
@@ -169,7 +169,7 @@ def get_user_activities_v2(
     from utils.permissions import has_permission
     can_view_by_cid = {}
     for cid in allowed_company_ids:
-        if user_role == 'admin':
+        if user_role in ('admin', 'client'):
             can_view_by_cid[cid] = True
         else:
             can_view_by_cid[cid] = has_permission(cid, 'companies', 'view')

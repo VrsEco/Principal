@@ -41,17 +41,9 @@ def upload_process_flow():
 @permission_required('processes', 'view')
 def processes_list():
     """Processes list page"""
-    if current_user.role != 'admin':
-        company_id = session.get('active_company_id')
-        if not company_id:
-            emp = Employee.query.filter_by(user_id=current_user.id, status='active').first()
-            if emp: company_id = emp.company_id
-        
-        if company_id:
-            # Check if superuser
-            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-            if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-                abort(403, description="Acesso negado: Colaboradores não podem acessar a listagem detalhada de processos.")
+    # Apenas colaboradores (não admin nem client) são bloqueados da listagem detalhada
+    if current_user.role not in ('admin', 'client'):
+        abort(403, description="Acesso negado: Colaboradores não podem acessar a listagem detalhada de processos.")
 
     company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
     if not company_id and current_user.is_authenticated:
@@ -89,11 +81,8 @@ def process_map():
             if emp:
                 company_id = emp.company_id
     
-    is_collaborator = False
-    if current_user.role != 'admin':
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            is_collaborator = True
+    # Colaborador = qualquer user que não seja admin nem client
+    is_collaborator = current_user.role not in ('admin', 'client')
 
     return render_template('modules/processes/process_map_v2.html', 
                            company_id=company_id, 
@@ -155,11 +144,7 @@ def process_map_compact():
                 p['stage_color'] = get_stage_color(p.get('kanban_stage'))
                 p['perf_color'] = get_perf_color(p.get('performance_level'))
 
-    is_collaborator = False
-    if current_user.role != 'admin':
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            is_collaborator = True
+    is_collaborator = current_user.role not in ('admin', 'client')
 
     return render_template(
         'modules/processes/process_map_compact_view.html',
@@ -173,11 +158,8 @@ def process_map_compact():
 @permission_required('processes', 'view')
 def process_details(process_id):
     """Process details page (modeling/pops)"""
-    if current_user.role != 'admin':
-        process = Process.query.get_or_404(process_id)
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=process.company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            abort(403, description="Acesso negado: Colaboradores não podem acessar os detalhes de modelagem do processo.")
+    if current_user.role not in ('admin', 'client'):
+        abort(403, description="Acesso negado: Colaboradores não podem acessar os detalhes de modelagem do processo.")
 
     process = _get_process_with_access(process_id, action='view')
     company = Company.query.get_or_404(process.company_id)
@@ -229,11 +211,7 @@ def process_instances_redirect():
 def process_instances_page(company_id):
     """Render the process instances management page."""
     company = Company.query.get_or_404(company_id)
-    is_collaborator = False
-    if current_user.role != 'admin':
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            is_collaborator = True
+    is_collaborator = current_user.role not in ('admin', 'client')
     return render_template('modules/processes/process_instances_list.html', company=company, is_collaborator=is_collaborator)
 
 @processes_bp.route('/process-occurrences')
@@ -266,11 +244,7 @@ def process_occurrences_page(company_id):
 def process_routines_page(company_id):
     """Render the process routines management page."""
     company = Company.query.get_or_404(company_id)
-    is_collaborator = False
-    if current_user.role != 'admin':
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            is_collaborator = True
+    is_collaborator = current_user.role not in ('admin', 'client')
     return render_template('process_routines.html', company=company, is_collaborator=is_collaborator)
 
 @processes_bp.route('/companies/<int:company_id>/process-routines/analysis')
@@ -364,11 +338,8 @@ def api_get_process_routines(company_id):
 @permission_required('processes', 'create')
 def api_create_process_routine(company_id):
     """Create a new process routine"""
-    if current_user.role != 'admin':
-        from models import Employee
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem criar rotinas."}), 403
+    if current_user.role not in ('admin', 'client'):
+        return jsonify({"success": False, "message": "Acesso negado: Colaboradores não podem criar rotinas."}), 403
     try:
         data = request.get_json(silent=True) or {}
         name = data.get("name", "").strip()
@@ -422,11 +393,8 @@ def api_create_process_routine(company_id):
 @permission_required('processes', 'edit')
 def api_update_process_routine(company_id, routine_id):
     """Update an existing process routine"""
-    if current_user.role != 'admin':
-        from models import Employee
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem editar rotinas."}), 403
+    if current_user.role not in ('admin', 'client'):
+        return jsonify({"success": False, "message": "Acesso negado: Colaboradores não podem editar rotinas."}), 403
     try:
         data = request.get_json(silent=True) or {}
         pg = get_db()
@@ -472,11 +440,8 @@ def api_update_process_routine(company_id, routine_id):
 @permission_required('processes', 'delete')
 def api_delete_process_routine(company_id, routine_id):
     """Soft delete a process routine"""
-    if current_user.role != 'admin':
-        from models import Employee
-        employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-        if not employee or not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']:
-            return jsonify({"success": False, "message": "Acesso negado: Visualizadores não podem excluir rotinas."}), 403
+    if current_user.role not in ('admin', 'client'):
+        return jsonify({"success": False, "message": "Acesso negado: Colaboradores não podem excluir rotinas."}), 403
     try:
         pg = get_db()
         conn = pg._get_connection()

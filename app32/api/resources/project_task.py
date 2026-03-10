@@ -14,14 +14,13 @@ def apply_task_employee_filter(query, company_id):
     
     if not current_user.is_authenticated:
         return query
-        
-    if current_user.role == 'admin':
+
+    # Admin e Client veem todas as tarefas
+    if current_user.role in ('admin', 'client'):
         return query
-        
+
+    # Colaborador: só tarefas onde é executor ou colaborador
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-    if employee and employee.role and employee.role.title and employee.role.title.lower() in ['superuser', 'administrador', 'cliente']:
-        return query
-        
     if employee:
         return query.filter(
             or_(

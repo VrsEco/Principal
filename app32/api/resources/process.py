@@ -29,13 +29,12 @@ def apply_instance_employee_filter(query, company_id):
     if not current_user.is_authenticated:
         return query
 
-    if current_user.role == 'admin':
+    # Admin e Client vêem tudo
+    if current_user.role in ('admin', 'client'):
         return query
 
+    # Colaborador: filtra apenas instâncias onde é dono, responsável ou executor
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-    if employee and employee.role and employee.role.title and employee.role.title.lower() in ['superuser', 'administrador', 'cliente']:
-        return query
-
     if employee:
         return query.filter(
             or_(
@@ -537,13 +536,12 @@ class ProcessInstanceResource(Resource):
     def put(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
 
-        # Check if user is collaborator only (viewer-only restriction)
-        # If not admin/superuser and not the owner/responsible/executor, block edit
-        if current_user.role != 'admin':
+        # Colaboradores não podem editar se não são dono/responsável/executor
+        if current_user.role not in ('admin', 'client'):
             company_id = get_request_company_id()
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-            if employee and (not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']):
+            if employee:
                 if instance.owner_employee_id != employee.id and \
                    instance.responsible_id != employee.id and \
                    instance.executor_id != employee.id:
@@ -564,13 +562,9 @@ class ProcessInstanceResource(Resource):
     def delete(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
         
-        # Viewer only check for delete
-        if current_user.role != 'admin':
-            company_id = get_request_company_id()
-            from models.employee import Employee
-            employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
-            if employee and (not employee.role or employee.role.title.lower() not in ['superuser', 'administrador', 'cliente']):
-                return {"error": "Viewer only: You cannot delete process instances."}, 403
+        # Colaboradores não podem deletar
+        if current_user.role not in ('admin', 'client'):
+            return {"error": "Viewer only: You cannot delete process instances."}, 403
 
         try:
             db.session.delete(instance)

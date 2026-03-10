@@ -209,4 +209,5 @@ github_deploy_key_temp
 out*.txt
 tmp_*.py
 error_log.txt
-pacote_deploy_squad.tar.gz
+pacote_deploy_squad.tar.gzapp32_env_fixed.txt
+github_actions_deploy_key_fixed.txt
