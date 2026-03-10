@@ -12,7 +12,8 @@ def user_can_access_company(company_id):
     company = Company.query.get(company_id)
     if not company or not bool(getattr(company, 'is_active', True)):
         return False
-    if str(getattr(current_user, 'role', '')).lower() == 'admin':
+    # Admin e Client têm acesso total
+    if str(getattr(current_user, 'role', '')).lower() in ['admin', 'client']:
         return True
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
     return employee is not None
@@ -30,7 +31,8 @@ def get_active_company():
         if emp and user_can_access_company(emp.company_id):
             session['active_company_id'] = emp.company_id
             return Company.query.get(emp.company_id)
-        if current_user.role == 'admin':
+        if current_user.role in ['admin', 'client']:
+            # For admins and clients, handle company context appropriately
             first = Company.query.filter_by(is_active=True).order_by(Company.id).first()
             if first:
                 session['active_company_id'] = first.id
@@ -65,14 +67,14 @@ def meetings_company_manage(company_id):
     
     # Filter meetings based on user context
     meetings_data = []
-    is_admin = str(getattr(current_user, 'role', '')).lower() == 'admin'
+    is_full_access = str(getattr(current_user, 'role', '')).lower() in ['admin', 'client']
     current_employee = None
     
-    if not is_admin:
+    if not is_full_access:
         current_employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
         
     for m in all_meetings_data:
-        if is_admin:
+        if is_full_access:
             meetings_data.append(m)
             continue
             

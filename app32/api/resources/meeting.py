@@ -26,7 +26,7 @@ def user_can_access_company(company_id):
     if not company or not bool(getattr(company, 'is_active', True)):
         return False
 
-    if str(getattr(current_user, 'role', '')).lower() == 'admin':
+    if str(getattr(current_user, 'role', '')).lower() in ['admin', 'client']:
         return True
 
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
@@ -63,7 +63,7 @@ def get_request_company_id():
         if employee:
             return employee.company_id
 
-        if current_user.role == 'admin':
+        if current_user.role in ['admin', 'client']:
             first = Company.query.filter_by(is_active=True).order_by(Company.id.asc()).first()
             if first:
                 return first.id
