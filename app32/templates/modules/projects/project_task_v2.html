@@ -1068,7 +1068,7 @@
             <span class="detail-label">Projeto</span>
             <span class="detail-value">
                 {% if project %}
-                <a href="/grv/company/{{ company.id if company else 0 }}/projects/{{ project.id }}/manage">{{
+                <a href="{{ url_for('projects.project_manage', project_id=project.id) }}">{{
                     project.title }}</a>
                 {% else %}—{% endif %}
             </span>
@@ -1124,7 +1124,7 @@
         </button>
         {% endif %}
 
-        <a href="/grv/company/{{ company.id if company else 0 }}/projects/{{ project.id if project else 0 }}/manage?activity_id={{ task.id }}"
+        <a href="{{ url_for('projects.project_manage', project_id=project.id if project else 0) }}?activity_id={{ task.id }}&from=my-work"
             class="btn btn-secondary w-100" style="text-align: center; text-decoration: none; display: block;">
             ✏️ Editar Atividade
         </a>

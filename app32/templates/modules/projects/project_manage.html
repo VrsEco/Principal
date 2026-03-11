@@ -1164,6 +1164,7 @@
             allTasks = await response.json();
             renderKanban();
             updateStats();
+            maybeOpenTaskFromShortcut();
         } catch (error) {
             console.error('Erro ao carregar atividades:', error);
         }
@@ -1645,6 +1646,31 @@
     // Modal Logic
     const taskModal = document.getElementById('taskModal');
     const taskForm = document.getElementById('taskForm');
+    const pageParams = new URLSearchParams(window.location.search);
+    let pendingTaskModalId = pageParams.get('activity_id');
+
+    function clearTaskShortcutParams() {
+        if (!window.history?.replaceState) return;
+        if (!pageParams.has('activity_id') && !pageParams.has('from')) return;
+
+        const nextParams = new URLSearchParams(window.location.search);
+        nextParams.delete('activity_id');
+        nextParams.delete('from');
+        const nextQuery = nextParams.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+        window.history.replaceState({}, document.title, nextUrl);
+    }
+
+    function maybeOpenTaskFromShortcut() {
+        if (!pendingTaskModalId) return;
+
+        const shortcutTask = allTasks.find(t => String(t.id) === String(pendingTaskModalId));
+        if (!shortcutTask) return;
+
+        openTaskModal(shortcutTask.id);
+        pendingTaskModalId = null;
+        clearTaskShortcutParams();
+    }
 
     function openTaskModal(taskId = null) {
         if (IS_COLLABORATOR && !taskId) {
