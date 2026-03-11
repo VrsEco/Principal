@@ -95,7 +95,7 @@ class SchedulerService:
 scheduler_service = SchedulerService()
 
 
-def process_daily_routines():
+def process_daily_routines(app):
     """
     Processa todas as rotinas diárias
     Esta função é executada pelo scheduler
@@ -105,16 +105,17 @@ def process_daily_routines():
     logger.info("=" * 80)
 
     try:
-        # Importar aqui para evitar circular import
-        from scripts.routine_scheduler import process_routines
+        with app.app_context():
+            from services.process_routine_scheduler_service import process_scheduled_routines
 
-        # Executar o processamento de rotinas
-        success = process_routines()
-
-        if success:
-            logger.info("✅ Processamento de rotinas concluído com sucesso!")
-        else:
-            logger.error("❌ Erro no processamento de rotinas")
+            result = process_scheduled_routines()
+            logger.info(
+                "✅ Rotinas processadas com sucesso | total=%s criadas=%s ignoradas=%s atrasadas=%s",
+                result.get("processed", 0),
+                result.get("created", 0),
+                result.get("skipped", 0),
+                result.get("overdue_updated", 0),
+            )
 
     except Exception as e:
         logger.error(f"❌ Erro ao processar rotinas: {e}")
@@ -123,29 +124,28 @@ def process_daily_routines():
         traceback.print_exc()
 
 
-def setup_routine_jobs():
+def setup_routine_jobs(app):
     """
     Configura os jobs de rotina no scheduler
     """
     logger.info("🔧 Configurando jobs de rotina...")
 
-    # Job 1: Processar rotinas diárias às 00:01
+    # Job 1: Avaliar rotinas a cada minuto para respeitar horários configurados
     scheduler_service.add_job(
-        func=process_daily_routines,
+        func=lambda: process_daily_routines(app),
         trigger="cron",
         job_id="process_daily_routines",
-        hour=0,
-        minute=1,
-        name="Processamento Diário de Rotinas",
+        minute="*",
+        name="Processamento de Rotinas Agendadas",
     )
 
-    # Job 2: Verificar tarefas atrasadas a cada hora
+    # Job 2: Verificar instâncias atrasadas a cada hora
     scheduler_service.add_job(
-        func=check_overdue_tasks,
+        func=lambda: check_overdue_tasks(app),
         trigger="cron",
         job_id="check_overdue_tasks",
         minute=0,  # A cada hora cheia
-        name="Verificação de Tarefas Atrasadas",
+        name="Verificação de Instâncias Atrasadas",
     )
 
     logger.info("✅ Jobs de rotina configurados!")
@@ -193,22 +193,22 @@ def send_proactive_morning_summary(app):
     send_morning_summaries(app)
 
 
-def check_overdue_tasks():
+def check_overdue_tasks(app):
     """
     Verifica e atualiza status de tarefas atrasadas
     Executado a cada hora
     """
-    logger.info("⏰ Verificando tarefas atrasadas...")
+    logger.info("⏰ Verificando instâncias atrasadas...")
 
     try:
-        # Importar aqui para evitar circular import
-        from scripts.routine_scheduler import update_overdue_tasks
+        with app.app_context():
+            from services.process_routine_scheduler_service import sync_overdue_process_instances
 
-        update_overdue_tasks()
-        logger.info("✅ Verificação de tarefas concluída!")
+            updated = sync_overdue_process_instances()
+            logger.info("✅ Verificação de instâncias concluída! atualizadas=%s", updated)
 
     except Exception as e:
-        logger.error(f"❌ Erro ao verificar tarefas: {e}")
+        logger.error(f"❌ Erro ao verificar instâncias: {e}")
 
 
 def initialize_scheduler(app):
@@ -220,7 +220,7 @@ def initialize_scheduler(app):
 
     try:
         # Configurar jobs de sistema
-        setup_routine_jobs()
+        setup_routine_jobs(app)
         
         # Configurar jobs proativos (Fase 4)
         setup_proactive_jobs(app)
