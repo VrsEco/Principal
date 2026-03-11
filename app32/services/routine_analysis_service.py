@@ -788,11 +788,22 @@ def _build_filter_metadata(
         if _safe_int(emp.get("id")) is not None
     ]
     employee_options.sort(key=lambda item: item["name"])
+    all_employee_options = [
+        {
+            "id": _safe_int(emp.get("id")),
+            "name": emp.get("name") or "Colaborador",
+            "department": (emp.get("department") or "Não informado").strip() if isinstance(emp.get("department"), str) else (emp.get("department") or "Não informado"),
+        }
+        for emp in employee_list
+        if _safe_int(emp.get("id")) is not None
+    ]
+    all_employee_options.sort(key=lambda item: item["name"])
     return {
         "department": department,
         "employee_id": employee_id,
         "departments": departments,
         "employees": employee_options,
+        "all_employees": all_employee_options,
         "scope_label": _build_scope_label(department, employee_id, employee_options),
     }
 
