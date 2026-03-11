@@ -3972,7 +3972,7 @@ function initializeActivityActions() {
       }
       const params = new URLSearchParams({ activity_id: activityId });
       params.append('from', 'my-work');
-      window.location.href = `/grv/company/${companyId}/projects/${projectId}/manage?${params.toString()}`;
+      window.location.href = `/projects/${projectId}/manage?${params.toString()}`;
       return;
     } else if (action === 'add-hours') {
       openModal('modalAddHours', activityData);
