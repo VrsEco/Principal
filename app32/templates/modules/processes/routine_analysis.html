@@ -470,7 +470,8 @@
   .w-100 { width:100%; justify-content:center; }
   .filter-field { display:flex; flex-direction:column; align-items:flex-start; }
   .filter-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
-  .analysis-charts .chart-wrap { min-height:260px; }
+  .analysis-charts .chart-wrap { min-height:65px; max-width:220px; max-height:110px; margin:0 auto; position:relative; }
+  .analysis-charts .chart-wrap canvas { width:100% !important; height:110px !important; }
   .summary-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
   .two-columns { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .three-columns { grid-template-columns:repeat(3, minmax(0, 1fr)); }
