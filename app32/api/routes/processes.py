@@ -253,9 +253,20 @@ def process_routines_analysis_page(company_id):
         analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
         return render_template('modules/processes/routine_analysis.html', company=company, analysis=analysis)
     except Exception:
-        current_app.logger.exception('Falha ao carregar análise de rotinas para company_id=%s', company_id)
-        flash('Não foi possível carregar a análise de rotinas agora. Tente novamente em instantes.', 'error')
-        return redirect(url_for('processes.process_routines_page', company_id=company_id))
+        current_app.logger.exception(
+            'Falha ao carregar análise de rotinas para company_id=%s (department=%s, employee_id=%s)',
+            company_id,
+            department,
+            employee_id,
+        )
+        flash('Não foi possível aplicar os filtros selecionados. Exibindo a visão geral da análise.', 'warning')
+        try:
+            analysis = get_routine_analysis(company_id)
+            return render_template('modules/processes/routine_analysis.html', company=company, analysis=analysis)
+        except Exception:
+            current_app.logger.exception('Falha ao carregar visão geral da análise de rotinas para company_id=%s', company_id)
+            flash('Não foi possível carregar a análise de rotinas agora. Tente novamente em instantes.', 'error')
+            return redirect(url_for('processes.process_routines_page', company_id=company_id))
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis', methods=['GET'])
 @permission_required('processes', 'view')
