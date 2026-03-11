@@ -114,3 +114,5 @@ def test_process_details_template_bootstraps_initial_payload_and_fallback():
     assert 'state.process: initialProcess' not in content
     assert 'process: initialProcess || null' in content
     assert 'mantendo payload inicial da rota SSR' in content
+    assert 'function setElementText(id, value)' in content
+    assert "Elemento ausente no DOM" in content

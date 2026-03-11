@@ -950,8 +950,8 @@
             renderOccurrences();
         } catch (error) {
             console.error("Error loading process details:", error);
-            document.getElementById('detName').textContent = "Erro ao carregar dados";
-            document.getElementById('detDescription').textContent = "Houve um problema ao carregar as informações principais deste processo. Por favor, tente novamente.";
+            setElementText('detName', "Erro ao carregar dados");
+            setElementText('detDescription', "Houve um problema ao carregar as informações principais deste processo. Por favor, tente novamente.");
         }
     }
 
@@ -1031,35 +1031,59 @@
         }
     }
 
+    function setElementText(id, value) {
+        const element = document.getElementById(id);
+        if (!element) {
+            console.warn(`Elemento ausente no DOM: #${id}`);
+            return null;
+        }
+        element.textContent = value;
+        return element;
+    }
+
     function renderProcess() {
-        document.getElementById('breadcrumbName').textContent = state.process.name;
+        if (!state.process) {
+            console.warn('renderProcess chamado sem state.process');
+            return;
+        }
+
+        setElementText('breadcrumbName', state.process.name || 'Processo');
 
         // Format: CODE - NAME
-        const processDisplayName = state.process.code ? `${state.process.code} - ${state.process.name}` : state.process.name;
-        document.getElementById('detName').textContent = processDisplayName;
+        const processDisplayName = state.process.code ? `${state.process.code} - ${state.process.name}` : (state.process.name || 'Processo');
+        setElementText('detName', processDisplayName);
 
-        document.getElementById('detDescription').textContent = state.process.description || 'Sem descrição definida.';
-        document.getElementById('detOwner').textContent = state.process.macro?.owner || '--';
-        document.getElementById('detResponsible').textContent = state.process.responsible || '--';
-        document.getElementById('detIndicatorCount').textContent = state.indicators.length;
+        setElementText('detDescription', state.process.description || 'Sem descrição definida.');
+        setElementText('detOwner', state.process.macro?.owner || '--');
+        setElementText('detResponsible', state.process.responsible || '--');
+        setElementText('detIndicatorCount', String(state.indicators.length || 0));
 
         const areaName = state.process.macro?.area?.name || 'Área';
         const areaCode = state.process.macro?.area?.code;
-        document.getElementById('detArea').textContent = areaCode ? `${areaCode} - ${areaName}` : areaName;
+        setElementText('detArea', areaCode ? `${areaCode} - ${areaName}` : areaName);
 
         const macroName = state.process.macro?.name || state.process.macro_id || '--';
         const macroCode = state.process.macro?.code;
-        document.getElementById('detMacro').textContent = macroCode ? `${macroCode} - ${macroName}` : macroName;
+        setElementText('detMacro', macroCode ? `${macroCode} - ${macroName}` : macroName);
 
         const stage = document.getElementById('detStage');
-        stage.textContent = getStageLabel(state.process.kanban_stage);
-        stage.className = `badge stage-${state.process.kanban_stage}`;
+        if (stage) {
+            stage.textContent = getStageLabel(state.process.kanban_stage);
+            stage.className = `badge stage-${state.process.kanban_stage || 'inbox'}`;
+        } else {
+            console.warn('Elemento ausente no DOM: #detStage');
+        }
 
         renderFlow();
     }
 
     function renderFlow() {
         const flowContainer = document.getElementById('flowContainer');
+        if (!flowContainer) {
+            console.warn('Elemento ausente no DOM: #flowContainer');
+            return;
+        }
+
         if (state.process.flow_document) {
             const isPdf = state.process.flow_document.toLowerCase().endsWith('.pdf');
             if (isPdf) {
