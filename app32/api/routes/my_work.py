@@ -540,6 +540,7 @@ def project_task_summary_options(task_id):
     })
 
 
+@my_work_bp.route('/my-work/api/project-task/<int:task_id>/summary-pdf')
 @my_work_bp.route('/my-work/api/project-task/<int:task_id>/summary.pdf')
 @login_required
 def project_task_summary_pdf(task_id):

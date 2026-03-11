@@ -154,6 +154,7 @@ def project_summary_options(project_id):
     })
 
 
+@projects_bp.route('/api/projects/<int:project_id>/summary-pdf')
 @projects_bp.route('/api/projects/<int:project_id>/summary.pdf')
 @permission_required('projects', 'view')
 def project_summary_pdf(project_id):

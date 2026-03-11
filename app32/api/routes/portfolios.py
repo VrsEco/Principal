@@ -275,6 +275,7 @@ def portfolio_summary_options(company_id, portfolio_id):
     })
 
 
+@portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary-pdf')
 @portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary.pdf')
 @permission_required('projects', 'view')
 def portfolio_summary_pdf(company_id, portfolio_id):
