@@ -97,24 +97,28 @@
 </section>
 
 <section class="analysis-grid two-columns analysis-charts">
-  <article class="panel-card">
-    <div class="panel-head">
-      <div>
-        <h2>Capacidade x Rotina fixa</h2>
-        <p>Visualização rápida da capacidade semanal cadastrada versus o comprometimento recorrente.</p>
+  <article class="panel-card chart-card-horizontal">
+    <div class="chart-card-copy">
+      <div class="panel-head chart-card-head">
+        <div>
+          <h2>Capacidade x Rotina fixa</h2>
+          <p>Visualização rápida da capacidade semanal cadastrada versus o comprometimento recorrente.</p>
+        </div>
       </div>
     </div>
     <div class="chart-wrap"><canvas id="capacityChart"></canvas></div>
   </article>
-  <article class="panel-card">
-    <div class="panel-head">
-      <div>
-        <h2>Comprometimento por tipo</h2>
-        <p>Distribuição entre rotina fixa, projetos e reuniões no escopo selecionado.</p>
+  <article class="panel-card chart-card-horizontal">
+    <div class="chart-card-copy">
+      <div class="panel-head chart-card-head">
+        <div>
+          <h2>Comprometimento por tipo</h2>
+          <p>Distribuição entre rotina fixa, projetos e reuniões no escopo selecionado.</p>
+        </div>
       </div>
+      <p class="text-muted chart-support-copy">Total comprometido no escopo: <strong>{{ '%.1f'|format(analysis.summary.scoped_total_commitment_hours) }}h</strong>.</p>
     </div>
     <div class="chart-wrap"><canvas id="commitmentChart"></canvas></div>
-    <p class="text-muted" style="margin-top:.75rem;">Total comprometido no escopo: <strong>{{ '%.1f'|format(analysis.summary.scoped_total_commitment_hours) }}h</strong>.</p>
   </article>
 </section>
 
@@ -469,8 +473,12 @@
   .w-100 { width:100%; justify-content:center; }
   .filter-field { display:flex; flex-direction:column; align-items:flex-start; }
   .filter-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
-  .analysis-charts .chart-wrap { min-height:65px; max-width:220px; max-height:110px; margin:0 auto; position:relative; }
-  .analysis-charts .chart-wrap canvas { width:100% !important; height:110px !important; }
+  .analysis-charts .chart-card-horizontal { display:grid; grid-template-columns:minmax(0, 1fr) 140px; align-items:center; gap:1rem; }
+  .analysis-charts .chart-card-head { margin-bottom:.5rem; }
+  .analysis-charts .chart-card-copy { min-width:0; }
+  .analysis-charts .chart-support-copy { margin-top:.35rem; }
+  .analysis-charts .chart-wrap { min-height:65px; width:140px; max-width:140px; height:90px; max-height:90px; margin:0 0 0 auto; position:relative; }
+  .analysis-charts .chart-wrap canvas { width:100% !important; height:90px !important; }
   .summary-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
   .two-columns { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .three-columns { grid-template-columns:repeat(3, minmax(0, 1fr)); }
@@ -524,6 +532,8 @@
     .analysis-header, .summary-grid, .two-columns, .three-columns, .capacity-stats, .mini-stats { grid-template-columns:1fr; display:grid; }
     .analysis-header { display:grid; }
     .analysis-actions, .analysis-filters, .filter-actions { width:100%; justify-content:flex-start; }
+    .analysis-charts .chart-card-horizontal { grid-template-columns:1fr; }
+    .analysis-charts .chart-wrap { margin:0 auto; }
   }
 </style>
 
