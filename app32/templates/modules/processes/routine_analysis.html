@@ -162,15 +162,28 @@
   <div class="analysis-grid three-columns">
     <article class="panel-card inner-panel">
       <div class="panel-head compact-head"><div><h2>Rotinas do colaborador</h2></div></div>
-      <div class="stack-list compact">
-        {% for item in analysis.drilldown.routines %}
-        <div class="stack-item">
-          <div>
-            <strong>{{ item.name }}</strong>
-            <small>{{ item.process_name }} · {{ item.schedule_label }}</small>
+      <div class="routine-groups">
+        {% for group in analysis.drilldown.routine_groups %}
+        <section class="routine-group-card">
+          <div class="routine-group-head">
+            <div>
+              <h3>{{ group.title }}</h3>
+              <small>{{ group.items|length }} rotina(s)</small>
+            </div>
+            <span class="routine-group-total">Total: {{ group.total_hours_label }}</span>
           </div>
-          <span>{{ '%.1f'|format(item.weekly_equivalent_hours) }}h/sem</span>
-        </div>
+          <div class="stack-list compact">
+            {% for item in group.items %}
+            <div class="stack-item routine-stack-item">
+              <div>
+                <strong>{{ item.name }}</strong>
+                <small>{{ item.schedule_description }} · {{ item.hours_label }} por ocorrência</small>
+              </div>
+              <span>{{ item.hours_label }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
         {% else %}
         <div class="empty-line">Sem rotinas vinculadas no recorte.</div>
         {% endfor %}
@@ -548,6 +561,13 @@
   .note-box p { margin:.35rem 0 0; }
   .note-box-warning { border-color:#f59e0b44; background:#fffaf0; }
   .stack-list { display:grid; gap:.65rem; }
+  .routine-groups { display:grid; gap:1rem; }
+  .routine-group-card { border:1px solid var(--border); background:var(--surface-primary); border-radius:14px; padding:.9rem; display:grid; gap:.75rem; }
+  .routine-group-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+  .routine-group-head h3 { margin:0; font-size:.95rem; color:var(--text-primary); }
+  .routine-group-head small { color:var(--text-secondary); }
+  .routine-group-total { display:inline-flex; align-items:center; padding:.35rem .65rem; border-radius:999px; background:var(--surface-secondary); border:1px solid var(--border); font-size:.78rem; font-weight:700; color:var(--primary); white-space:nowrap; }
+  .routine-stack-item { background:var(--surface-secondary); }
   .stack-item { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; }
   .stack-item strong { display:block; }
   .stack-item small { color:var(--text-secondary); }

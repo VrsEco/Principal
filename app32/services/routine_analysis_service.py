@@ -126,6 +126,67 @@ def _schedule_label(schedule_type: str) -> str:
     return labels.get(schedule_type, schedule_type.title())
 
 
+def _humanize_hours(hours: float) -> str:
+    rounded = round(_safe_float(hours), 2)
+    if rounded.is_integer():
+        value = str(int(rounded))
+    else:
+        value = f"{rounded:.1f}".replace('.', ',')
+    return f"{value} hora" if rounded == 1 else f"{value} horas"
+
+
+def _describe_schedule(schedule_type: str, schedule_value: Any) -> str:
+    raw = str(schedule_value or '').strip()
+    if not raw:
+        fallback = {
+            'daily': 'Todos os dias',
+            'weekly': 'Sem dia fixo informado',
+            'monthly': 'Sem dia fixo informado',
+            'quarterly': 'A cada trimestre',
+            'yearly': 'Todo ano',
+            'specific': 'Data específica',
+        }
+        return fallback.get(schedule_type, 'Agendamento não informado')
+
+    if schedule_type == 'daily':
+        return f"Todos os dias ({raw})" if raw else 'Todos os dias'
+
+    if schedule_type == 'weekly':
+        weekday_map = {
+            '0': 'domingo',
+            '1': 'segunda-feira',
+            '2': 'terça-feira',
+            '3': 'quarta-feira',
+            '4': 'quinta-feira',
+            '5': 'sexta-feira',
+            '6': 'sábado',
+        }
+        raw_tokens = [token.strip() for token in raw.replace(';', ',').replace('|', ',').split(',') if token.strip()]
+        labels = [weekday_map.get(token, token) for token in raw_tokens]
+        if len(labels) == 1:
+            return f"Toda {labels[0]}"
+        if len(labels) > 1:
+            return "Toda " + ", ".join(labels[:-1]) + f" e {labels[-1]}"
+
+    if schedule_type == 'monthly':
+        day_tokens = [token.strip() for token in raw.replace(';', ',').split(',') if token.strip()]
+        if len(day_tokens) == 1:
+            return f"Todo dia {day_tokens[0]}"
+        if len(day_tokens) > 1:
+            return "Todo dia " + ", ".join(day_tokens[:-1]) + f" e {day_tokens[-1]}"
+
+    if schedule_type == 'yearly':
+        return f"Todo ano em {raw}"
+
+    if schedule_type == 'quarterly':
+        return f"A cada trimestre ({raw})"
+
+    if schedule_type == 'specific':
+        return raw
+
+    return raw
+
+
 def _schedule_weekly_factor(schedule_type: str) -> float:
     factors = {
         "daily": 5.0,
@@ -342,6 +403,8 @@ def _build_routine_section(routine_rows: List[Dict[str, Any]]) -> Dict[str, Any]
                 ),
                 "schedule_type": routine["schedule_type"],
                 "schedule_label": _schedule_label(routine["schedule_type"]),
+                "schedule_value": routine.get("schedule_value"),
+                "schedule_description": _describe_schedule(routine["schedule_type"], routine.get("schedule_value")),
                 "weekly_equivalent_hours": routine["weekly_equivalent_hours"],
                 "hours_per_occurrence": routine["hours_per_occurrence"],
                 "collaborators": list(routine["collaborators"]),
@@ -852,6 +915,8 @@ def _apply_scope_to_routine_section(routine_section: Dict[str, Any], scoped_empl
             "process_name": routine.get("process_name") or "Sem processo vinculado",
             "schedule_type": schedule_type,
             "schedule_label": routine.get("schedule_label") or _schedule_label(schedule_type),
+            "schedule_value": routine.get("schedule_value"),
+            "schedule_description": routine.get("schedule_description") or _describe_schedule(schedule_type, routine.get("schedule_value")),
             "hours_per_occurrence": hours_per_occurrence,
             "collaborators": scoped_collaborators,
         }
@@ -985,19 +1050,54 @@ def _build_employee_drilldown(
         return None
 
     employee = employee_by_id[employee_id]
-    routine_items = []
+    routine_groups_map: Dict[str, Dict[str, Any]] = {}
+    group_order = [
+        ('daily', 'Rotinas diárias'),
+        ('weekly', 'Rotinas semanais'),
+        ('monthly', 'Rotinas mensais'),
+        ('quarterly', 'Rotinas trimestrais'),
+        ('yearly', 'Rotinas anuais'),
+        ('specific', 'Rotinas específicas'),
+    ]
+
     for routine in routine_section.get("all_routines", []):
         match = next((item for item in routine.get("collaborators", []) if _safe_int(item.get("employee_id")) == employee_id), None)
         if not match:
             continue
-        routine_items.append({
+
+        schedule_type = routine.get("schedule_type") or "weekly"
+        group = routine_groups_map.setdefault(
+            schedule_type,
+            {
+                "key": schedule_type,
+                "title": dict(group_order).get(schedule_type, f"Rotinas {routine.get('schedule_label', schedule_type)}"),
+                "total_hours": 0.0,
+                "items": [],
+            },
+        )
+        hours_per_occurrence = round(_safe_float(match.get("hours_used")), 2)
+        group["total_hours"] += hours_per_occurrence
+        group["items"].append({
             "id": routine["id"],
             "name": routine["name"],
             "process_name": routine["process_name"],
             "schedule_label": routine["schedule_label"],
-            "hours_per_occurrence": round(_safe_float(match.get("hours_used")), 2),
-            "weekly_equivalent_hours": round(_safe_float(match.get("hours_used")) * _schedule_weekly_factor(routine.get("schedule_type") or "weekly"), 2),
+            "schedule_description": routine.get("schedule_description") or _describe_schedule(schedule_type, routine.get("schedule_value")),
+            "hours_per_occurrence": hours_per_occurrence,
+            "hours_label": _humanize_hours(hours_per_occurrence),
+            "weekly_equivalent_hours": round(hours_per_occurrence * _schedule_weekly_factor(schedule_type), 2),
         })
+
+    routine_groups = []
+    for key, title in group_order:
+        group = routine_groups_map.get(key)
+        if not group:
+            continue
+        group["items"].sort(key=lambda item: (item.get("hours_per_occurrence", 0), item.get("name", "")), reverse=True)
+        group["total_hours"] = round(group["total_hours"], 2)
+        group["total_hours_label"] = _humanize_hours(group["total_hours"])
+        group["title"] = title
+        routine_groups.append(group)
 
     project_items = [
         item for item in project_section.get("member_allocations", [])
@@ -1020,7 +1120,6 @@ def _build_employee_drilldown(
     ]
     meeting_items.sort(key=lambda item: item.get("estimated_hours", 0), reverse=True)
 
-    routine_items.sort(key=lambda item: item.get("weekly_equivalent_hours", 0), reverse=True)
     return {
         "employee": {
             "id": employee_id,
@@ -1028,7 +1127,8 @@ def _build_employee_drilldown(
             "department": employee.get("department") or "Não informado",
             "email": employee.get("email") or "",
         },
-        "routines": routine_items[:10],
+        "routine_groups": routine_groups,
+        "routines": [item for group in routine_groups for item in group["items"]][:10],
         "projects": project_items[:10],
         "meetings": meeting_items[:10],
     }
