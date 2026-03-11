@@ -97,28 +97,56 @@
 </section>
 
 <section class="analysis-grid two-columns analysis-charts">
-  <article class="panel-card chart-card-horizontal">
-    <div class="chart-card-copy">
-      <div class="panel-head chart-card-head">
-        <div>
-          <h2>Capacidade x Rotina fixa</h2>
-          <p>Visualização rápida da capacidade semanal cadastrada versus o comprometimento recorrente.</p>
-        </div>
+  <article class="panel-card chart-dashboard-card">
+    <div class="panel-head chart-card-head">
+      <div>
+        <h2>Capacidade x Rotina fixa</h2>
+        <p>Visualização rápida da capacidade semanal cadastrada versus o comprometimento recorrente.</p>
       </div>
     </div>
-    <div class="chart-wrap"><canvas id="capacityChart"></canvas></div>
-  </article>
-  <article class="panel-card chart-card-horizontal">
-    <div class="chart-card-copy">
-      <div class="panel-head chart-card-head">
-        <div>
-          <h2>Comprometimento por tipo</h2>
-          <p>Distribuição entre rotina fixa, projetos e reuniões no escopo selecionado.</p>
-        </div>
+    <div class="chart-stat-row">
+      <div class="chart-stat-chip">
+        <span>Capacidade</span>
+        <strong>{{ '%.1f'|format(analysis.summary.total_capacity_weekly_hours) }}h</strong>
       </div>
+      <div class="chart-stat-chip accent-warning">
+        <span>Rotina fixa</span>
+        <strong>{{ '%.1f'|format(analysis.summary.total_fixed_weekly_hours) }}h</strong>
+      </div>
+      <div class="chart-stat-chip accent-info">
+        <span>Saldo</span>
+        <strong>{{ '%.1f'|format(analysis.summary.total_available_weekly_hours) }}h</strong>
+      </div>
+    </div>
+    <div class="chart-stage">
+      <div class="chart-wrap chart-wrap-bar"><canvas id="capacityChart"></canvas></div>
+    </div>
+  </article>
+  <article class="panel-card chart-dashboard-card">
+    <div class="panel-head chart-card-head">
+      <div>
+        <h2>Comprometimento por tipo</h2>
+        <p>Distribuição entre rotina fixa, projetos e reuniões no escopo selecionado.</p>
+      </div>
+    </div>
+    <div class="chart-stat-row">
+      <div class="chart-stat-chip accent-warning">
+        <span>Rotina fixa</span>
+        <strong>{{ '%.1f'|format(analysis.summary.total_fixed_weekly_hours) }}h</strong>
+      </div>
+      <div class="chart-stat-chip accent-danger">
+        <span>Projetos</span>
+        <strong>{{ '%.1f'|format(analysis.summary.scoped_project_hours) }}h</strong>
+      </div>
+      <div class="chart-stat-chip accent-info">
+        <span>Reuniões</span>
+        <strong>{{ '%.1f'|format(analysis.summary.scoped_meeting_hours) }}h</strong>
+      </div>
+    </div>
+    <div class="chart-stage chart-stage-donut">
+      <div class="chart-wrap chart-wrap-donut"><canvas id="commitmentChart"></canvas></div>
       <p class="text-muted chart-support-copy">Total comprometido no escopo: <strong>{{ '%.1f'|format(analysis.summary.scoped_total_commitment_hours) }}h</strong>.</p>
     </div>
-    <div class="chart-wrap"><canvas id="commitmentChart"></canvas></div>
   </article>
 </section>
 
@@ -473,12 +501,19 @@
   .w-100 { width:100%; justify-content:center; }
   .filter-field { display:flex; flex-direction:column; align-items:flex-start; }
   .filter-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
-  .analysis-charts .chart-card-horizontal { display:grid; grid-template-columns:minmax(0, 1fr) 140px; align-items:center; gap:1rem; }
-  .analysis-charts .chart-card-head { margin-bottom:.5rem; }
-  .analysis-charts .chart-card-copy { min-width:0; }
-  .analysis-charts .chart-support-copy { margin-top:.35rem; }
-  .analysis-charts .chart-wrap { min-height:65px; width:140px; max-width:140px; height:90px; max-height:90px; margin:0 0 0 auto; position:relative; }
-  .analysis-charts .chart-wrap canvas { width:100% !important; height:90px !important; }
+  .analysis-charts .chart-dashboard-card { display:grid; gap:1rem; }
+  .analysis-charts .chart-card-head { margin-bottom:0; }
+  .analysis-charts .chart-stat-row { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.75rem; }
+  .analysis-charts .chart-stat-chip { padding:.8rem .9rem; border:1px solid var(--border); border-radius:14px; background:var(--surface-secondary); display:grid; gap:.25rem; }
+  .analysis-charts .chart-stat-chip span { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); font-weight:700; }
+  .analysis-charts .chart-stat-chip strong { font-size:1.1rem; color:var(--text-primary); }
+  .analysis-charts .chart-stage { border:1px solid var(--border); background:linear-gradient(180deg, var(--surface-secondary), rgba(255,255,255,0.7)); border-radius:18px; padding:1rem; display:grid; place-items:center; min-height:220px; }
+  .analysis-charts .chart-stage-donut { grid-template-columns:1fr; }
+  .analysis-charts .chart-wrap { position:relative; width:100%; max-width:280px; margin:0 auto; }
+  .analysis-charts .chart-wrap-bar { max-width:320px; height:160px; }
+  .analysis-charts .chart-wrap-donut { max-width:210px; height:210px; }
+  .analysis-charts .chart-wrap canvas { width:100% !important; height:100% !important; }
+  .analysis-charts .chart-support-copy { margin-top:.25rem; text-align:center; }
   .summary-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
   .two-columns { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .three-columns { grid-template-columns:repeat(3, minmax(0, 1fr)); }
@@ -532,8 +567,10 @@
     .analysis-header, .summary-grid, .two-columns, .three-columns, .capacity-stats, .mini-stats { grid-template-columns:1fr; display:grid; }
     .analysis-header { display:grid; }
     .analysis-actions, .analysis-filters, .filter-actions { width:100%; justify-content:flex-start; }
-    .analysis-charts .chart-card-horizontal { grid-template-columns:1fr; }
-    .analysis-charts .chart-wrap { margin:0 auto; }
+    .analysis-charts .chart-stat-row { grid-template-columns:1fr; }
+    .analysis-charts .chart-stage { min-height:auto; }
+    .analysis-charts .chart-wrap-bar { max-width:100%; height:180px; }
+    .analysis-charts .chart-wrap-donut { max-width:180px; height:180px; }
   }
 </style>
 
