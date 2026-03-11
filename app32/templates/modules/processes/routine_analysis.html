@@ -427,7 +427,6 @@
       <p><strong>1.</strong> A rotina fixa ocupa <strong>{{ '%.1f'|format(analysis.summary.fixed_utilization_percent) }}%</strong> da capacidade, mas o comprometimento total já alcança <strong>{{ '%.1f'|format(analysis.summary.scoped_total_utilization_percent) }}%</strong> no escopo atual.</p>
       <p><strong>2.</strong> Existe um backlog adicional de <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_project_hours or analysis.summary.open_project_hours) }}h</strong> em projetos abertos.</p>
       <p><strong>3.</strong> As reuniões abertas adicionam <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_meeting_hours or analysis.summary.meeting_estimated_hours_total) }}h</strong> ao cenário, já priorizando duração real e planejada quando disponíveis.</p>
-      <p><strong>4.</strong> Próximo passo recomendado: aprofundar o drill-down por projeto/processo e automatizar alertas quando o colaborador ultrapassar a capacidade semanal.</p>
     </div>
   </article>
 
