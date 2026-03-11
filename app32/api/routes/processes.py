@@ -202,6 +202,29 @@ def process_details(process_id):
                             company_id=process.company_id,
                             process_payload=_build_process_details_payload(process))
 
+
+@processes_bp.route('/processes/<int:process_id>/book')
+@permission_required('processes', 'view')
+def process_book(process_id):
+    """Renderiza o Book do Processo em layout print-friendly do app32."""
+    from services.process_book_service import build_process_book_context
+
+    process = _get_process_with_access(process_id, action='view')
+    if is_collaborator_in_company(process.company_id):
+        abort(403, description="Acesso negado: Colaboradores não podem acessar o book do processo.")
+
+    try:
+        context = build_process_book_context(
+            process_id=process.id,
+            company_id=process.company_id,
+            request_root=request.url_root,
+        )
+    except ValueError as exc:
+        current_app.logger.warning('Book do processo indisponível para process_id=%s: %s', process_id, exc)
+        abort(404, description=str(exc))
+
+    return render_template('reports/process_book_v2.html', **context)
+
 # --- Process Routines Page and APIs ---
 
 @processes_bp.route('/process-routines')

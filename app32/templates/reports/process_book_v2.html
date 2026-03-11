@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book do Processo - {{ first_page.title }}</title>
+  <style>
+    :root {
+      --page-bg: #eef4ff;
+      --surface: #ffffff;
+      --surface-soft: #f8fbff;
+      --border: #d9e4f5;
+      --text: #0f172a;
+      --muted: #475569;
+      --muted-2: #64748b;
+      --brand: #1d4ed8;
+      --brand-2: #4338ca;
+      --success: #0f766e;
+      --warning: #b45309;
+      --shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    @page {
+      size: A4 portrait;
+      margin: 14mm;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #fff;
+      color: var(--text);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .screen-actions {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      padding: 14px;
+      background: rgba(238, 244, 255, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(217, 228, 245, 0.85);
+    }
+
+    .screen-actions a,
+    .screen-actions button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(29, 78, 216, 0.24);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .report-shell {
+      width: auto;
+      margin: 0 auto;
+    }
+
+    .page {
+      background: var(--surface);
+      break-after: page;
+      page-break-after: always;
+    }
+
+    .page:last-child {
+      break-after: auto;
+      page-break-after: auto;
+    }
+
+    .page-inner {
+      padding: 0;
+    }
+
+    .first-page {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background:
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.10), transparent 30%),
+        linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
+      color: #fff;
+      border-radius: 22px;
+      padding: 18px 22px;
+      box-shadow: 0 14px 32px rgba(29, 78, 216, 0.20);
+    }
+
+    .hero-eyebrow {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0.86;
+      margin-bottom: 8px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 25px;
+      line-height: 1.14;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+      max-width: 920px;
+      opacity: 0.96;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      margin-top: 12px;
+      font-size: 12px;
+    }
+
+    .hero-meta strong { display: block; font-size: 11px; opacity: 0.8; text-transform: uppercase; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 16px;
+    }
+
+    .panel-title {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .detail-card,
+    .stat-card,
+    .mini-card {
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+
+    .detail-label,
+    .stat-label,
+    .mini-label {
+      display: block;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted-2);
+      margin-bottom: 3px;
+    }
+
+    .detail-value,
+    .stat-value,
+    .mini-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .stats-column {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .flow-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .compact-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .mini-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mini-item {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+
+    .mini-item-title {
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 4px;
+    }
+
+    .mini-item-text {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .flow-frame {
+      flex: 1;
+      min-height: 520px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .flow-frame img,
+    .flow-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 14px;
+    }
+
+    .empty-state {
+      width: 100%;
+      text-align: center;
+      color: var(--muted);
+      border: 2px dashed var(--border);
+      border-radius: 18px;
+      padding: 36px 22px;
+      background: rgba(255, 255, 255, 0.66);
+      line-height: 1.7;
+    }
+
+    .section-page .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #dbe4f0;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    .section-title-wrap h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .section-title-wrap p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .section-badge {
+      flex-shrink: 0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .activity-card,
+    .routine-card,
+    .indicator-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      page-break-inside: auto;
+      break-inside: auto;
+      orphans: 3;
+      widows: 3;
+    }
+
+    .activity-top,
+    .routine-top,
+    .indicator-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .activity-code,
+    .routine-code,
+    .indicator-code {
+      display: inline-flex;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #e0edff;
+      color: var(--brand);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
+    .activity-name,
+    .routine-name,
+    .indicator-name {
+      margin: 5px 0 0;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .activity-description,
+    .routine-description,
+    .indicator-description {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 11px;
+      white-space: pre-line;
+    }
+
+    .step-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .step-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fbff;
+      padding: 8px 10px;
+      overflow: hidden;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .section-flow {
+      min-height: 0;
+    }
+
+    .pop-section {
+      break-before: page;
+      page-break-before: always;
+    }
+
+    .step-header {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--brand);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .step-content {
+      display: grid;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .step-content.with-image {
+      grid-template-columns: minmax(160px, 230px) minmax(0, 1fr);
+    }
+
+    .step-content img {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid #d8e3f2;
+      display: block;
+      background: #fff;
+    }
+
+    .step-text {
+      color: var(--text);
+      line-height: 1.45;
+      white-space: pre-line;
+      font-size: 11px;
+    }
+
+    .routine-meta-grid,
+    .indicator-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .collaborators-table,
+    .indicators-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .collaborators-table th,
+    .collaborators-table td,
+    .indicators-table th,
+    .indicators-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+      vertical-align: top;
+      font-size: 11px;
+    }
+
+    .collaborators-table th,
+    .indicators-table th {
+      background: #eff6ff;
+      color: var(--muted-2);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .collaborators-table tr:last-child td,
+    .indicators-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted-2);
+    }
+
+    @media screen {
+      body {
+        background: var(--page-bg);
+      }
+      .report-shell {
+        width: 210mm;
+        max-width: calc(100vw - 24px);
+        margin: 20px auto 40px;
+      }
+      .page {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto 18px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .page-inner {
+        padding: 14mm;
+        min-height: calc(297mm - 28mm);
+      }
+      .section-flow .page-inner {
+        min-height: calc(297mm - 28mm);
+      }
+      .flow-frame {
+        min-height: 220mm;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+      .screen-actions { display: none !important; }
+      .report-shell {
+        width: auto;
+        max-width: none;
+        margin: 0;
+      }
+      .page {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: visible;
+        background: transparent;
+      }
+      .page-inner {
+        padding: 0;
+        min-height: auto;
+      }
+      .first-page { min-height: auto; }
+      .flow-frame {
+        min-height: 235mm;
+      }
+      .panel, .detail-card, .mini-item, .activity-card, .routine-card, .indicator-card, .step-card {
+        box-shadow: none !important;
+      }
+    }
+
+    @media screen and (max-width: 900px) {
+      .summary-grid,
+      .detail-grid,
+      .routine-meta-grid,
+      .indicator-meta-grid,
+      .step-content.with-image,
+      .compact-two-col,
+      .stats-column {
+        grid-template-columns: 1fr;
+      }
+
+      .report-shell {
+        width: calc(100% - 18px);
+        max-width: calc(100% - 18px);
+        margin: 10px auto 24px;
+      }
+
+      .page {
+        width: 100%;
+        min-height: auto;
+      }
+
+      .page-inner { padding: 18px; min-height: auto; }
+      .hero h1,
+      .section-title-wrap h2 { font-size: 24px; }
+      .flow-frame { min-height: 380px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen-actions">
+    <a href="{{ url_for('processes.process_details', process_id=process.id) }}" class="btn-secondary">Voltar ao processo</a>
+    <button type="button" class="btn-primary" onclick="window.print()">Imprimir / Salvar em PDF</button>
+  </div>
+
+  <div class="report-shell">
+    <section class="page">
+      <div class="page-inner first-page">
+        <div class="hero">
+          <div class="hero-eyebrow">Book de Processos - Gestão Versus</div>
+          <h1>{{ first_page.title }}</h1>
+          <p>{{ first_page.subtitle }}</p>
+          <div class="hero-meta">
+            <div><strong>Empresa</strong>{{ first_page.company_name }}</div>
+            <div><strong>Responsável</strong>{{ first_page.responsible_name }}</div>
+            <div><strong>Gerado em</strong>{{ generated_at }}</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="panel">
+            <h2 class="panel-title">Dados gerais do processo</h2>
+            <div class="detail-grid">
+              <div class="detail-card"><span class="detail-label">Área</span><div class="detail-value">{{ first_page.area_name }}</div></div>
+              <div class="detail-card"><span class="detail-label">Macroprocesso</span><div class="detail-value">{{ first_page.macro_name }}</div></div>
+              <div class="detail-card"><span class="detail-label">Dono</span><div class="detail-value">{{ first_page.owner_name }}</div></div>
+              <div class="detail-card"><span class="detail-label">Responsável</span><div class="detail-value">{{ first_page.responsible_name }}</div></div>
+              <div class="detail-card"><span class="detail-label">Estruturação</span><div class="detail-value">{{ first_page.structuring_label }}</div></div>
+              <div class="detail-card"><span class="detail-label">Desempenho</span><div class="detail-value">{{ first_page.performance_label }}</div></div>
+              {% for stat in first_page.stats %}
+              <div class="detail-card"><span class="detail-label">{{ stat.label }}</span><div class="detail-value">{{ stat.value }}</div></div>
+              {% endfor %}
+            </div>
+            {% if first_page.notes %}
+            <div class="detail-card" style="margin-top: 8px;">
+              <span class="detail-label">Observações</span>
+              <div class="detail-value" style="white-space: pre-line; font-size: 11px;">{{ first_page.notes }}</div>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="panel">
+            <h2 class="panel-title">Indicadores</h2>
+            {% if indicators %}
+            <div class="mini-list">
+              {% for indicator in indicators[:6] %}
+              <div class="mini-item">
+                <div class="mini-item-title">{{ indicator.name }}</div>
+                <div class="mini-item-text">Atual: {{ indicator.current_value }}</div>
+                <div class="mini-item-text">Meta: {{ indicator.goal_value }}</div>
+              </div>
+              {% endfor %}
+            </div>
+            {% if indicators|length > 6 %}
+            <div class="mini-item-text" style="margin-top: 8px;">+ {{ indicators|length - 6 }} indicador(es) adicionais nas próximas seções.</div>
+            {% endif %}
+            {% else %}
+            <div class="empty-state" style="padding: 18px 12px; font-size: 11px;">Nenhum indicador vinculado.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page section-flow">
+      <div class="page-inner">
+        <div class="panel flow-panel">
+          <div class="section-header" style="border-bottom:0; padding-bottom:0; margin-bottom:10px;">
+            <div class="section-title-wrap">
+              <h2>Fluxo do processo</h2>
+              <p>Fluxo em página exclusiva para melhor leitura e impressão.</p>
+            </div>
+          </div>
+
+          <div class="flow-frame">
+            {% if first_page.flow_is_image and first_page.flow_url %}
+              <img src="{{ first_page.flow_url }}" alt="Fluxo do processo">
+            {% elif first_page.flow_is_pdf and first_page.flow_url %}
+              <iframe src="{{ first_page.flow_url }}#toolbar=0&navpanes=0&scrollbar=0"></iframe>
+            {% else %}
+              <div class="empty-state">
+                <strong>Fluxo não disponível</strong><br>
+                Faça upload do fluxo do processo para que ele passe a compor esta página.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page section-page pop-section">
+      <div class="page-inner">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>POP - Procedimento Operacional Padrão</h2>
+            <p>Sequência operacional contínua, sem quebra artificial entre atividades.</p>
+          </div>
+          <div class="section-badge">{{ pop_activities|length }} atividade(s)</div>
+        </div>
+
+        {% if pop_activities %}
+          {% for activity in pop_activities %}
+          <article class="activity-card">
+            <div class="activity-top">
+              <div>
+                <span class="activity-code">{{ activity.code }}</span>
+                <h3 class="activity-name">{{ activity.name }}</h3>
+                {% if activity.description %}
+                <div class="activity-description">{{ activity.description }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if activity.entries %}
+            <div class="step-list">
+              {% for entry in activity.entries %}
+              <div class="step-card">
+                <div class="step-header">Passo {{ loop.index }}{% if entry.name %} - {{ entry.name }}{% endif %}</div>
+                <div class="step-content {% if entry.image_url %}with-image{% endif %}">
+                  {% if entry.image_url %}
+                  <div>
+                    <img src="{{ entry.image_url }}" alt="Passo {{ loop.index }}">
+                  </div>
+                  {% endif %}
+                  <div class="step-text">{{ entry.text_content or 'Sem detalhamento cadastrado para este passo.' }}</div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="margin-top: 14px;">Atividade cadastrada sem passos detalhados.</div>
+            {% endif %}
+          </article>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">Nenhuma atividade POP cadastrada para este processo.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="page section-page">
+      <div class="page-inner">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>Rotinas</h2>
+            <p>Agendamentos, prazos e equipe executora vinculados diretamente ao processo.</p>
+          </div>
+          <div class="section-badge">{{ routines|length }} rotina(s)</div>
+        </div>
+
+        {% if routines %}
+          {% for routine in routines %}
+          <article class="activity-card">
+            <div class="activity-top">
+              <div>
+                <span class="activity-code">{{ routine.code }}</span>
+                <h3 class="activity-name">{{ routine.name }}</h3>
+                {% if routine.description %}
+                <div class="activity-description">{{ routine.description }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="indicator-meta-grid">
+              <div class="detail-card">
+                <span class="detail-label">Agendamento</span>
+                <div class="detail-value">{{ routine.schedule_label }}{% if routine.schedule_value %}<br><span style="font-size:11px; color: var(--muted); font-weight:600;">{{ routine.schedule_value }}</span>{% endif %}</div>
+              </div>
+              <div class="detail-card">
+                <span class="detail-label">Prazo</span>
+                <div class="detail-value">
+                  {% if routine.deadline_date %}
+                    Até {{ routine.deadline_date }}
+                  {% elif routine.deadline_days or routine.deadline_hours %}
+                    {% if routine.deadline_days %}{{ routine.deadline_days }} dia(s){% endif %}{% if routine.deadline_days and routine.deadline_hours %} + {% endif %}{% if routine.deadline_hours %}{{ routine.deadline_hours }}h{% endif %}
+                  {% else %}
+                    Não definido
+                  {% endif %}
+                </div>
+              </div>
+              <div class="detail-card">
+                <span class="detail-label">Carga vinculada</span>
+                <div class="detail-value">{{ routine.total_hours }}h</div>
+              </div>
+            </div>
+
+            {% if routine.collaborators %}
+            <table class="collaborators-table">
+              <thead>
+                <tr>
+                  <th>Colaborador</th>
+                  <th>Horas úteis</th>
+                  <th>Observações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for collaborator in routine.collaborators %}
+                <tr>
+                  <td>
+                    <strong>{{ collaborator.employee_name }}</strong>
+                    {% if collaborator.employee_email %}
+                    <div style="margin-top:4px; color: var(--muted);">{{ collaborator.employee_email }}</div>
+                    {% endif %}
+                  </td>
+                  <td>{{ collaborator.hours_used }}h</td>
+                  <td>{{ collaborator.notes or '-' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state" style="margin-top: 10px; padding: 18px 12px; font-size: 11px;">Nenhum colaborador vinculado a esta rotina.</div>
+            {% endif %}
+          </article>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">Nenhuma rotina cadastrada para este processo.</div>
+        {% endif %}
+
+        <div class="footer-note">Book gerado em {{ generated_at }} para {{ company.name }}.</div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

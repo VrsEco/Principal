@@ -105,6 +105,18 @@ def test_occurrences_loader_sends_company_scope_and_falls_back_gracefully():
     assert 'state.occurrences = []' in content
 
 
+
+def test_process_details_template_removes_occurrences_module():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'tab-occurrences' not in content
+    assert 'occurrenceModal' not in content
+    assert 'process_details_occurrences.js' not in content
+    assert 'fetchOccurrences()' not in content
+
+
 def test_process_details_template_bootstraps_initial_payload_and_fallback():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:

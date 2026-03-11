@@ -27,6 +27,9 @@
             </div>
             <h1 class="text-h1" id="detName">Carregando Processo...</h1>
             <p class="text-secondary" id="detDescription">Aguarde enquanto carregamos as informações.</p>
+            <div style="display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1.25rem;">
+                <a href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank" class="btn btn-secondary" onclick="setTimeout(() => this.blur(), 150)">🖨️ Versão de Impressão</a>
+            </div>
         </div>
     </div>
 
@@ -64,7 +67,6 @@
         <button class="tab-btn" onclick="switchTab('pops')">📋 POP</button>
         <button class="tab-btn" onclick="switchTab('routine')">📅 Rotinas do Processo</button>
         <button class="tab-btn" onclick="switchTab('indicators')">📊 Indicadores</button>
-        <button class="tab-btn" onclick="switchTab('occurrences')">🔔 Ocorrências</button>
     </div>
 
     <!-- Tab: Modeling -->
@@ -163,22 +165,6 @@
         </div>
     </div>
 
-    <!-- Tab: Occurrences -->
-    <div id="tab-occurrences" class="tab-content">
-        <div class="card p-4 mt-4">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 class="text-h2">🔔 Histórico de Ocorrências</h2>
-                <button class="btn btn-primary btn-sm" onclick="openOccurrenceModal()">
-                    ➕ Nova Ocorrência
-                </button>
-            </div>
-
-            <div id="occurrencesList" class="occurrence-list">
-                <!-- JS will populate -->
-                <p class="text-tertiary">Carregando ocorrências...</p>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Modal: Novo Roteiro -->
@@ -248,61 +234,6 @@
     </div>
 </div>
 
-<!-- Modal: Nova Ocorrência (Multi-select) -->
-<div id="occurrenceModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="occurrenceModalTitle">Nova Ocorrência</h3>
-            <button class="btn-close" onclick="closeModal('occurrenceModal')">&times;</button>
-        </div>
-        <form id="occurrenceForm">
-            <input type="hidden" name="id" id="occId">
-            <input type="hidden" name="process_id" value="{{ process_id }}">
-
-            <div class="form-group">
-                <label class="form-label">Título *</label>
-                <input type="text" class="form-control" name="title" id="occTitle" required
-                    placeholder="Resumo da ocorrência">
-            </div>
-
-            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div class="form-group">
-                    <label class="form-label">Tipo *</label>
-                    <select class="form-control" name="type" id="occType" required>
-                        <option value="positive">Positiva</option>
-                        <option value="negative">Negativa</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Impacto/Score</label>
-                    <input type="number" class="form-control" name="score" id="occScore" value="0"
-                        placeholder="Ex: -5 ou +10">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Colaboradores Envolvidos *</label>
-                <select class="form-control" name="collaborators_ids" id="occCollaborators" multiple
-                    style="height: 100px;">
-                    <!-- JS will populate -->
-                </select>
-                <div class="form-text text-tertiary" style="font-size: 0.8rem;">Segure Ctrl/Cmd para selecionar
-                    múltiplos.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Descrição Detalhada</label>
-                <textarea class="form-control" name="description" id="occDescription" rows="4"></textarea>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary"
-                    onclick="closeModal('occurrenceModal')">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Salvar Ocorrência</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <style>
     /* POP Manager and Activity Styles from APP31 */
@@ -796,7 +727,6 @@
         routines: [],
         indicators: [],
         schedules: [],
-        occurrences: [],
         employees: []
     };
 
@@ -858,15 +788,12 @@
         init();
         const routineForm = document.getElementById('routineForm');
         const stepForm = document.getElementById('stepForm');
-        const occurrenceForm = document.getElementById('occurrenceForm');
 
         // Moved to bottom of file to ensure functions are defined
         // if (routineForm) routineForm.addEventListener('submit', handleRoutineSubmit);
         // if (stepForm) stepForm.addEventListener('submit', handleStepSubmit);
-        // if (occurrenceForm) occurrenceForm.addEventListener('submit', handleOccurrenceSubmit);
     });
 </script>
-<script src="/static/js/process_details_occurrences.js"></script>
 <script>
 
     async function handleRoutineSubmit(e) {
@@ -932,13 +859,12 @@
             const results = await Promise.allSettled([
                 fetchRoutines(),
                 fetchIndicators(),
-                fetchSchedules(),
-                fetchOccurrences()
+                fetchSchedules()
             ]);
 
             results.forEach((result, index) => {
                 if (result.status === 'rejected') {
-                    const loaders = ['roteiros', 'indicadores', 'agendamentos', 'ocorrências'];
+                    const loaders = ['roteiros', 'indicadores', 'agendamentos'];
                     console.warn(`Falha parcial ao carregar ${loaders[index]} do processo ${processId}:`, result.reason);
                 }
             });
@@ -947,7 +873,6 @@
             renderRoutines();
             renderIndicators();
             renderInstances();
-            renderOccurrences();
         } catch (error) {
             console.error("Error loading process details:", error);
             setElementText('detName', "Erro ao carregar dados");
@@ -955,8 +880,6 @@
         }
     }
 
-
-    // Occurrences logic moved to external file
     async function fetchProcess() {
         try {
             const res = await fetch(`/api/processes/${processId}`);
@@ -1617,11 +1540,9 @@
     document.addEventListener('DOMContentLoaded', () => {
         const routineForm = document.getElementById('routineForm');
         const stepForm = document.getElementById('stepForm');
-        const occurrenceForm = document.getElementById('occurrenceForm');
 
         if (routineForm) routineForm.addEventListener('submit', handleRoutineSubmit);
         if (stepForm) stepForm.addEventListener('submit', handleStepSubmit);
-        if (occurrenceForm) occurrenceForm.addEventListener('submit', handleOccurrenceSubmit);
     });
 </script>
 
@@ -1636,72 +1557,6 @@
         text-transform: uppercase;
     }
 
-    /* Occurrence Styles */
-    .occurrence-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .occurrence-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.25rem;
-        transition: var(--transition);
-    }
-
-    .occurrence-card:hover {
-        box-shadow: var(--shadow-sm);
-        transform: translateY(-2px);
-    }
-
-    .occ-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.75rem;
-    }
-
-    .occ-title-group {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .occ-title-group h3 {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin: 0;
-    }
-
-    .occ-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .occ-score {
-        font-weight: 700;
-        font-family: monospace;
-        font-size: 0.95rem;
-    }
-
-    .occ-desc {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        line-height: 1.5;
-        margin-bottom: 1rem;
-    }
-
-    .occ-footer {
-        display: flex;
-        gap: 1.5rem;
-        font-size: 0.85rem;
-        color: var(--text-tertiary);
-        border-top: 1px solid var(--border);
-        padding-top: 0.75rem;
-    }
 </style>
 {% endblock %}
 
