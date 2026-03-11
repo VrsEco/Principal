@@ -731,6 +731,11 @@ def _normalize_filter_text(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
+def _normalize_department_value(value: Any) -> str:
+    normalized = _normalize_filter_text(value)
+    return normalized or 'não informado'
+
+
 def _apply_employee_filters(
     employees: Iterable[Dict[str, Any]],
     department: str | None = None,
@@ -742,7 +747,7 @@ def _apply_employee_filters(
     for employee in employees:
         if employee_id and _safe_int(employee.get("id")) != employee_id:
             continue
-        if dept_filter and _normalize_filter_text(employee.get("department")) != dept_filter:
+        if dept_filter and _normalize_department_value(employee.get("department")) != _normalize_department_value(department):
             continue
         filtered.append(employee)
     return filtered
@@ -768,16 +773,18 @@ def _build_filter_metadata(
     department: str | None,
     employee_id: int | None,
 ) -> Dict[str, Any]:
+    employee_list = list(employees)
     departments = sorted(
         {
             dept.strip()
-            for dept in (emp.get("department") or "Não informado" for emp in employees)
+            for dept in (emp.get("department") or "Não informado" for emp in employee_list)
             if dept.strip()
         }
     )
+    selectable_employees = _apply_employee_filters(employee_list, department=department) if department else employee_list
     employee_options = [
         {"id": _safe_int(emp.get("id")), "name": emp.get("name") or "Colaborador"}
-        for emp in employees
+        for emp in selectable_employees
         if _safe_int(emp.get("id")) is not None
     ]
     employee_options.sort(key=lambda item: item["name"])
@@ -787,6 +794,172 @@ def _build_filter_metadata(
         "departments": departments,
         "employees": employee_options,
         "scope_label": _build_scope_label(department, employee_id, employee_options),
+    }
+
+
+def _get_scoped_employee_ids(employees: Iterable[Dict[str, Any]]) -> set[int]:
+    return {
+        employee_id
+        for employee_id in (_safe_int(emp.get("id")) for emp in employees)
+        if employee_id is not None
+    }
+
+
+def _apply_scope_to_routine_section(routine_section: Dict[str, Any], scoped_employee_ids: set[int]) -> Dict[str, Any]:
+    if not scoped_employee_ids:
+        return {**routine_section, "top_routines": [], "all_routines": [], "frequency_breakdown": [], "routine_count": 0}
+
+    frequency_keys = ("daily", "weekly", "monthly", "quarterly", "yearly", "specific")
+    frequency_map: Dict[str, Dict[str, Any]] = {
+        key: {
+            "key": key,
+            "label": _schedule_label(key),
+            "activity_count": 0,
+            "hours_per_occurrence": 0.0,
+            "weekly_equivalent_hours": 0.0,
+            "monthly_equivalent_hours": 0.0,
+            "annual_equivalent_hours": 0.0,
+        }
+        for key in frequency_keys
+    }
+
+    scoped_routines = []
+    for routine in routine_section.get("all_routines", []):
+        scoped_collaborators = [
+            collaborator
+            for collaborator in routine.get("collaborators", [])
+            if _safe_int(collaborator.get("employee_id")) in scoped_employee_ids
+        ]
+        if not scoped_collaborators:
+            continue
+
+        hours_per_occurrence = round(sum(_safe_float(item.get("hours_used")) for item in scoped_collaborators), 2)
+        schedule_type = routine.get("schedule_type") or "weekly"
+        scoped_routine = {
+            "id": routine.get("id"),
+            "name": routine.get("name") or "Rotina sem nome",
+            "process_name": routine.get("process_name") or "Sem processo vinculado",
+            "schedule_type": schedule_type,
+            "schedule_label": routine.get("schedule_label") or _schedule_label(schedule_type),
+            "hours_per_occurrence": hours_per_occurrence,
+            "collaborators": scoped_collaborators,
+        }
+        scoped_routine.update(_build_period_metrics(hours_per_occurrence, schedule_type))
+        scoped_routines.append(scoped_routine)
+
+        if schedule_type in frequency_map:
+            bucket = frequency_map[schedule_type]
+            bucket["activity_count"] += 1
+            for metric_key in ("hours_per_occurrence", "weekly_equivalent_hours", "monthly_equivalent_hours", "annual_equivalent_hours"):
+                bucket[metric_key] += scoped_routine[metric_key]
+
+    frequency_breakdown = []
+    for key in frequency_keys:
+        bucket = frequency_map[key]
+        if not bucket["activity_count"] and not any(bucket[m] for m in ("hours_per_occurrence", "weekly_equivalent_hours", "monthly_equivalent_hours", "annual_equivalent_hours")):
+            continue
+        for metric_key in ("hours_per_occurrence", "weekly_equivalent_hours", "monthly_equivalent_hours", "annual_equivalent_hours"):
+            bucket[metric_key] = round(bucket[metric_key], 2)
+        frequency_breakdown.append(bucket)
+
+    scoped_routines.sort(key=lambda item: item.get("weekly_equivalent_hours", 0), reverse=True)
+    return {
+        **routine_section,
+        "frequency_breakdown": frequency_breakdown,
+        "top_routines": scoped_routines[:8],
+        "all_routines": scoped_routines,
+        "total_fixed_weekly_hours": round(sum(item.get("weekly_equivalent_hours", 0.0) for item in scoped_routines), 2),
+        "routine_count": len(scoped_routines),
+    }
+
+
+def _apply_scope_to_project_section(project_section: Dict[str, Any], scoped_employee_ids: set[int]) -> Dict[str, Any]:
+    if not scoped_employee_ids:
+        return {**project_section, "top_projects": [], "open_task_count": 0, "estimated_hours_total": 0.0, "worked_hours_total": 0.0}
+
+    allocations = [
+        item
+        for item in project_section.get("member_allocations", [])
+        if _safe_int(item.get("employee_id")) in scoped_employee_ids
+    ]
+    project_totals: Dict[int, Dict[str, Any]] = {}
+    task_ids = set()
+
+    for item in allocations:
+        task_id = _safe_int(item.get("task_id"))
+        if task_id is not None:
+            task_ids.add(task_id)
+        project_id = _safe_int(item.get("project_id")) or 0
+        project_entry = project_totals.setdefault(
+            project_id,
+            {
+                "project_id": project_id,
+                "project_name": item.get("project_name") or "Projeto",
+                "task_ids": set(),
+                "estimated_hours": 0.0,
+                "worked_hours": 0.0,
+            },
+        )
+        if task_id is not None:
+            project_entry["task_ids"].add(task_id)
+        project_entry["estimated_hours"] += _safe_float(item.get("estimated_hours"))
+        project_entry["worked_hours"] += _safe_float(item.get("worked_hours"))
+
+    top_projects = []
+    for item in project_totals.values():
+        top_projects.append({
+            "project_id": item["project_id"],
+            "project_name": item["project_name"],
+            "task_count": len(item["task_ids"]),
+            "estimated_hours": round(item["estimated_hours"], 2),
+            "worked_hours": round(item["worked_hours"], 2),
+        })
+    top_projects.sort(key=lambda item: item["estimated_hours"], reverse=True)
+
+    return {
+        **project_section,
+        "open_task_count": len(task_ids),
+        "estimated_hours_total": round(sum(_safe_float(item.get("estimated_hours")) for item in allocations), 2),
+        "worked_hours_total": round(sum(_safe_float(item.get("worked_hours")) for item in allocations), 2),
+        "top_projects": top_projects[:8],
+    }
+
+
+def _apply_scope_to_meeting_section(meeting_section: Dict[str, Any], scoped_employee_ids: set[int]) -> Dict[str, Any]:
+    if not scoped_employee_ids:
+        return {**meeting_section, "top_meetings": [], "meeting_details": [], "open_meeting_count": 0, "scheduled_meeting_count": 0, "estimated_hours_total": 0.0}
+
+    scoped_meetings = []
+    scoped_total = 0.0
+    scheduled_count = 0
+
+    for item in meeting_section.get("meeting_details", []):
+        matched_ids = [_safe_int(employee_id) for employee_id in item.get("matched_employee_ids", [])]
+        scope_matches = [employee_id for employee_id in matched_ids if employee_id in scoped_employee_ids]
+        if not scope_matches:
+            continue
+
+        matched_count = len([employee_id for employee_id in matched_ids if employee_id is not None]) or 1
+        scoped_hours = round(_safe_float(item.get("estimated_hours")) * (len(scope_matches) / matched_count), 2)
+        scoped_item = {**item, "scoped_estimated_hours": scoped_hours}
+        scoped_meetings.append(scoped_item)
+        scoped_total += scoped_hours
+        if item.get("scheduled_date"):
+            scheduled_count += 1
+
+    scoped_meetings.sort(key=lambda item: item.get("scoped_estimated_hours", item.get("estimated_hours", 0)), reverse=True)
+    top_meetings = [
+        {**item, "estimated_hours": item.get("scoped_estimated_hours", item.get("estimated_hours", 0.0))}
+        for item in scoped_meetings[:8]
+    ]
+
+    return {
+        **meeting_section,
+        "open_meeting_count": len(scoped_meetings),
+        "scheduled_meeting_count": scheduled_count,
+        "estimated_hours_total": round(scoped_total, 2),
+        "top_meetings": top_meetings,
+        "meeting_details": scoped_meetings,
     }
 
 
@@ -855,18 +1028,21 @@ def get_routine_analysis(company_id: int, department: str | None = None, employe
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         employees, employee_by_id, employee_by_email = _load_employees(cursor, company_id)
-        filter_metadata = _build_filter_metadata(employees, department, employee_id)
         filtered_employees = _apply_employee_filters(employees, department, employee_id)
+        scoped_employee_ids = _get_scoped_employee_ids(filtered_employees)
+        filter_metadata = _build_filter_metadata(employees, department, employee_id)
         routine_section = _build_routine_section(_load_routines(cursor, company_id))
         project_section = _load_project_section(cursor, company_id)
         meeting_section = _load_meeting_section(cursor, company_id, employee_by_id, employee_by_email)
+        scoped_routine_section = _apply_scope_to_routine_section(routine_section, scoped_employee_ids) if (department or employee_id) else routine_section
+        scoped_project_section = _apply_scope_to_project_section(project_section, scoped_employee_ids) if (department or employee_id) else project_section
+        scoped_meeting_section = _apply_scope_to_meeting_section(meeting_section, scoped_employee_ids) if (department or employee_id) else meeting_section
         member_section = _build_member_capacity_section(
             filtered_employees,
             routine_section["member_fixed_hours"],
             project_section["member_project_hours"],
             meeting_section["member_meeting_hours"],
         )
-
 
         project_hours_scope = sum(
             project_section["member_project_hours"].get(member["employee_id"], 0.0)
@@ -879,7 +1055,7 @@ def get_routine_analysis(company_id: int, department: str | None = None, employe
 
         summary = {
             **member_section["summary"],
-            "routine_count": routine_section["routine_count"],
+            "routine_count": scoped_routine_section["routine_count"],
             "open_project_hours": project_section["estimated_hours_total"],
             "open_project_task_count": project_section["open_task_count"],
             "open_meeting_count": meeting_section["open_meeting_count"],
@@ -918,22 +1094,22 @@ def get_routine_analysis(company_id: int, department: str | None = None, employe
         return {
             "generated_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "summary": summary,
-            "frequency_breakdown": routine_section["frequency_breakdown"],
+            "frequency_breakdown": scoped_routine_section["frequency_breakdown"],
             "fixed_routines": {
-                "top_routines": routine_section["top_routines"],
+                "top_routines": scoped_routine_section["top_routines"],
             },
             "projects": {
-                "open_task_count": project_section["open_task_count"],
-                "estimated_hours_total": project_section["estimated_hours_total"],
-                "worked_hours_total": project_section["worked_hours_total"],
-                "top_projects": project_section["top_projects"],
+                "open_task_count": scoped_project_section["open_task_count"],
+                "estimated_hours_total": scoped_project_section["estimated_hours_total"],
+                "worked_hours_total": scoped_project_section["worked_hours_total"],
+                "top_projects": scoped_project_section["top_projects"],
             },
             "meetings": {
-                "open_meeting_count": meeting_section["open_meeting_count"],
-                "scheduled_meeting_count": meeting_section["scheduled_meeting_count"],
-                "estimated_hours_total": meeting_section["estimated_hours_total"],
-                "top_meetings": meeting_section["top_meetings"],
-                "estimation_basis": meeting_section["estimation_basis"],
+                "open_meeting_count": scoped_meeting_section["open_meeting_count"],
+                "scheduled_meeting_count": scoped_meeting_section["scheduled_meeting_count"],
+                "estimated_hours_total": scoped_meeting_section["estimated_hours_total"],
+                "top_meetings": scoped_meeting_section["top_meetings"],
+                "estimation_basis": scoped_meeting_section["estimation_basis"],
             },
             "filters": filter_metadata,
             "charts": charts,
