@@ -3,11 +3,60 @@
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
+from urllib.parse import unquote, urlparse
 
-from config_database import get_db
+import psycopg2
+from flask import has_app_context
+from psycopg2.extras import RealDictCursor
+
+
+
+def _load_env_file() -> None:
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        raw = line.strip()
+        if not raw or raw.startswith("#") or "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+def _get_pg_connection():
+    if has_app_context():
+        try:
+            from models import db
+
+            return db.engine.raw_connection()
+        except Exception:
+            pass
+
+    _load_env_file()
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        parsed = urlparse(database_url)
+        return psycopg2.connect(
+            host=parsed.hostname,
+            port=parsed.port or 5432,
+            dbname=(parsed.path or "").lstrip("/"),
+            user=parsed.username,
+            password=unquote(parsed.password or ""),
+            cursor_factory=RealDictCursor,
+        )
+
+    return psycopg2.connect(
+        host=os.environ.get("POSTGRES_HOST", "127.0.0.1"),
+        port=int(os.environ.get("POSTGRES_PORT", 5432)),
+        dbname=os.environ.get("POSTGRES_DB", "bdversusv2"),
+        user=os.environ.get("POSTGRES_USER", "postgres"),
+        password=os.environ.get("POSTGRES_PASSWORD", ""),
+        cursor_factory=RealDictCursor,
+    )
 
 DEFAULT_WEEKLY_CAPACITY = 40.0
 DEFAULT_MEETING_DURATION_HOURS = 1.0
@@ -291,9 +340,11 @@ def _build_routine_section(routine_rows: List[Dict[str, Any]]) -> Dict[str, Any]
                     if routine.get("process_code")
                     else routine["process_name"]
                 ),
+                "schedule_type": routine["schedule_type"],
                 "schedule_label": _schedule_label(routine["schedule_type"]),
                 "weekly_equivalent_hours": routine["weekly_equivalent_hours"],
                 "hours_per_occurrence": routine["hours_per_occurrence"],
+                "collaborators": list(routine["collaborators"]),
             }
         )
 
@@ -311,6 +362,7 @@ def _build_routine_section(routine_rows: List[Dict[str, Any]]) -> Dict[str, Any]
         "frequency_breakdown": frequency_breakdown,
         "member_fixed_hours": {key: round(value, 2) for key, value in member_fixed_hours.items()},
         "top_routines": top_routines[:8],
+        "all_routines": top_routines,
         "total_fixed_weekly_hours": total_fixed_weekly,
         "routine_count": len(routines_map),
     }
@@ -377,6 +429,7 @@ def _load_project_section(cursor, company_id: int) -> Dict[str, Any]:
     open_task_count = 0
     estimated_total = 0.0
     worked_total = 0.0
+    member_allocations = []
 
     for row in task_rows:
         if not _is_open_work_item(row.get("status"), row.get("stage")):
@@ -398,12 +451,30 @@ def _load_project_section(cursor, company_id: int) -> Dict[str, Any]:
                 task_worked += worked
                 if employee_id:
                     member_hours[employee_id] += estimated
+                    member_allocations.append({
+                        "employee_id": employee_id,
+                        "project_id": project_id,
+                        "project_name": row.get("project_title") or "Projeto",
+                        "task_id": task_id,
+                        "task_name": row.get("what") or "Atividade",
+                        "estimated_hours": round(estimated, 2),
+                        "worked_hours": round(worked, 2),
+                    })
         else:
             task_estimated = _safe_float(row.get("estimated_hours"))
             task_worked = _safe_float(row.get("worked_hours"))
             employee_id = _safe_int(row.get("employee_id"))
             if employee_id:
                 member_hours[employee_id] += task_estimated
+                member_allocations.append({
+                    "employee_id": employee_id,
+                    "project_id": project_id,
+                    "project_name": row.get("project_title") or "Projeto",
+                    "task_id": task_id,
+                    "task_name": row.get("what") or "Atividade",
+                    "estimated_hours": round(task_estimated, 2),
+                    "worked_hours": round(task_worked, 2),
+                })
 
         estimated_total += task_estimated
         worked_total += task_worked
@@ -441,6 +512,7 @@ def _load_project_section(cursor, company_id: int) -> Dict[str, Any]:
         "worked_hours_total": round(worked_total, 2),
         "member_project_hours": {key: round(value, 2) for key, value in member_hours.items()},
         "top_projects": top_projects[:8],
+        "member_allocations": member_allocations,
     }
 
 
@@ -479,6 +551,7 @@ def _load_meeting_section(
     open_count = 0
     scheduled_count = 0
     top_meetings = []
+    meeting_details = []
 
     for row in rows:
         if not _is_open_work_item(row.get("status")):
@@ -514,22 +587,23 @@ def _load_meeting_section(
             for employee_id in matched_employee_ids:
                 member_hours[employee_id] += per_member_hours
 
-        top_meetings.append(
-            {
-                "id": row.get("id"),
-                "title": row.get("title") or "Reunião",
-                "project_name": row.get("project_title") or "Sem projeto vinculado",
-                "scheduled_date": (
-                    row["scheduled_date"].strftime("%d/%m/%Y")
-                    if getattr(row.get("scheduled_date"), "strftime", None)
-                    else None
-                ),
-                "scheduled_time": row.get("scheduled_time"),
-                "participant_count": participant_count,
-                "estimated_hours": round(duration_hours, 2),
-                "duration_source": duration_source,
-            }
-        )
+        meeting_payload = {
+            "id": row.get("id"),
+            "title": row.get("title") or "Reunião",
+            "project_name": row.get("project_title") or "Sem projeto vinculado",
+            "scheduled_date": (
+                row["scheduled_date"].strftime("%d/%m/%Y")
+                if getattr(row.get("scheduled_date"), "strftime", None)
+                else None
+            ),
+            "scheduled_time": row.get("scheduled_time"),
+            "participant_count": participant_count,
+            "estimated_hours": round(duration_hours, 2),
+            "duration_source": duration_source,
+            "matched_employee_ids": matched_employee_ids,
+        }
+        top_meetings.append(meeting_payload)
+        meeting_details.append(meeting_payload)
 
     top_meetings.sort(key=lambda item: item["estimated_hours"], reverse=True)
     return {
@@ -538,6 +612,7 @@ def _load_meeting_section(
         "estimated_hours_total": round(estimated_total, 2),
         "member_meeting_hours": {key: round(value, 2) for key, value in member_hours.items()},
         "top_meetings": top_meetings[:8],
+        "meeting_details": meeting_details,
         "estimation_basis": "Prioriza duração real, depois planejada; sem duração estruturada, usa heurística de 1h por participante identificado.",
     }
 
@@ -551,7 +626,11 @@ def _build_member_capacity_section(
     members = []
     total_capacity = 0.0
     total_fixed = 0.0
+    total_project = 0.0
+    total_meeting = 0.0
     overloaded_count = 0
+    overloaded_total_count = 0
+    attention_total_count = 0
 
     for employee in employees:
         employee_id = _safe_int(employee.get("id"))
@@ -562,14 +641,26 @@ def _build_member_capacity_section(
         fixed_hours = _safe_float(fixed_member_hours.get(employee_id))
         project_hours = _safe_float(project_member_hours.get(employee_id))
         meeting_hours = _safe_float(meeting_member_hours.get(employee_id))
+        total_commitment = fixed_hours + project_hours + meeting_hours
         remaining_capacity = weekly_capacity - fixed_hours
+        remaining_after_total = weekly_capacity - total_commitment
         utilization_percent = round((fixed_hours / weekly_capacity) * 100, 1) if weekly_capacity else 0.0
+        total_utilization_percent = round((total_commitment / weekly_capacity) * 100, 1) if weekly_capacity else 0.0
         status = _member_status(utilization_percent)
+        total_status = _member_status(total_utilization_percent)
+        risk_label = "Crítico" if total_utilization_percent >= 100 else "Atenção" if total_utilization_percent >= 85 else "Controlado"
+
         if status == "overload":
             overloaded_count += 1
+        if total_status == "overload":
+            overloaded_total_count += 1
+        elif total_status == "attention":
+            attention_total_count += 1
 
         total_capacity += weekly_capacity
         total_fixed += fixed_hours
+        total_project += project_hours
+        total_meeting += meeting_hours
         members.append(
             {
                 "employee_id": employee_id,
@@ -578,51 +669,212 @@ def _build_member_capacity_section(
                 "weekly_capacity": round(weekly_capacity, 2),
                 "fixed_hours_weekly": round(fixed_hours, 2),
                 "remaining_capacity_weekly": round(remaining_capacity, 2),
+                "remaining_after_total_weekly": round(remaining_after_total, 2),
                 "fixed_utilization_percent": utilization_percent,
                 "project_open_hours": round(project_hours, 2),
                 "meeting_estimated_hours": round(meeting_hours, 2),
+                "total_commitment_hours": round(total_commitment, 2),
+                "total_utilization_percent": total_utilization_percent,
                 "status": status,
+                "total_status": total_status,
+                "risk_label": risk_label,
             }
         )
 
     members.sort(
         key=lambda item: (
+            item["total_utilization_percent"],
+            item["total_commitment_hours"],
             item["fixed_utilization_percent"],
-            item["project_open_hours"],
-            item["meeting_estimated_hours"],
         ),
         reverse=True,
     )
 
     total_available = total_capacity - total_fixed
     utilization_total = round((total_fixed / total_capacity) * 100, 1) if total_capacity else 0.0
+    total_commitment_hours = total_fixed + total_project + total_meeting
+    total_utilization_all = round((total_commitment_hours / total_capacity) * 100, 1) if total_capacity else 0.0
+    top_bottlenecks = [
+        {
+            "employee_id": item["employee_id"],
+            "name": item["name"],
+            "department": item["department"],
+            "total_commitment_hours": item["total_commitment_hours"],
+            "total_utilization_percent": item["total_utilization_percent"],
+            "remaining_after_total_weekly": item["remaining_after_total_weekly"],
+            "risk_label": item["risk_label"],
+            "status": item["total_status"],
+        }
+        for item in members[:8]
+    ]
     return {
         "members": members,
         "summary": {
             "employee_count": len(members),
             "total_capacity_weekly_hours": round(total_capacity, 2),
             "total_fixed_weekly_hours": round(total_fixed, 2),
+            "total_project_weekly_hours": round(total_project, 2),
+            "total_meeting_weekly_hours": round(total_meeting, 2),
             "total_available_weekly_hours": round(total_available, 2),
             "fixed_utilization_percent": utilization_total,
             "overloaded_count": overloaded_count,
+            "overloaded_total_count": overloaded_total_count,
+            "attention_total_count": attention_total_count,
+            "total_commitment_weekly_hours": round(total_commitment_hours, 2),
+            "total_utilization_percent": total_utilization_all,
         },
+        "top_bottlenecks": top_bottlenecks,
     }
 
 
-def get_routine_analysis(company_id: int) -> Dict[str, Any]:
-    db = get_db()
-    conn = db._get_connection()
+def _normalize_filter_text(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _apply_employee_filters(
+    employees: Iterable[Dict[str, Any]],
+    department: str | None = None,
+    employee_id: int | None = None,
+) -> List[Dict[str, Any]]:
+    filtered = []
+    dept_filter = _normalize_filter_text(department)
+
+    for employee in employees:
+        if employee_id and _safe_int(employee.get("id")) != employee_id:
+            continue
+        if dept_filter and _normalize_filter_text(employee.get("department")) != dept_filter:
+            continue
+        filtered.append(employee)
+    return filtered
+
+
+def _build_scope_label(
+    department: str | None,
+    employee_id: int | None,
+    employee_options: List[Dict[str, Any]],
+) -> str:
+    if employee_id:
+        match = next((item for item in employee_options if item["id"] == employee_id), None)
+        if match:
+            return f"Colaborador: {match['name']}"
+        return "Colaborador filtrado"
+    if department:
+        return f"Departamento: {department}"
+    return "Empresa inteira"
+
+
+def _build_filter_metadata(
+    employees: Iterable[Dict[str, Any]],
+    department: str | None,
+    employee_id: int | None,
+) -> Dict[str, Any]:
+    departments = sorted(
+        {
+            dept.strip()
+            for dept in (emp.get("department") or "Não informado" for emp in employees)
+            if dept.strip()
+        }
+    )
+    employee_options = [
+        {"id": _safe_int(emp.get("id")), "name": emp.get("name") or "Colaborador"}
+        for emp in employees
+        if _safe_int(emp.get("id")) is not None
+    ]
+    employee_options.sort(key=lambda item: item["name"])
+    return {
+        "department": department,
+        "employee_id": employee_id,
+        "departments": departments,
+        "employees": employee_options,
+        "scope_label": _build_scope_label(department, employee_id, employee_options),
+    }
+
+
+def _build_employee_drilldown(
+    employee_id: int | None,
+    employee_by_id: Dict[int, Dict[str, Any]],
+    routine_section: Dict[str, Any],
+    project_section: Dict[str, Any],
+    meeting_section: Dict[str, Any],
+) -> Dict[str, Any] | None:
+    if not employee_id or employee_id not in employee_by_id:
+        return None
+
+    employee = employee_by_id[employee_id]
+    routine_items = []
+    for routine in routine_section.get("all_routines", []):
+        match = next((item for item in routine.get("collaborators", []) if _safe_int(item.get("employee_id")) == employee_id), None)
+        if not match:
+            continue
+        routine_items.append({
+            "id": routine["id"],
+            "name": routine["name"],
+            "process_name": routine["process_name"],
+            "schedule_label": routine["schedule_label"],
+            "hours_per_occurrence": round(_safe_float(match.get("hours_used")), 2),
+            "weekly_equivalent_hours": round(_safe_float(match.get("hours_used")) * _schedule_weekly_factor(routine.get("schedule_type") or "weekly"), 2),
+        })
+
+    project_items = [
+        item for item in project_section.get("member_allocations", [])
+        if _safe_int(item.get("employee_id")) == employee_id
+    ]
+    project_items.sort(key=lambda item: item.get("estimated_hours", 0), reverse=True)
+
+    meeting_items = [
+        {
+            "id": item["id"],
+            "title": item["title"],
+            "project_name": item["project_name"],
+            "scheduled_date": item["scheduled_date"],
+            "scheduled_time": item["scheduled_time"],
+            "estimated_hours": item["estimated_hours"],
+            "duration_source": item["duration_source"],
+        }
+        for item in meeting_section.get("meeting_details", [])
+        if employee_id in item.get("matched_employee_ids", [])
+    ]
+    meeting_items.sort(key=lambda item: item.get("estimated_hours", 0), reverse=True)
+
+    routine_items.sort(key=lambda item: item.get("weekly_equivalent_hours", 0), reverse=True)
+    return {
+        "employee": {
+            "id": employee_id,
+            "name": employee.get("name") or "Colaborador",
+            "department": employee.get("department") or "Não informado",
+            "email": employee.get("email") or "",
+        },
+        "routines": routine_items[:10],
+        "projects": project_items[:10],
+        "meetings": meeting_items[:10],
+    }
+
+
+def get_routine_analysis(company_id: int, department: str | None = None, employee_id: int | None = None) -> Dict[str, Any]:
+    conn = _get_pg_connection()
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         employees, employee_by_id, employee_by_email = _load_employees(cursor, company_id)
+        filter_metadata = _build_filter_metadata(employees, department, employee_id)
+        filtered_employees = _apply_employee_filters(employees, department, employee_id)
         routine_section = _build_routine_section(_load_routines(cursor, company_id))
         project_section = _load_project_section(cursor, company_id)
         meeting_section = _load_meeting_section(cursor, company_id, employee_by_id, employee_by_email)
         member_section = _build_member_capacity_section(
-            employees,
+            filtered_employees,
             routine_section["member_fixed_hours"],
             project_section["member_project_hours"],
             meeting_section["member_meeting_hours"],
+        )
+
+
+        project_hours_scope = sum(
+            project_section["member_project_hours"].get(member["employee_id"], 0.0)
+            for member in member_section["members"]
+        )
+        meeting_hours_scope = sum(
+            meeting_section["member_meeting_hours"].get(member["employee_id"], 0.0)
+            for member in member_section["members"]
         )
 
         summary = {
@@ -633,6 +885,34 @@ def get_routine_analysis(company_id: int) -> Dict[str, Any]:
             "open_meeting_count": meeting_section["open_meeting_count"],
             "scheduled_meeting_count": meeting_section["scheduled_meeting_count"],
             "meeting_estimated_hours_total": meeting_section["estimated_hours_total"],
+            "scoped_project_hours": round(project_hours_scope, 2),
+            "scoped_meeting_hours": round(meeting_hours_scope, 2),
+            "scope_label": filter_metadata["scope_label"],
+        }
+
+        total_commitment = summary["total_fixed_weekly_hours"] + summary["scoped_project_hours"] + summary["scoped_meeting_hours"]
+        summary["scoped_total_commitment_hours"] = round(total_commitment, 2)
+        summary["scoped_total_utilization_percent"] = round((total_commitment / summary["total_capacity_weekly_hours"]) * 100, 1) if summary["total_capacity_weekly_hours"] else 0.0
+
+        drilldown = _build_employee_drilldown(employee_id, employee_by_id, routine_section, project_section, meeting_section)
+
+        charts = {
+            "capacity": {
+                "labels": ["Capacidade semanal", "Rotina fixa", "Saldo disponível"],
+                "values": [
+                    summary["total_capacity_weekly_hours"],
+                    summary["total_fixed_weekly_hours"],
+                    summary["total_available_weekly_hours"],
+                ],
+            },
+            "commitment": {
+                "labels": ["Rotina fixa", "Projetos", "Reuniões"],
+                "values": [
+                    summary["total_fixed_weekly_hours"],
+                    summary["scoped_project_hours"],
+                    summary["scoped_meeting_hours"],
+                ],
+            },
         }
 
         return {
@@ -655,6 +935,10 @@ def get_routine_analysis(company_id: int) -> Dict[str, Any]:
                 "top_meetings": meeting_section["top_meetings"],
                 "estimation_basis": meeting_section["estimation_basis"],
             },
+            "filters": filter_metadata,
+            "charts": charts,
+            "bottlenecks": member_section["top_bottlenecks"],
+            "drilldown": drilldown,
             "members": member_section["members"],
         }
     finally:

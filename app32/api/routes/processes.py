@@ -1,6 +1,6 @@
 import os
 
-from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort
+from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort, flash
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -249,8 +249,13 @@ def process_routines_analysis_page(company_id):
         employee_id = current_employee.id
         department = None
 
-    analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
-    return render_template('modules/processes/routine_analysis.html', company=company, analysis=analysis)
+    try:
+        analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
+        return render_template('modules/processes/routine_analysis.html', company=company, analysis=analysis)
+    except Exception:
+        current_app.logger.exception('Falha ao carregar análise de rotinas para company_id=%s', company_id)
+        flash('Não foi possível carregar a análise de rotinas agora. Tente novamente em instantes.', 'error')
+        return redirect(url_for('processes.process_routines_page', company_id=company_id))
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis', methods=['GET'])
 @permission_required('processes', 'view')
