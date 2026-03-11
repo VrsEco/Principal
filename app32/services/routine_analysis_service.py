@@ -60,6 +60,8 @@ def _get_pg_connection():
 
 DEFAULT_WEEKLY_CAPACITY = 40.0
 DEFAULT_MEETING_DURATION_HOURS = 1.0
+DEFAULT_PROJECT_ACTIVITY_HOURS = 1.0
+DEFAULT_PROCESS_INSTANCE_HOURS = 2.0
 _CLOSED_STATUSES = {"completed", "done", "cancelled", "canceled", "archived"}
 _CLOSED_STAGES = {"completed", "done", "cancelled", "canceled", "archived"}
 
@@ -230,6 +232,19 @@ def _is_open_work_item(status: Any, stage: Any = None) -> bool:
     normalized_status = str(status or "").strip().lower()
     normalized_stage = str(stage or "").strip().lower()
     return normalized_status not in _CLOSED_STATUSES and normalized_stage not in _CLOSED_STAGES
+
+
+def _resolve_total_estimate(raw_estimate: Any, fallback_hours: float) -> float:
+    estimated = _safe_float(raw_estimate)
+    return estimated if estimated > 0 else fallback_hours
+
+
+def _distribute_hours(total_hours: float, employee_ids: List[int]) -> Dict[int, float]:
+    unique_employee_ids = [employee_id for employee_id in dict.fromkeys(employee_ids) if employee_id]
+    if not unique_employee_ids:
+        return {}
+    per_member = total_hours / len(unique_employee_ids)
+    return {employee_id: per_member for employee_id in unique_employee_ids}
 
 
 def _normalize_participant_items(payload: Any) -> List[Dict[str, Any]]:
@@ -506,10 +521,23 @@ def _load_project_section(cursor, company_id: int) -> Dict[str, Any]:
         task_worked = 0.0
 
         if assigned_rows:
+            positive_estimated_total = sum(
+                _safe_float(assigned.get("estimated_hours"))
+                for assigned in assigned_rows
+                if _safe_float(assigned.get("estimated_hours")) > 0
+            )
+            fallback_total = _resolve_total_estimate(row.get("estimated_hours"), DEFAULT_PROJECT_ACTIVITY_HOURS)
+            fallback_distribution = _distribute_hours(
+                fallback_total,
+                [_safe_int(assigned.get("employee_id")) for assigned in assigned_rows],
+            )
+
             for assigned in assigned_rows:
-                estimated = _safe_float(assigned.get("estimated_hours"))
                 worked = _safe_float(assigned.get("worked_hours"))
                 employee_id = _safe_int(assigned.get("employee_id"))
+                estimated = _safe_float(assigned.get("estimated_hours"))
+                if positive_estimated_total <= 0 and employee_id:
+                    estimated = fallback_distribution.get(employee_id, 0.0)
                 task_estimated += estimated
                 task_worked += worked
                 if employee_id:
@@ -523,8 +551,11 @@ def _load_project_section(cursor, company_id: int) -> Dict[str, Any]:
                         "estimated_hours": round(estimated, 2),
                         "worked_hours": round(worked, 2),
                     })
+
+            if positive_estimated_total <= 0 and task_estimated <= 0:
+                task_estimated = fallback_total
         else:
-            task_estimated = _safe_float(row.get("estimated_hours"))
+            task_estimated = _resolve_total_estimate(row.get("estimated_hours"), DEFAULT_PROJECT_ACTIVITY_HOURS)
             task_worked = _safe_float(row.get("worked_hours"))
             employee_id = _safe_int(row.get("employee_id"))
             if employee_id:
@@ -576,6 +607,189 @@ def _load_project_section(cursor, company_id: int) -> Dict[str, Any]:
         "member_project_hours": {key: round(value, 2) for key, value in member_hours.items()},
         "top_projects": top_projects[:8],
         "member_allocations": member_allocations,
+        "estimation_basis": "Prioriza horas previstas informadas; sem definição, aplica heurística de 1h por atividade aberta.",
+    }
+
+
+def _extract_process_employee_ids(row: Dict[str, Any]) -> List[int]:
+    employee_ids: List[int] = []
+    for key in ("owner_employee_id", "responsible_id", "executor_id"):
+        employee_id = _safe_int(row.get(key))
+        if employee_id:
+            employee_ids.append(employee_id)
+
+    for item in _parse_json_payload(row.get("collaborators_json")):
+        if not isinstance(item, dict):
+            continue
+        employee_id = _safe_int(item.get("employee_id") or item.get("id"))
+        if employee_id:
+            employee_ids.append(employee_id)
+
+    return [employee_id for employee_id in dict.fromkeys(employee_ids)]
+
+
+def _load_process_section(cursor, company_id: int) -> Dict[str, Any]:
+    cursor.execute(
+        """
+        SELECT
+            pi.id,
+            pi.process_id,
+            pi.title,
+            pi.status,
+            pi.priority,
+            pi.estimated_hours,
+            pi.actual_hours,
+            pi.worked_hours,
+            pi.owner_employee_id,
+            pi.responsible_id,
+            pi.executor_id,
+            pi.collaborators_json,
+            p.name AS process_name,
+            p.code AS process_code
+        FROM process_instances pi
+        LEFT JOIN processes p
+            ON p.id = pi.process_id
+           AND p.company_id = pi.company_id
+        WHERE pi.company_id = %s
+        ORDER BY pi.id DESC
+        """,
+        (company_id,),
+    )
+    instance_rows = [dict(row) for row in cursor.fetchall()]
+
+    cursor.execute(
+        """
+        SELECT
+            pic.process_instance_id,
+            pic.employee_id,
+            e.name AS employee_name,
+            pic.estimated_hours,
+            pic.worked_hours
+        FROM process_instance_collaborators pic
+        JOIN process_instances pi
+            ON pi.id = pic.process_instance_id
+           AND pi.company_id = %s
+        LEFT JOIN employees e
+            ON e.id = pic.employee_id
+           AND e.company_id = pi.company_id
+        WHERE COALESCE(pic.is_deleted, FALSE) = FALSE
+        ORDER BY pic.process_instance_id, e.name
+        """,
+        (company_id,),
+    )
+    collaborator_rows = [dict(row) for row in cursor.fetchall()]
+    collaborator_map: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for row in collaborator_rows:
+        instance_id = _safe_int(row.get("process_instance_id"))
+        if instance_id is not None:
+            collaborator_map[instance_id].append(row)
+
+    process_totals: Dict[int, Dict[str, Any]] = {}
+    member_hours = defaultdict(float)
+    member_allocations = []
+    open_instance_count = 0
+    estimated_total = 0.0
+    worked_total = 0.0
+
+    for row in instance_rows:
+        if not _is_open_work_item(row.get("status")):
+            continue
+
+        open_instance_count += 1
+        instance_id = _safe_int(row.get("id"))
+        process_id = _safe_int(row.get("process_id")) or 0
+        assigned_rows = collaborator_map.get(instance_id or -1, [])
+        instance_estimated = 0.0
+        instance_worked = _safe_float(row.get("actual_hours") or row.get("worked_hours"))
+        fallback_total = _resolve_total_estimate(row.get("estimated_hours"), DEFAULT_PROCESS_INSTANCE_HOURS)
+
+        if assigned_rows:
+            positive_estimated_total = sum(
+                _safe_float(assigned.get("estimated_hours"))
+                for assigned in assigned_rows
+                if _safe_float(assigned.get("estimated_hours")) > 0
+            )
+            fallback_distribution = _distribute_hours(
+                fallback_total,
+                [_safe_int(assigned.get("employee_id")) for assigned in assigned_rows],
+            )
+
+            for assigned in assigned_rows:
+                employee_id = _safe_int(assigned.get("employee_id"))
+                estimated = _safe_float(assigned.get("estimated_hours"))
+                worked = _safe_float(assigned.get("worked_hours"))
+                if positive_estimated_total <= 0 and employee_id:
+                    estimated = fallback_distribution.get(employee_id, 0.0)
+                instance_estimated += estimated
+                if employee_id:
+                    member_hours[employee_id] += estimated
+                    member_allocations.append({
+                        "employee_id": employee_id,
+                        "process_id": process_id,
+                        "process_name": row.get("process_name") or "Processo",
+                        "instance_id": instance_id,
+                        "instance_title": row.get("title") or "Instância",
+                        "estimated_hours": round(estimated, 2),
+                        "worked_hours": round(worked, 2),
+                    })
+
+            if positive_estimated_total <= 0 and instance_estimated <= 0:
+                instance_estimated = fallback_total
+        else:
+            instance_estimated = fallback_total
+            fallback_employee_ids = _extract_process_employee_ids(row)
+            fallback_distribution = _distribute_hours(instance_estimated, fallback_employee_ids)
+            for employee_id, estimated in fallback_distribution.items():
+                member_hours[employee_id] += estimated
+                member_allocations.append({
+                    "employee_id": employee_id,
+                    "process_id": process_id,
+                    "process_name": row.get("process_name") or "Processo",
+                    "instance_id": instance_id,
+                    "instance_title": row.get("title") or "Instância",
+                    "estimated_hours": round(estimated, 2),
+                    "worked_hours": 0.0,
+                })
+
+        estimated_total += instance_estimated
+        worked_total += instance_worked
+
+        process_entry = process_totals.setdefault(
+            process_id,
+            {
+                "process_id": process_id,
+                "process_name": row.get("process_name") or "Processo",
+                "process_code": row.get("process_code"),
+                "instance_count": 0,
+                "estimated_hours": 0.0,
+                "worked_hours": 0.0,
+            },
+        )
+        process_entry["instance_count"] += 1
+        process_entry["estimated_hours"] += instance_estimated
+        process_entry["worked_hours"] += instance_worked
+
+    top_processes = sorted(
+        (
+            {
+                **item,
+                "estimated_hours": round(item["estimated_hours"], 2),
+                "worked_hours": round(item["worked_hours"], 2),
+            }
+            for item in process_totals.values()
+        ),
+        key=lambda item: item["estimated_hours"],
+        reverse=True,
+    )
+
+    return {
+        "open_instance_count": open_instance_count,
+        "estimated_hours_total": round(estimated_total, 2),
+        "worked_hours_total": round(worked_total, 2),
+        "member_process_hours": {key: round(value, 2) for key, value in member_hours.items()},
+        "top_processes": top_processes[:8],
+        "member_allocations": member_allocations,
+        "estimation_basis": "Prioriza horas previstas informadas; sem definição, aplica heurística de 2h por instância de processo aberta.",
     }
 
 
@@ -684,12 +898,14 @@ def _build_member_capacity_section(
     employees: Iterable[Dict[str, Any]],
     fixed_member_hours: Dict[int, float],
     project_member_hours: Dict[int, float],
+    process_member_hours: Dict[int, float],
     meeting_member_hours: Dict[int, float],
 ) -> Dict[str, Any]:
     members = []
     total_capacity = 0.0
     total_fixed = 0.0
     total_project = 0.0
+    total_process = 0.0
     total_meeting = 0.0
     overloaded_count = 0
     overloaded_total_count = 0
@@ -703,8 +919,9 @@ def _build_member_capacity_section(
         weekly_capacity = _resolve_capacity(employee.get("weekly_hours"))
         fixed_hours = _safe_float(fixed_member_hours.get(employee_id))
         project_hours = _safe_float(project_member_hours.get(employee_id))
+        process_hours = _safe_float(process_member_hours.get(employee_id))
         meeting_hours = _safe_float(meeting_member_hours.get(employee_id))
-        total_commitment = fixed_hours + project_hours + meeting_hours
+        total_commitment = fixed_hours + project_hours + process_hours + meeting_hours
         remaining_capacity = weekly_capacity - fixed_hours
         remaining_after_total = weekly_capacity - total_commitment
         utilization_percent = round((fixed_hours / weekly_capacity) * 100, 1) if weekly_capacity else 0.0
@@ -723,6 +940,7 @@ def _build_member_capacity_section(
         total_capacity += weekly_capacity
         total_fixed += fixed_hours
         total_project += project_hours
+        total_process += process_hours
         total_meeting += meeting_hours
         members.append(
             {
@@ -735,6 +953,7 @@ def _build_member_capacity_section(
                 "remaining_after_total_weekly": round(remaining_after_total, 2),
                 "fixed_utilization_percent": utilization_percent,
                 "project_open_hours": round(project_hours, 2),
+                "process_open_hours": round(process_hours, 2),
                 "meeting_estimated_hours": round(meeting_hours, 2),
                 "total_commitment_hours": round(total_commitment, 2),
                 "total_utilization_percent": total_utilization_percent,
@@ -755,7 +974,7 @@ def _build_member_capacity_section(
 
     total_available = total_capacity - total_fixed
     utilization_total = round((total_fixed / total_capacity) * 100, 1) if total_capacity else 0.0
-    total_commitment_hours = total_fixed + total_project + total_meeting
+    total_commitment_hours = total_fixed + total_project + total_process + total_meeting
     total_utilization_all = round((total_commitment_hours / total_capacity) * 100, 1) if total_capacity else 0.0
     top_bottlenecks = [
         {
@@ -777,6 +996,7 @@ def _build_member_capacity_section(
             "total_capacity_weekly_hours": round(total_capacity, 2),
             "total_fixed_weekly_hours": round(total_fixed, 2),
             "total_project_weekly_hours": round(total_project, 2),
+            "total_process_weekly_hours": round(total_process, 2),
             "total_meeting_weekly_hours": round(total_meeting, 2),
             "total_available_weekly_hours": round(total_available, 2),
             "fixed_utilization_percent": utilization_total,
@@ -1001,6 +1221,58 @@ def _apply_scope_to_project_section(project_section: Dict[str, Any], scoped_empl
     }
 
 
+def _apply_scope_to_process_section(process_section: Dict[str, Any], scoped_employee_ids: set[int]) -> Dict[str, Any]:
+    if not scoped_employee_ids:
+        return {**process_section, "top_processes": [], "open_instance_count": 0, "estimated_hours_total": 0.0, "worked_hours_total": 0.0}
+
+    allocations = [
+        item
+        for item in process_section.get("member_allocations", [])
+        if _safe_int(item.get("employee_id")) in scoped_employee_ids
+    ]
+    process_totals: Dict[int, Dict[str, Any]] = {}
+    instance_ids = set()
+
+    for item in allocations:
+        instance_id = _safe_int(item.get("instance_id"))
+        if instance_id is not None:
+            instance_ids.add(instance_id)
+        process_id = _safe_int(item.get("process_id")) or 0
+        process_entry = process_totals.setdefault(
+            process_id,
+            {
+                "process_id": process_id,
+                "process_name": item.get("process_name") or "Processo",
+                "instance_ids": set(),
+                "estimated_hours": 0.0,
+                "worked_hours": 0.0,
+            },
+        )
+        if instance_id is not None:
+            process_entry["instance_ids"].add(instance_id)
+        process_entry["estimated_hours"] += _safe_float(item.get("estimated_hours"))
+        process_entry["worked_hours"] += _safe_float(item.get("worked_hours"))
+
+    top_processes = []
+    for item in process_totals.values():
+        top_processes.append({
+            "process_id": item["process_id"],
+            "process_name": item["process_name"],
+            "instance_count": len(item["instance_ids"]),
+            "estimated_hours": round(item["estimated_hours"], 2),
+            "worked_hours": round(item["worked_hours"], 2),
+        })
+    top_processes.sort(key=lambda item: item["estimated_hours"], reverse=True)
+
+    return {
+        **process_section,
+        "open_instance_count": len(instance_ids),
+        "estimated_hours_total": round(sum(_safe_float(item.get("estimated_hours")) for item in allocations), 2),
+        "worked_hours_total": round(sum(_safe_float(item.get("worked_hours")) for item in allocations), 2),
+        "top_processes": top_processes[:8],
+    }
+
+
 def _apply_scope_to_meeting_section(meeting_section: Dict[str, Any], scoped_employee_ids: set[int]) -> Dict[str, Any]:
     if not scoped_employee_ids:
         return {**meeting_section, "top_meetings": [], "meeting_details": [], "open_meeting_count": 0, "scheduled_meeting_count": 0, "estimated_hours_total": 0.0}
@@ -1044,10 +1316,21 @@ def _build_employee_drilldown(
     employee_by_id: Dict[int, Dict[str, Any]],
     routine_section: Dict[str, Any],
     project_section: Dict[str, Any],
+    process_section: Dict[str, Any],
     meeting_section: Dict[str, Any],
 ) -> Dict[str, Any] | None:
     if not employee_id or employee_id not in employee_by_id:
         return None
+
+    def _normalize_employee_ids(values: Any) -> List[int]:
+        if not isinstance(values, (list, tuple, set)):
+            return []
+        normalized_ids: List[int] = []
+        for value in values:
+            normalized = _safe_int(value)
+            if normalized is not None:
+                normalized_ids.append(normalized)
+        return normalized_ids
 
     employee = employee_by_id[employee_id]
     routine_groups_map: Dict[str, Dict[str, Any]] = {}
@@ -1078,10 +1361,10 @@ def _build_employee_drilldown(
         hours_per_occurrence = round(_safe_float(match.get("hours_used")), 2)
         group["total_hours"] += hours_per_occurrence
         group["items"].append({
-            "id": routine["id"],
-            "name": routine["name"],
-            "process_name": routine["process_name"],
-            "schedule_label": routine["schedule_label"],
+            "id": routine.get("id"),
+            "name": routine.get("name") or "Rotina sem nome",
+            "process_name": routine.get("process_name") or "Sem processo vinculado",
+            "schedule_label": routine.get("schedule_label") or _schedule_label(schedule_type),
             "schedule_description": routine.get("schedule_description") or _describe_schedule(schedule_type, routine.get("schedule_value")),
             "hours_per_occurrence": hours_per_occurrence,
             "hours_label": _humanize_hours(hours_per_occurrence),
@@ -1105,18 +1388,24 @@ def _build_employee_drilldown(
     ]
     project_items.sort(key=lambda item: item.get("estimated_hours", 0), reverse=True)
 
+    process_items = [
+        item for item in process_section.get("member_allocations", [])
+        if _safe_int(item.get("employee_id")) == employee_id
+    ]
+    process_items.sort(key=lambda item: item.get("estimated_hours", 0), reverse=True)
+
     meeting_items = [
         {
-            "id": item["id"],
-            "title": item["title"],
-            "project_name": item["project_name"],
-            "scheduled_date": item["scheduled_date"],
-            "scheduled_time": item["scheduled_time"],
-            "estimated_hours": item["estimated_hours"],
-            "duration_source": item["duration_source"],
+            "id": item.get("id"),
+            "title": item.get("title") or "Reunião",
+            "project_name": item.get("project_name") or "Sem projeto vinculado",
+            "scheduled_date": item.get("scheduled_date"),
+            "scheduled_time": item.get("scheduled_time"),
+            "estimated_hours": _safe_float(item.get("estimated_hours")),
+            "duration_source": item.get("duration_source") or "heuristic",
         }
         for item in meeting_section.get("meeting_details", [])
-        if employee_id in item.get("matched_employee_ids", [])
+        if employee_id in _normalize_employee_ids(item.get("matched_employee_ids"))
     ]
     meeting_items.sort(key=lambda item: item.get("estimated_hours", 0), reverse=True)
 
@@ -1130,6 +1419,7 @@ def _build_employee_drilldown(
         "routine_groups": routine_groups,
         "routines": [item for group in routine_groups for item in group["items"]][:10],
         "projects": project_items[:10],
+        "processes": process_items[:10],
         "meetings": meeting_items[:10],
     }
 
@@ -1144,14 +1434,17 @@ def get_routine_analysis(company_id: int, department: str | None = None, employe
         filter_metadata = _build_filter_metadata(employees, department, employee_id)
         routine_section = _build_routine_section(_load_routines(cursor, company_id))
         project_section = _load_project_section(cursor, company_id)
+        process_section = _load_process_section(cursor, company_id)
         meeting_section = _load_meeting_section(cursor, company_id, employee_by_id, employee_by_email)
         scoped_routine_section = _apply_scope_to_routine_section(routine_section, scoped_employee_ids) if (department or employee_id) else routine_section
         scoped_project_section = _apply_scope_to_project_section(project_section, scoped_employee_ids) if (department or employee_id) else project_section
+        scoped_process_section = _apply_scope_to_process_section(process_section, scoped_employee_ids) if (department or employee_id) else process_section
         scoped_meeting_section = _apply_scope_to_meeting_section(meeting_section, scoped_employee_ids) if (department or employee_id) else meeting_section
         member_section = _build_member_capacity_section(
             filtered_employees,
             routine_section["member_fixed_hours"],
             project_section["member_project_hours"],
+            process_section["member_process_hours"],
             meeting_section["member_meeting_hours"],
         )
 
@@ -1163,25 +1456,32 @@ def get_routine_analysis(company_id: int, department: str | None = None, employe
             meeting_section["member_meeting_hours"].get(member["employee_id"], 0.0)
             for member in member_section["members"]
         )
+        process_hours_scope = sum(
+            process_section["member_process_hours"].get(member["employee_id"], 0.0)
+            for member in member_section["members"]
+        )
 
         summary = {
             **member_section["summary"],
             "routine_count": scoped_routine_section["routine_count"],
             "open_project_hours": project_section["estimated_hours_total"],
             "open_project_task_count": project_section["open_task_count"],
+            "open_process_hours": process_section["estimated_hours_total"],
+            "open_process_instance_count": process_section["open_instance_count"],
             "open_meeting_count": meeting_section["open_meeting_count"],
             "scheduled_meeting_count": meeting_section["scheduled_meeting_count"],
             "meeting_estimated_hours_total": meeting_section["estimated_hours_total"],
             "scoped_project_hours": round(project_hours_scope, 2),
+            "scoped_process_hours": round(process_hours_scope, 2),
             "scoped_meeting_hours": round(meeting_hours_scope, 2),
             "scope_label": filter_metadata["scope_label"],
         }
 
-        total_commitment = summary["total_fixed_weekly_hours"] + summary["scoped_project_hours"] + summary["scoped_meeting_hours"]
+        total_commitment = summary["total_fixed_weekly_hours"] + summary["scoped_project_hours"] + summary["scoped_process_hours"] + summary["scoped_meeting_hours"]
         summary["scoped_total_commitment_hours"] = round(total_commitment, 2)
         summary["scoped_total_utilization_percent"] = round((total_commitment / summary["total_capacity_weekly_hours"]) * 100, 1) if summary["total_capacity_weekly_hours"] else 0.0
 
-        drilldown = _build_employee_drilldown(employee_id, employee_by_id, routine_section, project_section, meeting_section)
+        drilldown = _build_employee_drilldown(employee_id, employee_by_id, routine_section, project_section, process_section, meeting_section)
 
         charts = {
             "capacity": {
@@ -1193,10 +1493,11 @@ def get_routine_analysis(company_id: int, department: str | None = None, employe
                 ],
             },
             "commitment": {
-                "labels": ["Rotina fixa", "Projetos", "Reuniões"],
+                "labels": ["Rotina fixa", "Projetos", "Processos", "Reuniões"],
                 "values": [
                     summary["total_fixed_weekly_hours"],
                     summary["scoped_project_hours"],
+                    summary["scoped_process_hours"],
                     summary["scoped_meeting_hours"],
                 ],
             },
@@ -1214,6 +1515,14 @@ def get_routine_analysis(company_id: int, department: str | None = None, employe
                 "estimated_hours_total": scoped_project_section["estimated_hours_total"],
                 "worked_hours_total": scoped_project_section["worked_hours_total"],
                 "top_projects": scoped_project_section["top_projects"],
+                "estimation_basis": scoped_project_section["estimation_basis"],
+            },
+            "processes": {
+                "open_instance_count": scoped_process_section["open_instance_count"],
+                "estimated_hours_total": scoped_process_section["estimated_hours_total"],
+                "worked_hours_total": scoped_process_section["worked_hours_total"],
+                "top_processes": scoped_process_section["top_processes"],
+                "estimation_basis": scoped_process_section["estimation_basis"],
             },
             "meetings": {
                 "open_meeting_count": scoped_meeting_section["open_meeting_count"],
