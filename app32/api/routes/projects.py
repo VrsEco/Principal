@@ -2,22 +2,39 @@ from flask import Blueprint, render_template, session, jsonify, abort, request, 
 from models import Company
 from flask_login import current_user
 
-from utils.permissions import get_default_company_id, permission_required, has_company_full_access, is_collaborator_in_company
+from utils.permissions import get_default_company_id, permission_required, has_company_full_access, is_collaborator_in_company, has_permission
 
 projects_bp = Blueprint('projects', __name__)
 
 def _get_project_page_with_access(project_id):
-    from models import Project
+    from models import Project, Company
     from api.resources.project import apply_project_employee_filter
 
     company = get_active_company()
     company_id = company.id if company else None
-    if not company_id:
-        return None, None
 
-    query = Project.query.filter_by(id=project_id, company_id=company_id)
-    query = apply_project_employee_filter(query, company_id)
-    return query.first_or_404(), company
+    if company_id:
+        query = Project.query.filter_by(id=project_id, company_id=company_id)
+        query = apply_project_employee_filter(query, company_id)
+        project = query.first()
+        if project:
+            return project, company
+
+    base_project = Project.query.filter_by(id=project_id).first_or_404()
+    fallback_company_id = base_project.company_id
+
+    if not has_permission(fallback_company_id, 'projects', 'view'):
+        abort(403, description='Acesso negado ao projeto solicitado.')
+
+    query = Project.query.filter_by(id=project_id, company_id=fallback_company_id)
+    query = apply_project_employee_filter(query, fallback_company_id)
+    project = query.first_or_404()
+
+    fallback_company = Company.query.get(fallback_company_id)
+    if fallback_company:
+        session['active_company_id'] = fallback_company.id
+
+    return project, fallback_company
 
 def get_active_company():
     from models import Employee, Company
