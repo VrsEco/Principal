@@ -602,9 +602,11 @@
     const capacityData = {{ analysis.charts.capacity | tojson }};
     const commitmentData = {{ analysis.charts.commitment | tojson }};
     const allEmployees = {{ analysis.filters.all_employees | tojson }};
+    const filterForm = document.getElementById('routineAnalysisFilters');
     const departmentSelect = document.getElementById('analysisDepartmentFilter');
     const employeeSelect = document.getElementById('analysisEmployeeFilter');
-    const selectedEmployeeId = {{ analysis.filters.employee_id | tojson }};
+    let currentSelectedEmployeeId = {{ analysis.filters.employee_id | tojson }};
+    currentSelectedEmployeeId = currentSelectedEmployeeId ? String(currentSelectedEmployeeId) : '';
 
     const normalizeDepartment = (value) => {
       const normalized = String(value || '').trim().toLowerCase();
@@ -621,7 +623,7 @@
       const availableEmployees = departmentValue
         ? allEmployees.filter((employee) => normalizeDepartment(employee.department) === normalizedDepartment)
         : allEmployees;
-      const currentValue = employeeSelect.value || (selectedEmployeeId ? String(selectedEmployeeId) : '');
+      const currentValue = employeeSelect.value || currentSelectedEmployeeId || '';
       const hasCurrentValue = availableEmployees.some((employee) => String(employee.id) === String(currentValue));
 
       employeeSelect.innerHTML = '';
@@ -643,12 +645,36 @@
       if (!hasCurrentValue) {
         employeeSelect.value = '';
       }
+      currentSelectedEmployeeId = employeeSelect.value || '';
     };
 
     if (departmentSelect && employeeSelect) {
       renderEmployeeOptions();
+      employeeSelect.addEventListener('change', () => {
+        currentSelectedEmployeeId = employeeSelect.value || '';
+      });
       departmentSelect.addEventListener('change', () => {
         renderEmployeeOptions();
+      });
+    }
+
+    if (filterForm) {
+      filterForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const targetUrl = new URL(window.location.href);
+        targetUrl.search = '';
+
+        const departmentValue = departmentSelect ? departmentSelect.value.trim() : '';
+        const employeeValue = employeeSelect ? employeeSelect.value.trim() : '';
+
+        if (departmentValue) {
+          targetUrl.searchParams.set('department', departmentValue);
+        }
+        if (employeeValue) {
+          targetUrl.searchParams.set('employee_id', employeeValue);
+        }
+
+        window.location.href = targetUrl.toString();
       });
     }
 
