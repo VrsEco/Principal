@@ -5,13 +5,21 @@
 {% block workspace_content %}
 {% set filter_active = analysis.filters.department or analysis.filters.employee_id %}
 <div class="workspace-header analysis-header">
-  <div>
+  <div class="analysis-header-main">
     <div class="eyebrow">Gestão da Rotina</div>
     <h1 class="text-h1">Análise da Rotina</h1>
     <p class="text-secondary">
       Consolidação das atividades fixas, da capacidade prevista da equipe e do comprometimento adicional com projetos e reuniões.
     </p>
     <p class="text-muted">Atualizado em {{ analysis.generated_at }}</p>
+    <p class="text-muted">Escopo atual: <strong>{{ analysis.summary.scope_label }}</strong></p>
+  </div>
+
+  <div class="analysis-header-side">
+    <div class="header-actions analysis-actions">
+      <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_page', company_id=company.id) }}">← Voltar para Rotinas</a>
+      <a class="btn btn-primary" href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}">+ Nova rotina</a>
+    </div>
 
     <form class="analysis-filters" method="get" id="routineAnalysisFilters">
       <div class="filter-field">
@@ -37,12 +45,6 @@
         <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id) }}">Limpar</a>
       </div>
     </form>
-    <p class="text-muted">Escopo atual: <strong>{{ analysis.summary.scope_label }}</strong></p>
-  </div>
-
-  <div class="header-actions analysis-actions">
-    <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_page', company_id=company.id) }}">← Voltar para Rotinas</a>
-    <a class="btn btn-primary" href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}">+ Nova rotina</a>
   </div>
 </div>
 
@@ -425,15 +427,17 @@
 
 <style>
   .analysis-header { display:flex; justify-content:space-between; gap:1.5rem; align-items:flex-start; margin-bottom:1.5rem; }
-  .analysis-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+  .analysis-header-main { flex:1 1 auto; min-width:0; }
+  .analysis-header-side { flex:0 0 auto; min-width:320px; display:flex; flex-direction:column; align-items:flex-end; gap:1rem; }
+  .analysis-actions { display:flex; gap:.75rem; flex-wrap:wrap; justify-content:flex-end; }
   .eyebrow { font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; margin-bottom:.35rem; }
   .text-muted { color:var(--text-tertiary); font-size:.85rem; margin-top:.35rem; }
   .analysis-grid { display:grid; gap:1rem; margin-bottom:1rem; }
-  .analysis-filters { display:flex; flex-wrap:wrap; gap:1rem; margin:.75rem 0 1rem; align-items:flex-end; }
+  .analysis-filters { display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-end; }
   .analysis-filters label { display:block; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); font-weight:700; margin-bottom:.35rem; }
   .analysis-filters select { min-width:200px; padding:.55rem .75rem; border:1px solid var(--border); border-radius:10px; background:var(--surface-primary); }
-  .filter-field { display:flex; flex-direction:column; }
-  .filter-actions { display:flex; gap:.6rem; flex-wrap:wrap; }
+  .filter-field { display:flex; flex-direction:column; align-items:flex-start; }
+  .filter-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
   .analysis-charts .chart-wrap { min-height:260px; }
   .summary-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
   .two-columns { grid-template-columns:repeat(2, minmax(0, 1fr)); }
@@ -487,7 +491,8 @@
   @media (max-width: 768px) {
     .analysis-header, .summary-grid, .two-columns, .three-columns, .capacity-stats, .mini-stats { grid-template-columns:1fr; display:grid; }
     .analysis-header { display:grid; }
-    .analysis-actions { width:100%; }
+    .analysis-header-side { min-width:0; align-items:stretch; }
+    .analysis-actions, .analysis-filters, .filter-actions { width:100%; justify-content:flex-start; }
   }
 </style>
 
