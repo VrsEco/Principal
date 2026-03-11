@@ -1,6 +1,6 @@
 import json
 
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, send_file, url_for
 from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, User, Company, Employee, Project, ProjectTask, Process, ProcessInstance
@@ -516,6 +516,52 @@ def project_task_view(task_id):
                            project=project,
                            company=company)
 
+@my_work_bp.route('/my-work/api/project-task/<int:task_id>/summary-options')
+@login_required
+def project_task_summary_options(task_id):
+    from services.project_responsible_summary_service import build_summary_hint, build_summary_options, get_task_responsible_user
+
+    task = ProjectTask.query.get_or_404(task_id)
+    project = Project.query.get(task.project_id) if task.project_id else None
+    company_id = project.company_id if project else None
+    if not _user_has_company_access(company_id):
+        return jsonify({'success': False, 'message': 'Acesso negado'}), 403
+
+    target_user = get_task_responsible_user(task)
+    return jsonify({
+        'success': True,
+        'title': 'Resumo da Atividade',
+        'options': build_summary_options(
+            target_user,
+            url_for('my_work.project_task_summary_pdf', task_id=task.id),
+            url_for('my_work.send_project_task_summary', task_id=task.id),
+        ),
+        'hint': build_summary_hint(target_user),
+    })
+
+
+@my_work_bp.route('/my-work/api/project-task/<int:task_id>/summary.pdf')
+@login_required
+def project_task_summary_pdf(task_id):
+    from io import BytesIO
+    from services.project_summary_pdf_service import generate_task_summary_pdf_bytes
+
+    task = ProjectTask.query.get_or_404(task_id)
+    project = Project.query.get(task.project_id) if task.project_id else None
+    company_id = project.company_id if project else None
+    if not _user_has_company_access(company_id):
+        return jsonify({'success': False, 'message': 'Acesso negado'}), 403
+
+    pdf_bytes = generate_task_summary_pdf_bytes(task)
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'resumo-atividade-{task.code or task.id}.pdf',
+    )
+
+
+@my_work_bp.route('/my-work/api/project-task/<int:task_id>/summary', methods=['POST'])
 @my_work_bp.route('/my-work/api/project-task/<int:task_id>/send-summary', methods=['POST'])
 @login_required
 def send_project_task_summary(task_id):
@@ -527,13 +573,16 @@ def send_project_task_summary(task_id):
 
     from services.project_responsible_summary_service import send_task_summary_to_responsible
 
-    result = send_task_summary_to_responsible(task)
+    payload = request.get_json(silent=True) or {}
+    preferred_channel = (payload.get('channel') or '').strip().lower() or None
+    result = send_task_summary_to_responsible(task, preferred_channel=preferred_channel)
     if not result.get('success'):
         return jsonify({'success': False, 'message': result.get('error') or 'Falha ao enviar resumo', 'result': result}), 400
 
+    channel_label = {'email': 'E-mail', 'whatsapp': 'WhatsApp'}.get(result.get('delivery_channel'), result.get('delivery_channel'))
     return jsonify({
         'success': True,
-        'message': f"Resumo da atividade enviado com sucesso via {result.get('delivery_channel')}",
+        'message': f"Resumo da atividade enviado com sucesso via {channel_label}",
         'result': result,
     })
 

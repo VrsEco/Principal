@@ -51,8 +51,8 @@
             {% endif %}
         </div>
         <div class="header-actions" id="mainHeaderActions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button type="button" class="btn btn-secondary btn-sm" id="btnSendTaskSummary" onclick="sendTaskSummaryToResponsible()">
-                📨 Enviar resumo ao responsável
+            <button type="button" class="btn btn-secondary btn-sm" id="btnTaskSummaryMenu" onclick="openTaskSummaryMenu(event)">
+                🧾 Resumo
             </button>
             {% if task.status != 'completed' %}
             <button type="button" class="btn btn-outline btn-sm" onclick="showFinalizarModal()">
@@ -939,28 +939,36 @@
         }
     }
 
-    async function sendTaskSummaryToResponsible() {
-        const button = document.getElementById('btnSendTaskSummary');
+    let activeTaskSummaryMenu = null;
+
+    function closeTaskSummaryMenu() {
+        if (activeTaskSummaryMenu) {
+            activeTaskSummaryMenu.remove();
+            activeTaskSummaryMenu = null;
+        }
+    }
+
+    async function sendTaskSummary(channel, actionUrl, button) {
         const originalText = button ? button.textContent : '';
         if (button) {
             button.disabled = true;
             button.textContent = 'Enviando...';
         }
-
         try {
-            const response = await fetch(`/my-work/api/project-task/${TASK_ID}/send-summary`, {
+            const response = await fetch(actionUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel })
             });
             const result = await response.json();
             if (result.success) {
-                showToast(result.message || 'Resumo da atividade enviado com sucesso.', 'success');
+                showToast(result.message || 'Resumo enviado com sucesso.', 'success');
             } else {
-                showToast(result.message || 'Falha ao enviar resumo da atividade.', 'error');
+                showToast(result.message || 'Falha ao enviar resumo.', 'error');
             }
         } catch (error) {
             console.error(error);
-            showToast('Erro de conexão ao enviar resumo da atividade.', 'error');
+            showToast('Erro de conexão ao enviar resumo.', 'error');
         } finally {
             if (button) {
                 button.disabled = false;
@@ -968,6 +976,66 @@
             }
         }
     }
+
+    async function openTaskSummaryMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeTaskSummaryMenu();
+        const anchor = event.currentTarget;
+        try {
+            const response = await fetch(`/my-work/api/project-task/${TASK_ID}/summary-options`);
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                showToast(payload.message || 'Não foi possível carregar as opções de resumo.', 'error');
+                return;
+            }
+
+            const menu = document.createElement('div');
+            menu.style.cssText = 'position:fixed; min-width:180px; background:#fff; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 16px 48px rgba(15,23,42,0.18); padding:8px; z-index:26000;';
+            payload.options.forEach((option) => {
+                if (option.kind === 'download') {
+                    const link = document.createElement('a');
+                    link.href = option.url;
+                    link.textContent = option.label;
+                    link.style.cssText = 'display:block; padding:10px 12px; border-radius:8px; text-decoration:none; color:#0f172a; font-weight:600;';
+                    link.addEventListener('click', closeTaskSummaryMenu);
+                    menu.appendChild(link);
+                    return;
+                }
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = option.label;
+                btn.style.cssText = 'display:block; width:100%; padding:10px 12px; border:none; background:#fff; text-align:left; border-radius:8px; color:#0f172a; font-weight:600; cursor:pointer;';
+                btn.addEventListener('click', async () => {
+                    closeTaskSummaryMenu();
+                    await sendTaskSummary(option.channel, option.url, anchor);
+                });
+                menu.appendChild(btn);
+            });
+
+            if (payload.hint) {
+                const hint = document.createElement('div');
+                hint.textContent = payload.hint;
+                hint.style.cssText = 'padding:8px 12px 4px; font-size:12px; color:#64748b; line-height:1.4;';
+                menu.appendChild(hint);
+            }
+
+            document.body.appendChild(menu);
+            const rect = anchor.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + 8}px`;
+            menu.style.left = `${Math.max(16, rect.right - 180)}px`;
+            activeTaskSummaryMenu = menu;
+        } catch (error) {
+            console.error(error);
+            showToast('Erro ao abrir o menu de resumo.', 'error');
+        }
+    }
+
+    document.addEventListener('click', (event) => {
+        if (activeTaskSummaryMenu && !activeTaskSummaryMenu.contains(event.target) && event.target.id !== 'btnTaskSummaryMenu') {
+            closeTaskSummaryMenu();
+        }
+    });
 
     // ============================================================
     // Finalizar Atividade

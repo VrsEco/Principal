@@ -810,8 +810,8 @@
                 projeto.' }}</p>
         </div>
         <div class="workspace-header-actions">
-            <button class="btn btn-secondary" id="btnSendProjectSummary" onclick="sendProjectSummaryToOwner()">
-                📨 Enviar resumo ao responsável
+            <button class="btn btn-secondary" id="btnProjectSummaryMenu" onclick="openProjectSummaryMenu(event)">
+                🧾 Resumo
             </button>
             <a href="/projects" class="btn btn-secondary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -973,6 +973,7 @@
 
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnTaskSummaryInline" style="display:none;" onclick="openInlineTaskSummaryMenu(event)">🧾 Resumo</button>
                 <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar Atividade</button>
             </div>
@@ -1128,25 +1129,29 @@
         'completed': 'CD'
     };
 
-    async function sendProjectSummaryToOwner() {
-        const button = document.getElementById('btnSendProjectSummary');
+    let activeProjectSummaryMenu = null;
+
+    function closeProjectSummaryMenu() {
+        if (activeProjectSummaryMenu) {
+            activeProjectSummaryMenu.remove();
+            activeProjectSummaryMenu = null;
+        }
+    }
+
+    async function sendProjectSummary(channel, actionUrl, button) {
         const originalText = button ? button.textContent : '';
         if (button) {
             button.disabled = true;
             button.textContent = 'Enviando...';
         }
-
         try {
-            const response = await fetch(`/api/projects/${PROJECT_ID}/send-owner-summary`, {
+            const response = await fetch(actionUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel })
             });
             const result = await response.json();
-            if (result.success) {
-                alert(result.message || 'Resumo do projeto enviado com sucesso.');
-            } else {
-                alert(result.message || 'Falha ao enviar resumo do projeto.');
-            }
+            alert(result.message || (result.success ? 'Resumo enviado com sucesso.' : 'Falha ao enviar resumo.'));
         } catch (error) {
             console.error(error);
             alert('Erro de conexão ao enviar resumo do projeto.');
@@ -1157,6 +1162,66 @@
             }
         }
     }
+
+    async function openProjectSummaryMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeProjectSummaryMenu();
+        const anchor = event.currentTarget;
+        try {
+            const response = await fetch(`/api/projects/${PROJECT_ID}/summary-options`);
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                alert(payload.message || 'Não foi possível carregar as opções de resumo.');
+                return;
+            }
+
+            const menu = document.createElement('div');
+            menu.style.cssText = 'position:fixed; min-width:180px; background:#fff; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 16px 48px rgba(15,23,42,0.18); padding:8px; z-index:26000;';
+            payload.options.forEach((option) => {
+                if (option.kind === 'download') {
+                    const link = document.createElement('a');
+                    link.href = option.url;
+                    link.textContent = option.label;
+                    link.style.cssText = 'display:block; padding:10px 12px; border-radius:8px; text-decoration:none; color:#0f172a; font-weight:600;';
+                    link.addEventListener('click', closeProjectSummaryMenu);
+                    menu.appendChild(link);
+                    return;
+                }
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = option.label;
+                btn.style.cssText = 'display:block; width:100%; padding:10px 12px; border:none; background:#fff; text-align:left; border-radius:8px; color:#0f172a; font-weight:600; cursor:pointer;';
+                btn.addEventListener('click', async () => {
+                    closeProjectSummaryMenu();
+                    await sendProjectSummary(option.channel, option.url, anchor);
+                });
+                menu.appendChild(btn);
+            });
+
+            if (payload.hint) {
+                const hint = document.createElement('div');
+                hint.textContent = payload.hint;
+                hint.style.cssText = 'padding:8px 12px 4px; font-size:12px; color:#64748b; line-height:1.4;';
+                menu.appendChild(hint);
+            }
+
+            document.body.appendChild(menu);
+            const rect = anchor.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + 8}px`;
+            menu.style.left = `${Math.max(16, rect.right - 180)}px`;
+            activeProjectSummaryMenu = menu;
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao abrir o menu de resumo.');
+        }
+    }
+
+    document.addEventListener('click', (event) => {
+        if (activeProjectSummaryMenu && !activeProjectSummaryMenu.contains(event.target) && event.target.id !== 'btnProjectSummaryMenu') {
+            closeProjectSummaryMenu();
+        }
+    });
 
     async function loadTasks() {
         try {
@@ -1339,6 +1404,14 @@
                         </svg>
                     </button>
                     ${task.id ? `
+                    <a href="/my-work/api/project-task/${task.id}/summary.pdf" target="_blank" rel="noopener" class="btn-icon" style="padding: 4px; color: #0f766e; background: #ccfbf1; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center;" title="Relatório da Atividade">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="8" y1="13" x2="16" y2="13"></line>
+                            <line x1="8" y1="17" x2="13" y2="17"></line>
+                        </svg>
+                    </a>
                     <a href="/my-work/project-task/${task.id}?from=project" class="btn-icon" style="padding: 4px; color: var(--success); background: #dcfce7; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center;" title="+Horas / Info">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -1709,6 +1782,8 @@
         if (saveButton) saveButton.style.display = IS_COLLABORATOR ? 'none' : 'inline-flex';
         const deleteButton = document.getElementById('btnDeleteTask');
         if (deleteButton) deleteButton.style.display = (IS_COLLABORATOR || !taskId) ? 'none' : deleteButton.style.display;
+        const summaryButton = document.getElementById('btnTaskSummaryInline');
+        if (summaryButton) summaryButton.style.display = taskId ? 'inline-flex' : 'none';
         ['taskProjectId','taskWhat','taskEmployeeId','taskDueDate','taskEstimatedHours','taskScoreWeight','taskHow','taskNotes'].forEach((fieldId) => {
             const field = document.getElementById(fieldId);
             if (field) field.disabled = !!IS_COLLABORATOR;
@@ -1924,6 +1999,103 @@
         const el = document.getElementById(id);
         if (el) el.classList.toggle('collapsed');
     }
+
+
+    let activeInlineTaskSummaryMenu = null;
+
+    function closeInlineTaskSummaryMenu() {
+        if (activeInlineTaskSummaryMenu) {
+            activeInlineTaskSummaryMenu.remove();
+            activeInlineTaskSummaryMenu = null;
+        }
+    }
+
+    async function sendInlineTaskSummary(channel, actionUrl, button) {
+        const originalText = button ? button.textContent : '';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Enviando...';
+        }
+        try {
+            const response = await fetch(actionUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel })
+            });
+            const result = await response.json();
+            alert(result.message || (result.success ? 'Resumo enviado com sucesso.' : 'Falha ao enviar resumo.'));
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao enviar resumo da atividade.');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+    }
+
+    async function openInlineTaskSummaryMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeInlineTaskSummaryMenu();
+        const anchor = event.currentTarget;
+        const taskId = document.getElementById('taskId').value;
+        if (!taskId) {
+            alert('Abra uma atividade existente para gerar o resumo.');
+            return;
+        }
+        try {
+            const response = await fetch(`/my-work/api/project-task/${taskId}/summary-options`);
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                alert(payload.message || 'Não foi possível carregar as opções de resumo da atividade.');
+                return;
+            }
+            const menu = document.createElement('div');
+            menu.style.cssText = 'position:fixed; min-width:220px; background:#fff; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 16px 48px rgba(15,23,42,0.18); padding:8px; z-index:26000;';
+            payload.options.forEach((option) => {
+                if (option.kind === 'download') {
+                    const link = document.createElement('a');
+                    link.href = option.url;
+                    link.textContent = option.label;
+                    link.style.cssText = 'display:block; padding:10px 12px; border-radius:8px; text-decoration:none; color:#0f172a; font-weight:600;';
+                    link.addEventListener('click', closeInlineTaskSummaryMenu);
+                    menu.appendChild(link);
+                    return;
+                }
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = option.label;
+                btn.style.cssText = 'display:block; width:100%; padding:10px 12px; border:none; background:#fff; text-align:left; border-radius:8px; color:#0f172a; font-weight:600; cursor:pointer;';
+                btn.addEventListener('click', async () => {
+                    closeInlineTaskSummaryMenu();
+                    await sendInlineTaskSummary(option.channel, option.url, anchor);
+                });
+                menu.appendChild(btn);
+            });
+            if (payload.hint) {
+                const hint = document.createElement('div');
+                hint.textContent = payload.hint;
+                hint.style.cssText = 'padding:8px 12px 4px; font-size:12px; color:#64748b; line-height:1.4;';
+                menu.appendChild(hint);
+            }
+            document.body.appendChild(menu);
+            const rect = anchor.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + 8}px`;
+            menu.style.left = `${Math.max(16, rect.left)}px`;
+            activeInlineTaskSummaryMenu = menu;
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao abrir o menu de resumo da atividade.');
+        }
+    }
+
+    document.addEventListener('click', (event) => {
+        if (activeInlineTaskSummaryMenu && !activeInlineTaskSummaryMenu.contains(event.target) && event.target.id !== 'btnTaskSummaryInline') {
+            closeInlineTaskSummaryMenu();
+        }
+    });
 
     // Close modal when clicking on backdrop
     taskModal.addEventListener('click', (e) => {

@@ -1,5 +1,5 @@
 """Portfolio API routes"""
-from flask import Blueprint, request, jsonify, render_template, abort
+from flask import Blueprint, request, jsonify, render_template, abort, send_file, url_for
 from flask_login import login_required, current_user
 from models import db
 from models.portfolio import Portfolio
@@ -251,3 +251,65 @@ def delete_portfolio(company_id, portfolio_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+
+@portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary-options')
+@permission_required('projects', 'view')
+def portfolio_summary_options(company_id, portfolio_id):
+    from services.project_responsible_summary_service import build_summary_hint, build_summary_options, get_portfolio_responsible_user
+
+    if not has_company_full_access(company_id):
+        return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
+    portfolio = Portfolio.query.filter_by(id=portfolio_id, company_id=company_id).first_or_404()
+    target_user = get_portfolio_responsible_user(portfolio)
+    return jsonify({
+        'success': True,
+        'title': 'Resumo do Portfólio',
+        'options': build_summary_options(
+            target_user,
+            url_for('portfolios.portfolio_summary_pdf', company_id=company_id, portfolio_id=portfolio.id),
+            url_for('portfolios.send_portfolio_summary', company_id=company_id, portfolio_id=portfolio.id),
+        ),
+        'hint': build_summary_hint(target_user),
+    })
+
+
+@portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary.pdf')
+@permission_required('projects', 'view')
+def portfolio_summary_pdf(company_id, portfolio_id):
+    from io import BytesIO
+    from services.project_summary_pdf_service import generate_portfolio_summary_pdf_bytes
+
+    if not has_company_full_access(company_id):
+        abort(403, description='Acesso negado: colaboradores não podem gerar resumos.')
+    portfolio = Portfolio.query.filter_by(id=portfolio_id, company_id=company_id).first_or_404()
+    pdf_bytes = generate_portfolio_summary_pdf_bytes(portfolio)
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'resumo-portfolio-{portfolio.code}.pdf',
+    )
+
+
+@portfolios_bp.route('/api/companies/<int:company_id>/portfolios/<int:portfolio_id>/summary', methods=['POST'])
+@permission_required('projects', 'view')
+def send_portfolio_summary(company_id, portfolio_id):
+    from services.project_responsible_summary_service import send_portfolio_summary_to_responsible
+
+    if not has_company_full_access(company_id):
+        return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
+    portfolio = Portfolio.query.filter_by(id=portfolio_id, company_id=company_id).first_or_404()
+    payload = request.get_json(silent=True) or {}
+    preferred_channel = (payload.get('channel') or '').strip().lower() or None
+    result = send_portfolio_summary_to_responsible(portfolio, preferred_channel=preferred_channel)
+    if not result.get('success'):
+        return jsonify({'success': False, 'message': result.get('error') or 'Falha ao enviar resumo', 'result': result}), 400
+
+    channel_label = {'email': 'E-mail', 'whatsapp': 'WhatsApp'}.get(result.get('delivery_channel'), result.get('delivery_channel'))
+    return jsonify({
+        'success': True,
+        'message': f"Resumo do portfólio enviado com sucesso via {channel_label}",
+        'result': result,
+    })

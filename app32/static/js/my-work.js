@@ -1986,6 +1986,8 @@ function createActivityElement(activity) {
   wrapper.dataset.estimatedHours = activity.estimated_hours || 0;
   wrapper.dataset.workedHours = activity.worked_hours || 0;
   wrapper.dataset.status = activity.status || '';
+  wrapper.dataset.estimatedHoursSource = activity.estimated_hours_source || '';
+  wrapper.dataset.estimatedHoursIsHeuristic = activity.estimated_hours_is_heuristic ? 'true' : 'false';
   wrapper.dataset.priority = activity.priority || '';
   wrapper.dataset.deadline = activity.deadline || '';
   wrapper.dataset.deadlineLabel = activity.deadline_label || '';
@@ -2001,7 +2003,7 @@ function createActivityElement(activity) {
 
   const statusIndicatorClass = getStatusIndicatorClass(activity);
   const assignmentLabel = activity.assignment?.label || '';
-  const metaBadge = '';
+  const metaBadge = renderEstimatedHoursBadge(activity);
   const typeLabel = activity.type === 'process' ? 'PROCESSO' : 'PROJETO';
   const priorityLabel = getPriorityLabel(activity);
   const deadlineInfo = formatDeadline(activity);
@@ -2256,6 +2258,19 @@ function formatDeadline(activity) {
   }
 }
 
+function renderEstimatedHoursBadge(activity) {
+  if (!activity || !activity.estimated_hours_is_heuristic) return '';
+  return '<span class="status-badge status-badge--heuristic" style="background-color: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 12px; font-size: 0.70rem; font-weight: 700;">Estimativa heurística</span>';
+}
+
+function formatEstimatedHoursLabel(activity) {
+  const hours = formatHours(activity?.estimated_hours);
+  if (!activity?.estimated_hours_is_heuristic) {
+    return `${hours} estimadas`;
+  }
+  return `${hours} estimadas (heurística)`;
+}
+
 function formatSecondaryInfo(activity) {
   const infoItems = [];
 
@@ -2359,7 +2374,7 @@ function formatSecondaryInfo(activity) {
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
-        ${formatHours(activity.estimated_hours)} estimadas
+        ${formatEstimatedHoursLabel(activity)}
       </span>
     `);
   }

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, jsonify, abort
+from flask import Blueprint, render_template, session, jsonify, abort, request, send_file, url_for
 from models import Company
 from flask_login import current_user
 
@@ -115,6 +115,48 @@ def project_analysis():
                            is_collaborator=is_collaborator)
 
 
+@projects_bp.route('/api/projects/<int:project_id>/summary-options')
+@permission_required('projects', 'view')
+def project_summary_options(project_id):
+    from services.project_responsible_summary_service import build_summary_hint, build_summary_options, get_project_owner_user
+
+    project, company = _get_project_page_with_access(project_id)
+    if company and not has_company_full_access(company.id):
+        return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
+
+    target_user = get_project_owner_user(project)
+    return jsonify({
+        'success': True,
+        'title': 'Resumo do Projeto',
+        'options': build_summary_options(
+            target_user,
+            url_for('projects.project_summary_pdf', project_id=project.id),
+            url_for('projects.send_project_owner_summary', project_id=project.id),
+        ),
+        'hint': build_summary_hint(target_user),
+    })
+
+
+@projects_bp.route('/api/projects/<int:project_id>/summary.pdf')
+@permission_required('projects', 'view')
+def project_summary_pdf(project_id):
+    from io import BytesIO
+    from services.project_summary_pdf_service import generate_project_summary_pdf_bytes
+
+    project, company = _get_project_page_with_access(project_id)
+    if company and not has_company_full_access(company.id):
+        abort(403, description='Acesso negado: colaboradores não podem gerar resumos.')
+
+    pdf_bytes = generate_project_summary_pdf_bytes(project)
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'resumo-projeto-{project.code}.pdf',
+    )
+
+
+@projects_bp.route('/api/projects/<int:project_id>/summary', methods=['POST'])
 @projects_bp.route('/api/projects/<int:project_id>/send-owner-summary', methods=['POST'])
 @permission_required('projects', 'view')
 def send_project_owner_summary(project_id):
@@ -123,12 +165,16 @@ def send_project_owner_summary(project_id):
     project, company = _get_project_page_with_access(project_id)
     if company and not has_company_full_access(company.id):
         return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
-    result = send_project_summary_to_owner(project)
+
+    payload = request.get_json(silent=True) or {}
+    preferred_channel = (payload.get('channel') or '').strip().lower() or None
+    result = send_project_summary_to_owner(project, preferred_channel=preferred_channel)
     if not result.get('success'):
         return jsonify({'success': False, 'message': result.get('error') or 'Falha ao enviar resumo', 'result': result}), 400
 
+    channel_label = {'email': 'E-mail', 'whatsapp': 'WhatsApp'}.get(result.get('delivery_channel'), result.get('delivery_channel'))
     return jsonify({
         'success': True,
-        'message': f"Resumo do projeto enviado com sucesso via {result.get('delivery_channel')}",
+        'message': f"Resumo do projeto enviado com sucesso via {channel_label}",
         'result': result,
     })
