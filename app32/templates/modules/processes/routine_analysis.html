@@ -61,7 +61,7 @@
     <div class="eyebrow">Gestão da Rotina</div>
     <h1 class="text-h1">Análise da Rotina</h1>
     <p class="text-secondary">
-      Consolidação das atividades fixas, da capacidade prevista da equipe e do comprometimento adicional com projetos e reuniões.
+      Consolidação das atividades fixas, da capacidade prevista da equipe e do comprometimento adicional com projetos, instâncias de processo e reuniões.
     </p>
     <p class="text-muted">Atualizado em {{ analysis.generated_at }}</p>
     <p class="text-muted">Escopo atual: <strong>{{ analysis.summary.scope_label }}</strong></p>
@@ -88,6 +88,11 @@
     <span class="summary-label">Projetos</span>
     <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_project_hours or analysis.summary.open_project_hours) }}h</strong>
     <small>{% if filter_active %}Horas no escopo{% else %}{{ analysis.summary.open_project_task_count }} atividades abertas{% endif %}</small>
+  </article>
+  <article class="summary-card accent-process">
+    <span class="summary-label">Processos</span>
+    <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_process_hours or analysis.summary.open_process_hours) }}h</strong>
+    <small>{% if filter_active %}Horas no escopo{% else %}{{ analysis.summary.open_process_instance_count }} instâncias abertas{% endif %}</small>
   </article>
   <article class="summary-card accent-info">
     <span class="summary-label">Reuniões</span>
@@ -126,7 +131,7 @@
     <div class="panel-head chart-card-head">
       <div>
         <h2>Comprometimento por tipo</h2>
-        <p>Distribuição entre rotina fixa, projetos e reuniões no escopo selecionado.</p>
+        <p>Distribuição entre rotina fixa, projetos, processos e reuniões no escopo selecionado.</p>
       </div>
     </div>
     <div class="chart-stat-row">
@@ -137,6 +142,10 @@
       <div class="chart-stat-chip accent-danger">
         <span>Projetos</span>
         <strong>{{ '%.1f'|format(analysis.summary.scoped_project_hours) }}h</strong>
+      </div>
+      <div class="chart-stat-chip accent-process">
+        <span>Processos</span>
+        <strong>{{ '%.1f'|format(analysis.summary.scoped_process_hours) }}h</strong>
       </div>
       <div class="chart-stat-chip accent-info">
         <span>Reuniões</span>
@@ -159,7 +168,7 @@
     </div>
     <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id, department=analysis.filters.department) }}">Fechar drill-down</a>
   </div>
-  <div class="analysis-grid three-columns">
+  <div class="analysis-grid four-columns">
     <article class="panel-card inner-panel">
       <div class="panel-head compact-head"><div><h2>Rotina de Processos</h2></div></div>
       <div class="routine-groups">
@@ -168,11 +177,11 @@
           <div class="routine-group-head">
             <div>
               <h3>{{ group.title }}:</h3>
-              <small>{{ group.items|length }} rotina(s)</small>
+              <small>{{ group["items"]|length }} rotina(s)</small>
             </div>
           </div>
           <div class="stack-list compact">
-            {% for item in group.items %}
+            {% for item in group["items"] %}
             <div class="stack-item routine-stack-item">
               <div>
                 <strong>{{ item.name }}</strong>
@@ -202,6 +211,22 @@
         </div>
         {% else %}
         <div class="empty-line">Sem carga aberta de projeto no recorte.</div>
+        {% endfor %}
+      </div>
+    </article>
+    <article class="panel-card inner-panel">
+      <div class="panel-head compact-head"><div><h2>Instâncias de Processo</h2></div></div>
+      <div class="stack-list compact">
+        {% for item in analysis.drilldown.processes %}
+        <div class="stack-item">
+          <div>
+            <strong>{{ item.instance_title }}</strong>
+            <small>{{ item.process_name }}</small>
+          </div>
+          <span>{{ '%.1f'|format(item.estimated_hours) }}h</span>
+        </div>
+        {% else %}
+        <div class="empty-line">Sem instâncias abertas no recorte.</div>
         {% endfor %}
       </div>
     </article>
@@ -265,7 +290,7 @@
     <div class="panel-head">
       <div>
         <h2>Capacidade total comprometida</h2>
-        <p>Leitura combinada entre rotina fixa, projetos e reuniões no escopo selecionado.</p>
+        <p>Leitura combinada entre rotina fixa, projetos, processos e reuniões no escopo selecionado.</p>
       </div>
     </div>
 
@@ -285,14 +310,14 @@
     <div class="note-box">
       <strong>Leitura executiva</strong>
       <p>
-        A combinação de rotina fixa, projetos e reuniões consome <strong>{{ '%.1f'|format(analysis.summary.scoped_total_utilization_percent) }}%</strong>
+        A combinação de rotina fixa, projetos, processos e reuniões consome <strong>{{ '%.1f'|format(analysis.summary.scoped_total_utilization_percent) }}%</strong>
         da capacidade semanal do escopo atual. Isso permite enxergar o risco real de ocupação, e não apenas a carga recorrente.
       </p>
     </div>
   </article>
 </section>
 
-<section class="analysis-grid two-columns">
+<section class="analysis-grid three-columns analysis-load-sections">
   <article class="panel-card">
     <div class="panel-head">
       <div>
@@ -305,6 +330,10 @@
       <div><span>Horas realizadas</span><strong>{{ '%.1f'|format(analysis.projects.worked_hours_total) }}h</strong></div>
       <div><span>Atividades abertas</span><strong>{{ analysis.projects.open_task_count }}</strong></div>
     </div>
+    <div class="note-box note-box-warning">
+      <strong>Base de cálculo</strong>
+      <p>{{ analysis.projects.estimation_basis }}</p>
+    </div>
     <div class="stack-list">
       {% for project in analysis.projects.top_projects %}
       <div class="stack-item">
@@ -316,6 +345,37 @@
       </div>
       {% else %}
       <div class="empty-line">Nenhum backlog aberto de projeto encontrado.</div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel-card">
+    <div class="panel-head">
+      <div>
+        <h2>Processos: impacto estimado</h2>
+        <p>Instâncias abertas entram no cenário com prioridade para horas informadas e heurística de fallback quando necessário.</p>
+      </div>
+    </div>
+    <div class="mini-stats">
+      <div><span>Instâncias abertas</span><strong>{{ analysis.processes.open_instance_count }}</strong></div>
+      <div><span>Horas estimadas</span><strong>{{ '%.1f'|format(analysis.processes.estimated_hours_total) }}h</strong></div>
+      <div><span>Horas realizadas</span><strong>{{ '%.1f'|format(analysis.processes.worked_hours_total) }}h</strong></div>
+    </div>
+    <div class="note-box note-box-warning">
+      <strong>Base de cálculo</strong>
+      <p>{{ analysis.processes.estimation_basis }}</p>
+    </div>
+    <div class="stack-list compact">
+      {% for process in analysis.processes.top_processes %}
+      <div class="stack-item">
+        <div>
+          <strong>{{ process.process_name }}</strong>
+          <small>{{ process.instance_count }} instâncias</small>
+        </div>
+        <span>{{ '%.1f'|format(process.estimated_hours) }}h</span>
+      </div>
+      {% else %}
+      <div class="empty-line">Nenhuma instância de processo aberta encontrada.</div>
       {% endfor %}
     </div>
   </article>
@@ -364,7 +424,7 @@
   <div class="panel-head">
     <div>
       <h2>Capacidade por colaborador</h2>
-      <p>Leitura combinada entre carga fixa, backlog de projetos, reuniões e comprometimento total.</p>
+      <p>Leitura combinada entre carga fixa, backlog de projetos, instâncias de processo, reuniões e comprometimento total.</p>
     </div>
   </div>
   <div class="table-wrap">
@@ -376,6 +436,7 @@
           <th>Capacidade semanal</th>
           <th>Rotina fixa</th>
           <th>Projetos</th>
+          <th>Processos</th>
           <th>Reuniões</th>
           <th>Total comprometido</th>
           <th>Saldo final</th>
@@ -391,6 +452,7 @@
           <td>{{ '%.1f'|format(member.weekly_capacity) }}h</td>
           <td>{{ '%.1f'|format(member.fixed_hours_weekly) }}h</td>
           <td>{{ '%.1f'|format(member.project_open_hours) }}h</td>
+          <td>{{ '%.1f'|format(member.process_open_hours) }}h</td>
           <td>{{ '%.1f'|format(member.meeting_estimated_hours) }}h</td>
           <td><strong>{{ '%.1f'|format(member.total_commitment_hours) }}h</strong></td>
           <td>{{ '%.1f'|format(member.remaining_after_total_weekly) }}h</td>
@@ -403,7 +465,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="10" class="empty-line">Nenhum colaborador ativo encontrado para a empresa.</td>
+          <td colspan="11" class="empty-line">Nenhum colaborador ativo encontrado para a empresa.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -471,7 +533,8 @@
     <div class="note-box">
       <p><strong>1.</strong> A rotina fixa ocupa <strong>{{ '%.1f'|format(analysis.summary.fixed_utilization_percent) }}%</strong> da capacidade, mas o comprometimento total já alcança <strong>{{ '%.1f'|format(analysis.summary.scoped_total_utilization_percent) }}%</strong> no escopo atual.</p>
       <p><strong>2.</strong> Existe um backlog adicional de <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_project_hours or analysis.summary.open_project_hours) }}h</strong> em projetos abertos.</p>
-      <p><strong>3.</strong> As reuniões abertas adicionam <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_meeting_hours or analysis.summary.meeting_estimated_hours_total) }}h</strong> ao cenário, já priorizando duração real e planejada quando disponíveis.</p>
+      <p><strong>3.</strong> As instâncias de processo abertas adicionam <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_process_hours or analysis.summary.open_process_hours) }}h</strong> ao cenário, considerando heurística de 2h quando não houver previsão.</p>
+      <p><strong>4.</strong> As reuniões abertas adicionam <strong>{{ '%.1f'|format(filter_active and analysis.summary.scoped_meeting_hours or analysis.summary.meeting_estimated_hours_total) }}h</strong> ao cenário, já priorizando duração real e planejada quando disponíveis.</p>
     </div>
   </article>
 
@@ -516,7 +579,7 @@
   .filter-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
   .analysis-charts .chart-dashboard-card { display:grid; gap:1rem; }
   .analysis-charts .chart-card-head { margin-bottom:0; }
-  .analysis-charts .chart-stat-row { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.75rem; }
+  .analysis-charts .chart-stat-row { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:.75rem; }
   .analysis-charts .chart-stat-chip { padding:.8rem .9rem; border:1px solid var(--border); border-radius:14px; background:var(--surface-secondary); display:grid; gap:.25rem; }
   .analysis-charts .chart-stat-chip span { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); font-weight:700; }
   .analysis-charts .chart-stat-chip strong { font-size:1.1rem; color:var(--text-primary); }
@@ -527,9 +590,10 @@
   .analysis-charts .chart-wrap-donut { max-width:210px; height:210px; }
   .analysis-charts .chart-wrap canvas { width:100% !important; height:100% !important; }
   .analysis-charts .chart-support-copy { margin-top:.25rem; text-align:center; }
-  .summary-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+  .summary-grid { grid-template-columns:repeat(5, minmax(0, 1fr)); }
   .two-columns { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .three-columns { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+  .four-columns { grid-template-columns:repeat(4, minmax(0, 1fr)); }
   .summary-card, .panel-card { background:var(--surface-primary); border:1px solid var(--border); border-radius:16px; padding:1.1rem 1.2rem; box-shadow:var(--shadow-xs); }
   .inner-panel { background:var(--surface-secondary); }
   .compact-head { margin-bottom:.75rem; }
@@ -541,6 +605,7 @@
   .accent-warning { border-color:#f59e0b33; }
   .accent-danger { border-color:#ef444433; }
   .accent-info { border-color:#0ea5e933; }
+  .accent-process { border-color:#8b5cf633; }
   .panel-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
   .panel-head h2 { margin:0; font-size:1.1rem; }
   .panel-head p { margin:.25rem 0 0; color:var(--text-secondary); font-size:.9rem; }
@@ -584,9 +649,9 @@
   .status-balanced { background:#dbeafe; color:#1d4ed8; }
   .status-attention { background:#fef3c7; color:#92400e; }
   .status-overload { background:#fee2e2; color:#b91c1c; }
-  @media (max-width: 1100px) { .summary-grid, .two-columns { grid-template-columns:1fr 1fr; } }
+  @media (max-width: 1100px) { .summary-grid, .two-columns, .three-columns, .four-columns { grid-template-columns:1fr 1fr; } }
   @media (max-width: 768px) {
-    .analysis-header, .summary-grid, .two-columns, .three-columns, .capacity-stats, .mini-stats { grid-template-columns:1fr; display:grid; }
+    .analysis-header, .summary-grid, .two-columns, .three-columns, .four-columns, .capacity-stats, .mini-stats { grid-template-columns:1fr; display:grid; }
     .analysis-header { display:grid; }
     .analysis-actions, .analysis-filters, .filter-actions { width:100%; justify-content:flex-start; }
     .analysis-charts .chart-stat-row { grid-template-columns:1fr; }
@@ -706,7 +771,7 @@
           labels: commitmentData.labels,
           datasets: [{
             data: commitmentData.values,
-            backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444']
+            backgroundColor: ['#3b82f6', '#f59e0b', '#8b5cf6', '#0ea5e9']
           }]
         },
         options: {
