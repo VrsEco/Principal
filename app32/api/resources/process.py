@@ -927,10 +927,43 @@ from utils.storage import save_file, delete_file
 class ProcessResource(Resource):
     @permission_required('processes', 'view')
     def get(self, process_id):
-        process = _get_process_with_access(process_id, action='view', sync_session=True)
-        if not process:
-            return {"error": "Permission denied: view on processes"}, 403
-        return process_schema.dump(process), 200
+        current_app.logger.info(
+            'ProcessResource.get start process_id=%s path=%s user_id=%s active_company_id=%s args=%s',
+            process_id,
+            request.path,
+            getattr(current_user, 'id', None),
+            session.get('active_company_id'),
+            dict(request.args),
+        )
+
+        try:
+            process = _get_process_with_access(process_id, action='view', sync_session=True)
+            if not process:
+                current_app.logger.warning(
+                    'ProcessResource.get denied process_id=%s user_id=%s active_company_id=%s',
+                    process_id,
+                    getattr(current_user, 'id', None),
+                    session.get('active_company_id'),
+                )
+                return {"error": "Permission denied: view on processes"}, 403
+
+            payload = process_schema.dump(process)
+            current_app.logger.info(
+                'ProcessResource.get success process_id=%s company_id=%s macro_id=%s user_id=%s',
+                process_id,
+                getattr(process, 'company_id', None),
+                getattr(process, 'macro_id', None),
+                getattr(current_user, 'id', None),
+            )
+            return payload, 200
+        except Exception:
+            current_app.logger.exception(
+                'ProcessResource.get failure process_id=%s user_id=%s active_company_id=%s',
+                process_id,
+                getattr(current_user, 'id', None),
+                session.get('active_company_id'),
+            )
+            raise
 
     @permission_required('processes', 'edit')
     def put(self, process_id):

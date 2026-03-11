@@ -30,6 +30,51 @@ def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
     session['active_company_id'] = process.company_id
     return process
 
+
+def _build_process_details_payload(process: Process) -> dict:
+    """Payload mínimo e resiliente para hidratação inicial da tela de detalhes."""
+    macro = getattr(process, 'macro', None)
+    area = getattr(macro, 'area', None) if macro else None
+
+    return {
+        'id': process.id,
+        'company_id': process.company_id,
+        'macro_id': getattr(process, 'macro_id', None),
+        'code': getattr(process, 'code', None),
+        'name': process.name,
+        'description': getattr(process, 'description', None),
+        'responsible': getattr(process, 'responsible', None),
+        'responsible_id': getattr(process, 'responsible_id', None),
+        'owner_employee_id': getattr(process, 'owner_employee_id', None),
+        'kanban_stage': getattr(process, 'kanban_stage', None),
+        'structuring_level': getattr(process, 'structuring_level', None),
+        'performance_level': getattr(process, 'performance_level', None),
+        'order_index': getattr(process, 'order_index', None),
+        'flow_document': getattr(process, 'flow_document', None),
+        'flow_mermaid': getattr(process, 'flow_mermaid', None),
+        'notes': getattr(process, 'notes', None),
+        'is_active': getattr(process, 'is_active', None),
+        'macro': {
+            'id': macro.id,
+            'company_id': macro.company_id,
+            'area_id': macro.area_id,
+            'code': macro.code,
+            'name': macro.name,
+            'owner': macro.owner,
+            'description': macro.description,
+            'order_index': macro.order_index,
+            'area': {
+                'id': area.id,
+                'company_id': area.company_id,
+                'code': area.code,
+                'name': area.name,
+                'description': area.description,
+                'order_index': area.order_index,
+                'color': area.color,
+            } if area else None,
+        } if macro else None,
+    }
+
 @processes_bp.route('/api/processes/upload-flow', methods=['POST'])
 def upload_process_flow():
     if 'file' not in request.files:
@@ -153,7 +198,9 @@ def process_details(process_id):
     return render_template('modules/processes/process_details_v2.html', 
                             process_id=process_id, 
                             process=process,
-                            company=company)
+                            company=company,
+                            company_id=process.company_id,
+                            process_payload=_build_process_details_payload(process))
 
 # --- Process Routines Page and APIs ---
 

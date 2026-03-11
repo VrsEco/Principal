@@ -47,6 +47,7 @@ def test_process_details_route_syncs_active_company_from_process(monkeypatch):
     monkeypatch.setattr(process_routes, 'has_permission', lambda company_id, resource, action: company_id == 22)
     monkeypatch.setattr(process_routes, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
     monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
+    monkeypatch.setattr(process_routes, 'is_collaborator_in_company', lambda company_id: False)
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
     with app.test_request_context('/processes/287'):
@@ -57,6 +58,9 @@ def test_process_details_route_syncs_active_company_from_process(monkeypatch):
     assert response['template'] == 'modules/processes/process_details_v2.html'
     assert response['context']['process'].company_id == 22
     assert response['context']['company'].id == 22
+    assert response['context']['company_id'] == 22
+    assert response['context']['process_payload']['company_id'] == 22
+    assert response['context']['process_payload']['name'] == 'Processo X'
 
 
 def test_process_resource_checks_permission_against_process_company(monkeypatch):
@@ -99,3 +103,14 @@ def test_occurrences_loader_sends_company_scope_and_falls_back_gracefully():
 
     assert "query.set('company_id', companyId)" in content
     assert 'state.occurrences = []' in content
+
+
+def test_process_details_template_bootstraps_initial_payload_and_fallback():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'const initialProcess = {{ process_payload|tojson }};' in content
+    assert 'state.process: initialProcess' not in content
+    assert 'process: initialProcess || null' in content
+    assert 'mantendo payload inicial da rota SSR' in content

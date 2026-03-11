@@ -789,9 +789,10 @@
 <script>
     const processId = "{{ process_id }}";
     const companyId = "{{ company_id }}";
+    const initialProcess = {{ process_payload|tojson }};
     window.companyId = companyId;
     let state = {
-        process: null,
+        process: initialProcess || null,
         routines: [],
         indicators: [],
         schedules: [],
@@ -918,6 +919,10 @@
 
     async function init() {
         try {
+            if (state.process) {
+                renderProcess();
+            }
+
             await fetchProcess();
 
             if (state.process && state.process.company_id) {
@@ -953,9 +958,22 @@
 
     // Occurrences logic moved to external file
     async function fetchProcess() {
-        const res = await fetch(`/api/processes/${processId}`);
-        if (!res.ok) throw new Error('Falha ao carregar processo');
-        state.process = await res.json();
+        try {
+            const res = await fetch(`/api/processes/${processId}`);
+            if (!res.ok) {
+                const errorBody = await res.text();
+                throw new Error(`Falha ao carregar processo (HTTP ${res.status}): ${errorBody || 'sem detalhes'}`);
+            }
+
+            state.process = await res.json();
+        } catch (error) {
+            if (state.process) {
+                console.warn('Falha ao atualizar processo via API; mantendo payload inicial da rota SSR.', error);
+                return;
+            }
+
+            throw error;
+        }
     }
 
     async function fetchRoutines() {
