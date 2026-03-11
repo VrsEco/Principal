@@ -2,6 +2,58 @@
 
 {% block title %}Análise da Rotina | Versus{% endblock %}
 
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+  <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+    </svg>
+    Filtros
+  </button>
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="analysis-sidebar">
+  <div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="text-body-secondary" style="font-size: 0.8rem;">Refine o escopo da análise de rotinas.</p>
+  </div>
+
+  <form class="analysis-filters analysis-filters-sidebar" method="get" id="routineAnalysisFilters">
+    <div class="filter-group">
+      <label class="filter-label" for="analysisDepartmentFilter">Departamento</label>
+      <select name="department" id="analysisDepartmentFilter" class="filter-select">
+        <option value="">Todos</option>
+        {% for dept in analysis.filters.departments %}
+        <option value="{{ dept }}" {% if analysis.filters.department == dept %}selected{% endif %}>{{ dept }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label" for="analysisEmployeeFilter">Colaborador</label>
+      <select name="employee_id" id="analysisEmployeeFilter" class="filter-select">
+        <option value="">Todos</option>
+        {% for emp in analysis.filters.employees %}
+        <option value="{{ emp.id }}" {% if analysis.filters.employee_id == emp.id %}selected{% endif %}>{{ emp.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Escopo atual</label>
+      <div class="filter-scope-pill">{{ analysis.summary.scope_label }}</div>
+    </div>
+
+    <div class="analysis-sidebar-actions">
+      <button class="btn btn-primary w-100" type="submit">Aplicar filtros</button>
+      <a class="btn btn-secondary w-100" href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id) }}">Limpar filtros</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
 {% block workspace_content %}
 {% set filter_active = analysis.filters.department or analysis.filters.employee_id %}
 <div class="workspace-header analysis-header">
@@ -15,36 +67,9 @@
     <p class="text-muted">Escopo atual: <strong>{{ analysis.summary.scope_label }}</strong></p>
   </div>
 
-  <div class="analysis-header-side">
-    <div class="header-actions analysis-actions">
-      <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_page', company_id=company.id) }}">← Voltar para Rotinas</a>
-      <a class="btn btn-primary" href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}">+ Nova rotina</a>
-    </div>
-
-    <form class="analysis-filters" method="get" id="routineAnalysisFilters">
-      <div class="filter-field">
-        <label>Departamento</label>
-        <select name="department" id="analysisDepartmentFilter">
-          <option value="">Todos</option>
-          {% for dept in analysis.filters.departments %}
-          <option value="{{ dept }}" {% if analysis.filters.department == dept %}selected{% endif %}>{{ dept }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="filter-field">
-        <label>Colaborador</label>
-        <select name="employee_id" id="analysisEmployeeFilter">
-          <option value="">Todos</option>
-          {% for emp in analysis.filters.employees %}
-          <option value="{{ emp.id }}" {% if analysis.filters.employee_id == emp.id %}selected{% endif %}>{{ emp.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="filter-actions">
-        <button class="btn btn-primary" type="submit">Aplicar filtros</button>
-        <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id) }}">Limpar</a>
-      </div>
-    </form>
+  <div class="header-actions analysis-actions">
+    <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_page', company_id=company.id) }}">← Voltar para Rotinas</a>
+    <a class="btn btn-primary" href="{{ url_for('processes.routine_details_page', company_id=company.id, routine_id='new') }}">+ Nova rotina</a>
   </div>
 </div>
 
@@ -428,14 +453,21 @@
 <style>
   .analysis-header { display:flex; justify-content:space-between; gap:1.5rem; align-items:flex-start; margin-bottom:1.5rem; }
   .analysis-header-main { flex:1 1 auto; min-width:0; }
-  .analysis-header-side { flex:0 0 auto; min-width:320px; display:flex; flex-direction:column; align-items:flex-end; gap:1rem; }
   .analysis-actions { display:flex; gap:.75rem; flex-wrap:wrap; justify-content:flex-end; }
   .eyebrow { font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; margin-bottom:.35rem; }
   .text-muted { color:var(--text-tertiary); font-size:.85rem; margin-top:.35rem; }
   .analysis-grid { display:grid; gap:1rem; margin-bottom:1rem; }
-  .analysis-filters { display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:flex-end; }
+  .analysis-filters { display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; }
   .analysis-filters label { display:block; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); font-weight:700; margin-bottom:.35rem; }
+  .analysis-sidebar { padding:1.5rem; display:grid; gap:1rem; }
+  .analysis-filters-sidebar { display:grid; gap:1rem; }
   .analysis-filters select { min-width:200px; padding:.55rem .75rem; border:1px solid var(--border); border-radius:10px; background:var(--surface-primary); }
+  .filter-group { display:grid; gap:.45rem; }
+  .filter-label { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); font-weight:700; }
+  .filter-select, .filter-input { width:100%; padding:.7rem .8rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-primary); color:var(--text-primary); }
+  .filter-scope-pill { padding:.75rem .9rem; border-radius:12px; background:var(--surface-secondary); border:1px solid var(--border); color:var(--text-primary); font-weight:600; }
+  .analysis-sidebar-actions { display:grid; gap:.75rem; margin-top:.5rem; }
+  .w-100 { width:100%; justify-content:center; }
   .filter-field { display:flex; flex-direction:column; align-items:flex-start; }
   .filter-actions { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
   .analysis-charts .chart-wrap { min-height:260px; }
@@ -491,7 +523,6 @@
   @media (max-width: 768px) {
     .analysis-header, .summary-grid, .two-columns, .three-columns, .capacity-stats, .mini-stats { grid-template-columns:1fr; display:grid; }
     .analysis-header { display:grid; }
-    .analysis-header-side { min-width:0; align-items:stretch; }
     .analysis-actions, .analysis-filters, .filter-actions { width:100%; justify-content:flex-start; }
   }
 </style>
