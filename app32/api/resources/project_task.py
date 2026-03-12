@@ -4,9 +4,30 @@ from marshmallow import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from models import db, ProjectTask, Project
+from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_task_schema, project_tasks_schema
 from utils.permissions import has_company_full_access, permission_required
 from datetime import datetime
+
+
+def _detach_workflow_gap_candidates_for_task(*, task_id, project_id, company_id):
+    if not task_id or not project_id:
+        return
+
+    query = WorkflowGapCandidate.query.filter(
+        WorkflowGapCandidate.app_task_id == task_id,
+        WorkflowGapCandidate.app_project_id == project_id,
+    )
+    if company_id is not None:
+        query = query.filter(
+            db.or_(
+                WorkflowGapCandidate.company_id == company_id,
+                WorkflowGapCandidate.company_id.is_(None),
+            )
+        )
+
+    for candidate in query.all():
+        candidate.app_task_id = None
 
 def _sync_table_sequence(table_name: str, pk_column: str = 'id'):
     seq_row = db.session.execute(
@@ -229,12 +250,18 @@ class ProjectTaskResource(Resource):
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         try:
+            _detach_workflow_gap_candidates_for_task(
+                task_id=task.id,
+                project_id=task.project_id,
+                company_id=company_id,
+            )
             db.session.delete(task)
             
             # Update project progress
-            project = Project.query.get(project_id)
-            if project:
-                project.update_progress()
+            with db.session.no_autoflush:
+                project = Project.query.get(project_id)
+                if project:
+                    project.update_progress()
                 
             db.session.commit()
             return {"message": "Task deleted successfully"}, 200

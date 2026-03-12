@@ -1,6 +1,7 @@
 from flask import request, jsonify
 from flask_restful import Resource
 from models import db, Project, Company
+from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_schema, projects_schema
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, permission_required
 
@@ -25,6 +26,26 @@ def _task_is_visible_to_employee(task, employee_id):
         if collaborator.employee_id == employee_id:
             return True
     return False
+
+
+def _detach_workflow_gap_candidates_for_task(*, task_id, project_id, company_id):
+    if not task_id or not project_id:
+        return
+
+    query = WorkflowGapCandidate.query.filter(
+        WorkflowGapCandidate.app_task_id == task_id,
+        WorkflowGapCandidate.app_project_id == project_id,
+    )
+    if company_id is not None:
+        query = query.filter(
+            db.or_(
+                WorkflowGapCandidate.company_id == company_id,
+                WorkflowGapCandidate.company_id.is_(None),
+            )
+        )
+
+    for candidate in query.all():
+        candidate.app_task_id = None
 
 
 def _get_project_with_access(project_id, action='view'):
@@ -312,6 +333,11 @@ class ProjectTaskResource(Resource):
             return {"message": "Acesso negado à atividade."}, 403
         if not has_company_full_access(company_id):
             return {"message": "Acesso negado: colaboradores não podem excluir atividades."}, 403
+        _detach_workflow_gap_candidates_for_task(
+            task_id=task.id,
+            project_id=task.project_id,
+            company_id=company_id,
+        )
         db.session.delete(task)
         db.session.commit()
         return '', 204
