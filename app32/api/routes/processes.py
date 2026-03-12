@@ -385,7 +385,7 @@ def process_routines_analysis_summary_options(company_id):
 def process_routines_analysis_summary_pdf(company_id):
     from io import BytesIO
     from services.routine_analysis_service import get_routine_analysis
-    from services.routine_analysis_summary_service import generate_routine_analysis_summary_pdf_bytes
+    from services.routine_analysis_summary_service import ensure_routine_analysis_drilldown, generate_routine_analysis_summary_pdf_bytes
 
     if not has_company_full_access(company_id):
         abort(403, description='Acesso negado: colaboradores não podem gerar resumos.')
@@ -397,8 +397,9 @@ def process_routines_analysis_summary_pdf(company_id):
         abort(400, description='Selecione um colaborador para gerar o resumo.')
 
     analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
+    analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
     if not analysis.get('drilldown'):
-        abort(404, description='Drill-down do colaborador não encontrado para o resumo.')
+        abort(404, description='Colaborador não encontrado para o resumo.')
 
     employee_name = secure_filename((analysis['drilldown']['employee'].get('name') or f'colaborador-{employee_id}').lower())
     pdf_bytes = generate_routine_analysis_summary_pdf_bytes(company.name, analysis)
@@ -415,7 +416,7 @@ def process_routines_analysis_summary_pdf(company_id):
 @permission_required('processes', 'view')
 def send_process_routines_analysis_summary(company_id):
     from services.routine_analysis_service import get_routine_analysis
-    from services.routine_analysis_summary_service import send_routine_analysis_summary_to_employee
+    from services.routine_analysis_summary_service import ensure_routine_analysis_drilldown, send_routine_analysis_summary_to_employee
 
     if not has_company_full_access(company_id):
         return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
@@ -426,8 +427,9 @@ def send_process_routines_analysis_summary(company_id):
         return jsonify({'success': False, 'message': 'Selecione um colaborador para gerar o resumo.'}), 400
 
     analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
+    analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
     if not analysis.get('drilldown'):
-        return jsonify({'success': False, 'message': 'Drill-down do colaborador não encontrado para o resumo.'}), 404
+        return jsonify({'success': False, 'message': 'Colaborador não encontrado para o resumo.'}), 404
 
     payload = request.get_json(silent=True) or {}
     preferred_channel = (payload.get('channel') or '').strip().lower() or None

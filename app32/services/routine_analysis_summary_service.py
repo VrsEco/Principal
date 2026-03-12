@@ -136,6 +136,40 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def ensure_routine_analysis_drilldown(company_id: int, employee_id: int, analysis: dict[str, Any]) -> dict[str, Any]:
+    if analysis.get('drilldown'):
+        return analysis
+
+    employee = Employee.query.filter_by(id=employee_id, company_id=company_id).first()
+    if not employee:
+        return analysis
+
+    analysis['drilldown'] = {
+        'employee': {
+            'id': employee.id,
+            'name': getattr(employee, 'name', None) or f'Colaborador {employee.id}',
+            'department': getattr(employee, 'department', None) or 'Não informado',
+            'email': getattr(employee, 'email', None) or '',
+        },
+        'summary': {
+            'routine_count': 0,
+            'routine_total_hours': 0.0,
+            'process_count': 0,
+            'process_total_hours': 0.0,
+            'project_count': 0,
+            'project_total_hours': 0.0,
+            'meeting_count': 0,
+            'meeting_total_hours': 0.0,
+        },
+        'routine_groups': [],
+        'routines': [],
+        'projects': [],
+        'processes': [],
+        'meetings': [],
+    }
+    return analysis
+
+
 def build_routine_analysis_summary_payload(analysis: dict[str, Any]) -> dict[str, str | None]:
     drilldown = analysis.get('drilldown') or {}
     employee = drilldown.get('employee') or {}
