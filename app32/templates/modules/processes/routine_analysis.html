@@ -166,12 +166,7 @@
       <h2>Drill-down do colaborador</h2>
       <p>{{ analysis.drilldown.employee.name }} · {{ analysis.drilldown.employee.department }}</p>
     </div>
-    <div class="analysis-actions">
-      {% if can_manage_summary %}
-      <button type="button" class="btn btn-primary" id="btnRoutineAnalysisSummary">🧾 Resumo</button>
-      {% endif %}
-      <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id, department=analysis.filters.department) }}">Fechar drill-down</a>
-    </div>
+    <a class="btn btn-secondary" href="{{ url_for('processes.process_routines_analysis_page', company_id=company.id, department=analysis.filters.department) }}">Fechar drill-down</a>
   </div>
   <div class="analysis-grid three-columns">
     <article class="panel-card inner-panel">
@@ -709,113 +704,11 @@
     const capacityData = {{ analysis.charts.capacity | tojson }};
     const commitmentData = {{ analysis.charts.commitment | tojson }};
     const allEmployees = {{ analysis.filters.all_employees | tojson }};
-    const companyId = {{ company.id | tojson }};
-    const canManageSummary = {{ can_manage_summary | tojson }};
-    const selectedEmployeeId = {{ analysis.drilldown.employee.id if analysis.drilldown else 'null' }};
-    const selectedDepartment = {{ analysis.filters.department | tojson }};
     const filterForm = document.getElementById('routineAnalysisFilters');
     const departmentSelect = document.getElementById('analysisDepartmentFilter');
     const employeeSelect = document.getElementById('analysisEmployeeFilter');
-    const summaryButton = document.getElementById('btnRoutineAnalysisSummary');
     let currentSelectedEmployeeId = {{ analysis.filters.employee_id | tojson }};
-    let activeRoutineSummaryMenu = null;
     currentSelectedEmployeeId = currentSelectedEmployeeId ? String(currentSelectedEmployeeId) : '';
-
-    const closeRoutineSummaryMenu = () => {
-      if (activeRoutineSummaryMenu) {
-        activeRoutineSummaryMenu.remove();
-        activeRoutineSummaryMenu = null;
-      }
-    };
-
-    const sendRoutineSummary = async (channel, actionUrl, button) => {
-      const originalText = button ? button.textContent : '';
-      if (button) {
-        button.disabled = true;
-        button.textContent = 'Enviando...';
-      }
-      try {
-        const response = await fetch(actionUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channel })
-        });
-        const result = await response.json();
-        alert(result.message || (result.success ? 'Resumo enviado com sucesso.' : 'Falha ao enviar resumo.'));
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao enviar resumo da rotina.');
-      } finally {
-        if (button) {
-          button.disabled = false;
-          button.textContent = originalText;
-        }
-      }
-    };
-
-    const openRoutineSummaryMenu = async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (!canManageSummary || !selectedEmployeeId) {
-        alert('Selecione um colaborador para gerar o resumo.');
-        return;
-      }
-      closeRoutineSummaryMenu();
-      const anchor = event.currentTarget;
-      try {
-        const params = new URLSearchParams({ employee_id: String(selectedEmployeeId) });
-        if (selectedDepartment) {
-          params.set('department', selectedDepartment);
-        }
-        const response = await fetch(`/api/companies/${companyId}/process-routines/analysis/summary-options?${params.toString()}`);
-        const payload = await response.json();
-        if (!response.ok || !payload.success) {
-          alert(payload.message || 'Não foi possível carregar as opções de resumo.');
-          return;
-        }
-
-        const menu = document.createElement('div');
-        menu.style.cssText = 'position:fixed; min-width:180px; background:#fff; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 16px 48px rgba(15,23,42,0.18); padding:8px; z-index:26000;';
-
-        payload.options.forEach((option) => {
-          if (option.kind === 'download') {
-            const link = document.createElement('a');
-            link.href = option.url;
-            link.textContent = option.label;
-            link.style.cssText = 'display:block; padding:10px 12px; border-radius:8px; text-decoration:none; color:#0f172a; font-weight:600;';
-            link.addEventListener('click', closeRoutineSummaryMenu);
-            menu.appendChild(link);
-            return;
-          }
-
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = option.label;
-          btn.style.cssText = 'display:block; width:100%; padding:10px 12px; border:none; background:#fff; text-align:left; border-radius:8px; color:#0f172a; font-weight:600; cursor:pointer;';
-          btn.addEventListener('click', async () => {
-            closeRoutineSummaryMenu();
-            await sendRoutineSummary(option.channel, option.url, anchor);
-          });
-          menu.appendChild(btn);
-        });
-
-        if (payload.hint) {
-          const hint = document.createElement('div');
-          hint.textContent = payload.hint;
-          hint.style.cssText = 'padding:8px 12px 4px; font-size:12px; color:#64748b; line-height:1.4;';
-          menu.appendChild(hint);
-        }
-
-        document.body.appendChild(menu);
-        const rect = anchor.getBoundingClientRect();
-        menu.style.top = `${rect.bottom + 8}px`;
-        menu.style.left = `${Math.max(16, rect.right - 180)}px`;
-        activeRoutineSummaryMenu = menu;
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao abrir o menu de resumo.');
-      }
-    };
 
     const normalizeDepartment = (value) => {
       const normalized = String(value || '').trim().toLowerCase();
@@ -887,15 +780,6 @@
       });
     }
 
-    if (summaryButton) {
-      summaryButton.addEventListener('click', openRoutineSummaryMenu);
-    }
-
-    document.addEventListener('click', (event) => {
-      if (activeRoutineSummaryMenu && !activeRoutineSummaryMenu.contains(event.target) && event.target.id !== 'btnRoutineAnalysisSummary') {
-        closeRoutineSummaryMenu();
-      }
-    });
 
     const capacityCtx = document.getElementById('capacityChart');
     if (capacityCtx) {

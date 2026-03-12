@@ -1,6 +1,6 @@
 import os
 
-from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort, flash, send_file
+from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort, flash
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -16,21 +16,6 @@ def _get_current_company_employee(company_id: int):
     if not current_user.is_authenticated or not company_id:
         return None
     return Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
-
-
-def _resolve_routine_summary_employee_id(company_id: int, requested_employee_id: int | None) -> int | None:
-    session_company_id = session.get('routine_analysis_summary_company_id')
-    session_employee_id = session.get('routine_analysis_summary_employee_id')
-    if session_company_id == company_id and session_employee_id:
-        employee = Employee.query.filter_by(id=session_employee_id, company_id=company_id, status='active').first()
-        if employee:
-            return employee.id
-
-    if requested_employee_id:
-        employee = Employee.query.filter_by(id=requested_employee_id, company_id=company_id, status='active').first()
-        if employee:
-            return employee.id
-    return None
 
 
 def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
@@ -336,19 +321,10 @@ def process_routines_analysis_page(company_id):
 
     try:
         analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
-        drilldown = analysis.get('drilldown') or {}
-        drill_employee = (drilldown.get('employee') or {}).get('id')
-        if drill_employee:
-            session['routine_analysis_summary_company_id'] = company_id
-            session['routine_analysis_summary_employee_id'] = drill_employee
-        else:
-            session.pop('routine_analysis_summary_company_id', None)
-            session.pop('routine_analysis_summary_employee_id', None)
         return render_template(
             'modules/processes/routine_analysis.html',
             company=company,
             analysis=analysis,
-            can_manage_summary=has_company_full_access(company_id),
         )
     except Exception:
         current_app.logger.exception(
@@ -360,120 +336,16 @@ def process_routines_analysis_page(company_id):
         flash('Não foi possível aplicar os filtros selecionados. Exibindo a visão geral da análise.', 'warning')
         try:
             analysis = get_routine_analysis(company_id)
-            drilldown = analysis.get('drilldown') or {}
-            drill_employee = (drilldown.get('employee') or {}).get('id')
-            if drill_employee:
-                session['routine_analysis_summary_company_id'] = company_id
-                session['routine_analysis_summary_employee_id'] = drill_employee
-            else:
-                session.pop('routine_analysis_summary_company_id', None)
-                session.pop('routine_analysis_summary_employee_id', None)
             return render_template(
                 'modules/processes/routine_analysis.html',
                 company=company,
                 analysis=analysis,
-                can_manage_summary=has_company_full_access(company_id),
             )
         except Exception:
             current_app.logger.exception('Falha ao carregar visão geral da análise de rotinas para company_id=%s', company_id)
             flash('Não foi possível carregar a análise de rotinas agora. Tente novamente em instantes.', 'error')
             return redirect(url_for('processes.process_routines_page', company_id=company_id))
 
-
-@processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis/summary-options', methods=['GET'])
-@permission_required('processes', 'view')
-def process_routines_analysis_summary_options(company_id):
-    from services.routine_analysis_summary_service import build_summary_hint, build_summary_options, get_routine_analysis_target_user
-
-    if not has_company_full_access(company_id):
-        return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
-
-    employee_id = _resolve_routine_summary_employee_id(company_id, request.args.get('employee_id', type=int))
-    if not employee_id:
-        return jsonify({'success': False, 'message': 'Selecione um colaborador válido no drill-down para gerar o resumo.'}), 400
-
-    target_user = get_routine_analysis_target_user(company_id, employee_id)
-    base_params = {'company_id': company_id, 'employee_id': employee_id}
-    department = (request.args.get('department') or '').strip()
-    if department:
-        base_params['department'] = department
-
-    return jsonify({
-        'success': True,
-        'title': 'Resumo da Rotina',
-        'options': build_summary_options(
-            target_user,
-            url_for('processes.process_routines_analysis_summary_pdf', **base_params),
-            url_for('processes.send_process_routines_analysis_summary', **base_params),
-        ),
-        'hint': build_summary_hint(target_user),
-    })
-
-
-@processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis/summary-pdf', methods=['GET'])
-@processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis/summary.pdf', methods=['GET'])
-@permission_required('processes', 'view')
-def process_routines_analysis_summary_pdf(company_id):
-    from io import BytesIO
-    from services.routine_analysis_service import get_routine_analysis
-    from services.routine_analysis_summary_service import ensure_routine_analysis_drilldown, generate_routine_analysis_summary_pdf_bytes
-
-    if not has_company_full_access(company_id):
-        abort(403, description='Acesso negado: colaboradores não podem gerar resumos.')
-
-    company = Company.query.get_or_404(company_id)
-    employee_id = _resolve_routine_summary_employee_id(company_id, request.args.get('employee_id', type=int))
-    department = request.args.get('department')
-    if not employee_id:
-        abort(400, description='Selecione um colaborador válido no drill-down para gerar o resumo.')
-
-    analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
-    analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
-    if not analysis.get('drilldown'):
-        abort(404, description=f'Colaborador {employee_id} não encontrado na empresa {company_id} para o resumo.')
-
-    employee_name = secure_filename((analysis['drilldown']['employee'].get('name') or f'colaborador-{employee_id}').lower())
-    pdf_bytes = generate_routine_analysis_summary_pdf_bytes(company.name, analysis)
-    return send_file(
-        BytesIO(pdf_bytes),
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f'resumo-rotina-{employee_name}.pdf',
-    )
-
-
-@processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis/send-summary', methods=['POST'])
-@processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis/summary', methods=['POST'])
-@permission_required('processes', 'view')
-def send_process_routines_analysis_summary(company_id):
-    from services.routine_analysis_service import get_routine_analysis
-    from services.routine_analysis_summary_service import ensure_routine_analysis_drilldown, send_routine_analysis_summary_to_employee
-
-    if not has_company_full_access(company_id):
-        return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
-
-    employee_id = _resolve_routine_summary_employee_id(company_id, request.args.get('employee_id', type=int))
-    department = request.args.get('department')
-    if not employee_id:
-        return jsonify({'success': False, 'message': 'Selecione um colaborador válido no drill-down para gerar o resumo.'}), 400
-
-    analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
-    analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
-    if not analysis.get('drilldown'):
-        return jsonify({'success': False, 'message': f'Colaborador {employee_id} não encontrado na empresa {company_id} para o resumo.'}), 404
-
-    payload = request.get_json(silent=True) or {}
-    preferred_channel = (payload.get('channel') or '').strip().lower() or None
-    result = send_routine_analysis_summary_to_employee(company_id, analysis, preferred_channel=preferred_channel)
-    if not result.get('success'):
-        return jsonify({'success': False, 'message': result.get('error') or 'Falha ao enviar resumo', 'result': result}), 400
-
-    channel_label = {'email': 'E-mail', 'whatsapp': 'WhatsApp'}.get(result.get('delivery_channel'), result.get('delivery_channel'))
-    return jsonify({
-        'success': True,
-        'message': f"Resumo da rotina enviado com sucesso via {channel_label}",
-        'result': result,
-    })
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/analysis', methods=['GET'])
 @permission_required('processes', 'view')
