@@ -19,15 +19,15 @@ def _get_current_company_employee(company_id: int):
 
 
 def _resolve_routine_summary_employee_id(company_id: int, requested_employee_id: int | None) -> int | None:
-    if requested_employee_id:
-        employee = Employee.query.filter_by(id=requested_employee_id, company_id=company_id, status='active').first()
-        if employee:
-            return employee.id
-
     session_company_id = session.get('routine_analysis_summary_company_id')
     session_employee_id = session.get('routine_analysis_summary_employee_id')
     if session_company_id == company_id and session_employee_id:
         employee = Employee.query.filter_by(id=session_employee_id, company_id=company_id, status='active').first()
+        if employee:
+            return employee.id
+
+    if requested_employee_id:
+        employee = Employee.query.filter_by(id=requested_employee_id, company_id=company_id, status='active').first()
         if employee:
             return employee.id
     return None
