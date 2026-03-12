@@ -149,6 +149,28 @@ function loadFiltersFromCache() {
   }
 }
 
+
+async function parseJsonResponse(response, fallbackMessage = 'Resposta inválida do servidor') {
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
+  const rawText = await response.text();
+
+  try {
+    return rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    const snippet = rawText.trim().slice(0, 180).replace(/\s+/g, ' ');
+    const detail = snippet
+      ? `${fallbackMessage} [content-type=${contentType || 'desconhecido'}]. Conteúdo recebido: ${snippet}`
+      : `${fallbackMessage} [content-type=${contentType || 'desconhecido'}]`;
+    throw new Error(detail);
+  }
+}
+
+async function fetchJsonOrThrow(url, options = {}, fallbackMessage = 'Resposta inválida do servidor') {
+  const response = await fetch(url, options);
+  const payload = await parseJsonResponse(response, fallbackMessage);
+  return { response, payload };
+}
+
 function clearAllFilters() {
   // Resetar todos os filtros para valores padrão no estado
   state.selectedCompanyIds = (state.companies || []).map(c => c.company_id);
@@ -407,8 +429,11 @@ async function bootstrapFilterDashboard() {
 
 async function loadFilterOptions() {
   try {
-    const response = await fetch('/my-work/api/filter-options');
-    const payload = await response.json();
+    const { response, payload } = await fetchJsonOrThrow(
+      '/my-work/api/filter-options',
+      {},
+      'A API de filtros do My Work não retornou JSON válido'
+    );
     if (!payload.success) {
       throw new Error(payload.error || 'Erro ao buscar filtros');
     }
@@ -1277,8 +1302,11 @@ async function loadActivitiesData() {
       params.append('delivery_tags', deliveryFilters.join(','));
     }
 
-    const response = await fetch(`/my-work/api/activities?${params.toString()}`);
-    const data = await response.json();
+    const { response, payload: data } = await fetchJsonOrThrow(
+      `/my-work/api/activities?${params.toString()}` ,
+      {},
+      'A API de atividades do My Work não retornou JSON válido'
+    );
 
     if (!response.ok || !data.success) {
       throw new Error(data.error || 'Erro ao carregar atividades');
@@ -1708,8 +1736,11 @@ async function updateIncidentSummary() {
     if (state.selectedCompanyIds?.length) {
       params.append('company_ids', state.selectedCompanyIds.join(','));
     }
-    const response = await fetch(`/my-work/api/occurrences/summary?${params.toString()}`);
-    const payload = await response.json();
+    const { response, payload } = await fetchJsonOrThrow(
+      `/my-work/api/occurrences/summary?${params.toString()}` ,
+      {},
+      'A API de ocorrências do My Work não retornou JSON válido'
+    );
     if (!payload.success) {
       throw new Error(payload.error || 'Erro ao carregar ocorrências');
     }
