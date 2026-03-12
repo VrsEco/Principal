@@ -204,11 +204,14 @@ def _build_task_summary_item(task, company_map: dict[int, Company], today: date)
     if not task.project:
         return None
 
+    company = company_map.get(task.project.company_id)
+    if not company:
+        return None
+
     due_date = _coerce_date(task.due_date)
     if not due_date:
         return None
 
-    company = company_map.get(task.project.company_id)
     company_code = (company.client_code if company and company.client_code else "CP")
     project_code = f"{company_code}.J.{task.project.id}"
     responsible = task.employee.name if task.employee and task.employee.name else (task.who or "Sem responsável")
@@ -234,6 +237,8 @@ def _build_process_summary_item(instance, company_map: dict[int, Company], owner
         return None
 
     company = company_map.get(instance.company_id)
+    if not company:
+        return None
     company_code = (company.client_code if company and company.client_code else "CP")
     process_name = instance.process_rel.name if instance.process_rel and instance.process_rel.name else "Sem nome"
     process_code = instance.process_rel.code if instance.process_rel and instance.process_rel.code else f"{company_code}.C.{instance.process_id}"
@@ -260,6 +265,8 @@ def _build_meeting_summary_item(meeting, company_map: dict[int, Company], today:
         return None
 
     company = company_map.get(meeting.company_id)
+    if not company:
+        return None
     company_code = (company.client_code if company and company.client_code else "CP")
     project_code = f"{company_code}.J.{meeting.project.id}" if meeting.project else "-"
     project_name = meeting.project.name if meeting.project else "Sem projeto vinculado"
@@ -316,8 +323,15 @@ def _build_summary_context(user, date_range: str = "today") -> dict | None:
     if not company_ids and not employee_ids:
         return None
 
-    companies = Company.query.filter(Company.id.in_(company_ids)).all() if company_ids else []
+    companies = Company.query.filter(
+        Company.id.in_(company_ids),
+        Company.is_active == True,
+    ).all() if company_ids else []
     company_map = {c.id: c for c in companies}
+    company_ids = sorted(company_map.keys())
+
+    if not company_ids and role == "admin":
+        return None
     emails = sorted({str(user.email or "").strip(), *[str(e.email or "").strip() for e in user_employees if e.email]})
     names = sorted({str(user.name or "").strip(), *[str(e.name or "").strip() for e in user_employees if e.name]})
     emails = [e for e in emails if e]
@@ -364,13 +378,15 @@ def _build_summary_context(user, date_range: str = "today") -> dict | None:
             ProcessInstance.executor_id.in_(employee_ids),
             ProcessInstance.owner_employee_id.in_(employee_ids)
         ),
-        ProcessInstance.status != 'completed'
-    ).all() if employee_ids else []
+        ProcessInstance.status != 'completed',
+        ProcessInstance.company_id.in_(company_ids)
+    ).all() if employee_ids and company_ids else []
 
     process_collab = ProcessInstance.query.filter(
         ProcessInstance.id.in_(collaborator_instance_ids),
-        ProcessInstance.status != 'completed'
-    ).all() if collaborator_instance_ids else []
+        ProcessInstance.status != 'completed',
+        ProcessInstance.company_id.in_(company_ids)
+    ).all() if collaborator_instance_ids and company_ids else []
 
     personal_process_instances = list({p.id: p for p in (process_direct + process_collab)}.values())
     owner_ids = {
