@@ -3,10 +3,11 @@ import html
 import re
 import inspect
 import unicodedata
+from collections import defaultdict
 from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from models import db, User, Employee
-from models.project import ProjectTask, ProjectActivityCollaborator
+from models.project import Project, ProjectTask, ProjectActivityCollaborator
 from models.process import ProcessInstance, ProcessInstanceCollaborator
 from models.meeting import Meeting
 from models.company import Company
@@ -16,11 +17,30 @@ from src.core.theme_tokens import (
     get_summary_email_theme,
     get_summary_email_section_styles,
 )
+from utils.permissions import _normalize_role_title
 
 logger = logging.getLogger(__name__)
 EMAIL_FALLBACK_SUFFIX = "Registros acima da capacidade deste canal, quer que eu te envie por e-mail?"
 EMAIL_FALLBACK_FRAGMENT = "Registros acima da capacidade deste canal"
 SUMMARY_DELIVERY_CHANNELS = ("telegram", "whatsapp", "email")
+
+DAILY_INSPIRATION_QUOTES = [
+    ("O sucesso nasce do querer.", "Napoleon Hill"),
+    ("O que pode ser medido pode ser melhorado.", "Peter Drucker"),
+    ("Leveza também é produtividade.", "Anne Lamott"),
+    ("Feito é melhor que perfeito.", "Sheryl Sandberg"),
+    ("A melhor maneira de prever o futuro é criá-lo.", "Peter Drucker"),
+    ("Respire. Um passo de cada vez também é avanço.", "Desmond Tutu"),
+    ("Tudo parece impossível até acontecer.", "Nelson Mandela"),
+    ("Simplicidade é sofisticação.", "Leonardo da Vinci"),
+    ("Gentileza gera força silenciosa.", "Dalai Lama"),
+    ("Comece antes de estar pronto.", "Steven Pressfield"),
+    ("Quem sabe focar, avança.", "Peter Drucker"),
+    ("A alegria não atrapalha a excelência.", "Maya Angelou"),
+    ("Disciplina é liberdade.", "Jocko Willink"),
+    ("O importante é transformar intenção em ação.", "Indra Nooyi"),
+    ("Que o seu dia tenha propósito e leveza.", "Martha Medeiros"),
+]
 
 
 def _resolve_summary_delivery_channels(user) -> list[str]:
@@ -129,39 +149,184 @@ def _format_my_work_report_compat(report_formatter, **kwargs):
         legacy_kwargs.pop("user_id", None)
         return formatter(**legacy_kwargs)
 
-def get_user_summary_report(user, date_range='today', channel='telegram'):
-    """
-    Gera o relatório de resumo para um usuário específico.
-    channel:
-      - telegram (padrão): mensagem compacta e com truncamento de segurança do canal
-      - email: texto completo sem truncamento
-      - whatsapp/web: texto completo sem truncamento
-    """
-    from src.intelligence import menu_engine as report_formatter
-    normalized_channel = str(channel or "telegram").strip().lower()
+def _normalize_summary_user_role(user, user_employees: list[Employee] | None = None) -> str:
+    role = str(getattr(user, "role", "") or "").strip().lower()
+    if role in {"admin", "administrator"}:
+        return "admin"
+    if role == "client":
+        return "client"
 
+    for employee in user_employees or []:
+        role_title = _normalize_role_title(employee.role.title if employee and employee.role else None)
+        if role_title in {"superuser", "administrador", "administrator", "admin"}:
+            return "admin"
+
+    return "collaborator"
+
+
+def _format_date_br(value) -> str:
+    due_date = _coerce_date(value)
+    return due_date.strftime("%d/%m/%Y") if due_date else "-"
+
+
+def _format_due_hint(due_date: date, today: date) -> str:
+    if not due_date:
+        return "sem data"
+    if due_date < today:
+        return f"atrasada desde {due_date.strftime('%d/%m')}"
+    if due_date == today:
+        return "vence hoje"
+    if due_date == today + timedelta(days=1):
+        return "vence amanhã"
+    return f"vence em {due_date.strftime('%d/%m')}"
+
+
+def _get_daily_inspiration(today: date) -> str:
+    if not DAILY_INSPIRATION_QUOTES:
+        return ""
+    index = today.toordinal() % len(DAILY_INSPIRATION_QUOTES)
+    quote, author = DAILY_INSPIRATION_QUOTES[index]
+    return f"\"{quote}\" — {author}"
+
+
+def _describe_summary_target_window(date_range: str) -> str:
+    normalized = str(date_range or "today").strip().lower()
+    if normalized in {"today", "hoje"}:
+        return "para hoje"
+    if normalized in {"week", "this_week", "esta semana", "esta_semana"}:
+        return "para esta semana"
+    if normalized in {"month", "this_month", "este_mes", "este mes", "neste_mes", "neste mes"}:
+        return "para este mês"
+    return "para o período selecionado"
+
+
+def _build_task_summary_item(task, company_map: dict[int, Company], today: date):
+    if not task.project:
+        return None
+
+    due_date = _coerce_date(task.due_date)
+    if not due_date:
+        return None
+
+    company = company_map.get(task.project.company_id)
+    company_code = (company.client_code if company and company.client_code else "CP")
+    project_code = f"{company_code}.J.{task.project.id}"
+    responsible = task.employee.name if task.employee and task.employee.name else (task.who or "Sem responsável")
+
+    return {
+        "kind": "task",
+        "id": task.id,
+        "company_id": task.project.company_id,
+        "code": f"{project_code}.{task.id}",
+        "title": task.what,
+        "responsible": responsible,
+        "due_date": due_date,
+        "due_label": _format_due_hint(due_date, today),
+        "group_type": "Projeto",
+        "group_id": task.project.id,
+        "group_label": f"{project_code} - {task.project.name}",
+    }
+
+
+def _build_process_summary_item(instance, company_map: dict[int, Company], owner_lookup: dict[int, str], today: date):
+    due_date = _coerce_date(instance.due_date)
+    if not due_date:
+        return None
+
+    company = company_map.get(instance.company_id)
+    company_code = (company.client_code if company and company.client_code else "CP")
+    process_name = instance.process_rel.name if instance.process_rel and instance.process_rel.name else "Sem nome"
+    process_code = instance.process_rel.code if instance.process_rel and instance.process_rel.code else f"{company_code}.C.{instance.process_id}"
+    owner_name = _resolve_process_owner_name(instance, owner_lookup)
+
+    return {
+        "kind": "process",
+        "id": instance.id,
+        "company_id": instance.company_id,
+        "code": instance.instance_code or f"{process_code}.{instance.id}",
+        "title": instance.title or process_name,
+        "responsible": owner_name,
+        "due_date": due_date,
+        "due_label": _format_due_hint(due_date, today),
+        "group_type": "Processo",
+        "group_id": instance.process_id,
+        "group_label": f"{process_code} - {process_name}",
+    }
+
+
+def _build_meeting_summary_item(meeting, company_map: dict[int, Company], today: date):
+    due_date = _coerce_date(meeting.scheduled_date)
+    if not due_date:
+        return None
+
+    company = company_map.get(meeting.company_id)
+    company_code = (company.client_code if company and company.client_code else "CP")
+    project_code = f"{company_code}.J.{meeting.project.id}" if meeting.project else "-"
+    project_name = meeting.project.name if meeting.project else "Sem projeto vinculado"
+    meeting_name = meeting.title or f"Reunião {meeting.id}"
+    time_label = str(meeting.scheduled_time or "").strip()
+    due_label = "hoje" if due_date == today else ("amanhã" if due_date == today + timedelta(days=1) else due_date.strftime('%d/%m'))
+    if time_label:
+        due_label = f"{due_label} às {time_label}"
+
+    return {
+        "kind": "meeting",
+        "id": meeting.id,
+        "company_id": meeting.company_id,
+        "code": f"{company_code}.R.{meeting.id}",
+        "title": f"Reunião — {meeting_name}",
+        "responsible": "Agenda",
+        "due_date": due_date,
+        "due_label": due_label,
+        "group_type": "Reunião",
+        "group_id": meeting.id,
+        "group_label": f"{project_code} - {project_name}",
+    }
+
+
+def _sort_summary_items(items: list[dict]) -> list[dict]:
+    return sorted(
+        items,
+        key=lambda item: (
+            item.get("due_date") or date.max,
+            str(item.get("responsible") or ""),
+            str(item.get("title") or ""),
+        ),
+    )
+
+
+def _build_summary_context(user, date_range: str = "today") -> dict | None:
     today = date.today()
     start_date, end_date, range_label = _resolve_summary_period(date_range=date_range, today=today)
 
     user_employees = Employee.query.filter_by(user_id=user.id, status='active').all()
-    employee_ids = [e.id for e in user_employees if e.id]
+    employee_ids = sorted({e.id for e in user_employees if e.id})
     company_ids = sorted({e.company_id for e in user_employees if e.company_id})
+    role = _normalize_summary_user_role(user, user_employees)
+
+    if role == "admin" and not company_ids:
+        try:
+            from src.intelligence.identity import get_best_company_id
+            best_company_id = get_best_company_id(user)
+        except Exception:
+            best_company_id = None
+        if best_company_id:
+            company_ids = [best_company_id]
+
+    if not company_ids and not employee_ids:
+        return None
+
+    companies = Company.query.filter(Company.id.in_(company_ids)).all() if company_ids else []
+    company_map = {c.id: c for c in companies}
     emails = sorted({str(user.email or "").strip(), *[str(e.email or "").strip() for e in user_employees if e.email]})
     names = sorted({str(user.name or "").strip(), *[str(e.name or "").strip() for e in user_employees if e.name]})
     emails = [e for e in emails if e]
     names = [n for n in names if n]
 
-    if not employee_ids:
-        return None
-
-    companies = Company.query.filter(Company.id.in_(company_ids)).all() if company_ids else []
-    company_map = {c.id: c for c in companies}
-
-    # 1) Atividades de Projeto (responsável direto + colaborador)
     tasks_direct = ProjectTask.query.filter(
         ProjectTask.employee_id.in_(employee_ids),
         ProjectTask.stage != 'completed'
-    ).all()
+    ).all() if employee_ids else []
 
     collaborator_task_ids = {
         c.activity_id
@@ -170,16 +335,20 @@ def get_user_summary_report(user, date_range='today', channel='telegram'):
             ProjectActivityCollaborator.is_deleted == False
         ).all()
         if c.activity_id
-    }
+    } if employee_ids else set()
+
     tasks_collab = ProjectTask.query.filter(
         ProjectTask.id.in_(collaborator_task_ids),
         ProjectTask.stage != 'completed',
         ~ProjectTask.employee_id.in_(employee_ids)
     ).all() if collaborator_task_ids else []
 
-    project_tasks = list({t.id: t for t in (tasks_direct + tasks_collab)}.values())
+    personal_task_items = []
+    for task in {t.id: t for t in (tasks_direct + tasks_collab)}.values():
+        item = _build_task_summary_item(task, company_map, today)
+        if item:
+            personal_task_items.append(item)
 
-    # 2) Instâncias de Processo (dono/responsável/executor + colaborador)
     collaborator_instance_ids = {
         c.process_instance_id
         for c in ProcessInstanceCollaborator.query.filter(
@@ -187,7 +356,7 @@ def get_user_summary_report(user, date_range='today', channel='telegram'):
             ProcessInstanceCollaborator.is_deleted == False
         ).all()
         if c.process_instance_id
-    }
+    } if employee_ids else set()
 
     process_direct = ProcessInstance.query.filter(
         db.or_(
@@ -196,208 +365,225 @@ def get_user_summary_report(user, date_range='today', channel='telegram'):
             ProcessInstance.owner_employee_id.in_(employee_ids)
         ),
         ProcessInstance.status != 'completed'
-    ).all()
+    ).all() if employee_ids else []
+
     process_collab = ProcessInstance.query.filter(
         ProcessInstance.id.in_(collaborator_instance_ids),
         ProcessInstance.status != 'completed'
     ).all() if collaborator_instance_ids else []
 
-    process_instances = list({p.id: p for p in (process_direct + process_collab)}.values())
-
+    personal_process_instances = list({p.id: p for p in (process_direct + process_collab)}.values())
     owner_ids = {
-        getattr(p, "owner_employee_id", None) for p in process_instances
+        getattr(p, "owner_employee_id", None) for p in personal_process_instances
     } | {
-        getattr(p, "responsible_id", None) for p in process_instances
+        getattr(p, "responsible_id", None) for p in personal_process_instances
     } | {
-        getattr(p, "executor_id", None) for p in process_instances
+        getattr(p, "executor_id", None) for p in personal_process_instances
     }
     owner_ids = {oid for oid in owner_ids if oid}
-    owner_lookup = {}
-    if owner_ids:
-        owner_lookup = {e.id: e.name for e in Employee.query.filter(Employee.id.in_(owner_ids)).all()}
+    owner_lookup = {e.id: e.name for e in Employee.query.filter(Employee.id.in_(owner_ids)).all()} if owner_ids else {}
 
-    # 3) Reuniões Agendadas (usuário convidado)
+    personal_process_items = []
+    for instance in personal_process_instances:
+        item = _build_process_summary_item(instance, company_map, owner_lookup, today)
+        if item:
+            personal_process_items.append(item)
+
     meetings_q = Meeting.query.filter(
         Meeting.company_id.in_(company_ids),
         func.lower(func.coalesce(Meeting.status, "")) != "completed",
         Meeting.scheduled_date.isnot(None),
-    )
-    potential_meetings = meetings_q.all()
-    meetings = [
-        m for m in potential_meetings
-        if _is_meeting_for_user(m, emails=emails, names=names)
-    ]
+    ) if company_ids else []
+    potential_meetings = meetings_q.all() if company_ids else []
+    personal_meeting_items = []
+    for meeting in potential_meetings:
+        if _is_meeting_for_user(meeting, emails=emails, names=names):
+            item = _build_meeting_summary_item(meeting, company_map, today)
+            if item:
+                personal_meeting_items.append(item)
 
-    # 4) Aprovações pendentes
-    pending_actions = AgentAction.query.filter(
-        AgentAction.company_id.in_(company_ids),
-        AgentAction.status.in_(["pending", "awaiting_approval"])
-    ).order_by(AgentAction.created_at.asc()).all()
+    personal_items = _sort_summary_items(personal_task_items + personal_process_items)
+    personal_overdue = [item for item in personal_items if item["due_date"] < today]
+    personal_period = [item for item in personal_items if start_date <= item["due_date"] <= end_date]
+    meeting_today = [item for item in personal_meeting_items if item["due_date"] == today]
+    meeting_next_7_days = [item for item in personal_meeting_items if today < item["due_date"] <= today + timedelta(days=7)]
 
-    overdue_tasks, range_tasks = [], []
-    overdue_processes, range_processes = [], []
-    overdue_meetings, range_meetings = [], []
+    pending_actions = []
+    if role == "admin" and company_ids:
+        pending_actions = AgentAction.query.filter(
+            AgentAction.company_id.in_(company_ids),
+            AgentAction.status.in_(["pending", "awaiting_approval"])
+        ).order_by(AgentAction.created_at.asc()).all()
 
-    # Normalização para o padrão "Código + Nome"
-    for task in project_tasks:
-        if not task.project:
-            continue
-        due_date = _coerce_date(task.due_date)
-        if not due_date:
-            continue
+    team_overdue_extra = []
+    team_period_extra = []
+    if role == "client" and company_ids:
+        team_tasks = ProjectTask.query.join(Project, Project.id == ProjectTask.project_id).filter(
+            Project.company_id.in_(company_ids),
+            ProjectTask.stage != 'completed'
+        ).all()
+        team_processes = ProcessInstance.query.filter(
+            ProcessInstance.company_id.in_(company_ids),
+            ProcessInstance.status != 'completed'
+        ).all()
 
-        company = company_map.get(task.project.company_id)
-        company_code = (company.client_code if company and company.client_code else "CP")
-        company_name = (company.name if company and company.name else f"Empresa {task.project.company_id}")
-        project_code = f"{company_code}.J.{task.project.id}"
-        task_item = {
-            "company_id": task.project.company_id,
-            "company_code": company_code,
-            "company_name": company_name,
-            "project_code": project_code,
-            "project_name": task.project.name,
-            "activity_code": f"{project_code}.{task.id}",
-            "title": task.what,
-            "responsible": task.employee.name if task.employee and task.employee.name else (task.who or "Sem responsavel"),
-            "due_date": due_date.isoformat(),
-            "completion_date": "-",
+        extra_owner_ids = {
+            getattr(p, "owner_employee_id", None) for p in team_processes
+        } | {
+            getattr(p, "responsible_id", None) for p in team_processes
+        } | {
+            getattr(p, "executor_id", None) for p in team_processes
         }
-        if due_date < today:
-            overdue_tasks.append(task_item)
-        elif start_date <= due_date <= end_date:
-            range_tasks.append(task_item)
+        extra_owner_ids = {oid for oid in extra_owner_ids if oid}
+        extra_owner_lookup = owner_lookup.copy()
+        if extra_owner_ids:
+            extra_owner_lookup.update({
+                e.id: e.name for e in Employee.query.filter(Employee.id.in_(extra_owner_ids)).all()
+            })
 
-    for instance in process_instances:
-        due_date = _coerce_date(instance.due_date)
-        if not due_date:
-            continue
-        company = company_map.get(instance.company_id)
-        company_code = (company.client_code if company and company.client_code else "CP")
-        company_name = (company.name if company and company.name else f"Empresa {instance.company_id}")
-        process_name = instance.process_rel.name if instance.process_rel and instance.process_rel.name else "Sem nome"
-        process_code = instance.process_rel.code if instance.process_rel and instance.process_rel.code else f"{company_code}.C.{instance.process_id}"
-        owner_name = _resolve_process_owner_name(instance, owner_lookup)
-        item = {
-            "company_id": instance.company_id,
-            "company_code": company_code,
-            "company_name": company_name,
-            "process_code": process_code,
-            "process_name": process_name,
-            "instance_code": instance.instance_code or f"{process_code}.{instance.id}",
-            "title": instance.title or process_name,
-            "owner": owner_name,
-            "due_date": due_date.isoformat(),
-            "completion_date": "-",
-        }
-        if due_date < today:
-            overdue_processes.append(item)
-        elif start_date <= due_date <= end_date:
-            range_processes.append(item)
+        personal_keys = {(item["kind"], item["id"]) for item in personal_items}
+        all_team_items = []
 
-    for meeting in meetings:
-        scheduled_date = _coerce_date(meeting.scheduled_date)
-        if not scheduled_date:
-            continue
-        company = company_map.get(meeting.company_id)
-        company_code = (company.client_code if company and company.client_code else "CP")
-        company_name = (company.name if company and company.name else f"Empresa {meeting.company_id}")
-        project_code = f"{company_code}.J.{meeting.project.id}" if meeting.project else "-"
-        project_name = meeting.project.name if meeting.project else "Sem projeto vinculado"
-        item = {
-            "company_id": meeting.company_id,
-            "company_code": company_code,
-            "company_name": company_name,
-            "meeting_code": f"{company_code}.R.{meeting.id}",
-            "meeting_name": meeting.title or f"Reuniao {meeting.id}",
-            "project_code": project_code,
-            "project_name": project_name,
-            "scheduled_time": meeting.scheduled_time or "-",
-            "due_date": scheduled_date.isoformat(),
-            "completion_date": "-",
-        }
-        if scheduled_date < today:
-            overdue_meetings.append(item)
-        elif start_date <= scheduled_date <= end_date:
-            range_meetings.append(item)
+        for task in team_tasks:
+            item = _build_task_summary_item(task, company_map, today)
+            if item and (item["kind"], item["id"]) not in personal_keys:
+                all_team_items.append(item)
 
-    has_overdue = bool(overdue_tasks or overdue_processes or overdue_meetings)
-    has_period = bool(range_tasks or range_processes or range_meetings)
-    has_approvals = bool(pending_actions)
+        for instance in team_processes:
+            item = _build_process_summary_item(instance, company_map, extra_owner_lookup, today)
+            if item and (item["kind"], item["id"]) not in personal_keys:
+                all_team_items.append(item)
 
-    if not has_overdue and not has_period and not has_approvals:
-        if normalized_channel == "email":
-            return (
-                f"✅ {user.name}, você está 100% em dia {range_label}.\n"
-                "Nenhuma tarefa, processo ou reunião pendente foi encontrada para o período."
+        all_team_items = _sort_summary_items(all_team_items)
+        team_overdue_extra = [item for item in all_team_items if item["due_date"] < today]
+        team_period_extra = [item for item in all_team_items if start_date <= item["due_date"] <= end_date]
+
+    return {
+        "role": role,
+        "today": today,
+        "range_label": range_label,
+        "date_range": date_range,
+        "company_ids": company_ids,
+        "personal_items": personal_items,
+        "personal_overdue": personal_overdue,
+        "personal_period": personal_period,
+        "pending_actions": pending_actions,
+        "next_7_days": [item for item in personal_items if today < item["due_date"] <= today + timedelta(days=7)],
+        "meeting_today": meeting_today,
+        "meeting_next_7_days": meeting_next_7_days,
+        "team_overdue_extra": team_overdue_extra,
+        "team_period_extra": team_period_extra,
+        "team_next_7_days_extra": [item for item in all_team_items if today < item["due_date"] <= today + timedelta(days=7)] if role == "client" and company_ids else [],
+    }
+
+
+def _build_short_summary_message(user, summary: dict, channel: str) -> str:
+    normalized_channel = str(channel or "telegram").strip().lower()
+    role = summary["role"]
+    today = summary["today"]
+    personal_overdue = summary["personal_overdue"]
+    personal_period = summary["personal_period"]
+    next_7_days = summary.get("next_7_days") or []
+    meeting_today = summary.get("meeting_today") or []
+    meeting_next_7_days = summary.get("meeting_next_7_days") or []
+    pending_actions = summary["pending_actions"]
+    team_overdue_extra = summary["team_overdue_extra"]
+    team_period_extra = summary["team_period_extra"]
+    team_next_7_days_extra = summary.get("team_next_7_days_extra") or []
+    target_window = _describe_summary_target_window(summary.get("date_range") or "today")
+
+    lines = [f"Bom dia, {user.name}! Resumo de hoje ({today.strftime('%d/%m/%Y')}):"]
+
+    if personal_overdue or personal_period or next_7_days or meeting_today or meeting_next_7_days:
+        lines.append(f"• {len(personal_overdue)} atrasada(s)")
+        lines.append(f"• {len(personal_period)} {target_window}")
+        lines.append(f"• {len(next_7_days)} para os próximos 7 dias")
+        lines.append(f"• {len(meeting_today)} reunião(ões) hoje e {len(meeting_next_7_days)} nos próximos 7 dias")
+        lines.append("")
+        lines.append("Principais itens:")
+        spotlight = _sort_summary_items(personal_overdue + personal_period + next_7_days + meeting_today + meeting_next_7_days)[:3]
+        for idx, item in enumerate(spotlight, start=1):
+            lines.append(
+                f"{idx}. {item['code']} — {item['title']} ({item['group_type']}: {item['group_label']}) — {item['due_label']}."
             )
-        return (
-            f"✅ {user.name} está 100% em dia {range_label}! "
-            "Nenhuma tarefa, processo ou reunião pendente encontrada para o período."
-        )
-
-    sections = []
-
-    if has_approvals:
-        approval_lines = ["⚖️ APROVAÇÕES PENDENTES (IA):"]
-        for idx, action in enumerate(pending_actions[:5], start=1):
-            agent = (action.requesting_agent or "agente").upper()
-            approval_lines.append(f"{idx}. {agent} - {action.title}")
-        if len(pending_actions) > 5:
-            approval_lines.append(f"...e mais {len(pending_actions) - 5} solicitações.")
-        if normalized_channel == "email":
-            approval_lines.append("Acesse o chat do sistema para aprovar ou recusar as solicitações.")
-        else:
-            approval_lines.append("Responda 'Aprovar' ou 'Recusar' no chat do sistema.")
-        sections.append("\n".join(approval_lines))
-
-    if has_overdue:
-        overdue_report = _format_my_work_report_compat(
-            report_formatter,
-            action="my_work.overdue",
-            company_label="empresas vinculadas",
-            tasks=overdue_tasks,
-            processes=overdue_processes,
-            meetings=overdue_meetings,
-            start_date=None,
-            end_date=None,
-            channel=normalized_channel,
-            payload={"colaborador": user.name},
-            user_id=user.id,
-        )
-        sections.append(overdue_report)
-
-    if has_period:
-        range_report = _format_my_work_report_compat(
-            report_formatter,
-            action="my_work.due_range",
-            company_label="empresas vinculadas",
-            tasks=range_tasks,
-            processes=range_processes,
-            meetings=range_meetings,
-            start_date=start_date,
-            end_date=end_date,
-            channel=normalized_channel,
-            payload={"colaborador": user.name},
-            user_id=user.id,
-        )
-        sections.append(range_report)
-
-    if normalized_channel == "email":
-        intro = (
-            f"Olá, {user.name}! ☀️\n"
-            f"Sou o Sapiens e este é o seu resumo {range_label}.\n"
-        )
-        outro = "\n\nConte comigo para priorizar o próximo passo da sua agenda."
     else:
-        intro = f"Olá, {user.name}! ☀️\nSou o Sapiens e trouxe seu resumo {range_label}.\n"
-        outro = "\n\nEstou à disposição para ajudar você a priorizar o próximo passo."
+        lines.append("• 0 atrasada(s)")
+        lines.append(f"• 0 {target_window}")
+        lines.append("• 0 para os próximos 7 dias")
+        lines.append("• 0 reunião(ões) hoje e 0 nos próximos 7 dias")
 
-    message = intro + "\n\n".join(sections)
-    message += outro
+    if role == "client":
+        lines.append("")
+        lines.append("Além disso, sua equipe tem:")
+        lines.append(f"• {len(team_overdue_extra)} atrasada(s)")
+        lines.append(f"• {len(team_period_extra)} {target_window}")
+        lines.append(f"• {len(team_next_7_days_extra)} para os próximos 7 dias")
+        if team_overdue_extra or team_period_extra or team_next_7_days_extra:
+            lines.append("")
+            lines.append("Quer que eu mostre agora? Responda SIM.")
 
+    if role == "admin" and pending_actions:
+        lines.append("")
+        lines.append("Sistema:")
+        lines.append(f"• {len(pending_actions)} ação(ões) do squad/correção aguardando decisão")
+        for idx, action in enumerate(pending_actions[:3], start=1):
+            agent = (action.requesting_agent or "agente").upper()
+            lines.append(f"{idx}. {agent} — {action.title}")
+        if len(pending_actions) > 3:
+            lines.append(f"...e mais {len(pending_actions) - 3}.")
+
+    lines.append("")
+    if normalized_channel == "email":
+        lines.append("Se quiser, responda este e-mail e eu detalho a lista.")
+    else:
+        lines.append("Se quiser, eu posso detalhar a lista no chat.")
+
+    inspiration = _get_daily_inspiration(today)
+    if inspiration:
+        lines.append("")
+        lines.append(inspiration)
+
+    return "\n".join(lines)
+
+
+def _build_team_details_message(user, summary: dict, channel: str) -> str:
+    items = _sort_summary_items(summary["team_overdue_extra"] + summary["team_period_extra"])
+    if not items:
+        return f"{user.name}, não encontrei outras atividades da equipe além das que já enviei no resumo."
+
+    grouped = defaultdict(lambda: defaultdict(list))
+    for item in items:
+        responsible = item.get("responsible") or "Sem responsável"
+        grouped[responsible][item["group_label"]].append(item)
+
+    lines = ["Segue o detalhamento da equipe por responsável e projeto/processo:"]
+    for responsible in sorted(grouped.keys()):
+        lines.append(f"• {responsible}")
+        for group_label in sorted(grouped[responsible].keys()):
+            lines.append(f"  - {group_label}")
+            for item in grouped[responsible][group_label][:8]:
+                lines.append(f"    • {item['code']} — {item['title']} ({_format_date_br(item['due_date'])})")
+
+    message = "\n".join(lines)
+    if channel == "telegram":
+        return _truncate_telegram_message(message)
+    return message
+
+
+def get_user_summary_report(user, date_range='today', channel='telegram'):
+    """
+    Gera o relatório de resumo para um usuário específico.
+    """
+    normalized_channel = str(channel or "telegram").strip().lower()
+    summary = _build_summary_context(user, date_range=date_range)
+    if not summary:
+        return None
+
+    message = _build_short_summary_message(user, summary, normalized_channel)
     if normalized_channel == "telegram":
         return _truncate_telegram_message(message)
     return message
+
 
 
 def get_user_summary_email_payload(user, date_range='today'):
@@ -780,35 +966,40 @@ def _infer_date_range_from_summary_text(content: str) -> str:
     return "today"
 
 
-def _find_recent_email_offer_message(user_id: int, company_id: int, channel: str = "telegram", lookback_minutes: int = 1440):
+def _find_recent_summary_prompt_message(
+    user_id: int,
+    company_id: int,
+    channel: str,
+    metadata_key: str,
+    lookback_minutes: int = 1440,
+):
     from models.agent_message import AgentMessage
 
     cutoff = datetime.utcnow() - timedelta(minutes=lookback_minutes)
-    return AgentMessage.query.filter(
+    candidates = AgentMessage.query.filter(
         AgentMessage.user_id == user_id,
         AgentMessage.company_id == company_id,
         AgentMessage.channel == channel,
         AgentMessage.direction == "outbound",
         AgentMessage.created_at >= cutoff,
-        AgentMessage.content.ilike(f"%{EMAIL_FALLBACK_FRAGMENT}%"),
-    ).order_by(AgentMessage.created_at.desc()).first()
+    ).order_by(AgentMessage.created_at.desc()).limit(20).all()
+
+    for candidate in candidates:
+        metadata = candidate.metadata_json or {}
+        if metadata.get(metadata_key):
+            return candidate
+    return None
 
 
-def try_handle_summary_email_confirmation(user, company_id: int, incoming_text: str, channel: str = "telegram"):
-    """
-    Fluxo rápido para confirmação via Telegram:
-    quando o usuário responde "sim" após resumo truncado, dispara o envio por e-mail.
-    """
-    if channel != "telegram" or not user or not company_id:
-        return False, None
-
+def _handle_summary_email_confirmation(user, company_id: int, incoming_text: str, channel: str):
     if not _is_affirmative_email_confirmation(incoming_text):
         return False, None
 
-    offer_message = _find_recent_email_offer_message(
+    offer_message = _find_recent_summary_prompt_message(
         user_id=user.id,
         company_id=company_id,
         channel=channel,
+        metadata_key="email_offer_available",
     )
     if not offer_message:
         return False, None
@@ -838,13 +1029,56 @@ def try_handle_summary_email_confirmation(user, company_id: int, incoming_text: 
     return True, "Tentei enviar o e-mail, mas houve uma falha no serviço agora. Posso tentar novamente."
 
 
+def _handle_summary_team_details_confirmation(user, company_id: int, incoming_text: str, channel: str):
+    if not _is_affirmative_email_confirmation(incoming_text):
+        return False, None
+
+    offer_message = _find_recent_summary_prompt_message(
+        user_id=user.id,
+        company_id=company_id,
+        channel=channel,
+        metadata_key="summary_team_offer_available",
+    )
+    if not offer_message:
+        return False, None
+
+    metadata = offer_message.metadata_json or {}
+    if str(metadata.get("summary_user_role") or "") != "client":
+        return False, None
+
+    date_range = str(metadata.get("summary_date_range") or "").strip() or _infer_date_range_from_summary_text(offer_message.content)
+    summary = _build_summary_context(user, date_range=date_range)
+    if not summary:
+        return True, "Não consegui montar o detalhamento da equipe agora."
+
+    return True, _build_team_details_message(user, summary, channel)
+
+
+def try_handle_summary_followup(user, company_id: int, incoming_text: str, channel: str = "telegram"):
+    if not user or not company_id:
+        return False, None
+
+    handled, response = _handle_summary_team_details_confirmation(user, company_id, incoming_text, channel)
+    if handled:
+        return handled, response
+
+    return _handle_summary_email_confirmation(user, company_id, incoming_text, channel)
+
+
+def try_handle_summary_email_confirmation(user, company_id: int, incoming_text: str, channel: str = "telegram"):
+    return _handle_summary_email_confirmation(user, company_id, incoming_text, channel)
+
+
 def _log_summary_agent_message(user, company_id: int, channel: str, recipient: str, message: str, date_range: str, preferred_channels: list[str] | None = None, delivery_sequence: list[str] | None = None, fallback_used: bool = False, winner_channel: str | None = None):
     try:
         from models.agent_message import AgentMessage
 
+        summary = _build_summary_context(user, date_range=date_range) or {}
         metadata = {
             "contact": "sapiens",
             "summary_date_range": date_range,
+            "summary_user_role": summary.get("role"),
+            "summary_team_offer_available": bool(summary.get("role") == "client" and (summary.get("team_overdue_extra") or summary.get("team_period_extra"))),
             "email_offer_available": EMAIL_FALLBACK_FRAGMENT in (message or ""),
             "recipient": str(recipient),
             "preferred_channels": list(preferred_channels or []),

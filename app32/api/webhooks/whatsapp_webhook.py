@@ -286,6 +286,62 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
 
             thread_id = f"wa_{metadata.get('thread_contact') or phone}"
 
+            try:
+                from services.proactive_service import try_handle_summary_followup
+
+                handled_followup, followup_response = try_handle_summary_followup(
+                    user=user,
+                    company_id=company_id,
+                    incoming_text=message_text,
+                    channel="whatsapp",
+                )
+            except Exception as followup_err:
+                logger.exception("Falha ao processar follow-up do resumo no WhatsApp: %s", followup_err)
+                handled_followup, followup_response = False, None
+
+            if handled_followup and followup_response:
+                db.session.add(
+                    AgentMessage(
+                        company_id=company_id,
+                        user_id=user.id,
+                        agent_type="work_agent_squad",
+                        agent_name="Usuário",
+                        direction="inbound",
+                        channel="whatsapp",
+                        content=message_text,
+                        metadata_json={
+                            "thread_id": thread_id,
+                            "contact": "sapiens",
+                            "phone": phone,
+                            "event_type": metadata.get("event_type"),
+                            "message_id": metadata.get("message_id"),
+                        },
+                    )
+                )
+                db.session.add(
+                    AgentMessage(
+                        company_id=company_id,
+                        user_id=user.id,
+                        agent_type="work_agent_squad",
+                        agent_name="sapiens",
+                        direction="outbound",
+                        channel="whatsapp",
+                        content=followup_response,
+                        metadata_json={
+                            "thread_id": thread_id,
+                            "contact": "sapiens",
+                            "phone": phone,
+                            "flow": "summary_followup",
+                        },
+                    )
+                )
+                db.session.commit()
+
+                sent_ok = whatsapp_service.send_message(phone, followup_response)
+                if not sent_ok:
+                    logger.error("WHATSAPP: falha ao enviar follow-up do resumo para %s", phone)
+                return
+
             # 2. Executa o Agente
             response = run_agent_with_context(
                 user_id=user.id,

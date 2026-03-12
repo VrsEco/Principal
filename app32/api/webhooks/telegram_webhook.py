@@ -127,9 +127,9 @@ def process_telegram_message(app, message: telebot.types.Message):
 
             # Fluxo rápido: confirmação de envio por e-mail após resumo truncado.
             try:
-                from services.proactive_service import try_handle_summary_email_confirmation
+                from services.proactive_service import try_handle_summary_followup
 
-                handled_email_confirm, email_confirm_response = try_handle_summary_email_confirmation(
+                handled_email_confirm, email_confirm_response = try_handle_summary_followup(
                     user=user,
                     company_id=company_id,
                     incoming_text=user_msg,

@@ -24,8 +24,24 @@ def process_incoming_email(sender_email: str, subject: str, body: str):
     # 2. Executa o Agente
     try:
         company_id = get_best_company_id(user)
+
+        try:
+            from services.proactive_service import try_handle_summary_followup
+            handled_followup, followup_response = try_handle_summary_followup(
+                user=user,
+                company_id=company_id,
+                incoming_text=body,
+                channel="email",
+            )
+        except Exception as followup_err:
+            logger.exception("Falha ao processar follow-up do resumo por e-mail: %s", followup_err)
+            handled_followup, followup_response = False, None
+
+        if handled_followup and followup_response:
+            return followup_response
+
         user_msg = f"Assunto: {subject}\n\n{body}"
-        
+
         response = run_agent_with_context(
             user_id=user.id,
             user_msg=user_msg,
