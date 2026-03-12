@@ -399,7 +399,7 @@ def process_routines_analysis_summary_pdf(company_id):
     analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
     analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
     if not analysis.get('drilldown'):
-        abort(404, description='Colaborador não encontrado para o resumo.')
+        abort(404, description=f'Colaborador {employee_id} não encontrado na empresa {company_id} para o resumo.')
 
     employee_name = secure_filename((analysis['drilldown']['employee'].get('name') or f'colaborador-{employee_id}').lower())
     pdf_bytes = generate_routine_analysis_summary_pdf_bytes(company.name, analysis)
@@ -429,7 +429,7 @@ def send_process_routines_analysis_summary(company_id):
     analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
     analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
     if not analysis.get('drilldown'):
-        return jsonify({'success': False, 'message': 'Colaborador não encontrado para o resumo.'}), 404
+        return jsonify({'success': False, 'message': f'Colaborador {employee_id} não encontrado na empresa {company_id} para o resumo.'}), 404
 
     payload = request.get_json(silent=True) or {}
     preferred_channel = (payload.get('channel') or '').strip().lower() or None
