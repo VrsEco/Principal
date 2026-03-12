@@ -335,8 +335,107 @@
       'quarterly': 'Trimestral', 'yearly': 'Anual', 'specific': 'Específico'
     };
 
+    const weekdayShortLabels = {
+      'segunda': 'seg',
+      'segunda-feira': 'seg',
+      'terca': 'ter',
+      'terça': 'ter',
+      'terca-feira': 'ter',
+      'terça-feira': 'ter',
+      'quarta': 'qua',
+      'quarta-feira': 'qua',
+      'quinta': 'qui',
+      'quinta-feira': 'qui',
+      'sexta': 'sex',
+      'sexta-feira': 'sex',
+      'sabado': 'sáb',
+      'sábado': 'sáb',
+      'domingo': 'dom'
+    };
+
+    const monthLabels = {
+      1: 'jan',
+      2: 'fev',
+      3: 'mar',
+      4: 'abr',
+      5: 'mai',
+      6: 'jun',
+      7: 'jul',
+      8: 'ago',
+      9: 'set',
+      10: 'out',
+      11: 'nov',
+      12: 'dez'
+    };
+
+    function formatWeeklyDays(scheduleValue) {
+      const days = (scheduleValue || '')
+        .split(',')
+        .map(day => day.trim().toLowerCase())
+        .filter(Boolean)
+        .map(day => weekdayShortLabels[day] || day);
+
+      if (days.length === 0) return 'Semanal';
+      if (days.length === 1) return days[0];
+      if (days.length === 2) return `${days[0]} e ${days[1]}`;
+      return `${days.slice(0, -1).join(', ')} e ${days[days.length - 1]}`;
+    }
+
+    function formatSpecificDate(value) {
+      if (!value) return null;
+      const [year, month, day] = String(value).split('-');
+      if (!year || !month || !day) return null;
+      return `${day}/${month}/${year}`;
+    }
+
+    function formatQuarterMonth(value) {
+      const monthNumber = Number(value);
+      if (![1, 2, 3].includes(monthNumber)) return null;
+      return `${monthNumber}º mês do trimestre`;
+    }
+
+    function formatScheduleDetails(routine) {
+      const defaultStartTime = '00:01';
+
+      if (routine.schedule_type === 'weekly') {
+        return `${formatWeeklyDays(routine.schedule_value)} | Start: ${defaultStartTime}`;
+      }
+
+      if (routine.schedule_type === 'daily') {
+        const startTime = (routine.schedule_value || '').trim() || defaultStartTime;
+        return `Todos os dias | Start: ${startTime}`;
+      }
+
+      if (routine.schedule_type === 'monthly' && routine.schedule_value) {
+        return `Todo dia ${routine.schedule_value} | Start: ${defaultStartTime}`;
+      }
+
+      if (routine.schedule_type === 'quarterly' && routine.schedule_value) {
+        const [quarterMonth, quarterDay] = String(routine.schedule_value).split('-');
+        const formattedQuarterMonth = formatQuarterMonth(quarterMonth);
+        if (formattedQuarterMonth && quarterDay) {
+          return `${formattedQuarterMonth}, dia ${quarterDay} | Start: ${defaultStartTime}`;
+        }
+      }
+
+      if (routine.schedule_type === 'yearly' && routine.schedule_value) {
+        const [day, month] = String(routine.schedule_value).split('/');
+        const formattedMonth = monthLabels[Number(month)];
+        if (day && formattedMonth) {
+          return `Todo ${day}/${formattedMonth} | Start: ${defaultStartTime}`;
+        }
+      }
+
+      if (routine.schedule_type === 'specific' && routine.schedule_value) {
+        const formattedDate = formatSpecificDate(routine.schedule_value);
+        return `${formattedDate || routine.schedule_value} | Start: ${defaultStartTime}`;
+      }
+
+      return `${scheduleLabels[routine.schedule_type] || routine.schedule_type || 'Manual'} | Start: ${defaultStartTime}`;
+    }
+
     grid.innerHTML = data.map(r => {
-      const schedLabel = scheduleLabels[r.schedule_type] || r.schedule_type || 'Manual';
+      const scheduleDetails = formatScheduleDetails(r);
       const processLabel = `${r.process_code ? r.process_code + ' - ' : ''}${r.process_name || 'Processo Indefinido'}`;
 
       // Team rendering
@@ -352,7 +451,8 @@
 
       // Next deadline
       let deadlineHtml = '';
-      if (r.deadline_days) deadlineHtml = `<span>⏱️ SLA: ${r.deadline_days}d</span>`;
+      if (r.deadline_days) deadlineHtml = `<span>⏱️ SLA: ${r.deadline_days} dia${r.deadline_days > 1 ? 's' : ''}</span>`;
+      else if (r.deadline_hours) deadlineHtml = `<span>⏱️ SLA: ${r.deadline_hours}h</span>`;
 
       return `
             <div class="routine-card">
@@ -381,7 +481,7 @@
                 
                 <div class="rt-meta">
                     <div class="rt-schedule-badge">
-                        <span>📅</span> ${schedLabel}
+                        <span>📅</span> ${scheduleDetails}
                     </div>
                     ${deadlineHtml}
                     <div style="flex:1"></div>

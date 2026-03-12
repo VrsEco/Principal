@@ -53,6 +53,33 @@ def apply_instance_employee_filter(query, company_id):
     # Para colaborador, a filtragem final é feita em Python para suportar collaborators_json no PostgreSQL.
     return query
 
+
+def _resolve_instance_role_employee_id(instance, role):
+    """Resolve colaborador principal da instância com fallback para o processo legado."""
+    if not instance:
+        return None
+
+    role_to_field = {
+        'owner': 'owner_employee_id',
+        'responsible': 'responsible_id',
+        'executor': 'executor_id',
+    }
+    field_name = role_to_field.get(role)
+    if not field_name:
+        return None
+
+    direct_value = getattr(instance, field_name, None)
+    if direct_value:
+        return direct_value
+
+    process_rel = getattr(instance, 'process_rel', None)
+    if role in {'owner', 'responsible'} and process_rel:
+        fallback_value = getattr(process_rel, field_name, None)
+        if fallback_value:
+            return fallback_value
+
+    return None
+
 def generate_area_code(company_id, sequence):
     company = Company.query.get(company_id)
     if not company or not company.client_code:
@@ -339,29 +366,32 @@ class ProcessInstanceListResource(Resource):
         for inst in instances:
             data = process_instance_schema.dump(inst)
             collabs = []
+            owner_employee_id = _resolve_instance_role_employee_id(inst, 'owner')
+            responsible_employee_id = _resolve_instance_role_employee_id(inst, 'responsible')
+            executor_employee_id = _resolve_instance_role_employee_id(inst, 'executor')
             
             # Owner
-            if inst.owner_employee_id and inst.owner_employee_id in employees:
+            if owner_employee_id and owner_employee_id in employees:
                 collabs.append({
                     'role': 'owner',
-                    'name': employees[inst.owner_employee_id],
-                    'id': inst.owner_employee_id
+                    'name': employees[owner_employee_id],
+                    'id': owner_employee_id
                 })
             
             # Responsible
-            if inst.responsible_id and inst.responsible_id in employees:
+            if responsible_employee_id and responsible_employee_id in employees:
                 collabs.append({
                     'role': 'responsible',
-                    'name': employees[inst.responsible_id],
-                    'id': inst.responsible_id
+                    'name': employees[responsible_employee_id],
+                    'id': responsible_employee_id
                 })
             
             # Executors
-            if inst.executor_id and inst.executor_id in employees:
+            if executor_employee_id and executor_employee_id in employees:
                 collabs.append({
                     'role': 'executor',
-                    'name': employees[inst.executor_id],
-                    'id': inst.executor_id
+                    'name': employees[executor_employee_id],
+                    'id': executor_employee_id
                 })
             
             # Check collaborators_json
