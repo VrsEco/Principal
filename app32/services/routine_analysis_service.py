@@ -189,27 +189,111 @@ def _describe_schedule(schedule_type: str, schedule_value: Any) -> str:
     return raw
 
 
-def _schedule_weekly_factor(schedule_type: str) -> float:
-    factors = {
-        "daily": 5.0,
-        "weekly": 1.0,
-        "monthly": 12.0 / 52.0,
-        "quarterly": 4.0 / 52.0,
-        "yearly": 1.0 / 52.0,
-        "specific": 0.0,
+def _schedule_occurrence_count(schedule_type: str, schedule_value: Any) -> float:
+    raw = str(schedule_value or '').strip()
+    normalized_type = _normalize_schedule_type(schedule_type)
+
+    if normalized_type == "daily":
+        return 7.0
+
+    if normalized_type in {"weekly", "monthly", "quarterly", "yearly"}:
+        tokens = [token.strip() for token in raw.replace(';', ',').replace('|', ',').split(',') if token.strip()]
+        token_count = float(len(tokens)) if tokens else 1.0
+        if normalized_type == "weekly":
+            return token_count
+        if normalized_type == "monthly":
+            return token_count / 4.0
+        if normalized_type == "quarterly":
+            return token_count / 13.0
+        if normalized_type == "yearly":
+            return token_count / 52.0
+
+    if normalized_type == "specific":
+        return 0.0
+
+    return 1.0
+
+
+def _schedule_weekly_factor(schedule_type: str, schedule_value: Any = None) -> float:
+    return _schedule_occurrence_count(schedule_type, schedule_value)
+
+
+def _format_count_label(value: float) -> str:
+    return str(int(value)) if float(value).is_integer() else str(round(value, 2)).replace('.', ',')
+
+
+def _schedule_period_label(schedule_type: str, occurrence_count: float) -> str:
+    normalized_type = _normalize_schedule_type(schedule_type)
+    count = round(_safe_float(occurrence_count), 2)
+    if normalized_type in {"daily", "weekly"}:
+        return "dia" if count == 1 else "dias"
+    if normalized_type == "monthly":
+        return "mês"
+    if normalized_type == "quarterly":
+        return "trimestre"
+    if normalized_type == "yearly":
+        return "ano"
+    if count == 1:
+        return "ocorrência"
+    return "ocorrências"
+
+
+def _build_schedule_formula(hours_per_occurrence: float, schedule_type: str, schedule_value: Any = None) -> Dict[str, Any]:
+    occurrence_count = round(_schedule_occurrence_count(schedule_type, schedule_value), 2)
+    weekly_hours = round(hours_per_occurrence * occurrence_count, 2)
+    normalized_type = _normalize_schedule_type(schedule_type)
+
+    if normalized_type == "daily":
+        weekly_formula_label = f"{hours_per_occurrence:.1f}h/dia × 7 dias = {weekly_hours:.1f}h/sem"
+    elif normalized_type == "weekly":
+        day_label = "dia" if occurrence_count == 1 else "dias"
+        weekly_formula_label = f"{hours_per_occurrence:.1f}h × {_format_count_label(occurrence_count)} {day_label} = {weekly_hours:.1f}h/sem"
+    elif normalized_type == "monthly":
+        count_label = _format_count_label(occurrence_count * 4)
+        base_prefix = f"{hours_per_occurrence:.1f}h/mês"
+        if occurrence_count * 4 > 1:
+            base_prefix = f"{hours_per_occurrence:.1f}h × {count_label} eventos/mês"
+        weekly_formula_label = f"{base_prefix} ÷ 4 = {weekly_hours:.1f}h/sem"
+    elif normalized_type == "quarterly":
+        count_label = _format_count_label(occurrence_count * 13)
+        base_prefix = f"{hours_per_occurrence:.1f}h/trimestre"
+        if occurrence_count * 13 > 1:
+            base_prefix = f"{hours_per_occurrence:.1f}h × {count_label} eventos/trimestre"
+        weekly_formula_label = f"{base_prefix} ÷ 13 = {weekly_hours:.1f}h/sem"
+    elif normalized_type == "yearly":
+        count_label = _format_count_label(occurrence_count * 52)
+        base_prefix = f"{hours_per_occurrence:.1f}h/ano"
+        if occurrence_count * 52 > 1:
+            base_prefix = f"{hours_per_occurrence:.1f}h × {count_label} eventos/ano"
+        weekly_formula_label = f"{base_prefix} ÷ 52 = {weekly_hours:.1f}h/sem"
+    else:
+        weekly_formula_label = f"{hours_per_occurrence:.1f}h × {_format_count_label(occurrence_count)} {_schedule_period_label(schedule_type, occurrence_count)} = {weekly_hours:.1f}h/sem"
+
+    return {
+        "occurrence_count": occurrence_count,
+        "period_label": _schedule_period_label(schedule_type, occurrence_count),
+        "formula_label": weekly_formula_label.split(' = ')[0],
+        "weekly_formula_label": weekly_formula_label,
+        "normalized_schedule_type": normalized_type,
+        "weekly_hours": weekly_hours,
     }
-    return factors.get(schedule_type, 1.0)
 
 
-def _build_period_metrics(hours_per_occurrence: float, schedule_type: str) -> Dict[str, float]:
-    weekly_hours = hours_per_occurrence * _schedule_weekly_factor(schedule_type)
-    monthly_hours = weekly_hours * (52.0 / 12.0)
+def _build_period_metrics(hours_per_occurrence: float, schedule_type: str, schedule_value: Any = None) -> Dict[str, float]:
+    formula = _build_schedule_formula(hours_per_occurrence, schedule_type, schedule_value)
+    occurrence_count = formula["occurrence_count"]
+    weekly_hours = formula["weekly_hours"]
+    monthly_hours = weekly_hours * 4.0
     annual_hours = weekly_hours * 52.0
     return {
         "hours_per_occurrence": round(hours_per_occurrence, 2),
         "weekly_equivalent_hours": round(weekly_hours, 2),
         "monthly_equivalent_hours": round(monthly_hours, 2),
         "annual_equivalent_hours": round(annual_hours, 2),
+        "occurrence_count": occurrence_count,
+        "period_label": formula["period_label"],
+        "formula_label": formula["formula_label"],
+        "weekly_formula_label": formula["weekly_formula_label"],
     }
 
 
@@ -394,7 +478,7 @@ def _build_routine_section(routine_rows: List[Dict[str, Any]]) -> Dict[str, Any]
 
     top_routines = []
     for routine in routines_map.values():
-        metrics = _build_period_metrics(routine["hours_per_occurrence"], routine["schedule_type"])
+        metrics = _build_period_metrics(routine["hours_per_occurrence"], routine["schedule_type"], routine.get("schedule_value"))
         routine.update(metrics)
         if routine["schedule_type"] in frequency_map:
             bucket = frequency_map[routine["schedule_type"]]
@@ -404,7 +488,7 @@ def _build_routine_section(routine_rows: List[Dict[str, Any]]) -> Dict[str, Any]
 
         for collaborator in routine["collaborators"]:
             member_fixed_hours[collaborator["employee_id"]] += (
-                collaborator["hours_used"] * _schedule_weekly_factor(routine["schedule_type"])
+                collaborator["hours_used"] * _schedule_weekly_factor(routine["schedule_type"], routine.get("schedule_value"))
             )
 
         top_routines.append(
@@ -422,6 +506,10 @@ def _build_routine_section(routine_rows: List[Dict[str, Any]]) -> Dict[str, Any]
                 "schedule_description": _describe_schedule(routine["schedule_type"], routine.get("schedule_value")),
                 "weekly_equivalent_hours": routine["weekly_equivalent_hours"],
                 "hours_per_occurrence": routine["hours_per_occurrence"],
+                "occurrence_count": routine.get("occurrence_count", 0),
+                "period_label": routine.get("period_label"),
+                "formula_label": routine.get("formula_label"),
+                "weekly_formula_label": routine.get("weekly_formula_label"),
                 "collaborators": list(routine["collaborators"]),
             }
         )
@@ -1140,7 +1228,7 @@ def _apply_scope_to_routine_section(routine_section: Dict[str, Any], scoped_empl
             "hours_per_occurrence": hours_per_occurrence,
             "collaborators": scoped_collaborators,
         }
-        scoped_routine.update(_build_period_metrics(hours_per_occurrence, schedule_type))
+        scoped_routine.update(_build_period_metrics(hours_per_occurrence, schedule_type, routine.get("schedule_value")))
         scoped_routines.append(scoped_routine)
 
         if schedule_type in frequency_map:
@@ -1368,7 +1456,11 @@ def _build_employee_drilldown(
             "schedule_description": routine.get("schedule_description") or _describe_schedule(schedule_type, routine.get("schedule_value")),
             "hours_per_occurrence": hours_per_occurrence,
             "hours_label": _humanize_hours(hours_per_occurrence),
-            "weekly_equivalent_hours": round(hours_per_occurrence * _schedule_weekly_factor(schedule_type), 2),
+            "weekly_equivalent_hours": round(hours_per_occurrence * _schedule_weekly_factor(schedule_type, routine.get("schedule_value")), 2),
+            "occurrence_count": routine.get("occurrence_count", 0),
+            "period_label": routine.get("period_label"),
+            "formula_label": routine.get("formula_label"),
+            "weekly_formula_label": routine.get("weekly_formula_label"),
         })
 
     routine_groups = []
@@ -1409,6 +1501,12 @@ def _build_employee_drilldown(
     ]
     meeting_items.sort(key=lambda item: item.get("estimated_hours", 0), reverse=True)
 
+    routine_items = [item for group in routine_groups for item in group["items"]]
+    routine_total_hours = round(sum(item.get("weekly_equivalent_hours", 0) for item in routine_items), 2)
+    process_total_hours = round(sum(_safe_float(item.get("estimated_hours")) for item in process_items), 2)
+    project_total_hours = round(sum(_safe_float(item.get("estimated_hours")) for item in project_items), 2)
+    meeting_total_hours = round(sum(_safe_float(item.get("estimated_hours")) for item in meeting_items), 2)
+
     return {
         "employee": {
             "id": employee_id,
@@ -1416,8 +1514,18 @@ def _build_employee_drilldown(
             "department": employee.get("department") or "Não informado",
             "email": employee.get("email") or "",
         },
+        "summary": {
+            "routine_count": len(routine_items),
+            "routine_total_hours": routine_total_hours,
+            "process_count": len(process_items),
+            "process_total_hours": process_total_hours,
+            "project_count": len(project_items),
+            "project_total_hours": project_total_hours,
+            "meeting_count": len(meeting_items),
+            "meeting_total_hours": meeting_total_hours,
+        },
         "routine_groups": routine_groups,
-        "routines": [item for group in routine_groups for item in group["items"]][:10],
+        "routines": routine_items[:10],
         "projects": project_items[:10],
         "processes": process_items[:10],
         "meetings": meeting_items[:10],
