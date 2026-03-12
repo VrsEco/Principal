@@ -18,6 +18,21 @@ def _get_current_company_employee(company_id: int):
     return Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
 
 
+def _resolve_routine_summary_employee_id(company_id: int, requested_employee_id: int | None) -> int | None:
+    if requested_employee_id:
+        employee = Employee.query.filter_by(id=requested_employee_id, company_id=company_id, status='active').first()
+        if employee:
+            return employee.id
+
+    session_company_id = session.get('routine_analysis_summary_company_id')
+    session_employee_id = session.get('routine_analysis_summary_employee_id')
+    if session_company_id == company_id and session_employee_id:
+        employee = Employee.query.filter_by(id=session_employee_id, company_id=company_id, status='active').first()
+        if employee:
+            return employee.id
+    return None
+
+
 def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
     process = Process.query.get_or_404(process_id)
 
@@ -321,6 +336,14 @@ def process_routines_analysis_page(company_id):
 
     try:
         analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
+        drilldown = analysis.get('drilldown') or {}
+        drill_employee = (drilldown.get('employee') or {}).get('id')
+        if drill_employee:
+            session['routine_analysis_summary_company_id'] = company_id
+            session['routine_analysis_summary_employee_id'] = drill_employee
+        else:
+            session.pop('routine_analysis_summary_company_id', None)
+            session.pop('routine_analysis_summary_employee_id', None)
         return render_template(
             'modules/processes/routine_analysis.html',
             company=company,
@@ -337,6 +360,14 @@ def process_routines_analysis_page(company_id):
         flash('Não foi possível aplicar os filtros selecionados. Exibindo a visão geral da análise.', 'warning')
         try:
             analysis = get_routine_analysis(company_id)
+            drilldown = analysis.get('drilldown') or {}
+            drill_employee = (drilldown.get('employee') or {}).get('id')
+            if drill_employee:
+                session['routine_analysis_summary_company_id'] = company_id
+                session['routine_analysis_summary_employee_id'] = drill_employee
+            else:
+                session.pop('routine_analysis_summary_company_id', None)
+                session.pop('routine_analysis_summary_employee_id', None)
             return render_template(
                 'modules/processes/routine_analysis.html',
                 company=company,
@@ -357,9 +388,9 @@ def process_routines_analysis_summary_options(company_id):
     if not has_company_full_access(company_id):
         return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
 
-    employee_id = request.args.get('employee_id', type=int)
+    employee_id = _resolve_routine_summary_employee_id(company_id, request.args.get('employee_id', type=int))
     if not employee_id:
-        return jsonify({'success': False, 'message': 'Selecione um colaborador para gerar o resumo.'}), 400
+        return jsonify({'success': False, 'message': 'Selecione um colaborador válido no drill-down para gerar o resumo.'}), 400
 
     target_user = get_routine_analysis_target_user(company_id, employee_id)
     base_params = {'company_id': company_id, 'employee_id': employee_id}
@@ -391,10 +422,10 @@ def process_routines_analysis_summary_pdf(company_id):
         abort(403, description='Acesso negado: colaboradores não podem gerar resumos.')
 
     company = Company.query.get_or_404(company_id)
-    employee_id = request.args.get('employee_id', type=int)
+    employee_id = _resolve_routine_summary_employee_id(company_id, request.args.get('employee_id', type=int))
     department = request.args.get('department')
     if not employee_id:
-        abort(400, description='Selecione um colaborador para gerar o resumo.')
+        abort(400, description='Selecione um colaborador válido no drill-down para gerar o resumo.')
 
     analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
     analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
@@ -421,10 +452,10 @@ def send_process_routines_analysis_summary(company_id):
     if not has_company_full_access(company_id):
         return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
 
-    employee_id = request.args.get('employee_id', type=int)
+    employee_id = _resolve_routine_summary_employee_id(company_id, request.args.get('employee_id', type=int))
     department = request.args.get('department')
     if not employee_id:
-        return jsonify({'success': False, 'message': 'Selecione um colaborador para gerar o resumo.'}), 400
+        return jsonify({'success': False, 'message': 'Selecione um colaborador válido no drill-down para gerar o resumo.'}), 400
 
     analysis = get_routine_analysis(company_id, department=department, employee_id=employee_id)
     analysis = ensure_routine_analysis_drilldown(company_id, employee_id, analysis)
