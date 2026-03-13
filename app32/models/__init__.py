@@ -50,6 +50,12 @@ from .agent_menu import AgentMenuOption, AgentMenuSession
 from .workflow_gap import WorkflowGapCandidate
 from .workflow_usage import WorkflowExecutionLog
 
+# Incentive Module (Onda 1A)
+from .incentive import (
+    IncentiveIndicator, IncentiveRuleSet, IncentiveRule, 
+    IncentiveGovernabilityMatrix, IncentiveFact, IncentiveCalculation
+)
+
 __all__ = [
     'db', 'Company', 'User', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
@@ -62,5 +68,7 @@ __all__ = [
     'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
     'UiCatalog', 'UserLog',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentMenuOption', 'AgentMenuSession',
-    'WorkflowGapCandidate', 'WorkflowExecutionLog'
+    'WorkflowGapCandidate', 'WorkflowExecutionLog',
+    'IncentiveIndicator', 'IncentiveRuleSet', 'IncentiveRule', 
+    'IncentiveGovernabilityMatrix', 'IncentiveFact', 'IncentiveCalculation'
 ]
