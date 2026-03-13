@@ -8555,6 +8555,18 @@ class PostgreSQLDatabase(DatabaseInterface):
         macros = self.list_macro_processes(company_id)
         processes = self.list_processes(company_id)
 
+        # Buscar processos que possuem indicadores de incentivo ativos
+        incentive_process_ids = set()
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT source_id FROM incentive_indicators WHERE source_module = 'process' AND is_active = TRUE")
+            incentive_process_ids = set(row[0] for row in cursor.fetchall())
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao buscar processos com incentivo no mapa: {e}")
+            pass
+
         # Group macros by area
         for area in areas:
             area["macros"] = [m for m in macros if m["area_id"] == area["id"]]

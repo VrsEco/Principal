@@ -1,0 +1,163 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Teia de Conexões (Governabilidade){% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/incentives.css') }}">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="incentive-container">
+    <div class="incentive-header">
+        <div>
+            <h1 class="incentive-title">Teia de Governabilidade</h1>
+            <p style="color: var(--text-secondary)">Visualize a conexão entre Cargos e Indicadores estratégicos.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('incentives.dashboard') }}" class="vs-btn vs-btn-outline">Voltar ao Dashboard</a>
+        </div>
+    </div>
+
+    <div class="incentive-glass" style="padding: 0; position: relative;">
+        <div id="spiderWeb" class="spider-web-canvas"></div>
+        
+        <!-- Legend Overlay -->
+        <div style="position: absolute; bottom: 20px; left: 20px; z-index: 10;" class="incentive-glass">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--incentive-primary); box-shadow: 0 0 8px var(--incentive-primary);"></div>
+                    <span style="font-size: 0.8rem;">Cargos</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--incentive-secondary); box-shadow: 0 0 8px var(--incentive-secondary);"></div>
+                    <span style="font-size: 0.8rem;">Indicadores</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Card Overlay -->
+        <div id="infoCard" style="position: absolute; top: 20px; right: 20px; z-index: 10; width: 250px; display: none;" class="incentive-glass pulse">
+            <h4 id="infoTitle" style="margin-bottom: 4px;">--</h4>
+            <p id="infoType" style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px;">--</p>
+            <div id="infoDetails" style="font-size: 0.875rem;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const container = document.getElementById('spiderWeb');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    // Fetch data
+    const response = await fetch('/api/incentives/spider-web-data');
+    const data = await response.json();
+
+    const svg = d3.select("#spiderWeb")
+        .append("svg")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("viewBox", [0, 0, width, height]);
+
+    const g = svg.append("g");
+
+    // Zoom behavior
+    svg.call(d3.zoom().on("zoom", (event) => {
+        g.attr("transform", event.transform);
+    }));
+
+    const simulation = d3.forceSimulation(data.nodes)
+        .force("link", d3.forceLink(data.links).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+    const link = g.append("g")
+        .selectAll("line")
+        .data(data.links)
+        .join("line")
+        .attr("class", "link-edge")
+        .attr("stroke-opacity", 0.6);
+
+    const node = g.append("g")
+        .selectAll("g")
+        .data(data.nodes)
+        .join("g")
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended))
+        .on("mouseover", showInfo)
+        .on("mouseout", hideInfo);
+
+    node.append("circle")
+        .attr("r", 8)
+        .attr("class", d => d.type === 'role' ? 'node-role' : 'node-indicator');
+
+    node.append("text")
+        .attr("x", 12)
+        .attr("y", 4)
+        .text(d => d.label)
+        .style("fill", "#fff")
+        .style("font-size", "12px")
+        .style("font-family", "Inter, sans-serif")
+        .style("pointer-events", "none");
+
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    function showInfo(event, d) {
+        const card = document.getElementById('infoCard');
+        document.getElementById('infoTitle').innerText = d.label;
+        document.getElementById('infoType').innerText = d.type.toUpperCase();
+        
+        let details = '';
+        if (d.type === 'role') {
+            const connections = data.links.filter(l => l.source.id === d.id);
+            details = `${connections.length} indicadores associados.`;
+        } else {
+            const connections = data.links.filter(l => l.target.id === d.id);
+            details = `Monitorado por ${connections.length} cargos.`;
+        }
+        document.getElementById('infoDetails').innerText = details;
+        card.style.display = 'block';
+        
+        // Highlight connections
+        link.style("stroke", l => (l.source.id === d.id || l.target.id === d.id) ? "var(--incentive-accent)" : "rgba(255,255,255,0.2)");
+        link.style("stroke-width", l => (l.source.id === d.id || l.target.id === d.id) ? "3" : "1.5");
+    }
+
+    function hideInfo() {
+        document.getElementById('infoCard').style.display = 'none';
+        link.style("stroke", "rgba(255,255,255,0.2)");
+        link.style("stroke-width", "1.5");
+    }
+
+    function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+    }
+
+    function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+    }
+
+    function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+    }
+});
+</script>
+{% endblock %}

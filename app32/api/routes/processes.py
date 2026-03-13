@@ -7,6 +7,7 @@ from datetime import datetime
 
 from database import get_db
 from models import db, Company, Process, ProcessInstance, Employee
+from models.incentive import IncentiveIndicator
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company
 
 processes_bp = Blueprint('processes', __name__)
@@ -54,6 +55,11 @@ def _build_process_details_payload(process: Process) -> dict:
         'flow_mermaid': getattr(process, 'flow_mermaid', None),
         'notes': getattr(process, 'notes', None),
         'is_active': getattr(process, 'is_active', None),
+        'incentive_indicator': next((i.to_dict() for i in [IncentiveIndicator.query.filter_by(
+            source_module='process', 
+            source_id=str(process.id), 
+            is_active=True
+        ).first()] if i), None),
         'macro': {
             'id': macro.id,
             'company_id': macro.company_id,

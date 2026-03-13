@@ -317,6 +317,10 @@ def register_api_resources(api):
         PlanImplantationResource,
         PlanParticipantListResource, PlanParticipantResource
     )
+    from api.resources.incentive import (
+        IncentiveIndicatorListResource, IncentiveCalculationResource,
+        IncentiveSpiderWebResource
+    )
 
     api.add_resource(CompanyListResource, '/api/companies')
     api.add_resource(CompanyResource, '/api/companies/<int:company_id>')
@@ -397,6 +401,11 @@ def register_api_resources(api):
     from api.resources.efficiency import EfficiencyCollaborators
     api.add_resource(EfficiencyCollaborators, '/api/companies/<int:company_id>/efficiency/collaborators')
 
+    # Incentive API
+    api.add_resource(IncentiveIndicatorListResource, '/api/incentives/indicators')
+    api.add_resource(IncentiveCalculationResource, '/api/incentives/calculate')
+    api.add_resource(IncentiveSpiderWebResource, '/api/incentives/spider-web-data')
+
 def register_blueprints(app):
     # Route to serve uploaded files
     @app.route('/uploads/<path:filename>')
@@ -447,6 +456,9 @@ def register_blueprints(app):
     app.register_blueprint(onboarding_bp)
     app.register_blueprint(plans_bp)
     app.register_blueprint(usuarios_bp)
+
+    from api.routes.incentives import incentives_bp
+    app.register_blueprint(incentives_bp)
 
     # Webhook Telegram (Sapiens Fase 3)
     from api.webhooks.telegram_webhook import telegram_bp, setup_webhook

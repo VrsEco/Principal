@@ -161,6 +161,7 @@ function renderMapClassic(container) {
                                     <span class="process-link-name">${p.code ? p.code + ' - ' : ''}${p.name}</span>
                                     <div class="process-link-meta">
                                         <div style="display: flex; gap: 6px; align-items: center;">
+                                            ${p.has_incentive ? '<span title="Possui Incentivo" style="font-size: 0.75rem; filter: drop-shadow(0 0 2px #fbbf24);">🏆</span>' : ''}
                                             <span class="indicator-stage" style="background: ${getStageColor(p.kanban_stage)}" title="Etapa"></span>
                                             <span class="indicator-perf" style="background: ${getPerfColor(p.performance_level)}" title="Desempenho"></span>
                                         </div>
@@ -200,6 +201,7 @@ function renderMapMP2(container) {
                 return `
                                         <${linkTag} ${linkAttr} class="mp2-process-card" ${isCollaborator ? 'style="cursor: default;"' : ''}>
                                             <div class="mp2-process-badges">
+                                                ${p.has_incentive ? '<span title="Possui Incentivo" style="font-size: 0.6rem; margin-bottom: 2px;">🏆</span>' : ''}
                                                 <div class="indicator-stage" style="background: ${getStageColor(p.kanban_stage)}; width: 10px; height: 10px;"></div>
                                                 <div class="indicator-perf" style="background: ${getPerfColor(p.performance_level)}; width: 9px; height: 9px;"></div>
                                             </div>

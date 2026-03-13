@@ -1,0 +1,120 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Configurar Regras: {{ rule_set.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/incentives.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="incentive-container">
+    <div class="incentive-header">
+        <div>
+            <h1 class="incentive-title">Gestão de Regras</h1>
+            <p style="color: var(--text-secondary)">{{ rule_set.name }} - v{{ rule_set.version }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('incentives.dashboard') }}" class="vs-btn vs-btn-outline">Voltar ao Dashboard</a>
+            <button class="vs-btn vs-btn-primary" onclick="salvarAlteracoes()">Salvar Alterações</button>
+        </div>
+    </div>
+
+    <div class="vs-grid-cols-12">
+        <!-- Sidebar de Indicadores -->
+        <div class="vs-col-span-4">
+            <div class="incentive-glass" style="height: 100%;">
+                <h3 style="margin-bottom: 1rem;">Biblioteca de Indicadores</h3>
+                <div id="indicatorList" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Carregado via API -->
+                    <div style="padding: 1rem; text-align: center; color: var(--text-tertiary);">Carregando indicadores...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor de Regras -->
+        <div class="vs-col-span-8">
+            <div class="incentive-glass">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>Regras Definidas</h3>
+                    <span class="vs-badge vs-badge-info">{{ rule_set.periodicity | upper }}</span>
+                </div>
+
+                <div id="rulesEngine" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Placeholder de Regra -->
+                    <div class="incentive-glass" style="background: rgba(255,255,255,0.03); border-style: dashed;">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
+                            Arraste um indicador para cá ou clique em "+" para criar uma regra matemática.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // Carregar indicadores via API
+    try {
+        const response = await fetch('/api/incentives/indicators');
+        const indicators = await response.json();
+        
+        const list = document.getElementById('indicatorList');
+        list.innerHTML = indicators.map(ind => `
+            <div class="incentive-glass" style="padding: 10px; cursor: pointer; border-color: rgba(99, 102, 241, 0.3);" onclick="addRule(${ind.id}, '${ind.name}')">
+                <div style="font-weight: 600; font-size: 0.9rem;">${ind.name}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">${ind.source.toUpperCase()} | ${ind.type}</div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error("Erro ao carregar indicadores", e);
+    }
+});
+
+function addRule(indicatorId, name) {
+    const engine = document.getElementById('rulesEngine');
+    // Se for o primeiro, limpa o placeholder
+    if (engine.innerText.includes('Arraste')) engine.innerHTML = '';
+
+    const ruleHtml = `
+        <div class="incentive-glass" style="border-left: 4px solid var(--incentive-primary);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div>
+                    <h4 style="margin: 0;">${name}</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">ID do Indicador: ${indicatorId}</span>
+                </div>
+                <button class="vs-btn vs-btn-sm vs-btn-ghost" style="color: var(--incentive-accent);" onclick="this.closest('.incentive-glass').remove()">Remover</button>
+            </div>
+            
+            <div class="vs-grid-cols-4" style="gap: 15px;">
+                <div>
+                    <label class="vs-label">Tipo de Impacto</label>
+                    <select class="vs-input">
+                        <option value="individual">Individual (Soma)</option>
+                        <option value="multiplier">Multiplicador (Global)</option>
+                        <option value="reducer">Redutor (Risco)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="vs-label">Peso (0.0 a 1.0)</label>
+                    <input type="number" class="vs-input" step="0.1" value="1.0">
+                </div>
+                <div>
+                    <label class="vs-label">Meta (Target)</label>
+                    <input type="number" class="vs-input" value="100">
+                </div>
+                <div>
+                    <label class="vs-label">Teto (Cap)</label>
+                    <input type="number" class="vs-input" value="1.2">
+                </div>
+            </div>
+        </div>
+    `;
+    engine.insertAdjacentHTML('beforeend', ruleHtml);
+}
+
+function salvarAlteracoes() {
+    alert('As regras foram enviadas para validação do Arquiteto.\nSalvamento pendente (Backend Onda 1B Update).');
+}
+</script>
+{% endblock %}

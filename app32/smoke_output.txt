@@ -1,0 +1,414 @@
+INFO:services.scheduler_service:\U0001f4c5 Scheduler Service inicializado
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'minute': '*', 'name': 'Processamento de Rotinas Agendadas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de InstÔncias Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Canais Configurados)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento de Rotinas Agendadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de InstÔncias Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Canais Configurados)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:\u2705 Scheduler iniciado com sucesso
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-12 22:18:40.568822-03:00
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-12 22:19:00-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-12 23:00:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-13 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+EINFO:api.webhooks.telegram_webhook:\u2705 Webhook do Telegram registrado com sucesso: https://app.gestaoversus.com.br/webhook/telegram
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Added job "Processamento de Rotinas Agendadas" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'minute': '*', 'name': 'Processamento de Rotinas Agendadas'}
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de InstÔncias Atrasadas" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de InstÔncias Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Canais Configurados)" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Canais Configurados)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-12 22:18:41.409655-03:00
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-12 22:19:00-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-12 23:00:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-13 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+.ERROR:api.webhooks.telegram_webhook:\u274c Erro ao registrar Webhook do Telegram (tentativa 1/3): A request to the Telegram API was unsuccessful. Error code: 429. Description: Too Many Requests: retry after 1
+INFO:api.webhooks.telegram_webhook:\u2705 Webhook do Telegram registrado com sucesso: https://app.gestaoversus.com.br/webhook/telegram
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Added job "Processamento de Rotinas Agendadas" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'minute': '*', 'name': 'Processamento de Rotinas Agendadas'}
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de InstÔncias Atrasadas" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de InstÔncias Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Canais Configurados)" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Canais Configurados)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-12 22:18:44.449964-03:00
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-12 22:19:00-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-12 23:00:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-13 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+E
+======================================================================
+ERROR: test_calculation_logic_basic (__main__.IncentiveSmokeTest.test_calculation_logic_basic)
+Teste de fumaþa na l¾gica de cßlculo do Service
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 145, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 3292, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 452, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 1269, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 716, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 169, in _do_get
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 167, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 393, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 678, in __init__
+    self.__connect()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 902, in __connect
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 898, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\create.py", line 637, in connect
+    return dialect.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 616, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\scripts\smoke_test_incentives.py", line 32, in test_calculation_logic_basic
+    company = Company.query.first()
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2748, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2308, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2180, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2047, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 1143, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 3268, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 147, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2430, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 145, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 3292, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 452, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 1269, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 716, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 169, in _do_get
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 167, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 393, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 678, in __init__
+    self.__connect()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 902, in __connect
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 898, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\create.py", line 637, in connect
+    return dialect.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 616, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+======================================================================
+ERROR: test_spider_web_data_structure (__main__.IncentiveSmokeTest.test_spider_web_data_structure)
+Verificar se o recurso de spider-web retorna o formato esperado para o D3
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 145, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 3292, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 452, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 1269, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 716, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 169, in _do_get
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 167, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 393, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 678, in __init__
+    self.__connect()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 902, in __connect
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 898, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\create.py", line 637, in connect
+    return dialect.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 616, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\scripts\smoke_test_incentives.py", line 74, in test_spider_web_data_structure
+    company = Company.query.first()
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2748, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2308, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2180, in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2047, in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in _connection_for_bind
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 1143, in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 3268, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 147, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2430, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 145, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 3292, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 452, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 1269, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 716, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 169, in _do_get
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\impl.py", line 167, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 393, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 678, in __init__
+    self.__connect()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 902, in __connect
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\pool\base.py", line 898, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\create.py", line 637, in connect
+    return dialect.connect(*cargs, **cparams)
+DEBUG: Registering Jinja filters...
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 616, in connect
+DEBUG: Registering API resources...
+    return self.loaded_dbapi.connect(*cargs, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+DEBUG: API resources registered.
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+DEBUG: Registering blueprints...
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: Error in db.create_all(): (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+FAILED Engineering Worker: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+----------------------------------------------------------------------
+Ran 3 tests in 26.932s
+
+FAILED (errors=2)
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: Error in db.create_all(): (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
+FAILED Engineering Worker: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: Error in db.create_all(): (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+FAILED Engineering Worker: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

@@ -20,6 +20,7 @@ class IncentiveIndicator(db.Model):
     
     # Sources: process, project, okr, occurrence, manual
     source_module = db.Column(db.String(50), nullable=False)
+    source_id = db.Column(db.Integer, nullable=True) # ID of the entity in the source_module
     
     is_active = db.Column(db.Boolean, default=True)
     
