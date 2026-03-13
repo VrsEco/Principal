@@ -15,10 +15,29 @@ def dashboard():
     company = Company.query.get(company_id)
     rule_sets = IncentiveRuleSet.query.filter_by(company_id=company_id).all()
     
+    # Dynamic Stats
+    from models import IncentiveIndicator, IncentiveCalculation, db
+    from sqlalchemy import func
+    
+    indicators_count = IncentiveIndicator.query.filter_by(company_id=company_id, is_active=True).count()
+    
+    # Get last calculation totals
+    last_calc = IncentiveCalculation.query.filter_by(company_id=company_id).order_by(IncentiveCalculation.created_at.desc()).first()
+    
+    # Historical Summary (Last 6 calculations)
+    history = IncentiveCalculation.query.filter_by(company_id=company_id).order_by(IncentiveCalculation.created_at.desc()).limit(6).all()
+    
     return render_template(
         'modules/incentives/dashboard.html',
         company=company,
-        rule_sets=rule_sets
+        rule_sets=rule_sets,
+        stats={
+            "indicators": indicators_count,
+            "total_payout": last_calc.total_distributed if last_calc else 0,
+            "participants": last_calc.participants_count if last_calc else 0,
+            "last_closing": last_calc.period_end if last_calc else None
+        },
+        history=history
     )
 
 @incentives_bp.route('/incentives/spider-web')

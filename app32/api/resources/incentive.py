@@ -31,8 +31,7 @@ class IncentiveCalculationResource(Resource):
         end_date = date.fromisoformat(data.get('end_date'))
         
         # Trigger harvesting before calculation
-        IncentiveService.harvest_occurrence_facts(company_id, start_date, end_date)
-        IncentiveService.harvest_project_facts(company_id, start_date, end_date)
+        IncentiveService.harvest_all_modules(company_id, start_date, end_date)
         
         result = IncentiveService.calculate_incentive(company_id, rule_set_id, start_date, end_date)
         return result

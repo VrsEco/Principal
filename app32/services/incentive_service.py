@@ -60,6 +60,71 @@ class IncentiveService:
         db.session.commit()
 
     @staticmethod
+    def harvest_process_facts(company_id: int, period_start: date, period_end: date):
+        """
+        Scans Process Instances and generates facts for employees.
+        Calculates based on completed instances and their weights.
+        """
+        indicators = IncentiveIndicator.query.filter_by(
+            company_id=company_id,
+            source_module='process',
+            is_active=True
+        ).all()
+
+        for indicator in indicators:
+            # Query instances in the period
+            # Filter by specific process if source_id is defined
+            query = db.session.query(
+                ProcessInstance.executor_id,
+                func.count(ProcessInstance.id).label('count'),
+                func.sum(ProcessInstance.score_weight).label('total_weight')
+            ).filter(
+                ProcessInstance.company_id == company_id,
+                ProcessInstance.status == 'completed',
+                func.cast(ProcessInstance.completed_at, sa.Date) >= period_start,
+                func.cast(ProcessInstance.completed_at, sa.Date) <= period_end
+            )
+
+            if indicator.source_id:
+                query = query.filter(ProcessInstance.process_id == indicator.source_id)
+
+            results = query.group_by(ProcessInstance.executor_id).all()
+
+            for emp_id, count, total_weight in results:
+                if not emp_id: continue
+                
+                fact = IncentiveFact.query.filter_by(
+                    company_id=company_id,
+                    indicator_id=indicator.id,
+                    employee_id=emp_id,
+                    period_start=period_start,
+                    period_end=period_end
+                ).first()
+
+                if not fact:
+                    fact = IncentiveFact(
+                        company_id=company_id,
+                        indicator_id=indicator.id,
+                        employee_id=emp_id,
+                        period_start=period_start,
+                        period_end=period_end
+                    )
+                    db.session.add(fact)
+
+                # Value can be count or weighted sum based on indicator config (defaulting to weight sum)
+                fact.value = Decimal(str(total_weight or count))
+                fact.status = 'verified'
+                
+                # Attach evidence payload
+                fact.evidence_payload = {
+                    "instances_count": count,
+                    "target_process_id": indicator.source_id,
+                    "module": "process"
+                }
+
+        db.session.commit()
+
+    @staticmethod
     def harvest_occurrence_facts(company_id: int, period_start: date, period_end: date):
         """
         Scans Occurrences (Risk/Deductions) and creates facts.
@@ -72,21 +137,22 @@ class IncentiveService:
         
         for indicator in indicators:
             # Group by employee
-            # Using cast to handle potential TEXT columns in legacy schemas
-            created_at_cast = func.cast(Occurrence.created_at, sa.DateTime)
-            
-            results = db.session.query(
+            # Filter by specific source_id if applicable (e.g. type of occurrence)
+            query = db.session.query(
                 Occurrence.employee_id,
                 func.count(Occurrence.id).label('count'),
                 func.sum(Occurrence.score).label('total_score')
             ).filter(
                 Occurrence.company_id == company_id,
-                created_at_cast >= period_start,
-                created_at_cast <= period_end
-            ).group_by(Occurrence.employee_id).all()
+                Occurrence.created_at >= period_start,
+                Occurrence.created_at <= period_end
+            )
+            
+            results = query.group_by(Occurrence.employee_id).all()
             
             for emp_id, count, total_score in results:
-                # Create or update IncentiveFact
+                if not emp_id: continue
+
                 fact = IncentiveFact.query.filter_by(
                     company_id=company_id,
                     indicator_id=indicator.id,
@@ -105,11 +171,20 @@ class IncentiveService:
                     )
                     db.session.add(fact)
                 
-                # Signal value depends on indicator configuration (placeholder logic)
                 fact.value = Decimal(str(total_score or count))
                 fact.status = 'verified'
+                fact.evidence_payload = {"count": count, "module": "occurrence"}
         
         db.session.commit()
+
+    @classmethod
+    def harvest_all_modules(cls, company_id: int, period_start: date, period_end: date):
+        """Unified entry point for harvesting all sources."""
+        logger.info(f"Starting Harvesting for company {company_id} period {period_start} to {period_end}")
+        cls.harvest_project_facts(company_id, period_start, period_end)
+        cls.harvest_occurrence_facts(company_id, period_start, period_end)
+        cls.harvest_process_facts(company_id, period_start, period_end)
+        logger.info(f"Harvesting completed for company {company_id}")
 
     @staticmethod
     def calculate_incentive(company_id: int, rule_set_id: int, period_start: date, period_end: date):

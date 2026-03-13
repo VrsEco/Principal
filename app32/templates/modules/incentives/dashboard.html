@@ -26,67 +26,91 @@
     <div class="vs-grid-cols-3" style="margin-bottom: 2rem;">
         <div class="incentive-glass incentive-card">
             <h3 style="margin-bottom: 0.5rem;">Indicadores Ativos</h3>
-            <div style="font-size: 2rem; font-weight: 700;">12</div>
-            <p style="font-size: 0.875rem; color: #10b981;">+2 este mês</p>
+            <div style="font-size: 2rem; font-weight: 700;">{{ stats.indicators }}</div>
+            <p style="font-size: 0.875rem; color: #10b981;">Monitorando módulos core</p>
         </div>
         <div class="incentive-glass incentive-card">
-            <h3 style="margin-bottom: 0.5rem;">Calculados</h3>
-            <div style="font-size: 2rem; font-weight: 700;">R$ 45.200</div>
-            <p style="font-size: 0.875rem; color: var(--text-secondary)">Provisionado (Fev/26)</p>
+            <h3 style="margin-bottom: 0.5rem;">Cálculo Atual</h3>
+            <div style="font-size: 2rem; font-weight: 700;">R$ {{ "{:,.2f}".format(stats.total_payout).replace(',', 'X').replace('.', ',').replace('X', '.') }}</div>
+            <p style="font-size: 0.875rem; color: var(--text-secondary)">Provisionado para {{ stats.participants }} colaboradores</p>
         </div>
         <div class="incentive-glass incentive-card">
-            <h3 style="margin-bottom: 0.5rem;">Saúde do Plano</h3>
-            <div style="font-size: 2rem; font-weight: 700; color: #10b981;">98%</div>
-            <p style="font-size: 0.875rem; color: var(--text-secondary)">Conexões validadas</p>
+            <h3 style="margin-bottom: 0.5rem;">Governança</h3>
+            <div style="font-size: 2rem; font-weight: 700; color: #10b981;">100%</div>
+            <p style="font-size: 0.875rem; color: var(--text-secondary)">Último fechamento: {{ stats.last_closing.strftime('%d/%m/%Y') if stats.last_closing else 'N/A' }}</p>
         </div>
     </div>
 
-    <div class="incentive-glass">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.5rem;">Conjuntos de Regras (RuleSets)</h2>
-            <button class="vs-btn vs-btn-outline" onclick="alert('Funcionalidade em desenvolvimento')">Novo Conjunto</button>
+    <div class="vs-grid-cols-2" style="gap: 2rem; margin-bottom: 2rem;">
+        <div class="incentive-glass">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.5rem;">Configurações (RuleSets)</h2>
+                <button class="vs-btn vs-btn-outline vs-btn-sm" onclick="alert('Funcionalidade em desenvolvimento')">Novo Plano</button>
+            </div>
+
+            <div class="vs-table-container">
+                <table class="vs-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Periodicidade</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rs in rule_sets %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ rs.name }} (v{{ rs.version }})</td>
+                            <td>{{ rs.periodicity | upper }}</td>
+                            <td>
+                                {% if rs.is_active %}
+                                <span class="vs-badge vs-badge-success">Ativo</span>
+                                {% else %}
+                                <span class="vs-badge vs-badge-secondary">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <a href="{{ url_for('incentives.manage_rules', rule_set_id=rs.id) }}" class="vs-btn vs-btn-sm vs-btn-ghost">Configurar</a>
+                                    <button class="vs-btn vs-btn-sm vs-btn-primary" onclick="simularCalculo({{ rs.id }})">Rodar</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="vs-table-container">
-            <table class="vs-table">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Periodicidade</th>
-                        <th>Versão</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for rs in rule_sets %}
-                    <tr>
-                        <td style="font-weight: 500;">{{ rs.name }}</td>
-                        <td>{{ rs.periodicity | upper }}</td>
-                        <td>v{{ rs.version }}</td>
-                        <td>
-                            {% if rs.is_active %}
-                            <span class="vs-badge vs-badge-success">Ativo</span>
-                            {% else %}
-                            <span class="vs-badge vs-badge-secondary">Inativo</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <a href="{{ url_for('incentives.manage_rules', rule_set_id=rs.id) }}" class="vs-btn vs-btn-sm vs-btn-ghost">Configurar</a>
-                                <button class="vs-btn vs-btn-sm vs-btn-primary" onclick="simularCalculo({{ rs.id }})">Simular</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-                            Nenhum conjunto de regras configurado.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="incentive-glass">
+            <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">Histórico de Fechamentos</h2>
+            <div class="vs-table-container">
+                <table class="vs-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Período</th>
+                            <th>Valor Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for calc in history %}
+                        <tr>
+                            <td>{{ calc.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td style="font-size: 0.75rem; color: var(--text-secondary);">{{ calc.period_start.strftime('%d/%m') }} - {{ calc.period_end.strftime('%d/%m') }}</td>
+                            <td style="font-weight: 600;">R$ {{ "{:,.2f}".format(calc.total_distributed).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+                            <td><span class="vs-badge vs-badge-primary">{{ calc.status.upper() }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 2rem;">Nenhum histórico disponível.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
