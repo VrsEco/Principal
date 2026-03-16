@@ -30,7 +30,7 @@
             </div>
             <h1 class="text-h1" id="detName">Carregando Processo...</h1>
             <p class="text-secondary" id="detDescription">Aguarde enquanto carregamos as informações.</p>
-            <div style="display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1.25rem;">
+            <div class="process-header-actions">
                 <a href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank" class="btn btn-secondary" onclick="setTimeout(() => this.blur(), 150)">🖨️ Versão de Impressão</a>
             </div>
         </div>
@@ -239,6 +239,17 @@
 
 
 <style>
+    .workspace-header {
+        margin-bottom: 2rem;
+    }
+
+    .process-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+    }
+
     /* POP Manager and Activity Styles from APP31 */
     .pop-manager {
         display: flex;
