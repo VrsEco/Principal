@@ -13,6 +13,7 @@ from middleware.auto_log_decorator import (
     get_auto_logging_config,
 )
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 route_audit_bp = Blueprint("route_audit", __name__, url_prefix="/route-audit")
 
 
@@ -66,7 +67,7 @@ def get_audit_summary():
 
     except Exception as e:
         return (
-            jsonify({"success": False, "message": f"Erro ao obter resumo: {str(e)}"}),
+            jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
             500,
         )
 
@@ -122,7 +123,7 @@ def get_all_routes():
 
     except Exception as e:
         return (
-            jsonify({"success": False, "message": f"Erro ao obter rotas: {str(e)}"}),
+            jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
             500,
         )
 
@@ -162,7 +163,7 @@ def get_routes_without_logging():
             jsonify(
                 {
                     "success": False,
-                    "message": f"Erro ao obter rotas sem logging: {str(e)}",
+                    "message": PUBLIC_ERROR_MESSAGE,
                 }
             ),
             500,
@@ -215,7 +216,7 @@ def get_route_details(endpoint):
             jsonify(
                 {
                     "success": False,
-                    "message": f"Erro ao obter detalhes da rota: {str(e)}",
+                    "message": PUBLIC_ERROR_MESSAGE,
                 }
             ),
             500,
@@ -250,7 +251,7 @@ def get_logging_config():
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao obter configuração: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -286,7 +287,7 @@ def enable_entity_logging(entity_type):
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao habilitar logging: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -322,7 +323,7 @@ def disable_entity_logging(entity_type):
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao desabilitar logging: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -414,7 +415,7 @@ def export_audit_report():
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao exportar relatório: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )

@@ -6,6 +6,7 @@ from datetime import datetime
 from utils.permissions import has_company_full_access
 
 main_bp = Blueprint('main', __name__)
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 
 def _active_employee_filter():
@@ -268,7 +269,7 @@ def dashboard_filter_options():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @main_bp.route('/main')

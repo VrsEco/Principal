@@ -9,6 +9,7 @@ from services.log_service import log_service
 from services.auth_service import auth_service
 from utils.permissions import admin_required, is_platform_admin
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 logs_bp = Blueprint("logs", __name__, url_prefix="/logs")
 
 
@@ -80,7 +81,7 @@ def list_logs():
 
     except Exception as e:
         return (
-            jsonify({"success": False, "message": f"Erro ao obter logs: {str(e)}"}),
+            jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
             500,
         )
 
@@ -130,7 +131,7 @@ def get_log_stats():
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao obter estatÃ­sticas: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -189,7 +190,7 @@ def entity_activity(entity_type, entity_id):
             jsonify(
                 {
                     "success": False,
-                    "message": f"Erro ao obter atividade da entidade: {str(e)}",
+                    "message": PUBLIC_ERROR_MESSAGE,
                 }
             ),
             500,
@@ -295,6 +296,6 @@ def export_logs():
 
     except Exception as e:
         return (
-            jsonify({"success": False, "message": f"Erro ao exportar logs: {str(e)}"}),
+            jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
             500,
         )

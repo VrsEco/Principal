@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from models.company import Company
 
 onboarding_bp = Blueprint('onboarding', __name__)
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 @onboarding_bp.route('/api/onboarding/status', methods=['GET'])
 @login_required
@@ -36,4 +37,4 @@ def get_onboarding_status():
         })
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500

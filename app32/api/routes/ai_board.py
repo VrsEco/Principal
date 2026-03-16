@@ -7,6 +7,7 @@ from agents.graph import board_intelligence
 import json
 
 ai_board_bp = Blueprint('ai_board', __name__)
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 def extract_evidence_data(messages):
     """
@@ -87,7 +88,7 @@ def start_board():
         })
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @ai_board_bp.route('/api/ai/board/resume', methods=['POST'])
 @login_required
@@ -147,4 +148,4 @@ def resume_board():
         })
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500

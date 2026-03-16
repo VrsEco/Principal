@@ -18,6 +18,7 @@ portfolio_schema = PortfolioSchema()
 portfolios_schema = PortfolioSchema(many=True)
 portfolio_create_schema = PortfolioCreateSchema()
 portfolio_update_schema = PortfolioUpdateSchema()
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 
 @portfolios_bp.route("/project-portfolios")
@@ -75,7 +76,7 @@ def list_portfolios(company_id):
         return jsonify({"success": True, "portfolios": portfolios_data}), 200
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @portfolios_bp.route("/api/companies/<int:company_id>/portfolios", methods=["POST"])
@@ -127,7 +128,7 @@ def create_portfolio(company_id):
         return jsonify({"success": False, "message": str(e.messages)}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @portfolios_bp.route(
@@ -151,7 +152,7 @@ def get_portfolio(company_id, portfolio_id):
         )
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @portfolios_bp.route(
@@ -208,7 +209,7 @@ def update_portfolio(company_id, portfolio_id):
         return jsonify({"success": False, "message": str(e.messages)}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @portfolios_bp.route(
@@ -250,7 +251,7 @@ def delete_portfolio(company_id, portfolio_id):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 
