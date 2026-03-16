@@ -286,7 +286,12 @@ def indicator_tree_form(node_id=None):
             # Precisamos checar se houve tentativa de alteração de hierarquia (mudança de pai)
             if node.parent_id != parent_id:
                 # Se está mudando o parent e tem indicadores próprios ou filhos, bloqueia.
-                has_indicators = Indicator.query.filter_by(tree_id=node.id).first() is not None
+                has_indicators = (
+                    Indicator.query
+                    .filter_by(company_id=company_id, tree_id=node.id)
+                    .first()
+                    is not None
+                )
                 if has_indicators:
                     flash('Este nível já possui indicadores associados. Não é possível alterar sua hierarquia (Pai).', 'danger')
                     return redirect(url_for('indicators.indicator_tree_form', node_id=node.id))
@@ -337,18 +342,29 @@ def indicator_tree_form(node_id=None):
 def indicator_tree_delete(node_id):
     company_id = session.get('active_company_id')
     if not company_id: return jsonify({'error': 'Unauthorized'}), 401
+    company_id = int(company_id)
     
     node = IndicatorTree.query.get_or_404(node_id)
-    if node.company_id != int(company_id): return jsonify({'error': 'Forbidden'}), 403
+    if node.company_id != company_id: return jsonify({'error': 'Forbidden'}), 403
     
     # Travas solicitadas:
     # 1. Tem indicadores associados?
-    has_indicators = Indicator.query.filter_by(tree_id=node.id).first() is not None
+    has_indicators = (
+        Indicator.query
+        .filter_by(company_id=company_id, tree_id=node.id)
+        .first()
+        is not None
+    )
     if has_indicators:
         return jsonify({'error': 'Este nível já possui indicadores associados. Não é possível excluí-lo.'}), 400
         
     # 2. Tem subníveis na árvore?
-    has_children = IndicatorTree.query.filter_by(parent_id=node.id).first() is not None
+    has_children = (
+        IndicatorTree.query
+        .filter_by(company_id=company_id, parent_id=node.id)
+        .first()
+        is not None
+    )
     if has_children:
         return jsonify({'error': 'Este nível possui subníveis. Não é possível excluí-lo antes de excluir os subníveis vazios.'}), 400
         
@@ -430,7 +446,7 @@ def routine_execution(routine_id):
     
     from models import Routine, IndicatorGoal, Indicator, ProcessInstance
     from flask import request as flask_request
-    routine = Routine.query.get_or_404(routine_id)
+    routine = Routine.query.filter_by(id=routine_id, company_id=int(company_id)).first_or_404()
     
     # Captura instância de processo vinculada (se veio de uma execução)
     instance_id = flask_request.args.get('instance_id', type=int)
@@ -455,7 +471,7 @@ def routine_execution(routine_id):
     
     indicators_meta = []
     for g in goals:
-        ind = Indicator.query.get(g.indicator_id)
+        ind = Indicator.query.filter_by(id=g.indicator_id, company_id=int(company_id)).first()
         if ind:
             indicators_meta.append({
                 "indicator": ind,
@@ -729,8 +745,8 @@ def delete_indicator(indicator_id):
     
     # Check for associations
     from models import IndicatorGoal, IndicatorData
-    goals_count = IndicatorGoal.query.filter_by(indicator_id=indicator_id).count()
-    data_count = IndicatorData.query.filter_by(indicator_id=indicator_id).count()
+    goals_count = IndicatorGoal.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
+    data_count = IndicatorData.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
     
     if goals_count > 0 or data_count > 0:
         return jsonify({

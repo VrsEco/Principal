@@ -76,12 +76,12 @@ class IndicatorListResource(Resource):
                 code = "PENDING"
                 if tree_id:
                     from models import IndicatorTree, Indicator
-                    parent_node = IndicatorTree.query.get(tree_id)
+                    parent_node = IndicatorTree.query.filter_by(id=tree_id, company_id=cid).first()
                     if parent_node:
                         # Check for existing children in Tree (subgroups)
-                        tree_children = IndicatorTree.query.filter_by(parent_id=tree_id).all()
+                        tree_children = IndicatorTree.query.filter_by(company_id=cid, parent_id=tree_id).all()
                         # Check for existing children in Indicators (KPIs)
-                        indicator_children = Indicator.query.filter_by(tree_id=tree_id).all()
+                        indicator_children = Indicator.query.filter_by(company_id=cid, tree_id=tree_id).all()
                         
                         indices = []
                         for c in tree_children:
@@ -122,14 +122,17 @@ class IndicatorListResource(Resource):
 class IndicatorResource(Resource):
     @permission_required('indicators', 'view')
     def get(self, indicator_id):
-        indicator = Indicator.query.get_or_404(indicator_id)
+        company_id = get_request_company_id()
+        indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
         return indicator_schema.dump(indicator), 200
 
     @permission_required('indicators', 'edit')
     def put(self, indicator_id):
-        indicator = Indicator.query.get_or_404(indicator_id)
+        company_id = get_request_company_id()
+        indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
         try:
             data = request.get_json()
+            data['company_id'] = company_id
             indicator = indicator_schema.load(data, instance=indicator, partial=True)
             db.session.commit()
             return indicator_schema.dump(indicator), 200
@@ -141,7 +144,8 @@ class IndicatorResource(Resource):
 
     @permission_required('indicators', 'delete')
     def delete(self, indicator_id):
-        indicator = Indicator.query.get_or_404(indicator_id)
+        company_id = get_request_company_id()
+        indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
         try:
             db.session.delete(indicator)
             db.session.commit()
@@ -182,11 +186,12 @@ class IndicatorGroupListResource(Resource):
 class IndicatorGoalListResource(Resource):
     @permission_required('indicators', 'view')
     def get(self):
+        company_id = get_request_company_id()
         indicator_id = request.args.get('indicator_id')
-        if not indicator_id:
+        if not indicator_id or not company_id:
             return [], 200
-            
-        query = IndicatorGoal.query.filter_by(indicator_id=indicator_id)
+             
+        query = IndicatorGoal.query.filter_by(company_id=company_id, indicator_id=indicator_id)
         goals = query.all()
         return indicator_goals_schema.dump(goals), 200
 
