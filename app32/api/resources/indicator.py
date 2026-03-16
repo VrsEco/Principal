@@ -213,6 +213,9 @@ class IndicatorGoalListResource(Resource):
             cid = get_request_company_id()
             if cid:
                 data['company_id'] = cid
+
+            if data.get('goal_date') in (None, '', 'null', 'undefined'):
+                data['goal_date'] = data.get('period_end') or data.get('period_start')
             
             # --- Autocodificação (AB.M.1) ---
             from models.company import Company
