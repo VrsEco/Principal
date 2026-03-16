@@ -221,6 +221,14 @@ def create_app(config_name=None):
                         conn.execute(text("ALTER TABLE indicator_data ADD COLUMN source_ref VARCHAR(255)"))
                     if "evidence_payload" not in indicator_data_columns:
                         conn.execute(text("ALTER TABLE indicator_data ADD COLUMN evidence_payload JSON"))
+                    if "routine_id" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
+                    if "process_instance_id" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN process_instance_id INTEGER REFERENCES process_instances(id)"))
+                    if "status" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN status VARCHAR(30) DEFAULT 'draft'"))
+                    if "is_manual" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN is_manual BOOLEAN DEFAULT FALSE"))
             if "indicator_goals" in table_names:
                 indicator_goal_columns = {col["name"] for col in inspector.get_columns("indicator_goals")}
                 with db.engine.begin() as conn:
