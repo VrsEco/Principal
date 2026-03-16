@@ -734,18 +734,20 @@ def delete_indicator(indicator_id):
     
     # Check for associations
     from models import IndicatorGoal, IndicatorData
+    from models.incentive import IncentiveRule
     goals_count = IndicatorGoal.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
     data_count = IndicatorData.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
+    incentive_rules_count = IncentiveRule.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
     
-    if goals_count > 0 or data_count > 0:
+    if goals_count > 0 or data_count > 0 or incentive_rules_count > 0:
         return jsonify({
-            "error": "Não é possível excluir um indicador que possui metas ou dados associados. Inative-o em vez disso."
+            "error": "Não é possível excluir um indicador que possui metas, dados ou vínculos em regras de incentivo. Inative-o em vez disso."
         }), 400
         
     try:
         db.session.delete(ind)
         db.session.commit()
         return jsonify({"status": "success", "message": "Indicador excluído com sucesso."})
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return jsonify({"error": f"Erro ao excluir: {str(e)}"}), 500
+        return jsonify({"error": "Erro interno ao excluir indicador. Tente novamente ou contate o suporte."}), 500

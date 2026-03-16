@@ -238,6 +238,31 @@ def create_app(config_name=None):
                         conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
                     if "collection_method" not in indicator_goal_columns:
                         conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN collection_method VARCHAR(50) DEFAULT 'manual'"))
+            if "incentive_rules" in table_names:
+                incentive_rule_columns = {col["name"] for col in inspector.get_columns("incentive_rules")}
+                with db.engine.begin() as conn:
+                    if "impact_value" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN impact_value NUMERIC(15, 4) DEFAULT 1.0"))
+                    if "weight" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN weight NUMERIC(10, 4) DEFAULT 1.0"))
+                    if "use_indicator_goal" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN use_indicator_goal BOOLEAN DEFAULT TRUE"))
+                    if "calculation_mode" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN calculation_mode VARCHAR(30) DEFAULT 'ranges'"))
+                    if "ranges_config" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN ranges_config JSON"))
+                    if "target_value" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN target_value NUMERIC(15, 4)"))
+                    if "min_threshold" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN min_threshold NUMERIC(15, 4)"))
+                    if "max_cap" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN max_cap NUMERIC(15, 4)"))
+                    if "max_reduction" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN max_reduction NUMERIC(15, 4)"))
+                    if "impact_type" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN impact_type VARCHAR(20) DEFAULT 'multiplier'"))
+                    if "order_index" not in incentive_rule_columns:
+                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN order_index INTEGER DEFAULT 0"))
             if {"users", "employees"}.issubset(table_names):
                 stats = _backfill_user_channel_contacts()
                 print(
