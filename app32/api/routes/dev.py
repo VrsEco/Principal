@@ -3,6 +3,7 @@ from models import db, Company, Project, User, Employee, Indicator, IndicatorGro
 from datetime import datetime, timedelta
 
 dev_bp = Blueprint('dev', __name__)
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 @dev_bp.route('/debug/routes')
 def debug_routes():
@@ -181,7 +182,7 @@ def ping_dependencies():
     except Exception as e:
         return jsonify({
             "status": "error",
-            "message": str(e)
+            "message": PUBLIC_ERROR_MESSAGE
         }), 500
 
 @dev_bp.route('/trigger-proactive')

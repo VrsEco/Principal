@@ -7,6 +7,8 @@ from schemas.plan_implantation import AlignmentSchema, ModelMarketSchema, Execut
 from pydantic import ValidationError
 import json
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 class PlanListResource(Resource):
     @permission_required('plans', 'view')
     def get(self):
@@ -31,7 +33,7 @@ class PlanListResource(Resource):
         except ValidationError as e:
             return {"errors": e.errors()}, 400
         except Exception as e:
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class PlanParticipantListResource(Resource):
@@ -58,7 +60,7 @@ class PlanParticipantListResource(Resource):
         except ValueError as e:
             return {"error": str(e)}, 400
         except Exception as e:
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class PlanParticipantResource(Resource):
@@ -71,7 +73,7 @@ class PlanParticipantResource(Resource):
         except ValueError as e:
             return {"error": str(e)}, 404
         except Exception as e:
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class PlanResource(Resource):
@@ -134,7 +136,7 @@ class PlanDriverResource(Resource):
         except Exception as e:
             from models import db
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class PlanDriverDetailResource(Resource):
@@ -164,7 +166,7 @@ class PlanDriverDetailResource(Resource):
         except Exception as e:
             from models import db
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('plans', 'edit')
     def delete(self, plan_id, driver_id):
@@ -182,7 +184,7 @@ class PlanDriverDetailResource(Resource):
         except Exception as e:
             from models import db
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class PlanSectionStatusResource(Resource):
@@ -232,7 +234,7 @@ class PlanImplantationResource(Resource):
         except ValueError as e:
             return {"error": str(e)}, 400
         except Exception as e:
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 

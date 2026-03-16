@@ -8,6 +8,8 @@ from utils.permissions import get_default_company_id, has_company_full_access, p
 from flask import session
 from flask_login import current_user
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 def get_request_company_id():
     def clean(val):
         if val is None: return None
@@ -143,7 +145,7 @@ class OccurrenceListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class OccurrenceResource(Resource):
     @permission_required('processes', 'view')
@@ -173,7 +175,7 @@ class OccurrenceResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'delete')
     def delete(self, occurrence_id):
@@ -186,4 +188,4 @@ class OccurrenceResource(Resource):
             return {"message": "Occurrence deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500

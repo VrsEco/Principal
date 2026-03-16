@@ -9,6 +9,8 @@ from flask import Blueprint, jsonify
 from datetime import datetime
 import os
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 health_bp = Blueprint("health", __name__)
 
 
@@ -39,7 +41,7 @@ def health_check():
         db.session.execute("SELECT 1")
         checks["database"] = "ok"
     except Exception as e:
-        checks["database"] = f"error: {str(e)}"
+        checks["database"] = "error"
         health_status["status"] = "unhealthy"
 
     # Check 2: Redis (opcional)
@@ -65,7 +67,7 @@ def health_check():
             else:
                 checks["redis"] = "skipped"
         except Exception as e:
-            checks["redis"] = f"error: {str(e)}"
+            checks["redis"] = "error"
             # Redis é opcional, não marca como unhealthy
     else:
         checks["redis"] = "not_configured"
@@ -83,7 +85,7 @@ def health_check():
         else:
             checks["disk_space"] = f"ok: {free_percent:.1f}% free"
     except Exception as e:
-        checks["disk_space"] = f"error: {str(e)}"
+        checks["disk_space"] = "error"
 
     health_status["checks"] = checks
 
@@ -115,7 +117,7 @@ def readiness_check():
             jsonify(
                 {
                     "status": "not_ready",
-                    "error": str(e),
+                    "error": PUBLIC_ERROR_MESSAGE,
                     "timestamp": datetime.utcnow().isoformat(),
                 }
             ),

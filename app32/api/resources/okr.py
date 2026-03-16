@@ -3,6 +3,8 @@ from utils.permissions import permission_required
 from flask_restful import Resource
 from marshmallow import ValidationError
 from models import db, OKRGlobal, KeyResult, OKRArea, KeyResultArea
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 from schemas.okr import (
     okr_global_schema, okrs_global_schema,
     key_result_schema, key_results_schema,
@@ -37,7 +39,7 @@ class OKRGlobalListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class OKRGlobalResource(Resource):
@@ -57,7 +59,7 @@ class OKRGlobalResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     def delete(self, okr_id):
         okr = OKRGlobal.query.get_or_404(okr_id)
@@ -67,7 +69,7 @@ class OKRGlobalResource(Resource):
             return {"message": "OKR deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class KeyResultListResource(Resource):
@@ -103,7 +105,7 @@ class KeyResultResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class OKRAreaListResource(Resource):
