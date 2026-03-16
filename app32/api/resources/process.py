@@ -21,6 +21,8 @@ from utils.permissions import get_default_company_id, has_company_full_access, h
 from database import get_db
 from sqlalchemy import or_
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 def _instance_visible_to_employee(instance, employee_id):
     if not instance or not employee_id:
         return False
@@ -557,7 +559,7 @@ class ProcessInstanceListResource(Resource):
             import traceback
             traceback.print_exc()
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessInstanceResource(Resource):
     @permission_required('processes', 'view')
@@ -609,7 +611,7 @@ class ProcessInstanceResource(Resource):
             return {"message": "Process instance deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessInstanceWorkLogResource(Resource):
     @permission_required('processes', 'view')
@@ -653,7 +655,7 @@ class ProcessInstanceWorkLogResource(Resource):
             
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ActivityWorkLogItemResource(Resource):
     @permission_required('processes', 'edit')
@@ -686,7 +688,7 @@ class ActivityWorkLogItemResource(Resource):
             return log.to_dict(), 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'edit')
     def delete(self, log_id):
@@ -707,7 +709,7 @@ class ActivityWorkLogItemResource(Resource):
             return {"message": "Log deleted"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessAreaListResource(Resource):
     @permission_required('processes', 'view')
@@ -727,7 +729,7 @@ class ProcessAreaListResource(Resource):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error in ProcessAreaListResource.get: {e}")
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'create')
     def post(self):
@@ -757,7 +759,7 @@ class ProcessAreaListResource(Resource):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error in ProcessAreaListResource.post: {e}")
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessAreaResource(Resource):
     @permission_required('processes', 'view')
@@ -793,7 +795,7 @@ class ProcessAreaResource(Resource):
             return {"message": "Process area deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class MacroProcessListResource(Resource):
     @permission_required('processes', 'view')
@@ -816,7 +818,7 @@ class MacroProcessListResource(Resource):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error in MacroProcessListResource.get: {e}")
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'create')
     def post(self):
@@ -846,7 +848,7 @@ class MacroProcessListResource(Resource):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error in MacroProcessListResource.post: {e}")
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class MacroProcessResource(Resource):
     @permission_required('processes', 'view')
@@ -879,7 +881,7 @@ class MacroProcessResource(Resource):
             return {"message": "Macro process deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessListResource(Resource):
     @permission_required('processes', 'view')
@@ -920,7 +922,7 @@ class ProcessListResource(Resource):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error in ProcessListResource.get: {e}")
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'create')
     def post(self):
@@ -950,7 +952,7 @@ class ProcessListResource(Resource):
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error in ProcessListResource.post: {e}")
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 from utils.storage import save_file, delete_file
 
@@ -1034,7 +1036,7 @@ class ProcessResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'delete')
     def delete(self, process_id):
@@ -1047,7 +1049,7 @@ class ProcessResource(Resource):
             return {"message": "Process deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessRoutineListResource(Resource):
     @permission_required('processes', 'view')
@@ -1064,7 +1066,7 @@ class ProcessRoutineListResource(Resource):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'create')
     def post(self):
@@ -1094,7 +1096,7 @@ class ProcessRoutineListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessRoutineResource(Resource):
     @permission_required('processes', 'view')
@@ -1176,7 +1178,7 @@ class ProcessRoutineResource(Resource):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'delete')
     def delete(self, routine_id):
@@ -1208,7 +1210,7 @@ class ProcessRoutineResource(Resource):
             conn.close()
             return {"error": "Routine not found"}, 404
         except Exception as e:
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessStepListResource(Resource):
     @permission_required('processes', 'view')
@@ -1262,7 +1264,7 @@ class ProcessStepListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessStepResource(Resource):
     @permission_required('processes', 'view')
@@ -1308,7 +1310,7 @@ class ProcessStepResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'delete')
     def delete(self, step_id):
@@ -1321,7 +1323,7 @@ class ProcessStepResource(Resource):
             return {"message": "Step deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessScheduleListResource(Resource):
     @permission_required('processes', 'view')
@@ -1405,7 +1407,7 @@ class ProcessScheduleListResource(Resource):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
         finally:
             if 'conn' in locals() and conn:
                 conn.close()

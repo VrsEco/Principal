@@ -6,6 +6,8 @@ from pydantic import ValidationError
 from utils.permissions import admin_required, is_platform_admin
 from services.notification_hub import notification_hub
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 usuarios_bp = Blueprint('usuarios', __name__)
 
 
@@ -241,10 +243,10 @@ def create_user():
         return jsonify({"success": True, "user": user.to_dict()}), 201
         
     except ValidationError as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @usuarios_bp.route('/api/usuarios/<int:user_id>', methods=['PUT'])
 @login_required
@@ -271,10 +273,10 @@ def update_user(user_id):
         return jsonify({"success": True, "user": user.to_dict()})
         
     except ValidationError as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @usuarios_bp.route('/api/usuarios/<int:user_id>/test-channel', methods=['POST'])
 @login_required
@@ -327,9 +329,9 @@ def test_user_channel(user_id):
             "result": result,
         })
     except ValidationError as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 400
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @usuarios_bp.route('/usuarios/api/delete/<int:user_id>', methods=['DELETE'])

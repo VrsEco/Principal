@@ -9,6 +9,8 @@ from schemas.project import project_task_schema, project_tasks_schema
 from utils.permissions import has_company_full_access, has_permission, permission_required
 from datetime import datetime
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 
 def _detach_workflow_gap_candidates_for_task(*, task_id, project_id, company_id):
     if not task_id or not project_id:
@@ -188,7 +190,7 @@ class ProjectTaskListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskResource(Resource):
     @permission_required('projects', 'view')
@@ -262,7 +264,7 @@ class ProjectTaskResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('projects', 'view')
     def patch(self, project_id, task_id):
@@ -295,7 +297,7 @@ class ProjectTaskResource(Resource):
             return {"message": "Task deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskStageResource(Resource):
     @permission_required('projects', 'view')
@@ -349,7 +351,7 @@ class ProjectTaskStageResource(Resource):
             return project_task_schema.dump(task), 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskCollaboratorListResource(Resource):
     @permission_required('projects', 'view')
@@ -394,7 +396,7 @@ class ProjectTaskCollaboratorListResource(Resource):
             return collaborator.to_dict(), 201
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskCollaboratorResource(Resource):
     @permission_required('projects', 'edit')
@@ -417,7 +419,7 @@ class ProjectTaskCollaboratorResource(Resource):
             return {"message": "Work log deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskHoursSummaryResource(Resource):
 
@@ -472,7 +474,7 @@ class ProjectAllTasksResource(Resource):
             import traceback
             print("ERROR in ProjectAllTasksResource:", str(e))
             print(traceback.format_exc())
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 class ProjectTaskTransferResource(Resource):
     @permission_required('projects', 'edit')
     def post(self, project_id, task_id):
@@ -543,7 +545,7 @@ class ProjectTaskTransferResource(Resource):
             db.session.rollback()
             import traceback
             traceback.print_exc()
-            return {"error": str(e)}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class ProjectTaskDependencyListResource(Resource):
@@ -617,7 +619,7 @@ class ProjectTaskDependencyListResource(Resource):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return {"error": f"Erro interno ao processar dependência: {str(e)}"}, 500
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class ProjectTaskDependencyResource(Resource):

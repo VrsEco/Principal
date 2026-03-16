@@ -1,5 +1,7 @@
 import os
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort, flash
 from flask_login import current_user
 from werkzeug.utils import secure_filename
@@ -470,7 +472,7 @@ def api_get_process_routines(company_id):
         return jsonify({"success": True, "routines": routines})
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines', methods=['POST'])
 @permission_required('processes', 'create')
@@ -530,7 +532,7 @@ def api_create_process_routine(company_id):
         }), 201
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/<int:routine_id>', methods=['PUT'])
 @permission_required('processes', 'edit')
@@ -583,7 +585,7 @@ def api_update_process_routine(company_id, routine_id):
         return jsonify({"success": True, "message": "Rotina atualizada com sucesso"})
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/<int:routine_id>', methods=['DELETE'])
 @permission_required('processes', 'delete')
@@ -605,7 +607,7 @@ def api_delete_process_routine(company_id, routine_id):
         return jsonify({"success": True, "message": "Rotina excluída com sucesso"})
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/routines/<int:routine_id>/collaborators', methods=['GET'])
 @permission_required('processes', 'view')
@@ -632,7 +634,7 @@ def api_get_routine_collaborators(routine_id):
         return jsonify({"success": True, "collaborators": collaborators})
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/routines/<int:routine_id>/collaborators', methods=['POST'])
 @permission_required('processes', 'edit')
@@ -664,7 +666,7 @@ def api_add_routine_collaborator(routine_id):
         return jsonify({"success": True, "id": collaborator_id, "message": "Colaborador adicionado com sucesso"}), 201
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>', methods=['PUT'])
 @permission_required('processes', 'edit')
@@ -699,7 +701,7 @@ def api_update_routine_collaborator(routine_id, collaborator_id):
         return jsonify({"success": True, "message": "Colaborador atualizado com sucesso"})
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/routines/<int:routine_id>/collaborators/<int:collaborator_id>', methods=['DELETE'])
 @permission_required('processes', 'edit')
@@ -720,7 +722,7 @@ def api_delete_routine_collaborator(routine_id, collaborator_id):
         return jsonify({"success": True, "message": "Colaborador removido com sucesso"})
 
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 
@@ -743,7 +745,7 @@ def api_get_company_employees(company_id):
         return jsonify({"success": True, "employees": employees})
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/companies/<int:company_id>/routines/<routine_id>')
 @permission_required('processes', 'view')

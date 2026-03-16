@@ -5,6 +5,8 @@ from utils.permissions import can_access_company, is_platform_admin, permission_
 from flask_login import login_required, current_user
 from utils.logo_processor import resize_and_save_logo, get_logo_url
 
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 companies_bp = Blueprint('companies', __name__)
 
 @companies_bp.route('/companies')
@@ -123,7 +125,7 @@ def add_company_role(company_id):
         return jsonify(role.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>', methods=['PUT', 'GET'])
 @permission_required('companies', 'edit')
@@ -191,7 +193,7 @@ def add_company_employee(company_id):
         return jsonify(employee.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/system-users', methods=['GET'])
 @permission_required('companies', 'view')
@@ -344,4 +346,4 @@ def upload_company_logo(company_id):
         })
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
