@@ -1335,48 +1335,77 @@ class ProcessScheduleListResource(Resource):
             return {"error": "Permission denied: view on processes"}, 403
 
         try:
-            # Busca APENAS na tabela routines (agendamentos) associados ao processo
             pg = get_db()
             conn = pg._get_connection()
             cursor = conn.cursor()
-            
+
+            # Compatível com ambientes legados: consulta apenas colunas estáveis
+            # e aplica multi-tenancy explícito por company_id.
             cursor.execute(
                 """
-                SELECT id, process_id, code, name, description,
-                       schedule_type, schedule_value, deadline_days, deadline_hours, deadline_date,
-                       score_weight, created_at, updated_at
-                FROM routines
-                WHERE process_id = %s AND (is_active = TRUE OR is_active IS NULL)
-                ORDER BY created_at DESC
+                SELECT
+                    r.id,
+                    r.process_id,
+                    r.name,
+                    r.description,
+                    r.schedule_type,
+                    r.schedule_value,
+                    r.schedule_value AS trigger_value,
+                    r.deadline_days,
+                    r.deadline_hours,
+                    r.deadline_date,
+                    r.created_at
+                FROM routines r
+                WHERE
+                    r.company_id = %s
+                    AND r.process_id = %s
+                    AND (r.is_active = TRUE OR r.is_active IS NULL)
+                ORDER BY r.created_at DESC
                 """,
-                (process.id,)
+                (process.company_id, process.id),
             )
-            
+
             routines = [dict(row) for row in cursor.fetchall()]
 
-            # Enrich with collaborators and ensure JSON serialization
             if routines:
+                routine_ids = [r['id'] for r in routines if r.get('id') is not None]
+                collaborators_by_routine = {}
+
+                if routine_ids:
+                    placeholders = ",".join(["%s"] * len(routine_ids))
+                    cursor.execute(
+                        f"""
+                        SELECT
+                            rc.routine_id,
+                            e.name
+                        FROM routine_collaborators rc
+                        JOIN routines r ON r.id = rc.routine_id
+                        JOIN employees e ON e.id = rc.employee_id
+                        WHERE
+                            rc.routine_id IN ({placeholders})
+                            AND r.company_id = %s
+                        ORDER BY e.name
+                        """,
+                        tuple(routine_ids) + (process.company_id,),
+                    )
+
+                    for row in cursor.fetchall():
+                        collaborators_by_routine.setdefault(row['routine_id'], []).append(row['name'])
+
                 for r in routines:
-                    # Convert dates and decimals
                     for k, v in r.items():
                         if isinstance(v, (datetime, date)):
                             r[k] = v.isoformat()
                         elif isinstance(v, Decimal):
                             r[k] = float(v)
 
-                    # Fetch collaborators for each routine
-                    cursor.execute("""
-                        SELECT e.name
-                        FROM routine_collaborators rc
-                        JOIN employees e ON e.id = rc.employee_id
-                        WHERE rc.routine_id = %s
-                    """, (r['id'],))
-                    collabs = cursor.fetchall()
-                    r['team'] = [c['name'] for c in collabs]
-                conn.close()
+                    r['team'] = collaborators_by_routine.get(r['id'], [])
 
             return routines, 200
         except Exception as e:
             import traceback
             traceback.print_exc()
             return {"error": str(e)}, 500
+        finally:
+            if 'conn' in locals() and conn:
+                conn.close()
