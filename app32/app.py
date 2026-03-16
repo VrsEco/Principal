@@ -7,6 +7,7 @@ from sqlalchemy import inspect, or_, text
 
 from models import db
 from schemas import ma
+from utils.error_handling import register_global_error_handlers
 
 
 def _backfill_user_channel_contacts():
@@ -122,6 +123,7 @@ def create_app(config_name=None):
     # Blueprints
     register_blueprints(app)
     print("DEBUG: Blueprints registered.")
+    register_global_error_handlers(app)
 
     # Ensure Upload Dirs
     for folder in ['flows', 'pop']:
