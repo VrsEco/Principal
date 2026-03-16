@@ -76,6 +76,12 @@ def _get_form_context(company_id):
 
 indicators_bp = Blueprint('indicators', __name__)
 
+
+def _get_company_tree_node(company_id: int, node_id: int | None):
+    if not node_id:
+        return None
+    return IndicatorTree.query.filter_by(id=node_id, company_id=company_id).first()
+
 @indicators_bp.route('/indicators')
 @permission_required('indicators', 'view')
 def indicators_list():
@@ -207,9 +213,18 @@ def indicator_tree_form(node_id=None):
     # Se o link de "Adicionar Subgrupo" foi clicado para um nó que já possui indicadores, bloqueia.
     pre_selected_parent_id_get = request.args.get('parent_id', type=int)
     if request.method == 'GET' and pre_selected_parent_id_get and not node_id:
-        has_indicators_in_parent = Indicator.query.filter_by(tree_id=pre_selected_parent_id_get).first() is not None
+        parent_node_check = _get_company_tree_node(company_id, pre_selected_parent_id_get)
+        if not parent_node_check:
+            flash('Grupo pai inválido para a empresa ativa.', 'danger')
+            return redirect(url_for('indicators.indicator_tree'))
+
+        has_indicators_in_parent = (
+            Indicator.query
+            .filter_by(company_id=company_id, tree_id=pre_selected_parent_id_get)
+            .first()
+            is not None
+        )
         if has_indicators_in_parent:
-            parent_node_check = IndicatorTree.query.get(pre_selected_parent_id_get)
             flash(f'O nível "{parent_node_check.name}" já possui indicadores associados. Não é possível criar subníveis abaixo dele.', 'danger')
             return redirect(url_for('indicators.indicator_tree'))
 
@@ -228,9 +243,18 @@ def indicator_tree_form(node_id=None):
             # ── TRAVA 2: Bloqueio em POST de novo nó ──
             # Proibe criar subnível num nó que já tem indicadores
             if parent_id:
-                has_indicators_in_parent = Indicator.query.filter_by(tree_id=parent_id).first() is not None
+                parent_node_check = _get_company_tree_node(company_id, parent_id)
+                if not parent_node_check:
+                    flash('Grupo pai inválido para a empresa ativa.', 'danger')
+                    return redirect(url_for('indicators.indicator_tree'))
+
+                has_indicators_in_parent = (
+                    Indicator.query
+                    .filter_by(company_id=company_id, tree_id=parent_id)
+                    .first()
+                    is not None
+                )
                 if has_indicators_in_parent:
-                    parent_node_check = IndicatorTree.query.get(parent_id)
                     flash(f'O nível "{parent_node_check.name}" já possui indicadores associados. Não é possível criar subníveis abaixo dele.', 'danger')
                     return redirect(url_for('indicators.indicator_tree'))
             
@@ -248,8 +272,8 @@ def indicator_tree_form(node_id=None):
                 node.code = f"{company_prefix}.I.{next_idx}"
             else:
                 # Child nodes: ParentCode.X
-                parent_node = IndicatorTree.query.get(parent_id)
-                children = IndicatorTree.query.filter_by(parent_id=parent_id).all()
+                parent_node = parent_node_check
+                children = IndicatorTree.query.filter_by(company_id=company_id, parent_id=parent_id).all()
                 indices = []
                 for c in children:
                     last_part = c.code.split('.')[-1]
