@@ -211,3 +211,27 @@ tmp_*.py
 error_log.txt
 pacote_deploy_squad.tar.gzapp32_env_fixed.txt
 github_actions_deploy_key_fixed.txt
+
+# ==========================================
+# Artefatos temporários do Codex / debug local
+# ==========================================
+.codex_temp*
+*.remote_backup
+tmp/
+output/
+github_actions_deploy_key*.txt
+.pytest_cache/
+__pycache__/
+debug_results.json
+debug_out.txt
+debug_inc_redirect.txt
+remote_out.txt
+smoke_out.txt
+inspect_output.txt
+inspection_output*.txt
+verify_output.txt
+seed_log.txt
+simulation_output.txt
+simulation_capped_output.txt
+pip_list_remote.txt
+error2.txt
