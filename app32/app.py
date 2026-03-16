@@ -151,6 +151,38 @@ def create_app(config_name=None):
                     if "source_config" not in indicator_columns:
                         conn.execute(text("ALTER TABLE indicators ADD COLUMN source_config JSON"))
                         print("DEBUG: indicators.source_config column added successfully.")
+            if "indicator_data" in table_names:
+                indicator_data_columns = {col["name"] for col in inspector.get_columns("indicator_data")}
+                with db.engine.begin() as conn:
+                    if "indicator_id" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN indicator_id INTEGER"))
+                        conn.execute(text("""
+                            UPDATE indicator_data
+                            SET indicator_id = indicator_goals.indicator_id
+                            FROM indicator_goals
+                            WHERE indicator_data.goal_id = indicator_goals.id
+                              AND indicator_data.indicator_id IS NULL
+                        """))
+                        print("DEBUG: indicator_data.indicator_id column added successfully.")
+                    if "record_date" in indicator_data_columns and "measured_date" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data RENAME COLUMN record_date TO measured_date"))
+                        print("DEBUG: indicator_data.record_date renamed to measured_date.")
+                    if "value" in indicator_data_columns and "measured_value" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data RENAME COLUMN value TO measured_value"))
+                        conn.execute(text("ALTER TABLE indicator_data ALTER COLUMN measured_value TYPE NUMERIC(15, 4) USING measured_value::numeric"))
+                        print("DEBUG: indicator_data.value renamed to measured_value.")
+                    if "period_start" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN period_start DATE"))
+                    if "period_end" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN period_end DATE"))
+                    if "employee_id" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN employee_id INTEGER REFERENCES employees(id)"))
+                    if "collaborator_id" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN collaborator_id INTEGER REFERENCES employees(id)"))
+                    if "source_ref" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN source_ref VARCHAR(255)"))
+                    if "evidence_payload" not in indicator_data_columns:
+                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN evidence_payload JSON"))
             if {"users", "employees"}.issubset(table_names):
                 stats = _backfill_user_channel_contacts()
                 print(
