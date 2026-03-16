@@ -363,7 +363,7 @@ def indicator_tree_delete(node_id):
         return jsonify({'status': 'success', 'message': 'Nível excluído com sucesso.'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Erro interno ao excluir nível. Tente novamente ou contate o suporte.'}), 500
 
 # --- Goals (Metas) ---
 

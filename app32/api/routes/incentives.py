@@ -479,7 +479,7 @@ def vetor_add(rule_set_id):
         import traceback
         error_msg = traceback.format_exc()
         print(f"❌ ERRO NO BANCO: {error_msg}")
-        return jsonify({"error": f"Erro de Banco de Dados: {str(e)}"}), 500
+        return jsonify({"error": "Erro interno ao processar dados de incentivos. Tente novamente ou contate o suporte."}), 500
 
     return jsonify({"ok": True, "vetor": v.to_dict()}), 201
 

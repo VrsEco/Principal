@@ -13,6 +13,9 @@ from schemas.indicator import (
 
 from utils.permissions import permission_required
 
+
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
 def get_request_company_id():
     from flask import session
     
@@ -117,7 +120,8 @@ class IndicatorListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao criar indicador")
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorResource(Resource):
     @permission_required('indicators', 'view')
@@ -140,7 +144,8 @@ class IndicatorResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao atualizar indicador %s", indicator_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('indicators', 'delete')
     def delete(self, indicator_id):
@@ -152,7 +157,8 @@ class IndicatorResource(Resource):
             return {"message": "Indicator deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao excluir indicador %s", indicator_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorGroupListResource(Resource):
     @permission_required('indicators', 'view')
@@ -181,7 +187,8 @@ class IndicatorGroupListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao criar grupo de indicador")
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorGoalListResource(Resource):
     @permission_required('indicators', 'view')
@@ -221,7 +228,8 @@ class IndicatorGoalListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao criar meta de indicador")
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorGoalResource(Resource):
     @permission_required('indicators', 'view')
@@ -241,7 +249,8 @@ class IndicatorGoalResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao atualizar meta %s", goal_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     def patch(self, goal_id):
         return self.put(goal_id)
@@ -255,7 +264,8 @@ class IndicatorGoalResource(Resource):
             return {"message": "Goal deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao excluir meta %s", goal_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorDataListResource(Resource):
     @permission_required('indicators', 'view')
@@ -304,7 +314,8 @@ class IndicatorDataListResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao criar lançamento de indicador")
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorDataResource(Resource):
     @permission_required('indicators', 'view')
@@ -321,7 +332,8 @@ class IndicatorDataResource(Resource):
             return {"message": "Data record deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao excluir lançamento %s", data_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class IndicatorAuditResource(Resource):
     """Resource para o Sapiens Wizard auditar indicadores sem rotina."""
@@ -430,4 +442,5 @@ class IndicatorDataBatchResource(Resource):
             return {"errors": err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 500
+            logger.exception("Erro ao aplicar wizard de indicadores em lote")
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
