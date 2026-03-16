@@ -24,6 +24,10 @@
                 <span class="company-name">{{ active_company.name }}</span>
             </div>
             {% endif %}
+
+            <div class="navbar-breadcrumb">
+                {% block breadcrumb %}{% endblock %}
+            </div>
         </div>
 
         <div class="navbar-right">

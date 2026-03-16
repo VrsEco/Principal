@@ -1,0 +1,520 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Dashboard de Indicadores | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Gestão Estratégica</a>
+<span class="sep">/</span>
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">Dashboard</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.5rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')" title="Filtros">
+        <i class="fas fa-filter"></i> <span class="btn-text">Filtros</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    /* ── Summary Cards ── */
+    .dash-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    @media (max-width: 1000px) { .dash-cards { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 580px)  { .dash-cards { grid-template-columns: 1fr 1fr; } }
+
+    .sc {
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        padding: 0.875rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        position: relative;
+        overflow: hidden;
+        transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .sc:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .sc::after {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        border-radius: 14px 0 0 14px;
+    }
+    .sc.s::after { background: #10b981; }
+    .sc.d::after { background: #ef4444; }
+    .sc.w::after { background: #f59e0b; }
+    .sc.i::after { background: #3b82f6; }
+
+    .sc-icon {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; flex-shrink: 0;
+    }
+    .sc.s .sc-icon { background: #dcfce7; color: #16a34a; }
+    .sc.d .sc-icon { background: #fee2e2; color: #dc2626; }
+    .sc.w .sc-icon { background: #fef9c3; color: #d97706; }
+    .sc.i .sc-icon { background: #dbeafe; color: #2563eb; }
+
+    .sc-body { min-width: 0; }
+    .sc-val  { font-size: 1.75rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; color: var(--text-primary); }
+    .sc-lbl  { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin-top: 2px; }
+    .sc-sub  { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 3px; }
+
+    /* ── Charts ── */
+    .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    @media (max-width: 860px) { .charts-row { grid-template-columns: 1fr; } }
+
+    .chart-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem;
+    }
+    .chart-card-hd {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .chart-card-title { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); }
+
+    /* ── Filter Bar ── */
+    .filter-select {
+        width: 100%;
+        padding: 0.6rem 0.875rem;
+        border-radius: 10px;
+        border: 1.5px solid var(--border);
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .filter-select:focus { border-color: var(--primary); outline: none; background: var(--surface); }
+    .filter-group { margin-bottom: 1.25rem; }
+    .filter-label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 0.5rem; display: block; letter-spacing: 0.05em; }
+
+    /* ── Status Badges ── */
+    .sbadge {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 0.62rem; font-weight: 800;
+        padding: 3px 8px; border-radius: 6px;
+        text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
+    }
+    .sb-exc  { background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+    .sb-ok   { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+    .sb-alt  { background:#fef9c3; color:#92400e; border:1px solid #fef08a; }
+    .sb-low  { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+    .sb-nd   { background:var(--surface-secondary); color:var(--text-tertiary); border:1px solid var(--border); }
+    .sb-ng   { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+
+    /* ── Type Pills ── */
+    .tpill {
+        display: inline-flex; align-items: center; gap: 3px;
+        font-size: 0.6rem; font-weight: 800;
+        padding: 2px 7px; border-radius: 5px;
+        text-transform: uppercase; white-space: nowrap;
+    }
+    .tp-e { background:#fdf4ff; color:#a21caf; border:1px solid #f0abfc; }
+    .tp-r { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
+    .tp-i { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+
+    /* ── KPI Table ── */
+    .kpi-table { width:100%; border-collapse:collapse; }
+    .kpi-table thead { background:var(--surface-secondary); }
+    .kpi-table th {
+        padding: 0.65rem 0.875rem;
+        text-align:left; font-size:0.62rem; font-weight:800;
+        color:var(--text-tertiary); text-transform:uppercase;
+        letter-spacing:0.06em; white-space:nowrap;
+    }
+    .kpi-table td {
+        padding: 0.75rem 0.875rem;
+        border-bottom:1px solid var(--border);
+        font-size:0.875rem; vertical-align:middle;
+    }
+    .kpi-table tr:hover td { background:var(--surface-secondary); }
+    .kpi-table tr:last-child td { border-bottom:none; }
+
+    /* ── Perf Bar ── */
+    .pb-wrap { height:5px; background:var(--surface-secondary); border-radius:3px; overflow:hidden; min-width:70px; }
+    .pb-fill  { height:100%; border-radius:3px; transition:width 0.5s; }
+
+    /* ── Collapsible Sections ── */
+    .section-vs { margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow-sm); }
+    .section-hd-vs { 
+        padding: 0.875rem 1rem; background: var(--surface-secondary); border-bottom: 1px solid var(--border); 
+        display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s;
+        user-select: none;
+    }
+    .section-hd-vs:hover { background: var(--border); }
+    .section-title-vs { font-size: 0.875rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px; }
+    .section-body-vs { padding: 1rem; }
+    .section-vs.collapsed .section-body-vs { display: none; }
+    .section-vs.collapsed .section-hd-vs { border-bottom: none; }
+    .section-vs .section-icon-vs { font-size: 0.75rem; color: var(--text-tertiary); transition: transform 0.2s; }
+    .section-vs.collapsed .section-icon-vs { transform: rotate(-90deg); }
+
+    @media (max-width:768px) { .hide-m { display:none!important; } }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+
+    {# ── Header compacto ── #}
+    <div class="workspace-header" style="margin-bottom:1rem;">
+        <div class="header-content">
+            <h1 class="text-h1" style="font-size:1.35rem;">📊 Dashboard de Indicadores</h1>
+            <p class="text-secondary" style="font-size:0.82rem; margin-top:2px;">Visão consolidada de performance — metas, realizações e tendências.</p>
+        </div>
+    </div>
+
+    {# ── Cards de Resumo ── #}
+    {% set total_active = kpi_data | length %}
+    <div class="section-vs" id="sectionSummary">
+        <div class="section-hd-vs" onclick="toggleSection(this)">
+            <h3 class="section-title-vs"><i class="fas fa-chart-pie" style="color:var(--primary);"></i> Resumo de Performance</h3>
+            <i class="fas fa-chevron-down section-icon-vs"></i>
+        </div>
+        <div class="section-body-vs">
+            <div class="dash-cards">
+                <div class="sc s">
+                    <div class="sc-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="sc-body">
+                        <div class="sc-val">{{ count_on_target }}</div>
+                        <div class="sc-lbl">Na Meta</div>
+                        <div class="sc-sub">{% if total_active > 0 %}{{ "%.0f" | format(count_on_target / total_active * 100) }}% do total{% else %}—{% endif %}</div>
+                    </div>
+                </div>
+                <div class="sc d">
+                    <div class="sc-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="sc-body">
+                        <div class="sc-val">{{ count_below }}</div>
+                        <div class="sc-lbl">Abaixo</div>
+                        <div class="sc-sub">{% if total_active > 0 %}{{ "%.0f" | format(count_below / total_active * 100) }}% do total{% else %}—{% endif %}</div>
+                    </div>
+                </div>
+                <div class="sc w">
+                    <div class="sc-icon"><i class="fas fa-clock"></i></div>
+                    <div class="sc-body">
+                        <div class="sc-val">{{ count_no_data }}</div>
+                        <div class="sc-lbl">Sem Dados</div>
+                        <div class="sc-sub">Medições pendentes</div>
+                    </div>
+                </div>
+                <div class="sc i">
+                    <div class="sc-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="sc-body">
+                        <div class="sc-val">{{ total_active }}</div>
+                        <div class="sc-lbl">KPIs Ativos</div>
+                        <div class="sc-sub">⚙️ {{ type_counts.effort }} · 🎯 {{ type_counts.result }} · 🚀 {{ type_counts.impact }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="activeFiltersInfo" style="display: none; margin-bottom: 1rem; padding: 0.5rem 1rem; background: var(--primary-light); border-radius: 10px; border: 1px solid rgba(37,99,235,0.1); align-items: center; gap: 0.75rem;">
+        <span style="font-size: 0.75rem; font-weight: 600; color: var(--primary);">
+            <i class="fas fa-info-circle"></i> Existem filtros ativos no painel lateral
+        </span>
+        <button class="btn btn-secondary btn-sm" onclick="clearFilters()" style="margin-left: auto; padding: 0.25rem 0.75rem; font-size: 0.7rem;">
+            Limpar Filtros
+        </button>
+    </div>
+
+    {% if kpi_data %}
+    <div class="section-vs" id="sectionCharts">
+        <div class="section-hd-vs" onclick="toggleSection(this)">
+            <h3 class="section-title-vs"><i class="fas fa-project-diagram" style="color:var(--primary);"></i> Panorama Gráfico</h3>
+            <i class="fas fa-chevron-down section-icon-vs"></i>
+        </div>
+        <div class="section-body-vs">
+            <div class="charts-row" style="margin-bottom:0;">
+                <div class="chart-card">
+                    <div class="chart-card-hd">
+                        <span class="chart-card-title">🥧 Distribuição por Status</span>
+                    </div>
+                    <div style="height:160px; position:relative;">
+                        <canvas id="statusDonutChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-hd">
+                        <span class="chart-card-title">📊 KPIs por Tipo</span>
+                    </div>
+                    <div style="height:160px; position:relative;">
+                        <canvas id="typeBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Tabela de KPIs ── #}
+    <div class="section-vs" id="sectionTable">
+        <div class="section-hd-vs" onclick="toggleSection(this)">
+            <h3 class="section-title-vs">
+                <i class="fas fa-table" style="color:var(--primary);"></i> Painel de KPIs
+            </h3>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span id="tableRowCount" style="font-size:0.7rem; color:var(--text-tertiary);"></span>
+                <i class="fas fa-chevron-down section-icon-vs"></i>
+            </div>
+        </div>
+        <div class="section-body-vs" style="padding:0;">
+            <div class="table-responsive">
+                <table class="kpi-table" id="kpiTable">
+                    <thead>
+                        <tr>
+                            <th>Indicador</th>
+                            <th>Tipo</th>
+                        <th class="hide-m">Último Valor</th>
+                        <th class="hide-m">Meta Ativa</th>
+                        <th>Desempenho</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="kpiTableBody">
+                    {% for item in kpi_data %}
+                    {% set ind = item.indicator %}
+                    {% set goal = item.goal %}
+                    {% set last = item.last_data %}
+                    {% set sc = item.status_class %}
+                    {% set perf = item.performance_pct %}
+                    <tr data-type="{{ ind.indicator_type }}" data-status="{{ sc }}" data-group="{{ ind.tree_id or 'none' }}">
+                        <td>
+                            <a href="/indicators/{{ ind.id }}" style="text-decoration:none; color:inherit;">
+                                <div style="font-weight:700; font-size:0.875rem; color:var(--text-primary);">{{ ind.name }}</div>
+                                <div style="font-size:0.6rem; color:var(--primary); font-family:'JetBrains Mono',monospace; font-weight:800; opacity:0.8; margin-top:1px;">{{ ind.code or ind.full_code or '—' }}</div>
+                            </a>
+                        </td>
+                        <td>
+                            {% if ind.indicator_type == 'effort' %}<span class="tpill tp-e">⚙️ Esforço</span>
+                            {% elif ind.indicator_type == 'result' %}<span class="tpill tp-r">🎯 Resultado</span>
+                            {% elif ind.indicator_type == 'impact' %}<span class="tpill tp-i">🚀 Impacto</span>
+                            {% else %}<span class="tpill" style="background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border);">{{ ind.indicator_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="hide-m">
+                            {% if last %}
+                            <div style="font-weight:700; color:var(--primary); font-size:0.9rem;">
+                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ last.measured_value | format_currency_br }}
+                                {% else %}{{ "{:,.2f}".format(last.measured_value|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size:0.65rem; color:var(--text-tertiary); margin-top:1px;">{{ last.measured_date | format_date_br if last.measured_date else '—' }}</div>
+                            {% else %}<span style="font-size:0.78rem; color:var(--text-tertiary);">Sem medição</span>{% endif %}
+                        </td>
+                        <td class="hide-m">
+                            {% if goal %}
+                            <div style="font-weight:600; font-size:0.875rem; color:var(--text-primary);">
+                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ goal.goal_value | format_currency_br }}
+                                {% else %}{{ "{:,.2f}".format(goal.goal_value|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size:0.65rem; color:var(--text-tertiary); margin-top:1px;">
+                                {% if goal.goal_type == 'monthly' %}📅 Mensal
+                                {% elif goal.goal_type == 'quarterly' %}📅 Trimestral
+                                {% elif goal.goal_type == 'annual' %}📅 Anual
+                                {% elif goal.goal_type == 'weekly' %}📅 Semanal
+                                {% else %}{{ goal.goal_type or '—' }}{% endif %}
+                            </div>
+                            {% else %}<span style="font-size:0.78rem; color:var(--text-tertiary);">Sem meta ativa</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if perf is not none %}
+                            <div style="display:flex; align-items:center; gap:8px; min-width:110px;">
+                                <div class="pb-wrap" style="flex:1;">
+                                    <div class="pb-fill" style="width:{{ [perf,100]|min }}%; background:{% if sc=='exceeded' %}#3b82f6{% elif sc=='on_target' %}#10b981{% elif sc=='alert' %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+                                </div>
+                                <span style="font-size:0.72rem; font-weight:800; color:{% if sc=='exceeded' %}#2563eb{% elif sc=='on_target' %}#16a34a{% elif sc=='alert' %}#d97706{% else %}#dc2626{% endif %}; min-width:38px; text-align:right;">{{ perf }}%</span>
+                            </div>
+                            {% else %}<span style="font-size:0.75rem; color:var(--text-tertiary);">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if sc == 'exceeded' %}<span class="sbadge sb-exc"><i class="fas fa-rocket" style="font-size:0.55rem;"></i> Superação</span>
+                            {% elif sc == 'on_target' %}<span class="sbadge sb-ok"><i class="fas fa-check" style="font-size:0.55rem;"></i> Na Meta</span>
+                            {% elif sc == 'alert' %}<span class="sbadge sb-alt"><i class="fas fa-exclamation" style="font-size:0.55rem;"></i> Alerta</span>
+                            {% elif sc == 'below' %}<span class="sbadge sb-low"><i class="fas fa-arrow-down" style="font-size:0.55rem;"></i> Abaixo</span>
+                            {% elif sc == 'no_goal' %}<span class="sbadge sb-ng"><i class="fas fa-minus" style="font-size:0.55rem;"></i> Sem Meta</span>
+                            {% else %}<span class="sbadge sb-nd"><i class="fas fa-hourglass" style="font-size:0.55rem;"></i> Sem Dados</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right;">
+                            <div style="display:flex; gap:4px; justify-content:flex-end;">
+                                <a href="/indicators/{{ ind.id }}" class="btn btn-icon btn-sm" title="Detalhes" style="width:28px;height:28px;border-radius:7px;border:1.5px solid var(--border);font-size:0.75rem;">
+                                    <i class="fas fa-chart-bar"></i>
+                                </a>
+                                <a href="/indicators/{{ ind.id }}/edit" class="btn btn-icon btn-sm" title="Configurar" style="width:28px;height:28px;border-radius:7px;border:1.5px solid var(--border);font-size:0.75rem;">
+                                    <i class="fas fa-cog"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% else %}
+    <div style="padding:4rem 2rem; text-align:center; background:var(--surface); border:2px dashed var(--border); border-radius:16px;">
+        <div style="font-size:3rem; margin-bottom:1rem; opacity:0.2;">📊</div>
+        <h2 class="text-h2">Nenhum indicador ativo</h2>
+        <p class="text-secondary" style="max-width:380px; margin:0.5rem auto 1.5rem;">Crie indicadores e defina metas para começar a monitorar a performance.</p>
+        <div style="display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+            <a href="/indicators/new" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Criar Indicador</a>
+            <a href="/indicators" class="btn btn-secondary btn-sm">Ver Todos</a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const statusData = { on: {{ count_on_target }}, below: {{ count_below }}, nodata: {{ count_no_data }} };
+const typeData   = { effort: {{ type_counts.effort }}, result: {{ type_counts.result }}, impact: {{ type_counts.impact }} };
+
+function initStatusDonut() {
+    const ctx = document.getElementById('statusDonutChart');
+    if (!ctx) return;
+    const total = statusData.on + statusData.below + statusData.nodata;
+    if (!total) { ctx.parentElement.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding-top:3rem;font-size:0.8rem;">Sem dados suficientes</p>'; return; }
+    new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Na Meta', 'Abaixo', 'Sem Dados'],
+            datasets: [{ data: [statusData.on, statusData.below, statusData.nodata],
+                backgroundColor: ['#10b981','#ef4444','#94a3b8'],
+                borderColor: '#ffffff', borderWidth: 2, hoverOffset: 4 }]
+        },
+        options: {
+            cutout: '68%', responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { boxWidth: 10, padding: 12, font: { size: 11, weight: '600' }, color: '#64748b' } },
+                tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed} (${((c.parsed/total)*100).toFixed(0)}%)` } }
+            }
+        }
+    });
+}
+
+function initTypeBar() {
+    const ctx = document.getElementById('typeBarChart');
+    if (!ctx) return;
+    new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['⚙️ Esforço','🎯 Resultado','🚀 Impacto'],
+            datasets: [{ data: [typeData.effort, typeData.result, typeData.impact],
+                backgroundColor: ['rgba(162,28,175,0.7)','rgba(37,99,235,0.7)','rgba(245,158,11,0.7)'],
+                borderColor: ['#a21caf','#2563eb','#f59e0b'],
+                borderWidth: 2, borderRadius: 8, borderSkipped: false }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.parsed.y} KPI${c.parsed.y!==1?'s':''}` } } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize:1, font:{size:10}, color:'#94a3b8' }, grid: { color:'rgba(0,0,0,0.04)' } },
+                x: { ticks: { font:{size:11,weight:'600'}, color:'#64748b' }, grid: { display:false } }
+            }
+        }
+    });
+}
+
+function applyFilters() {
+    const type   = document.getElementById('filterType')?.value   || 'all';
+    const status = document.getElementById('filterStatus')?.value || 'all';
+    const group  = document.getElementById('filterGroup')?.value  || 'all';
+    const rows   = document.querySelectorAll('#kpiTableBody tr');
+    let visible  = 0;
+    rows.forEach(r => {
+        const show = (type==='all'||r.dataset.type===type) && (status==='all'||r.dataset.status===status) && (group==='all'||r.dataset.group===group);
+        r.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const rc = document.getElementById('tableRowCount');
+    if (rc) rc.textContent = `${visible} de ${rows.length} KPIs`;
+    
+    // Info bar
+    const hasFilters = type !== 'all' || status !== 'all' || group !== 'all';
+    const infoBar = document.getElementById('activeFiltersInfo');
+    if (infoBar) infoBar.style.display = hasFilters ? 'flex' : 'none';
+}
+
+function toggleSection(header) {
+    const section = header.closest('.section-vs');
+    section.classList.toggle('collapsed');
+}
+
+function clearFilters() {
+    ['filterType','filterStatus','filterGroup'].forEach(id => { const e=document.getElementById(id); if(e) e.value='all'; });
+    applyFilters();
+}
+
+document.addEventListener('DOMContentLoaded', () => { initStatusDonut(); initTypeBar(); applyFilters(); });
+</script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros Avançados</h3>
+</div>
+<div class="sidebar-content-ws" style="padding: 1rem;">
+    <div class="filter-group">
+        <label class="filter-label">Tipo de Indicador</label>
+        <select class="filter-select" id="filterType" onchange="applyFilters()">
+            <option value="all">Todos os Tipos</option>
+            <option value="effort">⚙️ Esforço</option>
+            <option value="result">🎯 Resultado</option>
+            <option value="impact">🚀 Impacto</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Status de Performance</label>
+        <select class="filter-select" id="filterStatus" onchange="applyFilters()">
+            <option value="all">Todos os Status</option>
+            <option value="exceeded">Superação</option>
+            <option value="on_target">Na Meta</option>
+            <option value="alert">Alerta</option>
+            <option value="below">Abaixo</option>
+            <option value="no_data">Sem Dados</option>
+            <option value="no_goal">Sem Meta</option>
+        </select>
+    </div>
+
+    {% if tree_nodes %}
+    <div class="filter-group">
+        <label class="filter-label">Grupo / Árvore</label>
+        <select class="filter-select" id="filterGroup" onchange="applyFilters()">
+            <option value="all">Todos os Grupos</option>
+            {% for node in tree_nodes %}
+            <option value="{{ node.id }}">{{ node.code }} — {{ node.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+        <button class="btn btn-primary w-100" onclick="closeAllSidebars()">Aplicar Filtros</button>
+        <button class="btn btn-secondary w-100 mt-2" onclick="clearFilters()">Limpar Filtros</button>
+    </div>
+
+</div>
+{% endblock %}

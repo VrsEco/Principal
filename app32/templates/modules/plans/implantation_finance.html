@@ -254,8 +254,7 @@
                                     period.period }}</td>
                                 <td style="padding: 12px; font-size: 12px; color: #64748b;">CAPEX Consolidado</td>
                                 <td style="padding: 12px; font-size: 12px; color: #64748b;">{{ period.period }}</td>
-                                <td style="padding: 12px; font-size: 13px; font-weight: 700; text-align: right;">{{
-                                    "{:,.2f}".format(period.investment) }}</td>
+                                <td style="padding: 12px; font-size: 13px; font-weight: 700; text-align: right;">{{ period.investment | format_currency_br }}</td>
                             </tr>
                             {% endif %}
                             {% endfor %}
@@ -264,8 +263,7 @@
                             <tr style="background: #f8fafc;">
                                 <td colspan="3" style="padding: 12px; font-weight: 800; text-align: right;">Total Capex
                                     Projetado</td>
-                                <td style="padding: 12px; font-weight: 800; text-align: right; color: #2563eb;">R$ {{
-                                    "{:,.2f}".format(consolidated.summary.total_investment) }}</td>
+                                <td style="padding: 12px; font-weight: 800; text-align: right; color: #2563eb;">R$ {{ consolidated.summary.total_investment | format_currency_br }}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -306,7 +304,7 @@
                             {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
                             <td
                                 style="padding: 12px; font-size: 12px; text-align: right; border-bottom: 1px dashed #f1f5f9;">
-                                {{ "{:,.2f}".format(t.revenue) }}</td>
+                                {{ t.revenue | format_currency_br }}</td>
                             {% endfor %}
                         </tr>
                         <tr>
@@ -316,7 +314,7 @@
                             {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
                             <td
                                 style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px dashed #f1f5f9;">
-                                ({{ "{:,.2f}".format(t.variable_costs) }})</td>
+                                ({{ t.variable_costs | format_currency_br }})</td>
                             {% endfor %}
                         </tr>
                         <tr>
@@ -326,7 +324,7 @@
                             {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
                             <td
                                 style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px dashed #f1f5f9;">
-                                ({{ "{:,.2f}".format(t.variable_expenses) }})</td>
+                                ({{ t.variable_expenses | format_currency_br }})</td>
                             {% endfor %}
                         </tr>
                         <tr style="background: #eff6ff;">
@@ -336,7 +334,7 @@
                             {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
                             <td
                                 style="padding: 12px; font-size: 12px; text-align: right; font-weight: 800; color: #2563eb; border-bottom: 1px solid #e2e8f0;">
-                                {{ "{:,.2f}".format(t.gmc) }}</td>
+                                {{ t.gmc | format_currency_br }}</td>
                             {% endfor %}
                         </tr>
                         <tr>
@@ -346,7 +344,7 @@
                             {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
                             <td
                                 style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px dashed #f1f5f9;">
-                                ({{ "{:,.2f}".format(t.fixed_costs) }})</td>
+                                ({{ t.fixed_costs | format_currency_br }})</td>
                             {% endfor %}
                         </tr>
                         <tr>
@@ -356,7 +354,7 @@
                             {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
                             <td
                                 style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px solid #e2e8f0;">
-                                ({{ "{:,.2f}".format(t.fixed_expenses) }})</td>
+                                ({{ t.fixed_expenses | format_currency_br }})</td>
                             {% endfor %}
                         </tr>
                         <tr style="background: #f0fdf4;">
@@ -366,7 +364,7 @@
                             {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
                             <td
                                 style="padding: 12px; font-size: 12px; text-align: right; font-weight: 800; color: #10b981;">
-                                {{ "{:,.2f}".format(t.operating_result) }}</td>
+                                {{ t.operating_result | format_currency_br }}</td>
                             {% endfor %}
                         </tr>
                     </tbody>
@@ -441,30 +439,23 @@
                                 <td
                                     style="padding: 8px 10px; font-weight: 700; color: #0f172a; position: sticky; left: 0; background: white; border-bottom: 1px solid #f1f5f9; z-index: 5;">
                                     {{ month_label }}</td>
-                                <td style="padding: 8px 10px; text-align: right;">{{ "{:,.2f}".format(t.revenue) }}</td>
-                                <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{
-                                    "{:,.2f}".format(variables_total) }})</td>
-                                <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #2563eb;">{{
-                                    "{:,.2f}".format(t.gmc) }}</td>
-                                <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{
-                                    "{:,.2f}".format(fixed_total) }})</td>
+                                <td style="padding: 8px 10px; text-align: right;">{{ t.revenue | format_currency_br }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{ variables_total | format_currency_br }})</td>
+                                <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #2563eb;">{{ t.gmc | format_currency_br }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{ fixed_total | format_currency_br }})</td>
                                 <td
                                     style="padding: 8px 10px; text-align: right; font-weight: 700; color: {% if t.operating_result >= 0 %}#10b981{% else %}#ef4444{% endif %};">
-                                    {{ "{:,.2f}".format(t.operating_result) }}</td>
-                                <td style="padding: 8px 10px; text-align: right; color: #64748b;">({{
-                                    "{:,.2f}".format(t.total_destinations) }})</td>
-                                <td style="padding: 8px 10px; text-align: right; font-weight: 600;">{{
-                                    "{:,.2f}".format(res_periodo) }}</td>
+                                    {{ t.operating_result | format_currency_br }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #64748b;">({{ t.total_destinations | format_currency_br }})</td>
+                                <td style="padding: 8px 10px; text-align: right; font-weight: 600;">{{ res_periodo | format_currency_br }}</td>
                                 <td
                                     style="padding: 8px 10px; text-align: right; font-weight: 700; color: #334155; background: #fafafa;">
-                                    {{ "{:,.2f}".format(t.cumulative_net_operating) }}</td>
-                                <td style="padding: 8px 10px; text-align: right; color: #f97316;">({{
-                                    "{:,.2f}".format(t.investment) }})</td>
-                                <td style="padding: 8px 10px; text-align: right; color: #10b981;">{{
-                                    "{:,.2f}".format(t.loans) }}</td>
+                                    {{ t.cumulative_net_operating | format_currency_br }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #f97316;">({{ t.investment | format_currency_br }})</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #10b981;">{{ t.loans | format_currency_br }}</td>
                                 <td
                                     style="padding: 8px 10px; text-align: right; font-weight: 800; color: #0369a1; background: #f0f9ff;">
-                                    {{ "{:,.2f}".format(t.cumulative_business) }}</td>
+                                    {{ t.cumulative_business | format_currency_br }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -512,16 +503,14 @@
                                 <td
                                     style="padding: 8px 10px; font-weight: 700; color: #9a3412; position: sticky; left: 0; background: white; border-bottom: 1px solid #fed7aa; z-index: 5;">
                                     {{ month_label }}</td>
-                                <td style="padding: 8px 10px; text-align: right; color: #ea580c;">({{
-                                    "{:,.2f}".format(t.investment) }})</td>
-                                <td style="padding: 8px 10px; text-align: right; color: #10b981;">{{
-                                    "{:,.2f}".format(total_sources_period) }}</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ea580c;">({{ t.investment | format_currency_br }})</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #10b981;">{{ total_sources_period | format_currency_br }}</td>
                                 <td
                                     style="padding: 8px 10px; text-align: right; font-weight: 600; color: {% if t.investment_flow >= 0 %}#10b981{% else %}#ea580c{% endif %};">
-                                    {{ "{:,.2f}".format(t.investment_flow) }}</td>
+                                    {{ t.investment_flow | format_currency_br }}</td>
                                 <td
                                     style="padding: 8px 10px; text-align: right; font-weight: 800; color: #9a3412; background: #fffaf0;">
-                                    {{ "{:,.2f}".format(t.cumulative_investment) }}</td>
+                                    {{ t.cumulative_investment | format_currency_br }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -574,20 +563,20 @@
                                     style="padding: 10px 12px; font-weight: 700; color: #0369a1; position: sticky; left: 0; background: white; border-bottom: 1px solid #e0f2fe; z-index: 5;">
                                     {{ month_label }}</td>
                                 <td style="padding: 10px 12px; text-align: right; color: #ef4444; font-weight: 600;">
-                                    {% if t.sources_equity > 0 %}({{ "{:,.2f}".format(t.sources_equity) }}){% else %}-{%
+                                    {% if t.sources_equity > 0 %}({{ t.sources_equity | format_currency_br }}){% else %}-{%
                                     endif %}
                                 </td>
                                 <td style="padding: 10px 12px; text-align: right; color: #10b981; font-weight: 600;">
-                                    {% if t.distributions > 0 %}{{ "{:,.2f}".format(t.distributions) }}{% else %}-{%
+                                    {% if t.distributions > 0 %}{{ t.distributions | format_currency_br }}{% else %}-{%
                                     endif %}
                                 </td>
                                 <td
                                     style="padding: 10px 12px; text-align: right; font-weight: 700; color: {% if t.investor_net_flow >= 0 %}#10b981{% else %}#ef4444{% endif %};">
-                                    {{ "{:,.2f}".format(t.investor_net_flow) }}
+                                    {{ t.investor_net_flow | format_currency_br }}
                                 </td>
                                 <td
                                     style="padding: 10px 12px; text-align: right; font-weight: 900; color: #0369a1; background: #f0f9ff;">
-                                    {{ "{:,.2f}".format(t.cumulative_investor) }}
+                                    {{ t.cumulative_investor | format_currency_br }}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -600,21 +589,18 @@
                     <div>
                         <span
                             style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Investimento</span>
-                        <span style="font-size: 18px; font-weight: 800; color: #ef4444; display: block;">R$ {{
-                            "{:,.2f}".format(consolidated.summary.total_equity) }}</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #ef4444; display: block;">R$ {{ consolidated.summary.total_equity | format_currency_br }}</span>
                     </div>
                     <div>
                         <span
                             style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Retorno
                             Acum.</span>
-                        <span style="font-size: 18px; font-weight: 800; color: #10b981; display: block;">R$ {{
-                            "{:,.2f}".format(consolidated.timeline|sum(attribute='distributions')) }}</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #10b981; display: block;">R$ {{ consolidated.timeline | sum(attribute='distributions') | format_currency_br }}</span>
                     </div>
                     <div>
                         <span
                             style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Líquido</span>
-                        <span style="font-size: 18px; font-weight: 800; color: #0369a1; display: block;">R$ {{
-                            "{:,.2f}".format(consolidated.timeline|sum(attribute='investor_net_flow')) }}</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #0369a1; display: block;">R$ {{ consolidated.timeline | sum(attribute='investor_net_flow') | format_currency_br }}</span>
                     </div>
                     <div>
                         <span style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">ROI

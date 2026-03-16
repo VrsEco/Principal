@@ -1,0 +1,44 @@
+                                             Table "public.indicators"
+        Column        |            Type             | Collation | Nullable |                Default                 
+----------------------+-----------------------------+-----------+----------+----------------------------------------
+ id                   | integer                     |           | not null | nextval('indicators_id_seq'::regclass)
+ company_id           | integer                     |           | not null | 
+ group_id             | integer                     |           |          | 
+ code                 | character varying(50)       |           | not null | 
+ name                 | character varying(255)      |           | not null | 
+ process_id           | integer                     |           |          | 
+ project_id           | integer                     |           |          | 
+ department_id        | integer                     |           |          | 
+ okr_id               | integer                     |           |          | 
+ collaborators        | json                        |           |          | 
+ unit                 | character varying(50)       |           |          | 
+ formula              | text                        |           |          | 
+ polarity             | character varying(20)       |           |          | 
+ data_source          | text                        |           |          | 
+ notes                | text                        |           |          | 
+ okr_reference        | character varying(255)      |           |          | 
+ okr_level            | character varying(50)       |           |          | 
+ created_at           | timestamp without time zone |           | not null | 
+ updated_at           | timestamp without time zone |           | not null | 
+ tree_id              | integer                     |           |          | 
+ full_code            | character varying(100)      |           |          | 
+ indicator_type       | character varying(50)       |           |          | 'individual'::character varying
+ source_module        | character varying(50)       |           |          | 'manual'::character varying
+ source_id            | integer                     |           |          | 
+ collection_mode      | character varying(30)       |           |          | 'manual'::character varying
+ aggregation_function | character varying(30)       |           |          | 'sum'::character varying
+ is_active            | boolean                     |           |          | true
+ description          | text                        |           |          | 
+Indexes:
+    "indicators_pkey" PRIMARY KEY, btree (id)
+    "indicators_code_key" UNIQUE CONSTRAINT, btree (code)
+Foreign-key constraints:
+    "indicators_company_id_fkey" FOREIGN KEY (company_id) REFERENCES companies(id)
+    "indicators_group_id_fkey" FOREIGN KEY (group_id) REFERENCES indicator_groups(id)
+    "indicators_process_id_fkey" FOREIGN KEY (process_id) REFERENCES processes(id)
+    "indicators_project_id_fkey" FOREIGN KEY (project_id) REFERENCES projects(id)
+Referenced by:
+    TABLE "indicator_goals" CONSTRAINT "indicator_goals_indicator_id_fkey" FOREIGN KEY (indicator_id) REFERENCES indicators(id)
+
+
+

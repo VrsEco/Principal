@@ -1,0 +1,302 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Editar Indicador | Versus{% endblock %}
+
+{% block breadcrumb %}
+<span>Gestão Estratégica</span>
+<span class="sep">/</span>
+<a href="/incentives/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">Editar</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header">
+        <div class="header-content">
+            <h1 class="text-h1">📊 Editar Indicador de desempenho</h1>
+            <p class="text-secondary">Ajuste os parâmetros do indicador: {{ ind.name }}</p>
+        </div>
+    </div>
+
+    <div class="create-form-card" style="max-width: 800px;">
+        <form method="POST">
+            <div class="form-grid-2" style="margin-bottom:0.75rem;">
+                <div>
+                    <label class="field-label">Código *</label>
+                    <input name="code" class="field-input" value="{{ ind.code }}" maxlength="50" required>
+                </div>
+                <div>
+                    <label class="field-label">Nome *</label>
+                    <input name="name" class="field-input" value="{{ ind.name }}" maxlength="255" required>
+                </div>
+            </div>
+
+            <div style="margin-bottom:0.75rem;">
+                <label class="field-label">Descrição</label>
+                <input name="description" class="field-input" value="{{ ind.description or '' }}" placeholder="O que este indicador mede?">
+            </div>
+
+            <div style="margin-bottom:0.75rem;">
+                <label class="field-label">Grupo / Plano de Contas</label>
+                <select name="tree_id" class="field-select">
+                    <option value="">Nenhum (Geral)</option>
+                    {% for node in tree_nodes %}
+                    <option value="{{ node.id }}" {% if ind.tree_id == node.id %}selected{% endif %}>{{ node.code }} - {{ node.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid-3" style="margin-bottom:0.75rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+            <!-- SEÇÃO 1: O QUÊ (FONTE) -->
+            <div style="background:var(--surface-secondary); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:0.75rem; display:flex; align-items:center;">
+                    <i class="fas fa-database" style="margin-right:8px; color:var(--primary);"></i> 1. O QUÊ (Origem dos Dados)
+                </div>
+                <div class="form-grid-2" style="margin-bottom:0.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label class="field-label">Fonte / Módulo *</label>
+                        <select name="source_module" class="field-select" required onchange="updateSourceUI(this.value)">
+                            <option value="manual" {% if ind.source_module == 'manual' %}selected{% endif %}>Entrada Manual</option>
+                            <option value="system_score" {% if ind.source_module == 'system_score' %}selected{% endif %}>Pontuação do Sistema</option>
+                            <option value="processo" {% if ind.source_module == 'processo' %}selected{% endif %}>Processos (GRV)</option>
+                            <option value="projeto" {% if ind.source_module == 'projeto' %}selected{% endif %}>Projetos & Atividades</option>
+                            <option value="okr" {% if ind.source_module == 'okr' %}selected{% endif %}>OKR & Planejamento</option>
+                            <option value="ocorrencia" {% if ind.source_module == 'ocorrencia' %}selected{% endif %}>Ocorrências</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 2: DE QUEM (ESCOPO) -->
+            <div style="background:var(--surface-secondary); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:0.75rem; display:flex; align-items:center;">
+                    <i class="fas fa-users" style="margin-right:8px; color:var(--primary);"></i> 2. DE QUEM (Foco / Granularidade)
+                </div>
+                <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label class="field-label">Escopo / Granularidade *</label>
+                        <select name="source_scope" class="field-select" required onchange="updateScopeUI(this.value)">
+                            <option value="company" {% if ind.source_scope == 'company' %}selected{% endif %}>Empresa (Global)</option>
+                            <option value="department" {% if ind.source_scope == 'department' %}selected{% endif %}>Departamento / Equipe</option>
+                            <option value="individual" {% if ind.source_scope == 'individual' %}selected{% endif %}>Individual (Colaborador)</option>
+                        </select>
+                    </div>
+                    <div id="scopeReference">
+                        <!-- Carregado via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 3: QUAL (Alvo Específico) -->
+            <div id="sourceTargetSection" style="background:var(--surface-secondary); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; display:none;">
+                <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:0.75rem; display:flex; align-items:center;">
+                    <i class="fas fa-bullseye" style="margin-right:8px; color:var(--primary);"></i> 3. QUAL (Projeto / Processo Específico)
+                </div>
+                <div id="sourceTargetDiv">
+                    <!-- Dinâmico -->
+                </div>
+            </div>
+
+            <!-- SEÇÃO 3: COMO (MÉTRICA) -->
+            <div style="background:var(--surface-secondary); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:0.75rem; display:flex; align-items:center;">
+                    <i class="fas fa-calculator" style="margin-right:8px; color:var(--primary);"></i> 3. COMO (Métrica & Cálculo)
+                </div>
+                <div class="form-grid-3" style="margin-bottom:0.75rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div>
+                        <label class="field-label">Agregação</label>
+                        <select name="aggregation_function" class="field-select">
+                            <option value="score_ratio" {% if ind.aggregation_function == 'score_ratio' %}selected{% endif %}>Score Ratio</option>
+                            <option value="sum" {% if ind.aggregation_function == 'sum' %}selected{% endif %}>Soma</option>
+                            <option value="avg" {% if ind.aggregation_function == 'avg' %}selected{% endif %}>Média</option>
+                            <option value="count" {% if ind.aggregation_function == 'count' %}selected{% endif %}>Contagem</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">Amostragem Mínima</label>
+                        <input name="min_instances" type="number" class="field-input" value="{{ ind.source_config.min_instances if ind.source_config else '' }}" placeholder="Min. ocorrências">
+                    </div>
+                    <div>
+                        <label class="field-label">Polaridade</label>
+                        <select name="polarity" class="field-select">
+                            <option value="positive" {% if ind.polarity == 'positive' %}selected{% endif %}>Melhor para Cima</option>
+                            <option value="negative" {% if ind.polarity == 'negative' %}selected{% endif %}>Melhor para Baixo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label class="field-label">Unidade</label>
+                        <select name="unit" class="field-select">
+                            <option value="pts" {% if ind.unit == 'pts' %}selected{% endif %}>pts</option>
+                            <option value="%" {% if ind.unit == '%' %}selected{% endif %}>%</option>
+                            <option value="R$" {% if ind.unit == 'R$' %}selected{% endif %}>R$</option>
+                            <option value="un" {% if ind.unit == 'un' %}selected{% endif %}>un</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">Tipo *</label>
+                        <select name="indicator_type" class="field-select" required>
+                            <option value="effort" {% if ind.indicator_type == 'effort' %}selected{% endif %}>Esforço (Ex: Qtde de Orçamentos)</option>
+                            <option value="result" {% if ind.indicator_type == 'result' %}selected{% endif %}>Resultado (Ex: Faturamento do Mês)</option>
+                            <option value="impact" {% if ind.indicator_type == 'impact' %}selected{% endif %}>Impacto (Ex: Lucro do Trimestre)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid-2" style="margin-bottom:0.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label class="field-label">Responsável pela Gestão</label>
+                    <select name="responsible_id" class="field-select">
+                        <option value="">Selecione o responsável...</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}" {% if ind.responsible_id == emp.id %}selected{% endif %}>{{ emp.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label">Modo de Coleta *</label>
+                    <select name="collection_mode" class="field-select" required>
+                        <option value="auto_interno" {% if ind.collection_mode == 'auto_interno' %}selected{% endif %}>Automático (Sensor)</option>
+                        <option value="manual" {% if ind.collection_mode == 'manual' %}selected{% endif %}>Lançamento Humano</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom:0.75rem;">
+                <label class="field-label">Fórmula de Cálculo</label>
+                <input name="formula" class="field-input" value="{{ ind.formula or '' }}" placeholder="Descreva a fórmula...">
+            </div>
+
+            <div style="margin-bottom:1.5rem;">
+                <label class="field-label">Observações (Notas)</label>
+                <textarea name="notes" class="field-input" style="height: 80px; padding:10px;">{{ ind.notes or '' }}</textarea>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <a href="/incentives/indicators" class="btn btn-secondary btn-sm">Cancelar</a>
+                <button type="submit" class="btn btn-special btn-sm">
+                    <i class="fas fa-save"></i> Atualizar Indicador
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .create-form-card {
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-md);
+    }
+    .field-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 0.5rem;
+    }
+    .field-input, .field-select {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: border-color 0.2s;
+    }
+    .field-input:focus, .field-select:focus {
+        border-color: var(--primary);
+        outline: none;
+    }
+</style>
+
+{% block scripts %}
+<script>
+function updateSourceUI(val, initialSourceId = null) {
+    const targetSection = document.getElementById('sourceTargetSection');
+    const targetDiv = document.getElementById('sourceTargetDiv');
+    
+    if (val === 'projeto') {
+        targetSection.style.display = 'block';
+        let html = '<label class="field-label">Selecione o Projeto</label>';
+        html += '<select name="source_id" class="field-select">';
+        html += '<option value="">Todos os projetos ativos</option>';
+        {% for p in projects %}
+        html += `<option value="{{ p.id }}" ${initialSourceId == '{{ p.id }}' ? 'selected' : ''}>[{{ p.code }}] {{ p.name }}</option>`;
+        {% endfor %}
+        html += '</select>';
+        targetDiv.innerHTML = html;
+    } else if (val === 'processo') {
+        targetSection.style.display = 'block';
+        let html = '<label class="field-label">Selecione o Processo (GRV)</label>';
+        html += '<select name="source_id" class="field-select">';
+        html += '<option value="">Todos os processos ativos</option>';
+        {% for pr in processes %}
+        html += `<option value="{{ pr.id }}" ${initialSourceId == '{{ pr.id }}' ? 'selected' : ''}>[{{ pr.code }}] {{ pr.name }}</option>`;
+        {% endfor %}
+        html += '</select>';
+        targetDiv.innerHTML = html;
+    } else if (val === 'okr') {
+        targetSection.style.display = 'block';
+        let html = '<label class="field-label">Selecione o OKR / Objetivo</label>';
+        html += '<select name="source_id" class="field-select">';
+        html += '<option value="">Todos os OKRs</option>';
+        
+        html += '<optgroup label="OKRs Globais">';
+        {% for okr in okrs_global %}
+        html += `<option value="{{ okr.id }}" ${initialSourceId == '{{ okr.id }}' ? 'selected' : ''}>[Global] {{ okr.objective }}</option>`;
+        {% endfor %}
+        html += '</optgroup>';
+
+        html += '<optgroup label="OKRs de Área">';
+        {% for okr in okrs_area %}
+        html += `<option value="{{ okr.id }}" ${initialSourceId == '{{ okr.id }}' ? 'selected' : ''}>[Área] {{ okr.objective }}</option>`;
+        {% endfor %}
+        html += '</optgroup>';
+
+        html += '</select>';
+        targetDiv.innerHTML = html;
+    } else {
+        targetSection.style.display = 'none';
+    }
+}
+
+function updateScopeUI(val, initialScopeId = null) {
+    const refDiv = document.getElementById('scopeReference');
+    if (val === 'company') {
+        refDiv.innerHTML = '<label class="field-label">Contexto</label><input class="field-input" disabled value="Empresa Inteira">';
+    } else if (val === 'department') {
+        let html = '<label class="field-label">Selecione o Departamento / Equipe</label>';
+        html += '<select name="source_id" class="field-select" required>';
+        html += '<option value="">Escolha uma equipe...</option>';
+        {% for t in teams %}
+        html += `<option value="{{ t.id }}" ${initialScopeId == '{{ t.id }}' ? 'selected' : ''}>{{ t.name }}</option>`;
+        {% endfor %}
+        html += '</select>';
+        refDiv.innerHTML = html;
+    } else if (val === 'individual') {
+        let html = '<label class="field-label">Selecione o Colaborador</label>';
+        html += '<select name="source_id" class="field-select" required>';
+        html += '<option value="">Escolha um colaborador...</option>';
+        {% for e in employees %}
+        html += `<option value="{{ e.id }}" ${initialScopeId == '{{ e.id }}' ? 'selected' : ''}>{{ e.name }}</option>`;
+        {% endfor %}
+        html += '</select>';
+        refDiv.innerHTML = html;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateScopeUI("{{ ind.source_scope }}", "{{ ind.source_id if ind.source_scope != 'company' else '' }}");
+    updateSourceUI("{{ ind.source_module }}", "{{ ind.source_id if ind.source_scope == 'company' else '' }}");
+});
+</script>
+{% endblock %}
+{% endblock %}

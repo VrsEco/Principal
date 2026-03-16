@@ -1,0 +1,210 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Árvore de Indicadores | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">Árvore</span>
+{% endblock %}
+
+{% block head %}
+<style>
+    .tree-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .tree-node {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s;
+        margin-bottom: 0.5rem;
+    }
+
+    .tree-node:hover {
+        border-color: var(--primary-light);
+        background: var(--surface-secondary);
+        transform: translateX(4px);
+    }
+
+    .node-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .node-code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: var(--primary-light);
+        color: var(--primary);
+        padding: 2px 8px;
+        border-radius: 6px;
+    }
+
+    .node-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .node-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .tree-level {
+        padding-left: 2rem;
+        border-left: 2px solid var(--border);
+        margin-left: 0.75rem;
+    }
+
+    .empty-tree {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--surface);
+        border: 2px dashed var(--border);
+        border-radius: 20px;
+        color: var(--text-tertiary);
+    }
+    
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-icon:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header" style="margin-bottom:2rem;">
+        <div class="header-content">
+            <h1 class="text-h1">🌳 Árvore de Indicadores</h1>
+            <p class="text-secondary">Estrutura organizacional e plano de contas dos seus indicadores corporativos.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('indicators.indicator_tree_form') }}" class="btn btn-special btn-sm">
+                <i class="fas fa-plus"></i> Novo Grupo
+            </a>
+        </div>
+    </div>
+
+    {% if nodes %}
+        <div class="tree-container">
+            {# Recursive macro for rendering tree #}
+            {% macro render_node(node, level=0) %}
+                {% set is_locked = node.id in locked_node_ids %}
+                {% set children = nodes|selectattr('parent_id', 'equalto', node.id)|list %}
+                <div class="tree-node-wrapper">
+                    <div class="tree-node {% if is_locked %}locked{% endif %}">
+                        <div class="node-content">
+                            <span class="node-code">{{ node.code }}</span>
+                            <span class="node-name">{{ node.name }}</span>
+                            {% if is_locked %}
+                            <span style="font-size:0.65rem; background:#fef3c7; color:#92400e; border:1px solid #fcd34d; border-radius:6px; padding:2px 7px; font-weight:800; margin-left:6px;">
+                                🔒 COM INDICADORES
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="node-actions">
+                            {% if is_locked %}
+                            <button class="btn-icon" style="opacity:0.35; cursor:not-allowed; color: var(--text-tertiary);" 
+                                    title="Bloqueado: este nível já possui indicadores. Não é possível criar subníveis." disabled>
+                                <i class="fas fa-lock"></i>
+                            </button>
+                            {% else %}
+                            <a href="{{ url_for('indicators.indicator_tree_form', parent_id=node.id) }}" class="btn-icon" title="Adicionar Subgrupo">
+                                <i class="fas fa-plus"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('indicators.indicator_tree_form', node_id=node.id) }}" class="btn-icon" title="Editar Nome/Descrição">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn-icon" style="color: #ef4444;" title="Excluir Nível" onclick="deleteNode({{ node.id }}, '{{ node.name }}')"
+                                    {% if is_locked or children %}disabled style="opacity:0.35; cursor:not-allowed;" title="Bloqueado: possui indicadores ou subníveis associados"{% endif %}>
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {% set children = nodes|selectattr('parent_id', 'equalto', node.id)|list %}
+                    {% if children %}
+                        <div class="tree-level">
+                            {% for child in children %}
+                                {{ render_node(child, level + 1) }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endmacro %}
+
+            {# Start with root nodes (parent_id is None) #}
+            {% for node in nodes if not node.parent_id %}
+                {{ render_node(node) }}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-tree">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🌳</div>
+            <h3 class="text-h3">Nenhuma estrutura definida</h3>
+            <p style="margin-bottom: 1.5rem;">Crie grupos e subgrupos para organizar seus indicadores de forma hierárquica.</p>
+            <button class="btn btn-primary" onclick="openNodeForm()">Começar agora</button>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function openNodeForm(parentId = null) {
+        // Por enquanto, usaremos um popup ou prompt para agilizar, 
+        // mas idealmente seria um modal elegante do APP32.
+        alert("Em breve: Formulário elegante para " + (parentId ? "subgrupo do ID " + parentId : "novo grupo raiz"));
+    }
+    
+    function editNode(id) {
+        alert("Editar nó " + id);
+    }
+    
+    async function deleteNode(id, name) {
+        if (!confirm(`Tem certeza que deseja excluir o nível "${name}"?`)) return;
+        
+        try {
+            const res = await fetch(`/indicators/tree/${id}/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert(data.error || 'Erro ao excluir o nível.');
+            }
+        } catch(e) {
+            alert('Erro de conexão ao tentar excluir.');
+        }
+    }
+</script>
+{% endblock %}

@@ -16,10 +16,7 @@
         </div>
         <div>
             <div style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;">Investimento Total</div>
-            <div style="font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1;">
-                R$ {{ "{:,.2f}".format(total_investment|default(0)).replace(',', 'X').replace('.', ',').replace('X',
-                '.') }}
-            </div>
+                R$ {{ total_investment|default(0) | format_currency_br }}
         </div>
     </div>
     <div class="planning-card" style="padding: 20px; display: flex; align-items: center; gap: 16px;">

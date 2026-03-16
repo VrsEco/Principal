@@ -1,15 +1,21 @@
-from app import app
+
+from app import create_app
 from models import db
-from sqlalchemy import inspect
+from sqlalchemy import text
 
+app = create_app()
 with app.app_context():
-    inspector = inspect(db.engine)
-    print("--- ROLES ---")
-    columns = inspector.get_columns('roles')
-    for column in columns:
-        print(f"{column['name']}: {column['type']}")
+    print("Colunas em incentive_indicators:")
+    res = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'incentive_indicators'"))
+    for row in res:
+        print(row[0])
+    
+    print("\nColunas em incentive_rules:")
+    res = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'incentive_rules'"))
+    for row in res:
+        print(row[0])
 
-    print("--- SETTINGS ---")
-    columns_settings = inspector.get_columns('company_performance_settings')
-    for column in columns_settings:
-        print(f"{column['name']}: {column['type']}")
+    print("\nColunas em incentive_rule_sets:")
+    res = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'incentive_rule_sets'"))
+    for row in res:
+        print(row[0])

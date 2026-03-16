@@ -1,6 +1,6 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Detalhes do Indicador | Versus{% endblock %}
+{% block title %}Indicador | Versus{% endblock %}
 
 {% block breadcrumb %}
 <a href="/my-work">Meu Trabalho</a>
@@ -11,634 +11,573 @@
 {% endblock %}
 
 {% block navbar_actions %}
-<div style="display: flex; align-items: center; gap: 0.75rem;">
-    <a href="/indicators/{{ indicator_id }}/edit" class="btn btn-secondary btn-sm">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
-            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-        </svg>
-        Configurações
-    </a>
-    <button class="btn btn-secondary btn-sm" onclick="openRecordModal()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"></path>
-        </svg>
-        Lançar Valor
-    </button>
-    <button class="btn btn-primary btn-sm" onclick="openGoalModal()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M12 8v8M8 12h8"></path>
-        </svg>
-        Nova Meta
+<div style="display:flex; align-items:center; gap:0.5rem;">
+    <button class="btn btn-secondary btn-sm" onclick="toggleSidebar('right')" title="Filtros e Ações">
+        <i class="fas fa-filter"></i> <span class="btn-text">Filtros</span>
     </button>
 </div>
 {% endblock %}
 
-
-{% block workspace_content %}
-<div class="indicator-details-container" id="indicatorDetails">
-    <!-- Header Section -->
-    <div class="workspace-header">
-        <div class="header-content">
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-                <span class="indicator-code" id="detCode">IND-000</span>
-                <span class="indicator-group-badge" id="detGroup">Grupo</span>
-            </div>
-            <h1 class="text-h1" id="detName">Carregando Indicador...</h1>
-            <p class="text-secondary" id="detDescription">Aguarde enquanto carregamos as informações.</p>
-        </div>
-    </div>
-
-    <!-- Stats Grid -->
-    <div class="stats-overview">
-        <div class="stat-card">
-            <span class="stat-label">Último Valor</span>
-            <div class="stat-value-container">
-                <span class="stat-value" id="detLastValue">--</span>
-                <span class="stat-unit" id="detUnit"></span>
-            </div>
-            <span class="stat-trend positive" id="detTrend">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                    <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-                --
-            </span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Meta Atual</span>
-            <div class="stat-value-container">
-                <span class="stat-value" id="detCurrentGoal">--</span>
-                <span class="stat-unit" id="detUnitGoal"></span>
-            </div>
-            <span class="stat-helper" id="detGoalDeadline">Sem meta ativa</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Desempenho</span>
-            <div class="stat-value-container">
-                <span class="stat-value" id="detPerformance">0%</span>
-            </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="detProgressBar" style="width: 0%"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart Section -->
-    <div class="workspace-section mt-5" id="chartSection">
-        <div class="card p-4">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 class="text-h2" style="margin: 0;">📊 Gráfico de Desempenho</h2>
-                <div class="chart-legend" id="chartLegend"></div>
-            </div>
-            <div style="height: 350px; width: 100%;">
-                <canvas id="indicatorChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- History Section -->
-    <div class="workspace-section mt-5">
-        <h2 class="text-h2 mb-4">📈 Histórico de Registros</h2>
-        <div class="history-table-wrapper">
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Valor Lançado</th>
-                        <th>Meta Relacionada</th>
-                        <th>Notas</th>
-                        <th style="text-align: right;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="recordsTableBody">
-                    <!-- JS will populate -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Novo Registro -->
-<div id="recordModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Lançar Valor</h3>
-            <button class="btn-close" onclick="closeModal('recordModal')">&times;</button>
-        </div>
-        <form id="recordForm">
-            <input type="hidden" name="company_id" id="modalRecordCompanyId" value="">
-            <div class="form-group">
-                <label class="form-label">Meta Relacionada</label>
-                <select class="form-select" name="goal_id" id="modalRecordGoalId" required>
-                    <option value="">Selecione a meta...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Data do Registro</label>
-                <input type="date" class="form-control" name="record_date" id="modalRecordDate" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Valor</label>
-                <input type="number" step="0.01" class="form-control" name="value" id="modalRecordValue" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Notas</label>
-                <textarea class="form-control" name="notes" rows="2"></textarea>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('recordModal')">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Salvar Registro</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Modal: Nova Meta -->
-<div id="goalModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Nova Meta</h3>
-            <button class="btn-close" onclick="closeModal('goalModal')">&times;</button>
-        </div>
-        <form id="goalForm">
-            <input type="hidden" name="company_id" id="modalGoalCompanyId" value="">
-            <input type="hidden" name="indicator_id" id="modalGoalIndicatorId" value="{{ indicator_id }}">
-
-            <div class="form-group">
-                <label class="form-label">Valor Alvo</label>
-                <input type="number" step="0.01" class="form-control" name="goal_value" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Prazo Final</label>
-                <input type="date" class="form-control" name="goal_date" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Tipo de Meta</label>
-                <select class="form-select" name="goal_type">
-                    <option value="single">Meta Única</option>
-                    <option value="monthly">Mensal</option>
-                    <option value="quarterly">Trimestral</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Status</label>
-                <select class="form-select" name="status">
-                    <option value="active">Ativa</option>
-                    <option value="planned">Planejada</option>
-                </select>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Criar Meta</button>
-            </div>
-        </form>
-    </div>
-</div>
-
+{% block head %}
 <style>
-    .stats-overview {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
+    /* ── Header Info ── */
+    .ind-header { margin-bottom: 1rem; }
+    .ind-badges { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+    .ind-code {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 800;
+        color: var(--primary); background: var(--primary-light); padding: 3px 8px; border-radius: 6px;
     }
+    .ind-badge {
+        font-size: 0.65rem; font-weight: 700; color: var(--text-secondary);
+        background: var(--surface-secondary); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    .ind-name { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); margin: 0 0 0.2rem; }
+    .ind-desc { font-size: 0.8rem; color: var(--text-tertiary); margin: 0; }
+
+    /* ── Stat Cards ── */
+    .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+    @media (max-width: 720px) { .stat-row { grid-template-columns: 1fr 1fr; } }
 
     .stat-card {
-        background: var(--surface);
-        padding: 1.5rem;
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+        background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px;
+        padding: 0.875rem 1rem; display: flex; flex-direction: column; gap: 4px; transition: box-shadow 0.2s;
     }
+    .stat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+    .stat-lbl { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); }
+    .stat-val { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-primary); line-height: 1.1; }
+    .stat-unit { font-size: 0.75rem; font-weight: 500; color: var(--text-tertiary); margin-left: 4px; vertical-align: baseline; }
+    .stat-helper { font-size: 0.72rem; color: var(--text-tertiary); }
 
-    .stat-label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--text-tertiary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
+    /* ── Progress ── */
+    .prog-wrap { height: 6px; background: var(--surface-secondary); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+    .prog-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
 
-    .stat-value-container {
-        display: flex;
-        align-items: baseline;
-        gap: 0.5rem;
-    }
+    /* ── Chart Section ── */
+    .chart-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; margin-bottom: 1rem; }
+    .chart-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .chart-hd-title { font-size: 0.875rem; font-weight: 700; color: var(--text-primary); }
 
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--text-primary);
-    }
+    /* ── History Table ── */
+    .hist-table { width: 100%; border-collapse: collapse; }
+    .hist-table thead { background: var(--surface-secondary); }
+    .hist-table th { padding: 0.6rem 0.875rem; text-align: left; font-size: 0.62rem; font-weight: 800; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; }
+    .hist-table td { padding: 0.7rem 0.875rem; border-bottom: 1px solid var(--border); font-size: 0.875rem; vertical-align: middle; }
+    .hist-table tr:hover td { background: var(--surface-secondary); }
+    
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-    .stat-unit {
-        color: var(--text-tertiary);
-        font-weight: 500;
-    }
+    /* ── Modals ── */
+    .modal-vs { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.7); z-index: 25000; backdrop-filter: blur(8px); animation: fadeIn 0.18s ease; }
+    .modal-content-vs { background: var(--surface); width: 90%; max-width: 480px; margin: 6vh auto; border-radius: 20px; padding: 0; box-shadow: 0 25px 60px rgba(0,0,0,0.4); border: 1px solid var(--border); overflow: hidden; animation: slideDown 0.25s cubic-bezier(0.16,1,0.3,1); }
+    .modal-hd-vs { padding: 1.1rem 1.5rem; background: var(--surface-secondary); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-body-vs { padding: 1.5rem; }
+    .modal-foot-vs { padding: 1rem 1.5rem; background: var(--surface-secondary); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; }
 
-    .stat-trend {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
+    .fld { margin-bottom: 1rem; }
+    .fld-lbl { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 0.4rem; display: block; }
+    .fld-inp, .fld-sel { width: 100%; padding: 0.65rem 0.875rem; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface-secondary); color: var(--text-primary); font-size: 0.875rem; transition: border-color 0.15s; box-sizing: border-box; }
+    .fld-inp:focus, .fld-sel:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
-    .stat-trend.positive {
-        color: var(--success);
-    }
+    .goal-card-sb { padding: 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; margin-bottom: 0.6rem; cursor: pointer; transition: all 0.18s; }
+    .goal-card-sb.active { border-color: var(--primary); background: var(--primary-light); }
 
-    .stat-trend.negative {
-        color: var(--danger);
-    }
+    @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+    @keyframes slideDown { from { transform:translateY(-16px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+    .spinner { display:none; margin-left:6px; }
+    .btn-loading .spinner { display:inline-block; }
 
-    .stat-helper {
-        font-size: 0.85rem;
-        color: var(--text-tertiary);
+    /* ── Collapsible Sections ── */
+    .section-vs { margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow-sm); }
+    .section-hd-vs { 
+        padding: 0.875rem 1rem; background: var(--surface-secondary); border-bottom: 1px solid var(--border); 
+        display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s;
+        user-select: none;
     }
-
-    .progress-bar-container {
-        height: 8px;
-        background: var(--surface-secondary);
-        border-radius: 4px;
-        margin-top: 0.5rem;
-        overflow: hidden;
-    }
-
-    .progress-bar {
-        height: 100%;
-        background: var(--primary);
-        border-radius: 4px;
-        transition: width 0.5s ease;
-    }
-
-    .history-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .history-table th {
-        text-align: left;
-        padding: 1rem;
-        border-bottom: 1.5px solid var(--border);
-        color: var(--text-tertiary);
-        font-weight: 600;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-    }
-
-    .history-table td {
-        padding: 1.25rem 1rem;
-        border-bottom: 1px solid var(--border);
-        font-size: 0.9375rem;
-    }
-
-    .goal-card-sidebar {
-        padding: 1rem;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        transition: var(--transition);
-        cursor: pointer;
-    }
-
-    .goal-card-sidebar:hover {
-        border-color: var(--primary);
-        background: var(--primary-light);
-    }
-
-    .goal-card-sidebar.active {
-        border-color: var(--primary);
-        background: var(--primary-light);
-        box-shadow: 0 4px 12px var(--primary-glow);
-    }
-
-    .indicator-code {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--primary);
-        background: var(--primary-light);
-        padding: 4px 10px;
-        border-radius: 6px;
-    }
-
-    .indicator-group-badge {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        background: var(--surface-secondary);
-        padding: 4px 10px;
-        border-radius: 6px;
-    }
-
-    /* Modal Styles */
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        backdrop-filter: blur(4px);
-    }
-
-    .modal-content {
-        background: white;
-        max-width: 500px;
-        margin: 10vh auto;
-        border-radius: 20px;
-        padding: 2rem;
-        box-shadow: var(--shadow-xl);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-
-    .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-
-    .btn-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: var(--text-tertiary);
-    }
+    .section-hd-vs:hover { background: var(--border); }
+    .section-title-vs { font-size: 0.875rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px; }
+    .section-body-vs { padding: 1rem; }
+    .section-vs.collapsed .section-body-vs { display: none; }
+    .section-vs.collapsed .section-hd-vs { border-bottom: none; }
+    .section-vs .section-icon-vs { font-size: 0.75rem; color: var(--text-tertiary); transition: transform 0.2s; }
+    .section-vs.collapsed .section-icon-vs { transform: rotate(-90deg); }
 </style>
+{% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-    const indicatorId = window.location.pathname.split('/')[2];
-    let state = {
-        indicator: null,
-        goals: [],
-        records: [],
-        chart: null
-    };
-
-    document.addEventListener('DOMContentLoaded', () => {
-        init();
-
-        document.getElementById('recordForm').addEventListener('submit', handleRecordSubmit);
-    });
-
-    async function init() {
-        await fetchIndicator();
-        await fetchGoals();
-        renderIndicator();
-        renderGoals();
-        renderRecords();
-        renderChart();
-    }
-
-    async function fetchIndicator() {
-        const res = await fetch(`/api/indicators/${indicatorId}`);
-        state.indicator = await res.json();
-    }
-
-    async function fetchGoals() {
-        const res = await fetch(`/api/indicator-goals?indicator_id=${indicatorId}`);
-        state.goals = await res.json();
-
-        // Fetch all records for this indicator in one go
-        const rRes = await fetch(`/api/indicator-data?indicator_id=${indicatorId}`);
-        const records = await rRes.json();
-
-        // Add goal labels to records for display
-        records.forEach(r => {
-            const goal = state.goals.find(g => g.id === r.goal_id);
-            r.goal_label = goal ? `Meta ${goal.id} (${goal.goal_value})` : `Meta ${r.goal_id}`;
-        });
-
-        state.records = records.sort((a, b) => new Date(b.record_date) - new Date(a.record_date));
-    }
-
-    function renderIndicator() {
-        document.getElementById('breadcrumbName').textContent = state.indicator.name;
-        document.getElementById('detName').textContent = state.indicator.name;
-        document.getElementById('detCode').textContent = state.indicator.code;
-        document.getElementById('detUnit').textContent = state.indicator.unit || '';
-        document.getElementById('detUnitGoal').textContent = state.indicator.unit || '';
-        document.getElementById('detDescription').textContent = state.indicator.formula || 'Sem fórmula definida.';
-        document.getElementById('modalRecordCompanyId').value = state.indicator.company_id;
-        document.getElementById('modalGoalCompanyId').value = state.indicator.company_id;
-
-        const lastValue = state.records.length > 0 ? state.records[0].value : null;
-        document.getElementById('detLastValue').textContent = lastValue !== null ? lastValue : '--';
-
-        const activeGoal = state.goals.find(g => g.status === 'active') || state.goals[0];
-        if (activeGoal) {
-            document.getElementById('detCurrentGoal').textContent = activeGoal.goal_value;
-            document.getElementById('detGoalDeadline').textContent = `Prazo: ${activeGoal.goal_date}`;
-
-            if (lastValue !== null) {
-                const perf = (lastValue / activeGoal.goal_value) * 100;
-                const cappedPerf = Math.min(perf, 100);
-                document.getElementById('detPerformance').textContent = `${Math.round(perf)}%`;
-                document.getElementById('detProgressBar').style.width = `${cappedPerf}%`;
-            }
-        }
-    }
-
-    function renderGoals() {
-        const list = document.getElementById('activeGoalsList');
-        const modalSelect = document.getElementById('modalRecordGoalId');
-
-        list.innerHTML = state.goals.map(goal => `
-            <div class="goal-card-sidebar ${goal.status === 'active' ? 'active' : ''}">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
-                    <span style="font-weight: 700; color: var(--text-primary);">${goal.goal_value} ${state.indicator.unit || ''}</span>
-                    <span class="badge" style="font-size: 0.7rem; background: ${goal.status === 'active' ? 'var(--success)' : 'var(--border)'}; color: white;">${goal.status}</span>
-                </div>
-                <div style="font-size: 0.8rem; color: var(--text-tertiary);">${goal.goal_date}</div>
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="ind-header workspace-header">
+        <div class="header-content">
+            <div class="ind-badges">
+                <span class="ind-code" id="detCode">…</span>
+                <span class="ind-badge" id="detGroup">Geral</span>
+                <span class="ind-badge" id="detType">—</span>
+                <span class="ind-badge" id="detFrequency">—</span>
+                <span class="ind-badge" id="detAggFunc" style="background:var(--primary-light); border-color:var(--primary); color:var(--primary);">Soma</span>
             </div>
-        `).join('');
+            <h1 class="ind-name" id="detName">Carregando...</h1>
+            <p class="ind-desc" id="detDescription"></p>
+        </div>
+        <div class="header-actions" style="display:flex; gap:0.5rem; align-items:flex-start;">
+            <a href="/indicators/{{ indicator_id }}/edit" class="btn btn-secondary btn-sm" title="Editar Configurações">
+                <i class="fas fa-cog"></i>
+            </a>
+            <button class="btn btn-special btn-sm" onclick="openGoalModal()">
+                <i class="fas fa-bullseye"></i> <span class="btn-text">Meta</span>
+            </button>
+        </div>
+    </div>
 
-        modalSelect.innerHTML = '<option value="">Selecione a meta...</option>' +
-            state.goals.map(goal => `<option value="${goal.id}">Meta ${goal.id} - ${goal.goal_value} (${goal.goal_date})</option>`).join('');
+    <div class="section-vs" id="sectionPerformance">
+        <div class="section-hd-vs" onclick="toggleSection(this)">
+            <h3 class="section-title-vs"><i class="fas fa-chart-line" style="color:var(--primary);"></i> Desempenho Atual</h3>
+            <i class="fas fa-chevron-down section-icon-vs"></i>
+        </div>
+        <div class="section-body-vs">
+            <div class="stat-row" style="margin-bottom:0;">
+                <div class="stat-card">
+                    <span class="stat-lbl">Acumulado (Período Atual)</span>
+                    <div>
+                        <span class="stat-val" id="detAccValue">--</span>
+                        <span class="stat-unit" id="detUnitAcc"></span>
+                    </div>
+                    <span class="stat-helper" id="detLastUpdate"></span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-lbl">Meta do Período</span>
+                    <div>
+                        <span class="stat-val" id="detCurrentGoal">--</span>
+                        <span class="stat-unit" id="detUnitGoal"></span>
+                    </div>
+                    <span class="stat-helper" id="detGoalPeriod"></span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-lbl">Desempenho</span>
+                    <div>
+                        <span class="stat-val" id="detPerformance">--</span>
+                    </div>
+                    <div class="prog-wrap">
+                        <div class="prog-fill" id="detProgressBar" style="width:0%; background:var(--primary);"></div>
+                    </div>
+                    <span class="stat-helper" id="detPerfMsg"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-vs" id="sectionChart">
+        <div class="section-hd-vs" onclick="toggleSection(this)">
+            <h3 class="section-title-vs"><i class="fas fa-area-chart" style="color:var(--primary);"></i> Histórico Diário</h3>
+            <i class="fas fa-chevron-down section-icon-vs"></i>
+        </div>
+        <div class="section-body-vs">
+            <div class="chart-section" style="margin-bottom:0; border:none; padding:0;">
+                <div class="chart-hd">
+                    <span class="chart-hd-title">📊 Visualização de Tendência</span>
+                    <div id="chartLegend" style="display:flex; gap:1rem; align-items:center; font-size:0.72rem; font-weight:600; color:var(--text-secondary);">
+                        <span><span style="display:inline-block;width:20px;height:3px;background:rgba(37,99,235,0.7);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Valor Diário</span>
+                        <span><span style="display:inline-block;width:20px;height:2px;background:#ef4444;border-radius:2px;border-top:2px dashed #ef4444;vertical-align:middle;margin-right:4px;"></span>Meta</span>
+                    </div>
+                </div>
+                <div style="height:180px; position:relative;">
+                    <canvas id="indicatorChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-vs" id="sectionGoals">
+        <div class="section-hd-vs" onclick="toggleSection(this)">
+            <h3 class="section-title-vs"><i class="fas fa-bullseye" style="color:var(--primary);"></i> Ciclos de Metas</h3>
+            <i class="fas fa-chevron-down section-icon-vs"></i>
+        </div>
+        <div class="section-body-vs">
+            <div id="activeGoalsList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:0.75rem;">
+                <div class="loading-shimmer" style="height:56px; border-radius:10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-vs" id="sectionRecords">
+        <div class="section-hd-vs" onclick="toggleSection(this)">
+            <h3 class="section-title-vs"><i class="fas fa-list" style="color:var(--primary);"></i> Histórico de Registros</h3>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <span id="recordCount" style="font-size:0.72rem; color:var(--text-tertiary);"></span>
+                <i class="fas fa-chevron-down section-icon-vs"></i>
+            </div>
+        </div>
+        <div class="section-body-vs" style="padding:0;">
+            <div style="padding:0.75rem 1rem; border-bottom:1px solid var(--border); display:flex; justify-content:flex-end; background:var(--surface-secondary);">
+                <button class="btn btn-primary btn-sm" onclick="openRecordModal()">
+                    <i class="fas fa-plus"></i> Lançar Valor
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="hist-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Valor</th>
+                            <th>Meta Associada</th>
+                            <th>Observações</th>
+                            <th style="text-align:right;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTableBody">
+                        <tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-tertiary);">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modals #}
+<div id="recordModal" class="modal-vs">
+    <div class="modal-content-vs">
+        <div class="modal-hd-vs">
+            <h3 style="margin:0; font-size:1rem;">Lançar Valor</h3>
+            <button class="btn btn-icon btn-sm" onclick="closeModal('recordModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="recordForm" onsubmit="handleRecordSubmit(event)">
+            <div class="modal-body-vs">
+                <input type="hidden" name="company_id" id="modalRecordCompanyId">
+                <div class="fld">
+                    <label class="fld-lbl">Meta Correspondente</label>
+                    <select class="fld-sel" name="goal_id" id="modalRecordGoalId"></select>
+                </div>
+                <div class="form-grid-2">
+                    <div class="fld">
+                        <label class="fld-lbl">Data</label>
+                        <input type="date" class="fld-inp" name="measured_date" id="modalRecordDate" required>
+                    </div>
+                    <div class="fld">
+                        <label class="fld-lbl">Valor</label>
+                        <input type="number" step="0.01" class="fld-inp" name="measured_value" required placeholder="0,00">
+                    </div>
+                </div>
+                <div class="fld">
+                    <label class="fld-lbl">Notas</label>
+                    <textarea class="fld-inp" name="notes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-foot-vs">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('recordModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm" id="btnSaveRecord">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="goalModal" class="modal-vs">
+    <div class="modal-content-vs">
+        <div class="modal-hd-vs">
+            <h3 style="margin:0; font-size:1rem;">Nova Meta</h3>
+            <button class="btn btn-icon btn-sm" onclick="closeModal('goalModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="goalForm" onsubmit="handleGoalSubmit(event)">
+            <div class="modal-body-vs">
+                <input type="hidden" name="company_id" id="modalGoalCompanyId">
+                <input type="hidden" name="indicator_id" value="{{ indicator_id }}">
+                <div class="form-grid-2">
+                    <div class="fld">
+                        <label class="fld-lbl">Valor Alvo</label>
+                        <input type="number" step="0.01" class="fld-inp" name="goal_value" required placeholder="0,00">
+                    </div>
+                    <div class="fld">
+                        <label class="fld-lbl">Início</label>
+                        <input type="date" class="fld-inp" name="period_start" id="goalStartDate" required>
+                    </div>
+                </div>
+                <div class="fld">
+                    <label class="fld-lbl">Frequência da Meta</label>
+                    <select class="fld-sel" name="goal_type">
+                        <option value="monthly">Mensal</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="quarterly">Trimestral</option>
+                        <option value="annual">Anual</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-foot-vs">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('goalModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm">Criar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const indicatorId = "{{ indicator_id }}";
+let state = { indicator: null, goals: [], records: [], chart: null };
+
+const fmt = {
+    num: (v) => {
+        if (v === null || v === undefined || isNaN(v)) return '--';
+        return parseFloat(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    dateBr: (d) => {
+        if (!d) return '--';
+        const date = new Date(d);
+        return isNaN(date.getTime()) ? d : date.toLocaleDateString('pt-BR');
+    }
+};
+
+const mapType = { effort:'⚙️ Esforço', result:'🎯 Resultado', impact:'🚀 Impacto' };
+const mapFreq = { weekly:'📅 Semanal', monthly:'📅 Mensal', quarterly:'📅 Trimestral', annual:'📅 Anual' };
+const mapAgg = { sum:'Soma Acumulada', avg:'Média do Período', last:'Último Valor', count:'Contagem' };
+
+async function init() {
+    const [iR, gR, dR] = await Promise.all([
+        fetch(`/api/indicators/${indicatorId}`),
+        fetch(`/api/indicator-goals?indicator_id=${indicatorId}`),
+        fetch(`/api/indicator-data?indicator_id=${indicatorId}`)
+    ]);
+    state.indicator = await iR.json();
+    state.goals = await gR.json();
+    state.records = (await dR.json()).sort((a,b) => new Date(b.measured_date||b.record_date) - new Date(a.measured_date||a.record_date));
+
+    renderUI();
+}
+
+function renderUI() {
+    const ind = state.indicator;
+    const unit = ind.unit || '';
+    
+    // Header
+    document.getElementById('breadcrumbName').innerText = ind.name;
+    document.getElementById('detName').innerText = ind.name;
+    document.getElementById('detCode').innerText = ind.code || ind.full_code;
+    document.getElementById('detType').innerText = mapType[ind.indicator_type] || ind.indicator_type;
+    document.getElementById('detFrequency').innerText = mapFreq[ind.measurement_frequency] || ind.measurement_frequency;
+    document.getElementById('detAggFunc').innerText = mapAgg[ind.aggregation_function] || 'Soma';
+    
+    if(document.getElementById('sideAggFunc')) document.getElementById('sideAggFunc').innerText = mapAgg[ind.aggregation_function] || 'Soma';
+    if(document.getElementById('sideFreq')) document.getElementById('sideFreq').innerText = mapFreq[ind.measurement_frequency] || ind.measurement_frequency;
+
+    document.getElementById('detDescription').innerText = ind.description || '';
+    document.getElementById('modalRecordCompanyId').value = ind.company_id;
+    document.getElementById('modalGoalCompanyId').value = ind.company_id;
+
+    // Meta Ativa
+    const activeGoal = state.goals.find(g => g.status === 'active') || state.goals[0];
+    let gValue = 0;
+    if (activeGoal) {
+        gValue = parseFloat(activeGoal.goal_value);
+        document.getElementById('detCurrentGoal').innerText = fmt.num(gValue);
+        document.getElementById('detUnitGoal').innerText = unit;
+        document.getElementById('detGoalPeriod').innerText = `Ciclo: ${activeGoal.goal_type || 'Mensal'}`;
     }
 
-    function renderRecords() {
-        const tbody = document.getElementById('recordsTableBody');
-        if (state.records.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-tertiary">Nenhum registro encontrado.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = state.records.map(record => `
-            <tr>
-                <td><strong>${record.record_date}</strong></td>
-                <td><span style="font-weight: 600; color: var(--primary);">${record.value} ${state.indicator.unit || ''}</span></td>
-                <td><span class="indicator-group-badge" style="background: var(--primary-light); color: var(--primary); border: none;">${record.goal_label}</span></td>
-                <td><span class="text-tertiary">${record.notes || '--'}</span></td>
-                <td style="text-align: right;">
-                    <button class="btn-icon" onclick="deleteRecord(${record.id})">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+    // Cálculo de Acumulado (Período Atual)
+    let acc = 0;
+    const targetGoalId = activeGoal ? activeGoal.id : null;
+    const recordsInPeriod = state.records.filter(r => r.goal_id === targetGoalId);
+    
+    if (ind.aggregation_function === 'avg' && recordsInPeriod.length > 0) {
+        acc = recordsInPeriod.reduce((sum, r) => sum + parseFloat(r.value||r.measured_value||0), 0) / recordsInPeriod.length;
+    } else if (ind.aggregation_function === 'last' && recordsInPeriod.length > 0) {
+        acc = parseFloat(recordsInPeriod[0].value||recordsInPeriod[0].measured_value||0);
+    } else {
+        acc = recordsInPeriod.reduce((sum, r) => sum + parseFloat(r.value||r.measured_value||0), 0);
     }
 
-    function renderChart() {
-        const ctx = document.getElementById('indicatorChart').getContext('2d');
+    document.getElementById('detAccValue').innerText = fmt.num(acc);
+    document.getElementById('detUnitAcc').innerText = unit;
+    if (state.records.length > 0) {
+        document.getElementById('detLastUpdate').innerText = `Último: ${fmt.dateBr(state.records[0].measured_date || state.records[0].record_date)}`;
+    }
 
-        // Prepare data - sorted by date ASC for chart
-        const sortedRecords = [...state.records].sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
+    // Desempenho
+    if (gValue > 0) {
+        const pct = Math.round((acc / gValue) * 100);
+        document.getElementById('detPerformance').innerText = `${pct}%`;
+        document.getElementById('detProgressBar').style.width = `${Math.min(pct, 100)}%`;
+        
+        let color = '#ef4444';
+        if (pct >= 100) color = '#10b981';
+        else if (pct >= 85) color = '#f59e0b';
+        document.getElementById('detProgressBar').style.background = color;
+        document.getElementById('detPerfMsg').innerText = pct >= 100 ? 'Meta alcançada!' : `Faltam ${fmt.num(gValue - acc)} ${unit}`;
+    }
 
-        if (state.chart) {
-            state.chart.destroy();
-        }
+    // Sidebar & Selects
+    document.getElementById('modalRecordGoalId').innerHTML = `<option value="">Sem meta (avulso)</option>` + 
+        state.goals.map(g => `<option value="${g.id}" ${g.status==='active'?'selected':''}>${g.goal_type} - ${fmt.num(g.goal_value)}</option>`).join('');
 
-        const labels = sortedRecords.map(r => r.record_date);
-        const values = sortedRecords.map(r => r.value);
+    // Table
+    document.getElementById('recordsTableBody').innerHTML = state.records.map(r => {
+        const g = state.goals.find(goal => goal.id === r.goal_id);
+        return `<tr>
+            <td><strong>${fmt.dateBr(r.measured_date || r.record_date)}</strong></td>
+            <td><span style="color:var(--primary); font-weight:700;">${fmt.num(r.value||r.measured_value)}</span> ${unit}</td>
+            <td><span style="font-size:0.7rem; background:var(--surface-secondary); padding:2px 6px; border-radius:4px;">${g ? (g.code || 'Meta ' + g.id) : '—'}</span></td>
+            <td style="font-size:0.75rem; color:var(--text-tertiary); max-width:200px; overflow:hidden; text-overflow:ellipsis;">${r.notes||'—'}</td>
+            <td style="text-align:right;"><button class="btn btn-icon btn-sm" onclick="deleteRec(${r.id})"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    }).join('');
 
-        // Find current goal line
-        const activeGoal = state.goals.find(g => g.status === 'active') || state.goals[0];
-        const goalValues = activeGoal ? sortedRecords.map(() => activeGoal.goal_value) : [];
+    // Active Goals in Sidebar
+    const goalsList = document.getElementById('activeGoalsList');
+    if (goalsList) {
+        goalsList.innerHTML = state.goals.map(g => `
+            <div class="goal-card-sb ${g.status==='active'?'active':''}" onclick="renderChartByGoal(${g.id})">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="font-size:0.85rem; font-weight:700;">${fmt.num(g.goal_value)} ${unit}</div>
+                    <span class="ind-badge" style="font-size:0.55rem; padding:1px 4px;">${g.status==='active'?'ATIVA':'PASSADA'}</span>
+                </div>
+                <div style="font-size:0.65rem; color:var(--text-tertiary); margin-top:2px;">
+                    ${g.goal_type} • Início: ${fmt.dateBr(g.period_start)}
+                </div>
+            </div>
+        `).join('') || '<div style="font-size:0.75rem; color:var(--text-tertiary); text-align:center;">Nenhuma meta definida</div>';
+    }
 
-        state.chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Realizado',
-                        data: values,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#2563eb',
-                        pointBorderColor: '#fff',
-                        pointHoverRadius: 6
-                    },
-                    {
-                        label: 'Meta',
-                        data: goalValues,
-                        borderColor: '#ef4444',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        pointRadius: 0,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
+    renderChart(activeGoal);
+}
+
+function renderChart(activeGoal) {
+    const ctx = document.getElementById('indicatorChart').getContext('2d');
+    if (state.chart) state.chart.destroy();
+
+    const sorted = [...state.records].sort((a,b) => new Date(a.measured_date||a.record_date) - new Date(b.measured_date||b.record_date));
+    const labels = sorted.map(r => fmt.dateBr(r.measured_date || r.record_date));
+    const values = sorted.map(r => parseFloat(r.value || r.measured_value || 0));
+    const goalLine = activeGoal ? sorted.map(() => parseFloat(activeGoal.goal_value)) : [];
+
+    state.chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Realizado',
+                    data: values,
+                    backgroundColor: 'rgba(37,99,235,0.6)',
+                    borderColor: '#2563eb',
+                    borderWidth: 1,
+                    borderRadius: 4
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
+                {
+                    label: 'Meta',
+                    data: goalLine,
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: false
                 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks:{ font:{size:10} } },
+                x: { grid: { display: false }, ticks:{ font:{size:10}, maxRotation:0 } }
             }
-        });
-    }
-
-    function openRecordModal() {
-        document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0];
-        document.getElementById('recordModal').style.display = 'block';
-    }
-
-    function openGoalModal() {
-        document.getElementById('goalModal').style.display = 'block';
-    }
-
-    function closeModal(id) {
-        document.getElementById(id).style.display = 'none';
-    }
-
-    async function handleRecordSubmit(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.value = parseFloat(data.value);
-        data.goal_id = parseInt(data.goal_id);
-
-        try {
-            const res = await fetch('/api/indicator-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            if (res.ok) {
-                closeModal('recordModal');
-                init();
-            } else {
-                alert('Erro ao salvar registro.');
-            }
-        } catch (err) {
-            console.error(err);
         }
-    }
+    });
+}
 
-    async function handleGoalSubmit(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.goal_value = parseFloat(data.goal_value);
-        data.indicator_id = parseInt(data.indicator_id);
-        data.company_id = parseInt(data.company_id);
+function renderChartByGoal(goalId) {
+    const goal = state.goals.find(g => g.id === goalId);
+    if(goal) renderChart(goal);
+}
 
-        try {
-            const res = await fetch('/api/indicator-goals', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+// Modals
+function openRecordModal() { document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0]; document.getElementById('recordModal').style.display='block'; }
+function openGoalModal() { document.getElementById('goalStartDate').value = new Date().toISOString().split('T')[0]; document.getElementById('goalModal').style.display='block'; }
+function closeModal(id) { document.getElementById(id).style.display='none'; }
 
-            if (res.ok) {
-                closeModal('goalModal');
-                init();
-            } else {
-                const err = await res.json();
-                alert('Erro ao criar meta: ' + JSON.stringify(err.errors || err.error));
-            }
-        } catch (err) {
-            console.error(err);
+async function handleRecordSubmit(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    data.measured_value = parseFloat(data.measured_value);
+    if(data.goal_id) data.goal_id = parseInt(data.goal_id); else delete data.goal_id;
+    data.indicator_id = parseInt(indicatorId);
+    data.company_id = parseInt(data.company_id);
+    
+    await fetch('/api/indicator-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    closeModal('recordModal');
+    init();
+}
+
+async function handleGoalSubmit(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    data.goal_value = parseFloat(data.goal_value);
+    data.indicator_id = parseInt(indicatorId);
+    data.company_id = parseInt(data.company_id);
+    
+    await fetch('/api/indicator-goals', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    closeModal('goalModal');
+    init();
+}
+
+async function deleteRec(id) { if(confirm('Excluir?')) { await fetch(`/api/indicator-data/${id}`, {method:'DELETE'}); init(); } }
+
+function toggleSection(header) {
+    const section = header.closest('.section-vs');
+    section.classList.toggle('collapsed');
+}
+
+function applyDetailFilters() {
+    const start = document.getElementById('filterStartDate').value;
+    const end = document.getElementById('filterEndDate').value;
+    const rows = document.querySelectorAll('#recordsTableBody tr');
+    
+    rows.forEach(row => {
+        const dateCell = row.querySelector('td:first-child strong');
+        if (!dateCell) return;
+        const dateStr = dateCell.innerText;
+        const [d, m, y] = dateStr.split('/');
+        const rowDate = new Date(y, m - 1, d);
+        
+        let show = true;
+        if (start) {
+            const startDate = new Date(start);
+            startDate.setHours(0,0,0,0);
+            if (rowDate < startDate) show = false;
         }
-    }
+        if (end) {
+            const endDate = new Date(end);
+            endDate.setHours(23,59,59,999);
+            if (rowDate > endDate) show = false;
+        }
+        row.style.display = show ? '' : 'none';
+    });
+}
 
-    document.getElementById('goalForm').addEventListener('submit', handleGoalSubmit);
+function clearDetailFilters() {
+    document.getElementById('filterStartDate').value = '';
+    document.getElementById('filterEndDate').value = '';
+    applyDetailFilters();
+}
 
-    async function deleteRecord(id) {
-        if (!confirm('Excluir este registro?')) return;
-        await fetch(`/api/indicator-data/${id}`, { method: 'DELETE' });
-        init();
-    }
+document.addEventListener('DOMContentLoaded', init);
 </script>
 {% endblock %}
 
 {% block sidebar_right %}
-<div class="sidebar-header-ws">
-    <h3 class="text-h3">Metas Ativas</h3>
+
+<div class="sidebar-header-ws mt-4">
+    <h3 class="text-h3">🔍 Filtros</h3>
 </div>
-<div class="sidebar-content-ws" id="activeGoalsList">
-    <div class="loading-shimmer" style="height: 60px; margin-bottom: 10px; border-radius: 8px;"></div>
-    <div class="loading-shimmer" style="height: 60px; margin-bottom: 10px; border-radius: 8px;"></div>
+<div class="sidebar-content-ws" style="padding:1rem;">
+    <div class="fld">
+        <label class="fld-lbl">Período de Dados</label>
+        <div style="display:flex; gap:0.5rem; flex-direction:column;">
+            <input type="date" class="fld-inp" id="filterStartDate" onchange="applyDetailFilters()" placeholder="Início">
+            <input type="date" class="fld-inp" id="filterEndDate" onchange="applyDetailFilters()" placeholder="Fim">
+        </div>
+    </div>
+    <div style="margin-top:1rem;">
+        <button class="btn btn-secondary btn-sm w-100" onclick="clearDetailFilters()">Limpar Filtros</button>
+    </div>
 </div>
 {% endblock %}

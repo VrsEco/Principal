@@ -100,9 +100,11 @@ def seed_demo():
         
         entry = IndicatorData(
             company_id=company.id,
+            indicator_id=kpi.id,
             goal_id=goal.id,
-            record_date=datetime.today().date(),
-            value=85000
+            measured_date=datetime.today().date(),
+            measured_value=85000,
+            status='verified'
         )
         db.session.add(entry)
 

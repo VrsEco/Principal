@@ -73,6 +73,11 @@ def create_app(config_name=None):
         from utils.jinja_filters import format_date_br
         return format_date_br(value, include_time)
 
+    @app.template_filter('format_currency_br')
+    def format_currency_br_filter(value):
+        from utils.jinja_filters import format_currency_br
+        return format_currency_br(value)
+
     CORS(app)
 
     # Configuration
@@ -85,7 +90,7 @@ def create_app(config_name=None):
         config_name = 'default'
     
     app.config.from_object(app_configs[config_name])
-    
+
     # Ensure Upload Dirs (keep hardcoded if not in config)
     app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -319,7 +324,7 @@ def register_api_resources(api):
     )
     from api.resources.incentive import (
         IncentiveIndicatorListResource, IncentiveCalculationResource,
-        IncentiveSpiderWebResource
+        IncentiveSpiderWebResource, IncentiveRuleResource
     )
 
     api.add_resource(CompanyListResource, '/api/companies')
@@ -405,6 +410,7 @@ def register_api_resources(api):
     api.add_resource(IncentiveIndicatorListResource, '/api/incentives/indicators')
     api.add_resource(IncentiveCalculationResource, '/api/incentives/calculate')
     api.add_resource(IncentiveSpiderWebResource, '/api/incentives/spider-web-data')
+    api.add_resource(IncentiveRuleResource, '/api/incentives/rule-sets/<int:rule_set_id>/rules')
 
 def register_blueprints(app):
     # Route to serve uploaded files

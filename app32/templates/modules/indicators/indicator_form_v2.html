@@ -1,239 +1,629 @@
-{% extends "layouts/form.html" %}
+{% extends "layouts/workspace.html" %}
 
-{% block title %}
-{% if indicator_id %}Editar Indicador{% else %}Novo Indicador{% endif %} | Versus
+{% block title %}{{ 'Editar' if indicator_id else 'Novo' }} Indicador | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Gestão Estratégica</a>
+<span class="sep">/</span>
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">{{ 'Editar' if indicator_id else 'Novo' }}</span>
 {% endblock %}
 
-{% block form_title %}
-{% if indicator_id %}📊 Editar Indicador{% else %}🚀 Novo Indicador{% endif %}
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <a href="/indicators" class="btn btn-secondary btn-sm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Voltar
+    </a>
+</div>
 {% endblock %}
 
-{% block form_subtitle %}
-Defina os parâmetros e vínculos do novo indicador de desempenho.
+{% block head %}
+<style>
+    /* ── Form Card ── */
+    .ind-form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    /* ── Section Header ── */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1.5rem 2rem;
+        background: var(--surface-secondary);
+        border-bottom: 1px solid var(--border);
+    }
+    .section-accent {
+        width: 8px;
+        min-width: 8px;
+        height: 32px;
+        border-radius: 4px;
+    }
+    .section-header h3 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    .section-header p {
+        font-size: 0.78rem;
+        color: var(--text-tertiary);
+        margin: 2px 0 0;
+    }
+
+    /* ── Section Body ── */
+    .section-body {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .section-body:last-of-type {
+        border-bottom: none;
+    }
+
+    /* ── Grid ── */
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; }
+
+    /* ── Field ── */
+    .field-label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-tertiary);
+        margin-bottom: 0.45rem;
+    }
+    .field-input, .field-select {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-sizing: border-box;
+    }
+    .field-input:focus, .field-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+        outline: none;
+    }
+    .field-input[readonly] {
+        background: var(--surface);
+        cursor: not-allowed;
+        border-style: dashed;
+        color: var(--text-tertiary);
+    }
+    .field-hint {
+        font-size: 0.72rem;
+        color: var(--text-tertiary);
+        margin-top: 0.3rem;
+    }
+
+    /* ── Sub-section inside section ── */
+    .sub-section {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    .sub-section:last-child { margin-bottom: 0; }
+    .sub-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .sub-label i { color: var(--primary); }
+
+    /* ── Form Actions ── */
+    .form-footer {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        padding: 1.25rem 2rem;
+        background: var(--surface-secondary);
+        border-top: 1px solid var(--border);
+    }
+
+    /* ── Page Header ── */
+    .page-header-ind {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .page-icon-ind {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    /* ── Status Feedback ── */
+    .form-alert {
+        padding: 0.85rem 1.25rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        font-size: 0.88rem;
+        font-weight: 500;
+    }
+    .form-alert.success { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+    .form-alert.danger { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+
+    @media (max-width: 768px) {
+        .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+        .section-header, .section-body, .form-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+    }
+</style>
 {% endblock %}
 
-{% block form_content %}
+{% block workspace_content %}
 <input type="hidden" id="indicatorId" value="{{ indicator_id or '' }}">
 
-<div class="form-grid">
-    <div class="form-group col-span-2">
-        <label class="form-label">Nome do Indicador *</label>
-        <input type="text" class="form-control" name="name" id="name" required placeholder="Ex: Faturamento Mensal">
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Código *</label>
-        <input type="text" class="form-control" name="code" id="code" required placeholder="IND-001">
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Empresa *</label>
-        <select class="form-select" name="company_id" id="company_id" required>
-            <option value="">Selecione a empresa...</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Grupo de Indicadores</label>
-        <select class="form-select" name="group_id" id="group_id">
-            <option value="">Nenhum</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Unidade de Medida</label>
-        <input type="text" class="form-control" name="unit" id="unit" placeholder="Ex: R$, %, kg">
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Polaridade</label>
-        <select class="form-select" name="polarity" id="polarity">
-            <option value="positive">Quanto maior melhor (Crescente)</option>
-            <option value="negative">Quanto menor melhor (Decrescente)</option>
-        </select>
-    </div>
-
-    <div class="divider col-span-2" style="margin: 1.5rem 0; border-top: 1px solid var(--border);"></div>
-    <h3 class="text-h3 col-span-2 mb-3">Vínculos Estratégicos</h3>
-
-    <div class="form-group">
-        <label class="form-label">Plano Estratégico</label>
-        <select class="form-select" name="plan_id" id="plan_id">
-            <option value="">Nenhum</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Projeto (OPEX/CAPEX)</label>
-        <select class="form-select" name="project_id" id="project_id">
-            <option value="">Nenhum</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Processo de Negócio</label>
-        <select class="form-select" name="process_id" id="process_id">
-            <option value="">Nenhum</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">OKR (Resultado Chave)</label>
-        <select class="form-select" name="okr_id" id="okr_id">
-            <option value="">Nenhum</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label class="form-label">Fonte de Dados</label>
-        <input type="text" class="form-control" name="data_source" id="data_source" placeholder="Ex: ERP, Planilha, BI">
-    </div>
-
-    <div class="form-group col-span-2">
-        <label class="form-label">Fórmula de Cálculo</label>
-        <textarea class="form-control" name="formula" id="formula" rows="2"
-            placeholder="Descreva como o valor é calculado..."></textarea>
-    </div>
-
-    <div class="form-group col-span-2">
-        <label class="form-label">Observações</label>
-        <textarea class="form-control" name="notes" id="notes" rows="3"
-            placeholder="Informações adicionais sobre a coleta de dados..."></textarea>
+<div class="page-header-ind fade-in">
+    <div class="page-icon-ind">📊</div>
+    <div>
+        <h1 class="text-h1" style="margin:0;">{{ 'Editar Indicador' if indicator_id else 'Novo Indicador de Desempenho' }}</h1>
+        <p class="text-subtitle" style="margin:4px 0 0;">Configure os parâmetros, fonte de dados e vínculos do indicador.</p>
     </div>
 </div>
 
-<div id="formStatus" class="mt-4" style="display: none;"></div>
+<div id="formStatus" style="display:none;"></div>
+
+<form id="indForm">
+<div class="ind-form-card fade-in">
+
+    {# ─── SEÇÃO 1: IDENTIFICAÇÃO ─── #}
+    <div class="section-header">
+        <div class="section-accent" style="background: var(--primary);"></div>
+        <div>
+            <h3>Identificação</h3>
+            <p>Nome, código e grupo na árvore de indicadores</p>
+        </div>
+    </div>
+    <div class="section-body">
+        <div class="form-grid-2" style="margin-bottom:1rem;">
+            <div>
+                <label class="field-label">Código</label>
+                <input type="text" class="field-input" id="code" name="code" readonly value="Auto" placeholder="Gerado automaticamente">
+                <p class="field-hint">Gerado automaticamente ao selecionar o grupo.</p>
+            </div>
+            <div>
+                <label class="field-label">Nome do Indicador *</label>
+                <input type="text" class="field-input" id="name" name="name" required placeholder="Ex: Faturamento Mensal, Score de Processos">
+            </div>
+        </div>
+        <div class="form-grid-2">
+            <div>
+                <label class="field-label">Grupo / Árvore de Indicadores *</label>
+                <select class="field-select" id="tree_id" name="tree_id" required>
+                    <option value="">Selecione o grupo...</option>
+                </select>
+            </div>
+            <div>
+                <label class="field-label">Descrição</label>
+                <input type="text" class="field-input" id="description" name="description" placeholder="O que este indicador mede?">
+            </div>
+        </div>
+    </div>
+
+    {# ─── SEÇÃO 2: O QUÊ — FONTE DOS DADOS ─── #}
+    <div class="section-header">
+        <div class="section-accent" style="background: var(--info, #0ea5e9);"></div>
+        <div>
+            <h3>1. O QUÊ — Origem dos Dados</h3>
+            <p>De onde vem o valor deste indicador?</p>
+        </div>
+    </div>
+    <div class="section-body">
+        <div class="form-grid-2">
+            <div>
+                <label class="field-label">Fonte / Módulo *</label>
+                <select class="field-select" id="source_module" name="source_module" required onchange="updateSourceUI(this.value)">
+                    <option value="manual">Entrada Manual</option>
+                    <option value="system_score">Pontuação do Sistema (Efficiency Score)</option>
+                    <option value="processo">Processos (GRV)</option>
+                    <option value="projeto">Projetos &amp; Atividades</option>
+                    <option value="okr">OKR &amp; Planejamento</option>
+                    <option value="ocorrencia">Ocorrências &amp; Feedbacks</option>
+                </select>
+            </div>
+            <div id="sourceObjectFilter" style="display:none;">
+                <label class="field-label">Objeto Específico</label>
+                <select class="field-select" id="source_id_select" name="source_id">
+                    <option value="">Todos (geral)</option>
+                </select>
+                <p class="field-hint">Vazio = aplica para todos os registros do módulo.</p>
+            </div>
+        </div>
+    </div>
+
+    {# ─── SEÇÃO 3: DE QUEM — ESCOPO ─── #}
+    <div class="section-header">
+        <div class="section-accent" style="background: var(--accent, #8b5cf6);"></div>
+        <div>
+            <h3>2. DE QUEM — Foco e Granularidade</h3>
+            <p>Sobre quem este indicador mede?</p>
+        </div>
+    </div>
+    <div class="section-body">
+        <div class="form-grid-2">
+            <div>
+                <label class="field-label">Escopo / Granularidade *</label>
+                <select class="field-select" id="source_scope" name="source_scope" required onchange="updateScopeUI(this.value)">
+                    <option value="company">Empresa (Global)</option>
+                    <option value="department">Departamento / Equipe</option>
+                    <option value="individual">Individual (Colaborador)</option>
+                </select>
+            </div>
+            <div id="scopeReference">
+                <label class="field-label">Contexto</label>
+                <input class="field-input" disabled value="Empresa Inteira">
+            </div>
+        </div>
+    </div>
+
+    {# ─── SEÇÃO 4: COMO — MÉTRICA E CÁLCULO ─── #}
+    <div class="section-header">
+        <div class="section-accent" style="background: var(--success, #10b981);"></div>
+        <div>
+            <h3>3. COMO — Métrica &amp; Cálculo</h3>
+            <p>Como o valor é calculado e interpretado?</p>
+        </div>
+    </div>
+    <div class="section-body">
+
+        <div class="form-grid-2" style="margin-bottom:1rem;">
+            <div>
+                <label class="field-label">Frequência de Medição / Meta *</label>
+                <select class="field-select" id="measurement_frequency" name="measurement_frequency" required>
+                    <option value="weekly">📅 Semanal</option>
+                    <option value="monthly" selected>📅 Mensal</option>
+                    <option value="bimonthly">📅 Bimestral (a cada 2 meses)</option>
+                    <option value="quarterly">📅 Trimestral (a cada 3 meses)</option>
+                    <option value="four_monthly">📅 Quadrimestral (a cada 4 meses)</option>
+                    <option value="semiannual">📅 Semestral (a cada 6 meses)</option>
+                    <option value="annual">📅 Anual</option>
+                </select>
+                <p class="field-hint">Define o ritmo de lançamento de dados e criação de metas.</p>
+            </div>
+            <div>
+                <label class="field-label">Tipo de Indicador *</label>
+                <select class="field-select" id="indicator_type" name="indicator_type" required>
+                    <option value="effort">⚙️ Esforço (Ex: Qtde de Orçamentos)</option>
+                    <option value="result" selected>🎯 Resultado (Ex: Faturamento do Mês)</option>
+                    <option value="impact">🚀 Impacto (Ex: Lucro do Trimestre)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-grid-2" style="margin-bottom:1rem;">
+            <div>
+                <label class="field-label">Agregação</label>
+                <select class="field-select" id="aggregation_function" name="aggregation_function">
+                    <option value="sum">Σ Soma</option>
+                    <option value="avg">⌀ Média</option>
+                    <option value="count">＃ Contagem</option>
+                    <option value="score_ratio">✦ Score Ratio (obtido/possível)</option>
+                </select>
+            </div>
+            <div>
+                <label class="field-label">Polaridade</label>
+                <select class="field-select" id="polarity" name="polarity">
+                    <option value="positive">📈 Maior é melhor (Crescente)</option>
+                    <option value="negative">📉 Menor é melhor (Decrescente)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-grid-3" style="margin-bottom:1rem;">
+            <div>
+                <label class="field-label">Unidade de Medida</label>
+                <select class="field-select" id="unit" name="unit">
+                    <option value="pts">pts</option>
+                    <option value="%">%</option>
+                    <option value="R$">R$</option>
+                    <option value="un">un</option>
+                    <option value="h">h (horas)</option>
+                    <option value="kg">kg</option>
+                    <option value="outro">Outro</option>
+                </select>
+            </div>
+            <div>
+                <label class="field-label">Modo de Coleta *</label>
+                <select class="field-select" id="collection_mode" name="collection_mode" required>
+                    <option value="auto_interno">Automático (Sensor Inteligente)</option>
+                    <option value="manual">Lançamento Humano</option>
+                </select>
+            </div>
+            <div>
+                <label class="field-label">Amostragem Mínima</label>
+                <input type="number" class="field-input" id="min_instances" name="min_instances" placeholder="Ex: 3" min="0">
+                <p class="field-hint">Mín. de ocorrências para calcular.</p>
+            </div>
+        </div>
+        <div class="form-grid-2">
+            <div>
+                <label class="field-label">Fórmula de Cálculo</label>
+                <input type="text" class="field-input" id="formula" name="formula" placeholder="Ex: (Produção Real / Meta) * 100">
+            </div>
+            <div>
+                <label class="field-label">Responsável pela Gestão</label>
+                <select class="field-select" id="responsible_id" name="responsible_id">
+                    <option value="">Selecione o responsável...</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {# ─── SEÇÃO 5: OBSERVAÇÕES ─── #}
+    <div class="section-body" style="border-top: 1px solid var(--border);">
+        <label class="field-label">Observações / Notas</label>
+        <textarea class="field-input" id="notes" name="notes" rows="3"
+            placeholder="Detalhes sobre a coleta, exceções, regras especiais..."></textarea>
+    </div>
+
+    {# ─── RODAPÉ COM AÇÕES ─── #}
+    <div class="form-footer">
+        <a href="/indicators" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+            Cancelar
+        </a>
+        <button type="submit" class="btn btn-special" id="saveBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            {{ 'Atualizar Indicador' if indicator_id else 'Salvar Indicador' }}
+        </button>
+    </div>
+
+</div>
+</form>
 {% endblock %}
 
-{% block form_buttons %}
-<button type="button" class="btn btn-secondary" onclick="window.location.href='/indicators'">Voltar</button>
-<button type="submit" class="btn btn-primary" id="saveBtn">Salvar Indicador</button>
-{% endblock %}
-
-{% block extra_body %}
+{% block scripts %}
 <script>
-    const indicatorId = document.getElementById('indicatorId').value;
+const indicatorId = document.getElementById('indicatorId').value;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        await Promise.all([
-            fetchOptions('/api/companies', 'company_id'),
-            fetchOptions('/api/indicator-groups', 'group_id'),
-            fetchOptions('/api/plans', 'plan_id'),
-            fetchOptions('/api/projects', 'project_id'),
-            fetchOptions('/api/processes', 'process_id')
-        ]);
+// ──────────────────────────────────────────
+// Data for dynamic scope selects (from server)
+// ──────────────────────────────────────────
+const TEAMS_DATA = {{ teams_json | safe if teams_json else '[]' }};
+const EMPLOYEES_DATA = {{ employees_json | safe if employees_json else '[]' }};
+const PROJECTS_DATA = {{ projects_json | safe if projects_json else '[]' }};
+const PROCESSES_DATA = {{ processes_json | safe if processes_json else '[]' }};
+const OKRS_DATA = {{ okrs_json | safe if okrs_json else '[]' }};
+const TREE_NODES_DATA = {{ tree_nodes_json | safe if tree_nodes_json else '[]' }};
+const ROUTINES_DATA = {{ routines_json | safe if routines_json else '[]' }};
 
-        if (indicatorId) {
-            loadIndicatorData(indicatorId);
-        }
+// ──────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    // Populate tree nodes
+    populateTreeSelect();
+
+    // Populate responsible employees
+    populateEmployeeSelect();
+
+    if (indicatorId) {
+        await loadIndicatorData(indicatorId);
+    }
+});
+
+function populateTreeSelect() {
+    const sel = document.getElementById('tree_id');
+    TREE_NODES_DATA.forEach(node => {
+        const opt = document.createElement('option');
+        opt.value = node.id;
+        opt.textContent = node.label || `${node.code} - ${node.name}`;
+        sel.appendChild(opt);
     });
+}
 
-    async function fetchOptions(url, selectId) {
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            const select = document.getElementById(selectId);
-            data.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.id;
-                opt.textContent = item.name;
-                select.appendChild(opt);
-            });
-        } catch (e) {
-            console.error(`Error fetching ${selectId}:`, e);
-        }
+
+// ──────────────────────────────────────────
+// Source Module UI
+// ──────────────────────────────────────────
+function updateSourceUI(val, initialId = null) {
+    const filterDiv = document.getElementById('sourceObjectFilter');
+    const sel = document.getElementById('source_id_select');
+    sel.innerHTML = '<option value="">Todos (geral)</option>';
+
+    if (val === 'manual' || val === 'system_score') {
+        filterDiv.style.display = 'none';
+        return;
     }
 
-    async function loadIndicatorData(id) {
-        try {
-            const res = await fetch(`/api/indicators/${id}`);
-            const data = await res.json();
+    filterDiv.style.display = 'block';
 
-            Object.keys(data).forEach(key => {
-                const el = document.getElementById(key);
-                if (el) el.value = data[key] || '';
-            });
-        } catch (e) {
-            console.error('Error loading indicator:', e);
-        }
+    let items = [];
+    let labelFn = item => item.name;
+
+    if (val === 'projeto') {
+        items = PROJECTS_DATA;
+        labelFn = item => `[${item.code || item.id}] ${item.name}`;
+    } else if (val === 'processo') {
+        items = PROCESSES_DATA;
+        labelFn = item => `[${item.code || item.id}] ${item.name}`;
+    } else if (val === 'okr') {
+        items = OKRS_DATA;
+        labelFn = item => item.name;
+    } else if (val === 'ocorrencia') {
+        filterDiv.style.display = 'none';
+        return;
     }
 
-    document.getElementById('mainForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const saveBtn = document.getElementById('saveBtn');
-        const status = document.getElementById('formStatus');
+    items.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = labelFn(item);
+        if (initialId && String(item.id) === String(initialId)) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
 
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Salvando...';
+// ──────────────────────────────────────────
+// Scope UI
+// ──────────────────────────────────────────
+function updateScopeUI(val, initialId = null) {
+    const refDiv = document.getElementById('scopeReference');
 
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
+    if (val === 'company') {
+        refDiv.innerHTML = '<label class="field-label">Contexto</label><input class="field-input" disabled value="Empresa Inteira">';
+    } else if (val === 'department') {
+        let html = '<label class="field-label">Selecione o Departamento / Equipe</label>';
+        html += '<select name="scope_ref_id" class="field-select">';
+        html += '<option value="">Escolha uma equipe...</option>';
+        TEAMS_DATA.forEach(t => {
+            html += `<option value="${t.id}" ${initialId == t.id ? 'selected' : ''}>${t.name}</option>`;
+        });
+        html += '</select>';
+        refDiv.innerHTML = html;
+    } else if (val === 'individual') {
+        let html = '<label class="field-label">Selecione o Colaborador</label>';
+        html += '<select name="scope_ref_id" class="field-select">';
+        html += '<option value="">Escolha um colaborador...</option>';
+        EMPLOYEES_DATA.forEach(e => {
+            html += `<option value="${e.id}" ${initialId == e.id ? 'selected' : ''}>${e.name}</option>`;
+        });
+        html += '</select>';
+        refDiv.innerHTML = html;
+    }
+}
 
-        // Convert empty IDs to null
-        ['group_id', 'plan_id', 'project_id', 'process_id', 'okr_id'].forEach(key => {
-            if (!data[key]) data[key] = null;
+// ──────────────────────────────────────────
+// Load indicator data for EDIT mode
+// ──────────────────────────────────────────
+async function loadIndicatorData(id) {
+    try {
+        const res = await fetch(`/api/indicators/${id}`);
+        if (!res.ok) throw new Error('Falha ao carregar dados.');
+        const data = await res.json();
+
+        // Fill simple fields
+        ['name', 'code', 'description', 'formula', 'notes', 
+         'indicator_type', 'aggregation_function', 'polarity', 
+         'unit', 'collection_mode', 'source_module', 'source_scope', 'tree_id',
+         'measurement_frequency'].forEach(key => {
+            const el = document.getElementById(key);
+            if (el && data[key] !== undefined && data[key] !== null) {
+                el.value = data[key];
+            }
         });
 
-        // Set company_id from form
-        data.company_id = parseInt(data.company_id);
-
-        try {
-            const url = indicatorId ? `/api/indicators/${indicatorId}` : '/api/indicators';
-            const method = indicatorId ? 'PUT' : 'POST';
-
-            const res = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            if (res.ok) {
-                status.innerHTML = '<div class="alert alert-success">Indicador salvo com sucesso! Redirecionando...</div>';
-                status.style.display = 'block';
-                setTimeout(() => window.location.href = '/indicators', 1500);
-            } else {
-                const err = await res.json();
-                status.innerHTML = `<div class="alert alert-danger">Erro: ${JSON.stringify(err.errors || err.error)}</div>`;
-                status.style.display = 'block';
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Salvar Indicador';
-            }
-        } catch (e) {
-            status.innerHTML = `<div class="alert alert-danger">Erro de conexão: ${e.message}</div>`;
-            status.style.display = 'block';
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Salvar Indicador';
+        // Responsible
+        if (data.responsible_id) {
+            document.getElementById('responsible_id').value = data.responsible_id;
         }
+
+        // min_instances from source_config
+        if (data.source_config && data.source_config.min_instances) {
+            document.getElementById('min_instances').value = data.source_config.min_instances;
+        }
+
+        // Source module dynamic UI
+        updateSourceUI(data.source_module, data.source_id);
+
+        // Scope dynamic UI
+        updateScopeUI(data.source_scope, data.source_id);
+
+    } catch (e) {
+        console.error('Erro ao carregar indicador:', e);
+        showAlert('Erro ao carregar dados do indicador: ' + e.message, 'danger');
+    }
+}
+
+// ──────────────────────────────────────────
+// Form Submit
+// ──────────────────────────────────────────
+document.getElementById('indForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
+    const originalHTML = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Salvando...';
+
+    const form = document.getElementById('indForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // Numeric/null coercions
+    if (data.tree_id) data.tree_id = parseInt(data.tree_id); else data.tree_id = null;
+    if (data.responsible_id) data.responsible_id = parseInt(data.responsible_id); else data.responsible_id = null;
+    if (data.min_instances) data.min_instances = parseInt(data.min_instances);
+
+    // Build source_config
+    data.source_config = { min_instances: data.min_instances || 0 };
+    delete data.min_instances;
+
+    // source_id from the dynamic select
+    const sourceSelect = document.getElementById('source_id_select');
+    if (sourceSelect && sourceSelect.value) {
+        data.source_id = parseInt(sourceSelect.value);
+    } else {
+        data.source_id = null;
+    }
+
+    // Remove scope_ref_id if present (handled via source_id)
+    delete data.scope_ref_id;
+
+    // Clean empty strings
+    ['description', 'formula', 'notes', 'code'].forEach(k => {
+        if (data[k] === '') data[k] = null;
     });
+
+    try {
+        const url = indicatorId ? `/api/indicators/${indicatorId}` : '/api/indicators';
+        const method = indicatorId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+            showAlert('Indicador salvo com sucesso! Redirecionando...', 'success');
+            setTimeout(() => window.location.href = '/indicators', 1500);
+        } else {
+            const err = await res.json();
+            showAlert('Erro: ' + JSON.stringify(err.errors || err.error || err.message), 'danger');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHTML;
+        }
+    } catch (err) {
+        showAlert('Erro de conexão: ' + err.message, 'danger');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalHTML;
+    }
+});
+
+function showAlert(msg, type) {
+    const el = document.getElementById('formStatus');
+    el.innerHTML = `<div class="form-alert ${type}">${msg}</div>`;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 </script>
-
-<style>
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .col-span-2 {
-        grid-column: span 2;
-    }
-
-    .alert {
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-
-    .alert-success {
-        background: #d1fae5;
-        color: #065f46;
-        border: 1px solid #10b981;
-    }
-
-    .alert-danger {
-        background: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #ef4444;
-    }
-</style>
 {% endblock %}

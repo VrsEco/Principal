@@ -1,15 +1,11 @@
-from database.postgres_helper import connect
-import json
+from app import create_app
+from models import db, IncentiveRule
+from sqlalchemy import inspect
 
-def check_table(table_name):
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}'")
-    cols = [r[0] for r in cursor.fetchall()]
-    print(f"Columns for {table_name}: {cols}")
-    conn.close()
-
-if __name__ == "__main__":
-    check_table('routines')
-    check_table('process_routines')
-    check_table('process_steps')
+app = create_app()
+with app.app_context():
+    inspector = inspect(db.engine)
+    columns = [c['name'] for c in inspector.get_columns('incentive_rules')]
+    print("COLUMNS_START")
+    print(",".join(columns))
+    print("COLUMNS_END")

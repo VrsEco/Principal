@@ -1,0 +1,251 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Novo Plano de Incentivo | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="{{ url_for('incentives.dashboard') }}">Incentivos</a>
+<span class="sep">/</span>
+<span class="current">Novo Plano</span>
+{% endblock %}
+
+{% block head %}
+<style>
+    .plan-form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 2.5rem;
+        box-shadow: var(--shadow-md);
+        max-width: 680px;
+        margin: 0 auto;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-tertiary);
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .vs-input, .vs-textarea, .vs-select {
+        width: 100%;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 0.95rem;
+        font-family: 'Inter', sans-serif;
+        color: var(--text-primary);
+        transition: border-color 0.2s, box-shadow 0.2s;
+        outline: none;
+    }
+    .vs-input:focus, .vs-textarea:focus, .vs-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .vs-textarea { resize: vertical; min-height: 90px; }
+
+    .periodicity-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+
+    .per-option {
+        position: relative;
+    }
+    .per-option input[type="radio"] {
+        position: absolute; opacity: 0; width: 0; height: 0;
+    }
+    .per-option label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 1rem 0.5rem;
+        border-radius: 14px;
+        border: 2px solid var(--border);
+        background: var(--surface-secondary);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+    .per-option label .icon { font-size: 1.4rem; }
+    .per-option input[type="radio"]:checked + label {
+        border-color: var(--primary);
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .tip-box {
+        background: var(--primary-light);
+        border: 1px solid rgba(37, 99, 235, 0.15);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 0.8rem;
+        color: var(--primary);
+        margin-top: 0.5rem;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper" style="max-width: 720px; margin: 2rem auto;">
+
+    <div class="workspace-header" style="margin-bottom: 2rem;">
+        <div class="header-content">
+            <h1 class="text-h1">🎯 Novo Plano de Incentivo</h1>
+            <p class="text-secondary">Defina as informações básicas do plano. Os indicadores e regras serão configurados na próxima etapa.</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}" style="margin-bottom:1rem;">{{ msg }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <div class="plan-form-card">
+        <form method="POST" action="{{ url_for('incentives.create_rule_set') }}">
+
+            <!-- Nome -->
+            <div class="form-section">
+                <label class="form-section-label" for="plan-name">Nome do Plano *</label>
+                <input
+                    id="plan-name"
+                    name="name"
+                    type="text"
+                    class="vs-input"
+                    placeholder="Ex: Plano de Performance Q1 2025"
+                    maxlength="100"
+                    required
+                    autofocus
+                >
+                <div class="tip-box" style="margin-top: 0.5rem;">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Use um nome que identifique claramente o período e o objetivo do plano.</span>
+                </div>
+            </div>
+
+            <!-- Descrição -->
+            <div class="form-section">
+                <label class="form-section-label" for="plan-desc">Descrição / Objetivo</label>
+                <textarea
+                    id="plan-desc"
+                    name="description"
+                    class="vs-textarea"
+                    placeholder="Descreva o objetivo deste plano, o público-alvo e as regras gerais...">
+                </textarea>
+            </div>
+
+            <!-- Periodicidade -->
+            <div class="form-section">
+                <label class="form-section-label">Periodicidade de Apuração *</label>
+                <div class="periodicity-grid">
+                    <div class="per-option">
+                        <input type="radio" id="per-weekly" name="periodicity" value="weekly">
+                        <label for="per-weekly">
+                            <span class="icon">📅</span>
+                            Semanal
+                        </label>
+                    </div>
+                    <div class="per-option">
+                        <input type="radio" id="per-monthly" name="periodicity" value="monthly" checked>
+                        <label for="per-monthly">
+                            <span class="icon">🗓️</span>
+                            Mensal
+                        </label>
+                    </div>
+                    <div class="per-option">
+                        <input type="radio" id="per-quarterly" name="periodicity" value="quarterly">
+                        <label for="per-quarterly">
+                            <span class="icon">📊</span>
+                            Trimestral
+                        </label>
+                    </div>
+                    <div class="per-option">
+                        <input type="radio" id="per-yearly" name="periodicity" value="yearly">
+                        <label for="per-yearly">
+                            <span class="icon">🏆</span>
+                            Anual
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vigência -->
+            <div class="form-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label class="form-section-label" for="plan-from">Vigência — Início</label>
+                    <input
+                        id="plan-from"
+                        name="valid_from"
+                        type="date"
+                        class="vs-input"
+                    >
+                </div>
+                <div>
+                    <label class="form-section-label" for="plan-to">Vigência — Fim (opcional)</label>
+                    <input
+                        id="plan-to"
+                        name="valid_to"
+                        type="date"
+                        class="vs-input"
+                    >
+                </div>
+            </div>
+
+            <!-- Info sobre Fatos -->
+            <div style="background: var(--surface-secondary); border-radius: 14px; padding: 1.25rem; margin-bottom: 2rem; border: 1px solid var(--border);">
+                <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 0.75rem;">
+                    <i class="fas fa-info-circle text-primary" style="margin-right:6px;"></i> Como funciona o cálculo
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; display: flex; flex-direction: column; gap: 6px;">
+                    <div>📌 <strong>Indicadores</strong> — o que será medido (ex: "Processos Concluídos", "NPS")</div>
+                    <div>⚙️ <strong>Regras</strong> — como cada indicador impacta no bônus (peso, meta, teto)</div>
+                    <div>🔄 <strong>Coleta automática</strong> — ao executar o cálculo, o sistema lê os dados reais de Processos, Projetos e Ocorrências</div>
+                    <div>💰 <strong>Resultado</strong> — bônus calculado por colaborador com base nos dados coletados</div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-special" id="submitBtn">
+                    <i class="fas fa-arrow-right"></i> Criar Plano e Configurar Indicadores
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Prevent double submit
+document.querySelector('form').addEventListener('submit', () => {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando plano...';
+});
+</script>
+{% endblock %}

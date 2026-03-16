@@ -617,6 +617,8 @@
           <a href="{{ _module_links.get('grv') }}"
             class="nav-link {% if active_nav == 'grv' %}active{% endif %}">GRV</a>
           {% endif %}
+          <a href="/incentives"
+            class="nav-link {% if active_nav == 'incentives' or '/incentives' in request.path %}active{% endif %}">Incentivos</a>
           {% if _module_links.get('my_work') %}
           <a href="{{ _module_links.get('my_work') }}"
             class="nav-link {% if active_nav == 'my_work' %}active{% endif %}">Minhas Atividades</a>

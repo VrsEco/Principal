@@ -128,7 +128,7 @@
 
 
     <!-- Gestão Estratégica -->
-    <div class="sidebar-group {{ 'open' if '/indicators' in request.path or '/strategic' in request.path }}">
+    <div class="sidebar-group {{ 'open' if '/indicators' in request.path or '/incentives' in request.path or '/okrs' in request.path or '/plans' in request.path }}">
         <button class="nav-button" onclick="toggleSidebarGroup(this)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
@@ -145,8 +145,43 @@
             <a href="{{ url_for('plans.plans_list') }}"
                 class="sub-nav-link {{ 'active' if '/plans' in request.path }}">Planejamento
                 Estratégico</a>
-            <a href="/indicators" class="sub-nav-link {{ 'active' if '/indicators' in request.path }}">Indicadores</a>
-            <a href="/incentives" class="sub-nav-link {{ 'active' if '/incentives' in request.path }}">Plano de Incentivos</a>
+            
+            <!-- Subgrupo: Indicadores -->
+            <div class="sidebar-subgroup {{ 'open' if '/indicators' in request.path or '/okrs' in request.path }}">
+                <button class="subgroup-button" onclick="toggleSidebarGroup(this)">
+                    Indicadores
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/indicators/tree" class="sub-nav-link {{ 'active' if '/indicators/tree' in request.path }}">Árvore</a>
+                    <a href="/indicators" class="sub-nav-link {{ 'active' if request.path == '/indicators' }}">Indicadores</a>
+                    <a href="/indicators/goals" class="sub-nav-link {{ 'active' if '/indicators/goals' in request.path }}">Metas</a>
+                    <a href="/indicators/data" class="sub-nav-link {{ 'active' if '/indicators/data' in request.path or '/indicators/measurement-routines' in request.path or '/indicators/routine-execution' in request.path }}"><b>Lançar Dados / Histórico</b> 🚀</a>
+                    <a href="/indicators/dashboard" class="sub-nav-link {{ 'active' if '/indicators/dashboard' in request.path }}">Análise (Dashboard)</a>
+                    <a href="/indicators/analysis" class="sub-nav-link {{ 'active' if '/indicators/analysis' in request.path }}">Análises Comparativas</a>
+                </div>
+            </div>
+
+            <!-- Subgrupo: Gestão de Incentivos -->
+            <div class="sidebar-subgroup {{ 'open' if '/incentives' in request.path }}">
+                <button class="subgroup-button" onclick="toggleSidebarGroup(this)">
+                    Gestão de Incentivos
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/incentives" class="sub-nav-link {{ 'active' if request.path == '/incentives' }}">Planos de Incentivos</a>
+                    <a href="/incentives/closings" class="sub-nav-link {{ 'active' if '/incentives/closings' in request.path }}">Fechamento de Incentivos</a>
+                    <a href="/incentives/reports" class="sub-nav-link {{ 'active' if '/incentives/reports' in request.path }}">Extratos de Incentivos</a>
+                    <a href="/incentives/statement" class="sub-nav-link {{ 'active' if '/incentives/statement' in request.path }}">Meu Extrato</a>
+                    <a href="/incentives/spider-web" class="sub-nav-link {{ 'active' if '/incentives/spider-web' in request.path }}">Teia de Conexões</a>
+                </div>
+            </div>
         </div>
     </div>
 

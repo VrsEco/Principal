@@ -92,7 +92,7 @@
         {% if task.amount %}
         <div class="stat-mini">
             <span class="stat-mini__label">Valor</span>
-            <span class="stat-mini__value">R$ {{ '%.2f'|format(task.amount) }}</span>
+            <span class="stat-mini__value">R$ {{ task.amount | format_currency_br }}</span>
         </div>
         {% endif %}
     </div>

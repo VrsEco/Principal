@@ -313,20 +313,20 @@
                             style="font-size:13px; font-weight:800; color:#475569; text-transform:uppercase; margin-bottom:16px;">
                             Engenharia de Preços</h4>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
-                            <div><label class="field-label">Preço de Venda (R$)</label><input id="pPrice" type="number"
-                                    step="0.01" oninput="recalcProduct()" class="modal-input"></div>
+                            <div><label class="field-label">Preço de Venda (R$)</label><input id="pPrice" type="text"
+                                    oninput="recalcProduct()" class="modal-input" placeholder="0,00"></div>
                             <div><label class="field-label">Obs. sobre Preço</label><input id="pPriceNotes" type="text"
                                     class="modal-input"></div>
                             <div style="grid-column: span 2; height:1px; background:#e2e8f0; margin:8px 0;"></div>
-                            <div><label class="field-label">Custos Diretos (%)</label><input id="pCostPct" type="number"
-                                    oninput="syncProductValue('cost')" class="modal-input"></div>
+                            <div><label class="field-label">Custos Diretos (%)</label><input id="pCostPct" type="text"
+                                    oninput="syncProductValue('cost')" class="modal-input" placeholder="0,00"></div>
                             <div><label class="field-label">Custos Diretos (R$)</label><input id="pCostVal"
-                                    type="number" step="0.01" oninput="syncProductPct('cost')" class="modal-input">
+                                    type="text" oninput="syncProductPct('cost')" class="modal-input" placeholder="0,00">
                             </div>
-                            <div><label class="field-label">Desp. Variáveis (%)</label><input id="pExpPct" type="number"
-                                    oninput="syncProductValue('exp')" class="modal-input"></div>
+                            <div><label class="field-label">Desp. Variáveis (%)</label><input id="pExpPct" type="text"
+                                    oninput="syncProductValue('exp')" class="modal-input" placeholder="0,00"></div>
                             <div><label class="field-label">Desp. Variáveis (R$)</label><input id="pExpVal"
-                                    type="number" step="0.01" oninput="syncProductPct('exp')" class="modal-input"></div>
+                                    type="text" oninput="syncProductPct('exp')" class="modal-input" placeholder="0,00"></div>
                             <div
                                 style="grid-column: span 2; background:#0f172a; padding:16px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:white; font-size:13px; font-weight:700;">Margem Unitária</span>
@@ -431,7 +431,14 @@
 </style>
 
 <script>
-    let products = {{ section_content.products|default ([]) | tojson }};
+    function parseBrFloat(str) {
+        if (!str) return 0;
+        if (typeof str === 'number') return str;
+        let clean = str.toString().replace(/\./g, '').replace(',', '.');
+        return parseFloat(clean) || 0;
+    }
+
+    let products = {{ section_content.products|default([]) | tojson }};
     let currentEditingId = null;
     let nextSegmentId = {{ section_content.segments| length if section_content.segments else 0 }};
 
@@ -586,27 +593,27 @@
     }
 
     function syncProductValue(type) {
-        const p = parseFloat(document.getElementById('pPrice').value) || 0;
-        const pct = parseFloat(document.getElementById(type === 'cost' ? 'pCostPct' : 'pExpPct').value) || 0;
-        document.getElementById(type === 'cost' ? 'pCostVal' : 'pExpVal').value = ((p * pct) / 100).toFixed(2);
+        const p = parseBrFloat(document.getElementById('pPrice').value) || 0;
+        const pct = parseBrFloat(document.getElementById(type === 'cost' ? 'pCostPct' : 'pExpPct').value) || 0;
+        document.getElementById(type === 'cost' ? 'pCostVal' : 'pExpVal').value = ((p * pct) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         recalcProduct();
     }
 
     function syncProductPct(type) {
-        const p = parseFloat(document.getElementById('pPrice').value) || 0;
-        const val = parseFloat(document.getElementById(type === 'cost' ? 'pCostVal' : 'pExpVal').value) || 0;
-        if (p > 0) document.getElementById(type === 'cost' ? 'pCostPct' : 'pExpPct').value = ((val / p) * 100).toFixed(2);
+        const p = parseBrFloat(document.getElementById('pPrice').value) || 0;
+        const val = parseBrFloat(document.getElementById(type === 'cost' ? 'pCostVal' : 'pExpVal').value) || 0;
+        if (p > 0) document.getElementById(type === 'cost' ? 'pCostPct' : 'pExpPct').value = ((val / p) * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         recalcProduct();
     }
 
     function recalcProduct() {
-        const p = parseFloat(document.getElementById('pPrice').value) || 0;
-        const c = parseFloat(document.getElementById('pCostVal').value) || 0;
-        const e = parseFloat(document.getElementById('pExpVal').value) || 0;
+        const p = parseBrFloat(document.getElementById('pPrice').value) || 0;
+        const c = parseBrFloat(document.getElementById('pCostVal').value) || 0;
+        const e = parseBrFloat(document.getElementById('pExpVal').value) || 0;
         const s = parseFloat(document.getElementById('pShareUnits').value) || 0;
         const mcu = p - c - e;
         document.getElementById('pMarginVal').innerText = `R$ ${mcu.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('pMarginPct').innerText = `${p > 0 ? (mcu / p * 100).toFixed(2) : '0.00'}%`;
+        document.getElementById('pMarginPct').innerText = `${p > 0 ? (mcu / p * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}%`;
         document.querySelectorAll('#pRangeBody tr').forEach(row => {
             const pct = parseFloat(row.querySelector('.ramp-pct').value) || 0;
             row.querySelector('.ramp-un').innerText = Math.round(s * pct / 100);
@@ -618,12 +625,12 @@
             id: currentEditingId || Date.now().toString(),
             name: document.getElementById('pName').value,
             description: document.getElementById('pDesc').value,
-            sale_price: parseFloat(document.getElementById('pPrice').value) || 0,
+            sale_price: parseBrFloat(document.getElementById('pPrice').value) || 0,
             sale_price_notes: document.getElementById('pPriceNotes').value,
-            variable_costs_percent: parseFloat(document.getElementById('pCostPct').value) || 0,
-            variable_costs_value: parseFloat(document.getElementById('pCostVal').value) || 0,
-            variable_expenses_percent: parseFloat(document.getElementById('pExpPct').value) || 0,
-            variable_expenses_value: parseFloat(document.getElementById('pExpVal').value) || 0,
+            variable_costs_percent: parseBrFloat(document.getElementById('pCostPct').value) || 0,
+            variable_costs_value: parseBrFloat(document.getElementById('pCostVal').value) || 0,
+            variable_expenses_percent: parseBrFloat(document.getElementById('pExpPct').value) || 0,
+            variable_expenses_value: parseBrFloat(document.getElementById('pExpVal').value) || 0,
             market_size_monthly_units: parseFloat(document.getElementById('pMarketUnits').value) || 0,
             market_share_goal_monthly_units: parseFloat(document.getElementById('pShareUnits').value) || 0,
             ramp_up_entries: Array.from(document.querySelectorAll('#pRangeBody tr')).map(row => ({
@@ -645,10 +652,10 @@
             const mcu = p.sale_price - p.variable_costs_value - p.variable_expenses_value;
             const rev = p.sale_price * p.market_share_goal_monthly_units;
             tRev += rev; tU += p.market_share_goal_monthly_units; tW += (p.sale_price > 0 ? (mcu / p.sale_price * 100) : 0) * rev;
-            body.insertAdjacentHTML('beforeend', `<tr style="background:#f8fafc; cursor:pointer" onclick="openProductModal('${p.id || p.name}')"><td style="padding:12px"><strong>${p.name}</strong></td><td>R$ ${p.sale_price.toLocaleString('pt-BR')}</td><td>${p.variable_costs_percent}%</td><td>${p.variable_expenses_percent}%</td><td style="color:#10b981; font-weight:700">${p.sale_price > 0 ? (mcu / p.sale_price * 100).toFixed(2) : '0'}%</td><td style="color:#2563eb; font-weight:700">${p.market_share_goal_monthly_units}</td><td style="font-weight:800">R$ ${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td><td style="text-align:right"><button onclick="event.stopPropagation(); removeProduct('${p.id || p.name}')" style="color:#ef4444; border:none; background:none"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+            body.insertAdjacentHTML('beforeend', `<tr style="background:#f8fafc; cursor:pointer" onclick="openProductModal('${p.id || p.name}')"><td style="padding:12px"><strong>${p.name}</strong></td><td>R$ ${p.sale_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td><td>${p.variable_costs_percent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}%</td><td>${p.variable_expenses_percent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}%</td><td style="color:#10b981; font-weight:700">${p.sale_price > 0 ? (mcu / p.sale_price * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}%</td><td style="color:#2563eb; font-weight:700">${p.market_share_goal_monthly_units}</td><td style="font-weight:800">R$ ${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td><td style="text-align:right"><button onclick="event.stopPropagation(); removeProduct('${p.id || p.name}')" style="color:#ef4444; border:none; background:none"><i class="fa-solid fa-trash"></i></button></td></tr>`);
         });
         document.getElementById('summaryRevenue').innerText = `R$ ${tRev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        document.getElementById('summaryMargin').innerText = `${tRev > 0 ? (tW / tRev).toFixed(2) : '0'}%`;
+        document.getElementById('summaryMargin').innerText = `${tRev > 0 ? (tW / tRev).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}%`;
         document.getElementById('summaryShare').innerText = `${tU} un`;
     }
 

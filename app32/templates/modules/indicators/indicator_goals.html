@@ -1,0 +1,732 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Metas de Indicadores | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Gestão Estratégica</a>
+<span class="sep">/</span>
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">Metas</span>
+{% endblock %}
+
+{% block head %}
+<style>
+    /* ── Modal Versus Elite ── */
+    .modal-vs { 
+        display: none; 
+        position: fixed; 
+        top: 0; left: 0; 
+        width: 100%; height: 100%; 
+        background: rgba(15, 23, 42, 0.75); 
+        z-index: 2000; 
+        backdrop-filter: blur(12px); 
+        animation: fadeIn 0.2s ease;
+    }
+    
+    .modal-content-vs { 
+        background: var(--surface); 
+        width: 90%; 
+        max-width: 550px; 
+        margin: 5vh auto; 
+        border-radius: 24px; 
+        padding: 0; 
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+        border: 1px solid var(--border); 
+        overflow: hidden;
+        animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-header-vs { 
+        padding: 1.5rem 2rem; 
+        background: var(--surface-secondary); 
+        border-bottom: 1px solid var(--border); 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+    }
+    
+    .modal-body-vs { padding: 2rem; max-height: 75vh; overflow-y: auto; }
+    
+    .modal-footer-vs { 
+        padding: 1.25rem 2rem; 
+        background: var(--surface-secondary); 
+        border-top: 1px solid var(--border); 
+        display: flex; 
+        justify-content: flex-end; 
+        gap: 1rem; 
+    }
+
+    /* ── Field Standard ── */
+    .field-group { margin-bottom: 1.25rem; }
+    .field-label { 
+        font-size: 0.72rem; 
+        font-weight: 800; 
+        text-transform: uppercase; 
+        color: var(--text-tertiary); 
+        margin-bottom: 0.5rem; 
+        display: block;
+        letter-spacing: 0.05em;
+    }
+    .field-input, .field-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 1.5px solid var(--border);
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+    .field-input:focus, .field-select:focus {
+        border-color: var(--primary);
+        background: var(--surface);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+    /* ── Badges ── */
+    .badge-vs { font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; border: 1px solid transparent; }
+    .badge-freq { background: var(--surface-secondary); color: var(--text-secondary); border-color: var(--border); }
+    .badge-success-vs { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+    .badge-danger-vs { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+    .badge-planned-vs { background: #fef9c3; color: #a16207; border-color: #fef08a; }
+
+    /* ── Actions ── */
+    .btn-icon-sm { 
+        width: 34px; height: 34px; border-radius: 10px; 
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 1.5px solid var(--border); background: var(--surface);
+        color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+    }
+    .btn-icon-sm:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+    .btn-icon-sm.btn-danger-hover:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── Range Styling ── */
+    .range-box {
+        background: var(--surface-secondary);
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid var(--border);
+        margin-top: 0.5rem;
+    }
+    .range-item {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .range-item:last-child { margin-bottom: 0; }
+    .range-label { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); }
+    .range-input-group { display: flex; align-items: center; gap: 8px; }
+    
+    .range-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+    .dot-yellow { background: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+    .dot-green { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+    .dot-blue { background: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+
+    /* ── Animations ── */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .spinner { display: none; margin-left: 8px; }
+    .btn-loading .spinner { display: inline-block; }
+    .btn-loading .btn-text { opacity: 0.7; }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header" style="margin-bottom:2rem;">
+        <div class="header-content">
+            <h1 class="text-h1">🎯 Metas Estratégicas</h1>
+            <p class="text-secondary">Gestão de objetivos de performance com ciclo de vida (Início e Inativação).</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-special btn-sm" onclick="openGoalModal()">
+                <i class="fas fa-plus"></i> Nova Meta
+            </button>
+        </div>
+
+    </div>
+
+    <div class="goals-list-container">
+        {% if goals %}
+        <div class="card" style="border-radius: 20px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background: var(--surface-secondary);">
+                    <tr>
+                        <th style="padding: 1rem 1.5rem; text-align: left; font-size: 0.7rem; color: var(--text-tertiary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Indicador</th>
+                        <th style="padding: 1rem 1.5rem; text-align: left; font-size: 0.7rem; color: var(--text-tertiary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Valor Alvo</th>
+                        <th style="padding: 1rem 1.5rem; text-align: left; font-size: 0.7rem; color: var(--text-tertiary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Janela de Atuação</th>
+                        <th style="padding: 1rem 1.5rem; text-align: left; font-size: 0.7rem; color: var(--text-tertiary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Periodicidade</th>
+                        <th style="padding: 1rem 1.5rem; text-align: left; font-size: 0.7rem; color: var(--text-tertiary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Status</th>
+                        <th style="padding: 1rem 1.5rem; text-align: right; font-size: 0.7rem; color: var(--text-tertiary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for goal in goals %}
+                    <tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--surface-secondary)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 1.25rem 1.5rem;">
+                            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">{{ goal.indicator.name }}</div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <div style="font-size: 0.65rem; color: var(--primary); font-family: 'JetBrains Mono', monospace; font-weight: 800; opacity: 0.8;">{{ goal.indicator.code }}</div>
+                                {% if goal.code %}
+                                <div style="font-size: 0.65rem; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; font-weight: 900; background: var(--surface-secondary); padding: 1px 4px; border-radius: 4px;">{{ goal.code }}</div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="padding: 1.25rem 1.5rem;">
+                            <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
+                                {% if goal.indicator.unit == 'R$' or 'R$' in goal.indicator.unit or 'moeda' in goal.indicator.unit.lower() %}
+                                    R$ {{ goal.goal_value | format_currency_br }}
+                                {% else %}
+                                    {# Formatação genérica brasileira para decimais #}
+                                    {{ "{:,.2f}".format(goal.goal_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                                    <span style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 600;">{{ goal.indicator.unit }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="padding: 1.25rem 1.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+                                    <span style="color: var(--text-tertiary); font-size: 0.7rem;">DE</span> {{ goal.period_start or goal.created_at | format_date_br }}
+                                </div>
+                                {% if goal.goal_date %}
+                                <div style="font-size: 0.85rem; font-weight: 600; color: var(--danger);">
+                                    <span style="color: var(--text-tertiary); font-size: 0.7rem;">ATÉ</span> {{ goal.goal_date }}
+                                </div>
+                                {% else %}
+                                <div style="font-size: 0.8rem; color: var(--success); font-weight: 700;">
+                                    <i class="fas fa-infinity" style="font-size: 0.7rem;"></i> Em Aberto
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="padding: 1.15rem 1.5rem;" data-routine-id="{{ goal.routine_id or 'manual' }}">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span class="badge-vs badge-freq">
+                                        {% if goal.goal_type == 'single' %}🎯 Única
+                                        {% elif goal.goal_type == 'weekly' %}📅 Semanal
+                                        {% elif goal.goal_type == 'monthly' %}📅 Mensal
+                                        {% elif goal.goal_type == 'bimonthly' %}📅 Bimestral
+                                        {% elif goal.goal_type == 'quarterly' %}📅 Trimestral
+                                        {% elif goal.goal_type == 'annual' %}📅 Anual
+                                        {% else %}{{ goal.goal_type }}{% endif %}
+                                    </span>
+                                    <span class="badge-vs" style="background: var(--surface-secondary); color: var(--text-tertiary); border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem;">
+                                        {% if goal.collection_method == 'api' %}<i class="fas fa-plug" title="API"></i> API
+                                        {% elif goal.collection_method == 'webhook' %}<i class="fas fa-link" title="Webhook"></i> Webhook
+                                        {% elif goal.collection_method == 'mcp' %}<i class="fas fa-robot" title="MCP"></i> MCP
+                                        {% else %}<i class="fas fa-hand-paper" title="Manual"></i> Manual{% endif %}
+                                    </span>
+                                </div>
+                                {% if goal.routine_id and routines_map.get(goal.routine_id) %}
+                                    <span style="font-size: 0.65rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                        <i class="fas fa-sync" style="font-size: 0.6rem;"></i> {{ routines_map.get(goal.routine_id) }}
+                                    </span>
+                                {% else %}
+                                    <span style="font-size: 0.65rem; color: var(--text-tertiary); font-weight: 600;">
+                                        <i class="fas fa-exclamation-triangle" style="font-size: 0.6rem; color: var(--warning);"></i> Sem rotina (workflow)
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="padding: 1.25rem 1.5rem;">
+                            {% if goal.status == 'active' and not goal.goal_date %}
+                                <span class="badge-vs badge-success-vs">Em Vigência</span>
+                            {% elif goal.status == 'inactive' or goal.goal_date %}
+                                <span class="badge-vs badge-danger-vs">Inativa</span>
+                            {% else %}
+                                <span class="badge-vs badge-planned-vs">{{ goal.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1.25rem 1.5rem; text-align: right;">
+                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                <button class="btn-icon-sm" onclick='openEditGoalModal({{ goal.to_dict() | tojson }})' title="Editar Meta">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% if not goal.goal_date %}
+                                <button class="btn-icon-sm" onclick="openInactivateModal({{ goal.id }}, '{{ goal.indicator.name }}')" title="Inativar (Definir Prazo Final)">
+                                    <i class="fas fa-hand-paper"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-icon btn-sm btn-danger-hover" onclick="deleteGoal({{ goal.id }})" title="Excluir Definitivamente">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 6rem 2rem; text-align: center; background: var(--surface); border: 2px dashed var(--border); border-radius: 24px;">
+            <div style="font-size: 5rem; margin-bottom: 2rem; filter: grayscale(1); opacity: 0.3;">🎯</div>
+            <h3 class="text-h2">Sem metas definidas</h3>
+            <p class="text-secondary" style="margin-bottom: 2.5rem; max-width: 400px; margin-left: auto; margin-right: auto;">
+                Defina objetivos estratégicos para seus indicadores e acompanhe o progresso em tempo real.
+            </p>
+            <button class="btn btn-primary" onclick="openGoalModal()">Criar Minha Primeira Meta</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: Nova Meta -->
+<div id="goalModal" class="modal-vs">
+    <div class="modal-content-vs">
+        <div class="modal-header-vs">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 12px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fas fa-bullseye"></i>
+                </div>
+                <h3 class="text-h2" id="goalModalTitle" style="margin:0;">Nova Meta</h3>
+            </div>
+            <button class="btn btn-icon btn-sm" onclick="closeModal('goalModal')"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <form id="goalForm">
+            <div class="modal-body-vs">
+                <input type="hidden" name="company_id" value="{{ session.active_company_id or 1 }}">
+                <input type="hidden" id="goal_id_hidden">
+                
+                <div class="field-group">
+                    <label class="field-label">Indicador Estratégico *</label>
+                    <select name="indicator_id" id="goal_indicator_id" class="field-select" required onchange="updateGoalValuePrefix(this)">
+                        <option value="">Selecione o indicador...</option>
+                        {% for ind in indicators %}
+                        <option value="{{ ind.id }}" data-unit="{{ ind.unit }}">{{ ind.code }} - {{ ind.name }} ({{ ind.unit }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="field-group">
+                        <label class="field-label">Valor Alvo <span id="goal_unit_badge" style="text-transform:none; font-weight:600; opacity:0.7;"></span> *</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <span id="currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;">R$</span>
+                            <input type="text" id="goal_value_visual" class="field-input" placeholder="0,00" required oninput="handleGoalValueInput(this)">
+                            <input type="hidden" name="goal_value" id="goal_value_real">
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Data de Início *</label>
+                        <input type="date" name="period_start" id="new_goal_start_date" class="field-input" required>
+                    </div>
+                </div>
+
+                <!-- Range de Performance -->
+                <div class="field-group">
+                    <label class="field-label">Faixas de Atingimento (%)</label>
+                    <div class="range-box">
+                        <div class="range-item">
+                            <div class="range-input-group">
+                                <div class="range-dot dot-red"></div>
+                                <span class="range-label">Vermelho (Crítico)</span>
+                            </div>
+                            <div class="range-input-group">
+                                <span style="font-size: 0.8rem;">Até</span>
+                                <input type="number" name="range_red" id="range_red" class="field-input" style="padding: 0.4rem; width: 80px;" value="80" oninput="updateBlueRangeLabel()">
+                                <span style="font-size: 0.8rem;">%</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <div class="range-input-group">
+                                <div class="range-dot dot-yellow"></div>
+                                <span class="range-label">Amarelo (Alerta)</span>
+                            </div>
+                            <div class="range-input-group">
+                                <span style="font-size: 0.8rem;">Até</span>
+                                <input type="number" name="range_yellow" id="range_yellow" class="field-input" style="padding: 0.4rem; width: 80px;" value="90" oninput="updateBlueRangeLabel()">
+                                <span style="font-size: 0.8rem;">%</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <div class="range-input-group">
+                                <div class="range-dot dot-green"></div>
+                                <span class="range-label">Verde (Na Meta)</span>
+                            </div>
+                            <div class="range-input-group">
+                                <span style="font-size: 0.8rem;">Até</span>
+                                <input type="number" name="range_green" id="range_green" class="field-input" style="padding: 0.4rem; width: 80px;" value="110" oninput="updateBlueRangeLabel()">
+                                <span style="font-size: 0.8rem;">%</span>
+                            </div>
+                        </div>
+                        <div class="range-item">
+                            <div class="range-input-group">
+                                <div class="range-dot dot-blue"></div>
+                                <span class="range-label">Azul (Superação)</span>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 600;">
+                                Acima do Verde (> <span id="blue_threshold_label">110</span>%)
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.65rem; color: var(--text-tertiary); margin-top: 8px;">Os % definem as cores de performance no Dashboard.</p>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="field-group">
+                        <label class="field-label">Periodicidade</label>
+                        <select name="goal_type" id="goal_type_select" class="field-select">
+                            <option value="single">🎯 Meta Única</option>
+                            <option value="weekly">📅 Semanal</option>
+                            <option value="monthly" selected>📅 Mensal</option>
+                            <option value="bimonthly">📅 Bimestral</option>
+                            <option value="quarterly">📅 Trimestral</option>
+                            <option value="annual">📅 Anual</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Método de Coleta</label>
+                        <select name="collection_method" id="goal_collection_method" class="field-select">
+                            <option value="manual">✋ Lançamento Manual</option>
+                            <option value="api">🔌 Via API</option>
+                            <option value="webhook">🔗 Via Webhook</option>
+                            <option value="mcp">🤖 Via MCP (AI)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Rotina Vinculada (Workflow de Medição)</label>
+                    <select name="routine_id" id="goal_routine_id" class="field-select">
+                        <option value="">-- Sem rotina (Tarefa manual) --</option>
+                    </select>
+                </div>
+
+                <div class="field-group" style="margin-bottom:0;">
+                    <label class="field-label">Observações Estratégicas</label>
+                    <textarea name="notes" id="goal_notes" class="field-input" rows="2" placeholder="Descreva o contexto desta meta..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer-vs">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('goalModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSaveGoal">
+                    <span class="btn-text" id="btnGoalText">Ativar Meta</span>
+                    <i class="fas fa-spinner fa-spin spinner"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Inativar Meta -->
+<div id="inactivateModal" class="modal-vs">
+    <div class="modal-content-vs" style="max-width: 400px;">
+        <div class="modal-header-vs">
+            <h3 class="text-h2" style="margin:0;">🏁 Inativar Meta</h3>
+            <button class="btn btn-icon btn-sm" onclick="closeModal('inactivateModal')"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <form id="inactivateForm">
+            <input type="hidden" name="goal_id" id="inactivate_goal_id">
+            <div class="modal-body-vs">
+                <p class="text-secondary" style="font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Defina o <b>Prazo Final</b> para encerrar a vigência da meta: <br>
+                    <span id="inactivate_goal_name" style="color: var(--text-primary); font-weight: 700;"></span>
+                </p>
+                <div class="field-group">
+                    <label class="field-label">Prazo Final (Encerramento) *</label>
+                    <input type="date" name="goal_date" class="field-input" required id="inactivate_deadline">
+                </div>
+            </div>
+
+            <div class="modal-footer-vs">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('inactivateModal')">Voltar</button>
+                <button type="submit" class="btn btn-danger" id="btnConfirmInactivate">
+                    <span class="btn-text">Confirmar Inativação</span>
+                    <i class="fas fa-spinner fa-spin spinner"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// --- Contexto Versuss Elite ---
+const routines = {{ routines_json | safe if routines_json else '[]' }};
+
+function initRoutineSelects() {
+    const selects = ['goal_routine_id', 'wizard_routine_select'];
+    selects.forEach(sid => {
+        const sel = document.getElementById(sid);
+        if (sel) {
+            // Preservar primeira opção (nula)
+            const first = sel.options[0];
+            sel.innerHTML = "";
+            sel.appendChild(first);
+            routines.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.text = `${r.code ? r.code + ' - ' : ''}${r.name}`;
+                sel.appendChild(opt);
+            });
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initRoutineSelects);
+
+// --- Dinâmica de Faixas ---
+function updateBlueRangeLabel() {
+    const greenVal = document.getElementById('range_green').value || 110;
+    document.getElementById('blue_threshold_label').innerText = greenVal;
+}
+
+// --- Formatação Brasileira ---
+function formatBR(val) {
+    if (val === "" || val === null) return "";
+    let clean = val.toString().replace(/\D/g, "");
+    if (clean === "") return "";
+    let num = (parseFloat(clean) / 100).toFixed(2);
+    return num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function updateGoalValuePrefix(select) {
+    const opt = select.options[select.selectedIndex];
+    const unit = opt.getAttribute('data-unit') || "";
+    const prefix = document.getElementById('currency_prefix');
+    const input = document.getElementById('goal_value_visual');
+    const badge = document.getElementById('goal_unit_badge');
+    
+    badge.innerText = unit ? `(${unit})` : "";
+    
+    if (unit === 'R$' || unit.includes('moeda')) {
+        prefix.style.display = 'block';
+        input.style.paddingLeft = '3rem';
+    } else {
+        prefix.style.display = 'none';
+        input.style.paddingLeft = '1rem';
+    }
+}
+
+function handleGoalValueInput(input) {
+    let val = input.value;
+    input.value = formatBR(val);
+    
+    // Atualiza o valor real (hidden) para o servidor
+    let realVal = input.value.replace(/\./g, "").replace(",", ".");
+    document.getElementById('goal_value_real').value = realVal;
+}
+
+function openGoalModal() {
+    document.getElementById('goalModalTitle').innerText = "Nova Meta";
+    document.getElementById('btnGoalText').innerText = "Ativar Meta";
+    document.getElementById('goal_id_hidden').value = "";
+    document.getElementById('new_goal_start_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('goalForm').reset();
+    document.getElementById('goal_routine_id').value = "";
+    document.getElementById('goal_collection_method').value = "manual";
+    document.getElementById('currency_prefix').style.display = 'none';
+    document.getElementById('goal_value_visual').style.paddingLeft = '1rem';
+    updateBlueRangeLabel();
+    document.getElementById('goalModal').style.display = 'block';
+}
+
+function openEditGoalModal(goal) {
+    document.getElementById('goalModalTitle').innerText = "Editar Meta";
+    document.getElementById('btnGoalText').innerText = "Salvar Alterações";
+    document.getElementById('goal_id_hidden').value = goal.id;
+    
+    document.getElementById('goal_indicator_id').value = goal.indicator_id;
+    updateGoalValuePrefix(document.getElementById('goal_indicator_id'));
+    
+    // Valor Visual
+    const rawVal = (goal.goal_value * 100).toFixed(0);
+    document.getElementById('goal_value_visual').value = formatBR(rawVal);
+    document.getElementById('goal_value_real').value = goal.goal_value;
+    
+    document.getElementById('new_goal_start_date').value = goal.start_date || "";
+    document.getElementById('goal_type_select').value = goal.goal_type;
+    document.getElementById('goal_collection_method').value = goal.collection_method || "manual";
+    document.getElementById('goal_notes').value = goal.notes || "";
+    
+    // Ranges
+    if (goal.performance_ranges) {
+        document.getElementById('range_red').value = goal.performance_ranges.red || 80;
+        document.getElementById('range_yellow').value = goal.performance_ranges.yellow || 90;
+        document.getElementById('range_green').value = goal.performance_ranges.green || 110;
+    }
+    document.getElementById('goal_routine_id').value = goal.routine_id || "";
+    
+    updateBlueRangeLabel();
+    document.getElementById('goalModal').style.display = 'block';
+}
+
+function openInactivateModal(id, name) {
+    document.getElementById('inactivate_goal_id').value = id;
+    document.getElementById('inactivate_goal_name').innerText = name;
+    document.getElementById('inactivate_deadline').value = new Date().toISOString().split('T')[0];
+    document.getElementById('inactivateModal').style.display = 'block';
+}
+
+function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+}
+
+window.onclick = function(event) {
+    if (event.target.className === 'modal-vs') {
+        closeModal('goalModal');
+        closeModal('inactivateModal');
+    }
+}
+
+// Persistência de Meta (Criação/Edição)
+document.getElementById('goalForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveGoal');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    const goalId = document.getElementById('goal_id_hidden').value;
+    
+    data.goal_value = parseFloat(document.getElementById('goal_value_real').value || 0);
+    data.indicator_id = parseInt(data.indicator_id);
+    data.company_id = parseInt(data.company_id);
+    data.routine_id = data.routine_id ? parseInt(data.routine_id) : null;
+    
+    // Formatação do Performance Range
+    data.performance_ranges = {
+        red: parseInt(data.range_red),
+        yellow: parseInt(data.range_yellow),
+        green: parseInt(data.range_green)
+    };
+    
+    // NUNCA enviar 'id' no corpo do JSON para evitar erro de validação do Marshmallow (id is dump_only)
+    // O ID deve ir apenas na URL do PATCH/PUT
+    delete data.range_red;
+    delete data.range_yellow;
+    delete data.range_green;
+
+    const method = goalId ? 'PATCH' : 'POST';
+    const url = goalId ? `/api/indicator-goals/${goalId}` : '/api/indicator-goals';
+
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+            location.reload();
+        } else {
+            const errData = await res.json();
+            alert('Erro: ' + JSON.stringify(errData.errors || errData.error));
+        }
+    } catch (err) { alert('Erro de conexão.'); }
+    finally {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+    }
+});
+
+// Inativação de Meta
+document.getElementById('inactivateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnConfirmInactivate');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+
+    const goalId = document.getElementById('inactivate_goal_id').value;
+    const formData = new FormData(e.target);
+    const payload = {
+        goal_date: formData.get('goal_date'),
+        status: 'inactive'
+    };
+
+    try {
+        const res = await fetch(`/api/indicator-goals/${goalId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            location.reload();
+        } else {
+            const errData = await res.json();
+            alert('Falha ao inativar: ' + JSON.stringify(errData.error));
+        }
+    } catch (err) { alert('Erro de conexão.'); }
+    finally {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+    }
+});
+
+async function deleteGoal(id) {
+    if (!confirm('Deseja excluir esta meta permanentemente?')) return;
+    try {
+        const res = await fetch(`/api/indicator-goals/${id}`, { method: 'DELETE' });
+        if (res.ok) location.reload();
+    } catch (e) { console.error(e); }
+}
+
+function applyFilters() {
+    const routineFilter = document.getElementById('filter_routine').value;
+    const statusFilter = document.getElementById('filter_status').value;
+    const rows = document.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        const routineCell = row.querySelector('[data-routine-id]');
+        const routineId = routineCell ? routineCell.getAttribute('data-routine-id') : 'manual';
+        const statusBadge = row.querySelector('.badge-vs:not(.badge-freq)');
+        const isActive = statusBadge && statusBadge.classList.contains('badge-success-vs');
+        const statusValue = isActive ? 'active' : 'inactive';
+
+        let show = true;
+        if (routineFilter !== 'all' && routineFilter !== routineId) show = false;
+        if (statusFilter !== 'all' && statusFilter !== statusValue) show = false;
+
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+function clearFilters() {
+    document.getElementById('filter_routine').value = 'all';
+    document.getElementById('filter_status').value = 'all';
+    applyFilters();
+}
+</script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros de Metas</h3>
+</div>
+<div class="sidebar-content-ws" style="padding: 1.5rem;">
+    <div class="field-group">
+        <label class="field-label">Rotina Operacional</label>
+        <select id="filter_routine" class="field-select" onchange="applyFilters()">
+            <option value="all">Todas as Rotinas</option>
+            <option value="manual">Sem Rotina (Manual)</option>
+            {% for rid, rname in routines_map.items() %}
+            <option value="{{ rid }}">{{ rname }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="field-group">
+        <label class="field-label">Status da Meta</label>
+        <select id="filter_status" class="field-select" onchange="applyFilters()">
+            <option value="all">Todos os Status</option>
+            <option value="active">Em Vigência</option>
+            <option value="inactive">Inativas</option>
+        </select>
+    </div>
+    
+    <button class="btn btn-secondary btn-sm w-100" onclick="clearFilters()">Limpar Filtros</button>
+</div>
+{% endblock %}

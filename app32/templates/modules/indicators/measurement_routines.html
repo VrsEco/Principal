@@ -1,0 +1,225 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Rotinas de Medição | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Gestão Estratégica</a>
+<span class="sep">/</span>
+<a href="/indicators/data">Lançamentos</a>
+<span class="sep">/</span>
+<span class="current">Rotinas Operacionais</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header">
+    <div class="header-content">
+        <h1 class="text-h1">⚡ Rotinas de Medição</h1>
+        <p class="text-secondary">Execute seus workflows de alimentação de indicadores vinculados a metas ativas.</p>
+    </div>
+</div>
+
+<div class="workspace-body">
+    {% if routines_data %}
+    <div class="routines-grid">
+        {% for routine in routines_data %}
+        <div class="routine-card {% if routine.instance_id %}has-instance{% endif %}">
+            <div class="routine-header">
+                <div class="routine-info">
+                    <span class="routine-code">{{ routine.code or 'OP' }}</span>
+                    <h3 class="routine-name">{{ routine.name }}</h3>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                    <div class="routine-badge">{{ routine.count }} Indicadores</div>
+                    {% if routine.instance_id %}
+                    <div style="font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:10px; 
+                         background:{% if routine.instance_status == 'in_progress' %}var(--warning-light){% else %}var(--primary-light){% endif %}; 
+                         color:{% if routine.instance_status == 'in_progress' %}var(--warning){% else %}var(--primary){% endif %};">
+                        <i class="fas fa-circle-dot" style="font-size:0.55rem;"></i>
+                        {% if routine.instance_status == 'in_progress' %}Em Execução{% else %}Aguardando{% endif %}
+                        {% if routine.instance_due %} · {{ routine.instance_due }}{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="routine-body" style="margin-bottom: 1.5rem;">
+                <p class="text-secondary" style="font-size: 0.85rem;">
+                    {% if routine.instance_id %}
+                    Instância de processo ativa. Execute a planilha para registrar as medições e concluir a tarefa.
+                    {% else %}
+                    Esta rotina contém {{ routine.count }} indicadores vinculados a metas ativas que aguardam medição.
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="routine-actions">
+                {% if routine.instance_id %}
+                <button class="btn btn-primary w-100 mb-2" onclick="window.location.href='/indicators/routine-execution/{{ routine.id }}?instance_id={{ routine.instance_id }}'">
+                    <i class="fas fa-table"></i> Executar Planilha &amp; Concluir Tarefa
+                </button>
+                {% else %}
+                <button class="btn btn-secondary w-100 mb-2" onclick="window.location.href='/indicators/routine-execution/{{ routine.id }}'">
+                    <i class="fas fa-table"></i> Executar Planilha de Lançamento
+                </button>
+                {% endif %}
+                <button class="btn btn-secondary btn-sm w-100" onclick="window.location.href='/processes/routines/{{ routine.id }}'">
+                    Configurar Rotina
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📏</div>
+        <h3 class="text-h3">Nenhuma rotina de medição ativa</h3>
+        <p class="text-secondary">Vincule rotinas às suas metas de indicadores para que elas apareçam aqui.</p>
+        <a href="/indicators/goals" class="btn btn-primary mt-3">Gerenciar Metas</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Lançamento Rápido -->
+<div id="measurementModal" class="modal-vs" style="display:none; background: rgba(0,0,0,0.5); position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999;">
+    <div class="modal-content" style="background:var(--surface); max-width:500px; margin: 10vh auto; border-radius:16px; border: 1px solid var(--border);">
+        <div class="modal-header" style="padding:1.5rem; background: var(--surface-secondary); display:flex; justify-content:space-between; align-items:center; border-radius:16px 16px 0 0;">
+            <h2 class="text-h3" id="modalTitle">Lançar Medição</h2>
+            <button onclick="closeMeasurementModal()" style="background:none; border:none; cursor:pointer; font-size:1.5rem;">&times;</button>
+        </div>
+        <form id="measurementForm">
+            <input type="hidden" name="indicator_id" id="modal_indicator_id">
+            <input type="hidden" name="routine_id" id="modal_routine_id">
+            <div class="modal-body" style="padding:1.5rem;">
+                <div class="info-banner mb-3" style="background:var(--primary-light); padding:1rem; border-radius:8px;">
+                    <p style="margin:0; font-size:0.85rem; color:var(--primary);">
+                        <strong>Execução de Rotina:</strong> <span id="modal_routine_name"></span>
+                    </p>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label class="form-label">Data da Medição</label>
+                    <input type="date" name="measured_date" id="modal_date" class="form-control" required>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label class="form-label">Valor Medido</label>
+                    <input type="number" step="0.0001" name="measured_value" class="form-control" required placeholder="0.00">
+                </div>
+
+                <div class="form-group mb-0">
+                    <label class="form-label">Notas / Evidências</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="Opcional..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:1rem; display:flex; justify-content:flex-end; gap:0.5rem; border-top:1px solid var(--border);">
+                <button type="button" class="btn btn-secondary" onclick="closeMeasurementModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Registrar Medição</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .routines-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+    .routine-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .routine-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+    .routine-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+    .routine-code {
+        font-size: 0.7rem;
+        font-weight: 800;
+        background: var(--primary-light);
+        color: var(--primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+    .routine-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-top: 0.25rem;
+    }
+    .routine-badge {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        background: var(--surface-secondary);
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+    .ind-name { font-weight: 600; font-size: 0.9rem; }
+    .ind-code { font-size: 0.7rem; color: var(--text-tertiary); }
+    .badge-meta { font-size: 0.8rem; font-weight: 700; color: var(--success); }
+    .table-compact th { font-size: 0.7rem; text-transform: uppercase; color: var(--text-tertiary); padding: 8px 0; }
+    .table-compact td { padding: 10px 0; border-top: 1px solid var(--border-light); }
+    .btn-xs { padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; }
+
+    .modal-vs { 
+        display: none; 
+        position: fixed; 
+        top: 0; left: 0; 
+        width: 100%; height: 100%; 
+        background: rgba(15, 23, 42, 0.75); 
+        z-index: 2000; 
+        backdrop-filter: blur(8px); 
+    }
+</style>
+
+<script>
+function openMeasurementModal(indicatorId, indicatorName, routineId, routineName) {
+    document.getElementById('modalTitle').innerText = `Medir: ${indicatorName}`;
+    document.getElementById('modal_indicator_id').value = indicatorId;
+    document.getElementById('modal_routine_id').value = routineId;
+    document.getElementById('modal_routine_name').innerText = routineName;
+    document.getElementById('modal_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('measurementModal').style.display = 'block';
+}
+
+function closeMeasurementModal() {
+    document.getElementById('measurementModal').style.display = 'none';
+}
+
+document.getElementById('measurementForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    data.indicator_id = parseInt(data.indicator_id);
+    data.routine_id = parseInt(data.routine_id);
+    data.measured_value = parseFloat(data.measured_value);
+
+    try {
+        const res = await fetch('/api/indicator-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+            alert("Medição registrada com sucesso!");
+            closeMeasurementModal();
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert("Erro: " + JSON.stringify(err.errors || err.error));
+        }
+    } catch(e) { alert("Erro de conexão."); }
+});
+</script>
+{% endblock %}

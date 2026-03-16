@@ -1,0 +1,30 @@
+C:\Users\mff20\anaconda3\Lib\site-packages\paramiko\transport.py:219: CryptographyDeprecationWarning: Blowfish has been deprecated and will be removed in a future release
+  "class": algorithms.Blowfish,
+Running script on production...
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\scripts\deploy_and_run_remote_update.py", line 36, in <module>
+STDOUT:
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: users contact backfill completed (users=0, whatsapp=0, telegram=0).
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+
+STDERR:
+    run()
+  File "C:\GestaoVersus\app32\scripts\deploy_and_run_remote_update.py", line 30, in run
+    print(stderr.read().decode('utf-8', 'ignore'))
+  File "C:\Users\mff20\anaconda3\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4c5' in position 32: character maps to <undefined>

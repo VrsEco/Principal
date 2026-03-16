@@ -1,0 +1,262 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Executar Rotina: {{ routine.name }} | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Gestão Estratégica</a>
+<span class="sep">/</span>
+<a href="/indicators/measurement-routines">Rotinas</a>
+<span class="sep">/</span>
+<span class="current">{{ routine.name }}</span>
+{% endblock %}
+
+{% block head %}
+<style>
+    .spreadsheet-container {
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+    .spreadsheet-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .spreadsheet-table th {
+        background: var(--surface-secondary);
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        border-bottom: 2px solid var(--border);
+    }
+    .spreadsheet-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+    .cell-input {
+        width: 100%;
+        padding: 0.6rem 0.8rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    .cell-input:focus {
+        border-color: var(--primary);
+        background: var(--surface);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .indicator-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .indicator-name {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .indicator-code {
+        font-size: 0.65rem;
+        color: var(--primary);
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .goal-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header">
+        <div class="header-content">
+            <h1 class="text-h1">⚡ Execução de Rotina: {{ routine.name }}</h1>
+            <p class="text-secondary">Preencha os valores da planilha abaixo para os indicadores vinculados.</p>
+            {% if active_instance %}
+            <div style="display:inline-flex; align-items:center; gap:8px; margin-top:0.5rem; padding:6px 14px; background:var(--primary-light); border-radius:20px; border:1px solid var(--primary);">
+                <i class="fas fa-link" style="color:var(--primary); font-size:0.75rem;"></i>
+                <span style="font-size:0.8rem; font-weight:700; color:var(--primary);">Instância de Processo #{{ active_instance.id }}: {{ active_instance.title }}</span>
+                {% if active_instance.due_date %}
+                <span style="font-size:0.7rem; color:var(--text-tertiary);">| Prazo: {{ active_instance.due_date.strftime('%d/%m/%Y') }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="header-actions">
+            <a href="/indicators/measurement-routines" class="btn btn-secondary btn-sm">Cancelar</a>
+            <button class="btn btn-primary btn-sm" id="btnSaveBatch" onclick="saveBatch()">
+                <i class="fas fa-check"></i> Salvar Tudo
+            </button>
+        </div>
+    </div>
+
+    <div class="spreadsheet-container">
+        <table class="spreadsheet-table" id="batchTable">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Indicador / Meta</th>
+                    <th style="width: 15%;">Valor</th>
+                    <th style="width: 15%;">Data Medição</th>
+                    <th style="width: 30%;">Observações</th>
+                    <th style="width: 10%;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in indicators_meta %}
+                <tr class="batch-row" 
+                    data-indicator-id="{{ item.indicator.id }}" 
+                    data-goal-id="{{ item.goal.id }}"
+                    data-unit="{{ item.indicator.unit }}">
+                    <td>
+                        <div class="indicator-info">
+                            <span class="indicator-name">{{ item.indicator.name }}</span>
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                                <span class="indicator-code">{{ item.indicator.code }}</span>
+                                <span class="goal-badge">Meta: {{ item.goal.goal_value }}{{ item.indicator.unit }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="position:relative; display:flex; align-items:center;">
+                            {% if 'R$' in item.indicator.unit or 'moeda' in item.indicator.unit.lower() %}
+                            <span style="position:absolute; left:0.6rem; font-size:0.8rem; font-weight:700; color:var(--text-tertiary);">R$</span>
+                            <input type="text" class="cell-input val-visual" placeholder="0,00" style="padding-left:2rem;" oninput="formatBatchCurrency(this)">
+                            {% else %}
+                            <input type="number" step="0.01" class="cell-input val-real" placeholder="0.00">
+                            {% endif %}
+                            <input type="hidden" class="val-hidden">
+                        </div>
+                    </td>
+                    <td>
+                        <input type="date" class="cell-input date-input" value="{{ now_date }}">
+                    </td>
+                    <td>
+                        <input type="text" class="cell-input notes-input" placeholder="Opcional...">
+                    </td>
+                    <td class="row-status" style="text-align:center;">
+                        <i class="fas fa-minus" style="color:var(--border);"></i>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Set default date to today for all inputs
+    const today = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('.date-input').forEach(input => {
+        if (!input.value) input.value = today;
+    });
+});
+
+function formatBatchCurrency(input) {
+    let val = input.value.replace(/\D/g, "");
+    if (val === "") {
+        input.value = "";
+        input.closest('td').querySelector('.val-hidden').value = "";
+        return;
+    }
+    let num = (parseFloat(val) / 100).toFixed(2);
+    input.value = num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    input.closest('td').querySelector('.val-hidden').value = num;
+}
+
+async function saveBatch() {
+    const btn = document.getElementById('btnSaveBatch');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+    const rows = document.querySelectorAll('.batch-row');
+    const entries = [];
+    const instanceId = {{ instance_id | tojson }};
+    
+    rows.forEach(row => {
+        const indicatorId = parseInt(row.dataset.indicatorId);
+        const goalId = parseInt(row.dataset.goalId);
+        const unit = row.dataset.unit;
+        
+        let value;
+        const visualInput = row.querySelector('.val-visual');
+        const realInput = row.querySelector('.val-real');
+        const hiddenInput = row.querySelector('.val-hidden');
+        
+        if (visualInput) {
+            // Se for moeda, usa o hidden que foi preenchido pelo formatBatchCurrency
+            value = hiddenInput.value !== "" ? parseFloat(hiddenInput.value) : NaN;
+        } else {
+            // Se for número direto
+            value = realInput.value !== "" ? parseFloat(realInput.value) : NaN;
+        }
+        
+        const date = row.querySelector('.date-input').value;
+        const notes = row.querySelector('.notes-input').value;
+        
+        if (!isNaN(value)) {
+            const entry = {
+                indicator_id: indicatorId,
+                goal_id: goalId,
+                measured_value: value,
+                measured_date: date,
+                notes: notes
+            };
+            // Inclui instance_id se executando no contexto de um processo
+            if (instanceId) entry.process_instance_id = instanceId;
+            entries.push(entry);
+        }
+    });
+
+    if (entries.length === 0) {
+        alert('Nenhum valor preenchido para salvar.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Salvar Tudo';
+        return;
+    }
+
+    try {
+        const payload = { entries: entries };
+        if (instanceId) payload.process_instance_id = instanceId;
+        
+        const res = await fetch('/api/indicator-data/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            const result = await res.json();
+            const msg = instanceId 
+                ? `✅ ${result.saved} registros salvos e instância de processo concluída!`
+                : `✅ ${result.saved} registros salvos com sucesso!`;
+            alert(msg);
+            window.location.href = '/indicators/data';
+        } else {
+            const err = await res.json();
+            alert('Erro ao salvar: ' + JSON.stringify(err.errors || err.error));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Salvar Tudo';
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Erro de conexão.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Salvar Tudo';
+    }
+}
+</script>
+{% endblock %}

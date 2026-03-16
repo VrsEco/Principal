@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, abort
 from flask_login import current_user, login_required
 from models import Company, Meeting, MeetingAgendaItem, Employee, Project, db
-from utils.permissions import can_access_company, get_default_company_id, has_company_full_access, permission_required
+from utils.permissions import get_default_company_id, has_company_full_access, permission_required
 
 meetings_bp = Blueprint('meetings', __name__)
 
@@ -12,7 +12,10 @@ def user_can_access_company(company_id):
     company = Company.query.get(company_id)
     if not company or not bool(getattr(company, 'is_active', True)):
         return False
-    return can_access_company(company_id)
+    if str(getattr(current_user, 'role', '')).strip().lower() in {'admin', 'administrator'}:
+        return True
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+    return employee is not None
 
 def get_active_company():
     company_id = session.get('active_company_id')

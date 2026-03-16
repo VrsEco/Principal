@@ -1,0 +1,171 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Histórico de Fechamentos | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="/incentives">Incentivos</a>
+<span class="sep">/</span>
+<span class="current">Fechamentos</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+    <div class="header-content">
+        <h1 class="text-h1">📂 Histórico de Fechamentos</h1>
+        <p class="text-secondary">Lista de todos os ciclos de incentivos processados e homologados.</p>
+    </div>
+    <div class="header-actions">
+        <button onclick="openClosingModal()" class="btn btn-special">
+            <i class="fas fa-plus-circle"></i> Novo Fechamento
+        </button>
+    </div>
+</div>
+
+<div class="fade-in" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background: var(--surface-secondary); border-bottom: 1px solid var(--border);">
+                <th style="padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; color: var(--text-tertiary);">Ciclo</th>
+                <th style="padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; color: var(--text-tertiary);">Data de Cálculo</th>
+                <th style="padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; color: var(--text-tertiary);">Participantes</th>
+                <th style="padding: 1rem; text-align: right; font-size: 0.7rem; text-transform: uppercase; color: var(--text-tertiary);">Total Distribuído</th>
+                <th style="padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; color: var(--text-tertiary);">Status</th>
+                <th style="padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; color: var(--text-tertiary);">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in closings %}
+            <tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.01)'" onmouseout="this.style.background='transparent'">
+                <td style="padding: 1rem; font-weight: 700; color: var(--text-primary);">
+                    {{ c.period_start.strftime('%m/%Y') }}
+                </td>
+                <td style="padding: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+                    {{ c.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </td>
+                <td style="padding: 1rem; text-align: center; font-weight: 600;">
+                    {{ c.participants_count or 0 }}
+                </td>
+                <td style="padding: 1rem; text-align: right; font-weight: 800; color: var(--primary);">
+                    R$ {{ c.total_distributed | default(0) | format_currency_br }}
+                </td>
+                <td style="padding: 1rem; text-align: center;">
+                    <span class="status-badge status-{{ c.status }}" style="padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; 
+                        {% if c.status == 'paid' %} background: #dcfce7; color: #166534; 
+                        {% elif c.status == 'approved' %} background: #dbeafe; color: #1e40af; 
+                        {% else %} background: #fef9c3; color: #854d0e; {% endif %}">
+                        {{ c.status }}
+                    </span>
+                </td>
+                <td style="padding: 1rem; text-align: center;">
+                    <a href="/incentives/closing/{{ c.id }}" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.75rem;">
+                        <i class="fas fa-eye"></i> Ver Relatório
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="padding: 3rem; text-align: center; color: var(--text-tertiary);">
+                    <i class="fas fa-folder-open" style="font-size: 2rem; display: block; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    Nenhum fechamento encontrado.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal de Novo Fechamento -->
+<div id="modalClosing" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--surface); width: 100%; max-width: 500px; padding: 2rem; border-radius: 16px; box-shadow: var(--shadow-lg);">
+        <h2 class="text-h2" style="margin-bottom: 1rem;">🚀 Iniciar Novo Fechamento</h2>
+        <p class="text-secondary" style="margin-bottom: 1.5rem;">Selecione o plano estratégico e o período de referência para calcular os bônus.</p>
+        
+        <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem;">Plano de Incentivo</label>
+            <select id="selectRuleSet" class="vs-input" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                <option value="">Selecione um plano...</option>
+                {% for rs in rule_sets %}
+                <option value="{{ rs.id }}">{{ rs.name }} ({{ rs.periodicity | upper }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+            <div>
+                <label style="display: block; font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem;">Início do Período</label>
+                <input type="date" id="dateStart" class="vs-input" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.5rem;">Fim do Período</label>
+                <input type="date" id="dateEnd" class="vs-input" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button onclick="closeClosingModal()" class="btn btn-secondary">Cancelar</button>
+            <button onclick="confirmarFechamento()" class="btn btn-special" id="btnConfirmCalc">
+                <i class="fas fa-play"></i> Processar Fechamento
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openClosingModal() {
+    // Set default dates (last month)
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+    
+    document.getElementById('dateStart').value = firstDay;
+    document.getElementById('dateEnd').value = lastDay;
+    
+    document.getElementById('modalClosing').style.display = 'flex';
+}
+
+function closeClosingModal() {
+    document.getElementById('modalClosing').style.display = 'none';
+}
+
+async function confirmarFechamento() {
+    const rsId = document.getElementById('selectRuleSet').value;
+    const start = document.getElementById('dateStart').value;
+    const end = document.getElementById('dateEnd').value;
+    
+    if (!rsId) {
+        alert('Por favor, selecione um plano.');
+        return;
+    }
+    
+    const btn = document.getElementById('btnConfirmCalc');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    
+    try {
+        const response = await fetch('/api/incentives/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                rule_set_id: rsId,
+                start_date: start,
+                end_date: end
+            })
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        
+        // Redirect to the newly created closing
+        location.href = `/incentives/closing/${data.calculation_id}`;
+    } catch (e) {
+        alert('Erro ao processar: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play"></i> Processar Fechamento';
+    }
+}
+</script>
+{% endblock %}

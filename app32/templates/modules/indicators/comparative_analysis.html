@@ -1,0 +1,476 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Análises Comparativas | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Gestão Estratégica</a>
+<span class="sep">/</span>
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">Análises Comparativas</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display:flex; align-items:center; gap:0.75rem;">
+    <a href="/indicators/dashboard" class="btn btn-secondary btn-sm">
+        <i class="fas fa-chart-pie"></i> Dashboard
+    </a>
+</div>
+{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+    .analysis-shell { display:grid; gap:1rem; }
+    .hero-card, .panel-card, .chart-card, .table-card, .empty-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+    .hero-card { padding: 1.25rem 1.25rem 1rem; }
+    .hero-title { margin:0; font-size:1.35rem; font-weight:800; color:var(--text-primary); }
+    .hero-subtitle { margin:0.4rem 0 0; color:var(--text-secondary); max-width:840px; }
+    .alert-card {
+        margin-top:1rem; padding:0.9rem 1rem; border-radius:12px;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        border:1px solid #bfdbfe; color:#1e3a8a; font-size:0.92rem;
+    }
+    .panel-card { padding: 1rem; }
+    .panel-title { margin:0 0 0.75rem; font-size:1rem; font-weight:800; color:var(--text-primary); }
+    .filters-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:0.75rem; }
+    .field { display:flex; flex-direction:column; gap:0.35rem; }
+    .field label { font-size:0.74rem; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.04em; }
+    .field input, .field select {
+        width:100%; padding:0.75rem 0.85rem; border-radius:10px; border:1px solid var(--border);
+        background:var(--surface-secondary); color:var(--text-primary);
+    }
+    .btn-row { display:flex; justify-content:flex-end; gap:0.75rem; margin-top:0.9rem; flex-wrap:wrap; }
+    .indicators-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:0.75rem; }
+    .indicator-card {
+        border:1px solid var(--border); border-radius:14px; padding:0.9rem;
+        background: linear-gradient(180deg, rgba(248,250,252,0.75), rgba(255,255,255,1));
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .indicator-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(15,23,42,0.08); border-color:#bfdbfe; }
+    .indicator-head { display:flex; align-items:flex-start; gap:0.75rem; }
+    .indicator-head input { margin-top:0.15rem; }
+    .indicator-code { font-size:0.7rem; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.05em; }
+    .indicator-name { font-weight:700; color:var(--text-primary); }
+    .indicator-meta { margin-top:0.2rem; font-size:0.8rem; color:var(--text-tertiary); }
+    .goals-box { margin-top:0.85rem; display:grid; gap:0.5rem; }
+    .goal-card {
+        display:flex; gap:0.6rem; align-items:flex-start; padding:0.7rem;
+        border:1px solid var(--border); border-radius:12px; background:var(--surface);
+    }
+    .goal-title { font-size:0.84rem; font-weight:700; color:var(--text-primary); }
+    .goal-meta { font-size:0.76rem; color:var(--text-secondary); margin-top:0.2rem; line-height:1.45; }
+    .results-grid { display:grid; gap:1rem; }
+    .chart-card, .table-card, .empty-card { padding:1rem; }
+    .chart-wrap { position:relative; height:420px; }
+    .table-responsive { overflow:auto; }
+    .comparison-table { width:100%; border-collapse:collapse; min-width:860px; }
+    .comparison-table th, .comparison-table td { padding:0.8rem; border-bottom:1px solid var(--border); text-align:left; }
+    .comparison-table th {
+        font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;
+        color:var(--text-tertiary); background:var(--surface-secondary);
+    }
+    .badge {
+        display:inline-flex; align-items:center; padding:0.24rem 0.55rem; border-radius:999px;
+        font-size:0.72rem; font-weight:800;
+    }
+    .badge.good { background:#dcfce7; color:#166534; }
+    .badge.warn { background:#fef3c7; color:#92400e; }
+    .badge.bad { background:#fee2e2; color:#991b1b; }
+    .badge.neutral { background:var(--surface-secondary); color:var(--text-secondary); }
+    .empty-card { text-align:center; color:var(--text-secondary); }
+    @media (max-width: 980px) { .filters-grid { grid-template-columns:1fr 1fr; } }
+    @media (max-width: 640px) {
+        .filters-grid { grid-template-columns:1fr; }
+        .chart-wrap { height:320px; }
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="analysis-shell">
+    <section class="hero-card">
+        <h1 class="hero-title">📊 Análises Comparativas de Indicadores</h1>
+        <p class="hero-subtitle">
+            Referência funcional do APP31 trazida para o contexto de Indicadores no APP32. Compare metas e medições históricas
+            por período, com consolidação visual e tabela estatística.
+        </p>
+        <div class="alert-card">
+            <strong>Como usar:</strong> selecione um ou mais indicadores, marque as metas desejadas, ajuste o período e gere a análise.
+        </div>
+    </section>
+
+    <section class="panel-card">
+        <h2 class="panel-title">Filtros de análise</h2>
+        <div class="filters-grid">
+            <div class="field">
+                <label for="indicatorSearch">Buscar indicador</label>
+                <input id="indicatorSearch" type="search" placeholder="Código ou nome do indicador">
+            </div>
+            <div class="field">
+                <label for="periodStart">Data inicial</label>
+                <input id="periodStart" type="date">
+            </div>
+            <div class="field">
+                <label for="periodEnd">Data final</label>
+                <input id="periodEnd" type="date">
+            </div>
+            <div class="field">
+                <label for="viewMode">Visualização</label>
+                <select id="viewMode">
+                    <option value="all">Todos os pontos</option>
+                    <option value="monthly">Agregado por mês</option>
+                    <option value="quarterly">Agregado por trimestre</option>
+                </select>
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-secondary" type="button" onclick="clearSelection()">Limpar seleção</button>
+            <button class="btn btn-primary" type="button" onclick="generateAnalysis()">Gerar análise comparativa</button>
+        </div>
+    </section>
+
+    <section class="panel-card">
+        <h2 class="panel-title">Indicadores e metas</h2>
+        <div id="indicatorsGrid" class="indicators-grid"></div>
+    </section>
+
+    <section id="emptyState" class="empty-card">
+        <h3 style="margin-top:0;">Nenhuma análise gerada</h3>
+        <p>Selecione pelo menos uma meta para visualizar a evolução comparativa e as estatísticas.</p>
+    </section>
+
+    <div id="resultsBlock" class="results-grid" style="display:none;">
+        <section class="chart-card">
+            <h2 class="panel-title">Evolução comparativa</h2>
+            <div class="chart-wrap">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </section>
+
+        <section class="table-card">
+            <h2 class="panel-title">Estatísticas comparativas</h2>
+            <div class="table-responsive">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Indicador / Meta</th>
+                            <th>Meta</th>
+                            <th>Média</th>
+                            <th>Última medição</th>
+                            <th>Total de medições</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparisonTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+const indicators = {{ indicators_payload|tojson }};
+const goals = {{ goals_payload|tojson }};
+const dataRecords = {{ data_payload|tojson }};
+let comparisonChart = null;
+
+const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#65a30d', '#ea580c', '#db2777', '#0f766e'];
+
+document.addEventListener('DOMContentLoaded', () => {
+    setDefaultPeriod();
+    renderIndicators();
+    document.getElementById('indicatorSearch').addEventListener('input', renderIndicators);
+});
+
+function setDefaultPeriod() {
+    const today = new Date();
+    const start = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    document.getElementById('periodEnd').value = today.toISOString().slice(0, 10);
+    document.getElementById('periodStart').value = start.toISOString().slice(0, 10);
+}
+
+function renderIndicators() {
+    const search = (document.getElementById('indicatorSearch').value || '').trim().toLowerCase();
+    const container = document.getElementById('indicatorsGrid');
+
+    const filteredIndicators = indicators.filter(ind => {
+        if (!search) return true;
+        return `${ind.code || ''} ${ind.name || ''}`.toLowerCase().includes(search);
+    });
+
+    if (!filteredIndicators.length) {
+        container.innerHTML = '<div class="empty-card" style="grid-column:1/-1;"><p>Nenhum indicador encontrado para o filtro informado.</p></div>';
+        return;
+    }
+
+    container.innerHTML = filteredIndicators.map(indicator => {
+        const indicatorGoals = goals.filter(goal => goal.indicator_id === indicator.id);
+        const unit = indicator.unit ? ` • Unidade: ${indicator.unit}` : '';
+        const polarity = indicator.polarity === 'negative' ? 'Menor é melhor' : 'Maior é melhor';
+
+        return `
+            <article class="indicator-card">
+                <div class="indicator-head">
+                    <input type="checkbox" class="indicator-checkbox" id="indicator-${indicator.id}" onchange="toggleIndicator(${indicator.id})">
+                    <div>
+                        <div class="indicator-code">${escapeHtml(indicator.code || 'Sem código')}</div>
+                        <div class="indicator-name">${escapeHtml(indicator.name || 'Indicador')}</div>
+                        <div class="indicator-meta">${escapeHtml(polarity)}${escapeHtml(unit)}</div>
+                    </div>
+                </div>
+                <div class="goals-box" id="goals-${indicator.id}" style="display:none;">
+                    ${indicatorGoals.length ? indicatorGoals.map(goal => `
+                        <label class="goal-card">
+                            <input type="checkbox" class="goal-checkbox" data-indicator-id="${indicator.id}" data-goal-id="${goal.id}">
+                            <div>
+                                <div class="goal-title">${escapeHtml(goal.code || 'Meta')}</div>
+                                <div class="goal-meta">
+                                    Valor da meta: <strong>${formatNumber(goal.goal_value)}</strong><br>
+                                    ${describeGoalPeriod(goal)}
+                                </div>
+                            </div>
+                        </label>
+                    `).join('') : '<div class="goal-card"><div><div class="goal-title">Sem metas cadastradas</div><div class="goal-meta">Este indicador ainda não possui metas para comparação.</div></div></div>'}
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+function toggleIndicator(indicatorId) {
+    const checked = document.getElementById(`indicator-${indicatorId}`).checked;
+    const goalsBox = document.getElementById(`goals-${indicatorId}`);
+    goalsBox.style.display = checked ? 'grid' : 'none';
+
+    if (!checked) {
+        goalsBox.querySelectorAll('.goal-checkbox').forEach(input => input.checked = false);
+    }
+}
+
+function clearSelection() {
+    document.querySelectorAll('.indicator-checkbox').forEach(input => input.checked = false);
+    document.querySelectorAll('.goal-checkbox').forEach(input => input.checked = false);
+    document.querySelectorAll('[id^="goals-"]').forEach(box => box.style.display = 'none');
+
+    document.getElementById('resultsBlock').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+
+    if (comparisonChart) {
+        comparisonChart.destroy();
+        comparisonChart = null;
+    }
+}
+
+function generateAnalysis() {
+    const selectedGoals = Array.from(document.querySelectorAll('.goal-checkbox:checked')).map(input => ({
+        indicatorId: Number(input.dataset.indicatorId),
+        goalId: Number(input.dataset.goalId)
+    }));
+
+    if (!selectedGoals.length) {
+        alert('Selecione pelo menos uma meta para gerar a análise comparativa.');
+        return;
+    }
+
+    const periodStart = document.getElementById('periodStart').value || null;
+    const periodEnd = document.getElementById('periodEnd').value || null;
+    const viewMode = document.getElementById('viewMode').value;
+
+    const datasets = buildDatasets(selectedGoals, periodStart, periodEnd, viewMode);
+    const stats = buildStats(selectedGoals, periodStart, periodEnd);
+
+    if (!datasets.length) {
+        alert('Não há medições no período selecionado para as metas escolhidas.');
+        return;
+    }
+
+    renderChart(datasets);
+    renderStatsTable(stats);
+    document.getElementById('resultsBlock').style.display = 'grid';
+    document.getElementById('emptyState').style.display = 'none';
+}
+
+function buildDatasets(selectedGoals, periodStart, periodEnd, viewMode) {
+    return selectedGoals.map((selection, index) => {
+        const indicator = indicators.find(item => item.id === selection.indicatorId);
+        const goal = goals.find(item => item.id === selection.goalId);
+        if (!indicator || !goal) return null;
+
+        let records = dataRecords
+            .filter(item => item.goal_id === goal.id && item.measured_date)
+            .filter(item => !periodStart || item.measured_date >= periodStart)
+            .filter(item => !periodEnd || item.measured_date <= periodEnd)
+            .sort((a, b) => new Date(a.measured_date) - new Date(b.measured_date));
+
+        if (viewMode !== 'all') {
+            records = aggregateRecords(records, viewMode);
+        }
+
+        return {
+            label: `${indicator.code || indicator.name} • ${goal.code || 'Meta'}`,
+            data: records.map(item => ({ x: item.measured_date, y: item.measured_value })),
+            borderColor: CHART_COLORS[index % CHART_COLORS.length],
+            backgroundColor: `${CHART_COLORS[index % CHART_COLORS.length]}33`,
+            borderWidth: 2,
+            pointRadius: 4,
+            tension: 0.25,
+            fill: false
+        };
+    }).filter(Boolean).filter(item => item.data.length > 0);
+}
+
+function aggregateRecords(records, mode) {
+    const buckets = new Map();
+
+    records.forEach(record => {
+        const date = new Date(record.measured_date);
+        const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+        const quarterMonth = Math.floor(date.getMonth() / 3) * 3 + 1;
+        const quarter = `${date.getFullYear()}-${String(quarterMonth).padStart(2, '0')}-01`;
+        const key = mode === 'quarterly' ? quarter : month;
+        const current = buckets.get(key) || { measured_date: key, measured_value: 0, count: 0 };
+        current.measured_value += Number(record.measured_value || 0);
+        current.count += 1;
+        buckets.set(key, current);
+    });
+
+    return Array.from(buckets.values())
+        .sort((a, b) => new Date(a.measured_date) - new Date(b.measured_date))
+        .map(item => ({
+            measured_date: item.measured_date,
+            measured_value: Number((item.measured_value / item.count).toFixed(2))
+        }));
+}
+
+function buildStats(selectedGoals, periodStart, periodEnd) {
+    return selectedGoals.map(selection => {
+        const indicator = indicators.find(item => item.id === selection.indicatorId);
+        const goal = goals.find(item => item.id === selection.goalId);
+        if (!indicator || !goal) return null;
+
+        const records = dataRecords
+            .filter(item => item.goal_id === goal.id && item.measured_date)
+            .filter(item => !periodStart || item.measured_date >= periodStart)
+            .filter(item => !periodEnd || item.measured_date <= periodEnd)
+            .sort((a, b) => new Date(a.measured_date) - new Date(b.measured_date));
+
+        const count = records.length;
+        const lastValue = count ? Number(records[count - 1].measured_value || 0) : null;
+        const avg = count
+            ? Number((records.reduce((sum, item) => sum + Number(item.measured_value || 0), 0) / count).toFixed(2))
+            : null;
+        const goalValue = Number(goal.goal_value || 0);
+
+        let performance = null;
+        if (goalValue > 0 && avg !== null) {
+            performance = indicator.polarity === 'negative'
+                ? Number(((goalValue / avg) * 100).toFixed(1))
+                : Number(((avg / goalValue) * 100).toFixed(1));
+        }
+
+        return {
+            indicatorLabel: `${indicator.code || indicator.name} • ${goal.code || 'Meta'}`,
+            goalValue,
+            averageValue: avg,
+            lastValue,
+            count,
+            performance
+        };
+    }).filter(Boolean);
+}
+
+function renderChart(datasets) {
+    const ctx = document.getElementById('comparisonChart');
+    if (comparisonChart) comparisonChart.destroy();
+
+    comparisonChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            parsing: false,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { unit: 'month' },
+                    ticks: { color: '#64748b' },
+                    grid: { color: 'rgba(148, 163, 184, 0.12)' }
+                },
+                y: {
+                    beginAtZero: false,
+                    ticks: { color: '#64748b' },
+                    grid: { color: 'rgba(148, 163, 184, 0.12)' }
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `${context.dataset.label}: ${formatNumber(context.parsed.y)}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderStatsTable(stats) {
+    const tbody = document.getElementById('comparisonTableBody');
+    tbody.innerHTML = stats.map(item => `
+        <tr>
+            <td>${escapeHtml(item.indicatorLabel)}</td>
+            <td>${formatNumber(item.goalValue)}</td>
+            <td>${formatNumber(item.averageValue)}</td>
+            <td>${formatNumber(item.lastValue)}</td>
+            <td>${item.count}</td>
+            <td>${performanceBadge(item.performance)}</td>
+        </tr>
+    `).join('');
+}
+
+function performanceBadge(value) {
+    if (value === null || Number.isNaN(value)) return '<span class="badge neutral">Sem base</span>';
+    if (value >= 100) return `<span class="badge good">${formatNumber(value)}%</span>`;
+    if (value >= 80) return `<span class="badge warn">${formatNumber(value)}%</span>`;
+    return `<span class="badge bad">${formatNumber(value)}%</span>`;
+}
+
+function describeGoalPeriod(goal) {
+    if (goal.period_start && goal.period_end) {
+        return `Período: ${formatDate(goal.period_start)} até ${formatDate(goal.period_end)}`;
+    }
+    if (goal.goal_date) {
+        return `Prazo: ${formatDate(goal.goal_date)}`;
+    }
+    return 'Período não informado';
+}
+
+function formatDate(value) {
+    if (!value) return '—';
+    const date = new Date(`${value}T00:00:00`);
+    return date.toLocaleDateString('pt-BR');
+}
+
+function formatNumber(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+    return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+</script>
+{% endblock %}

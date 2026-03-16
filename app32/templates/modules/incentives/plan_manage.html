@@ -1,0 +1,970 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ rule_set.name }} | Plano de Incentivo | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="{{ url_for('incentives.dashboard') }}">Incentivos</a>
+<span class="sep">/</span>
+<span class="current">{{ rule_set.name }}</span>
+{% endblock %}
+
+{% block head %}
+<script>
+    /* ── Auxiliares de Formatação JS (Early Load) ───────────────────────── */
+function parseBrFloat(str) {
+    if (!str) return 0;
+    if (typeof str === 'number') return str;
+    let clean = str.toString().replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+    return parseFloat(clean) || 0;
+}
+function formatBrNumber(val, decimals = 2) {
+    if (val === null || val === undefined || isNaN(val)) return "";
+    return new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    }).format(val);
+}
+function applyNumericMask(input, type = 'factor') {
+    if (!input) return;
+    input.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, "");
+        if (!value) { e.target.value = ""; return; }
+        let floatVal = parseFloat(value) / 100;
+        if (type === 'value') { e.target.value = formatBrNumber(floatVal, 2); }
+        else { e.target.value = floatVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    });
+    input.addEventListener('focus', (e) => e.target.select());
+}
+</script>
+<style>
+
+    /* ── Plan Overview Info ──────────────────────────────────────────────── */
+    .plan-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .plan-info-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+    }
+    .plan-info-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        letter-spacing: 0.06em;
+        margin-bottom: 4px;
+    }
+    .plan-info-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    /* ── Participants Table ───────────────────────────────────────────────── */
+    .participants-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 6px;
+    }
+    .participants-table th {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        letter-spacing: 0.06em;
+        padding: 0 1rem 8px;
+        text-align: left;
+    }
+    .participants-table td {
+        background: var(--surface);
+        padding: 12px 1rem;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        font-size: 0.85rem;
+        color: var(--text-primary);
+    }
+    .participants-table td:first-child {
+        border-left: 1px solid var(--border);
+        border-radius: 12px 0 0 12px;
+    }
+    .participants-table td:last-child {
+        border-right: 1px solid var(--border);
+        border-radius: 0 12px 12px 0;
+    }
+    .valor-input {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        width: 120px;
+        text-align: right;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+    .valor-input:focus { border-color: var(--primary); }
+
+    /* ── Vetores Cards ───────────────────────────────────────────────────── */
+    .vetores-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .vetor-card {
+        background: var(--surface);
+        border: 2px solid var(--border);
+        border-radius: 18px;
+        padding: 1.25rem 1.5rem;
+        transition: all 0.2s;
+        position: relative;
+    }
+    .vetor-card.desconto_base { border-left: 6px solid #6366f1; }
+    .vetor-card.multiplicador { border-left: 6px solid #10b981; }
+    .vetor-card.redutor       { border-left: 6px solid #ef4444; }
+    .vetor-card.bloqueador    { border-left: 6px solid #f59e0b; }
+    .vetor-card:hover { box-shadow: var(--shadow-md); }
+
+    .vetor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.6rem 0.85rem;
+    }
+    
+    .vetor-body {
+        transition: max-height 0.3s ease-out, opacity 0.2s, margin 0.2s;
+        overflow: hidden;
+        max-height: 1200px;
+        opacity: 1;
+        padding: 0 0.85rem 0.85rem 0.85rem;
+    }
+
+    .vetor-card.collapsed .vetor-body {
+        max-height: 0;
+        opacity: 0;
+        padding-bottom: 0;
+    }
+    
+    .vetor-card.collapsed .vetor-header { margin-bottom: 0; }
+    
+    .toggle-chevron {
+        transition: transform 0.2s;
+        color: var(--text-tertiary);
+        font-size: 0.7rem;
+    }
+    .vetor-card.collapsed .toggle-chevron { transform: rotate(-90deg); }
+
+    .vetor-type-tag {
+        font-size: 0.55rem;
+        font-weight: 800;
+        padding: 1px 5px;
+        border-radius: 6px;
+        text-transform: uppercase;
+    }
+    .vetor-type-tag.desconto_base { background: #e0e7ff; color: #3730a3; }
+    .vetor-type-tag.multiplicador, .vetor-type-tag.bonus { background: #d1fae5; color: #065f46; }
+    .vetor-type-tag.redutor { background: #fee2e2; color: #991b1b; }
+    .vetor-type-tag.bloqueador { background: #fef3c7; color: #92400e; }
+
+    .vf-label {
+        font-size: 0.55rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 0;
+        display: block;
+        white-space: nowrap;
+    }
+    .vf-input {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 3px 6px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        width: 100%;
+        height: 24px;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+    .vf-input:focus { border-color: var(--primary); }
+    .vf-select { appearance: none; }
+
+    /* ── Add Form Panels ─────────────────────────────────────────────────── */
+    .add-panel {
+        background: var(--surface);
+        border: 2px dashed var(--primary-light);
+        border-radius: 10px;
+        padding: 0.75rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+        display: none;
+    }
+    .add-panel.open { display: block; }
+    .show-on-edit { display: none !important; }
+    .page-editing .show-on-edit { display: inline-flex !important; }
+    .show-on-view { display: inline-flex !important; }
+    .page-editing .show-on-view { display: none !important; }
+
+    .collapsed-label { display: inline; }
+    .expanded-label { display: none; }
+    .vetor-card:not(.collapsed) .collapsed-label { display: none; }
+    .vetor-card:not(.collapsed) .expanded-label { display: inline; }
+
+    /* Estilo para inputs desabilitados por estado visual */
+    .page-viewing input:not(.always-enabled), 
+    .page-viewing select:not(.always-enabled) {
+        pointer-events: none;
+        background: transparent !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+        color: var(--text-primary);
+    }
+
+    /* Seções Colapsáveis Base */
+    .section-collapsible {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .sections-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+    .section-header {
+        padding: 0.75rem 1rem;
+        background: var(--surface-secondary);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        user-select: none;
+    }
+    .section-title {
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .section-content {
+        padding: 1rem;
+        transition: max-height 0.3s ease-out;
+    }
+    .section-collapsible.collapsed .section-content {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        display: none;
+    }
+    .section-collapsible.collapsed .section-header {
+        border-bottom: none;
+    }
+    .section-chevron {
+        transition: transform 0.2s;
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+    .section-collapsible.collapsed .section-chevron {
+        transform: rotate(-90deg);
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper" style="padding-top:1rem;">
+
+    <div class="workspace-header" id="mainHeader" style="margin-bottom:1rem; display: flex; justify-content: space-between; align-items: center;">
+        <div class="header-content">
+            <h1 class="text-h1" style="font-size:1.25rem; margin-bottom:2px;">{{ rule_set.name }}</h1>
+            <p class="text-secondary" style="font-size:0.72rem;">
+                <span class="badge-pill bg-active">{{ rule_set.periodicity | upper }}</span>
+                {% if rule_set.description %} — {{ rule_set.description }}{% endif %}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <!-- BOTÕES MODO VIEW -->
+            <div class="show-on-view" style="gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="setEditMode(true)" style="padding: 4px 12px; font-size: 0.75rem; display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-edit"></i> Editar Plano
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="deletePlan()" style="color:#ef4444; padding: 4px 12px; font-size: 0.75rem;">
+                    <i class="fas fa-trash"></i> Excluir Plano
+                </button>
+            </div>
+            <!-- BOTÕES MODO EDIT -->
+            <div class="show-on-edit" style="gap:8px;">
+                <button class="btn btn-success btn-sm" onclick="setEditMode(false)" style="padding: 4px 12px; font-size: 0.75rem; background:#10b981; border-color:#10b981; display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-check"></i> Salvar e Bloquear
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="location.reload()" style="padding: 4px 12px; font-size: 0.75rem;">
+                    Cancelar
+                </button>
+            </div>
+            <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-secondary btn-sm" title="Voltar" style="padding: 4px 10px;">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="alert alert-{{ cat }}" style="margin-bottom:1rem;">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+
+    <!-- ── SEÇÕES DO PLANO ────────────────────────────────────────────── -->
+    <div class="sections-container">
+
+    <!-- ── SEÇÃO 1: VISÃO GERAL ────────────────────────────────────────── -->
+    <div class="section-collapsible" id="sec-overview">
+        <div class="section-header" onclick="toggleSection('sec-overview')">
+            <div class="section-title">📋 Visão Geral do Plano</div>
+            <i class="fas fa-chevron-down section-chevron"></i>
+        </div>
+        <div class="section-content">
+        <div class="plan-info-grid">
+            <div class="plan-info-item">
+                <div class="plan-info-label">Nome</div>
+                <input type="text" class="vf-input" value="{{ rule_set.name }}" 
+                    onblur="updatePlan('name', this.value); markChange()">
+            </div>
+            <div class="plan-info-item">
+                <div class="plan-info-label">Periodicidade</div>
+                <select class="vf-input vf-select" onchange="updatePlan('periodicity', this.value); markChange()">
+                    <option value="weekly" {{ 'selected' if rule_set.periodicity=='weekly' }}>Semanal</option>
+                    <option value="monthly" {{ 'selected' if rule_set.periodicity=='monthly' }}>Mensal</option>
+                    <option value="quarterly" {{ 'selected' if rule_set.periodicity=='quarterly' }}>Trimestral</option>
+                    <option value="yearly" {{ 'selected' if rule_set.periodicity=='yearly' }}>Anual</option>
+                </select>
+            </div>
+            <div class="plan-info-item">
+                <div class="plan-info-label">Vigência Início</div>
+                <input type="date" class="vf-input" value="{{ rule_set.valid_from }}" 
+                    onchange="updatePlan('valid_from', this.value); markChange()">
+            </div>
+            <div class="plan-info-item">
+                <div class="plan-info-label">Vigência Fim</div>
+                <input type="date" class="vf-input" value="{{ rule_set.valid_to }}" 
+                    onchange="updatePlan('valid_to', this.value); markChange()">
+            </div>
+            <div class="plan-info-item">
+                <div class="plan-info-label">Participantes</div>
+                <div class="plan-info-value">{{ participants|length }}</div>
+            </div>
+            <div class="plan-info-item">
+                <div class="plan-info-label">Vetores</div>
+                <div class="plan-info-value">{{ vetores|length }}</div>
+            </div>
+            <div class="plan-info-item">
+                <div class="plan-info-label">Redutor Máximo Total (Fator)</div>
+                <div class="plan-info-value">
+                    <input type="text" class="vf-input" style="width:100px;"
+                        id="planMaxRed"
+                        value="{{ '%.2f'|format(rule_set.max_red_total)|replace('.',',') if rule_set.max_red_total else '' }}"
+                        placeholder="Ex: 0,70"
+                        onblur="updatePlan('max_red_total', parseBrFloat(this.value)); markChange()">
+                    <script>applyNumericMask(document.getElementById('planMaxRed'), 'factor');</script>
+                </div>
+            </div>
+        </div>
+
+        {% if rule_set.description %}
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+            <div class="plan-info-label" style="margin-bottom:6px;">Descrição / Objetivo</div>
+            <p style="margin:0;font-size:0.88rem;color:var(--text-secondary);line-height:1.6;">{{ rule_set.description }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Resumo rápido Participantes & Vetores -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;">
+                <div class="plan-info-label" style="margin-bottom:0.75rem;">👥 Participantes</div>
+                {% if participants %}
+                    {% for p in participants[:5] %}
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle);">
+                        <span style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">{{ p.employee.name if p.employee else '—' }}</span>
+                        <span style="font-size:0.82rem;color:var(--text-secondary);">R$ {{ p.valor_base | format_currency_br }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if participants|length > 5 %}
+                    <div style="font-size:0.75rem;color:var(--text-tertiary);margin-top:8px;">+{{ participants|length - 5 }} mais...</div>
+                    {% endif %}
+                {% else %}
+                    <div style="color:var(--text-tertiary);font-size:0.82rem;padding:1rem 0;">Nenhum participante configurado.</div>
+                {% endif %}
+                <a href="?tab=participants" class="btn btn-secondary btn-sm" style="margin-top:12px;font-size:0.75rem;">Gerenciar →</a>
+            </div>
+
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem;">
+                <div class="plan-info-label" style="margin-bottom:0.75rem;">🎯 Vetores de Premiação</div>
+                {% if vetores %}
+                    {% for v in vetores %}
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-subtle);">
+                        <span style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">{{ v.indicator.name if v.indicator else '—' }}</span>
+                        <span class="vetor-type-badge badge-{{ v.vetor_type }}" style="font-size:0.6rem;">{{ v.vetor_type }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="color:var(--text-tertiary);font-size:0.82rem;padding:1rem 0;">Nenhum vetor configurado.</div>
+                {% endif %}
+                <a href="?tab=vetores" class="btn btn-secondary btn-sm" style="margin-top:12px;font-size:0.75rem;">Gerenciar →</a>
+            </div>
+        </div><!-- /grid resumo -->
+        </div><!-- /section-content overview -->
+    </div><!-- /section-overview -->
+
+    <!-- ── SEÇÃO 2: PARTICIPANTES ────────────────────────────────────────── -->
+    <div class="section-collapsible collapsed" id="sec-participants">
+        <div class="section-header" onclick="toggleSection('sec-participants')">
+            <div class="section-title">
+                👥 Participantes 
+                <span class="tab-badge" style="margin-left:8px; display:inline-flex;">{{ participants|length }}</span>
+            </div>
+            <i class="fas fa-chevron-down section-chevron"></i>
+        </div>
+        <div class="section-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <p style="margin:0;font-size:0.75rem;color:var(--text-tertiary);">Configuração do valor base e elegibilidade por colaborador.</p>
+                <button class="btn btn-special btn-xs show-on-edit" onclick="togglePanel('addParticipant')" style="height:26px; padding:2px 10px;">
+                    <i class="fas fa-plus"></i> Adicionar
+                </button>
+            </div>
+
+        {% if participants %}
+        <table class="participants-table">
+            <thead>
+                <tr>
+                    <th>Colaborador</th>
+                    <th>Valor Base (R$)</th>
+                    <th>Entrada no Plano</th>
+                    <th>Elegível</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="participantsBody">
+            {% for p in participants %}
+            <tr id="part-row-{{ p.id }}">
+                <td>
+                    <div style="font-weight:700;">{{ p.employee.name if p.employee else '—' }}</div>
+                    {% if p.notas %}<div style="font-size:0.72rem;color:var(--text-tertiary);">{{ p.notas }}</div>{% endif %}
+                </td>
+                <td>
+                    <input class="valor-input" type="text"
+                        value="{{ p.valor_base | format_currency_br }}"
+                        onblur="updateParticipant({{ p.id }}, 'valor_base', parseBrFloat(this.value))"
+                        onfocus="this.value = this.value.replace(/\./g, '')"
+                        title="Valor base para cálculo do bônus">
+                </td>
+                <td style="font-size:0.82rem;color:var(--text-secondary);">
+                    {{ p.data_entrada or '—' }}
+                </td>
+                <td>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                        <input type="checkbox" {{ 'checked' if p.elegivel }}
+                            onchange="updateParticipant({{ p.id }}, 'elegivel', this.checked)"
+                            style="width:16px;height:16px;accent-color:var(--primary);">
+                        <span style="font-size:0.78rem;color:var(--text-secondary);">{{ 'Sim' if p.elegivel else 'Não' }}</span>
+                    </label>
+                </td>
+                <td>
+                    <button class="btn-remove show-on-edit" onclick="removeParticipant({{ p.id }})" title="Remover do plano"
+                        style="background:rgba(239,68,68,0.08);color:#ef4444;border:none;padding:6px 10px;border-radius:8px;cursor:pointer;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-msg">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">👥</div>
+            <div style="font-weight:700;margin-bottom:6px;">Nenhum participante</div>
+            <div style="font-size:0.82rem;">Adicione colaboradores para configurar seus valores base.</div>
+        </div>
+        {% endif %}
+
+        <!-- Add Participant Panel -->
+        <div class="add-panel" id="addParticipant">
+            <div style="font-size:0.75rem;font-weight:800;text-transform:uppercase;color:var(--primary);margin-bottom:1rem;letter-spacing:0.06em;">
+                <i class="fas fa-user-plus" style="margin-right:6px;"></i> Adicionar Colaborador
+            </div>
+            <div class="field-row" style="margin-bottom:1rem;">
+                <div>
+                    <label class="field-label">Colaborador *</label>
+                    <select id="newEmpId" class="field-select">
+                        <option value="">Selecione...</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.id }}">{{ emp.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label">Valor Base (R$) *</label>
+                    <input id="newValorBase" type="text" class="field-input" placeholder="Ex: 5.000,00">
+                </div>
+                <div>
+                    <label class="field-label">Entrada no Plano</label>
+                    <input id="newEntrada" type="date" class="field-input">
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <button class="btn btn-secondary btn-sm" onclick="togglePanel('addParticipant')">Cancelar</button>
+                <button class="btn btn-special btn-sm" onclick="addParticipant()">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+        </div><!-- /section-content participants -->
+    </div><!-- /section-participants -->
+
+    <!-- ── SEÇÃO 3: VETORES ────────────────────────────────────────────── -->
+    <div class="section-collapsible" id="sec-vetores">
+        <div class="section-header" onclick="toggleSection('sec-vetores')">
+            <div class="section-title">
+                🎯 Vetores de Premiação
+                <span class="tab-badge" style="margin-left:8px; display:inline-flex;">{{ vetores|length }}</span>
+            </div>
+            <i class="fas fa-chevron-down section-chevron"></i>
+        </div>
+        <div class="section-content">
+
+            <!-- Configurações Globais (embutidas nos vetores) -->
+            <div style="background:var(--surface-secondary); border:1px solid var(--border); border-radius:10px; padding:0.6rem 0.85rem; margin-bottom:1rem;">
+                <div style="font-size:0.5rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);letter-spacing:0.06em;margin-bottom:0.4rem;">⚙️ Limites Globais</div>
+            <div style="display:flex; gap:1.5rem; align-items: center;">
+                <div style="display:flex; align-items:center; gap:8px; flex: 1;">
+                    <label class="vf-label" style="width: auto; min-width: 140px;">Fator Máximo (Mult.)</label>
+                    <input type="text" class="vf-input" style="max-width: 120px;"
+                        id="globalMaxMult"
+                        value="{{ '%.2f'|format(rule_set.max_red_total|float)|replace('.',',') if rule_set.max_red_total else '' }}"
+                        placeholder="Ex: 1,30"
+                        onblur="updatePlan('max_red_total', parseBrFloat(this.value))">
+                    <script>applyNumericMask(document.getElementById('globalMaxMult'), 'factor');</script>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex: 1; opacity: 0.5;">
+                    <label class="vf-label" style="width: auto; min-width: 140px;">Fator Máximo (Red.)</label>
+                    <input type="text" class="vf-input" style="max-width: 120px;"
+                        id="globalMaxRed" value="" placeholder="Ex: 0,50" disabled>
+                </div>
+            </div>
+        </div>
+
+        <!-- CABEÇALHO LISTA DE VETORES -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+            <div>
+                <h3 style="margin:0;font-size:0.8rem;font-weight:800;">🎯 Vetores de Premiação</h3>
+            </div>
+            <button class="btn btn-special btn-xs show-on-edit" onclick="togglePanel('addVetor')" style="padding: 2px 10px; font-size: 0.7rem; height: 26px;">
+                <i class="fas fa-plus"></i> Novo Vetor
+            </button>
+        </div>
+
+        <!-- LEGENDA DOS TIPOS -->
+        <div style="display:flex;gap:1rem;margin-bottom:0.75rem;flex-wrap:wrap;padding:0.25rem 0.5rem; border-radius:6px;">
+            <div style="display:flex;align-items:center;gap:4px;font-size:0.58rem;color:var(--text-tertiary); opacity: 0.8;">
+                <i class="fas fa-minus-circle" style="color:#6366f1;"></i> <b>Desc. Base:</b> abate valor
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:0.58rem;color:var(--text-tertiary); opacity: 0.8;">
+                <i class="fas fa-times-circle" style="color:#10b981;"></i> <b>Mult.:</b> fator prêmio
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:0.58rem;color:var(--text-tertiary); opacity: 0.8;">
+                <i class="fas fa-arrow-down" style="color:#ef4444;"></i> <b>Redutor:</b> penalidade
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;font-size:0.58rem;color:var(--text-tertiary); opacity: 0.8;">
+                <i class="fas fa-ban" style="color:#f59e0b;"></i> <b>Bloqueador:</b> trava pgto
+            </div>
+        </div>
+
+        <!-- LISTA DE VETORES CONFIGURADOS -->
+        {% if vetores %}
+        <div class="vetores-grid" id="vetoresGrid">
+            {% for v in vetores %}
+            {% set rc = v.ranges_config or [] %}
+            <div class="vetor-card {{ v.vetor_type }} collapsed" id="vetor-card-{{ v.id }}">
+                <div class="vetor-header" onclick="toggleVetorCollapse({{ v.id }})" style="cursor:pointer;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <i class="fas fa-chevron-down toggle-chevron"></i>
+                        <div>
+                            <div style="font-weight:800;font-size:0.95rem;margin-bottom:2px;">
+                                {{ v.indicator.name if v.indicator else '—' }}
+                            </div>
+                                <div style="font-size:0.72rem;color:var(--text-tertiary); display: flex; align-items:center; gap:8px;">
+                                <span class="vetor-type-tag {{ v.vetor_type }}">
+                                    {% if v.vetor_type == 'desconto_base' %}🔵 DESCONTO{% elif v.vetor_type in ['multiplicador','bonus'] %}🟢 MULTIPLICADOR{% elif v.vetor_type == 'redutor' %}🔴 REDUTOR{% else %}🟡 BLOQUEADOR{% endif %}
+                                </span>
+                                <span>· {{ v.indicator.code if v.indicator else '' }}</span>
+                                <span>· <span style="color:var(--primary);font-weight:600;">{{ rule_set.periodicity | capitalize }}</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;" onclick="event.stopPropagation()">
+                        <!-- Seletor de Tipo (Só aparece ao editar) -->
+                        <select class="vf-input vf-select show-on-edit" style="width:auto;font-size:0.7rem;padding:2px 6px;height:24px;"
+                            onchange="updateVetor({{ v.id }}, 'vetor_type', this.value); location.reload()">
+                            <option value="desconto_base" {{ 'selected' if v.vetor_type=='desconto_base' }}>🔵 Desconto</option>
+                            <option value="multiplicador"  {{ 'selected' if v.vetor_type in ['multiplicador','bonus'] }}>🟢 Mult.</option>
+                            <option value="redutor"        {{ 'selected' if v.vetor_type=='redutor' }}>🔴 Redutor</option>
+                            <option value="bloqueador"     {{ 'selected' if v.vetor_type=='bloqueador' }}>🟡 Bloq.</option>
+                        </select>
+                        
+                        <!-- Botão Expandir/Recolher (Sempre visível) -->
+                        <button class="btn btn-secondary btn-xs" onclick="toggleVetorCollapse({{ v.id }})" style="padding:2px 8px; font-size:0.65rem; height:24px;">
+                            <span class="collapsed-label"><i class="fas fa-edit"></i> Editar</span>
+                            <span class="expanded-label" style="display:none;"><i class="fas fa-check"></i> Salvar</span>
+                        </button>
+
+                        <button onclick="removeVetor({{ v.id }})" title="Excluir Vetor" class="show-on-edit"
+                            style="background:rgba(239,68,68,0.08);color:#ef4444;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;height:24px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="vetor-body">
+                    <!-- TABELA DE FAIXAS -->
+                    <table style="width:100%;border-collapse:separate;border-spacing:0 4px;margin-top:0.75rem;">
+                        <thead>
+                            <tr style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);">
+                                <th style="padding:0 8px;text-align:left;">Faixa</th>
+                                <th style="padding:0 8px;text-align:left;">
+                                    {% if v.vetor_type == 'desconto_base' %}Valor (R$)
+                                    {% elif v.vetor_type == 'bloqueador' %}Bloquear?
+                                    {% else %}Fator{% endif %}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set bands = [
+                                ('red',    '🔴', 'Vermelho (Crítico)', '#fef2f2', '#ef4444'),
+                                ('yellow', '🟡', 'Amarelo (Alerta)',   '#fefce8', '#d97706'),
+                                ('green',  '🟢', 'Verde (Na Meta)',    '#f0fdf4', '#16a34a'),
+                                ('blue',   '🔵', 'Azul (Superação)',   '#eff6ff', '#2563eb')
+                            ] %}
+                            {% for color, icon, label, bg, fg in bands %}
+                            {% set band_val = namespace(v='') %}
+                            {% for r in rc %}{% if r.color == color %}{% set band_val.v = r.value %}{% endif %}{% endfor %}
+                            <tr style="background:{{ bg }};">
+                                <td style="padding:6px 8px;border-radius:8px 0 0 8px;font-size:0.78rem;font-weight:700;color:{{ fg }};">
+                                    {{ icon }} {{ label }}
+                                </td>
+                                <td style="padding:6px 8px;border-radius:0 8px 8px 0;">
+                                    {% if v.vetor_type == 'bloqueador' %}
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                                        <input type="checkbox" {{ 'checked' if band_val.v }}
+                                            onchange="saveVetorRange({{ v.id }}, '{{ color }}', this.checked ? 1 : 0)"
+                                            style="width:14px;height:14px;accent-color:{{ fg }};">
+                                        <span style="font-size:0.75rem;">Bloquear</span>
+                                    </label>
+                                    {% else %}
+                                    <input type="text" class="vf-input band-input-{{ v.id }}-{{ color }}" style="width:110px;font-size:0.8rem;padding:4px 8px;"
+                                        value="{{ (band_val.v | format_currency_br) if v.vetor_type == 'desconto_base' else ('%.2f'|format(band_val.v|float)|replace('.',',')) if band_val.v else '' }}"
+                                        placeholder="{{ 'Ex: 1.000,00' if v.vetor_type == 'desconto_base' else 'Ex: 0,80' }}"
+                                        onblur="saveVetorRange({{ v.id }}, '{{ color }}', parseBrFloat(this.value))">
+                                    <script>applyNumericMask(document.querySelector('.band-input-{{ v.id }}-{{ color }}'), '{{ "value" if v.vetor_type == "desconto_base" else "factor" }}');</script>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-msg" id="vetoresEmpty">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">🎯</div>
+            <div style="font-weight:700;margin-bottom:6px;">Nenhum Vetor configurado</div>
+            <div style="font-size:0.82rem;">Adicione indicadores e defina como eles impactam o bônus.</div>
+        </div>
+        {% endif %}
+
+        <!-- PAINEL: Adicionar Novo Vetor -->
+        <div class="add-panel" id="addVetor">
+            <div style="font-size:0.75rem;font-weight:800;text-transform:uppercase;color:var(--primary);margin-bottom:1.25rem;letter-spacing:0.06em;">
+                <i class="fas fa-plus-circle" style="margin-right:6px;"></i> Novo Vetor de Premiação
+            </div>
+
+            <div class="field-row" style="margin-bottom:1.25rem;">
+                <div>
+                    <label class="field-label">
+                        Indicador *
+                        <small style="color:var(--text-tertiary);font-weight:400;">({{ rule_set.periodicity | capitalize }})</small>
+                    </label>
+                    <select id="newVetorInd" class="field-select" onchange="onIndicatorChange(this)">
+                        <option value="">Selecione o Indicador...</option>
+                        {% for ind in indicators_available %}
+                        <option value="{{ ind.id }}" data-has-ranges="{{ 'true' if ind.id in indicator_goals_map else 'false' }}">[{{ ind.source_module }}] {{ ind.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not indicators_available %}
+                    <div style="font-size:0.72rem;color:#ef4444;margin-top:4px;">⚠️ Nenhum indicador com periodicidade <strong>{{ rule_set.periodicity }}</strong> encontrado.</div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="field-label">Tipo de Vetor *</label>
+                    <select id="newVetorType" class="field-select" onchange="applyNewVetorVisibility()">
+                        <option value="desconto_base">🔵 Desconto Base — abate do valor base</option>
+                        <option value="multiplicador">🟢 Multiplicador — aumenta o prêmio</option>
+                        <option value="redutor">🔴 Redutor — desconta do atingimento</option>
+                        <option value="bloqueador">🟡 Bloqueador — trava pagamento total</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabela de Faixas por Atingimento -->
+            <div style="margin-bottom:1.25rem;">
+                <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);letter-spacing:0.06em;margin-bottom:0.75rem;">
+                    📊 Configure o valor/fator por Faixa de Atingimento
+                </div>
+                <table style="width:100%;border-collapse:separate;border-spacing:0 6px;">
+                    <thead>
+                        <tr style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);">
+                            <th style="padding:0 10px;text-align:left;width:220px;">Faixa</th>
+                            <th style="padding:0 10px;text-align:left;" id="newRangesColLabel">Fator / Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background:#fef2f2;">
+                            <td style="padding:8px 10px;border-radius:8px 0 0 8px;font-size:0.82rem;font-weight:700;color:#ef4444;">🔴 Vermelho (Crítico)</td>
+                            <td style="padding:8px 10px;border-radius:0 8px 8px 0;"><span id="band_red_wrap"><input type="text" id="band_red" class="field-input" style="width:140px;" placeholder="Ex: 0,50"></span></td>
+                        </tr>
+                        <tr style="background:#fefce8;">
+                            <td style="padding:8px 10px;border-radius:8px 0 0 8px;font-size:0.82rem;font-weight:700;color:#d97706;">🟡 Amarelo (Alerta)</td>
+                            <td style="padding:8px 10px;border-radius:0 8px 8px 0;"><span id="band_yellow_wrap"><input type="text" id="band_yellow" class="field-input" style="width:140px;" placeholder="Ex: 0,80"></span></td>
+                        </tr>
+                        <tr style="background:#f0fdf4;">
+                            <td style="padding:8px 10px;border-radius:8px 0 0 8px;font-size:0.82rem;font-weight:700;color:#16a34a;">🟢 Verde (Na Meta)</td>
+                            <td style="padding:8px 10px;border-radius:0 8px 8px 0;"><span id="band_green_wrap"><input type="text" id="band_green" class="field-input" style="width:140px;" placeholder="Ex: 1,00"></span></td>
+                        </tr>
+                        <tr style="background:#eff6ff;">
+                            <td style="padding:8px 10px;border-radius:8px 0 0 8px;font-size:0.82rem;font-weight:700;color:#2563eb;">🔵 Azul (Superação)</td>
+                            <td style="padding:8px 10px;border-radius:0 8px 8px 0;"><span id="band_blue_wrap"><input type="text" id="band_blue" class="field-input" style="width:140px;" placeholder="Ex: 1,20"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <button class="btn btn-secondary btn-sm" onclick="togglePanel('addVetor')">Cancelar</button>
+                <button class="btn btn-special btn-sm" onclick="addVetor()">
+                    <i class="fas fa-save"></i> Salvar Vetor
+                </button>
+            </div>
+        </div><!-- /add-panel -->
+        </div><!-- /section-content vetores -->
+    </div><!-- /section-vetores -->
+
+    </div><!-- /sections-container -->
+</div><!-- /workspace-wrapper -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+const RULE_SET_ID = {{ rule_set.id or 0 }};
+window.hasChanges = false;
+
+function markChange() { window.hasChanges = true; }
+
+function toggleSection(id) {
+    const sec = document.getElementById(id);
+    sec.classList.toggle('collapsed');
+}
+
+function toggleVetorCollapse(id) {
+    const card = document.getElementById(`vetor-card-${id}`);
+    card.classList.toggle('collapsed');
+}
+
+function togglePanel(id) {
+    const p = document.getElementById(id);
+    p.classList.toggle('open');
+    if (p.classList.contains('open')) {
+        p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (id === 'addVetor') applyNewVetorVisibility();
+    }
+}
+
+/**
+ * Modo de Edição Global
+ */
+function setEditMode(editing) {
+    document.body.classList.toggle('page-editing', editing);
+    document.body.classList.toggle('page-viewing', !editing);
+    
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(el => {
+        if (!el.classList.contains('always-enabled')) {
+            el.disabled = !editing;
+        }
+    });
+
+    if (!editing && window.hasChanges) {
+        showToast('Todas as alterações foram bloqueadas e salvas.');
+        window.hasChanges = false;
+    }
+}
+
+async function deletePlan() {
+    if (!confirm('Deseja EXCLUIR permanentemente este plano e todas as suas regras?')) return;
+    try {
+        const res = await fetch(`/api/incentive-rule-sets/${RULE_SET_ID}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Plano excluído.');
+            setTimeout(() => location.href = '/incentives', 1000);
+        } else {
+            showToast('Erro ao excluir plano.', 'error');
+        }
+    } catch (e) { console.error(e); }
+}
+
+function applyNewVetorVisibility() {
+    const type = document.getElementById('newVetorType')?.value;
+    if (!type) return;
+    const col = document.getElementById('newRangesColLabel');
+    if (col) col.textContent = type === 'desconto_base' ? 'Valor (R$)' : type === 'bloqueador' ? 'Bloquear?' : 'Fator';
+    const bands = ['red', 'yellow', 'green', 'blue'];
+    bands.forEach(color => {
+        const wrap = document.getElementById(`band_${color}_wrap`);
+        if (!wrap) return;
+        if (type === 'bloqueador') {
+            if (!wrap.querySelector('input[type=checkbox]')) {
+                wrap.innerHTML = `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="band_${color}" style="width:16px;height:16px;accent-color:var(--primary);">
+                    <span style="font-size:0.8rem;">Bloquear nesta faixa</span>
+                </label>`;
+            }
+        } else {
+            const isVal = type === 'desconto_base';
+            const ph = isVal ? 'Ex: 1.000,00' : 'Ex: 1,00';
+            const currentVal = wrap.querySelector('input')?.value || "";
+            wrap.innerHTML = `<input type="text" id="band_${color}" class="field-input" style="width:130px;" placeholder="${ph}" value="${currentVal}">`;
+            const inp = document.getElementById(`band_${color}`);
+            applyNumericMask(inp, isVal ? 'value' : 'factor');
+        }
+    });
+}
+
+function onIndicatorChange(select) { applyNewVetorVisibility(); }
+document.addEventListener('DOMContentLoaded', () => { 
+    applyNewVetorVisibility(); 
+    setEditMode(false); // Carrega bloqueado
+});
+
+async function updatePlan(field, value) {
+    try {
+        const res = await fetch(`/incentives/rules/${RULE_SET_ID}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [field]: value })
+        });
+        if (res.ok) showToast('Configuração atualizada!');
+        else showToast('Erro ao atualizar.', 'error');
+    } catch (e) { console.error(e); }
+}
+
+function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:99999;background:${type==='success'?'#10b981':'#ef4444'};color:white;padding:10px 18px;border-radius:12px;font-weight:700;font-size:0.82rem;box-shadow:0 4px 16px rgba(0,0,0,0.15);`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+// ── PARTICIPANTS ──────────────────────────────────────────────────────────────
+
+async function addParticipant() {
+    const empId = document.getElementById('newEmpId').value;
+    const rawValor = document.getElementById('newValorBase').value;
+    const valorBase = parseBrFloat(rawValor);
+    const entrada = document.getElementById('newEntrada').value;
+    if (!empId || isNaN(valorBase)) { showToast('Dados incompletos.', 'error'); return; }
+
+    const res = await fetch(`/incentives/rules/${RULE_SET_ID}/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: empId, valor_base: valorBase, data_entrada: entrada || null })
+    });
+    if (res.ok) { showToast('Adicionado!'); setTimeout(() => location.reload(), 800); }
+    else { const d = await res.json(); showToast(d.error || 'Erro', 'error'); }
+}
+
+async function updateParticipant(id, field, value) {
+    await fetch(`/incentives/participants/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value })
+    });
+    showToast('Salvo!');
+}
+
+async function removeParticipant(id) {
+    if (!confirm('Remover participante?')) return;
+    const res = await fetch(`/incentives/participants/${id}`, { method: 'DELETE' });
+    if (res.ok) { document.getElementById(`part-row-${id}`)?.remove(); showToast('Removido.'); }
+}
+
+// ── VETORES ───────────────────────────────────────────────────────────────────
+
+async function addVetor() {
+    const indId = document.getElementById('newVetorInd').value;
+    const type = document.getElementById('newVetorType').value;
+    if (!indId) { showToast('Selecione o Indicador.', 'error'); return; }
+
+    const BAND_COLORS = ['red', 'yellow', 'green', 'blue'];
+    const ranges_config = [];
+    BAND_COLORS.forEach(color => {
+        const inp = document.getElementById(`band_${color}`);
+        if (!inp) return;
+        ranges_config.push({ color, value: inp.type === 'checkbox' ? (inp.checked ? 1 : 0) : parseBrFloat(inp.value) });
+    });
+
+    const res = await fetch(`/incentives/rules/${RULE_SET_ID}/vetores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ indicator_id: indId, vetor_type: type, ranges_config })
+    });
+    if (res.ok) { showToast('Vetor adicionado!'); setTimeout(() => location.reload(), 800); }
+}
+
+async function saveVetorRange(vetorId, color, value) {
+    await fetch(`/incentives/vetores/${vetorId}/range`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color, value })
+    });
+    showToast('Salvo!');
+}
+
+async function updateVetor(id, field, value) {
+    await fetch(`/incentives/vetores/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value })
+    });
+    showToast('Vetor atualizado!');
+}
+
+async function removeVetor(id) {
+    if (!confirm('Remover vetor?')) return;
+    const res = await fetch(`/incentives/vetores/${id}`, { method: 'DELETE' });
+    if (res.ok) { document.getElementById(`vetor-card-${id}`)?.remove(); showToast('Removido.'); }
+}
+</script>
+{% endblock %}

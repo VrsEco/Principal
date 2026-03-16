@@ -149,21 +149,27 @@ function renderIndicators() {
             <div class="indicator-meta">
                 <span>POL: ${ind.polarity === 'positive' ? 'Crescente' : 'Decrescente'}</span>
                 <span>•</span>
-                <span>META: ${ind.goals && ind.goals.length > 0 ? (ind.goals.find(g => g.status === 'active') || ind.goals[0]).goal_value : '--'}</span>
+                <span>META: ${ind.goals && ind.goals.length > 0 ? formatBR((ind.goals.find(g => g.status === 'active') || ind.goals[0]).goal_value) : '--'}</span>
             </div>
             
             <div class="indicator-value-main">
-                <span class="current-value">${ind.last_value !== null ? ind.last_value : '0.00'}</span>
+                <span class="current-value">${ind.last_value !== null ? formatBR(ind.last_value) : '0,00'}</span>
                 <span class="value-unit">${ind.unit || ''}</span>
             </div>
             
             <div class="indicator-footer">
-                <span class="text-sm ${ind.performance >= 100 ? 'text-success' : 'text-primary'}" style="font-weight: 600;">Progresso: ${ind.performance !== null ? ind.performance + '%' : '--'}</span>
+                <span class="text-sm ${ind.performance >= 100 ? 'text-success' : 'text-primary'}" style="font-weight: 600;">Progresso: ${ind.performance !== null ? formatBR(ind.performance) + '%' : '--'}</span>
                 <a href="/indicators/${ind.id}" class="btn btn-secondary btn-sm">Detalhes</a>
             </div>
 
         </article>
     `).join('');
+}
+
+function formatBR(val) {
+    if (val === null || val === undefined) return '';
+    const numeric = typeof val === 'string' ? parseFloat(val) : val;
+    return numeric.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function selectGroup(id) {

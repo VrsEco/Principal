@@ -1,0 +1,31 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Análises Comparativas | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="/incentives">Incentivos</a>
+<span class="sep">/</span>
+<span class="current">Análises Comparativas</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-header" style="margin-bottom: 2rem;">
+    <div class="header-content">
+        <h1 class="text-h1">📈 Análises Comparativas</h1>
+        <p class="text-secondary">Módulo em desenvolvimento para análise de tendências e performance histórica.</p>
+    </div>
+</div>
+
+<div class="fade-in" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem 2rem; background: var(--surface); border: 2px dashed var(--border); border-radius: 16px; text-align: center;">
+    <div style="width: 80px; height: 80px; background: var(--primary-light); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 1.5rem;">
+        <i class="fas fa-tools"></i>
+    </div>
+    <h2 style="font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">Em Construção</h2>
+    <p style="color: var(--text-secondary); max-width: 400px; line-height: 1.5;">
+        Estamos preparando um dashboard avançado para comparar ciclos, departamentos e desempenho individual ao longo do tempo.
+    </p>
+    <a href="/incentives" class="btn btn-primary" style="margin-top: 2rem;">Voltar ao Dashboard</a>
+</div>
+{% endblock %}

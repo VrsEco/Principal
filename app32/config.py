@@ -141,10 +141,9 @@ class ProductionConfig(Config):
     """Production configuration"""
 
     DEBUG = False
+    SESSION_COOKIE_SECURE = True
     _prod_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
-    SQLALCHEMY_DATABASE_URI = (
-        _prod_database_url or "postgresql://user:password@localhost/bdversusv2"
-    )
+    SQLALCHEMY_DATABASE_URI = _prod_database_url
 
 
 class TestingConfig(Config):

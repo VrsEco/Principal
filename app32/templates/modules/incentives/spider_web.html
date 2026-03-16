@@ -1,162 +1,614 @@
-{% extends "layouts/app.html" %}
+{% extends "layouts/workspace.html" %}
 
-{% block page_title %}Teia de Conexões (Governabilidade){% endblock %}
+{% block title %}Teia de Governança | Versus{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/incentives.css') }}">
-<script src="https://d3js.org/d3.v7.min.js"></script>
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="{{ url_for('incentives.dashboard') }}">Incentivos</a>
+<span class="sep">/</span>
+<span class="current">Teia de Governança</span>
 {% endblock %}
 
-{% block content %}
-<div class="incentive-container">
-    <div class="incentive-header">
-        <div>
-            <h1 class="incentive-title">Teia de Governabilidade</h1>
-            <p style="color: var(--text-secondary)">Visualize a conexão entre Cargos e Indicadores estratégicos.</p>
+{% block head %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+    .canvas-card {
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+        position: relative;
+        height: 75vh;
+        min-height: 650px;
+    }
+
+    .spider-web-canvas {
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 30% 50%, rgba(37,99,235,0.03) 0%, transparent 60%),
+                    radial-gradient(circle at 70% 30%, rgba(124,58,237,0.03) 0%, transparent 60%),
+                    var(--surface-secondary);
+        cursor: grab;
+    }
+    .spider-web-canvas:active { cursor: grabbing; }
+
+    /* Node types */
+    .node-collaborator { fill: #2563eb; stroke: #fff; stroke-width: 2.5px; }
+    .node-indicator    { fill: #7c3aed; stroke: #fff; stroke-width: 2.5px; }
+    .node-process      { fill: #ea580c; stroke: #fff; stroke-width: 2.5px; }
+    .node-project      { fill: #059669; stroke: #fff; stroke-width: 2.5px; }
+
+    /* Health rings */
+    .health-orphan  { stroke: #ef4444 !important; stroke-width: 3px !important; stroke-dasharray: 4,3; }
+    .health-fragile { stroke: #f59e0b !important; stroke-width: 3px !important; }
+
+    /* Links */
+    .link-direct   { stroke: rgba(37,99,235,0.8); stroke-width: 5; stroke-opacity: 0.9; }
+    .link-indirect { stroke: rgba(148,163,184,0.6); stroke-width: 3.5; stroke-dasharray: 6,4; stroke-opacity: 0.7; }
+    .link-normal   { stroke: rgba(148,163,184,0.5); stroke-width: 2.5; }
+
+    .node-label {
+        fill: var(--text-primary);
+        font-size: 19px;
+        font-weight: 900;
+        font-family: 'Outfit', 'Inter', sans-serif;
+        pointer-events: none;
+        text-shadow: 0 1px 4px rgba(255,255,255,1), 0 0 15px rgba(255,255,255,0.9);
+    }
+
+    .node-icon {
+        font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "FontAwesome";
+        font-weight: 900;
+        fill: #fff;
+        font-size: 22px;
+        text-anchor: middle;
+        dominant-baseline: central;
+        pointer-events: none;
+    }
+
+    .overlay-card {
+        position: absolute;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(14px);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem;
+        box-shadow: var(--shadow-lg);
+        z-index: 10;
+    }
+
+    .legend-card { bottom: 20px; left: 20px; min-width: 160px; }
+
+    .health-panel {
+        top: 16px; right: 16px;
+        min-width: 200px;
+    }
+    .health-metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.35rem 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.8rem;
+    }
+    .health-metric:last-child { border-bottom: none; }
+    .health-metric .badge {
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
+
+    .info-card { bottom: 20px; right: 20px; width: 260px; display: none; }
+    .info-card h4 { margin: 0 0 4px; font-size: 0.95rem; }
+    .info-card .meta { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; font-weight: 700; margin-bottom: 0.75rem; }
+
+    .dot {
+        display: inline-block;
+        width: 10px; height: 10px;
+        border-radius: 50%; margin-right: 8px;
+    }
+
+    #emptyState {
+        display: none;
+        position: absolute; inset: 0;
+        align-items: center; justify-content: center;
+        flex-direction: column; gap: 1rem;
+        text-align: center; padding: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header" style="margin-bottom: 1rem;">
+        <div class="header-content">
+            <h1 class="text-h1">🕸️ Teia de Governança</h1>
+            <p class="text-secondary">Cargos · Indicadores · Processos · Projetos — e saúde das conexões.</p>
         </div>
         <div class="header-actions">
-            <a href="{{ url_for('incentives.dashboard') }}" class="vs-btn vs-btn-outline">Voltar ao Dashboard</a>
+            <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
         </div>
     </div>
 
-    <div class="incentive-glass" style="padding: 0; position: relative;">
+    <div class="canvas-card" id="canvasCard">
         <div id="spiderWeb" class="spider-web-canvas"></div>
         
-        <!-- Legend Overlay -->
-        <div style="position: absolute; bottom: 20px; left: 20px; z-index: 10;" class="incentive-glass">
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--incentive-primary); box-shadow: 0 0 8px var(--incentive-primary);"></div>
-                    <span style="font-size: 0.8rem;">Cargos</span>
+        <!-- Action Buttons -->
+        <div style="position:absolute; top:16px; left:16px; display:flex; gap:8px; z-index:20;">
+            <button onclick="fitView()" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,0.8); backdrop-filter:blur(10px);">
+                <i class="fas fa-expand-arrows-alt"></i> Enquadrar Teia
+            </button>
+        </div>
+        <div id="emptyState">
+            <div style="font-size:3rem;">🕸️</div>
+            <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Teia Vazia</h3>
+            <p style="font-size:0.85rem; color:var(--text-secondary); max-width:380px; margin:0;">
+                Configure Indicadores com Processos ou Projetos no seu Plano para que a Teia seja gerada.
+            </p>
+            <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-arrow-left"></i> Ver Incentivos
+            </a>
+        </div>
+
+        <!-- Legend -->
+        <div class="overlay-card legend-card" id="legend">
+            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:0.75rem;">Legenda</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                <div><span class="dot" style="background:#2563eb;"></span> <span style="font-size:0.78rem;font-weight:600;">Colaborador</span></div>
+                <div><span class="dot" style="background:#ea580c;"></span> <span style="font-size:0.78rem;font-weight:600;">Processo</span></div>
+                <div><span class="dot" style="background:#059669;"></span> <span style="font-size:0.78rem;font-weight:600;">Projeto</span></div>
+                <div><span class="dot" style="background:#7c3aed;"></span> <span style="font-size:0.78rem;font-weight:600;">Indicador</span></div>
+                <hr style="border:none;border-top:1px solid var(--border);margin:4px 0;">
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;">
+                    <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#1e40af" stroke-width="2"/></svg> Direto
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--incentive-secondary); box-shadow: 0 0 8px var(--incentive-secondary);"></div>
-                    <span style="font-size: 0.8rem;">Indicadores</span>
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;">
+                    <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#a5b4fc" stroke-width="1.5" stroke-dasharray="4,2"/></svg> Indireto
                 </div>
+                <hr style="border:none;border-top:1px solid var(--border);margin:4px 0;">
+                <div style="font-size:0.7rem;font-weight:600;color:#ef4444;">● Órfão (sem conexão)</div>
+                <div style="font-size:0.7rem;font-weight:600;color:#f59e0b;">● Frágil (1 conexão)</div>
             </div>
         </div>
 
-        <!-- Info Card Overlay -->
-        <div id="infoCard" style="position: absolute; top: 20px; right: 20px; z-index: 10; width: 250px; display: none;" class="incentive-glass pulse">
-            <h4 id="infoTitle" style="margin-bottom: 4px;">--</h4>
-            <p id="infoType" style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px;">--</p>
-            <div id="infoDetails" style="font-size: 0.875rem;"></div>
+        <!-- Health Panel -->
+        <div class="overlay-card health-panel" id="healthPanel" style="display:none;">
+            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:0.5rem;">
+                <i class="fas fa-heartbeat" style="margin-right:4px;"></i> Saúde da Teia
+            </div>
+            <div class="health-metric">
+                <span>Total de nós</span>
+                <span class="badge" style="background:#e0e7ff;color:#3730a3;" id="hTotal">0</span>
+            </div>
+            <div class="health-metric">
+                <span>Conectados</span>
+                <span class="badge" style="background:#dcfce7;color:#166534;" id="hConnected">0</span>
+            </div>
+            <div class="health-metric">
+                <span style="color:#f59e0b;">Frágeis</span>
+                <span class="badge" style="background:#fef3c7;color:#92400e;" id="hFragile">0</span>
+            </div>
+            <div class="health-metric">
+                <span style="color:#ef4444;">Órfãos</span>
+                <span class="badge" style="background:#fee2e2;color:#991b1b;" id="hOrphan">0</span>
+            </div>
+        </div>
+
+        <!-- Node info card -->
+        <div class="overlay-card info-card" id="infoCard">
+            <h4 id="infoTitle">--</h4>
+            <div class="meta" id="infoMeta">--</div>
+            <div id="infoDetails" style="font-size:0.8rem;line-height:1.5;color:var(--text-secondary);"></div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block sidebar_right %}
+<div style="padding: 1.5rem 1rem;">
+
+    <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);letter-spacing:0.05em;margin-bottom:1rem;">
+        <i class="fas fa-filter" style="margin-right:6px;"></i> Filtrar Teia
+    </div>
+
+    <!-- Tipo de Nó -->
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">Tipo de Nó</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label class="filter-toggle" data-filter="type" data-value="collaborator">
+                <span class="ftog-dot" style="background:#2563eb;"></span> Colaboradores
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="type" data-value="indicator">
+                <span class="ftog-dot" style="background:#7c3aed;"></span> Indicadores
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="type" data-value="process">
+                <span class="ftog-dot" style="background:#b45309;"></span> Processos
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="type" data-value="project">
+                <span class="ftog-dot" style="background:#065f46;"></span> Projetos
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Saúde -->
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">Saúde</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label class="filter-toggle" data-filter="health" data-value="connected">
+                <span class="ftog-dot" style="background:#16a34a;"></span> Conectados
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="health" data-value="fragile">
+                <span class="ftog-dot" style="background:#f59e0b;"></span> Frágeis
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="health" data-value="orphan">
+                <span class="ftog-dot" style="background:#ef4444;"></span> Órfãos
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Status de Projeto -->
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">Status de Projetos</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label class="filter-toggle" data-filter="proj_status" data-value="planned">
+                <span class="ftog-dot" style="background:#64748b;"></span> Planejado
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="proj_status" data-value="in_progress">
+                <span class="ftog-dot" style="background:#2563eb;"></span> Em Progresso
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="proj_status" data-value="completed">
+                <span class="ftog-dot" style="background:#16a34a;"></span> Concluído
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="proj_status" data-value="cancelled">
+                <span class="ftog-dot" style="background:#dc2626;"></span> Cancelado
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Estágio de Processo -->
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">Estágio de Processos</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label class="filter-toggle" data-filter="proc_stage" data-value="inbox">
+                <span class="ftog-dot" style="background:#94a3b8;"></span> Inbox
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="proc_stage" data-value="designing">
+                <span class="ftog-dot" style="background:#a855f7;"></span> Designing
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="proc_stage" data-value="deploying">
+                <span class="ftog-dot" style="background:#3b82f6;"></span> Deploying
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="proc_stage" data-value="stabilizing">
+                <span class="ftog-dot" style="background:#f59e0b;"></span> Stabilizing
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="proc_stage" data-value="stable">
+                <span class="ftog-dot" style="background:#16a34a;"></span> Stable
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Tipo de Link -->
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">Tipo de Ligação</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label class="filter-toggle" data-filter="link_strength" data-value="direct">
+                <svg width="18" height="8" style="margin-right:6px;"><line x1="0" y1="4" x2="18" y2="4" stroke="#1e40af" stroke-width="2"/></svg> Direta
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="link_strength" data-value="indirect">
+                <svg width="18" height="8" style="margin-right:6px;"><line x1="0" y1="4" x2="18" y2="4" stroke="#a5b4fc" stroke-width="1.5" stroke-dasharray="4,2"/></svg> Indireta
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+        </div>
+    </div>
+
+    <button onclick="resetFilters()" class="btn btn-secondary btn-sm" style="width:100%;margin-top:0.5rem;">
+        <i class="fas fa-redo"></i> Resetar Filtros
+    </button>
+
+</div>
+
+<style>
+.filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    user-select: none;
+    padding: 5px 8px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    position: relative;
+}
+.filter-toggle:hover { background: var(--surface-secondary); }
+.ftog-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.ftog-sw {
+    margin-left: auto;
+    width: 30px; height: 16px;
+    border-radius: 10px;
+    background: var(--border);
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.ftog-sw::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.2s;
+}
+.filter-toggle.active .ftog-sw { background: var(--primary); }
+.filter-toggle.active .ftog-sw::after { transform: translateX(14px); }
+</style>
+{% endblock %}
+
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('spiderWeb');
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const emptyState = document.getElementById('emptyState');
+    const legend = document.getElementById('legend');
+    const healthPanel = document.getElementById('healthPanel');
 
-    // Fetch data
-    const response = await fetch('/api/incentives/spider-web-data');
-    const data = await response.json();
+    let data;
+    try {
+        const res = await fetch('/api/incentives/spider-web-data');
+        data = await res.json();
+    } catch(e) {
+        container.innerHTML = '<p style="padding:2rem;text-align:center;color:var(--text-tertiary);">Erro ao carregar Teia.</p>';
+        return;
+    }
 
-    const svg = d3.select("#spiderWeb")
-        .append("svg")
-        .attr("width", "100%")
-        .attr("height", "100%")
-        .attr("viewBox", [0, 0, width, height]);
+    if (!data.nodes || data.nodes.length === 0) {
+        container.style.display = 'none';
+        legend.style.display = 'none';
+        emptyState.style.display = 'flex';
+        return;
+    }
 
-    const g = svg.append("g");
+    // Render health panel
+    if (data.summary) {
+        document.getElementById('hTotal').textContent = data.summary.total;
+        document.getElementById('hConnected').textContent = data.summary.connected;
+        document.getElementById('hFragile').textContent = data.summary.fragile;
+        document.getElementById('hOrphan').textContent = data.summary.orphans;
+        healthPanel.style.display = 'block';
+    }
 
-    // Zoom behavior
-    svg.call(d3.zoom().on("zoom", (event) => {
-        g.attr("transform", event.transform);
-    }));
+    const width = container.clientWidth || 1000;
+    const height = container.clientHeight || 850;
 
-    const simulation = d3.forceSimulation(data.nodes)
-        .force("link", d3.forceLink(data.links).id(d => d.id).distance(150))
-        .force("charge", d3.forceManyBody().strength(-300))
-        .force("center", d3.forceCenter(width / 2, height / 2));
+    const svg = d3.select('#spiderWeb').append('svg')
+        .attr('width', '100%').attr('height', '100%')
+        .attr('viewBox', [0, 0, width, height]);
 
-    const link = g.append("g")
-        .selectAll("line")
-        .data(data.links)
-        .join("line")
-        .attr("class", "link-edge")
-        .attr("stroke-opacity", 0.6);
+    const g = svg.append('g');
+    const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on('zoom', e => g.attr('transform', e.transform));
+    svg.call(zoom);
 
-    const node = g.append("g")
-        .selectAll("g")
-        .data(data.nodes)
-        .join("g")
+    const radius = { collaborator: 35, indicator: 28, process: 25, project: 25 };
+    const icons  = { collaborator: '\uf007', indicator: '\uf080', process: '\uf0e8', project: '\uf542' };
+
+    const sim = d3.forceSimulation(data.nodes)
+        .force('link', d3.forceLink(data.links).id(d => d.id).distance(d => d.strength === 'direct' ? 80 : 140))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(d => radius[d.type] + 45));
+
+    const link = g.append('g').selectAll('line')
+        .data(data.links).join('line')
+        .attr('class', d => `link-${d.strength || 'normal'}`);
+
+    const nodeG = g.append('g').selectAll('g')
+        .data(data.nodes).join('g')
         .call(d3.drag()
-            .on("start", dragstarted)
-            .on("drag", dragged)
-            .on("end", dragended))
-        .on("mouseover", showInfo)
-        .on("mouseout", hideInfo);
+            .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+            .on('drag',  (e, d) => { d.fx = e.x; d.fy = e.y; })
+            .on('end',   (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }))
+        .on('mouseover', showInfo)
+        .on('mouseout', hideInfo);
 
-    node.append("circle")
-        .attr("r", 8)
-        .attr("class", d => d.type === 'role' ? 'node-role' : 'node-indicator');
+    nodeG.append('circle')
+        .attr('r', d => radius[d.type] || 15)
+        .attr('class', d => `node-${d.type}`)
+        .classed('health-orphan',  d => d.health === 'orphan')
+        .classed('health-fragile', d => d.health === 'fragile');
 
-    node.append("text")
-        .attr("x", 12)
-        .attr("y", 4)
-        .text(d => d.label)
-        .style("fill", "#fff")
-        .style("font-size", "12px")
-        .style("font-family", "Inter, sans-serif")
-        .style("pointer-events", "none");
+    nodeG.append('text')
+        .attr('class', 'node-icon')
+        .text(d => icons[d.type] || '');
 
-    simulation.on("tick", () => {
-        link
-            .attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y);
+    nodeG.append('text')
+        .attr('class', 'node-label')
+        .attr('x', 0)
+        .attr('y', d => (radius[d.type] || 15) + 20)
+        .attr('text-anchor', 'middle')
+        .text(d => d.label.length > 25 ? d.label.slice(0, 23) + '\u2026' : d.label);
 
-        node
-            .attr("transform", d => `translate(${d.x},${d.y})`);
+    sim.on('tick', () => {
+        link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+        nodeG.attr('transform', d => `translate(${d.x},${d.y})`);
     });
+
+    // Auto-fit initial view after simulation stabilizes slightly
+    window.fitView = (duration = 1000) => {
+        const bounds = g.node().getBBox();
+        if (bounds.width === 0 || bounds.height === 0) return;
+
+        const fullWidth = container.clientWidth;
+        const fullHeight = container.clientHeight;
+        const midX = bounds.x + bounds.width / 2;
+        const midY = bounds.y + bounds.height / 2;
+        
+        const padding = 60;
+        const scale = 0.9 / Math.max((bounds.width + padding) / fullWidth, (bounds.height + padding) / fullHeight);
+        
+        svg.transition().duration(duration).call(
+            zoom.transform, 
+            d3.zoomIdentity.translate(fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY).scale(scale)
+        );
+    };
+
+    setTimeout(() => fitView(1500), 800);
+
+    // ── FILTER SYSTEM ──────────────────────────────────────────────────────
+    // State: which values are active per filter group
+    const filterState = {
+        type:         new Set(['collaborator','indicator','process','project']),
+        health:       new Set(['connected','fragile','orphan']),
+        proj_status:  new Set(['planned','in_progress','completed','cancelled']),
+        proc_stage:   new Set(['inbox','designing','deploying','stabilizing','stable']),
+        link_strength: new Set(['direct','indirect','normal'])
+    };
+
+    function nodeVisible(d) {
+        if (!filterState.type.has(d.type)) return false;
+        if (!filterState.health.has(d.health)) return false;
+        if (d.type === 'project' && d.status && !filterState.proj_status.has(d.status)) return false;
+        if (d.type === 'process' && d.kanban_stage && !filterState.proc_stage.has(d.kanban_stage)) return false;
+        return true;
+    }
+
+    function applyFilters() {
+        const visibleIds = new Set();
+        nodeG.each(d => { if (nodeVisible(d)) visibleIds.add(d.id); });
+
+        nodeG.style('display', d => nodeVisible(d) ? null : 'none');
+
+        link.style('display', d => {
+            const srcId = d.source.id || d.source;
+            const tgtId = d.target.id || d.target;
+            if (!visibleIds.has(srcId) || !visibleIds.has(tgtId)) return 'none';
+            if (!filterState.link_strength.has(d.strength || 'normal')) return 'none';
+            return null;
+        });
+    }
+
+    // Wire up filter toggles
+    document.querySelectorAll('.filter-toggle').forEach(label => {
+        const inp = label.querySelector('input');
+        const filterKey = label.dataset.filter;
+        const filterVal = label.dataset.value;
+        label.classList.add('active'); // all on by default
+
+        label.addEventListener('click', () => {
+            inp.checked = !inp.checked;
+            label.classList.toggle('active', inp.checked);
+
+            if (inp.checked) {
+                filterState[filterKey].add(filterVal);
+            } else {
+                filterState[filterKey].delete(filterVal);
+            }
+            applyFilters();
+        });
+    });
+
+    // Reset all filters
+    window.resetFilters = () => {
+        document.querySelectorAll('.filter-toggle').forEach(label => {
+            const inp = label.querySelector('input');
+            inp.checked = true;
+            label.classList.add('active');
+            filterState[label.dataset.filter].add(label.dataset.value);
+        });
+        applyFilters();
+    };
+
+    // ── HOVER INFO ─────────────────────────────────────────────────────────
+    const typeLabels   = { collaborator:'Colaborador', indicator:'Indicador', process:'Processo', project:'Projeto' };
+    const healthLabels = { orphan:'🔴 Órfão — sem conexões', fragile:'🟡 Frágil — apenas 1 ligação', connected:'🟢 Conectado' };
 
     function showInfo(event, d) {
         const card = document.getElementById('infoCard');
-        document.getElementById('infoTitle').innerText = d.label;
-        document.getElementById('infoType').innerText = d.type.toUpperCase();
-        
-        let details = '';
-        if (d.type === 'role') {
-            const connections = data.links.filter(l => l.source.id === d.id);
-            details = `${connections.length} indicadores associados.`;
-        } else {
-            const connections = data.links.filter(l => l.target.id === d.id);
-            details = `Monitorado por ${connections.length} cargos.`;
-        }
-        document.getElementById('infoDetails').innerText = details;
+        document.getElementById('infoTitle').textContent = d.label;
+        document.getElementById('infoMeta').textContent = typeLabels[d.type] || d.type;
+
+        const conns = data.links.filter(l =>
+            (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id
+        ).length;
+
+        let extra = '';
+        if (d.type === 'process' && d.kanban_stage) extra = `<br>Est\u00e1gio: <strong>${d.kanban_stage}</strong>`;
+        if (d.type === 'project' && d.status)        extra = `<br>Status: <strong>${d.status}</strong> \u00b7 Progresso: <strong>${d.progress || 0}%</strong>`;
+
+        document.getElementById('infoDetails').innerHTML =
+            `${healthLabels[d.health] || ''}<br>Conex\u00f5es: <strong>${conns}</strong>${extra}`;
         card.style.display = 'block';
+
+        link.transition().duration(400)
+            .style('stroke-opacity', l =>
+                (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 1 : 0.03)
+            .style('stroke-width', l =>
+                (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 4 : 1);
         
-        // Highlight connections
-        link.style("stroke", l => (l.source.id === d.id || l.target.id === d.id) ? "var(--incentive-accent)" : "rgba(255,255,255,0.2)");
-        link.style("stroke-width", l => (l.source.id === d.id || l.target.id === d.id) ? "3" : "1.5");
+        nodeG.transition().duration(400)
+            .style('opacity', n => {
+                // Highlight connected nodes too
+                const isConnected = data.links.some(l => 
+                    ((l.source.id || l.source) === d.id && (l.target.id || l.target) === n.id) ||
+                    ((l.target.id || l.target) === d.id && (l.source.id || l.source) === n.id)
+                );
+                return (n.id === d.id || isConnected) ? 1 : 0.15;
+            });
     }
 
     function hideInfo() {
         document.getElementById('infoCard').style.display = 'none';
-        link.style("stroke", "rgba(255,255,255,0.2)");
-        link.style("stroke-width", "1.5");
-    }
-
-    function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-    }
-
-    function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-    }
-
-    function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
+        link.transition().duration(400).style('stroke-opacity', null).style('stroke-width', null);
+        nodeG.transition().duration(400).style('opacity', 1);
     }
 });
 </script>

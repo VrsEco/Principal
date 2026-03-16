@@ -1,0 +1,413 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Registros de Dados | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Gestão Estratégica</a>
+<span class="sep">/</span>
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">Dados</span>
+{% endblock %}
+
+{% block head %}
+<style>
+    /* ── Modal Versus Elite ── */
+    .modal-vs { 
+        display: none; 
+        position: fixed; 
+        top: 0; left: 0; 
+        width: 100%; height: 100%; 
+        background: rgba(15, 23, 42, 0.75); 
+        z-index: 2000; 
+        backdrop-filter: blur(12px); 
+        animation: fadeIn 0.2s ease;
+    }
+    
+    .modal-content-vs { 
+        background: var(--surface); 
+        width: 90%; 
+        max-width: 500px; 
+        margin: 8vh auto; 
+        border-radius: 24px; 
+        padding: 0; 
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+        border: 1px solid var(--border); 
+        overflow: hidden;
+        animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-header-vs { 
+        padding: 1.5rem 2rem; 
+        background: var(--surface-secondary); 
+        border-bottom: 1px solid var(--border); 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+    }
+    
+    .modal-body-vs { padding: 2rem; }
+    
+    .modal-footer-vs { 
+        padding: 1.25rem 2rem; 
+        background: var(--surface-secondary); 
+        border-top: 1px solid var(--border); 
+        display: flex; 
+        justify-content: flex-end; 
+        gap: 1rem; 
+    }
+
+    /* ── Field Standard ── */
+    .field-group { margin-bottom: 1.25rem; }
+    .field-label { 
+        font-size: 0.72rem; 
+        font-weight: 800; 
+        text-transform: uppercase; 
+        color: var(--text-tertiary); 
+        margin-bottom: 0.5rem; 
+        display: block;
+        letter-spacing: 0.05em;
+    }
+    .field-input, .field-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        border: 1.5px solid var(--border);
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+    .field-input:focus, .field-select:focus {
+        border-color: var(--primary);
+        background: var(--surface);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+    /* ── Badges & Tables ── */
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table thead { background: var(--surface-secondary); }
+    .history-table th { padding: 1rem; text-align: left; font-size: 0.7rem; font-weight: 800; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+    .history-table td { padding: 1.25rem 1rem; border-bottom: 1px solid var(--border); }
+    
+    .indicator-group-badge { font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: var(--surface-secondary); color: var(--text-secondary); border: 1px solid var(--border); display: inline-block; }
+
+    /* ── Actions ── */
+    .btn-icon-sm { 
+        width: 32px; height: 32px; border-radius: 8px; 
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 1px solid var(--border); background: transparent;
+        color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+    }
+    .btn-icon-sm:hover { background: var(--surface-secondary); color: var(--danger); border-color: var(--danger); }
+
+    /* ── Animations ── */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .spinner { display: none; margin-left: 8px; }
+    .btn-loading .spinner { display: inline-block; }
+    .btn-loading .btn-text { opacity: 0.7; }
+
+    .field-hint { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 6px; line-height: 1.4; }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header" style="margin-bottom:2rem;">
+        <div class="header-content">
+            <h1 class="text-h1">📥 Registros de Dados</h1>
+            <p class="text-secondary">Histórico de todas as medições e coletas realizadas nos KPIs.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="window.location.href='/indicators/measurement-routines'">
+                <i class="fas fa-tasks"></i> Executar Rotina
+            </button>
+            <button class="btn btn-special btn-sm" onclick="openRecordModal()">
+                <i class="fas fa-plus"></i> Lançar Valor Unitário
+            </button>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }}" style="margin-bottom:1.5rem; border-radius: 12px;">{{ msg }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <div class="data-list-container">
+        {% if data_records %}
+        <div class="card" style="border-radius: 20px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Indicador</th>
+                        <th>Valor Medido</th>
+                        <th>Data da Medição</th>
+                        <th>Meta Associada</th>
+                        <th>Notas</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in data_records %}
+                    <tr onmouseover="this.style.background='var(--surface-secondary)'" onmouseout="this.style.background='transparent'">
+                        <td>
+                            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">{{ record.indicator.name }}</div>
+                            <div style="font-size: 0.65rem; color: var(--primary); font-family: 'JetBrains Mono', monospace; font-weight: 800;">{{ record.indicator.code }}</div>
+                        </td>
+                        <td>
+                            <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">
+                                {% if record.indicator.unit == 'R$' or 'R$' in record.indicator.unit or 'moeda' in record.indicator.unit.lower() %}
+                                    R$ {{ record.measured_value | format_currency_br }}
+                                {% else %}
+                                    {{ "{:,.2f}".format(record.measured_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                                    <span style="font-size: 0.8rem; color: var(--text-tertiary); font-weight: 600;">{{ record.indicator.unit }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: var(--text-secondary); font-size: 0.9rem;">
+                                <i class="far fa-calendar-alt" style="margin-right: 4px; opacity: 0.5;"></i>
+                                {{ record.measured_date | format_date_br if record.measured_date else (record.record_date | format_date_br if record.record_date else '--') }}
+                            </div>
+                            {% if record.routine %}
+                                <div style="font-size: 0.7rem; color: var(--primary); font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-check-double"></i> Rotina: {{ record.routine.name }}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.goal_id %}
+                                <div class="indicator-group-badge">
+                                    <i class="fas fa-bullseye" style="font-size: 0.6rem; margin-right: 4px;"></i>
+                                    {% if record.goal and record.goal.code %}
+                                        {{ record.goal.code }}
+                                    {% else %}
+                                        Meta #{{ record.goal_id }}
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <span style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase;">Avulso</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ record.notes }}">
+                                {{ record.notes or '--' }}
+                            </div>
+                        </td>
+                        <td style="text-align: right;">
+                             <button class="btn-icon-sm" onclick="deleteRecord({{ record.id }})" title="Excluir Registro">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding: 6rem 2rem; text-align: center; background: var(--surface); border: 2px dashed var(--border); border-radius: 24px;">
+            <div style="font-size: 5rem; margin-bottom: 2rem; filter: grayscale(1); opacity: 0.3;">📥</div>
+            <h3 class="text-h2">Nenhum dado registrado</h3>
+            <p class="text-secondary" style="margin-bottom: 2.5rem; max-width: 400px; margin-left: auto; margin-right: auto;">
+                Lance as medições dos seus indicadores para começar a acompanhar o desempenho estratégico.
+            </p>
+            <button class="btn btn-primary" onclick="openRecordModal()">Lançar Primeiro Dado</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: Lançar Valor -->
+<div id="recordModal" class="modal-vs">
+    <div class="modal-content-vs">
+        <div class="modal-header-vs">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 12px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <h3 class="text-h2" style="margin:0;">Lançar Valor</h3>
+            </div>
+            <button class="btn btn-icon btn-sm" onclick="closeModal('recordModal')"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <form id="recordForm">
+            <div class="modal-body-vs">
+                <input type="hidden" name="company_id" value="{{ session.active_company_id or 1 }}">
+
+                <div class="field-group">
+                    <label class="field-label">Indicador *</label>
+                    <select class="field-select" name="indicator_id" id="modalIndicatorId" required onchange="loadIndicatorGoals(this.value)">
+                        <option value="">Selecione o indicador...</option>
+                        {% for ind in indicators %}
+                        <option value="{{ ind.id }}" data-unit="{{ ind.unit }}">{{ ind.code }} - {{ ind.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Meta Relacionada</label>
+                    <select class="field-select" name="goal_id" id="modalGoalSelect">
+                        <option value="">Lançamento Avulso (Sem meta)</option>
+                    </select>
+                    <p class="field-hint">Associe a uma meta para calcular o desempenho automaticamente.</p>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="field-group">
+                        <label class="field-label">Valor Medido <span id="record_unit_label" style="text-transform:none;opacity:0.7;"></span> *</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <span id="record_currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;">R$</span>
+                            <input type="text" id="record_value_visual" class="field-input" placeholder="0,00" required oninput="handleRecordValueInput(this)">
+                            <input type="hidden" name="measured_value" id="record_value_real">
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Data da Medição *</label>
+                        <input type="date" class="field-input" name="measured_date" id="modalRecordDate" required title="Data da medição">
+                    </div>
+                </div>
+
+
+                <div class="field-group" style="margin-bottom:0;">
+                    <label class="field-label">Notas / Observações</label>
+                    <textarea class="field-input" name="notes" rows="2" placeholder="Descreva detalhes da coleta..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer-vs">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('recordModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSaveRecord">
+                    <span class="btn-text">Salvar Lançamento</span>
+                    <i class="fas fa-spinner fa-spin spinner"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// --- Formatação Brasileira ---
+function formatBR(val) {
+    if (val === "" || val === null) return "";
+    let clean = val.toString().replace(/\D/g, "");
+    if (clean === "") return "";
+    let num = (parseFloat(clean) / 100).toFixed(2);
+    return num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function handleRecordValueInput(input) {
+    let val = input.value;
+    input.value = formatBR(val);
+    let realVal = input.value.replace(/\./g, "").replace(",", ".");
+    document.getElementById('record_value_real').value = realVal;
+}
+
+function openRecordModal() {
+    document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('recordForm').reset();
+    document.getElementById('record_currency_prefix').style.display = 'none';
+    document.getElementById('record_value_visual').style.paddingLeft = '1rem';
+    
+    
+    document.getElementById('recordModal').style.display = 'block';
+}
+
+function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+}
+
+async function loadIndicatorGoals(indicatorId) {
+    const sel = document.getElementById('modalGoalSelect');
+    const unitLabel = document.getElementById('record_unit_label');
+    const prefix = document.getElementById('record_currency_prefix');
+    const input = document.getElementById('record_value_visual');
+    
+    sel.innerHTML = '<option value="">Carregando metas...</option>';
+    
+    if (!indicatorId) {
+        sel.innerHTML = '<option value="">Lançamento Avulso (Sem meta)</option>';
+        unitLabel.innerText = '';
+        prefix.style.display = 'none';
+        input.style.paddingLeft = '1rem';
+        return;
+    }
+
+    // Ajuste de unidade no input
+    const indSelect = document.getElementById('modalIndicatorId');
+    const unit = indSelect.options[indSelect.selectedIndex].getAttribute('data-unit') || "";
+    unitLabel.innerText = unit ? `(${unit})` : "";
+    
+    if (unit === 'R$' || unit.includes('moeda')) {
+        prefix.style.display = 'block';
+        input.style.paddingLeft = '3rem';
+    } else {
+        prefix.style.display = 'none';
+        input.style.paddingLeft = '1rem';
+    }
+
+    try {
+        const res = await fetch(`/api/indicator-goals?indicator_id=${indicatorId}`);
+        const goals = await res.json();
+        
+        let html = '<option value="">Lançamento Avulso (Sem meta)</option>';
+        goals.forEach(g => {
+            // Formatar valor da meta para exibição no combo usando padrão BR
+            let gVal = parseFloat(g.goal_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            let gCode = g.code ? `[${g.code}] ` : "";
+            let gDate = g.start_date || "S/D";
+            html += `<option value="${g.id}">${gCode}Valor: ${gVal} (venc: ${g.goal_date || 'Aberto'})</option>`;
+        });
+        sel.innerHTML = html;
+    } catch (e) {
+        sel.innerHTML = '<option value="">Erro ao carregar metas</option>';
+    }
+}
+
+document.getElementById('recordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveRecord');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    data.measured_value = parseFloat(document.getElementById('record_value_real').value);
+    data.indicator_id = parseInt(data.indicator_id);
+    if (data.goal_id) data.goal_id = parseInt(data.goal_id); else delete data.goal_id;
+    data.company_id = parseInt(data.company_id);
+
+    try {
+        const res = await fetch('/api/indicator-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            location.reload();
+        } else {
+            const err = await res.json();
+            alert('Erro: ' + JSON.stringify(err.errors || err.error));
+        }
+    } catch (err) { console.error(err); }
+    finally {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+    }
+});
+
+async function deleteRecord(id) {
+    if (!confirm('Excluir este registro permanentemente?')) return;
+    try {
+        const res = await fetch(`/api/indicator-data/${id}`, { method: 'DELETE' });
+        if (res.ok) location.reload();
+    } catch (err) { console.error(err); }
+}
+</script>
+{% endblock %}

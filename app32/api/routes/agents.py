@@ -8,7 +8,17 @@ cadastro_service = CadastroAgentService()
 
 
 def _has_operational_full_access(company_id=None):
-    return has_company_full_access(company_id)
+    role = str(getattr(current_user, 'role', '')).strip().lower()
+    if role in {'admin', 'administrator'}:
+        return True
+    try:
+        return has_company_full_access(company_id)
+    except Exception:
+        return False
+
+
+def _is_platform_admin_local():
+    return str(getattr(current_user, 'role', '')).strip().lower() in {'admin', 'administrator'}
 
 
 def _log_workflow_approval_message(action, message: str, metadata=None):
@@ -206,10 +216,9 @@ def workflow_catalog():
     from models.workflow_usage import WorkflowExecutionLog
     from services.workflow_catalog_service import build_workflow_catalog
 
+    active_company_id = session.get('active_company_id')
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para consultar o catálogo operacional de workflows."}), 403
-
-    active_company_id = session.get('active_company_id')
     include_inactive = (request.args.get('include_inactive') or 'false').strip().lower() == 'true'
     include_global = (request.args.get('include_global') or 'true').strip().lower() != 'false'
     limit_raw = (request.args.get('limit') or '500').strip()
@@ -277,10 +286,9 @@ def list_workflow_gaps():
     from models.workflow_gap import WorkflowGapCandidate
     from services.workflow_gap_service import serialize_workflow_gap_candidate
 
+    active_company_id = session.get('active_company_id')
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para listar gaps operacionais de workflows."}), 403
-
-    active_company_id = session.get('active_company_id')
     status_filter = (request.args.get('status') or 'all').strip().lower()
     channel_filter = (request.args.get('channel') or '').strip().lower()
     source_filter = (request.args.get('source') or '').strip().lower()
@@ -339,10 +347,9 @@ def get_workflow_gap_link():
     from flask import session
     from services.workflow_gap_service import find_workflow_gap_by_task, serialize_workflow_gap_candidate
 
+    active_company_id = session.get('active_company_id')
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para consultar vínculo operacional de workflow gap."}), 403
-
-    active_company_id = session.get('active_company_id')
     task_id_raw = (request.args.get('task_id') or '').strip()
     task_code = (request.args.get('task_code') or '').strip()
 
@@ -383,10 +390,9 @@ def list_workflow_usage_logs():
     from models.workflow_usage import WorkflowExecutionLog
     from services.workflow_usage_service import serialize_workflow_execution_log
 
+    active_company_id = session.get('active_company_id')
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para listar auditoria operacional de workflows."}), 403
-
-    active_company_id = session.get('active_company_id')
     status_filter = (request.args.get('status') or 'all').strip().lower()
     action_key_filter = (request.args.get('action_key') or '').strip().lower()
     channel_filter = (request.args.get('channel') or '').strip().lower()
@@ -442,10 +448,9 @@ def workflow_usage_metrics():
     from models.workflow_usage import WorkflowExecutionLog
     from services.workflow_usage_service import build_workflow_usage_metrics
 
-    if not _has_operational_full_access(active_company_id):
-        return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais de workflows."}), 403
-
     company_id = session.get('active_company_id')
+    if not _has_operational_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais de workflows."}), 403
     limit_raw = (request.args.get('limit') or '500').strip()
     try:
         limit = max(1, min(int(limit_raw), 1000))
@@ -474,10 +479,9 @@ def list_workflow_approvals():
     from models.agent_action import AgentAction
     from services.workflow_approval_service import serialize_workflow_approval_action
 
-    if not _has_operational_full_access(active_company_id):
-        return jsonify({"success": False, "error": "Sem permissão para listar approvals operacionais."}), 403
-
     company_id = session.get('active_company_id')
+    if not _has_operational_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para listar approvals operacionais."}), 403
     status_filter = (request.args.get('status') or 'pending').strip().lower()
     if status_filter not in {'pending', 'approved', 'executed', 'rejected', 'all', 'expired'}:
         return jsonify({"success": False, "error": "Parâmetro status inválido."}), 400
@@ -536,10 +540,9 @@ def workflow_approval_board():
     from models.agent_action import AgentAction
     from services.workflow_approval_service import build_workflow_approval_board
 
-    if not _has_operational_full_access(active_company_id):
-        return jsonify({"success": False, "error": "Sem permissão para consultar o painel operacional."}), 403
-
     company_id = session.get('active_company_id')
+    if not _has_operational_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para consultar o painel operacional."}), 403
     limit_raw = (request.args.get('limit') or '50').strip()
     try:
         limit = max(1, min(int(limit_raw), 200))
@@ -568,10 +571,9 @@ def workflow_approval_metrics():
     from models.agent_action import AgentAction
     from services.workflow_approval_service import build_workflow_approval_metrics
 
-    if not _has_operational_full_access(active_company_id):
-        return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais."}), 403
-
     company_id = session.get('active_company_id')
+    if not _has_operational_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais."}), 403
     limit_raw = (request.args.get('limit') or '200').strip()
     try:
         limit = max(1, min(int(limit_raw), 500))
@@ -605,7 +607,7 @@ def get_chat_history():
     
     # Se não for especificado user_id, usa o atual
     # Se for admin, pode ver de outros, senão, apenas o seu
-    if not target_user_id or not is_platform_admin():
+    if not target_user_id or not _is_platform_admin_local():
         target_user_id = current_user.id
     
     agent_type = 'work_agent_squad'
@@ -667,7 +669,7 @@ def get_agents_contacts():
     ]
     
     # 2. Usuários que interagiram (apenas para Admins)
-    if is_platform_admin():
+    if _is_platform_admin_local():
         # Busca subquery de usuários com mensagens
         user_ids_query = db.session.query(AgentMessage.user_id).filter(
             AgentMessage.company_id == company_id
@@ -749,7 +751,7 @@ def test_agent(agent_id):
 
 
 def _menu_admin_guard():
-    if not is_platform_admin():
+    if not _is_platform_admin_local():
         return jsonify({
             "success": False,
             "error": "Apenas administradores podem editar o menu de agentes."
@@ -1017,10 +1019,9 @@ def revalidate_action(action_id):
     if action.type != 'workflow_approval_request':
         return jsonify({"success": False, "error": "Ação não suporta revalidação operacional."}), 400
 
+    active_company_id = session.get('active_company_id')
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para revalidar esta ação."}), 403
-
-    active_company_id = session.get('active_company_id')
     service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
     outcome = service.revalidate(
         action=action,
@@ -1309,11 +1310,11 @@ def reject_action(action_id):
     if action.type != 'workflow_approval_request':
         return jsonify({"success": False, "error": "Ação não suporta rejeição operacional."}), 400
 
+    active_company_id = session.get('active_company_id')
     if not _has_operational_full_access(active_company_id):
         return jsonify({"success": False, "error": "Sem permissão para rejeitar esta ação."}), 403
 
     feedback = (request.get_json(silent=True) or {}).get('feedback')
-    active_company_id = session.get('active_company_id')
     service = WorkflowApprovalService(resume_executor=execute_approved_resume_payload)
     outcome = service.reject(
         action=action,

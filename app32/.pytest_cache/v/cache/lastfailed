@@ -3,7 +3,6 @@
   "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation": true,
   "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_bare_except": true,
   "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs": true,
-  "tests/test_api_contract.py::test_api_v2_chat_contract": true,
   "tests/test_sapiens_workflow_catalog_ui.py::test_sapiens_page_contains_workflow_catalog_panel": true,
   "tests/test_email_service_templates.py::test_send_email_autowraps_corporate_html": true,
   "tests/test_email_service_templates.py::test_send_email_preserves_explicit_html": true

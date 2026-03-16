@@ -1,0 +1,121 @@
+INFO:services.scheduler_service:\U0001f4c5 Scheduler Service inicializado
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'minute': '*', 'name': 'Processamento de Rotinas Agendadas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de InstÔncias Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Canais Configurados)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento de Rotinas Agendadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de InstÔncias Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Canais Configurados)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:\u2705 Scheduler iniciado com sucesso
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-15 20:15:00-03:00
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-15 20:15:28.873765-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-15 21:00:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-16 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+Traceback (most recent call last):
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2112, in _exec_insertmany_context
+    dialect.do_execute(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.NotNullViolation: null value in column "goal_id" of relation "indicator_data" violates not-null constraint
+DETAIL:  Failing row contains (23, 2, null, 2026-02-28, 550000.0000, null, 2026-03-15 23:14:59.008504, 2026-03-15 23:14:59.008504, 33, 2026-02-01, 2026-02-28, null, null, null, null, null, null, verified, f).
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\GestaoVersus\app32\seed_complex_incentive.py", line 120, in seed_complex
+    emp = Employee.query.filter(Employee.name.ilike(f"%{name}%"), Employee.company_id == cid).first()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2748, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\query.py", line 2847, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2308, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 2169, in _execute_internal
+    ) = compile_state_cls.orm_pre_session_exec(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\context.py", line 551, in orm_pre_session_exec
+    session._autoflush()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 3021, in _autoflush
+    raise e.with_traceback(sys.exc_info()[2])
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 3010, in _autoflush
+    self.flush()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 4312, in flush
+    self._flush(objects)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 4447, in _flush
+    with util.safe_reraise():
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\session.py", line 4408, in _flush
+    flush_context.execute()
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1136, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\sql\elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 1843, in _execute_context
+    return self._exec_insertmany_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2120, in _exec_insertmany_context
+    self._handle_dbapi_exception(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py", line 2112, in _exec_insertmany_context
+    dialect.do_execute(
+  File "C:\Users\mff20\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+(psycopg2.errors.NotNullViolation) null value in column "goal_id" of relation "indicator_data" violates not-null constraint
+DETAIL:  Failing row contains (23, 2, null, 2026-02-28, 550000.0000, null, 2026-03-15 23:14:59.008504, 2026-03-15 23:14:59.008504, 33, 2026-02-01, 2026-02-28, null, null, null, null, null, null, verified, f).
+
+[SQL: INSERT INTO indicator_data (company_id, indicator_id, goal_id, routine_id, process_instance_id, measured_value, measured_date, period_start, period_end, employee_id, collaborator_id, source_ref, notes, status, is_manual, created_at, updated_at) SELEC ... 1375 characters truncated ...  p15, p16, sen_counter) ORDER BY sen_counter RETURNING indicator_data.id, indicator_data.id AS id__1]
+[parameters: {'collaborator_id__0': None, 'employee_id__0': None, 'source_ref__0': None, 'notes__0': None, 'updated_at__0': datetime.datetime(2026, 3, 15, 23, 14, 59, 8504), 'routine_id__0': None, 'period_start__0': datetime.date(2026, 2, 1), 'company_id__0': 2, 'period_end__0': datetime.date(2026, 2, 28), 'measured_date__0': datetime.date(2026, 2, 28), 'goal_id__0': None, 'measured_value__0': 550000, 'status__0': 'verified', 'is_manual__0': False, 'created_at__0': datetime.datetime(2026, 3, 15, 23, 14, 59, 8504), 'process_instance_id__0': None, 'indicator_id__0': 33, 'collaborator_id__1': None, 'employee_id__1': None, 'source_ref__1': None, 'notes__1': None, 'updated_at__1': datetime.datetime(2026, 3, 15, 23, 14, 59, 8504), 'routine_id__1': None, 'period_start__1': datetime.date(2026, 2, 1), 'company_id__1': 2, 'period_end__1': datetime.date(2026, 2, 28), 'measured_date__1': datetime.date(2026, 2, 28), 'goal_id__1': None, 'measured_value__1': 1.1, 'status__1': 'verified', 'is_manual__1': False, 'created_at__1': datetime.datetime(2026, 3, 15, 23, 14, 59, 8504), 'process_instance_id__1': None, 'indicator_id__1': 34, 'collaborator_id__2': None, 'employee_id__2': None, 'source_ref__2': None, 'notes__2': None, 'updated_at__2': datetime.datetime(2026, 3, 15, 23, 14, 59, 8504), 'routine_id__2': None, 'period_start__2': datetime.date(2026, 2, 1), 'company_id__2': 2, 'period_end__2': datetime.date(2026, 2, 28), 'measured_date__2': datetime.date(2026, 2, 28), 'goal_id__2': None, 'measured_value__2': 0, 'status__2': 'verified', 'is_manual__2': False, 'created_at__2': datetime.datetime(2026, 3, 15, 23, 14, 59, 8504), 'process_instance_id__2': None, 'indicator_id__2': 35}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: users contact backfill completed (users=0, whatsapp=0, telegram=0).
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+--- Seeding Complex Case for: Gas Evolution (ID: 2) ---

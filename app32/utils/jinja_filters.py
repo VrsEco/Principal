@@ -34,6 +34,20 @@ def format_date_br(value, include_time=False):
         return dt.strftime('%d/%m/%Y %H:%M')
     return dt.strftime('%d/%m/%Y')
 
+def format_currency_br(value):
+    """
+    Formats a number to Brazilian format (XX.XXX,XX)
+    Usage in template: {{ my_value | format_currency_br }}
+    """
+    if value is None:
+        return "0,00"
+    try:
+        # Format with 2 decimal places, using comma as decimal separator and dot as thousand separator
+        return "{:,.2f}".format(float(value)).replace(",", "X").replace(".", ",").replace("X", ".")
+    except (ValueError, TypeError):
+        return value
+
 def register_filters(app):
     """Registers the custom filters in the Flask app"""
     app.jinja_env.filters['format_date_br'] = format_date_br
+    app.jinja_env.filters['format_currency_br'] = format_currency_br

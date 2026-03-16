@@ -1,6 +1,6 @@
 from marshmallow import fields
 from . import ma
-from models.indicator import Indicator, IndicatorGroup, IndicatorGoal, IndicatorData
+from models.indicator import IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
 
 class IndicatorDataSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -11,7 +11,13 @@ class IndicatorDataSchema(ma.SQLAlchemyAutoSchema):
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
     
-    value = fields.Float()
+    # Mapeamentos para compatibilidade com o modelo real
+    measured_value = fields.Float(required=True)
+    measured_date = fields.Date(required=True)
+    routine_id = fields.Integer(allow_none=True)
+    
+    # Campo legacy de visual/payload, mapeado para measured_value se necessário
+    value = fields.Float(load_only=True)
 
 class IndicatorGoalSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -21,8 +27,14 @@ class IndicatorGoalSchema(ma.SQLAlchemyAutoSchema):
     
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
+    code = fields.String()
     
     goal_value = fields.Float()
+    period_start = fields.Date()
+    goal_date = fields.Date(allow_none=True)
+    performance_ranges = fields.Dict(allow_none=True)
+    routine_id = fields.Integer(allow_none=True)
+    collection_method = fields.String(allow_none=True)
     
     records = fields.Nested(IndicatorDataSchema, many=True, dump_only=True)
 
@@ -34,6 +46,7 @@ class IndicatorSchema(ma.SQLAlchemyAutoSchema):
     
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
+    routine_id = fields.Integer(allow_none=True)
     
     goals = fields.Nested(IndicatorGoalSchema, many=True, dump_only=True)
     
@@ -41,21 +54,20 @@ class IndicatorSchema(ma.SQLAlchemyAutoSchema):
     performance = fields.Method("get_performance", dump_only=True)
 
     def get_last_value(self, obj):
-        # Get the most recent record across all goals
-        all_records = []
-        for goal in obj.goals:
-            all_records.extend(goal.records.all())
+        # Get the most recent measured value for this indicator
+        from sqlalchemy import desc
+        last_data = IndicatorData.query.filter_by(
+            indicator_id=obj.id
+        ).order_by(desc('measured_date')).first()
         
-        if not all_records:
+        if not last_data:
             return None
-            
-        # Sort by date descending
-        all_records.sort(key=lambda r: r.record_date, reverse=True)
-        return float(all_records[0].value)
+        return float(last_data.measured_value)
 
     def get_performance(self, obj):
-        # Get last record and active goal
-        active_goal = obj.goals.filter_by(status='active').first()
+        # Comparison logic: last measured value vs active goal
+        from sqlalchemy import desc
+        active_goal = IndicatorGoal.query.filter_by(indicator_id=obj.id, status='active').order_by(desc('goal_date')).first()
         if not active_goal:
             return None
             
@@ -67,6 +79,11 @@ class IndicatorSchema(ma.SQLAlchemyAutoSchema):
         if goal_val == 0:
             return 0
             
+        # Polarity check
+        if hasattr(obj, 'polarity') and obj.polarity == 'negative':
+             if last_val == 0: return 100.0
+             return round((goal_val / last_val) * 100, 1) if last_val > 0 else 0.0
+             
         return round((last_val / goal_val) * 100, 1)
 
 

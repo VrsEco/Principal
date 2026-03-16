@@ -1,0 +1,50 @@
+from scripts.deploy.configr_remote_helper import connect_ssh, run_command, APP_DIR, BASE_DIR
+ssh = connect_ssh()
+cmd = (
+    f"bash -lc \"source '{BASE_DIR}/activate' && cd '{APP_DIR}' && python - <<'PY'\n"
+    "from app import create_app\n"
+    "from models import User\n"
+    "app = create_app()\n"
+    "paths = [\n"
+    "    '/',\n"
+    "    '/portal',\n"
+    "    '/my-work',\n"
+    "    '/processes',\n"
+    "    '/projects',\n"
+    "    '/meetings',\n"
+    "    '/incentives',\n"
+    "    '/indicators',\n"
+    "    '/indicators/analysis',\n"
+    "    '/agents/board',\n"
+    "    '/agents/metrics',\n"
+    "    '/api/indicators',\n"
+    "    '/api/indicator-goals?indicator_id=1',\n"
+    "    '/api/indicator-data?indicator_id=1',\n"
+    "    '/api/incentives/indicators',\n"
+    "    '/api/incentives/spider-web-data',\n"
+    "    '/api/meetings',\n"
+    "    '/api/users',\n"
+    "]\n"
+    "with app.app_context():\n"
+    "    user = User.query.order_by(User.id.asc()).first()\n"
+    "    with app.test_client() as client:\n"
+    "        with client.session_transaction() as sess:\n"
+    "            sess['active_company_id'] = 1\n"
+    "            if user:\n"
+    "                sess['_user_id'] = str(user.id)\n"
+    "                sess['_fresh'] = True\n"
+    "        for path in paths:\n"
+    "            try:\n"
+    "                resp = client.get(path, follow_redirects=False)\n"
+    "                print('SMOKE::{}::{}::{}'.format(path, resp.status_code, resp.headers.get('Location','')))\n"
+    "                if resp.status_code >= 500:\n"
+    "                    print(resp.get_data(as_text=True)[:1200])\n"
+    "            except Exception as exc:\n"
+    "                print('SMOKE::{}::EXC::{}'.format(path, exc))\n"
+    "PY\""
+)
+code, out, err = run_command(ssh, cmd)
+print('CODE:', code)
+if out: print('OUT:\n' + out)
+if err: print('ERR:\n' + err)
+ssh.close()

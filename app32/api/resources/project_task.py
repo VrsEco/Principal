@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from models import db, ProjectTask, Project
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_task_schema, project_tasks_schema
-from utils.permissions import has_company_full_access, permission_required
+from utils.permissions import has_company_full_access, has_permission, permission_required
 from datetime import datetime
 
 
@@ -70,6 +70,23 @@ def apply_task_employee_filter(query, company_id):
         )
         
     return query
+
+
+def _user_can_update_task(company_id, project_id, task_id):
+    if has_permission(company_id, 'projects', 'edit'):
+        return True
+
+    query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+    query = apply_task_employee_filter(query, company_id)
+    return query.first() is not None
+
+
+def _validate_limited_task_update_payload(data):
+    allowed_fields = {'stage', 'status', 'completion_date', 'logs'}
+    extra_fields = set((data or {}).keys()) - allowed_fields
+    if extra_fields:
+        return False, extra_fields
+    return True, set()
 
 class ProjectTaskListResource(Resource):
     @permission_required('projects', 'view')
@@ -184,16 +201,27 @@ class ProjectTaskResource(Resource):
         task = query.first_or_404()
         return project_task_schema.dump(task), 200
 
-    @permission_required('projects', 'edit')
+    @permission_required('projects', 'view')
     def put(self, project_id, task_id):
         """Update a task."""
         from .project import get_request_company_id
         company_id = get_request_company_id()
+        if not _user_can_update_task(company_id, project_id, task_id):
+            return {"error": "Permission denied: edit on projects"}, 403
+
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         try:
             data = request.get_json()
+            has_full_edit = has_permission(company_id, 'projects', 'edit')
+            if not has_full_edit:
+                is_valid_payload, extra_fields = _validate_limited_task_update_payload(data)
+                if not is_valid_payload:
+                    return {
+                        "error": "Acesso negado: colaborador só pode atualizar status, conclusão e logs da própria atividade.",
+                        "extra_fields": sorted(extra_fields),
+                    }, 403
             
             # APP31 stage logic
             if 'stage' in data:
@@ -236,7 +264,7 @@ class ProjectTaskResource(Resource):
             db.session.rollback()
             return {"error": str(e)}, 500
 
-    @permission_required('projects', 'edit')
+    @permission_required('projects', 'view')
     def patch(self, project_id, task_id):
         """Partial update (e.g. for stage moves)."""
         return self.put(project_id, task_id)
@@ -270,11 +298,14 @@ class ProjectTaskResource(Resource):
             return {"error": str(e)}, 500
 
 class ProjectTaskStageResource(Resource):
-    @permission_required('projects', 'edit')
+    @permission_required('projects', 'view')
     def patch(self, project_id, task_id):
         """Update task stage (Kanban drag & drop)."""
         from .project import get_request_company_id
         company_id = get_request_company_id()
+        if not _user_can_update_task(company_id, project_id, task_id):
+            return {"error": "Permission denied: edit on projects"}, 403
+
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()

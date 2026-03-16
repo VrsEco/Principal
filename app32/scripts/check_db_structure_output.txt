@@ -1,0 +1,61 @@
+--- STDOUT ---
+
+--- STDERR ---
+Traceback (most recent call last):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/relationships.py", line 2434, in _determine_joins
+    self.primaryjoin = join_condition(
+                       ^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/sql/util.py", line 121, in join_condition
+    return Join._join_condition(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/sql/selectable.py", line 1453, in _join_condition
+    raise exc.NoForeignKeysError(
+sqlalchemy.exc.NoForeignKeysError: Can't find any foreign key relationships between 'incentive_indicators' and 'indicator_goals'.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/check_prod_db_structure_remote.py", line 4, in <module>
+    from app import create_app
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/app.py", line 9, in <module>
+    from schemas import ma
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/schemas/__init__.py", line 11, in <module>
+    from .company import CompanySchema, company_schema, companies_schema
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/schemas/company.py", line 11, in <module>
+    class CompanySchema(ma.SQLAlchemyAutoSchema):
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/marshmallow/schema.py", line 134, in __new__
+    klass._declared_fields = mcs.get_declared_fields(  # noqa: SLF001
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/marshmallow_sqlalchemy/schema.py", line 125, in get_declared_fields
+    fields.update(mcs.get_declared_sqla_fields(fields, converter, opts, dict_cls))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/marshmallow_sqlalchemy/schema.py", line 214, in get_declared_sqla_fields
+    converter.fields_for_model(
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/marshmallow_sqlalchemy/convert.py", line 164, in fields_for_model
+    for prop in sa.inspect(model).attrs:  # type: ignore[union-attr]
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 1235, in __get__
+    obj.__dict__[self.__name__] = result = self.fget(obj)
+                                           ^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/mapper.py", line 3057, in attrs
+    self._check_configure()
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/mapper.py", line 2410, in _check_configure
+    _configure_registries({self.registry}, cascade=True)
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/mapper.py", line 4227, in _configure_registries
+    _do_configure_registries(registries, cascade)
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/mapper.py", line 4268, in _do_configure_registries
+    mapper._post_configure_properties()
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/mapper.py", line 2427, in _post_configure_properties
+    prop.init()
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/interfaces.py", line 595, in init
+    self.do_init()
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/relationships.py", line 1657, in do_init
+    self._setup_join_conditions()
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/relationships.py", line 1895, in _setup_join_conditions
+    self._join_condition = jc = JoinCondition(
+                                ^^^^^^^^^^^^^^
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/relationships.py", line 2321, in __init__
+    self._determine_joins()
+  File "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages/sqlalchemy/orm/relationships.py", line 2455, in _determine_joins
+    raise sa_exc.NoForeignKeysError(
+sqlalchemy.exc.NoForeignKeysError: Could not determine join condition between parent/child tables on relationship IncentiveIndicator.goals - there are no foreign keys linking these tables.  Ensure that referencing columns are associated with a ForeignKey or ForeignKeyConstraint, or specify a 'primaryjoin' expression.

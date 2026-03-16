@@ -2,7 +2,7 @@ from flask import request, session
 from flask_restful import Resource
 from flask_login import login_required, current_user
 from models import Meeting, MeetingAgendaItem, Project, Company, Employee, db
-from utils.permissions import can_access_company, get_default_company_id, has_company_full_access
+from utils.permissions import get_default_company_id, has_company_full_access
 from datetime import datetime
 import json
 import logging
@@ -27,7 +27,11 @@ def user_can_access_company(company_id):
     if not company or not bool(getattr(company, 'is_active', True)):
         return False
 
-    return can_access_company(company_id)
+    if str(getattr(current_user, 'role', '')).strip().lower() in {'admin', 'administrator'}:
+        return True
+
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+    return employee is not None
 
 
 def get_request_company_id():

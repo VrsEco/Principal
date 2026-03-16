@@ -1,0 +1,69 @@
+INFO:services.scheduler_service:\U0001f4c5 Scheduler Service inicializado
+INFO:services.scheduler_service:\U0001f680 Inicializando Scheduler Service...
+INFO:services.scheduler_service:\U0001f527 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'process_daily_routines' adicionado: cron {'minute': '*', 'name': 'Processamento de Rotinas Agendadas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'VerificaþÒo de InstÔncias Atrasadas'}
+INFO:services.scheduler_service:\u2705 Jobs de rotina configurados!
+INFO:services.scheduler_service:\U0001f527 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Canais Configurados)'}
+INFO:services.scheduler_service:\u2705 Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:\u2705 Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:\u2705 Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento de Rotinas Agendadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "VerificaþÒo de InstÔncias Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Canais Configurados)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:\u2705 Scheduler iniciado com sucesso
+INFO:services.scheduler_service:\U0001f4cb Jobs agendados: 4
+INFO:services.scheduler_service:  - process_daily_routines: pr¾xima execuþÒo em 2026-03-15 11:29:00-03:00
+INFO:services.scheduler_service:  - chat_timeout_monitor: pr¾xima execuþÒo em 2026-03-15 11:29:16.348028-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: pr¾xima execuþÒo em 2026-03-15 12:00:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: pr¾xima execuþÒo em 2026-03-16 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:\u2705 SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: users contact backfill completed (users=0, whatsapp=0, telegram=0).
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+--- INSPECAO DE TABELA: indicator_data ---
+Coluna: id | Tipo: integer
+Coluna: company_id | Tipo: integer
+Coluna: goal_id | Tipo: integer
+Coluna: record_date | Tipo: date
+Coluna: value | Tipo: real
+Coluna: notes | Tipo: text
+Coluna: created_at | Tipo: text
+Coluna: updated_at | Tipo: text
+
+--- INSPECAO DE TABELA: indicator_goals ---
+Coluna: id | Tipo: integer
+Coluna: company_id | Tipo: integer
+Coluna: indicator_id | Tipo: integer
+Coluna: responsible_id | Tipo: integer
+Coluna: period_start | Tipo: date
+Coluna: period_end | Tipo: date
+Coluna: created_at | Tipo: timestamp without time zone
+Coluna: updated_at | Tipo: timestamp without time zone
+Coluna: goal_value | Tipo: numeric
+Coluna: goal_date | Tipo: date
+Coluna: code | Tipo: character varying
+Coluna: notes | Tipo: text
+Coluna: goal_type | Tipo: character varying
+Coluna: evaluation_basis | Tipo: character varying
+Coluna: status | Tipo: character varying

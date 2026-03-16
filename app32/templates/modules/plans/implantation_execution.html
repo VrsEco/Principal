@@ -102,13 +102,13 @@
                             </div>
                         </td>
                         <td style="padding: 12px;">
-                            <input type="number" class="item-capacity" value="{{ item.operational_capacity_revenue }}"
+                            <input type="text" class="item-capacity" value="{{ item.operational_capacity_revenue | format_currency_br }}"
                                 placeholder="0,00"
                                 style="width: 100%; background: transparent; border: none; font-size: 13px; font-weight: 500; text-align: right;">
                         </td>
                         <td style="padding: 12px;">
                             <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                                <input type="number" class="item-value" value="{{ item.value }}" readonly
+                                <input type="text" class="item-value" value="{{ item.value | format_currency_br }}" readonly
                                     style="width: 100%; background: transparent; border: none; font-weight: 700; text-align: right; font-size: 14px; color: #1e293b;">
                                 <button onclick="openPaymentsModal(this)" class="btn-link"
                                     style="font-size: 10px; color: #2563eb; cursor: pointer; border: none; background: none; text-decoration: underline; padding: 0;">
@@ -181,6 +181,13 @@
 </div>
 
 <script>
+    function parseBrFloat(str) {
+        if (!str) return 0;
+        if (typeof str === 'number') return str;
+        let clean = str.toString().replace(/\./g, '').replace(',', '.');
+        return parseFloat(clean) || 0;
+    }
+
     let currentEditingRow = null;
 
     function addItem(areaId) {
@@ -225,12 +232,12 @@
                 </div>
             </td>
             <td style="padding: 12px;">
-                <input type="number" class="item-capacity" placeholder="0,00"
+                <input type="text" class="item-capacity" placeholder="0,00"
                     style="width: 100%; background: transparent; border: none; font-size: 13px; font-weight: 500; text-align: right;">
             </td>
             <td style="padding: 12px;">
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                    <input type="number" class="item-value" value="0.00" readonly
+                    <input type="text" class="item-value" value="0.00" readonly
                         style="width: 100%; background: transparent; border: none; font-weight: 700; text-align: right; font-size: 14px;">
                     <button onclick="openPaymentsModal(this)" class="btn-link" style="font-size: 10px; color: #2563eb; cursor: pointer; border: none; background: none; text-decoration: underline; padding: 0;">
                         Planejar Pagamentos (<span class="payment-count">0</span>)
@@ -267,7 +274,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="padding: 8px 0;"><input type="date" class="modal-pay-date" value="${date}" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; font-size: 13px; width: 90%;"></td>
-            <td style="padding: 8px 0;"><input type="number" class="modal-pay-amount" value="${amount}" onchange="updateModalTotal()" placeholder="0,00" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; font-size: 13px; text-align: right; width: 100%;"></td>
+            <td style="padding: 8px 0;"><input type="text" class="modal-pay-amount" value="${amount ? amount.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : ''}" onchange="updateModalTotal()" placeholder="0,00" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; font-size: 13px; text-align: right; width: 100%;"></td>
             <td style="padding: 8px 0; text-align: right;"><button onclick="this.closest('tr').remove(); updateModalTotal();" style="color: #94a3b8; border: none; background: none; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button></td>
         `;
         document.getElementById('paymentsList').appendChild(tr);
@@ -276,7 +283,7 @@
     function updateModalTotal() {
         let total = 0;
         document.querySelectorAll('.modal-pay-amount').forEach(input => {
-            total += parseFloat(input.value) || 0;
+            total += parseBrFloat(input.value) || 0;
         });
         document.getElementById('modalTotalValue').innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
     }
@@ -292,7 +299,7 @@
 
         document.querySelectorAll('#paymentsList tr').forEach(row => {
             const date = row.querySelector('.modal-pay-date').value;
-            const amount = parseFloat(row.querySelector('.modal-pay-amount').value) || 0;
+            const amount = parseBrFloat(row.querySelector('.modal-pay-amount').value) || 0;
             if (date || amount > 0) {
                 payments.push({ date, amount });
                 total += amount;
@@ -300,7 +307,7 @@
         });
 
         currentEditingRow.querySelector('.item-payments-json').value = JSON.stringify(payments);
-        currentEditingRow.querySelector('.item-value').value = total.toFixed(2);
+        currentEditingRow.querySelector('.item-value').value = total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         currentEditingRow.querySelector('.payment-count').innerText = payments.length;
 
         closePaymentsModal();
@@ -316,8 +323,8 @@
                 classification: row.querySelector('.item-classification').value,
                 acquisition_date: row.querySelector('.item-acquisition-date').value || null,
                 availability_date: row.querySelector('.item-avail-date').value || null,
-                operational_capacity_revenue: parseFloat(row.querySelector('.item-capacity').value) || 0,
-                value: parseFloat(row.querySelector('.item-value').value) || 0,
+                operational_capacity_revenue: parseBrFloat(row.querySelector('.item-capacity').value) || 0,
+                value: parseBrFloat(row.querySelector('.item-value').value) || 0,
                 payments: JSON.parse(row.querySelector('.item-payments-json').value),
                 repetition: "unica",
                 supplier: "",

@@ -4,6 +4,9 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from dotenv import load_dotenv
 
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "FALSE")
+os.environ.setdefault("CHROMA_ANONYMIZED_TELEMETRY", "FALSE")
+
 load_dotenv()
 
 # Tenta carregar a chave de várias fontes possíveis

@@ -1,0 +1,164 @@
+import os
+from datetime import timedelta
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
+from pathlib import Path
+
+from utils.env_helpers import normalize_database_url
+
+# Força o carregamento do .env local da pasta base 'app32' (impede problemas no wsgi root)
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
+class Config:
+    """Base configuration class"""
+
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
+    # IMPORTANTE: PostgreSQL como padrão (conforme APP30 migrado)
+    # ✅ FIX: URL encoding na senha para evitar problemas com caracteres especiais (*)
+    _default_password = quote_plus("*Paraiso1978")
+    _env_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
+    SQLALCHEMY_DATABASE_URI = (
+        _env_database_url
+        or f"postgresql://postgres:{_default_password}@localhost:5432/bdversusv2"
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Authentication
+    LOGIN_DISABLED = os.environ.get("LOGIN_DISABLED", "False").lower() == "true"
+    REMEMBER_COOKIE_DURATION = timedelta(
+        days=7
+    )  # Reduzido de 30 para 7 dias por segurança
+
+    # Session Configuration (Segurança)
+    SESSION_COOKIE_SECURE = (
+        os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
+    )  # True em produção com HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Previne acesso via JavaScript (XSS protection)
+    SESSION_COOKIE_SAMESITE = "Lax"  # Proteção contra CSRF
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        hours=24
+    )  # Sessão expira em 24h se não marcar "lembrar-me"
+
+    # Email Configuration
+    MAIL_SERVER = os.environ.get("MAIL_SERVER")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT") or 587)
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
+    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "smtp")
+    EMAIL_WEBHOOK_URL = os.environ.get("EMAIL_WEBHOOK_URL")
+    EMAIL_INBOUND_PROTOCOL = os.environ.get("EMAIL_INBOUND_PROTOCOL", "pop3")
+    EMAIL_INBOUND_HOST = os.environ.get("EMAIL_INBOUND_HOST")
+    EMAIL_INBOUND_PORT = int(os.environ.get("EMAIL_INBOUND_PORT") or 995)
+    EMAIL_INBOUND_USERNAME = os.environ.get("EMAIL_INBOUND_USERNAME")
+    EMAIL_INBOUND_PASSWORD = os.environ.get("EMAIL_INBOUND_PASSWORD")
+    EMAIL_INBOUND_USE_SSL = (
+        os.environ.get("EMAIL_INBOUND_USE_SSL", "true").lower() == "true"
+    )
+    EMAIL_AUTO_REPLY = os.environ.get("EMAIL_AUTO_REPLY", "false").lower() == "true"
+
+    # File Uploads
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER") or "uploads"
+    ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "gif"}
+
+    # Google Cloud Storage
+    GCS_BUCKET = os.environ.get("GCS_BUCKET")
+    GOOGLE_APPLICATION_CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+
+    # AI Integration
+    AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai")  # openai, anthropic, local
+    AI_API_KEY = os.environ.get("AI_API_KEY")
+    AI_WEBHOOK_URL = os.environ.get("AI_WEBHOOK_URL")
+
+    # WhatsApp Integration
+    WHATSAPP_PROVIDER = os.environ.get(
+        "WHATSAPP_PROVIDER", "z-api"
+    )  # z-api, twilio, webhook
+    WHATSAPP_API_KEY = os.environ.get("WHATSAPP_API_KEY")
+    WHATSAPP_WEBHOOK_URL = os.environ.get("WHATSAPP_WEBHOOK_URL")
+    WHATSAPP_INSTANCE_ID = os.environ.get("WHATSAPP_INSTANCE_ID")
+    WHATSAPP_CLIENT_TOKEN = os.environ.get("WHATSAPP_CLIENT_TOKEN")
+    TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+
+    # Telegram Integration
+    TELEGRAM_PROVIDER = os.environ.get("TELEGRAM_PROVIDER", "bot_api")
+    TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_BOT_TOKEN_DEV = os.environ.get("TELEGRAM_BOT_TOKEN_DEV")
+    TELEGRAM_BOT_TOKEN_PROD = os.environ.get("TELEGRAM_BOT_TOKEN_PROD")
+    TELEGRAM_WEBHOOK_URL = os.environ.get("TELEGRAM_WEBHOOK_URL")
+    TELEGRAM_WEBHOOK_PATH = os.environ.get("TELEGRAM_WEBHOOK_PATH", "/webhook/telegram")
+    TELEGRAM_ENV = os.environ.get("TELEGRAM_ENV")
+
+    # Instagram Integration
+    INSTAGRAM_PROVIDER = os.environ.get("INSTAGRAM_PROVIDER", "meta")
+    INSTAGRAM_ACCESS_TOKEN = os.environ.get("INSTAGRAM_ACCESS_TOKEN")
+    INSTAGRAM_BUSINESS_ACCOUNT_ID = os.environ.get("INSTAGRAM_BUSINESS_ACCOUNT_ID")
+    INSTAGRAM_WEBHOOK_URL = os.environ.get("INSTAGRAM_WEBHOOK_URL")
+    INSTAGRAM_GRAPH_API_BASE = os.environ.get(
+        "INSTAGRAM_GRAPH_API_BASE", "https://graph.facebook.com/v21.0"
+    )
+    INSTAGRAM_APP_ID = os.environ.get("INSTAGRAM_APP_ID")
+    INSTAGRAM_APP_SECRET = os.environ.get("INSTAGRAM_APP_SECRET")
+    INSTAGRAM_VERIFY_TOKEN = os.environ.get("INSTAGRAM_VERIFY_TOKEN")
+
+    # Redis for Celery
+    REDIS_URL = os.environ.get("REDIS_URL") or "redis://localhost:6379/0"
+    CELERY_BROKER_URL = REDIS_URL
+    CELERY_RESULT_BACKEND = REDIS_URL
+
+    # PDF Generation
+    PDF_TEMP_FOLDER = os.environ.get("PDF_TEMP_FOLDER") or "temp_pdfs"
+
+    # Rate Limiting
+    RATELIMIT_STORAGE_URL = REDIS_URL
+
+    # Telegram Webhook
+    EXTERNAL_URL = os.environ.get("EXTERNAL_URL")
+    TELEGRAM_SETUP_WEBHOOK = os.environ.get("TELEGRAM_SETUP_WEBHOOK", "false").lower() == "true"
+
+
+class DevelopmentConfig(Config):
+    """Development configuration"""
+
+    DEBUG = True
+    TEMPLATES_AUTO_RELOAD = True  # Recarregar templates automaticamente
+    SEND_FILE_MAX_AGE_DEFAULT = 0  # Sem cache de arquivos estáticos
+    # IMPORTANTE: PostgreSQL como padrão (conforme APP30 migrado)
+    # ✅ FIX: URL encoding na senha para evitar problemas com caracteres especiais (*)
+    _dev_password = quote_plus("*Paraiso1978")
+    _dev_database_url = normalize_database_url(os.environ.get("DEV_DATABASE_URL"))
+    SQLALCHEMY_DATABASE_URI = (
+        _dev_database_url
+        or f"postgresql://postgres:{_dev_password}@localhost:5432/bdversusv2"
+    )
+
+
+class ProductionConfig(Config):
+    """Production configuration"""
+
+    DEBUG = False
+    _prod_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
+    SQLALCHEMY_DATABASE_URI = (
+        _prod_database_url or "postgresql://user:password@localhost/bdversusv2"
+    )
+
+
+class TestingConfig(Config):
+    """Testing configuration"""
+
+    TESTING = True
+    # For testing, use a separate test database or mock
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:password@localhost:5432/bd_app_versus_test"
+    WTF_CSRF_ENABLED = False
+
+
+config = {
+    "development": DevelopmentConfig,
+    "production": ProductionConfig,
+    "testing": TestingConfig,
+    "default": DevelopmentConfig,
+}

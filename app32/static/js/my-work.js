@@ -3602,6 +3602,46 @@ function updateHoursSummary() {
 // FORM SUBMISSIONS
 // ========================================
 
+function buildProjectTaskApiUrl(activity) {
+  if (!activity?.project_id || !activity?.id || !activity?.company_id) {
+    throw new Error('Dados do projeto incompletos');
+  }
+
+  return `/api/projects/${activity.project_id}/tasks/${activity.id}?company_id=${activity.company_id}`;
+}
+
+async function fetchProjectTaskData(activity) {
+  const taskUrl = buildProjectTaskApiUrl(activity);
+  const response = await fetch(taskUrl);
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json')
+    ? await response.json()
+    : null;
+
+  if (!response.ok || !data) {
+    throw new Error('Erro ao buscar dados atuais da atividade');
+  }
+
+  return { taskUrl, data };
+}
+
+function normalizeTaskLogs(rawLogs) {
+  if (Array.isArray(rawLogs)) {
+    return [...rawLogs];
+  }
+
+  if (typeof rawLogs === 'string' && rawLogs.trim()) {
+    try {
+      const parsedLogs = JSON.parse(rawLogs);
+      return Array.isArray(parsedLogs) ? parsedLogs : [];
+    } catch (err) {
+      console.warn('Logs da atividade em formato inválido; seguindo com lista vazia.', err);
+    }
+  }
+
+  return [];
+}
+
 // Form: Adicionar Horas
 document.getElementById('formAddHours')?.addEventListener('submit', async function (e) {
   e.preventDefault();
@@ -3619,60 +3659,15 @@ document.getElementById('formAddHours')?.addEventListener('submit', async functi
   console.log('Adding hours to activity:', currentActivity.id, 'Type:', currentActivity.type);
 
   try {
-    // Para PROJETOS: usar nova API de colaboradores
-    if (currentActivity.type === 'project' && currentActivity.company_id && currentActivity.project_id) {
-      // Registrar horas via nova API de colaboradores
-      const response = await fetch(
-        `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}/collaborators`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            employee_id: null,  // TODO: pegar do current_user quando disponível
-            role: 'executor',
-            hours: hoursToAdd,
-            notes: description || `Adicionado ${hoursToAdd}h em ${new Date(date).toLocaleDateString('pt-BR')}`
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao registrar horas');
-      }
-
-      window.showMessage(`✅ ${hoursToAdd}h registradas com sucesso!`, 'success');
-      closeModal('modalAddHours');
-      loadActivitiesData();
-      return; // IMPORTANTE: return aqui para não executar o código antigo
-    }
-
-    // Para PROCESSOS ou fallback: usar método antigo
     if (!currentActivity.company_id || !currentActivity.project_id) {
       window.showMessage('❌ Dados da atividade incompletos', 'error');
       return;
     }
 
-    // Fetch current activity data
-    const fetchResponse = await fetch(
-      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities`
-    );
-    const fetchData = await fetchResponse.json();
-
-    if (!fetchResponse.ok || !fetchData.success) {
-      throw new Error('Erro ao buscar dados da atividade');
-    }
-
-    const activities = fetchData.activities || [];
-    const activity = activities.find(a => a.id === currentActivity.id);
-
-    if (!activity) {
-      throw new Error('Atividade não encontrada');
-    }
+    const { taskUrl, data: activity } = await fetchProjectTaskData(currentActivity);
 
     // Add log entry (hours tracking will be implemented later with proper API)
-    const logs = activity.logs || [];
+    const logs = normalizeTaskLogs(activity.logs);
     logs.push({
       timestamp: new Date().toISOString(),
       text: description || `Adicionado ${hoursToAdd}h em ${new Date(date).toLocaleDateString('pt-BR')}`,
@@ -3682,28 +3677,21 @@ document.getElementById('formAddHours')?.addEventListener('submit', async functi
     });
 
     // Update activity - only updating logs, NOT touching amount or worked_hours
-    const updateResponse = await fetch(
-      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          what: activity.what,
-          who: activity.who,
-          when: activity.when,
-          how: activity.how,
-          amount: activity.amount,  // Keep original budget value
-          score_weight: activity.score_weight || 1,
-          observations: activity.observations,
-          logs: logs
-        })
-      }
-    );
+    const updateResponse = await fetch(taskUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        logs: logs
+      })
+    });
 
-    const updateData = await updateResponse.json();
+    const updateContentType = updateResponse.headers.get('content-type') || '';
+    const updateData = updateContentType.includes('application/json')
+      ? await updateResponse.json()
+      : null;
 
-    if (!updateResponse.ok || !updateData.success) {
-      throw new Error(updateData.message || 'Erro ao atualizar atividade');
+    if (!updateResponse.ok || !updateData) {
+      throw new Error('Erro ao atualizar atividade');
     }
 
     window.showMessage(`✅ ${hoursToAdd}h registradas com sucesso! (Registro em log apenas)`, 'info');
@@ -3731,25 +3719,10 @@ document.getElementById('formAddComment')?.addEventListener('submit', async func
   console.log('Adding comment to activity:', currentActivity.id);
 
   try {
-    // Fetch current activity data
-    const fetchResponse = await fetch(
-      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities`
-    );
-    const fetchData = await fetchResponse.json();
-
-    if (!fetchResponse.ok || !fetchData.success) {
-      throw new Error('Erro ao buscar dados da atividade');
-    }
-
-    const activities = fetchData.activities || [];
-    const activity = activities.find(a => a.id === currentActivity.id);
-
-    if (!activity) {
-      throw new Error('Atividade não encontrada');
-    }
+    const { taskUrl, data: activity } = await fetchProjectTaskData(currentActivity);
 
     // Add log entry
-    const logs = activity.logs || [];
+    const logs = normalizeTaskLogs(activity.logs);
     logs.push({
       timestamp: new Date().toISOString(),
       text: comment,
@@ -3757,28 +3730,21 @@ document.getElementById('formAddComment')?.addEventListener('submit', async func
     });
 
     // Update activity
-    const updateResponse = await fetch(
-      `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          what: activity.what,
-          who: activity.who,
-          when: activity.when,
-          how: activity.how,
-          amount: activity.amount,
-          score_weight: activity.score_weight || 1,
-          observations: activity.observations,
-          logs: logs
-        })
-      }
-    );
+    const updateResponse = await fetch(taskUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        logs: logs
+      })
+    });
 
-    const updateData = await updateResponse.json();
+    const updateContentType = updateResponse.headers.get('content-type') || '';
+    const updateData = updateContentType.includes('application/json')
+      ? await updateResponse.json()
+      : null;
 
-    if (!updateResponse.ok || !updateData.success) {
-      throw new Error(updateData.message || 'Erro ao atualizar atividade');
+    if (!updateResponse.ok || !updateData) {
+      throw new Error('Erro ao atualizar atividade');
     }
 
     window.showMessage('✅ Comentário adicionado com sucesso!', 'success');
@@ -3808,7 +3774,7 @@ document.getElementById('formComplete')?.addEventListener('submit', async functi
   try {
     if (currentActivity.type === 'process') {
       const companyId = currentActivity.company_id;
-      const instanceId = currentActivity.instance_id;
+      const instanceId = currentActivity.instance_id || currentActivity.id;
 
       if (!companyId || !instanceId) {
         throw new Error('Dados do processo incompletos');
@@ -3867,25 +3833,9 @@ document.getElementById('formComplete')?.addEventListener('submit', async functi
         throw new Error('Dados do projeto ausentes');
       }
 
-      // Fetch current activity data to get logs
-      const fetchResponse = await fetch(
-        `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities`
-      );
-      const fetchData = await fetchResponse.json();
+      const { taskUrl, data: fetchData } = await fetchProjectTaskData(currentActivity);
+      const logs = normalizeTaskLogs(fetchData.logs);
 
-      if (!fetchResponse.ok || !fetchData.success) {
-        throw new Error('Erro ao buscar dados da atividade');
-      }
-
-      const activities = fetchData.activities || [];
-      const activity = activities.find(a => a.id === currentActivity.id);
-
-      if (!activity) {
-        throw new Error('Atividade não encontrada');
-      }
-
-      // Add completion log
-      const logs = activity.logs || [];
       logs.push({
         timestamp: new Date().toISOString(),
         text: completionComment || `Atividade concluída em ${new Date(today).toLocaleDateString('pt-BR')}`,
@@ -3893,24 +3843,25 @@ document.getElementById('formComplete')?.addEventListener('submit', async functi
         date: today
       });
 
-      // Update activity stage to completed
-      const updateResponse = await fetch(
-        `/api/companies/${currentActivity.company_id}/projects/${currentActivity.project_id}/activities/${currentActivity.id}/stage`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            stage: 'completed',
-            completion_date: today,
-            logs: logs
-          })
-        }
-      );
+      // Update task with completion payload compatible with the backend resource
+      const updateResponse = await fetch(taskUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stage: 'completed',
+          status: 'completed',
+          completion_date: today,
+          logs: logs
+        })
+      });
 
-      const updateData = await updateResponse.json();
+      const updateContentType = updateResponse.headers.get('content-type') || '';
+      const updateData = updateContentType.includes('application/json')
+        ? await updateResponse.json()
+        : null;
 
-      if (!updateResponse.ok || !updateData.success) {
-        throw new Error(updateData.message || 'Erro ao finalizar atividade');
+      if (!updateResponse.ok || !updateData) {
+        throw new Error('Erro ao finalizar atividade');
       }
 
       window.showMessage('✅ Atividade finalizada com sucesso!', 'success');

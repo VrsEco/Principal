@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relatorio de Auditoria de Producao - 2026-03-16</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 32px; color: #1f2937; }
+    h1, h2, h3 { color: #0f172a; }
+    .meta { color: #475569; margin-bottom: 24px; }
+    .card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; vertical-align: top; }
+    th { background: #e2e8f0; }
+    .ok { color: #166534; font-weight: bold; }
+    .warn { color: #9a3412; font-weight: bold; }
+    ul { line-height: 1.6; }
+    .footer { margin-top: 28px; color: #64748b; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Relatorio de Auditoria de Producao</h1>
+  <div class="meta">Sistema: Gestao Versus APP32 - Ambiente Configr - Gerado em 16/03/2026 11:14</div>
+  <div class="card">
+    <h2>Resumo Executivo</h2>
+    <p>Foi executada uma auditoria tecnica profunda no ambiente de producao com foco em paginas principais, meetings, agents, incentives, projects, processes e endpoints de relatorio HTML/PDF. O erro real de <strong>/incentives</strong> foi corrigido e, nesta rodada, nao foi encontrado novo erro 500 ativo nas telas principais auditadas.</p>
+  </div>
+  <div class="card">
+    <h2>Paginas validadas</h2>
+    <table><thead><tr><th>Rota</th><th>Status</th><th>Observacao</th></tr></thead><tbody>
+    <tr><td>/incentives</td><td class="ok">200</td><td>500 real corrigido em produção; dashboard voltou a renderizar normalmente.</td></tr><tr><td>/portal</td><td class="ok">200</td><td>Tela principal autenticada validada.</td></tr><tr><td>/my-work</td><td class="ok">200</td><td>Tela principal autenticada validada.</td></tr><tr><td>/indicators</td><td class="ok">200</td><td>Listagem validada após correções anteriores.</td></tr><tr><td>/indicators/analysis</td><td class="ok">200</td><td>Análises comparativas validadas em produção.</td></tr><tr><td>/projects</td><td class="ok">200</td><td>Listagem de projetos validada.</td></tr><tr><td>/projects/analysis</td><td class="ok">200</td><td>Análise de projetos validada.</td></tr><tr><td>/incentives/reports</td><td class="ok">200</td><td>Relatórios de incentivos renderizando.</td></tr><tr><td>/incentives/validation</td><td class="ok">200</td><td>Painel de validação renderizando.</td></tr><tr><td>/incentives/statement</td><td class="ok">200</td><td>Extrato renderizando.</td></tr><tr><td>/meetings/company/9</td><td class="ok">200</td><td>Gestão de reuniões validada com login real via test_client.</td></tr><tr><td>/meetings/company/9/meeting/1/report</td><td class="ok">200</td><td>Ata/relatório HTML validado.</td></tr><tr><td>/sapiens</td><td class="ok">200</td><td>Hub de agents validado.</td></tr><tr><td>/usuarios</td><td class="ok">200</td><td>Gestão de usuários validada.</td></tr>
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>Relatorios HTML e PDF validados</h2>
+    <table><thead><tr><th>Artefato</th><th>Status</th><th>Content-Type</th><th>Tamanho</th><th>Observacao</th></tr></thead><tbody>
+    <tr><td>Process Book HTML</td><td class="ok">200</td><td>text/html</td><td>16627 bytes</td><td>Book de processo renderizando corretamente.</td></tr><tr><td>Project Summary PDF</td><td class="ok">200</td><td>application/pdf</td><td>6735 bytes</td><td>PDF gerado sem erro.</td></tr><tr><td>Task Summary PDF</td><td class="ok">200</td><td>application/pdf</td><td>3466 bytes</td><td>PDF gerado sem erro.</td></tr><tr><td>My Work Print HTML</td><td class="ok">200</td><td>text/html</td><td>85042 bytes</td><td>Relatório print-friendly renderizando.</td></tr><tr><td>Meeting Report HTML</td><td class="ok">200</td><td>text/html</td><td>14839 bytes</td><td>Ata HTML renderizando.</td></tr>
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>Contratos funcionais validados</h2>
+    <table><thead><tr><th>Endpoint</th><th>Status</th><th>Conclusao</th></tr></thead><tbody>
+    <tr><td>PUT /meetings/api/meeting/1</td><td class="ok">200</td><td>Contrato correto para preliminares com JSON.</td></tr><tr><td>PUT /meetings/api/meeting/1/execucao</td><td class="ok">200</td><td>Contrato correto para execução com JSON.</td></tr><tr><td>GET /meetings/api/meeting/1/check-sync</td><td class="ok">200</td><td>Consulta de sincronização OK.</td></tr><tr><td>POST /meetings/api/meeting/1/sync-activities</td><td class="ok">400</td><td>Resposta funcional correta: reunião ainda não iniciada/vinculada a projeto.</td></tr><tr><td>POST /api/agents/menu/options</td><td class="ok">400</td><td>Validação de payload funcionando; sem 500.</td></tr><tr><td>GET /api/agents/actions/workflow-approvals/board</td><td class="ok">200</td><td>Board de aprovações OK.</td></tr><tr><td>GET /api/agents/workflow-usage/metrics</td><td class="ok">200</td><td>Métricas de uso OK.</td></tr><tr><td>GET /api/agents/workflows/catalog</td><td class="ok">200</td><td>Catálogo OK.</td></tr>
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>Riscos remanescentes</h2>
+    <ul><li>Nao executei endpoints de escrita que alteram estado produtivo de forma irreversivel, como iniciar reuniao criando ou vinculando projeto.</li><li>Ainda existem templates legados ou inativos com url_for antigo, mas sem evidencia atual de 500 nas telas principais publicadas.</li><li>pdftoppm nao esta disponivel no ambiente local; por isso a validacao dos artefatos PDF foi feita por resposta HTTP, tamanho e leitura estrutural do arquivo gerado neste relatorio.</li></ul>
+  </div>
+  <div class="card">
+    <h2>Veredito tecnico</h2>
+    <p><strong>Status atual:</strong> ambiente produtivo estabilizado nas frentes auditadas nesta rodada.</p>
+    <p><strong>Conclusao:</strong> o 500 de incentives foi eliminado, os relatorios HTML/PDF auditados estao respondendo e nao foi identificado novo 500 ativo em Projects, Processes, Meetings, Agents e paginas principais cobertas nesta bateria.</p>
+  </div>
+  <div class="footer">Arquivo gerado automaticamente em C:/GestaoVersus/app32/output/html</div>
+</body></html>

@@ -1,0 +1,269 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Fechamento de Ciclo | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="/incentives">Incentivos</a>
+<span class="sep">/</span>
+<span class="current">Fechamento {{ calculation.period_start.strftime('%m/%Y') }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<style>
+    .closing-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding-bottom: 2rem;
+        max-width: 1400px;
+    }
+
+    .report-top-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .report-header-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .report-meta h1 {
+        font-size: 1.1rem;
+        font-weight: 850;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 0.3rem 0.75rem;
+        border-radius: 20px;
+    }
+
+    .status-preview { background: #fef9c3; color: #854d0e; }
+    .status-calculated { background: #dbeafe; color: #1e40af; }
+    .status-approved { background: #dcfce7; color: #166534; }
+    .status-paid { background: #f3e8ff; color: #6b21a8; }
+
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .stat-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.75rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .stat-label {
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        margin-bottom: 0.2rem;
+        display: block;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 900;
+        color: var(--text-primary);
+    }
+
+    .participants-list {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .p-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .p-table th {
+        background: var(--surface-secondary);
+        padding: 0.5rem 1rem;
+        text-align: left;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .p-table td {
+        padding: 0.6rem 1rem;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.85rem;
+    }
+
+    .p-table tr:hover { background: rgba(0,0,0,0.015); }
+
+    .emp-name { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; }
+    .emp-score { font-weight: 800; color: var(--primary); }
+    .emp-bonus { font-weight: 900; color: var(--text-primary); }
+
+    .action-bar-bottom {
+        padding: 0.75rem 1rem;
+        background: var(--surface-secondary);
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .btn-compact {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+    }
+
+    @media print {
+        .workspace-header, .action-bar-bottom, .breadcrumb { display: none !important; }
+        .closing-wrapper { gap: 0.5rem; }
+    }
+</style>
+
+<div class="workspace-header" style="margin-bottom: 0.75rem;">
+    <div class="header-content">
+        <h1 class="text-h1" style="font-size: 1.25rem;">📊 Relatório de Fechamento</h1>
+        <p class="text-secondary" style="font-size: 0.8rem;">Análise detalhada do ciclo de incentivos para aprovação.</p>
+    </div>
+    <div class="header-actions">
+        <button onclick="window.print()" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i> Imprimir</button>
+    </div>
+</div>
+
+<div class="closing-wrapper fade-in">
+    <!-- Top Grid: Header + Stats -->
+    <div class="report-top-grid">
+        <!-- Header com Status -->
+        <div class="report-header-card">
+            <div class="report-meta">
+                <h1>Ciclo {{ calculation.period_start.strftime('%m/%Y') }}</h1>
+                <span style="font-size: 0.7rem; color: var(--text-tertiary);">Gerado em {{ calculation.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+            </div>
+            
+            <div class="status-indicator status-{{ calculation.status }}">
+                <i class="fas {% if calculation.status == 'paid' %}fa-check-double{% elif calculation.status == 'approved' %}fa-check{% else %}fa-clock{% endif %}"></i>
+                {{ calculation.status | upper }}
+            </div>
+        </div>
+
+        <!-- Stats de Resumo -->
+        <div class="summary-stats">
+            <div class="stat-box">
+                <span class="stat-label">Total Distribuído</span>
+                <span class="stat-value">R$ {{ calculation.total_distributed | default(0) | format_currency_br }}</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Colaboradores</span>
+                <span class="stat-value">{{ calculation.participants_count or 0 }}</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Média por Pessoa</span>
+                <span class="stat-value">R$ {{ ((calculation.total_distributed / calculation.participants_count) if calculation.participants_count and calculation.participants_count > 0 else 0) | format_currency_br }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Participantes -->
+    <div class="participants-list">
+        <table class="p-table">
+            <thead>
+                <tr>
+                    <th>Colaborador</th>
+                    <th style="text-align: center;">Score Global</th>
+                    <th style="text-align: center;">Base Ref.</th>
+                    <th style="text-align: right;">Bônus Calculado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in participants %}
+                <tr style="cursor: pointer;" onclick="location.href='/incentives/statement/{{ calculation.id }}/{{ p.employee_id }}'">
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem;">
+                                {{ p.name[:1] }}
+                            </div>
+                            <div>
+                                <span class="emp-name">{{ p.name }}</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.7rem; color: var(--text-tertiary);">ID #{{ p.employee_id }}</span>
+                                    {% set flag = namespace(manual=false) %}
+                                    {% for step in p.steps %}
+                                        {% if step.is_manual %}{% set flag.manual = true %}{% endif %}
+                                    {% endfor %}
+                                    {% if flag.manual %}
+                                    <span style="font-size: 10px; color: #ef4444; font-weight: 800; background: #fee2e2; padding: 1px 6px; border-radius: 4px;">
+                                        <i class="fas fa-exclamation-circle"></i> AJUSTE MANUAL
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="emp-score">{{ "{:,.1f}".format((p.total_score * 100) | float).replace('.', ',') }}%</span>
+                    </td>
+                    <td style="text-align: center; color: var(--text-tertiary);">
+                        R$ {{ p.base_target | default(0) | format_currency_br }}
+                    </td>
+                    <td style="text-align: right;">
+                        <span class="emp-bonus">R$ {{ p.bonus | default(0) | format_currency_br }}</span>
+                        <i class="fas fa-chevron-right" style="margin-left: 1rem; color: var(--border); font-size: 0.8rem;"></i>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Ações do Gestor -->
+        <div class="action-bar-bottom">
+            {% if calculation.status == 'calculated' or calculation.status == 'preview' %}
+            <a href="{{ url_for('incentives.perform_action', calc_id=calculation.id, action='approve') }}" class="btn btn-primary btn-compact">
+                <i class="fas fa-check-circle"></i> Aprovar Relatório
+            </a>
+            {% elif calculation.status == 'approved' %}
+            <a href="{{ url_for('incentives.perform_action', calc_id=calculation.id, action='pay') }}" class="btn btn-primary btn-compact" style="background: var(--success); border-color: var(--success);">
+                <i class="fas fa-money-bill-wave"></i> Autorizar Pagamento (RH)
+            </a>
+            {% elif calculation.status == 'paid' %}
+            <div style="color: var(--success); font-weight: 700; font-size: 0.75rem;">
+                <i class="fas fa-check-double"></i> Ciclo Pago
+            </div>
+            {% endif %}
+            
+            <a href="/incentives" class="btn btn-secondary btn-compact">Voltar</a>
+        </div>
+    </div>
+
+    <div style="padding: 0.75rem 1rem; background: rgba(37, 99, 235, 0.05); border-radius: 8px; font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4; border: 1px dashed var(--primary-light);">
+        <strong>Certificação de Auditoria:</strong> Relatório imutável gravado em JSON. Dados baseados em evidências de módulos periféricos e ajustes manuais homologados.
+    </div>
+</div>
+{% endblock %}

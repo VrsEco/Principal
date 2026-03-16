@@ -1,0 +1,58 @@
+--- STDOUT ---
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+BOT [TELEGRAM] Verificando registro de Webhook para: https://app.gestaoversus.com.br
+DEBUG: Blueprints registered.
+DEBUG: Checking DB connection and creating tables...
+DEBUG: users contact backfill completed (users=0, whatsapp=0, telegram=0).
+DEBUG: DB tables verified/created successfully.
+DEBUG: Starting Engineering Service worker...
+[SQUAD ENGENHARIA] Monitorando sistema...
+DEBUG: Engineering Service worker started.
+DEBUG: Initializing Scheduler...
+DEBUG: Scheduler initialized.
+DEBUG: create_app() finished successfully.
+Executed success: 
+        CREATE TABLE IF NOT EXISTS incentive_indi...
+Executed success: 
+        ALTER TABLE incentive_indicators ADD COLU...
+Executed success: 
+        ALTER TABLE incentive_indicators ADD COLU...
+Executed success: 
+        CREATE INDEX IF NOT EXISTS idx_incentive_...
+Executed success: 
+        CREATE TABLE IF NOT EXISTS incentive_targ...
+DB Migration completed.
+
+--- STDERR ---
+INFO:services.scheduler_service:📅 Scheduler Service inicializado
+INFO:services.scheduler_service:🚀 Inicializando Scheduler Service...
+INFO:services.scheduler_service:🔧 Configurando jobs de rotina...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'process_daily_routines' adicionado: cron {'minute': '*', 'name': 'Processamento de Rotinas Agendadas'}
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'check_overdue_tasks' adicionado: cron {'minute': 0, 'name': 'Verificação de Instâncias Atrasadas'}
+INFO:services.scheduler_service:✅ Jobs de rotina configurados!
+INFO:services.scheduler_service:🔧 Configurando jobs proativos do Sapiens...
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'proactive_morning_summary' adicionado: cron {'hour': 8, 'minute': 0, 'name': 'Resumo Matinal Proativo (Canais Configurados)'}
+INFO:services.scheduler_service:✅ Jobs proativos configurados!
+INFO:apscheduler.scheduler:Adding job tentatively -- it will be properly scheduled when the scheduler starts
+INFO:services.scheduler_service:✅ Job 'chat_timeout_monitor' adicionado: interval {'seconds': 30, 'name': 'Monitor de Inatividade de Chat'}
+INFO:services.scheduler_service:✅ Job de Timeout de Chat configurado!
+INFO:apscheduler.scheduler:Added job "Processamento de Rotinas Agendadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Verificação de Instâncias Atrasadas" to job store "default"
+INFO:apscheduler.scheduler:Added job "Resumo Matinal Proativo (Canais Configurados)" to job store "default"
+INFO:apscheduler.scheduler:Added job "Monitor de Inatividade de Chat" to job store "default"
+INFO:apscheduler.scheduler:Scheduler started
+INFO:services.scheduler_service:✅ Scheduler iniciado com sucesso
+INFO:services.scheduler_service:📋 Jobs agendados: 4
+INFO:services.scheduler_service:  - process_daily_routines: próxima execução em 2026-03-14 09:34:00-03:00
+INFO:services.scheduler_service:  - chat_timeout_monitor: próxima execução em 2026-03-14 09:34:21.650744-03:00
+INFO:services.scheduler_service:  - check_overdue_tasks: próxima execução em 2026-03-14 10:00:00-03:00
+INFO:services.scheduler_service:  - proactive_morning_summary: próxima execução em 2026-03-15 08:00:00-03:00
+INFO:services.scheduler_service:================================================================================
+INFO:services.scheduler_service:✅ SCHEDULER ATIVO E FUNCIONANDO!
+INFO:services.scheduler_service:================================================================================

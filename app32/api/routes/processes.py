@@ -6,11 +6,35 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
-from models import db, Company, Process, ProcessInstance, Employee
-from models.incentive import IncentiveIndicator
+from models import db, Company, Process, ProcessInstance, Employee, Indicator
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company
 
 processes_bp = Blueprint('processes', __name__)
+
+
+def _coerce_optional_int(value, default=0):
+    if value in (None, ''):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_optional_float(value, default=1.0):
+    if value in (None, ''):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_optional_text(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _get_current_company_employee(company_id: int):
@@ -37,6 +61,17 @@ def _build_process_details_payload(process: Process) -> dict:
     macro = getattr(process, 'macro', None)
     area = getattr(macro, 'area', None) if macro else None
 
+    # Link to the unified core Indicator instead of IncentiveIndicator
+    ind = None
+    try:
+        ind = Indicator.query.filter_by(
+            source_module='processo',
+            source_id=process.id,
+            is_active=True
+        ).first()
+    except Exception:
+        ind = None
+
     return {
         'id': process.id,
         'company_id': process.company_id,
@@ -55,11 +90,7 @@ def _build_process_details_payload(process: Process) -> dict:
         'flow_mermaid': getattr(process, 'flow_mermaid', None),
         'notes': getattr(process, 'notes', None),
         'is_active': getattr(process, 'is_active', None),
-        'incentive_indicator': next((i.to_dict() for i in [IncentiveIndicator.query.filter_by(
-            source_module='process', 
-            source_id=str(process.id), 
-            is_active=True
-        ).first()] if i), None),
+        'incentive_indicator': ind.to_dict() if ind else None,
         'macro': {
             'id': macro.id,
             'company_id': macro.company_id,
@@ -453,8 +484,13 @@ def api_create_process_routine(company_id):
         if not name:
             return jsonify({"success": False, "message": "Nome é obrigatório"}), 400
 
-        process_id = data.get("process_id")
-        # process_id could be optional but usually required for "process routines"
+        process_id = _coerce_optional_int(data.get("process_id"), default=None)
+        schedule_type = _coerce_optional_text(data.get("schedule_type")) or "weekly"
+        schedule_value = _coerce_optional_text(data.get("schedule_value"))
+        deadline_days = _coerce_optional_int(data.get("deadline_days"), default=0)
+        deadline_hours = _coerce_optional_int(data.get("deadline_hours"), default=0)
+        deadline_date = _coerce_optional_text(data.get("deadline_date"))
+        score_weight = _coerce_optional_float(data.get("score_weight"), default=1.0)
         
         pg = get_db()
         conn = pg._get_connection()
@@ -474,12 +510,12 @@ def api_create_process_routine(company_id):
                 name,
                 data.get("description", ""),
                 process_id,
-                data.get("schedule_type", "weekly"),
-                data.get("schedule_value"),
-                data.get("deadline_days", 0),
-                data.get("deadline_hours", 0),
-                data.get("deadline_date"),
-                data.get("score_weight", 1.0)
+                schedule_type,
+                schedule_value,
+                deadline_days,
+                deadline_hours,
+                deadline_date,
+                score_weight
             ),
         )
 
@@ -504,6 +540,12 @@ def api_update_process_routine(company_id, routine_id):
         return jsonify({"success": False, "message": "Acesso negado: Colaboradores não podem editar rotinas."}), 403
     try:
         data = request.get_json(silent=True) or {}
+        process_id = _coerce_optional_int(data.get("process_id"), default=None)
+        schedule_type = _coerce_optional_text(data.get("schedule_type"))
+        schedule_value = _coerce_optional_text(data.get("schedule_value"))
+        deadline_days = _coerce_optional_int(data.get("deadline_days"), default=0)
+        deadline_hours = _coerce_optional_int(data.get("deadline_hours"), default=0)
+        score_weight = _coerce_optional_float(data.get("score_weight"), default=1.0)
         pg = get_db()
         conn = pg._get_connection()
         cursor = conn.cursor()
@@ -525,12 +567,12 @@ def api_update_process_routine(company_id, routine_id):
             (
                 data.get("name"),
                 data.get("description", ""),
-                data.get("process_id"),
-                data.get("schedule_type"),
-                data.get("schedule_value"),
-                data.get("deadline_days", 0),
-                data.get("deadline_hours", 0),
-                data.get("score_weight", 1.0),
+                process_id,
+                schedule_type,
+                schedule_value,
+                deadline_days,
+                deadline_hours,
+                score_weight,
                 routine_id,
                 company_id,
             ),

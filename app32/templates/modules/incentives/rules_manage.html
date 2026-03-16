@@ -1,120 +1,543 @@
-{% extends "layouts/app.html" %}
+{% extends "layouts/workspace.html" %}
 
-{% block page_title %}Configurar Regras: {{ rule_set.name }}{% endblock %}
+{% block title %}Configurar Regras | Versus{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/incentives.css') }}">
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="{{ url_for('incentives.dashboard') }}">Incentivos</a>
+<span class="sep">/</span>
+<span class="current">Configurar Regras</span>
 {% endblock %}
 
-{% block content %}
-<div class="incentive-container">
-    <div class="incentive-header">
-        <div>
-            <h1 class="incentive-title">Gestão de Regras</h1>
-            <p style="color: var(--text-secondary)">{{ rule_set.name }} - v{{ rule_set.version }}</p>
+{% block head %}
+<style>
+    :root {
+        --sidebar-width: 280px;
+        --preview-width: 320px;
+    }
+
+    .rules-configurator {
+        display: grid;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        gap: 2rem;
+        min-height: calc(100vh - 200px);
+        align-items: start;
+    }
+
+    /* Sidebar Esquerda: Catálogo */
+    .indicator-sidebar {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 1.5rem;
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+
+    .indicator-card {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 4px solid transparent;
+    }
+
+    .indicator-card:hover {
+        transform: translateY(-2px);
+        border-left-color: var(--primary);
+        box-shadow: var(--shadow-sm);
+        background: var(--surface);
+    }
+
+    .ind-name {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+
+    .ind-meta {
+        font-size: 0.7rem;
+        color: var(--text-tertiary);
+        display: flex;
+        justify-content: space-between;
+    }
+
+    /* Área Central: Motor de Regras */
+    .rules-engine-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .rules-engine {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .rule-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s ease;
+        position: relative;
+        animation: slideInRight 0.4s ease-out;
+    }
+
+    .rule-item:hover {
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-light);
+    }
+
+    .rule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--surface-secondary);
+    }
+
+    .rule-title-group h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--text-primary);
+    }
+
+    .rule-title-group span {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+    }
+
+    /* Forms Premium */
+    .vs-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .vs-control label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .vs-input {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        width: 100%;
+        transition: var(--transition);
+    }
+
+    .vs-input:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .btn-remove {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border: none;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .btn-remove:hover {
+        background: #ef4444;
+        color: white;
+    }
+
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+</style>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="workspace-wrapper">
+    <div class="workspace-header">
+        <div class="header-content">
+            <h1 class="text-h1">⚙️ Configurar Indicadores e Regras</h1>
+            <p class="text-secondary">{{ rule_set.name }} <span style="font-size: 0.8em; opacity: 0.7;">(v{{ rule_set.version }})</span></p>
         </div>
         <div class="header-actions">
-            <a href="{{ url_for('incentives.dashboard') }}" class="vs-btn vs-btn-outline">Voltar ao Dashboard</a>
-            <button class="vs-btn vs-btn-primary" onclick="salvarAlteracoes()">Salvar Alterações</button>
+            <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-secondary">Cancelar</a>
+            <button class="btn btn-special" onclick="salvarAlteracoes()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Salvar Regras
+            </button>
         </div>
     </div>
 
-    <div class="vs-grid-cols-12">
+    <div class="rules-configurator">
         <!-- Sidebar de Indicadores -->
-        <div class="vs-col-span-4">
-            <div class="incentive-glass" style="height: 100%;">
-                <h3 style="margin-bottom: 1rem;">Biblioteca de Indicadores</h3>
-                <div id="indicatorList" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Carregado via API -->
-                    <div style="padding: 1rem; text-align: center; color: var(--text-tertiary);">Carregando indicadores...</div>
+        <aside class="indicator-sidebar">
+            <h3 style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-plus-circle text-primary"></i>
+                Indicadores Disponíveis
+            </h3>
+            <div id="indicatorList">
+                <div style="padding: 2rem; text-align: center; color: var(--text-tertiary); font-size: 0.8rem;">
+                    <i class="fas fa-spinner fa-spin" style="display: block; margin-bottom: 1rem; font-size: 1.5rem;"></i>
+                    Carregando catálogo...
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <!-- Editor de Regras -->
-        <div class="vs-col-span-8">
-            <div class="incentive-glass">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h3>Regras Definidas</h3>
-                    <span class="vs-badge vs-badge-info">{{ rule_set.periodicity | upper }}</span>
-                </div>
+        <!-- Área Central -->
+        <div class="rules-engine-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">📐 Regras do Plano</h3>
+                <span class="badge-pill bg-active">{{ rule_set.periodicity | upper }}</span>
+            </div>
 
-                <div id="rulesEngine" style="display: flex; flex-direction: column; gap: 15px;">
-                    <!-- Placeholder de Regra -->
-                    <div class="incentive-glass" style="background: rgba(255,255,255,0.03); border-style: dashed;">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-tertiary);">
-                            Arraste um indicador para cá ou clique em "+" para criar uma regra matemática.
-                        </div>
-                    </div>
+            <div id="rulesEngine" class="rules-engine">
+                <!-- Placeholder ou Regras Dinâmicas -->
+                <div class="rules-placeholder" style="background: var(--surface); border: 2px dashed var(--border); border-radius: 20px; padding: 4rem; text-align: center;">
+                    <i class="fas fa-layer-group" style="font-size: 3rem; color: var(--border); display: block; margin-bottom: 1.5rem;"></i>
+                    <p style="color: var(--text-secondary); font-size: 1rem; max-width: 300px; margin: 0 auto;">
+                        Este plano ainda não possui regras. Use os indicadores à esquerda para começar.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block sidebar_right %}
+<div class="sidebar-right-content">
+    <div class="sidebar-tool-card">
+        <h3 class="tool-title"><i class="fas fa-eye"></i> Preview de Impacto</h3>
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">Soma de Pesos:</span>
+                <span id="totalWeight" style="font-weight: 700; color: var(--primary);">0.0%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">Total de Regras:</span>
+                <span id="rulesCount" style="font-weight: 700;">0</span>
+            </div>
+            
+            <div id="weightBar" style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 5px;">
+                <div id="weightFill" style="height: 100%; width: 0%; background: var(--primary); transition: width 0.3s;"></div>
+            </div>
+
+            <div id="weightWarning" style="margin-top: 0.5rem; padding: 0.75rem; border-radius: 8px; font-size: 0.75rem; display: none; line-height: 1.4;">
+                <!-- Dinâmico -->
+            </div>
+        </div>
+        
+        <button onclick="simularCalculoGlobal()" class="btn btn-special" style="width: 100%; margin-top: 1.5rem; justify-content: center;">
+            <i class="fas fa-play-circle" style="margin-right: 8px;"></i>
+            Simular Impacto
+        </button>
+    </div>
+
+    <div class="sidebar-tool-card">
+        <h3 class="tool-title"><i class="fas fa-history"></i> Log de Versão</h3>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 1rem;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.75rem;">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></div>
+                <span>Versão Atual: v{{ rule_set.version }}</span>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-tertiary); line-height: 1.4;">
+                Última alteração: {{ rule_set.updated_at.strftime('%d/%m/%Y %H:%M') if rule_set.updated_at else 'Não registrada' }}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    // Carregar indicadores via API
+    // 1. Carregar indicadores no catálogo lateral
     try {
         const response = await fetch('/api/incentives/indicators');
         const indicators = await response.json();
         
         const list = document.getElementById('indicatorList');
-        list.innerHTML = indicators.map(ind => `
-            <div class="incentive-glass" style="padding: 10px; cursor: pointer; border-color: rgba(99, 102, 241, 0.3);" onclick="addRule(${ind.id}, '${ind.name}')">
-                <div style="font-weight: 600; font-size: 0.9rem;">${ind.name}</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary);">${ind.source.toUpperCase()} | ${ind.type}</div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error("Erro ao carregar indicadores", e);
+        if (indicators.length === 0) {
+            list.innerHTML = '<p style="padding: 1rem; color: var(--text-tertiary); font-size: 0.8rem; text-align: center;">Nenhum indicador disponível.</p>';
+        } else {
+            list.innerHTML = indicators.map(ind => `
+                <div class="indicator-card" onclick="addRule(${ind.id}, '${ind.name}', '${ind.type}')">
+                    <div class="ind-name">${ind.name}</div>
+                    <div class="ind-meta">
+                        <span>${ind.source}</span>
+                        <span class="badge-pill bg-inactive" style="font-size: 9px; padding: 2px 6px;">${ind.type}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (e) { 
+        console.error('Erro ao carregar catálogo:', e); 
+        document.getElementById('indicatorList').innerHTML = '<p style="padding: 1rem; color: var(--status-critical); font-size: 0.8rem;">Erro ao carregar catálogo.</p>';
     }
+
+    // 2. Carregar regras existentes deste plano
+    loadExistingRules();
 });
 
-function addRule(indicatorId, name) {
+async function loadExistingRules() {
+    const ruleSetId = {{ rule_set.id }};
     const engine = document.getElementById('rulesEngine');
-    // Se for o primeiro, limpa o placeholder
-    if (engine.innerText.includes('Arraste')) engine.innerHTML = '';
+    
+    try {
+        const response = await fetch(`/api/incentives/rule-sets/${ruleSetId}/rules`);
+        const rules = await response.json();
+        
+        if (rules && rules.length > 0) {
+            engine.innerHTML = ''; // Limpa placeholder
+            rules.forEach(r => {
+                addRule(r.indicator_id, r.indicator_name, r.impact_type, r);
+            });
+        }
+    } catch (err) {
+        console.error('Erro ao carregar regras:', err);
+    }
+}
 
-    const ruleHtml = `
-        <div class="incentive-glass" style="border-left: 4px solid var(--incentive-primary);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                <div>
-                    <h4 style="margin: 0;">${name}</h4>
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">ID do Indicador: ${indicatorId}</span>
+function addRule(indicatorId, name, type = 'multiplier', existingData = null) {
+    const engine = document.getElementById('rulesEngine');
+    
+    // Remove o placeholder se existir
+    const placeholder = engine.querySelector('.rules-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const ruleId = `rule_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    
+    // Valores padrão ou vindos do banco
+    const weight = existingData ? (existingData.weight * 100).toFixed(1) : "10.0";
+    const target = existingData ? existingData.target : "100.00";
+    const cap = existingData ? existingData.max_cap : "1.2";
+    const useGoal = existingData ? (existingData.use_indicator_goal !== false) : true;
+    const calcMode = existingData ? (existingData.calculation_mode || 'linear') : 'linear';
+
+    const card = document.createElement('div');
+    card.className = 'rule-item slideInRight';
+    card.id = ruleId;
+    card.dataset.indicatorId = indicatorId;
+    
+    card.innerHTML = `
+        <div class="rule-header">
+            <div class="rule-title-group">
+                <h4 style="margin:0; font-size: 1rem; color: var(--text-primary);">${name}</h4>
+                <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 4px;">
+                    ID: ${indicatorId} • <span class="badge-pill bg-active" style="display:inline-block; font-size: 9px;">${type}</span>
                 </div>
-                <button class="vs-btn vs-btn-sm vs-btn-ghost" style="color: var(--incentive-accent);" onclick="this.closest('.incentive-glass').remove()">Remover</button>
             </div>
-            
-            <div class="vs-grid-cols-4" style="gap: 15px;">
-                <div>
-                    <label class="vs-label">Tipo de Impacto</label>
-                    <select class="vs-input">
-                        <option value="individual">Individual (Soma)</option>
-                        <option value="multiplier">Multiplicador (Global)</option>
-                        <option value="reducer">Redutor (Risco)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="vs-label">Peso (0.0 a 1.0)</label>
-                    <input type="number" class="vs-input" step="0.1" value="1.0">
-                </div>
-                <div>
-                    <label class="vs-label">Meta (Target)</label>
-                    <input type="number" class="vs-input" value="100">
-                </div>
-                <div>
-                    <label class="vs-label">Teto (Cap)</label>
-                    <input type="number" class="vs-input" value="1.2">
-                </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <label style="font-size: 0.7rem; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" class="rule-use-goal" ${useGoal ? 'checked' : ''} onchange="toggleGoalFields('${ruleId}')">
+                    Usar Meta do Indicador
+                </label>
+                <button class="btn-remove" onclick="removeRule('${ruleId}')" title="Remover Regra">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="vs-form-grid">
+            <div class="vs-control">
+                <label>Peso (%)</label>
+                <input type="number" step="1" value="${weight}" class="vs-input rule-weight" oninput="updatePreview()">
+            </div>
+            <div class="vs-control mode-field" style="${useGoal ? 'opacity: 0.5; pointer-events: none;' : ''}">
+                <label>Modo Cálculo</label>
+                <select class="vs-input rule-mode">
+                    <option value="linear" ${calcMode === 'linear' ? 'selected' : ''}>Linear</option>
+                    <option value="ranges" ${calcMode === 'ranges' ? 'selected' : ''}>Faixas (Ver/Ama/Ver)</option>
+                    <option value="step" ${calcMode === 'step' ? 'selected' : ''}>Degrau</option>
+                </select>
+            </div>
+            <div class="vs-control target-field" style="${useGoal ? 'opacity: 0.5; pointer-events: none;' : ''}">
+                <label>Meta (Target)</label>
+                <input type="number" step="0.01" value="${target}" class="vs-input rule-target" oninput="updatePreview()">
+            </div>
+            <div class="vs-control">
+                <label>Teto (Cap)</label>
+                <input type="number" step="0.1" value="${cap}" class="vs-input rule-cap" oninput="updatePreview()">
             </div>
         </div>
     `;
-    engine.insertAdjacentHTML('beforeend', ruleHtml);
+
+    engine.appendChild(card);
+    updatePreview();
 }
 
-function salvarAlteracoes() {
-    alert('As regras foram enviadas para validação do Arquiteto.\nSalvamento pendente (Backend Onda 1B Update).');
+function toggleGoalFields(ruleId) {
+    const card = document.getElementById(ruleId);
+    const useGoal = card.querySelector('.rule-use-goal').checked;
+    const targetField = card.querySelector('.target-field');
+    const modeField = card.querySelector('.mode-field');
+    
+    if (useGoal) {
+        targetField.style.opacity = '0.5';
+        targetField.style.pointerEvents = 'none';
+        modeField.style.opacity = '0.5';
+        modeField.style.pointerEvents = 'none';
+    } else {
+        targetField.style.opacity = '1';
+        targetField.style.pointerEvents = 'all';
+        modeField.style.opacity = '1';
+        modeField.style.pointerEvents = 'all';
+    }
+}
+
+function removeRule(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(50px)';
+        setTimeout(() => {
+            el.remove();
+            if (document.querySelectorAll('.rule-item').length === 0) {
+                resetEngine();
+            }
+            updatePreview();
+        }, 300);
+    }
+}
+
+function resetEngine() {
+    const engine = document.getElementById('rulesEngine');
+    engine.innerHTML = `
+        <div class="rules-placeholder" style="background: var(--surface); border: 2px dashed var(--border); border-radius: 20px; padding: 4rem; text-align: center;">
+            <i class="fas fa-layer-group" style="font-size: 3rem; color: var(--border); display: block; margin-bottom: 1.5rem;"></i>
+            <p style="color: var(--text-secondary); font-size: 1rem; max-width: 300px; margin: 0 auto;">
+                Este plano ainda não possui regras. Use os indicadores à esquerda para começar.
+            </p>
+        </div>
+    `;
+}
+
+function updatePreview() {
+    const weightInputs = document.querySelectorAll('.rule-weight');
+    let total = 0;
+    weightInputs.forEach(w => total += (parseFloat(w.value) || 0));
+    
+    document.getElementById('totalWeight').innerText = `${total.toFixed(1)}%`;
+    document.getElementById('rulesCount').innerText = weightInputs.length;
+    
+    const fill = document.getElementById('weightFill');
+    if (fill) fill.style.width = Math.min(total, 100) + '%';
+    
+    const warning = document.getElementById('weightWarning');
+    if (total > 100) {
+        warning.innerHTML = `⚠️ <strong>Overweighted!</strong> O total excede 100%. Isso pode gerar inflação na provisão.`;
+        warning.style.display = 'block';
+        warning.style.background = '#fef2f2';
+        warning.style.color = '#991b1b';
+        if (fill) fill.style.background = '#ef4444';
+    } else if (total < 100 && weightInputs.length > 0) {
+        warning.innerHTML = `💡 <strong>Atenção:</strong> Restam ${ (100 - total).toFixed(1) }% para atingir a distribuição completa.`;
+        warning.style.display = 'block';
+        warning.style.background = '#eff6ff';
+        warning.style.color = '#1e40af';
+        if (fill) fill.style.background = 'var(--primary)';
+    } else {
+        warning.style.display = 'none';
+        if (fill) fill.style.background = 'var(--primary)';
+    }
+}
+
+async function simularCalculoGlobal() {
+    const count = document.querySelectorAll('.rule-item').length;
+    if (count === 0) {
+        alert('Crie pelo menos uma regra para simular o impacto.');
+        return;
+    }
+    
+    // Mostra um loading simples
+    const btn = event.currentTarget;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/incentives/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                rule_set_id: {{ rule_set.id }},
+                start_date: '2026-01-01',
+                end_date: '2026-01-31'
+            })
+        });
+        const data = await response.json();
+        if (data.error) {
+            alert('Erro na simulação: ' + data.error);
+        } else {
+            alert(`⚡ Resultado da Simulação:\nProvisão Estimada: R$ ${parseFloat(data.total_payout).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\nParticipantes: ${data.participants.length}`);
+        }
+    } catch (e) {
+        alert('Erro ao conectar com o motor de cálculo.');
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
+}
+
+async function salvarAlteracoes() {
+    const ruleItems = document.querySelectorAll('.rule-item');
+    if (ruleItems.length === 0) {
+        alert('Adicione pelo menos uma regra antes de salvar.');
+        return;
+    }
+    
+    const rules = Array.from(ruleItems).map(item => ({
+        indicator_id: parseInt(item.dataset.indicatorId),
+        weight: parseFloat(item.querySelector('.rule-weight').value) / 100,
+        target: parseFloat(item.querySelector('.rule-target').value),
+        max_cap: parseFloat(item.querySelector('.rule-cap').value),
+        use_indicator_goal: item.querySelector('.rule-use-goal').checked,
+        calculation_mode: item.querySelector('.rule-mode').value,
+        impact_type: item.querySelector('.badge-pill').innerText
+    }));
+
+    try {
+        const response = await fetch(`/api/incentives/rule-sets/{{ rule_set.id }}/rules`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rules })
+        });
+        
+        if (response.ok) {
+            alert('Configuração salva com sucesso! Os indicadores foram vinculados ao plano estratégico.');
+        } else {
+            const err = await response.json();
+            alert('Falha ao salvar: ' + (err.error || 'Erro interno'));
+        }
+    } catch (err) {
+        alert('Erro de conexão.');
+    }
 }
 </script>
 {% endblock %}

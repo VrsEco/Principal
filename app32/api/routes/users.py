@@ -9,6 +9,13 @@ from services.notification_hub import notification_hub
 usuarios_bp = Blueprint('usuarios', __name__)
 
 
+def _is_platform_admin_local() -> bool:
+    return bool(
+        getattr(current_user, 'is_authenticated', False)
+        and str(getattr(current_user, 'role', '')).strip().lower() in {'admin', 'administrator'}
+    )
+
+
 def _list_user_company_names(user) -> list[str]:
     user_id = getattr(user, 'id', None)
     if not user_id:
@@ -107,7 +114,7 @@ def _summary_channels_list(raw_value):
 @login_required
 def index():
     """Render user management page"""
-    if not is_platform_admin():
+    if not _is_platform_admin_local():
         flash('Acesso negado. Apenas administradores podem gerenciar usuários.', 'error')
         return redirect(url_for('my_work.my_work'))
     
@@ -180,7 +187,7 @@ def vincular():
 @login_required
 def get_users():
     """API to list users"""
-    if not is_platform_admin():
+    if not _is_platform_admin_local():
         return jsonify({"success": False, "message": "Unauthorized"}), 403
     
     users = User.query.all()
@@ -190,7 +197,7 @@ def get_users():
 @login_required
 def create_user():
     """API to create a user with Pydantic validation"""
-    if not is_platform_admin():
+    if not _is_platform_admin_local():
         return jsonify({"success": False, "message": "Unauthorized"}), 403
     
     try:
@@ -243,7 +250,7 @@ def create_user():
 @login_required
 def update_user(user_id):
     """API to update a user with Pydantic validation"""
-    if not is_platform_admin() and current_user.id != user_id:
+    if not _is_platform_admin_local() and current_user.id != user_id:
         return jsonify({"success": False, "message": "Unauthorized"}), 403
     
     try:
@@ -252,13 +259,13 @@ def update_user(user_id):
         validated_data = UserUpdateSchema(**data)
         
         if validated_data.name is not None: user.name = validated_data.name
-        if validated_data.role is not None and is_platform_admin(): user.role = validated_data.role
+        if validated_data.role is not None and _is_platform_admin_local(): user.role = validated_data.role
         if validated_data.whatsapp is not None: user.whatsapp = validated_data.whatsapp
         if validated_data.telegram is not None: user.telegram = validated_data.telegram
         if validated_data.instagram is not None: user.instagram = validated_data.instagram
         if validated_data.summary_delivery_channels is not None:
             user.summary_delivery_channels = _serialize_summary_channels(validated_data.summary_delivery_channels)
-        if validated_data.is_active is not None and is_platform_admin(): user.is_active = validated_data.is_active
+        if validated_data.is_active is not None and _is_platform_admin_local(): user.is_active = validated_data.is_active
         
         db.session.commit()
         return jsonify({"success": True, "user": user.to_dict()})
@@ -273,7 +280,7 @@ def update_user(user_id):
 @login_required
 def test_user_channel(user_id):
     """Envia uma mensagem de teste para um canal configurado do usuário."""
-    if not is_platform_admin():
+    if not _is_platform_admin_local():
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
     try:
@@ -329,7 +336,7 @@ def test_user_channel(user_id):
 @login_required
 def delete_user_route(user_id):
     """API for soft delete (matching template expectation)"""
-    if not is_platform_admin():
+    if not _is_platform_admin_local():
         return jsonify({"success": False, "message": "Unauthorized"}), 403
         
     user = User.query.get_or_404(user_id)

@@ -64,6 +64,33 @@ def run_mcp_server():
         except Exception as e:
             return f"Erro ao ler schema: {str(e)}"
 
+    @mcp.tool()
+    def harvest_incentive_module(company_id: int) -> str:
+        """
+        Dispara a coleta automática de fatos para o módulo de Incentivos (S3).
+        Lê processos, projetos e ocorrências do banco e gera fatos para o bônus.
+        """
+        from app import create_app
+        from services.incentive_service import IncentiveService
+        from datetime import date
+        from models import db
+        
+        # Cria app para ter context de DB (SQLAlchemy)
+        app = create_app()
+        
+        today = date.today()
+        p_start = date(today.year, today.month, 1)
+        p_end = today
+        
+        try:
+            with app.app_context():
+                results = IncentiveService.harvest_all_modules(company_id, p_start, p_end)
+                db.session.commit()
+                summary = results.get('summary', {})
+                return f"Coleta S3 concluída: Proc={summary.get('processo')}, Proj={summary.get('projeto')}, Ocor={summary.get('ocorrencia')}. Pendentes Manual: {summary.get('manual_pendente')}"
+        except Exception as e:
+            return f"Erro na coleta: {str(e)}"
+
     # Inicia o servidor
     print("Iniciando MCP Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
     mcp.run()

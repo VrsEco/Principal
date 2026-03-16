@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "C:\GestaoVersus\app32\app.py", line 113, in create_app
+    register_api_resources(api)
+  File "C:\GestaoVersus\app32\app.py", line 320, in register_api_resources
+    from api.resources.incentive import (
+ImportError: cannot import name 'IndicatorListResource' from 'api.resources.incentive' (C:\GestaoVersus\app32\api\resources\incentive.py)
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...

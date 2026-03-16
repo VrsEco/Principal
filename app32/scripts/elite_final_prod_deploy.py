@@ -1,85 +1,61 @@
+from pathlib import Path
+import sys
 
-import paramiko
-import os
+BASE_DIR = Path(__file__).resolve().parents[1]
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
-def final_deploy():
-    host = "ip-69-164-205-75.cloudezapp.io"
-    port = 22122
-    user = "app"
-    passw = "*Paraiso1978"
-    
-    app_path = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32"
-    wsgi_path = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www"
-    python_path = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python"
-    venv_site = "/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/lib/python3.12/site-packages"
+from scripts.deploy.configr_remote_helper import APP_DIR, BASE_DIR as REMOTE_BASE_DIR, WWW_DIR, connect_ssh, run_command
 
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(host, port, user, passw)
-    print(f"📡 Conectado como {user}")
 
-    # 1. Update code
-    print("🚀 Sincronizando repositório...")
-    commands = [
-        f"cd {app_path} && git fetch origin main",
-        f"cd {app_path} && git reset --hard origin/main",
-        f"cd {app_path} && git clean -fd",
-    ]
-    for cmd in commands:
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        print(stdout.read().decode())
-        print(stderr.read().decode())
+def final_deploy() -> int:
+    print("📡 Conectando ao servidor de produção com chave SSH...")
+    ssh = connect_ssh()
+    try:
+        commands = [
+            f"cd {APP_DIR} && git fetch origin main",
+            f"cd {APP_DIR} && git reset --hard origin/main",
+            f"cd {APP_DIR} && git clean -fd",
+            f"cd {APP_DIR} && chmod +x scripts/deploy_configr.sh && bash scripts/deploy_configr.sh",
+        ]
 
-    # 2. Restore passenger_wsgi.py if it's a stub
-    print("🛠️ Restaurando passenger_wsgi.py...")
-    restore_cmd = f"cp {wsgi_path}/passenger_wsgi.py.bak {wsgi_path}/passenger_wsgi.py"
-    ssh.exec_command(restore_cmd)
+        final_status = 0
+        for command in commands:
+            print(f"\n[RUN] {command}")
+            code, stdout, stderr = run_command(ssh, command, get_pty=True)
+            if stdout.strip():
+                print(stdout.strip())
+            if stderr.strip():
+                print("[STDERR]")
+                print(stderr.strip())
+            if code != 0:
+                final_status = code
+                break
 
-    # 3. Migration
-    print("🗄️ Executando migração...")
-    migrate_script = f"""
-import sys, os
-VENV_SITE = '{venv_site}'
-if VENV_SITE not in sys.path:
-    sys.path.insert(0, VENV_SITE)
-sys.path.insert(0, '{app_path}')
-os.environ.setdefault('FLASK_CONFIG', 'production')
-try:
-    from app import create_app
-    from flask_migrate import upgrade
-    app = create_app('production')
-    with app.app_context():
-        print("Iniciando upgrade de banco programático...")
-        upgrade()
-        print("MIGRATION_SUCCESS")
-except Exception as e:
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-"""
-    sftp = ssh.open_sftp()
-    with sftp.file("/tmp/final_migrate.py", "w") as f:
-        f.write(migrate_script)
-    sftp.close()
+        if final_status != 0:
+            print(f"\n❌ Deploy interrompido com status {final_status}.")
+            return final_status
 
-    stdin, stdout, stderr = ssh.exec_command(f"{python_path} /tmp/final_migrate.py")
-    out = stdout.read().decode()
-    err = stderr.read().decode()
-    print(out)
-    print(err)
+        health_commands = [
+            f"test -f {WWW_DIR}/restart.txt && echo restart-ok || echo restart-missing",
+            f"cd {APP_DIR} && git log -n 1 --oneline",
+        ]
+        for command in health_commands:
+            print(f"\n[CHECK] {command}")
+            code, stdout, stderr = run_command(ssh, command)
+            if stdout.strip():
+                print(stdout.strip())
+            if stderr.strip():
+                print("[STDERR]")
+                print(stderr.strip())
+            if code != 0:
+                return code
 
-    if "MIGRATION_SUCCESS" in out:
-        print("✅ Migração concluída com sucesso!")
-    else:
-        print("⚠️ Falha na migração (ou já estava em dia). Verifique logs.")
+        print("\n✨ DEPLOY FINALIZADO COM SUCESSO.")
+        return 0
+    finally:
+        ssh.close()
 
-    # 4. Restart
-    print("🔄 Reiniciando servidor...")
-    ssh.exec_command(f"touch {wsgi_path}/restart.txt")
-    ssh.exec_command(f"touch {wsgi_path}/passenger_wsgi.py")
-
-    ssh.close()
-    print("🎉 DEPLOY FINALIZADO!")
 
 if __name__ == "__main__":
-    final_deploy()
+    raise SystemExit(final_deploy())
