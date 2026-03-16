@@ -306,6 +306,7 @@ def register_api_resources(api):
         MacroProcessListResource, MacroProcessResource,
         ProcessListResource, ProcessResource,
         ProcessRoutineListResource, ProcessRoutineResource,
+        ProcessScheduleListResource,
         ProcessStepListResource, ProcessStepResource,
         ProcessInstanceListResource, ProcessInstanceResource,
         ProcessInstanceWorkLogResource, ActivityWorkLogItemResource
@@ -357,6 +358,7 @@ def register_api_resources(api):
     api.add_resource(ProcessResource, '/api/processes/<int:process_id>')
     api.add_resource(ProcessRoutineListResource, '/api/process-routines')
     api.add_resource(ProcessRoutineResource, '/api/process-routines/<int:routine_id>')
+    api.add_resource(ProcessScheduleListResource, '/api/process-schedules')
     api.add_resource(ProcessStepListResource, '/api/process-steps')
     api.add_resource(ProcessStepResource, '/api/process-steps/<int:step_id>')
     api.add_resource(ProcessInstanceListResource, '/api/process-instances', '/api/companies/<int:company_id>/process-instances')
