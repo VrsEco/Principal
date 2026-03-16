@@ -145,12 +145,50 @@ def create_app(config_name=None):
             if "indicators" in table_names:
                 indicator_columns = {col["name"] for col in inspector.get_columns("indicators")}
                 with db.engine.begin() as conn:
+                    if "indicator_type" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN indicator_type VARCHAR(50) NOT NULL DEFAULT 'result'"))
+                    if "source_module" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_module VARCHAR(50) NOT NULL DEFAULT 'manual'"))
+                    if "source_id" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_id INTEGER"))
                     if "source_scope" not in indicator_columns:
                         conn.execute(text("ALTER TABLE indicators ADD COLUMN source_scope VARCHAR(50) NOT NULL DEFAULT 'company'"))
                         print("DEBUG: indicators.source_scope column added successfully.")
                     if "source_config" not in indicator_columns:
                         conn.execute(text("ALTER TABLE indicators ADD COLUMN source_config JSON"))
                         print("DEBUG: indicators.source_config column added successfully.")
+                    if "collection_mode" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN collection_mode VARCHAR(30) NOT NULL DEFAULT 'manual'"))
+                    if "aggregation_function" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN aggregation_function VARCHAR(30) NOT NULL DEFAULT 'sum'"))
+                    if "unit" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN unit VARCHAR(50) DEFAULT 'pts'"))
+                    if "polarity" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN polarity VARCHAR(20) DEFAULT 'positive'"))
+                    if "measurement_frequency" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN measurement_frequency VARCHAR(30) DEFAULT 'monthly'"))
+                    if "formula" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN formula TEXT"))
+                    if "process_id" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN process_id INTEGER REFERENCES processes(id)"))
+                    if "project_id" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
+                    if "responsible_id" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN responsible_id INTEGER REFERENCES employees(id)"))
+                    if "collaborators" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN collaborators JSON"))
+                    if "data_source" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN data_source TEXT"))
+                    if "notes" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN notes TEXT"))
+                    if "okr_reference" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN okr_reference VARCHAR(255)"))
+                    if "okr_level" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN okr_level VARCHAR(50)"))
+                    if "is_active" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
+                    if "routine_id" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
             if "indicator_data" in table_names:
                 indicator_data_columns = {col["name"] for col in inspector.get_columns("indicator_data")}
                 with db.engine.begin() as conn:
