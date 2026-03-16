@@ -1,10 +1,15 @@
 from flask import Blueprint, render_template, jsonify, request, redirect, url_for, session
 from flask_login import login_required
 from models import Company, Indicator, Process, Project, OKRGlobal, User, OKRArea, IndicatorData, IndicatorGoal, Employee, Meeting, db
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from datetime import datetime
+from utils.permissions import has_company_full_access
 
 main_bp = Blueprint('main', __name__)
+
+
+def _active_employee_filter():
+    return or_(Employee.status == 'active', Employee.status.is_(None))
 
 @main_bp.route('/')
 def index():
@@ -213,16 +218,30 @@ def dashboard_filter_options():
         if company_id and has_company_full_access(company_id):
             if company_id:
                 companies = Company.query.filter_by(id=company_id, is_active=True).all()
-                employees = Employee.query.filter_by(company_id=company_id, status='active').all()
+                employees = (
+                    Employee.query
+                    .filter(Employee.company_id == company_id, _active_employee_filter())
+                    .order_by(Employee.name)
+                    .all()
+                )
                 projects = Project.query.filter_by(company_id=company_id).all()
                 processes = Process.query.filter_by(company_id=company_id).all()
             else:
                 companies = Company.query.filter_by(is_active=True).all()
-                employees = Employee.query.filter_by(status='active').all()
+                employees = (
+                    Employee.query
+                    .filter(_active_employee_filter())
+                    .order_by(Employee.name)
+                    .all()
+                )
                 projects = Project.query.all()
                 processes = Process.query.all()
         else:
-            employee_records = Employee.query.filter_by(user_id=current_user.id, status='active').all()
+            employee_records = (
+                Employee.query
+                .filter(Employee.user_id == current_user.id, _active_employee_filter())
+                .all()
+            )
             company_ids = [e.company_id for e in employee_records]
             
             if company_id:
@@ -231,7 +250,12 @@ def dashboard_filter_options():
                 company_ids = [company_id]
             
             companies = Company.query.filter(Company.id.in_(company_ids), Company.is_active==True).all()
-            employees = Employee.query.filter(Employee.company_id.in_(company_ids), Employee.status=='active').all()
+            employees = (
+                Employee.query
+                .filter(Employee.company_id.in_(company_ids), _active_employee_filter())
+                .order_by(Employee.name)
+                .all()
+            )
             projects = Project.query.filter(Project.company_id.in_(company_ids)).all()
             processes = Process.query.filter(Process.company_id.in_(company_ids)).all()
         
