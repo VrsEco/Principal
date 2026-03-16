@@ -3,6 +3,15 @@ from utils.permissions import permission_required
 from models import db, Company, Indicator, IndicatorTree, IndicatorGoal, IndicatorData, Employee, Team, Routine
 import json
 
+
+def _indicator_exists_for_tree(company_id: int, tree_id: int) -> bool:
+    return (
+        db.session.query(Indicator.id)
+        .filter(Indicator.company_id == company_id, Indicator.tree_id == tree_id)
+        .first()
+        is not None
+    )
+
 def _get_form_context(company_id):
     """Carrega e serializa todos os dados necessários para o formulário de indicadores."""
     from models import Project, Process, OKRGlobal, OKRArea, Routine
@@ -218,12 +227,7 @@ def indicator_tree_form(node_id=None):
             flash('Grupo pai inválido para a empresa ativa.', 'danger')
             return redirect(url_for('indicators.indicator_tree'))
 
-        has_indicators_in_parent = (
-            Indicator.query
-            .filter_by(company_id=company_id, tree_id=pre_selected_parent_id_get)
-            .first()
-            is not None
-        )
+        has_indicators_in_parent = _indicator_exists_for_tree(company_id, pre_selected_parent_id_get)
         if has_indicators_in_parent:
             flash(f'O nível "{parent_node_check.name}" já possui indicadores associados. Não é possível criar subníveis abaixo dele.', 'danger')
             return redirect(url_for('indicators.indicator_tree'))
@@ -248,12 +252,7 @@ def indicator_tree_form(node_id=None):
                     flash('Grupo pai inválido para a empresa ativa.', 'danger')
                     return redirect(url_for('indicators.indicator_tree'))
 
-                has_indicators_in_parent = (
-                    Indicator.query
-                    .filter_by(company_id=company_id, tree_id=parent_id)
-                    .first()
-                    is not None
-                )
+                has_indicators_in_parent = _indicator_exists_for_tree(company_id, parent_id)
                 if has_indicators_in_parent:
                     flash(f'O nível "{parent_node_check.name}" já possui indicadores associados. Não é possível criar subníveis abaixo dele.', 'danger')
                     return redirect(url_for('indicators.indicator_tree'))
@@ -286,12 +285,7 @@ def indicator_tree_form(node_id=None):
             # Precisamos checar se houve tentativa de alteração de hierarquia (mudança de pai)
             if node.parent_id != parent_id:
                 # Se está mudando o parent e tem indicadores próprios ou filhos, bloqueia.
-                has_indicators = (
-                    Indicator.query
-                    .filter_by(company_id=company_id, tree_id=node.id)
-                    .first()
-                    is not None
-                )
+                has_indicators = _indicator_exists_for_tree(company_id, node.id)
                 if has_indicators:
                     flash('Este nível já possui indicadores associados. Não é possível alterar sua hierarquia (Pai).', 'danger')
                     return redirect(url_for('indicators.indicator_tree_form', node_id=node.id))
@@ -349,12 +343,7 @@ def indicator_tree_delete(node_id):
     
     # Travas solicitadas:
     # 1. Tem indicadores associados?
-    has_indicators = (
-        Indicator.query
-        .filter_by(company_id=company_id, tree_id=node.id)
-        .first()
-        is not None
-    )
+    has_indicators = _indicator_exists_for_tree(company_id, node.id)
     if has_indicators:
         return jsonify({'error': 'Este nível já possui indicadores associados. Não é possível excluí-lo.'}), 400
         

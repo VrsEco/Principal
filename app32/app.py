@@ -142,6 +142,15 @@ def create_app(config_name=None):
                     if "summary_delivery_channels" not in user_columns:
                         conn.execute(text("ALTER TABLE users ADD COLUMN summary_delivery_channels VARCHAR(100) NOT NULL DEFAULT 'telegram'"))
                         print("DEBUG: users.summary_delivery_channels column added successfully.")
+            if "indicators" in table_names:
+                indicator_columns = {col["name"] for col in inspector.get_columns("indicators")}
+                with db.engine.begin() as conn:
+                    if "source_scope" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_scope VARCHAR(50) NOT NULL DEFAULT 'company'"))
+                        print("DEBUG: indicators.source_scope column added successfully.")
+                    if "source_config" not in indicator_columns:
+                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_config JSON"))
+                        print("DEBUG: indicators.source_config column added successfully.")
             if {"users", "employees"}.issubset(table_names):
                 stats = _backfill_user_channel_contacts()
                 print(
