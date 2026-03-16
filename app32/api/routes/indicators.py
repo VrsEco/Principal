@@ -374,7 +374,13 @@ def indicator_goals():
     company_id = session.get('active_company_id')
     if not company_id: return redirect(url_for('auth.portal'))
     
-    indicators = Indicator.query.filter_by(company_id=int(company_id)).order_by(Indicator.name).all()
+    indicators = (
+        Indicator.query
+        .filter_by(company_id=int(company_id))
+        .filter(Indicator.is_active.isnot(False))
+        .order_by(Indicator.name)
+        .all()
+    )
     goals = IndicatorGoal.query.filter_by(company_id=int(company_id)).order_by(IndicatorGoal.goal_date.desc()).all()
     
     ctx = _get_form_context(int(company_id))
