@@ -5,6 +5,7 @@ from utils.permissions import has_company_full_access, is_platform_admin
 
 agents_bp = Blueprint('agents', __name__)
 cadastro_service = CadastroAgentService()
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 
 def _has_operational_full_access(company_id=None):
@@ -171,7 +172,7 @@ def agents_chat():
         traceback.print_exc()
         return jsonify({
             "success": False,
-            "error": str(e)
+            "error": PUBLIC_ERROR_MESSAGE
         }), 500
 
 @agents_bp.route('/api/agents/diagnostics', methods=['GET'])
@@ -876,7 +877,7 @@ def create_agent_menu_option():
         }), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @agents_bp.route('/api/agents/menu/options/<int:option_id>', methods=['PUT', 'PATCH'])
@@ -946,7 +947,7 @@ def update_agent_menu_option(option_id):
         })
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @agents_bp.route('/api/agents/actions/approve/<int:action_id>', methods=['POST'])
 @login_required
@@ -1290,7 +1291,7 @@ def finalizar_cadastro():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500
 
 

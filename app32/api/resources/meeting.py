@@ -8,6 +8,7 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 
 def _parse_optional_int(value):
@@ -119,7 +120,7 @@ class MeetingListResource(Resource):
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error creating meeting: {e}")
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingResource(Resource):
     @login_required
@@ -152,7 +153,7 @@ class MeetingResource(Resource):
             return {"success": True, "message": "Dados atualizados!"}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
     @login_required
     def delete(self, meeting_id):
@@ -166,7 +167,7 @@ class MeetingResource(Resource):
             return {"success": True, "message": "Reunião excluída com sucesso!"}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingExecutionResource(Resource):
     @login_required
@@ -192,7 +193,7 @@ class MeetingExecutionResource(Resource):
             return {"success": True, "message": "Execução salva!"}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingStartResource(Resource):
     @login_required
@@ -253,7 +254,7 @@ class MeetingStartResource(Resource):
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error starting meeting: {e}")
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingFinishResource(Resource):
     @login_required
@@ -294,7 +295,7 @@ class MeetingFinishResource(Resource):
             return {"success": True, "message": "Reunião finalizada e resumida no projeto!"}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingAgendaUseResource(Resource):
     @login_required
@@ -447,7 +448,7 @@ class MeetingSyncActivitiesResource(Resource):
             }
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingRemoveFromProjectResource(Resource):
     @login_required
@@ -472,4 +473,4 @@ class MeetingRemoveFromProjectResource(Resource):
             return {"success": True, "message": "Atividade não encontrada no projeto"}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500

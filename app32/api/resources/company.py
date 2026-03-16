@@ -3,12 +3,16 @@ Company API Resources - REST endpoints for Company CRUD operations.
 """
 
 from flask import request
+import logging
 from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import ValidationError
 from utils.permissions import is_platform_admin, permission_required
 from models import db, Company, Employee
 from schemas.company import company_schema, companies_schema
+
+logger = logging.getLogger(__name__)
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 
 class CompanyListResource(Resource):
@@ -86,7 +90,7 @@ class CompanyListResource(Resource):
             return {'errors': err.messages}, 400
         except Exception as e:
             db.session.rollback()
-            return {'error': str(e)}, 500
+            return {'error': PUBLIC_ERROR_MESSAGE}, 500
 
 
 class CompanyResource(Resource):
@@ -138,21 +142,21 @@ class CompanyResource(Resource):
         
         try:
             data = request.get_json()
-            print(f"DEBUG: Updating company {company_id} with data: {data}")
+            logger.info("Atualizando company_id=%s", company_id)
             
             company = company_schema.load(data, instance=company, partial=True)
             db.session.commit()
             
-            print(f"DEBUG: Company {company_id} updated successfully")
+            logger.info("Company company_id=%s atualizada com sucesso", company_id)
             return company_schema.dump(company), 200
             
         except ValidationError as err:
-            print(f"DEBUG: Validation error updating company {company_id}: {err.messages}")
+            logger.warning("Erro de validação ao atualizar company_id=%s: %s", company_id, err.messages)
             return {'errors': err.messages}, 400
         except Exception as e:
-            print(f"DEBUG: Unexpected error updating company {company_id}: {str(e)}")
+            logger.exception("Erro inesperado ao atualizar company_id=%s", company_id)
             db.session.rollback()
-            return {'error': str(e)}, 500
+            return {'error': PUBLIC_ERROR_MESSAGE}, 500
     
     @permission_required('companies', 'delete')
     def delete(self, company_id):
@@ -179,4 +183,4 @@ class CompanyResource(Resource):
             
         except Exception as e:
             db.session.rollback()
-            return {'error': str(e)}, 500
+            return {'error': PUBLIC_ERROR_MESSAGE}, 500

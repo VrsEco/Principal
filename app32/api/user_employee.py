@@ -12,6 +12,7 @@ from models.employee import Employee
 from utils.permissions import admin_required, can_access_company, is_platform_admin
 
 user_employee_bp = Blueprint('user_employee', __name__, url_prefix='/api/user-employee')
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 
 @user_employee_bp.route('/register', methods=['POST'])
@@ -65,7 +66,7 @@ def register_user_with_company():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500
 
 
@@ -114,7 +115,7 @@ def add_user_to_company():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500
 
 
@@ -138,7 +139,7 @@ def get_my_companies():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500
 
 
@@ -162,7 +163,7 @@ def get_my_activities():
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500
 
 
@@ -198,7 +199,7 @@ def get_company_employees(company_id):
     except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500
 
 
@@ -281,7 +282,7 @@ def update_employee(employee_id):
         db.session.rollback()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500
 
 
@@ -362,5 +363,5 @@ def link_employee_to_user(employee_id):
         db.session.rollback()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': PUBLIC_ERROR_MESSAGE
         }), 500

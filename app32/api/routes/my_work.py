@@ -8,6 +8,7 @@ from utils.permissions import can_access_company
 import logging
 
 logger = logging.getLogger(__name__)
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 my_work_bp = Blueprint('my_work', __name__)
 
@@ -602,7 +603,7 @@ def my_work_filter_options():
     except Exception as e:
         logger.error(f"filter-options error: {e}")
         import traceback; traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @my_work_bp.route('/my-work/api/activities')
 @login_required
@@ -676,7 +677,7 @@ def my_work_api_activities():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @my_work_bp.route('/my-work/api/occurrences/summary')
 @login_required
@@ -701,7 +702,7 @@ def my_work_occurrences_summary():
             "data": summary
         })
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @my_work_bp.route('/my-work/api/team-overview')
 @login_required
@@ -717,7 +718,7 @@ def my_work_team_overview():
         return jsonify({"success": True, "data": data})
     except Exception as e:
         logger.error(f"Team Overview Error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @my_work_bp.route('/my-work/api/company-overview')
 @login_required
@@ -734,4 +735,4 @@ def my_work_company_overview():
         return jsonify({"success": True, "data": data})
     except Exception as e:
         logger.error(f"Company Overview Error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500

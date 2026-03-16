@@ -12,6 +12,7 @@ from models import db
 from middleware.admin_required import admin_required
 
 logger = logging.getLogger(__name__)
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
@@ -62,7 +63,7 @@ def login():
 
         except Exception as e:
             return (
-                jsonify({"success": False, "message": f"Erro no login: {str(e)}"}),
+                jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
                 500,
             )
 
@@ -90,10 +91,10 @@ def logout():
 
     except Exception as e:
         if request.method == "GET":
-            flash(f"Erro no logout: {str(e)}", "error")
+            flash(PUBLIC_ERROR_MESSAGE, "error")
             return redirect(url_for("login"))
 
-        return jsonify({"success": False, "message": f"Erro no logout: {str(e)}"}), 500
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
 @login_required
@@ -154,7 +155,7 @@ def register():
         except Exception as e:
             return (
                 jsonify(
-                    {"success": False, "message": f"Erro ao criar usuário: {str(e)}"}
+                    {"success": False, "message": PUBLIC_ERROR_MESSAGE}
                 ),
                 500,
             )
@@ -222,7 +223,7 @@ def profile():
         except Exception as e:
             return (
                 jsonify(
-                    {"success": False, "message": f"Erro ao atualizar perfil: {str(e)}"}
+                    {"success": False, "message": PUBLIC_ERROR_MESSAGE}
                 ),
                 500,
             )
@@ -280,7 +281,7 @@ def change_password():
 
     except Exception as e:
         return (
-            jsonify({"success": False, "message": f"Erro ao alterar senha: {str(e)}"}),
+            jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
             500,
         )
 
@@ -375,7 +376,7 @@ def list_users():
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao listar usuários: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -409,7 +410,7 @@ def toggle_user_status(user_id):
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao atualizar status: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -424,7 +425,7 @@ def get_current_user():
 
     except Exception as e:
         return (
-            jsonify({"success": False, "message": f"Erro ao obter usuário: {str(e)}"}),
+            jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
             500,
         )
 
@@ -444,7 +445,7 @@ def get_user(user_id):
 
     except Exception as e:
         return (
-            jsonify({"success": False, "message": f"Erro ao obter usuário: {str(e)}"}),
+            jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}),
             500,
         )
 
@@ -499,7 +500,7 @@ def update_user(user_id):
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao atualizar usuário: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -542,7 +543,7 @@ def delete_user(user_id):
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao excluir usuário: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -575,7 +576,7 @@ def list_companies():
             logger.error(f"Erro ao listar empresas: {e}")
             return jsonify({
                 "success": False,
-                "message": f"Erro ao listar empresas: {str(e)}"
+                "message": PUBLIC_ERROR_MESSAGE
             }), 500
 
         return jsonify({"success": True, "companies": companies_data})
@@ -583,7 +584,7 @@ def list_companies():
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao listar empresas: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -643,7 +644,7 @@ def link_user_to_company(user_id):
     except Exception as e:
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao vincular usuário: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
@@ -729,7 +730,7 @@ def link_user_to_companies(user_id):
         logger.error(f"Erro ao vincular usuário às empresas: {str(e)}", exc_info=True)
         return jsonify({
             "success": False,
-            "message": f"Erro ao vincular usuário: {str(e)}"
+            "message": PUBLIC_ERROR_MESSAGE
         }), 500
 
 
@@ -768,7 +769,7 @@ def unlink_user_from_company(user_id, employee_id):
         db.session.rollback()
         return (
             jsonify(
-                {"success": False, "message": f"Erro ao remover vínculo: {str(e)}"}
+                {"success": False, "message": PUBLIC_ERROR_MESSAGE}
             ),
             500,
         )
