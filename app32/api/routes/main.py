@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, redirect, url_for, session
+from flask import Blueprint, render_template, jsonify, request, redirect, url_for, session, current_app
 from flask_login import login_required
 from models import Company, Indicator, Process, Project, OKRGlobal, User, OKRArea, IndicatorData, IndicatorGoal, Employee, Meeting, db
 from sqlalchemy import func, or_
@@ -267,8 +267,7 @@ def dashboard_filter_options():
             "processes": [{"id": p.id, "name": p.name, "code": p.code} for p in processes]
         })
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        current_app.logger.exception("Erro ao montar opções de filtro do dashboard")
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 

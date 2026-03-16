@@ -643,7 +643,7 @@ def closing_report(calc_id):
         err = traceback.format_exc()
         with open('debug_inc_redirect.txt', 'a') as f:
             f.write(f"ERROR: {str(e)}\n{err}\n")
-        flash(f"Erro ao carregar relatório: {str(e)}", "danger")
+        flash("Erro interno do servidor. Tente novamente ou contate o suporte.", "danger")
         return redirect(url_for('incentives.reports_selector'))
 @incentives_bp.route('/incentives/closing/<int:calc_id>/<action>')
 @login_required

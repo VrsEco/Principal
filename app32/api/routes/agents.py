@@ -168,8 +168,8 @@ def agents_chat():
         })
     except Exception as e:
         db.session.rollback()
-        import traceback
-        traceback.print_exc()
+        import logging
+        logging.getLogger(__name__).exception("Erro no endpoint /api/agents/chat para user_id=%s", getattr(current_user, "id", None))
         return jsonify({
             "success": False,
             "error": PUBLIC_ERROR_MESSAGE

@@ -303,7 +303,7 @@ def indicator_tree_form(node_id=None):
             return redirect(url_for('indicators.indicator_tree'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Erro ao salvar: {str(e)}', 'danger')
+            flash('Erro interno do servidor. Tente novamente ou contate o suporte.', 'danger')
 
     # List for parent selection (excluding self if editing AND excluding locked nodes)
     # Locked = nós que já possuem indicadores associados

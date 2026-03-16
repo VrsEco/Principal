@@ -58,7 +58,7 @@ class PlanParticipantListResource(Resource):
         except ValidationError as e:
             return {"errors": e.errors()}, 400
         except ValueError as e:
-            return {"error": str(e)}, 400
+            return {"error": "Requisição inválida."}, 400
         except Exception as e:
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
@@ -71,7 +71,7 @@ class PlanParticipantResource(Resource):
             PlanService.remove_participant(plan_id, company_id, participant_id)
             return {"message": "Participant removed"}, 200
         except ValueError as e:
-            return {"error": str(e)}, 404
+            return {"error": "Recurso não encontrado."}, 404
         except Exception as e:
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
@@ -132,7 +132,7 @@ class PlanDriverResource(Resource):
         except ValidationError as e:
             return {"errors": e.errors()}, 400
         except ValueError as e:
-            return {"error": str(e)}, 400
+            return {"error": "Requisição inválida."}, 400
         except Exception as e:
             from models import db
             db.session.rollback()
@@ -232,7 +232,7 @@ class PlanImplantationResource(Resource):
         except ValidationError as e:
             return {"errors": e.errors()}, 400
         except ValueError as e:
-            return {"error": str(e)}, 400
+            return {"error": "Requisição inválida."}, 400
         except Exception as e:
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 

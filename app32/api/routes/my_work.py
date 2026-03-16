@@ -601,8 +601,7 @@ def my_work_filter_options():
             "data": data
         })
     except Exception as e:
-        logger.error(f"filter-options error: {e}")
-        import traceback; traceback.print_exc()
+        logger.exception("Erro ao montar opções de filtro do My Work")
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @my_work_bp.route('/my-work/api/activities')
@@ -675,8 +674,7 @@ def my_work_api_activities():
             "scope_counts": scope_counts
         })
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.exception("Erro ao listar atividades do My Work para user_id=%s", getattr(current_user, "id", None))
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
 @my_work_bp.route('/my-work/api/occurrences/summary')

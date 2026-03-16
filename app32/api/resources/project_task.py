@@ -471,9 +471,7 @@ class ProjectAllTasksResource(Resource):
             
             return project_tasks_schema.dump(tasks), 200
         except Exception as e:
-            import traceback
-            print("ERROR in ProjectAllTasksResource:", str(e))
-            print(traceback.format_exc())
+            current_app.logger.exception("Erro ao listar todas as tarefas da empresa company_id=%s", company_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 class ProjectTaskTransferResource(Resource):
     @permission_required('projects', 'edit')
@@ -543,8 +541,7 @@ class ProjectTaskTransferResource(Resource):
             return {"success": True, "message": "Atividade transferida com sucesso"}, 200
         except Exception as e:
             db.session.rollback()
-            import traceback
-            traceback.print_exc()
+            current_app.logger.exception("Erro ao criar dependência successor_task_id=%s project_id=%s", task_id, project_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
@@ -617,8 +614,7 @@ class ProjectTaskDependencyListResource(Resource):
 
             return result, 201
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            current_app.logger.exception("Erro ao transferir tarefa task_id=%s projeto_origem=%s", task_id, project_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
