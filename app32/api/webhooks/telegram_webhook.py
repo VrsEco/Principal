@@ -14,6 +14,7 @@ from src.intelligence.tools import escalate_technical_issue
 logger = logging.getLogger(__name__)
 
 telegram_bp = Blueprint('telegram', __name__)
+PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 
 def _normalize_text_basic(value: str) -> str:
@@ -388,7 +389,7 @@ def telegram_webhook():
         logger.error(f"❌ Erro Crítico na Rota do Webhook: {e}")
         with open('request_debug.log', 'a') as f:
             f.write(f"ERROR: {str(e)}\n{tb}\n")
-        return f"Internal Error Logged: {str(e)}", 500
+        return PUBLIC_ERROR_MESSAGE, 500
 
 # Script manual para registrar o webhook no Telegram
 def setup_webhook(host_url):

@@ -13,6 +13,7 @@ from models import db
 
 whatsapp_webhook_bp = Blueprint('whatsapp_webhook', __name__)
 logger = logging.getLogger(__name__)
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 
 
@@ -630,4 +631,4 @@ def handle_instagram():
             instagram_service.send_message(sender_id, build_internal_error_message(channel="instagram"))
         except Exception:
             logger.exception("INSTAGRAM: falha ao enviar mensagem de erro operacional")
-        return jsonify({"status": "error", "message": str(e)}), 200
+        return jsonify({"status": "error", "message": PUBLIC_ERROR_MESSAGE}), 200
