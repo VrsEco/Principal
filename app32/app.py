@@ -221,6 +221,15 @@ def create_app(config_name=None):
                         conn.execute(text("ALTER TABLE indicator_data ADD COLUMN source_ref VARCHAR(255)"))
                     if "evidence_payload" not in indicator_data_columns:
                         conn.execute(text("ALTER TABLE indicator_data ADD COLUMN evidence_payload JSON"))
+            if "indicator_goals" in table_names:
+                indicator_goal_columns = {col["name"] for col in inspector.get_columns("indicator_goals")}
+                with db.engine.begin() as conn:
+                    if "performance_ranges" not in indicator_goal_columns:
+                        conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN performance_ranges JSON"))
+                    if "routine_id" not in indicator_goal_columns:
+                        conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
+                    if "collection_method" not in indicator_goal_columns:
+                        conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN collection_method VARCHAR(50) DEFAULT 'manual'"))
             if {"users", "employees"}.issubset(table_names):
                 stats = _backfill_user_channel_contacts()
                 print(
