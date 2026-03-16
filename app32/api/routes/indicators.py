@@ -737,23 +737,16 @@ def delete_indicator(indicator_id):
     if not company_id: return jsonify({"error": "Sessão expirada"}), 401
     
     ind = Indicator.query.filter_by(id=indicator_id, company_id=int(company_id)).first_or_404()
-    
-    # Check for associations
-    from models import IndicatorGoal, IndicatorData
-    from models.incentive import IncentiveRule
-    goals_count = IndicatorGoal.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
-    data_count = IndicatorData.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
-    incentive_rules_count = IncentiveRule.query.filter_by(company_id=int(company_id), indicator_id=indicator_id).count()
-    
-    if goals_count > 0 or data_count > 0 or incentive_rules_count > 0:
-        return jsonify({
-            "error": "Não é possível excluir um indicador que possui metas, dados ou vínculos em regras de incentivo. Inative-o em vez disso."
-        }), 400
-        
+
     try:
-        db.session.delete(ind)
+        ind.is_active = False
         db.session.commit()
-        return jsonify({"status": "success", "message": "Indicador excluído com sucesso."})
+        return jsonify({
+            "status": "success",
+            "message": "Indicador inativado com sucesso.",
+            "id": ind.id,
+            "is_active": ind.is_active,
+        })
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Erro interno ao excluir indicador. Tente novamente ou contate o suporte."}), 500
+        return jsonify({"error": "Erro interno ao inativar indicador. Tente novamente ou contate o suporte."}), 500

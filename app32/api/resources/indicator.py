@@ -152,9 +152,13 @@ class IndicatorResource(Resource):
         company_id = get_request_company_id()
         indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
         try:
-            db.session.delete(indicator)
+            indicator.is_active = False
             db.session.commit()
-            return {"message": "Indicator deleted successfully"}, 200
+            return {
+                "message": "Indicador inativado com sucesso",
+                "id": indicator.id,
+                "is_active": indicator.is_active,
+            }, 200
         except Exception as e:
             db.session.rollback()
             logger.exception("Erro ao excluir indicador %s", indicator_id)
