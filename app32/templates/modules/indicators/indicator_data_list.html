@@ -239,23 +239,29 @@
         <form id="recordForm">
             <div class="modal-body-vs">
                 <input type="hidden" name="company_id" value="{{ session.active_company_id or 1 }}">
+                <input type="hidden" name="indicator_id" id="modalIndicatorId">
 
                 <div class="field-group">
-                    <label class="field-label">Indicador *</label>
-                    <select class="field-select" name="indicator_id" id="modalIndicatorId" required onchange="loadIndicatorGoals(this.value)">
-                        <option value="">Selecione o indicador...</option>
-                        {% for ind in indicators %}
-                        <option value="{{ ind.id }}" data-unit="{{ ind.unit }}">{{ ind.code }} - {{ ind.name }}</option>
+                    <label class="field-label">Meta *</label>
+                    <select class="field-select" name="goal_id" id="modalGoalSelect" required onchange="handleGoalSelection(this)">
+                        <option value="">Selecione a meta...</option>
+                        {% for goal in goals %}
+                        <option 
+                            value="{{ goal.id }}"
+                            data-indicator-id="{{ goal.indicator_id }}"
+                            data-indicator-name="{{ goal.indicator.code }} - {{ goal.indicator.name }}"
+                            data-unit="{{ goal.indicator.unit or '' }}"
+                        >
+                            {% if goal.code %}[{{ goal.code }}] {% endif %}{{ goal.indicator.name }} — Meta {{ goal.goal_value | format_currency_br if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') else "{:,.2f}".format(goal.goal_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}{% if goal.goal_date %} (venc: {{ goal.goal_date | format_date_br }}){% endif %}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="field-group">
-                    <label class="field-label">Meta Relacionada</label>
-                    <select class="field-select" name="goal_id" id="modalGoalSelect">
-                        <option value="">Lançamento Avulso (Sem meta)</option>
-                    </select>
-                    <p class="field-hint">Associe a uma meta para calcular o desempenho automaticamente.</p>
+                    <label class="field-label">Indicador Vinculado</label>
+                    <input type="text" class="field-input" id="modalIndicatorName" readonly placeholder="Selecione uma meta para preencher o indicador">
+                    <p class="field-hint">O indicador é derivado automaticamente da meta selecionada.</p>
                 </div>
 
                 <div class="form-grid-2">
@@ -309,12 +315,13 @@ function handleRecordValueInput(input) {
 }
 
 function openRecordModal() {
-    document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('recordForm').reset();
+    document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalIndicatorId').value = '';
+    document.getElementById('modalIndicatorName').value = '';
+    document.getElementById('record_unit_label').innerText = '';
     document.getElementById('record_currency_prefix').style.display = 'none';
     document.getElementById('record_value_visual').style.paddingLeft = '1rem';
-    
-    
     document.getElementById('recordModal').style.display = 'block';
 }
 
@@ -322,25 +329,26 @@ function closeModal(id) {
     document.getElementById(id).style.display = 'none';
 }
 
-async function loadIndicatorGoals(indicatorId) {
-    const sel = document.getElementById('modalGoalSelect');
+function handleGoalSelection(select) {
     const unitLabel = document.getElementById('record_unit_label');
     const prefix = document.getElementById('record_currency_prefix');
     const input = document.getElementById('record_value_visual');
-    
-    sel.innerHTML = '<option value="">Carregando metas...</option>';
-    
-    if (!indicatorId) {
-        sel.innerHTML = '<option value="">Lançamento Avulso (Sem meta)</option>';
+    const indicatorIdInput = document.getElementById('modalIndicatorId');
+    const indicatorNameInput = document.getElementById('modalIndicatorName');
+
+    if (!select.value) {
+        indicatorIdInput.value = '';
+        indicatorNameInput.value = '';
         unitLabel.innerText = '';
         prefix.style.display = 'none';
         input.style.paddingLeft = '1rem';
         return;
     }
 
-    // Ajuste de unidade no input
-    const indSelect = document.getElementById('modalIndicatorId');
-    const unit = indSelect.options[indSelect.selectedIndex].getAttribute('data-unit') || "";
+    const selectedOption = select.options[select.selectedIndex];
+    const unit = selectedOption.getAttribute('data-unit') || "";
+    indicatorIdInput.value = selectedOption.getAttribute('data-indicator-id') || '';
+    indicatorNameInput.value = selectedOption.getAttribute('data-indicator-name') || '';
     unitLabel.innerText = unit ? `(${unit})` : "";
     
     if (unit === 'R$' || unit.includes('moeda')) {
@@ -351,22 +359,6 @@ async function loadIndicatorGoals(indicatorId) {
         input.style.paddingLeft = '1rem';
     }
 
-    try {
-        const res = await fetch(`/api/indicator-goals?indicator_id=${indicatorId}`);
-        const goals = await res.json();
-        
-        let html = '<option value="">Lançamento Avulso (Sem meta)</option>';
-        goals.forEach(g => {
-            // Formatar valor da meta para exibição no combo usando padrão BR
-            let gVal = parseFloat(g.goal_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            let gCode = g.code ? `[${g.code}] ` : "";
-            let gDate = g.start_date || "S/D";
-            html += `<option value="${g.id}">${gCode}Valor: ${gVal} (venc: ${g.goal_date || 'Aberto'})</option>`;
-        });
-        sel.innerHTML = html;
-    } catch (e) {
-        sel.innerHTML = '<option value="">Erro ao carregar metas</option>';
-    }
 }
 
 document.getElementById('recordForm').addEventListener('submit', async (e) => {
@@ -380,7 +372,7 @@ document.getElementById('recordForm').addEventListener('submit', async (e) => {
     
     data.measured_value = parseFloat(document.getElementById('record_value_real').value);
     data.indicator_id = parseInt(data.indicator_id);
-    if (data.goal_id) data.goal_id = parseInt(data.goal_id); else delete data.goal_id;
+    data.goal_id = parseInt(data.goal_id);
     data.company_id = parseInt(data.company_id);
 
     try {

@@ -491,12 +491,18 @@ def indicator_data_list():
     company_id = session.get('active_company_id')
     if not company_id: return redirect(url_for('auth.portal'))
     
-    indicators = Indicator.query.filter_by(company_id=int(company_id)).order_by(Indicator.name).all()
+    goals = IndicatorGoal.query.filter_by(
+        company_id=int(company_id),
+        status='active'
+    ).order_by(
+        IndicatorGoal.goal_date.desc(),
+        IndicatorGoal.created_at.desc()
+    ).all()
     data_records = IndicatorData.query.filter_by(company_id=int(company_id)).order_by(IndicatorData.measured_date.desc()).all()
     
     return render_template('modules/indicators/indicator_data_list.html', 
                          data_records=data_records,
-                         indicators=indicators)
+                         goals=goals)
 
 # --- Analysis (Dashboard) ---
 

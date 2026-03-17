@@ -300,6 +300,18 @@ class IndicatorDataListResource(Resource):
             cid = get_request_company_id()
             if cid:
                 data['company_id'] = cid
+
+            goal_id = data.get('goal_id')
+            indicator_id = data.get('indicator_id')
+
+            if goal_id and not indicator_id:
+                goal = IndicatorGoal.query.filter_by(
+                    id=goal_id,
+                    company_id=cid
+                ).first()
+                if not goal:
+                    return {"error": "Meta não encontrada para a empresa ativa."}, 400
+                data['indicator_id'] = goal.indicator_id
                 
             record = indicator_data_schema.load(data)
             db.session.add(record)
