@@ -12,9 +12,53 @@
 
 {% block navbar_actions %}
 <div style="display:flex; align-items:center; gap:0.75rem;">
+    <button class="btn btn-secondary btn-sm" type="button" onclick="toggleSidebar('right')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        Filtros
+    </button>
     <a href="/indicators/dashboard" class="btn btn-secondary btn-sm">
         <i class="fas fa-chart-pie"></i> Dashboard
     </a>
+</div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div style="padding:1.5rem;">
+    <div class="sidebar-header-ws">
+        <h3 class="text-h3">Filtros de análise</h3>
+        <p class="text-body-secondary" style="font-size:0.8rem;">Refine os indicadores e o período comparativo.</p>
+    </div>
+
+    <div class="sidebar-filter-group">
+        <label class="sidebar-filter-label" for="indicatorSearch">Buscar indicador</label>
+        <input id="indicatorSearch" class="sidebar-filter-input" type="search" placeholder="Código ou nome do indicador">
+    </div>
+
+    <div class="sidebar-filter-group">
+        <label class="sidebar-filter-label" for="periodStart">Data inicial</label>
+        <input id="periodStart" class="sidebar-filter-input" type="date">
+    </div>
+
+    <div class="sidebar-filter-group">
+        <label class="sidebar-filter-label" for="periodEnd">Data final</label>
+        <input id="periodEnd" class="sidebar-filter-input" type="date">
+    </div>
+
+    <div class="sidebar-filter-group">
+        <label class="sidebar-filter-label" for="viewMode">Visualização</label>
+        <select id="viewMode" class="sidebar-filter-input">
+            <option value="all">Todos os pontos</option>
+            <option value="monthly">Agregado por mês</option>
+            <option value="quarterly">Agregado por trimestre</option>
+        </select>
+    </div>
+
+    <div class="sidebar-actions">
+        <button class="btn btn-secondary" type="button" onclick="clearSelection()">Limpar seleção</button>
+        <button class="btn btn-primary" type="button" onclick="generateAnalysis()">Gerar análise comparativa</button>
+    </div>
 </div>
 {% endblock %}
 
@@ -39,14 +83,6 @@
     }
     .panel-card { padding: 1rem; }
     .panel-title { margin:0 0 0.75rem; font-size:1rem; font-weight:800; color:var(--text-primary); }
-    .filters-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:0.75rem; }
-    .field { display:flex; flex-direction:column; gap:0.35rem; }
-    .field label { font-size:0.74rem; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.04em; }
-    .field input, .field select {
-        width:100%; padding:0.75rem 0.85rem; border-radius:10px; border:1px solid var(--border);
-        background:var(--surface-secondary); color:var(--text-primary);
-    }
-    .btn-row { display:flex; justify-content:flex-end; gap:0.75rem; margin-top:0.9rem; flex-wrap:wrap; }
     .indicators-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:0.75rem; }
     .indicator-card {
         border:1px solid var(--border); border-radius:14px; padding:0.9rem;
@@ -85,11 +121,16 @@
     .badge.bad { background:#fee2e2; color:#991b1b; }
     .badge.neutral { background:var(--surface-secondary); color:var(--text-secondary); }
     .empty-card { text-align:center; color:var(--text-secondary); }
-    @media (max-width: 980px) { .filters-grid { grid-template-columns:1fr 1fr; } }
-    @media (max-width: 640px) {
-        .filters-grid { grid-template-columns:1fr; }
-        .chart-wrap { height:320px; }
+    .sidebar-filter-group { display:grid; gap:0.45rem; margin-bottom:1rem; }
+    .sidebar-filter-label {
+        font-size:0.78rem; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.04em;
     }
+    .sidebar-filter-input {
+        width:100%; padding:0.75rem 0.85rem; border-radius:10px; border:1px solid var(--border);
+        background:var(--surface-secondary); color:var(--text-primary);
+    }
+    .sidebar-actions { display:grid; gap:0.75rem; margin-top:1.5rem; }
+    @media (max-width: 640px) { .chart-wrap { height:320px; } }
 </style>
 {% endblock %}
 
@@ -105,37 +146,6 @@
             <strong>Como usar:</strong> selecione um ou mais indicadores, marque as metas desejadas, ajuste o período e gere a análise.
         </div>
     </section>
-
-    <section class="panel-card">
-        <h2 class="panel-title">Filtros de análise</h2>
-        <div class="filters-grid">
-            <div class="field">
-                <label for="indicatorSearch">Buscar indicador</label>
-                <input id="indicatorSearch" type="search" placeholder="Código ou nome do indicador">
-            </div>
-            <div class="field">
-                <label for="periodStart">Data inicial</label>
-                <input id="periodStart" type="date">
-            </div>
-            <div class="field">
-                <label for="periodEnd">Data final</label>
-                <input id="periodEnd" type="date">
-            </div>
-            <div class="field">
-                <label for="viewMode">Visualização</label>
-                <select id="viewMode">
-                    <option value="all">Todos os pontos</option>
-                    <option value="monthly">Agregado por mês</option>
-                    <option value="quarterly">Agregado por trimestre</option>
-                </select>
-            </div>
-        </div>
-        <div class="btn-row">
-            <button class="btn btn-secondary" type="button" onclick="clearSelection()">Limpar seleção</button>
-            <button class="btn btn-primary" type="button" onclick="generateAnalysis()">Gerar análise comparativa</button>
-        </div>
-    </section>
-
     <section class="panel-card">
         <h2 class="panel-title">Indicadores e metas</h2>
         <div id="indicatorsGrid" class="indicators-grid"></div>
