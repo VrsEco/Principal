@@ -13,6 +13,20 @@
     const noteDetailsModalBody = document.getElementById("noteDetailsModalBody");
     let noteDetailsModalInstance = null;
 
+    const noteToTaskForm = document.getElementById("noteToTaskForm");
+    const noteToTaskProject = document.getElementById("noteToTaskProject");
+    const noteToTaskResponsible = document.getElementById("noteToTaskResponsible");
+    const noteToTaskDueDate = document.getElementById("noteToTaskDueDate");
+    const noteToTaskWhat = document.getElementById("noteToTaskWhat");
+    const noteToTaskPreview = document.getElementById("noteToTaskPreview");
+    const noteToTaskNoteId = document.getElementById("noteToTaskNoteId");
+    let noteToTaskModalInstance = null;
+
+    const portalCompanyIds = Array.isArray(window.portalCompanyIds) ? window.portalCompanyIds : [];
+    const portalCompaniesById = window.portalCompaniesById || {};
+    const portalProjects = [];
+    const portalEmployeesByCompany = new Map();
+
     if (document.getElementById("noteDetailsModal") && window.Modal) {
         noteDetailsModalInstance = new Modal("noteDetailsModal", {
             animation: true,
@@ -22,15 +36,22 @@
         });
     }
 
-    // Get endpoint from data attribute or default
+    if (document.getElementById("noteToTaskModal") && window.Modal) {
+        noteToTaskModalInstance = new Modal("noteToTaskModal", {
+            animation: true,
+            backdrop: true,
+            closeOnBackdrop: true,
+            closeOnEscape: true,
+        });
+    }
+
     const notesEndpoint = document.body.dataset.notesEndpoint || "/api/notes/";
 
     let notes = [];
     let selectedNoteId = null;
 
-    // Helper to ensure URL ends with slash before appending ID
     function getNoteUrl(id) {
-        const base = notesEndpoint.endsWith('/') ? notesEndpoint : notesEndpoint + '/';
+        const base = notesEndpoint.endsWith("/") ? notesEndpoint : `${notesEndpoint}/`;
         return id ? `${base}${id}` : base;
     }
 
@@ -42,12 +63,11 @@
                 throw new Error(result.message || "Erro na operação.");
             }
             return result;
-        } else {
-            // If not JSON, probably an HTML error page (404, 500)
-            const text = await response.text();
-            console.error("Resposta não-JSON do servidor:", text);
-            throw new Error(`Erro do servidor (${response.status}). Verifique o console.`);
         }
+
+        const text = await response.text();
+        console.error("Resposta não-JSON do servidor:", text);
+        throw new Error(`Erro do servidor (${response.status}). Verifique o console.`);
     }
 
     function formatDate(value) {
@@ -71,6 +91,127 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    function getTodayIsoDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    function buildTaskTitleFromNote(noteValue) {
+        const firstLine = String(noteValue || "")
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .find(Boolean);
+
+        if (!firstLine) {
+            return "Nova atividade a partir da nota";
+        }
+
+        return firstLine.length > 120 ? `${firstLine.slice(0, 117)}...` : firstLine;
+    }
+
+    function resetResponsibleOptions() {
+        if (!noteToTaskResponsible) {
+            return;
+        }
+        noteToTaskResponsible.innerHTML = '<option value="">Selecione um responsável</option>';
+    }
+
+    function populateProjectOptions() {
+        if (!noteToTaskProject) {
+            return;
+        }
+
+        noteToTaskProject.innerHTML = '<option value="">Selecione um projeto</option>';
+
+        portalProjects
+            .sort((a, b) => {
+                const labelA = `${a.company_name || ""} ${a.code || ""} ${a.name || a.title || ""}`;
+                const labelB = `${b.company_name || ""} ${b.code || ""} ${b.name || b.title || ""}`;
+                return labelA.localeCompare(labelB, "pt-BR");
+            })
+            .forEach((project) => {
+                const option = document.createElement("option");
+                option.value = String(project.id);
+                option.dataset.companyId = String(project.company_id || "");
+                option.textContent = `${project.code ? `${project.code} • ` : ""}${project.name || project.title}${project.company_name ? ` — ${project.company_name}` : ""}`;
+                noteToTaskProject.appendChild(option);
+            });
+    }
+
+    async function loadPortalProjects() {
+        if (!portalCompanyIds.length) {
+            return;
+        }
+
+        const results = await Promise.allSettled(
+            portalCompanyIds.map(async (companyId) => {
+                const response = await fetch(`/api/projects?company_id=${companyId}&show_inactive=true`, {
+                    headers: { Accept: "application/json" },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Falha ao carregar projetos da empresa ${companyId}.`);
+                }
+
+                const payload = await response.json();
+                const list = (Array.isArray(payload) ? payload : []).filter((project) => !["completed", "cancelled", "archived"].includes(project.status));
+                return list.map((project) => ({
+                    ...project,
+                    company_id: project.company_id || companyId,
+                    company_name: portalCompaniesById[String(project.company_id || companyId)] || "",
+                }));
+            })
+        );
+
+        results.forEach((result) => {
+            if (result.status !== "fulfilled") {
+                console.warn(result.reason);
+                return;
+            }
+
+            result.value.forEach((project) => {
+                if (!portalProjects.some((item) => String(item.id) === String(project.id))) {
+                    portalProjects.push(project);
+                }
+            });
+        });
+
+        populateProjectOptions();
+    }
+
+    async function loadEmployeesForCompany(companyId) {
+        if (!companyId) {
+            resetResponsibleOptions();
+            return;
+        }
+
+        if (!portalEmployeesByCompany.has(companyId)) {
+            const response = await fetch(`/api/companies/${companyId}/employees`, {
+                headers: { Accept: "application/json" },
+            });
+
+            if (!response.ok) {
+                throw new Error("Não foi possível carregar os responsáveis do projeto.");
+            }
+
+            const payload = await response.json();
+            portalEmployeesByCompany.set(companyId, payload.employees || []);
+        }
+
+        const employees = portalEmployeesByCompany.get(companyId) || [];
+        resetResponsibleOptions();
+
+        employees.forEach((employee) => {
+            const option = document.createElement("option");
+            option.value = String(employee.id);
+            option.textContent = employee.name;
+            noteToTaskResponsible.appendChild(option);
+        });
     }
 
     function openNoteModal(note) {
@@ -101,6 +242,29 @@
         noteDetailsModalInstance.open();
     }
 
+    async function openNoteToTaskModal(note) {
+        if (!noteToTaskModalInstance || !noteToTaskForm) {
+            return;
+        }
+
+        if (!portalProjects.length) {
+            await loadPortalProjects();
+        }
+
+        if (!portalProjects.length) {
+            alert("Nenhum projeto disponível para transformar a nota em atividade.");
+            return;
+        }
+
+        noteToTaskForm.reset();
+        resetResponsibleOptions();
+        noteToTaskNoteId.value = note.id || "";
+        noteToTaskWhat.value = buildTaskTitleFromNote(note.text);
+        noteToTaskPreview.value = note.text || "";
+        noteToTaskDueDate.value = getTodayIsoDate();
+        noteToTaskModalInstance.open();
+    }
+
     function renderNotes() {
         if (!notes.length) {
             noteBoard.innerHTML =
@@ -125,6 +289,7 @@
             <div class="note-row-top" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 6px; margin-bottom: 6px;">
               <span class="note-row-meta" style="flex: 1;">${metaText}</span>
               <div class="note-row-actions" style="display: flex; gap: 8px;">
+                <button type="button" class="btn-icon btn-convert-note" title="Transformar em atividade" style="background: none; border: none; cursor: pointer; color: #0f766e; padding: 4px;"><i class="fas fa-list-check"></i></button>
                 <button type="button" class="btn-icon btn-edit-note" title="Editar" style="background: none; border: none; cursor: pointer; color: var(--primary); padding: 4px;"><i class="fas fa-edit"></i></button>
                 <button type="button" class="btn-icon btn-delete-note" title="Excluir" style="background: none; border: none; cursor: pointer; color: #ef4444; padding: 4px;"><i class="fas fa-trash"></i></button>
               </div>
@@ -146,16 +311,11 @@
 
     async function saveNoteToServer(text) {
         try {
-            // POST to base URL (e.g. /api/notes/)
-            // Remove trailing slash if present for POST if API expects it, 
-            // but usually Flask handles both. Let's use getNoteUrl() without ID which adds slash.
-            // If your API fails with slash on POST, remove it.
-            // Flask Blueprint url_prefix='/api/notes' + route '/' -> '/api/notes/'
             const response = await fetch(getNoteUrl(), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Accept": "application/json",
+                    Accept: "application/json",
                 },
                 body: JSON.stringify({ text }),
             });
@@ -173,7 +333,7 @@
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "Accept": "application/json",
+                    Accept: "application/json",
                 },
                 body: JSON.stringify({ text }),
             });
@@ -190,7 +350,7 @@
             const response = await fetch(getNoteUrl(noteId), {
                 method: "DELETE",
                 headers: {
-                    "Accept": "application/json",
+                    Accept: "application/json",
                 },
             });
             await handleResponse(response);
@@ -209,8 +369,6 @@
                 },
             });
 
-            // Handle non-200 responses manually if handleResponse is not used here
-            // or use handleResponse but adapt it since structure might differ slightly
             const contentType = response.headers.get("content-type");
             if (!response.ok) {
                 const text = await response.text();
@@ -229,7 +387,6 @@
             } else {
                 throw new Error("Resposta inválida do servidor (não é JSON).");
             }
-
         } catch (error) {
             console.error("Não foi possível carregar as notas:", error);
             if (noteBoard) {
@@ -309,6 +466,17 @@
 
             const btnEdit = event.target.closest(".btn-edit-note");
             const btnDelete = event.target.closest(".btn-delete-note");
+            const btnConvert = event.target.closest(".btn-convert-note");
+
+            if (btnConvert) {
+                try {
+                    await openNoteToTaskModal(note);
+                } catch (error) {
+                    console.error("Erro ao preparar formulário de atividade:", error);
+                    alert(error.message || "Não foi possível abrir o formulário de atividade.");
+                }
+                return;
+            }
 
             if (btnEdit) {
                 isEditing = true;
@@ -322,7 +490,7 @@
 
             if (btnDelete) {
                 const confirmed = confirm(
-                    `Tem certeza que deseja excluir a nota "${note.code || 'selecionada'}"?\n\nEsta ação não pode ser desfeita.`
+                    `Tem certeza que deseja excluir a nota "${note.code || "selecionada"}"?\n\nEsta ação não pode ser desfeita.`
                 );
 
                 if (!confirmed) return;
@@ -349,10 +517,75 @@
                 return;
             }
 
-            // Clicked somewhere else (like the bottom part), open modal
             openNoteModal(note);
         });
     }
+
+    if (noteToTaskProject) {
+        noteToTaskProject.addEventListener("change", async (event) => {
+            const selectedOption = event.target.selectedOptions?.[0];
+            const companyId = selectedOption?.dataset?.companyId || "";
+
+            try {
+                await loadEmployeesForCompany(companyId);
+            } catch (error) {
+                console.error("Erro ao carregar responsáveis:", error);
+                resetResponsibleOptions();
+                alert(error.message || "Não foi possível carregar os responsáveis.");
+            }
+        });
+    }
+
+    if (noteToTaskForm) {
+        noteToTaskForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const selectedProjectOption = noteToTaskProject.selectedOptions?.[0];
+            const projectId = noteToTaskProject.value;
+            const companyId = selectedProjectOption?.dataset?.companyId || "";
+
+            if (!projectId || !companyId) {
+                alert("Selecione um projeto válido.");
+                return;
+            }
+
+            const payload = {
+                source: "portal_note",
+                note_id: noteToTaskNoteId.value || null,
+                project_id: projectId,
+                company_id: companyId,
+                what: noteToTaskWhat.value.trim(),
+                employee_id: noteToTaskResponsible.value || "",
+                due_date: noteToTaskDueDate.value || "",
+                how: noteToTaskPreview.value || "",
+            };
+
+            if (!payload.what) {
+                alert("Informe a descrição da atividade.");
+                noteToTaskWhat.focus();
+                return;
+            }
+
+            if (!payload.employee_id) {
+                alert("Selecione um responsável.");
+                noteToTaskResponsible.focus();
+                return;
+            }
+
+            if (!payload.due_date) {
+                alert("Informe o prazo da atividade.");
+                noteToTaskDueDate.focus();
+                return;
+            }
+
+            window.sessionStorage.setItem("portalNoteToTaskDraft", JSON.stringify(payload));
+            window.location.href = `/projects/${projectId}/manage?from=portal&new_task=1`;
+        });
+    }
+
+    loadPortalProjects().catch((error) => {
+        console.warn("Não foi possível pré-carregar os projetos do portal:", error);
+    });
 
     loadNotes();
 })();

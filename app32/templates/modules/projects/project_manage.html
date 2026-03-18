@@ -1112,6 +1112,33 @@
 
 {% block scripts %}
 <script>
+    function parseLocalDate(dateString) {
+        if (!dateString) return null;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const [year, month, day] = dateString.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        return new Date(dateString);
+    }
+
+    function formatDatePtBr(dateString) {
+        const parsedDate = parseLocalDate(dateString);
+        return parsedDate ? parsedDate.toLocaleDateString('pt-BR') : '-';
+    }
+
+    function getTodayLocalIsoDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function getTodayStart() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
     const PROJECT_ID = parseInt("{{ project.id }}");
     const PROJECT_OWNER = "{{ project.owner or 'Sem Gestor' }}";
     const COMPANY_ID = parseInt("{{ company.id if company else '0' }}");
@@ -1337,8 +1364,8 @@
             draggedTaskId = null;
         };
 
-        const deadlineDate = task.due_date ? new Date(task.due_date) : null;
-        const isOverdue = deadlineDate && deadlineDate < new Date() && task.stage !== 'completed';
+        const deadlineDate = parseLocalDate(task.due_date);
+        const isOverdue = deadlineDate && deadlineDate < getTodayStart() && task.stage !== 'completed';
         const deadlineLabel = deadlineDate ? deadlineDate.toLocaleDateString('pt-BR') : '-';
         const hoursLabel = task.estimated_hours ? `${task.estimated_hours}h` : '0h';
 
@@ -1480,7 +1507,7 @@
     // Confirmation Popups Logic
     function openCompletionPopup(taskId, targetStage) {
         pendingDrop = { taskId, targetStage };
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayLocalIsoDate();
         document.getElementById('completionDateInput').value = today;
         document.getElementById('completionNoteInput').value = '';
         document.getElementById('completionPopup').classList.add('open');
@@ -1506,7 +1533,7 @@
 
         const newLog = {
             timestamp: new Date().toISOString(),
-            text: note || `Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}`,
+            text: note || `Atividade concluída em ${formatDatePtBr(date)}`,
             type: 'completion',
             date: date
         };
@@ -1546,7 +1573,7 @@
 
     function openCancellationPopup(taskId, targetStage) {
         pendingDrop = { taskId, targetStage };
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayLocalIsoDate();
         document.getElementById('cancellationDateInput').value = today;
         document.getElementById('cancellationNoteInput').value = '';
         document.getElementById('cancellationPopup').classList.add('open');
@@ -1721,14 +1748,16 @@
     const taskForm = document.getElementById('taskForm');
     const pageParams = new URLSearchParams(window.location.search);
     let pendingTaskModalId = pageParams.get('activity_id');
+    let portalTaskDraftApplied = false;
 
     function clearTaskShortcutParams() {
         if (!window.history?.replaceState) return;
-        if (!pageParams.has('activity_id') && !pageParams.has('from')) return;
+        if (!pageParams.has('activity_id') && !pageParams.has('from') && !pageParams.has('new_task')) return;
 
         const nextParams = new URLSearchParams(window.location.search);
         nextParams.delete('activity_id');
         nextParams.delete('from');
+        nextParams.delete('new_task');
         const nextQuery = nextParams.toString();
         const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
         window.history.replaceState({}, document.title, nextUrl);
@@ -1745,13 +1774,44 @@
         clearTaskShortcutParams();
     }
 
-    function openTaskModal(taskId = null) {
+    function applyPortalTaskDraft() {
+        if (portalTaskDraftApplied || pageParams.get('new_task') !== '1' || pageParams.get('from') !== 'portal') {
+            return false;
+        }
+
+        const rawDraft = window.sessionStorage.getItem('portalNoteToTaskDraft');
+        if (!rawDraft) {
+            return false;
+        }
+
+        let draft = null;
+        try {
+            draft = JSON.parse(rawDraft);
+        } catch (error) {
+            console.warn('Falha ao interpretar rascunho da nota.', error);
+            window.sessionStorage.removeItem('portalNoteToTaskDraft');
+            return false;
+        }
+
+        if (!draft || String(draft.project_id) !== String(PROJECT_ID)) {
+            return false;
+        }
+
+        portalTaskDraftApplied = true;
+        openTaskModal(null, { draft });
+        window.sessionStorage.removeItem('portalNoteToTaskDraft');
+        clearTaskShortcutParams();
+        return true;
+    }
+
+    function openTaskModal(taskId = null, options = {}) {
         if (IS_COLLABORATOR && !taskId) {
             alert('Colaborador não pode criar novas atividades nesta tela.');
             return;
         }
         const title = document.getElementById('modalTitle');
         const idField = document.getElementById('taskId');
+        const draft = options?.draft || null;
 
         if (taskId) {
             const task = allTasks.find(t => t.id == taskId);
@@ -1776,6 +1836,14 @@
             currentTaskLogs = [];
             // Hide dependencies section for new tasks
             document.getElementById('dependencySection').style.display = 'none';
+            document.getElementById('taskScoreWeight').value = 1.0;
+
+            if (draft) {
+                document.getElementById('taskWhat').value = draft.what || '';
+                document.getElementById('taskEmployeeId').value = draft.employee_id || '';
+                document.getElementById('taskDueDate').value = draft.due_date || '';
+                document.getElementById('taskHow').value = draft.how || '';
+            }
         }
 
                 const saveButton = document.querySelector('#taskModal .btn-primary');
@@ -1877,6 +1945,7 @@
             if (Object.keys(employeeNames).length > 0) {
                 renderKanban();
             }
+            applyPortalTaskDraft();
         } catch (error) {
             console.error('Erro ao carregar colaboradores:', error);
         }

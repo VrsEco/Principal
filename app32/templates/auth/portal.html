@@ -586,9 +586,69 @@
         </div>
     </div>
 
+    <div id="noteToTaskModal" class="modal-system" aria-hidden="true">
+        <div class="modal-content-system">
+            <button class="modal-close-system" data-modal-close aria-label="Fechar modal">&times;</button>
+            <div class="modal-body-system">
+                <p class="note-modal-label">Transformar Nota em Atividade</p>
+                <h3 class="note-modal-title">Abrir formulário de atividade</h3>
+                <p class="note-modal-meta" style="display: block;">Escolha o projeto, o responsável e o prazo. O conteúdo da nota será levado para o campo <strong>Como</strong>.</p>
+
+                <form id="noteToTaskForm" class="note-to-task-form">
+                    <input type="hidden" id="noteToTaskNoteId" />
+
+                    <div class="note-to-task-grid">
+                        <div class="note-to-task-field note-to-task-field--full">
+                            <label for="noteToTaskWhat">O quê? (Descrição)</label>
+                            <input type="text" id="noteToTaskWhat" required maxlength="180" placeholder="Descreva a atividade" />
+                        </div>
+
+                        <div class="note-to-task-field note-to-task-field--full">
+                            <label for="noteToTaskProject">Projeto</label>
+                            <select id="noteToTaskProject" required>
+                                <option value="">Selecione um projeto</option>
+                            </select>
+                        </div>
+
+                        <div class="note-to-task-field">
+                            <label for="noteToTaskResponsible">Responsável</label>
+                            <select id="noteToTaskResponsible" required>
+                                <option value="">Selecione um responsável</option>
+                            </select>
+                        </div>
+
+                        <div class="note-to-task-field">
+                            <label for="noteToTaskDueDate">Prazo</label>
+                            <input type="date" id="noteToTaskDueDate" required />
+                        </div>
+
+                        <div class="note-to-task-field note-to-task-field--full">
+                            <label for="noteToTaskPreview">Como</label>
+                            <textarea id="noteToTaskPreview" rows="5" readonly></textarea>
+                        </div>
+                    </div>
+
+                    <div class="note-to-task-actions">
+                        <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+                        <button type="submit" class="btn-primary">Abrir formulário</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/modal-system.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notes.js') }}"></script>
+    <script>
+        window.portalCompanyIds = {{ companies | map(attribute='id') | list | tojson }};
+        window.portalCompaniesById = {
+            {% for company in companies %}
+            {% set company_label = ((company.client_code ~ ' - ') if company.client_code else '') ~ company.name %}
+            "{{ company.id }}": {{ company_label | tojson }}{{ "," if not loop.last else "" }}
+            {% endfor %}
+        };
+    </script>
     <script>
         function toggleSection(sectionId) {
             const section = document.getElementById(sectionId);
