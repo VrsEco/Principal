@@ -68,6 +68,7 @@ class NotificationHub:
         subject: Optional[str] = None,
         html_body: Optional[str] = None,
         recipient_id: Optional[str] = None,
+        recipient_override: Optional[str] = None,
         parse_mode: str = "HTML",
     ) -> Dict[str, Any]:
         validation = self._validate_user(user)
@@ -76,27 +77,30 @@ class NotificationHub:
 
         normalized = (channel or "").strip().lower()
         if normalized == "email":
-            if not user.email:
+            target_email = recipient_override or user.email
+            if not target_email:
                 return {"success": False, "error": "Usuário sem e-mail cadastrado"}
             return self.send_email(
-                user.email,
+                target_email,
                 subject or "Notificação - Gestão Versus",
                 message,
                 html_body=html_body,
             )
 
         if normalized == "whatsapp":
-            if not user.whatsapp:
+            target_whatsapp = recipient_override or user.whatsapp
+            if not target_whatsapp:
                 return {"success": False, "error": "Usuário sem WhatsApp cadastrado"}
-            return self.send_whatsapp(user.whatsapp, message)
+            return self.send_whatsapp(target_whatsapp, message)
 
         if normalized == "telegram":
-            if not user.telegram:
+            target_telegram = recipient_override or user.telegram
+            if not target_telegram:
                 return {"success": False, "error": "Usuário sem Telegram cadastrado"}
-            return self.send_telegram(user.telegram, message, parse_mode=parse_mode)
+            return self.send_telegram(target_telegram, message, parse_mode=parse_mode)
 
         if normalized == "instagram":
-            target = recipient_id or getattr(user, "instagram", None)
+            target = recipient_override or recipient_id or getattr(user, "instagram", None)
             if not target:
                 return {
                     "success": False,

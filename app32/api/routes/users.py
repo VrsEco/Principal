@@ -312,6 +312,7 @@ def test_user_channel(user_id):
             body,
             subject=subject,
             html_body=html_body,
+            recipient_override=recipient,
             recipient_id=recipient if validated_data.channel == 'instagram' else None,
             parse_mode='HTML',
         )

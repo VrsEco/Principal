@@ -294,6 +294,7 @@ def test_test_user_channel_route_sends_message_to_selected_channel(monkeypatch):
     assert 'Sou o Sapiens' in fake_hub.calls[0]['message']
     assert 'Empresa Alpha, Empresa Beta' in fake_hub.calls[0]['message']
     assert 'SenhaTemp@123' in fake_hub.calls[0]['message']
+    assert fake_hub.calls[0]['kwargs']['recipient_override'] == '5511888887777'
     assert fake_hub.calls[0]['kwargs']['recipient_id'] is None
 
 
