@@ -14,6 +14,7 @@
     let noteDetailsModalInstance = null;
 
     const noteToTaskForm = document.getElementById("noteToTaskForm");
+    const noteToTaskCompany = document.getElementById("noteToTaskCompany");
     const noteToTaskProject = document.getElementById("noteToTaskProject");
     const noteToTaskResponsible = document.getElementById("noteToTaskResponsible");
     const noteToTaskDueDate = document.getElementById("noteToTaskDueDate");
@@ -119,28 +120,54 @@
             return;
         }
         noteToTaskResponsible.innerHTML = '<option value="">Selecione um responsável</option>';
+        noteToTaskResponsible.disabled = true;
     }
 
-    function populateProjectOptions() {
+    function resetProjectOptions() {
+        if (!noteToTaskProject) {
+            return;
+        }
+        noteToTaskProject.innerHTML = '<option value="">Selecione um projeto</option>';
+        noteToTaskProject.disabled = true;
+    }
+
+    function populateCompanyOptions() {
+        if (!noteToTaskCompany) {
+            return;
+        }
+
+        noteToTaskCompany.innerHTML = '<option value="">Selecione uma empresa</option>';
+        portalCompanyIds.forEach((companyId) => {
+            const option = document.createElement("option");
+            option.value = String(companyId);
+            option.textContent = portalCompaniesById[String(companyId)] || `Empresa ${companyId}`;
+            noteToTaskCompany.appendChild(option);
+        });
+    }
+
+    function populateProjectOptions(companyId) {
         if (!noteToTaskProject) {
             return;
         }
 
-        noteToTaskProject.innerHTML = '<option value="">Selecione um projeto</option>';
-
-        portalProjects
+        resetProjectOptions();
+        const filteredProjects = portalProjects
+            .filter((project) => String(project.company_id) === String(companyId))
             .sort((a, b) => {
-                const labelA = `${a.company_name || ""} ${a.code || ""} ${a.name || a.title || ""}`;
-                const labelB = `${b.company_name || ""} ${b.code || ""} ${b.name || b.title || ""}`;
+                const labelA = `${a.code || ""} ${a.name || a.title || ""}`;
+                const labelB = `${b.code || ""} ${b.name || b.title || ""}`;
                 return labelA.localeCompare(labelB, "pt-BR");
-            })
-            .forEach((project) => {
-                const option = document.createElement("option");
-                option.value = String(project.id);
-                option.dataset.companyId = String(project.company_id || "");
-                option.textContent = `${project.code ? `${project.code} • ` : ""}${project.name || project.title}${project.company_name ? ` — ${project.company_name}` : ""}`;
-                noteToTaskProject.appendChild(option);
             });
+
+        filteredProjects.forEach((project) => {
+            const option = document.createElement("option");
+            option.value = String(project.id);
+            option.dataset.companyId = String(project.company_id || "");
+            option.textContent = `${project.code ? `${project.code} • ` : ""}${project.name || project.title}`;
+            noteToTaskProject.appendChild(option);
+        });
+
+        noteToTaskProject.disabled = filteredProjects.length === 0;
     }
 
     async function loadPortalProjects() {
@@ -181,7 +208,7 @@
             });
         });
 
-        populateProjectOptions();
+        populateCompanyOptions();
     }
 
     async function loadEmployeesForCompany(companyId) {
@@ -212,6 +239,7 @@
             option.textContent = employee.name;
             noteToTaskResponsible.appendChild(option);
         });
+        noteToTaskResponsible.disabled = employees.length === 0;
     }
 
     function openNoteModal(note) {
@@ -251,12 +279,14 @@
             await loadPortalProjects();
         }
 
-        if (!portalProjects.length) {
-            alert("Nenhum projeto disponível para transformar a nota em atividade.");
+        if (!portalCompanyIds.length) {
+            alert("Nenhuma empresa vinculada ao usuário para transformar a nota em atividade.");
             return;
         }
 
         noteToTaskForm.reset();
+        populateCompanyOptions();
+        resetProjectOptions();
         resetResponsibleOptions();
         noteToTaskNoteId.value = note.id || "";
         noteToTaskWhat.value = buildTaskTitleFromNote(note.text);
@@ -521,13 +551,17 @@
         });
     }
 
-    if (noteToTaskProject) {
-        noteToTaskProject.addEventListener("change", async (event) => {
-            const selectedOption = event.target.selectedOptions?.[0];
-            const companyId = selectedOption?.dataset?.companyId || "";
+    if (noteToTaskCompany) {
+        noteToTaskCompany.addEventListener("change", async (event) => {
+            const companyId = event.target.value;
+            populateProjectOptions(companyId);
+            resetResponsibleOptions();
 
             try {
                 await loadEmployeesForCompany(companyId);
+                if (companyId && noteToTaskProject.disabled) {
+                    alert("Nenhum projeto ativo disponível para a empresa selecionada.");
+                }
             } catch (error) {
                 console.error("Erro ao carregar responsáveis:", error);
                 resetResponsibleOptions();
@@ -540,12 +574,11 @@
         noteToTaskForm.addEventListener("submit", (event) => {
             event.preventDefault();
 
-            const selectedProjectOption = noteToTaskProject.selectedOptions?.[0];
+            const companyId = noteToTaskCompany.value;
             const projectId = noteToTaskProject.value;
-            const companyId = selectedProjectOption?.dataset?.companyId || "";
 
             if (!projectId || !companyId) {
-                alert("Selecione um projeto válido.");
+                alert("Selecione uma empresa e um projeto válidos.");
                 return;
             }
 
@@ -561,7 +594,7 @@
             };
 
             if (!payload.what) {
-                alert("Informe a descrição da atividade.");
+                alert("Informe o título da atividade.");
                 noteToTaskWhat.focus();
                 return;
             }

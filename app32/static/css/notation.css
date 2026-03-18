@@ -198,6 +198,14 @@ textarea:focus {
 .note-to-task-field textarea[readonly] {
     min-height: 130px;
     resize: vertical;
+    opacity: 0.92;
+}
+
+.note-to-task-field select:disabled,
+.note-to-task-field input:disabled,
+.note-to-task-field textarea:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 .note-to-task-actions {
