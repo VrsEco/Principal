@@ -161,10 +161,20 @@ textarea:focus {
     gap: 1rem;
 }
 
+.note-to-task-header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
 .note-to-task-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
+    background: rgba(248, 250, 252, 0.85);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 18px;
+    padding: 1rem;
 }
 
 .note-to-task-field {
@@ -187,18 +197,28 @@ textarea:focus {
 .note-to-task-field select,
 .note-to-task-field textarea {
     width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    border-radius: 14px;
     padding: 0.85rem 1rem;
     font: inherit;
-    background: var(--surface-secondary);
+    background: #fff;
     color: var(--text-primary);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.note-to-task-field input:focus,
+.note-to-task-field select:focus,
+.note-to-task-field textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 .note-to-task-field textarea[readonly] {
     min-height: 130px;
     resize: vertical;
     opacity: 0.92;
+    background: #f8fafc;
 }
 
 .note-to-task-field select:disabled,
@@ -213,6 +233,14 @@ textarea:focus {
     justify-content: flex-end;
     gap: 0.75rem;
     flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.note-to-task-actions .btn {
+    min-width: 180px;
+    border-radius: 12px;
+    min-height: 44px;
+    font-weight: 700;
 }
 
 @media (max-width: 640px) {
@@ -238,6 +266,7 @@ textarea:focus {
 
     .note-to-task-grid {
         grid-template-columns: 1fr;
+        padding: 0.85rem;
     }
 }
 

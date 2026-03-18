@@ -594,9 +594,11 @@
         <div class="modal-content-system">
             <button class="modal-close-system" data-modal-close aria-label="Fechar modal">&times;</button>
             <div class="modal-body-system">
-                <p class="note-modal-label">Transformar Nota em Atividade</p>
-                <h3 class="note-modal-title">Abrir formulário de atividade</h3>
-                <p class="note-modal-meta" style="display: block;">Escolha a empresa, o projeto, o responsável e o prazo. O conteúdo da nota será levado para o campo <strong>Como</strong>.</p>
+                <div class="note-to-task-header">
+                    <p class="note-modal-label">Transformar Nota em Atividade</p>
+                    <h3 class="note-modal-title">Criar atividade de projeto</h3>
+                    <p class="note-modal-meta" style="display: block;">Escolha a empresa, o projeto, o responsável e o prazo. O conteúdo da nota será usado no campo <strong>Como</strong>.</p>
+                </div>
 
                 <form id="noteToTaskForm" class="note-to-task-form">
                     <input type="hidden" id="noteToTaskNoteId" />
@@ -618,7 +620,7 @@
 
                         <div class="note-to-task-field note-to-task-field--full">
                             <label for="noteToTaskWhat">Título</label>
-                            <input type="text" id="noteToTaskWhat" required maxlength="180" placeholder="Digite o título da atividade" />
+                            <input type="text" id="noteToTaskWhat" class="note-to-task-input" required maxlength="180" placeholder="Digite o título da atividade" />
                         </div>
 
                         <div class="note-to-task-field">
@@ -630,7 +632,7 @@
 
                         <div class="note-to-task-field">
                             <label for="noteToTaskDueDate">Prazo</label>
-                            <input type="date" id="noteToTaskDueDate" required />
+                            <input type="date" id="noteToTaskDueDate" class="note-to-task-input" required />
                         </div>
 
                         <div class="note-to-task-field note-to-task-field--full">
@@ -640,8 +642,8 @@
                     </div>
 
                     <div class="note-to-task-actions">
-                        <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-                        <button type="submit" class="btn-primary">Abrir formulário</button>
+                        <button type="button" class="btn btn-secondary" data-modal-close>Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="noteToTaskSubmitButton">Criar Atividade</button>
                     </div>
                 </form>
             </div>

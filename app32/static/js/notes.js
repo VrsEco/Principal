@@ -21,6 +21,7 @@
     const noteToTaskWhat = document.getElementById("noteToTaskWhat");
     const noteToTaskPreview = document.getElementById("noteToTaskPreview");
     const noteToTaskNoteId = document.getElementById("noteToTaskNoteId");
+    const noteToTaskSubmitButton = document.getElementById("noteToTaskSubmitButton");
     let noteToTaskModalInstance = null;
 
     const portalCompaniesById = { ...(window.portalCompaniesById || {}) };
@@ -260,6 +261,34 @@
             noteToTaskResponsible.appendChild(option);
         });
         noteToTaskResponsible.disabled = employees.length === 0;
+    }
+
+    async function createProjectTaskFromPortal(payload) {
+        const response = await fetch(`/api/projects/${payload.project_id}/tasks?company_id=${payload.company_id}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({
+                what: payload.what,
+                employee_id: payload.employee_id,
+                due_date: payload.due_date,
+                how: payload.how,
+                status: "planned",
+                stage: "inbox",
+                priority: "normal",
+            }),
+        });
+
+        const contentType = response.headers.get("content-type") || "";
+        const result = contentType.includes("application/json") ? await response.json() : null;
+
+        if (!response.ok) {
+            throw new Error(result?.message || result?.error || "Não foi possível criar a atividade.");
+        }
+
+        return result;
     }
 
     function openNoteModal(note) {
@@ -591,7 +620,7 @@
     }
 
     if (noteToTaskForm) {
-        noteToTaskForm.addEventListener("submit", (event) => {
+        noteToTaskForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
             const companyId = noteToTaskCompany.value;
@@ -631,8 +660,42 @@
                 return;
             }
 
-            window.sessionStorage.setItem("portalNoteToTaskDraft", JSON.stringify(payload));
-            window.location.href = `/projects/${projectId}/manage?from=portal&new_task=1`;
+            const originalButtonText = noteToTaskSubmitButton ? noteToTaskSubmitButton.textContent : "";
+            if (noteToTaskSubmitButton) {
+                noteToTaskSubmitButton.disabled = true;
+                noteToTaskSubmitButton.textContent = "Criando...";
+            }
+
+            let taskCreated = false;
+            try {
+                await createProjectTaskFromPortal(payload);
+                taskCreated = true;
+
+                if (payload.note_id) {
+                    await deleteNoteFromServer(payload.note_id);
+                    notes = notes.filter((note) => String(note.id) !== String(payload.note_id));
+                    if (isEditing && String(editNoteId) === String(payload.note_id)) {
+                        cancelEditMode();
+                    }
+                    updateSelection(null);
+                }
+
+                renderNotes();
+                noteToTaskModalInstance?.close();
+                alert("Atividade criada com sucesso e nota removida.");
+            } catch (error) {
+                console.error("Erro ao criar atividade a partir da nota:", error);
+                if (taskCreated) {
+                    alert(`Atividade criada, mas a nota não pôde ser removida automaticamente: ${error.message}`);
+                } else {
+                    alert(error.message || "Não foi possível criar a atividade.");
+                }
+            } finally {
+                if (noteToTaskSubmitButton) {
+                    noteToTaskSubmitButton.disabled = false;
+                    noteToTaskSubmitButton.textContent = originalButtonText || "Criar Atividade";
+                }
+            }
         });
     }
 
