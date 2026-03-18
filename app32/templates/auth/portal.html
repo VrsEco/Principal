@@ -542,7 +542,11 @@
                     {% if companies %}
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                         {% for company in companies %}
-                        <div class="company-card" onclick="selectCompany('{{ company.id }}')">
+                        {% set company_label = ((company.client_code ~ ' - ') if company.client_code else '') ~ company.name %}
+                        <div class="company-card"
+                            data-portal-company-id="{{ company.id }}"
+                            data-portal-company-label="{{ company_label }}"
+                            onclick="selectCompany('{{ company.id }}')">
                             <div class="company-icon-box"
                                 style="flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; background: rgba(37, 99, 235, 0.05); display: flex; align-items: center; justify-content: center; color: var(--primary); border: 1px solid rgba(37, 99, 235, 0.1);">
                                 <i class="fas fa-city" style="font-size: 1rem;"></i>

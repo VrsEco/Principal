@@ -23,8 +23,8 @@
     const noteToTaskNoteId = document.getElementById("noteToTaskNoteId");
     let noteToTaskModalInstance = null;
 
-    const portalCompanyIds = Array.isArray(window.portalCompanyIds) ? window.portalCompanyIds : [];
-    const portalCompaniesById = window.portalCompaniesById || {};
+    const portalCompaniesById = { ...(window.portalCompaniesById || {}) };
+    const portalCompanyIds = Array.isArray(window.portalCompanyIds) ? [...window.portalCompanyIds] : [];
     const portalProjects = [];
     const portalEmployeesByCompany = new Map();
 
@@ -113,6 +113,26 @@
         }
 
         return firstLine.length > 120 ? `${firstLine.slice(0, 117)}...` : firstLine;
+    }
+
+    function hydrateCompaniesFromDom() {
+        const companyCards = document.querySelectorAll("[data-portal-company-id]");
+        companyCards.forEach((card) => {
+            const companyId = String(card.dataset.portalCompanyId || "").trim();
+            const companyLabel = String(card.dataset.portalCompanyLabel || "").trim();
+
+            if (!companyId) {
+                return;
+            }
+
+            if (!portalCompanyIds.includes(companyId)) {
+                portalCompanyIds.push(companyId);
+            }
+
+            if (companyLabel && !portalCompaniesById[companyId]) {
+                portalCompaniesById[companyId] = companyLabel;
+            }
+        });
     }
 
     function resetResponsibleOptions() {
@@ -615,6 +635,8 @@
             window.location.href = `/projects/${projectId}/manage?from=portal&new_task=1`;
         });
     }
+
+    hydrateCompaniesFromDom();
 
     loadPortalProjects().catch((error) => {
         console.warn("Não foi possível pré-carregar os projetos do portal:", error);
