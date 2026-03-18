@@ -193,7 +193,7 @@ def test_project_task_complete_handler_formats_success():
         )
     )
 
-    assert captured["commits"] >= 1
+    assert captured["commits"] == 1
     assert task.status == "completed"
     assert task.stage == "completed"
     assert task.completion_date == date(2026, 3, 20)
@@ -201,6 +201,54 @@ def test_project_task_complete_handler_formats_success():
     assert "AA.J.17.31" in result.response_text
     assert "Projeto: AA.J.17 - Projeto V3" in result.response_text
     assert "Data de Conclusao: 2026-03-20" in result.response_text
+
+
+def test_project_task_complete_handler_rolls_back_when_progress_update_fails():
+    project = DummyProject(17, "Projeto V3", "AA.J.17", company_id=9)
+
+    def _broken_update_progress():
+        raise RuntimeError("boom")
+
+    project.update_progress = _broken_update_progress
+
+    class DummyCompleteTask(DummyTask):
+        def __init__(self):
+            super().__init__(31, "Configurar dashboards", "AA.J.17.31")
+            self.project = project
+            self.status = "in_progress"
+            self.stage = "executing"
+            self.completion_date = None
+
+    task = DummyCompleteTask()
+    captured = {}
+
+    def fake_commit_changes():
+        captured["commits"] = captured.get("commits", 0) + 1
+
+    def fake_rollback_changes():
+        captured["rolled_back"] = True
+
+    handler = ProjectTaskCompleteExecutionHandler(
+        extract_id_from_code=lambda code: 31 if code == "AA.J.17.31" else None,
+        parse_completion_date=lambda raw: date(2026, 3, 20) if raw == "20/03/2026" else None,
+        today_provider=lambda: date(2026, 3, 21),
+        load_task_by_id=lambda task_id: task if task_id == 31 else None,
+        load_company_by_id=lambda company_id: DummyCompany("AA", "Versus"),
+        user_can_access_company=lambda user_id, company_id: True,
+        commit_changes=fake_commit_changes,
+        rollback_changes=fake_rollback_changes,
+    )
+
+    result = handler.execute(
+        ProjectTaskCompleteRequest(
+            payload={"codigo_atividade": "AA.J.17.31", "data_finalizacao": "20/03/2026"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured.get("rolled_back") is True
+    assert "AA.J.17.31" in result.response_text
 
 
 def test_project_task_complete_handler_returns_invalid_date():

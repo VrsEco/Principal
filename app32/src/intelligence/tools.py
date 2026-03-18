@@ -284,12 +284,46 @@ def escalate_technical_issue(error_description: str, context: str):
     Use isto quando encontrar erros de código (ex: Jinja, Python, DB) que impedem sua operação.
     Automaticamente cria uma tarefa de Intervenção para o Líder do Squad no projeto da Engenharia.
     """
+    def _normalize_issue_text(value: str) -> str:
+        return re.sub(r"\s+", " ", str(value or "").strip())
+
+    def _build_technical_issue_title(error_text: str, issue_context: str) -> str:
+        combined = _normalize_issue_text(f"{error_text} {issue_context}").lower()
+
+        signatures = [
+            (
+                ("illegalstatechangeerror", "transaction is closed", "this transaction is closed"),
+                "[BUG][SQLALCHEMY_TX] Transacao fechada ao concluir atividade",
+            ),
+            (
+                ("relation", "does not exist"),
+                "[BUG][SQL] Relacao inexistente em consulta operacional",
+            ),
+            (
+                ("column", "does not exist"),
+                "[BUG][SQL] Coluna inexistente em consulta operacional",
+            ),
+            (
+                ("jinja", "undefined"),
+                "[BUG][JINJA] Variavel indefinida em renderizacao",
+            ),
+        ]
+
+        for markers, title in signatures:
+            if all(marker in combined for marker in markers):
+                return title
+
+        compact_error = _normalize_issue_text(error_text)
+        if compact_error:
+            return f"[BUG] {compact_error[:120]}"
+        return "[BUG] Erro tecnico detectado automaticamente"
+
     try:
         from datetime import datetime
         
         # Chama a nossa tool de intervenção da Squad internamente
         result = squad_create_intervention.invoke({
-            "title": f"[BUG] Inconsistência Detectada Automagicamente",
+            "title": _build_technical_issue_title(error_description, context),
             "due_date": str(datetime.utcnow().date()),
             "how": f"Contexto do erro e logs para análise investigativa.",
             "notes": f"Descrição do Erro:\n{error_description}\n\nContexto da IA:\n{context}",
@@ -1414,7 +1448,7 @@ def get_tasks_today(scope: str = "me"):
             # Tarefas de Projetos vencendo hoje ou atrasadas
             q_tasks = sqltext("""
                 SELECT pt.id, pt.what as title, pt.due_date, pt.status, pt.who as responsible,
-                       p.name as project_name
+                       p.title as project_name
                 FROM project_tasks pt
                 JOIN projects p ON p.id = pt.project_id
                 WHERE p.company_id = :cid
@@ -1570,15 +1604,15 @@ def complete_task(task_type: str, task_id: int, evidence_description: str = None
             if evidence_description:
                 task.how = (task.how or "") + f"\n\n✅ EVIDÊNCIA DE CONCLUSÃO ({final_date}): {evidence_description}"
             
-            db.session.commit()
-            
-            # Atualiza o progresso do projeto pai
+            # Atualiza o progresso do projeto pai no mesmo ciclo transacional
             if task.project:
                 try:
                     task.project.update_progress()
-                    db.session.commit()
-                except:
-                    pass
+                except Exception:
+                    db.session.rollback()
+                    return "Erro ao concluir tarefa: falha ao atualizar o progresso do projeto."
+
+            db.session.commit()
 
             # 1. Notificações (@ARQUITETO)
             notif_msg = []
@@ -2010,8 +2044,48 @@ def squad_create_intervention(title: str, due_date: str, how: str, notes: str = 
         
     company_id = project.company_id
 
-    # ── GUARDA DE IDEMPOTÊNCIA ──────────────────────────────────────────────────
-    # Impede criação duplicada de tarefa com mesmo título dentro de janela de 5 minutos
+    due_dt = None
+    if due_date:
+        try:
+            due_dt = datetime.strptime(due_date.strip()[:10], '%Y-%m-%d').date()
+        except:
+            pass
+
+    def _append_recurrence(existing_text: str, new_text: str) -> str:
+        base = str(existing_text or "").strip()
+        payload = str(new_text or "").strip()
+        if not payload:
+            return base
+        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+        block = f"[RECORRÊNCIA AUTOMÁTICA - {timestamp}]\n{payload}"
+        if payload in base:
+            return base
+        return f"{base}\n\n{block}".strip() if base else block
+
+    # ── GUARDA DE IDEMPOTÊNCIA / RECORRÊNCIA ───────────────────────────────────
+    # Se já existe uma intervenção aberta com o mesmo título, reusa o card
+    # e anexa a nova evidência em vez de abrir um novo BUG genérico.
+    existing_open = ProjectTask.query.filter(
+        ProjectTask.project_id == project.id,
+        ProjectTask.what == title,
+        ProjectTask.stage != 'completed',
+    ).order_by(ProjectTask.updated_at.desc(), ProjectTask.id.desc()).first()
+    if existing_open:
+        merged_notes = _append_recurrence(existing_open.notes, notes)
+        if merged_notes != (existing_open.notes or "").strip():
+            existing_open.notes = merged_notes
+        if how and not existing_open.how:
+            existing_open.how = how
+        if due_dt and (existing_open.due_date is None or due_dt < existing_open.due_date):
+            existing_open.due_date = due_dt
+        existing_open.updated_at = datetime.utcnow()
+        db.session.commit()
+        return (
+            f"[REINCIDÊNCIA] Intervenção aberta reutilizada com sucesso. "
+            f"Card existente ID: {existing_open.id}."
+        )
+
+    # Janela curta para evitar duplicata transacional imediata.
     five_min_ago = datetime.utcnow() - timedelta(minutes=5)
     existing = ProjectTask.query.filter(
         ProjectTask.project_id == project.id,
@@ -2033,13 +2107,6 @@ def squad_create_intervention(title: str, due_date: str, how: str, notes: str = 
     fabiano = Employee.query.join(User, User.id == Employee.user_id).filter(
         Employee.company_id == company_id, User.name.ilike('%Fabiano%')
     ).first()
-
-    due_dt = None
-    if due_date:
-        try:
-            due_dt = datetime.strptime(due_date.strip()[:10], '%Y-%m-%d').date()
-        except:
-            pass
 
     task = ProjectTask(
         project_id=project.id,

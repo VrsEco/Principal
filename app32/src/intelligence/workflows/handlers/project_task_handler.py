@@ -202,15 +202,17 @@ class ProjectTaskCompleteExecutionHandler:
 
         final_date = desired_date or self._today_provider()
 
+        has_changes = False
+
         if getattr(task, "status", None) != "completed" or getattr(task, "stage", None) != "completed":
             task.status = "completed"
             task.stage = "completed"
             task.completion_date = final_date
-            self._commit_changes()
+            has_changes = True
         elif desired_date and getattr(task, "completion_date", None) != desired_date:
             task.completion_date = desired_date
-            self._commit_changes()
             final_date = desired_date
+            has_changes = True
         else:
             final_date = getattr(task, "completion_date", None) or final_date
 
@@ -218,7 +220,9 @@ class ProjectTaskCompleteExecutionHandler:
             update_progress = getattr(project, "update_progress", None)
             if callable(update_progress):
                 update_progress()
-            self._commit_changes()
+                has_changes = True
+            if has_changes:
+                self._commit_changes()
         except Exception:
             self._rollback_changes()
             task = self._load_task_by_id(task_id)
