@@ -21,6 +21,27 @@ portfolio_update_schema = PortfolioUpdateSchema()
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 
+def _resolve_portfolio_for_summary(company_id: int, portfolio_id: int) -> Portfolio:
+    """
+    Resolve portfólio com fallback compatível para links legados de resumo.
+
+    Regra:
+    - prioriza o ID solicitado dentro da empresa
+    - se não existir e a empresa possuir exatamente 1 portfólio, usa esse único registro
+
+    Mantém isolamento multi-tenant pois toda busca continua restrita por company_id.
+    """
+    portfolio = Portfolio.query.filter_by(id=portfolio_id, company_id=company_id).first()
+    if portfolio:
+        return portfolio
+
+    company_portfolios = Portfolio.query.filter_by(company_id=company_id).order_by(Portfolio.id.asc()).all()
+    if len(company_portfolios) == 1:
+        return company_portfolios[0]
+
+    abort(404, description="Portfólio não encontrado para a empresa informada.")
+
+
 @portfolios_bp.route("/project-portfolios")
 @permission_required("projects", "view")
 def portfolios_page_redirect():
@@ -262,7 +283,7 @@ def portfolio_summary_options(company_id, portfolio_id):
 
     if not has_company_full_access(company_id):
         return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
-    portfolio = Portfolio.query.filter_by(id=portfolio_id, company_id=company_id).first_or_404()
+    portfolio = _resolve_portfolio_for_summary(company_id, portfolio_id)
     target_user = get_portfolio_responsible_user(portfolio)
     return jsonify({
         'success': True,
@@ -285,7 +306,7 @@ def portfolio_summary_pdf(company_id, portfolio_id):
 
     if not has_company_full_access(company_id):
         abort(403, description='Acesso negado: colaboradores não podem gerar resumos.')
-    portfolio = Portfolio.query.filter_by(id=portfolio_id, company_id=company_id).first_or_404()
+    portfolio = _resolve_portfolio_for_summary(company_id, portfolio_id)
     pdf_bytes = generate_portfolio_summary_pdf_bytes(portfolio)
     return send_file(
         BytesIO(pdf_bytes),
@@ -302,7 +323,7 @@ def send_portfolio_summary(company_id, portfolio_id):
 
     if not has_company_full_access(company_id):
         return jsonify({'success': False, 'message': 'Acesso negado: colaboradores não podem disparar resumos.'}), 403
-    portfolio = Portfolio.query.filter_by(id=portfolio_id, company_id=company_id).first_or_404()
+    portfolio = _resolve_portfolio_for_summary(company_id, portfolio_id)
     payload = request.get_json(silent=True) or {}
     preferred_channel = (payload.get('channel') or '').strip().lower() or None
     result = send_portfolio_summary_to_responsible(portfolio, preferred_channel=preferred_channel)
