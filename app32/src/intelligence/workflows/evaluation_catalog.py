@@ -102,6 +102,20 @@ def build_default_workflow_evaluation_cases() -> List[WorkflowEvaluationCase]:
             expected_action_key="project_task.complete",
         ),
         WorkflowEvaluationCase(
+            domain="project_task",
+            label="project_task_audit_missing_responsible",
+            text="Analise as atividades de projetos que estão sem responsável, de todas as empresas.",
+            expected_action_key="project_task.audit",
+            channel="whatsapp",
+        ),
+        WorkflowEvaluationCase(
+            domain="project_task",
+            label="project_task_audit_missing_due_date",
+            text="analise as atividades de todas as empresas que estão sem data.",
+            expected_action_key="project_task.audit",
+            channel="web",
+        ),
+        WorkflowEvaluationCase(
             domain="process",
             label="process_instance_complete",
             text="quero finalizar uma instancia de processo",

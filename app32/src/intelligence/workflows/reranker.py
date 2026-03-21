@@ -492,6 +492,17 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             score += 24
             reasons.append("reranker:agent_action=list_pending")
 
+        project_task_audit_query = (
+            "sem responsavel" in normalized_text
+            or "sem data" in normalized_text
+        ) and bool({"atividade", "atividades", "tarefa", "tarefas"} & tokens)
+        if project_task_audit_query and action_key == "project_task.audit":
+            score += 26
+            reasons.append("reranker:project_task=audit")
+        elif project_task_audit_query and action_key.startswith("my_work."):
+            score -= 6
+            reasons.append("reranker:my_work_penalty_for_audit")
+
         task_tokens = {"atividade", "atividades", "tarefa", "tarefas"} & tokens
         process_tokens = {"instancia", "instancias", "processo", "processos"} & tokens
         if task_tokens:

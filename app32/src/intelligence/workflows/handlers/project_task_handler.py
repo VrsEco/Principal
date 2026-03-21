@@ -51,6 +51,21 @@ class ProjectTaskUpdateResult(BaseModel):
     response_text: str
 
 
+class ProjectTaskAuditRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    active_company_id: Optional[int] = None
+    user_id: int
+    channel: str = "web"
+
+
+class ProjectTaskAuditResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_text: str
+
+
 class ProjectTaskCreateExecutionHandler:
     def __init__(
         self,
@@ -142,6 +157,55 @@ class ProjectTaskCreateExecutionHandler:
                 f"    Codigo da Atividade: {activity_code}\n"
                 f"    Responsavel: {responsible_name}"
             )
+        )
+
+
+class ProjectTaskAuditExecutionHandler:
+    def __init__(
+        self,
+        *,
+        resolve_company_ids_for_payload: Callable[
+            [Dict[str, Any], Optional[int], int],
+            Tuple[List[int], str],
+        ],
+        load_project_task_audit_rows: Callable[[List[int], str], List[Dict[str, Any]]],
+        format_report: Callable[[List[Dict[str, Any]], str, str], str],
+    ):
+        self._resolve_company_ids_for_payload = resolve_company_ids_for_payload
+        self._load_project_task_audit_rows = load_project_task_audit_rows
+        self._format_report = format_report
+
+    def execute(self, request: ProjectTaskAuditRequest) -> ProjectTaskAuditResult:
+        payload = dict(request.payload or {})
+        audit_type = str(
+            payload.get("tipo_auditoria")
+            or payload.get("audit_type")
+            or ""
+        ).strip().lower()
+        if audit_type not in {"missing_responsible", "missing_due_date"}:
+            return ProjectTaskAuditResult(
+                response_text=(
+                    "Nao identifiquei o tipo de auditoria. Use pedidos como "
+                    "'atividades sem responsável' ou 'atividades sem data'."
+                )
+            )
+
+        company_ids, company_label_or_error = self._resolve_company_ids_for_payload(
+            payload,
+            request.active_company_id,
+            request.user_id,
+        )
+        if not company_ids:
+            return ProjectTaskAuditResult(
+                response_text=(
+                    company_label_or_error
+                    or "Nao consegui identificar o recorte de empresas para auditoria."
+                )
+            )
+
+        rows = self._load_project_task_audit_rows(company_ids, audit_type)
+        return ProjectTaskAuditResult(
+            response_text=self._format_report(rows, audit_type, company_label_or_error or "empresas vinculadas")
         )
 
 

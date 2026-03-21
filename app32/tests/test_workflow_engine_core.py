@@ -305,6 +305,43 @@ def test_heuristic_reranker_prioritizes_pending_decisions_listing():
     assert reranked[0].workflow.action_key == "agent_action.list_pending"
 
 
+def test_heuristic_reranker_prioritizes_project_task_audit_for_missing_responsible():
+    options = [
+        _option(
+            option_id=48,
+            code="1.7",
+            title="Auditar Atividades de Projeto",
+            action_key="project_task.audit",
+            keywords=["atividades sem responsável", "auditoria de atividades"],
+            sort_order=17,
+        ),
+        _option(
+            option_id=49,
+            code="3.1",
+            title="Atividades em Aberto",
+            action_key="my_work.open",
+            keywords=["atividades em aberto"],
+            sort_order=31,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=10, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=10, reasons=[]),
+    ]
+
+    reranked = HeuristicWorkflowReranker().rerank(
+        WorkflowDiscoveryRequest(
+            text="Analise as atividades de projetos que estão sem responsável, de todas as empresas.",
+            top_k=2,
+        ),
+        matches,
+        registry,
+    )
+
+    assert reranked[0].workflow.action_key == "project_task.audit"
+
+
 def test_workflow_runtime_supports_explicit_code_discovery():
     options = [
         _option(

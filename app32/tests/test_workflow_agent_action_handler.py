@@ -6,6 +6,10 @@ from src.intelligence.workflows.handlers.agent_action_handler import (
     AgentActionOperationExecutionHandler,
     AgentActionOperationRequest,
 )
+from src.intelligence.workflows.handlers.project_task_handler import (
+    ProjectTaskAuditExecutionHandler,
+    ProjectTaskAuditRequest,
+)
 
 
 def test_agent_action_operation_handler_approves_explicit_action_id():
@@ -82,3 +86,31 @@ def test_agent_action_list_pending_handler_formats_top_items():
     assert "Encontrei 2 solicitacao(oes) pendente(s)" in result.response_text
     assert "#331 | Adiamento Lucro Real" in result.response_text
     assert "...e mais 1 solicitacao(oes)." in result.response_text
+
+
+def test_project_task_audit_handler_formats_missing_responsible_report():
+    handler = ProjectTaskAuditExecutionHandler(
+        resolve_company_ids_for_payload=lambda payload, active_company_id, user_id: ([9, 12], "empresas vinculadas"),
+        load_project_task_audit_rows=lambda company_ids, audit_type: [
+            {
+                "company_name": "Ventana",
+                "project_code": "VN.J.31",
+                "project_name": "Projeto X",
+                "activity_code": "VN.J.31.99",
+                "title": "Atividade sem dono",
+                "responsible": "Sem responsavel",
+                "due_date": "-",
+            }
+        ],
+        format_report=lambda rows, audit_type, scope_label: f"{audit_type}|{scope_label}|{rows[0]['activity_code']}",
+    )
+
+    result = handler.execute(
+        ProjectTaskAuditRequest(
+            payload={"tipo_auditoria": "missing_responsible"},
+            active_company_id=None,
+            user_id=7,
+        )
+    )
+
+    assert result.response_text == "missing_responsible|empresas vinculadas|VN.J.31.99"

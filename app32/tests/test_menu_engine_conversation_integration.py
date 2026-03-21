@@ -620,3 +620,21 @@ def test_extract_fields_from_text_captures_pending_action_limit_without_false_co
 
     assert payload["limite"] == "20"
     assert "empresa" not in payload
+
+
+def test_extract_fields_from_text_detects_project_task_audit_missing_responsible():
+    payload = menu_engine._extract_fields_from_text(
+        "Analise as atividades de projetos que estão sem responsável, de todas as empresas."
+    )
+
+    assert payload["entidade"] == "project_task"
+    assert payload["tipo_auditoria"] == "missing_responsible"
+
+
+def test_extract_fields_from_text_detects_project_task_audit_missing_due_date():
+    payload = menu_engine._extract_fields_from_text(
+        "analise as atividades de todas as empresas que estão sem data."
+    )
+
+    assert payload["entidade"] == "project_task"
+    assert payload["tipo_auditoria"] == "missing_due_date"

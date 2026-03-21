@@ -66,6 +66,8 @@ from src.intelligence.workflows.handlers import (
     OnboardingStatusRequest,
     ProcessInstanceCompleteExecutionHandler,
     ProcessInstanceCompleteRequest,
+    ProjectTaskAuditExecutionHandler,
+    ProjectTaskAuditRequest,
     ProjectTaskCompleteExecutionHandler,
     ProjectTaskCompleteRequest,
     ProjectTaskCreateExecutionHandler,
@@ -294,6 +296,7 @@ COMMAND_SCOPE_HINTS = (
     "ocupação",
     "capacidade",
     "carga",
+    "auditoria",
 )
 COMMAND_STATUS_HINTS = (
     "aberto",
@@ -1098,6 +1101,11 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
     if any(token in normalized_text for token in {"atividade", "atividades", "tarefa", "tarefas"}):
         data["entidade"] = "project_task"
 
+    if re.search(r"\bsem\s+respons[aá]vel\b", text, flags=re.IGNORECASE):
+        data.setdefault("tipo_auditoria", "missing_responsible")
+    elif re.search(r"\bsem\s+data\b", text, flags=re.IGNORECASE):
+        data.setdefault("tipo_auditoria", "missing_due_date")
+
     if any(token in normalized_text for token in {"vencido", "vencidos", "vencida", "vencidas", "atrasado", "atrasados", "atrasada", "atrasadas"}):
         data.setdefault("status_consulta", "overdue")
     elif any(token in normalized_text for token in {"aberto", "abertos", "aberta", "abertas", "pendente", "pendentes"}):
@@ -1303,6 +1311,7 @@ def _is_read_only_action(action_key: Optional[str]) -> bool:
     return action in {
         "collaborator.occupancy",
         "agent_action.list_pending",
+        "project_task.audit",
         "my_work.open",
         "my_work.overdue",
         "my_work.due_range",
@@ -2113,6 +2122,10 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                 handler_factory=_build_project_task_create_execution_handler,
                 request_model=ProjectTaskCreateRequest,
             ),
+            "project_task.audit": build_handler_executor(
+                handler_factory=_build_project_task_audit_execution_handler,
+                request_model=ProjectTaskAuditRequest,
+            ),
             "project_task.complete": build_handler_executor(
                 handler_factory=_build_project_task_complete_execution_handler,
                 request_model=ProjectTaskCompleteRequest,
@@ -2269,6 +2282,14 @@ def _build_project_task_create_execution_handler() -> ProjectTaskCreateExecution
     return ProjectTaskCreateExecutionHandler(
         resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
         create_project_task=ProjectTaskService.create_project_task,
+    )
+
+
+def _build_project_task_audit_execution_handler() -> ProjectTaskAuditExecutionHandler:
+    return ProjectTaskAuditExecutionHandler(
+        resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
+        load_project_task_audit_rows=_load_project_task_audit_rows,
+        format_report=_format_project_task_audit_report,
     )
 
 
@@ -4317,6 +4338,76 @@ def _load_project_tasks_report(
     return items
 
 
+def _load_project_task_audit_rows(
+    company_ids: List[int],
+    audit_type: str,
+) -> List[Dict[str, Any]]:
+    from models.company import Company
+    from models.project import Project, ProjectTask
+
+    query = (
+        db.session.query(ProjectTask, Project, Company)
+        .join(Project, Project.id == ProjectTask.project_id)
+        .join(Company, Company.id == Project.company_id)
+        .filter(Project.company_id.in_(company_ids))
+        .filter(~ProjectTask.status.in_(["completed", "cancelled"]))
+        .filter(ProjectTask.stage != "completed")
+    )
+
+    if audit_type == "missing_responsible":
+        query = query.filter(
+            ProjectTask.employee_id.is_(None),
+            or_(ProjectTask.who.is_(None), func.length(func.trim(ProjectTask.who)) == 0),
+        )
+    else:
+        query = query.filter(ProjectTask.due_date.is_(None))
+
+    rows = query.order_by(Company.name.asc(), Project.name.asc(), ProjectTask.id.asc()).limit(150).all()
+    items: List[Dict[str, Any]] = []
+    for task, project, company in rows:
+        company_code = str(getattr(company, "client_code", "") or "").strip() or "CP"
+        project_code = str(getattr(project, "code", "") or "").strip() or f"{company_code}.J.{getattr(project, 'id', '-')}"
+        activity_code = str(getattr(task, "code", "") or "").strip() or f"{project_code}.{getattr(task, 'id', '-')}"
+        responsible = task.employee.name if getattr(task, "employee", None) else (task.who or "Sem responsavel")
+        items.append(
+            {
+                "company_name": str(getattr(company, "name", "") or "").strip() or f"Empresa {getattr(company, 'id', '-')}",
+                "project_name": str(getattr(project, "name", "") or "").strip() or f"Projeto {getattr(project, 'id', '-')}",
+                "project_code": project_code,
+                "activity_code": activity_code,
+                "title": str(getattr(task, "what", "") or "").strip() or "Atividade sem titulo",
+                "responsible": responsible,
+                "due_date": getattr(task, "due_date", None).isoformat() if getattr(task, "due_date", None) else "-",
+            }
+        )
+    return items
+
+
+def _format_project_task_audit_report(
+    items: List[Dict[str, Any]],
+    audit_type: str,
+    scope_label: str,
+) -> str:
+    issue_label = "sem responsável" if audit_type == "missing_responsible" else "sem data"
+    if not items:
+        return f"Nao encontrei atividades {issue_label} no recorte {scope_label}."
+
+    lines = [
+        f"Encontrei {len(items)} atividade(s) {issue_label} no recorte {scope_label}.",
+        "",
+        "Principais itens:",
+    ]
+    for index, item in enumerate(items[:30], start=1):
+        lines.append(
+            f"{index}. [{item['company_name']}] {item['project_code']} - {item['project_name']} | "
+            f"{item['activity_code']} | {item['title']} | responsavel={item['responsible']} | prazo={item['due_date']}"
+        )
+    if len(items) > 30:
+        lines.append("")
+        lines.append(f"...e mais {len(items) - 30} atividade(s).")
+    return "\n".join(lines)
+
+
 def _load_process_instances_report(
     company_ids: List[int],
     mode: str,
@@ -4949,6 +5040,7 @@ def _ensure_default_menu_seed() -> None:
         {"code": "1.4", "title": "Cadastrar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.create", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}, {"key": "nome_atividade", "label": "Nome da Atividade"}], "keywords": ["cadastrar atividade", "nova atividade de projeto"], "sort_order": 14},
         {"code": "1.5", "title": "Finalizar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.complete", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}], "keywords": ["finalizar atividade de projeto", "concluir atividade"], "sort_order": 15},
         {"code": "1.6", "title": "Editar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.update", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}, {"key": "due_date", "label": "Novo Prazo"}], "keywords": ["editar atividade", "alterar atividade de projeto", "alterar prazo da atividade", "mudar prazo da atividade", "colocar atividade para o dia"], "sort_order": 16},
+        {"code": "1.7", "title": "Auditar Atividades de Projeto", "parent_code": "1", "action_key": "project_task.audit", "required_fields": [], "keywords": ["atividades sem responsável", "atividades sem data", "auditoria de atividades", "analisar atividades de projetos"], "sort_order": 17},
         {"code": "2", "title": "Gestao de Processos", "parent_code": None, "sort_order": 20},
         {"code": "2.1", "title": "Iniciar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.start", "required_fields": [{"key": "codigo_processo", "label": "Codigo do Processo"}], "keywords": ["iniciar instancia", "abrir processo"], "sort_order": 21},
         {"code": "2.2", "title": "Finalizar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.complete", "required_fields": [{"key": "codigo_instancia", "label": "Codigo da Instancia"}], "keywords": ["finalizar instancia", "encerrar processo"], "sort_order": 22},
@@ -5007,6 +5099,28 @@ def _ensure_default_menu_upgrades() -> None:
     """
     Garante que novas opcoes padrao sejam adicionadas em bases ja inicializadas.
     """
+    root_1 = _ensure_menu_option_exists(
+        code="1",
+        title="Gestao de Projetos",
+        parent_code=None,
+        sort_order=10,
+    )
+    if root_1:
+        _ensure_menu_option_exists(
+            code="1.7",
+            title="Auditar Atividades de Projeto",
+            parent_code="1",
+            action_key="project_task.audit",
+            required_fields=[],
+            keywords=[
+                "atividades sem responsável",
+                "atividades sem data",
+                "auditoria de atividades",
+                "analisar atividades de projetos",
+            ],
+            sort_order=17,
+        )
+
     root_3 = _ensure_menu_option_exists(
         code="3",
         title="Consultas de Trabalho",

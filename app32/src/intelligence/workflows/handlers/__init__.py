@@ -12,6 +12,9 @@ from .agent_action_handler import (
     AgentActionOperationResult,
 )
 from .project_task_handler import (
+    ProjectTaskAuditExecutionHandler,
+    ProjectTaskAuditRequest,
+    ProjectTaskAuditResult,
     ProjectTaskCompleteExecutionHandler,
     ProjectTaskCompleteRequest,
     ProjectTaskCompleteResult,
@@ -96,6 +99,9 @@ __all__ = [
     "ProcessInstanceCompleteExecutionHandler",
     "ProcessInstanceCompleteRequest",
     "ProcessInstanceCompleteResult",
+    "ProjectTaskAuditExecutionHandler",
+    "ProjectTaskAuditRequest",
+    "ProjectTaskAuditResult",
     "ProjectTaskCompleteExecutionHandler",
     "ProjectTaskCompleteRequest",
     "ProjectTaskCompleteResult",
