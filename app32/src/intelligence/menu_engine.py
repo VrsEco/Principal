@@ -1166,6 +1166,40 @@ def _parse_selection_number_date(text: str) -> Optional[Tuple[int, Optional[str]
     return idx, (right if right else None)
 
 
+def _extract_choice_index_from_text(text: str, choices: List[Dict[str, Any]]) -> Optional[int]:
+    normalized_text = _normalize_text(str(text or ""))
+    if not normalized_text:
+        return None
+
+    for item in choices or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            index = int(item.get("index"))
+        except (TypeError, ValueError):
+            continue
+
+        candidate_values = [
+            item.get("label"),
+            item.get("company_name"),
+            item.get("company_code"),
+            item.get("name"),
+        ]
+        normalized_candidates = {
+            _normalize_text(str(value or ""))
+            for value in candidate_values
+            if str(value or "").strip()
+        }
+        if normalized_text in normalized_candidates:
+            return index
+
+        company_code = _normalize_text(str(item.get("company_code") or ""))
+        company_name = _normalize_text(str(item.get("company_name") or ""))
+        if company_code and company_name and normalized_text == f"{company_code} - {company_name}":
+            return index
+    return None
+
+
 def _parse_completion_date(value: str):
     raw = (value or "").strip()
     if not raw:
@@ -1483,9 +1517,15 @@ def _handle_operation_company_state(
         workflow_code=option.code,
         workflow_action_key=option.action_key,
     )
+    selected_index = _extract_selection_index(text)
+    if selected_index is None:
+        selected_index = _extract_choice_index_from_text(
+            text,
+            (workflow_state.payload or {}).get("_operation_company_choices") or [],
+        )
     decision = coordinator.select_company(
         workflow_state,
-        selected_index=_extract_selection_index(text),
+        selected_index=selected_index,
         user_can_access_company=_user_can_access_company,
     )
     if decision.route != COMPANY_SELECTION_ROUTE_ADVANCE:
@@ -1535,13 +1575,18 @@ def _handle_summary_company_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
-    selected_index = _extract_selection_index(text)
     coordinator = _build_summary_workflow_coordinator()
     workflow_state = WorkflowSessionState.from_agent_menu_session(
         session,
         workflow_code=option.code,
         workflow_action_key=option.action_key,
     )
+    selected_index = _extract_selection_index(text)
+    if selected_index is None:
+        selected_index = _extract_choice_index_from_text(
+            text,
+            (workflow_state.payload or {}).get("_summary_company_choices") or [],
+        )
     decision = coordinator.select_company(
         workflow_state,
         selected_index=selected_index,
@@ -1569,16 +1614,23 @@ def _handle_summary_collaborator_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
 
-    if first_word in {"todos", "todas", "todo", "all"}:
-        selected_indexes = [0]
-    else:
-        selected_indexes = _extract_selection_indexes(text, allow_zero=True)
-    coordinator = _build_summary_workflow_coordinator()
     workflow_state = WorkflowSessionState.from_agent_menu_session(
         session,
         workflow_code=option.code,
         workflow_action_key=option.action_key,
     )
+    if first_word in {"todos", "todas", "todo", "all"}:
+        selected_indexes = [0]
+    else:
+        selected_indexes = _extract_selection_indexes(text, allow_zero=True)
+        if not selected_indexes:
+            matched_index = _extract_choice_index_from_text(
+                text,
+                (workflow_state.payload or {}).get("_summary_collaborator_choices") or [],
+            )
+            if matched_index is not None:
+                selected_indexes = [matched_index]
+    coordinator = _build_summary_workflow_coordinator()
     decision = coordinator.select_collaborators(
         workflow_state,
         selected_indexes=selected_indexes,

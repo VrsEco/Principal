@@ -48,6 +48,15 @@ def test_extract_numbered_fields_from_text_maps_reply_to_pending_keys():
     }
 
 
+def test_extract_numbered_fields_from_text_accepts_plain_reply_for_single_missing_field():
+    data = extract_numbered_fields_from_text(
+        "Fabiano",
+        [{"key": "colaborador", "label": "Colaborador"}],
+    )
+
+    assert data == {"colaborador": "Fabiano"}
+
+
 def test_workflow_required_field_normalizes_mixed_input():
     fields = WorkflowRequiredField.normalize_many(
         [

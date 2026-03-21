@@ -37,7 +37,33 @@ def extract_numbered_fields_from_text(
         value = value_raw.strip(" ,.")
         if key and value:
             data[key] = value
+    if data:
+        return data
 
+    if len(normalized_fields) != 1:
+        return data
+
+    free_text = str(text or "").strip(" \n\r\t,.;:!?")
+    if not free_text:
+        return data
+
+    normalized_free_text = re.sub(r"\s+", " ", free_text.casefold()).strip()
+    if normalized_free_text in {
+        "sim",
+        "ok",
+        "confirmo",
+        "confirmar",
+        "nao",
+        "não",
+        "cancelar",
+        "voltar",
+        "menu",
+    }:
+        return data
+
+    key = normalized_fields[0].key
+    if key:
+        data[key] = free_text
     return data
 
 

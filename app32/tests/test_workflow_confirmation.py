@@ -91,6 +91,29 @@ def test_confirmation_coordinator_returns_direct_response_when_available():
     assert decision.metadata["workflow_approval"]["status"] == "not_required"
 
 
+def test_confirmation_coordinator_accepts_affirmative_with_punctuation():
+    coordinator = _build_coordinator()
+    state = WorkflowSessionState(
+        user_id=10,
+        company_id=9,
+        channel="web",
+        status="awaiting_confirmation",
+        workflow_code="1.4",
+        workflow_action_key="project_task.create",
+        payload={"empresa": "Versus"},
+    )
+
+    decision = coordinator.handle_reply(
+        state,
+        option=SimpleNamespace(code="1.4", action_key="project_task.create"),
+        text="Sim.",
+        lower="sim.",
+    )
+
+    assert decision.route == CONFIRMATION_ROUTE_DIRECT_RESPONSE
+    assert decision.response_text == "atividade criada"
+
+
 def test_confirmation_coordinator_builds_execution_prompt_when_direct_execution_is_not_available():
     coordinator = _build_coordinator()
     state = WorkflowSessionState(

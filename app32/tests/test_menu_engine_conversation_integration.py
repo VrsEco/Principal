@@ -569,3 +569,27 @@ def test_extract_fields_from_text_detects_deadline_update_command():
 
     assert payload["due_date"] == "31/03/2026"
     assert payload["prazo"] == "31/03/2026"
+
+
+def test_extract_choice_index_from_text_matches_company_alias_or_label():
+    choices = [
+        {
+            "index": 1,
+            "company_id": 7,
+            "company_name": "Gandu Investimentos e Participações",
+            "company_code": "AU",
+            "label": "AU - Gandu Investimentos e Participações",
+        }
+    ]
+
+    assert menu_engine._extract_choice_index_from_text("AU", choices) == 1
+    assert menu_engine._extract_choice_index_from_text(
+        "AU - Gandu Investimentos e Participações",
+        choices,
+    ) == 1
+
+
+def test_extract_choice_index_from_text_matches_collaborator_name():
+    choices = [{"index": 2, "employee_id": 55, "name": "Fabiano"}]
+
+    assert menu_engine._extract_choice_index_from_text("Fabiano", choices) == 2

@@ -44,6 +44,10 @@ class ConfirmationCoordinator:
         self._cancel_response_text = cancel_response_text
 
     @staticmethod
+    def _normalize_reply_token(value: str) -> str:
+        return str(value or "").strip().strip(".,;:!?").lower()
+
+    @staticmethod
     def _coerce_direct_execution_result(
         value: Union[Optional[str], DirectExecutionResult],
     ) -> Optional[DirectExecutionResult]:
@@ -61,7 +65,7 @@ class ConfirmationCoordinator:
         text: str,
         lower: str,
     ) -> ConfirmationDecision:
-        first_word = str(lower or "").split(" ")[0] if lower else ""
+        first_word = self._normalize_reply_token(str(lower or "").split(" ")[0] if lower else "")
         payload = dict(workflow_state.payload or {})
 
         if first_word in self._confirm_words:
