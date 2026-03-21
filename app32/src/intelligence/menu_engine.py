@@ -233,6 +233,69 @@ CANCEL_WORDS = {
 }
 EXECUTE_HINTS = ("executar", "fazer", "iniciar", "finalizar", "cadastrar", "editar")
 COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo")
+COMMAND_QUERY_HINTS = (
+    "quais",
+    "qual",
+    "quero saber",
+    "gostaria de saber",
+    "me diga",
+    "listar",
+    "lista",
+    "mostrar",
+    "mostra",
+    "ver",
+    "consultar",
+    "consulta",
+)
+COMMAND_SCOPE_HINTS = (
+    "projeto",
+    "atividade",
+    "atividades",
+    "tarefa",
+    "tarefas",
+    "processo",
+    "processos",
+    "instancia",
+    "instancias",
+    "instância",
+    "instâncias",
+    "resumo",
+    "relatorio",
+    "relatório",
+    "colaborador",
+    "colaboradores",
+    "usuario",
+    "usuário",
+    "responsavel",
+    "responsável",
+    "empresa",
+    "empresas",
+    "ocupacao",
+    "ocupação",
+    "capacidade",
+    "carga",
+)
+COMMAND_STATUS_HINTS = (
+    "aberto",
+    "abertos",
+    "aberta",
+    "abertas",
+    "pendente",
+    "pendentes",
+    "vencido",
+    "vencidos",
+    "vencida",
+    "vencidas",
+    "atrasado",
+    "atrasados",
+    "atrasada",
+    "atrasadas",
+    "hoje",
+    "semana",
+    "mes",
+    "mês",
+)
+COMPANY_ALIAS_PATTERN = re.compile(r"^\s*([A-Za-z]{2,5})(?:\s*-\s*(.+))?\s*$")
 SUMMARY_ACTION_PERIOD = dict(SUMMARY_ACTION_PERIOD_MAP)
 SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
 SUMMARY_EMAIL_CUSTOM_STATUS = "awaiting_summary_email_custom"
@@ -835,21 +898,12 @@ def _is_menu_request(lower_text: str) -> bool:
 
 
 def _looks_like_command(lower_text: str) -> bool:
-    has_command = any(token in lower_text for token in COMMAND_HINTS)
-    has_scope = any(
-        token in lower_text
-        for token in (
-            "projeto",
-            "atividade",
-            "processo",
-            "instancia",
-            "instância",
-            "resumo",
-            "relatorio",
-            "relatório",
-        )
-    )
-    return has_command and has_scope
+    normalized = _normalize_text(lower_text)
+    has_command = any(token in normalized for token in COMMAND_HINTS)
+    has_query = any(token in normalized for token in COMMAND_QUERY_HINTS)
+    has_scope = any(token in normalized for token in COMMAND_SCOPE_HINTS)
+    has_status = any(token in normalized for token in COMMAND_STATUS_HINTS)
+    return (has_command or has_query) and (has_scope or has_status)
 
 
 def _extract_explicit_code(text: str, lower_text: str) -> Optional[str]:
@@ -866,6 +920,7 @@ def _extract_explicit_code(text: str, lower_text: str) -> Optional[str]:
 
 def _extract_fields_from_text(text: str) -> Dict[str, str]:
     data: Dict[str, str] = {}
+    stripped_text = str(text or "").strip()
 
     # Padrão "campo: valor" ou "campo=valor" por linha, evitando capturas internas
     # em valores de data/hora como "14:30".
@@ -887,6 +942,77 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         free_text = marker.group(2).strip()
         if free_text:
             data.setdefault("dados", free_text)
+
+    alias_match = COMPANY_ALIAS_PATTERN.match(stripped_text)
+    if alias_match:
+        alias_code = (alias_match.group(1) or "").strip()
+        alias_name = (alias_match.group(2) or "").strip()
+        if alias_code and len(alias_code) <= 5:
+            data.setdefault("empresa", f"{alias_code} - {alias_name}".strip(" -") if alias_name else alias_code)
+
+    company_match = re.search(
+        r"(?:\bda?\s+empresa\b|\bempresa\b)\s+(.+?)(?=\s+(?:com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if company_match:
+        company_name = company_match.group(1).strip(" ,.-")
+        if company_name:
+            data.setdefault("empresa", company_name)
+
+    if "empresa" not in data:
+        implicit_company_match = re.search(
+            r"\b(?:da|do|na|no)\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'`.-]+(?:\s+(?!com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)[A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'`.-]+){0,5})(?=\s+(?:com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if implicit_company_match:
+            implicit_company = implicit_company_match.group(1).strip(" ,.-")
+            if implicit_company and _normalize_text(implicit_company) not in {"mim", "me", "ele", "ela"}:
+                data.setdefault("empresa", implicit_company)
+
+    collaborator_patterns = (
+        r"\brespons[aá]vel(?:\s+por)?\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        r"\bpara\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        r"\bde\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b)|[?.!,;]|$)",
+    )
+    for pattern in collaborator_patterns:
+        collaborator_match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not collaborator_match:
+            continue
+        collaborator_name = collaborator_match.group(1).strip(" ,.-")
+        if collaborator_name and _normalize_text(collaborator_name) not in {"ids", "id"}:
+            data.setdefault("colaborador", collaborator_name)
+            break
+
+    normalized_text = _normalize_text(text)
+    if any(token in normalized_text for token in {"instancia", "instancias", "processo", "processos"}):
+        data.setdefault("entidade", "process_instance")
+    if any(token in normalized_text for token in {"atividade", "atividades", "tarefa", "tarefas"}):
+        data["entidade"] = "project_task"
+
+    if any(token in normalized_text for token in {"vencido", "vencidos", "vencida", "vencidas", "atrasado", "atrasados", "atrasada", "atrasadas"}):
+        data.setdefault("status_consulta", "overdue")
+    elif any(token in normalized_text for token in {"aberto", "abertos", "aberta", "abertas", "pendente", "pendentes"}):
+        data.setdefault("status_consulta", "open")
+    elif any(token in normalized_text for token in {"concluido", "concluidos", "concluida", "concluidas", "finalizado", "finalizados", "finalizada", "finalizadas"}):
+        data.setdefault("status_consulta", "completed")
+
+    id_match = re.search(r"\bids?\s*[:=]?\s*([\d,\seE]+)", text, flags=re.IGNORECASE)
+    if id_match:
+        raw_ids = re.findall(r"\d+", id_match.group(1))
+        if raw_ids:
+            joined_ids = ",".join(raw_ids)
+            data.setdefault("ids", joined_ids)
+            data.setdefault("codigo_atividade", joined_ids)
+
+    if "periodo" not in data:
+        if "hoje" in normalized_text:
+            data.setdefault("periodo", "hoje")
+        elif "semana" in normalized_text:
+            data.setdefault("periodo", "esta semana")
+        elif "mes" in normalized_text:
+            data.setdefault("periodo", "este mes")
 
     return data
 
@@ -1946,6 +2072,7 @@ def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
     return MyWorkExecutionHandler(
         resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
         resolve_employee_ids_for_report=_resolve_employee_ids_for_my_work_report,
+        resolve_employee_scope_for_payload=_resolve_employee_scope_for_my_work_payload,
         resolve_period_from_payload=_resolve_period_from_payload,
         load_project_tasks_report=_load_project_tasks_report,
         load_process_instances_report=_load_process_instances_report,
@@ -3527,6 +3654,108 @@ def _resolve_employee_ids_for_my_work_report(user_id: int, company_ids: List[int
     )
     employee_ids = [employee.id for employee in query.all() if getattr(employee, "id", None)]
     return employee_ids
+
+
+def _match_employees_by_term_for_companies(
+    company_ids: List[int],
+    collaborator_term: str,
+) -> Tuple[List[Any], Optional[str]]:
+    from models.employee import Employee
+
+    normalized_term = _normalize_text(collaborator_term)
+    if not normalized_term:
+        return [], "Informe o colaborador para continuar."
+
+    employees = (
+        Employee.query.filter(
+            Employee.company_id.in_(company_ids),
+            Employee.status == "active",
+        )
+        .order_by(Employee.company_id.asc(), Employee.name.asc(), Employee.id.asc())
+        .all()
+    )
+    if not employees:
+        return [], "Nenhum colaborador ativo encontrado no recorte solicitado."
+
+    matches: List[Tuple[int, Any]] = []
+    for employee in employees:
+        haystack = _normalize_text(
+            f"{getattr(employee, 'name', '')} {getattr(employee, 'email', '')} {getattr(employee, 'department', '')}"
+        )
+        employee_name = _normalize_text(getattr(employee, "name", "") or "")
+        score = 0
+        if normalized_term == employee_name:
+            score += 10
+        if normalized_term in haystack:
+            score += 4
+        if all(token in haystack for token in normalized_term.split() if token):
+            score += 2
+        if score > 0:
+            matches.append((score, employee))
+
+    if not matches:
+        visible_names = ", ".join(
+            str(getattr(employee, "name", "") or "").strip()
+            for employee in employees[:8]
+            if str(getattr(employee, "name", "") or "").strip()
+        )
+        return [], (
+            f"Nao encontrei colaborador para '{collaborator_term}'."
+            + (f" Colaboradores ativos: {visible_names}" if visible_names else "")
+        )
+
+    matches.sort(
+        key=lambda item: (
+            -item[0],
+            str(getattr(item[1], "name", "") or "").lower(),
+            int(getattr(item[1], "id", 0) or 0),
+        )
+    )
+    top_score = matches[0][0]
+    top_matches = [employee for score, employee in matches if score == top_score]
+    unique_ids = {
+        getattr(employee, "id", None)
+        for employee in top_matches
+        if getattr(employee, "id", None) is not None
+    }
+    if len(unique_ids) > 1:
+        names = ", ".join(str(getattr(employee, "name", "") or "").strip() for employee in top_matches[:8])
+        return [], f"Encontrei mais de um colaborador para '{collaborator_term}': {names}"
+    return top_matches[:1], None
+
+
+def _resolve_employee_scope_for_my_work_payload(
+    payload: Dict[str, Any],
+    user_id: int,
+    company_ids: List[int],
+    default_employee_ids: Optional[List[int]],
+) -> Tuple[Optional[List[int]], Optional[str], Optional[str]]:
+    del user_id
+
+    collaborator_term = str(
+        payload.get("colaborador")
+        or payload.get("colaborador_nome")
+        or payload.get("responsavel")
+        or payload.get("responsável")
+        or ""
+    ).strip()
+    if not collaborator_term:
+        return default_employee_ids, None, None
+
+    matches, error_message = _match_employees_by_term_for_companies(company_ids, collaborator_term)
+    if error_message:
+        return None, None, error_message
+
+    matched_ids = [int(employee.id) for employee in matches if getattr(employee, "id", None) is not None]
+    matched_label = str(getattr(matches[0], "name", "") or collaborator_term).strip() if matches else collaborator_term
+
+    if default_employee_ids is not None:
+        allowed_ids = set(default_employee_ids)
+        matched_ids = [employee_id for employee_id in matched_ids if employee_id in allowed_ids]
+        if not matched_ids:
+            return None, None, f"Voce nao possui acesso ao colaborador '{matched_label}' neste recorte."
+
+    return matched_ids, matched_label, None
 
 
 def _load_accessible_companies_for_user(user_id: int) -> List[Any]:

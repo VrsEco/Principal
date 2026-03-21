@@ -768,9 +768,14 @@ def test_default_workflow_evaluation_catalog_covers_multiple_domains():
     cases = build_default_workflow_evaluation_cases()
 
     domains = {case.domain for case in cases}
+    labels = {case.label for case in cases}
 
     assert len(cases) >= 12
     assert {"summary", "my_work", "project_task", "meeting", "onboarding"} <= domains
+    assert {
+        "my_work_overdue_instances_by_collaborator",
+        "my_work_open_tasks_by_collaborator",
+    } <= labels
 
 
 def test_workflow_session_state_reads_agent_menu_session_context():
@@ -867,3 +872,117 @@ def test_summary_workflow_coordinator_advance_custom_period_to_company_when_vali
     assert decision.route == SUMMARY_ROUTE_PROMPT_COMPANY
     assert decision.payload["data_inicial"] == "2026-03-01"
     assert decision.payload["data_final"] == "2026-03-31"
+
+
+def test_heuristic_reranker_prioritizes_collaborator_occupancy_for_capacity_query():
+    options = [
+        _option(
+            option_id=60,
+            code="3.1",
+            title="Atividades em Aberto",
+            action_key="my_work.open",
+            keywords=["atividades em aberto"],
+            sort_order=31,
+        ),
+        _option(
+            option_id=61,
+            code="3.6",
+            title="Ocupacao de Colaborador",
+            action_key="collaborator.occupancy",
+            keywords=["ocupacao do colaborador", "capacidade do colaborador"],
+            sort_order=36,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Quero saber a capacidade do colaborador Caroline Marques esta semana",
+        company_id=9,
+        channel="whatsapp",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=12, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "collaborator.occupancy"
+    assert any("collaborator" in reason for reason in reranked[0].reasons)
+
+
+def test_heuristic_reranker_prioritizes_project_task_complete_for_batch_ids():
+    options = [
+        _option(
+            option_id=62,
+            code="1.5",
+            title="Finalizar Atividade de Projeto",
+            action_key="project_task.complete",
+            keywords=["concluir atividade"],
+            sort_order=15,
+        ),
+        _option(
+            option_id=63,
+            code="2.2",
+            title="Finalizar Instancia de Processo",
+            action_key="process_instance.complete",
+            keywords=["encerrar processo"],
+            sort_order=22,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Pode dar como concluida as atividades de IDs: 24 e 323",
+        company_id=9,
+        channel="whatsapp",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=12, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "project_task.complete"
+    assert any("batch_ids" in reason for reason in reranked[0].reasons)
+
+
+def test_heuristic_reranker_preserves_my_work_for_process_instance_queries():
+    options = [
+        _option(
+            option_id=64,
+            code="1.5",
+            title="Finalizar Atividade de Projeto",
+            action_key="project_task.complete",
+            keywords=["concluir atividade"],
+            sort_order=15,
+        ),
+        _option(
+            option_id=65,
+            code="3.2",
+            title="Meu Trabalho Atrasado",
+            action_key="my_work.overdue",
+            keywords=["trabalho atrasado", "instancias atrasadas"],
+            sort_order=32,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Quais instancias atrasadas para Caroline Marques da empresa Gandu Investimentos?",
+        company_id=9,
+        channel="whatsapp",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=12, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "my_work.overdue"
+    assert any("process_instance" in reason for reason in reranked[0].reasons)

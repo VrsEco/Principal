@@ -325,6 +325,21 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="my_work=due_range",
             )
 
+        if {"ocupacao", "capacidade", "carga"} & tokens or (
+            {"horas", "disponiveis"} <= tokens
+        ):
+            score, reasons = self._apply_action_hint(
+                action_key=action_key,
+                expected="collaborator.occupancy",
+                score=score,
+                reasons=reasons,
+                label="collaborator=occupancy",
+            )
+
+        if {"colaborador", "usuario", "responsavel", "responsaveis"} & tokens and action_key == "collaborator.occupancy":
+            score += 8
+            reasons.append("reranker:collaborator_scope")
+
         if {"agendar", "agenda", "marcar"} & tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
@@ -392,9 +407,27 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             score += 8
             reasons.append("reranker:task=create")
 
-        if {"finalizar", "concluir", "encerrar"} & tokens and action_key in {"project_task.complete", "process_instance.complete"}:
+        if {"finalizar", "concluir", "concluida", "concluido", "concluidas", "concluidos", "encerrar"} & tokens and action_key in {"project_task.complete", "process_instance.complete"}:
             score += 8
             reasons.append(f"reranker:complete={action_key}")
+            if re.search(r"\bids?\b", normalized_text) and action_key == "project_task.complete":
+                score += 6
+                reasons.append("reranker:complete=batch_ids")
+
+        task_tokens = {"atividade", "atividades", "tarefa", "tarefas"} & tokens
+        process_tokens = {"instancia", "instancias", "processo", "processos"} & tokens
+        if task_tokens:
+            if action_key.startswith("my_work.") or action_key == "project_task.complete":
+                score += 6
+                reasons.append("reranker:entity=project_task")
+            if action_key == "process_instance.complete":
+                score -= 3
+        if process_tokens:
+            if action_key.startswith("my_work.") or action_key == "process_instance.complete":
+                score += 6
+                reasons.append("reranker:entity=process_instance")
+            if action_key == "project_task.complete":
+                score -= 3
 
         return score, reasons
 

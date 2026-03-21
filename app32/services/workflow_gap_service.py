@@ -19,6 +19,49 @@ DEFAULT_WORKFLOW_GAP_TASK_STAGE = os.environ.get("WORKFLOW_GAP_TASK_STAGE", "inb
 DEFAULT_WORKFLOW_GAP_TASK_STATUS = os.environ.get("WORKFLOW_GAP_TASK_STATUS", "planned")
 DEFAULT_WORKFLOW_GAP_TASK_PRIORITY = os.environ.get("WORKFLOW_GAP_TASK_PRIORITY", "normal")
 
+WORKFLOW_GAP_NOISE_IGNORED = "noise_ignored"
+WORKFLOW_GAP_AMBIGUOUS_NEEDS_CLARIFICATION = "ambiguous_needs_clarification"
+WORKFLOW_GAP_ENTITY_RESOLUTION_FAILED = "entity_resolution_failed"
+WORKFLOW_GAP_PARSER_FAILED = "parser_failed"
+WORKFLOW_GAP_NOT_SUPPORTED = "not_supported_workflow"
+WORKFLOW_GAP_RESOLVED_BY_AI = "resolved_by_ai"
+WORKFLOW_GAP_NOT_RESOLVED = "not_resolved"
+
+_NOISE_PATTERNS = (
+    r"mensagem automatica",
+    r"mensagem automática",
+    r"fora do horario",
+    r"fora do horário",
+    r"fora do expediente",
+    r"ausencia",
+    r"ausência",
+    r"deixe sua mensagem",
+    r"como posso ajudar\?? deixe sua mensagem",
+)
+_LOW_SIGNAL_MESSAGES = {
+    "oi",
+    "ola",
+    "olá",
+    "bom dia",
+    "boa tarde",
+    "boa noite",
+    "ok",
+    "blz",
+    "ai lascou",
+    "aí lascou",
+}
+_ENTITY_RESOLUTION_FAILURE_PATTERNS = (
+    r"nao encontrei empresa",
+    r"não encontrei empresa",
+    r"encontrei mais de uma empresa",
+    r"escolha uma empresa",
+    r"informe a empresa",
+    r"nao encontrei colaborador",
+    r"não encontrei colaborador",
+    r"encontrei mais de um colaborador",
+    r"sem acesso ao colaborador",
+)
+
 
 def _normalize_request_text(value: str) -> str:
     text = str(value or "").strip()
@@ -57,6 +100,153 @@ def _extract_candidate_codes(telemetry: Optional[Dict[str, Any]]) -> list[str]:
     if selected_code and selected_code not in codes:
         codes.insert(0, selected_code)
     return codes
+
+
+def _resolution_type_counts(items: list[Any]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for item in items:
+        key = str(getattr(item, "resolution_type", "") or "unknown").strip() or "unknown"
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _classify_existing_gap_candidate(candidate: Any) -> str:
+    request_text = _normalize_request_text(getattr(candidate, "user_request_text", None) or "")
+    normalized_request = request_text.casefold()
+    telemetry = dict(getattr(candidate, "telemetry", None) or {})
+    workflow_gap_meta = dict(telemetry.get("workflow_gap") or {})
+    workflow_discovery = dict(telemetry.get("workflow_discovery") or {})
+    confidence = dict(workflow_discovery.get("confidence") or {})
+    candidate_count = int(workflow_discovery.get("candidate_count") or confidence.get("candidate_count") or 0)
+    route = str(confidence.get("route") or "").strip().lower()
+
+    explicit_resolution_type = str(
+        workflow_gap_meta.get("resolution_type")
+        or getattr(candidate, "resolution_type", None)
+        or ""
+    ).strip()
+    if explicit_resolution_type == WORKFLOW_GAP_ENTITY_RESOLUTION_FAILED:
+        return explicit_resolution_type
+
+    if not request_text:
+        return WORKFLOW_GAP_NOISE_IGNORED
+    if normalized_request in _LOW_SIGNAL_MESSAGES:
+        return WORKFLOW_GAP_NOISE_IGNORED
+    if any(re.search(pattern, normalized_request, flags=re.IGNORECASE) for pattern in _NOISE_PATTERNS):
+        return WORKFLOW_GAP_NOISE_IGNORED
+
+    response_excerpt = str(workflow_gap_meta.get("response_excerpt") or "").strip()
+    if response_excerpt and any(
+        re.search(pattern, response_excerpt, flags=re.IGNORECASE)
+        for pattern in _ENTITY_RESOLUTION_FAILURE_PATTERNS
+    ):
+        return WORKFLOW_GAP_ENTITY_RESOLUTION_FAILED
+
+    if route == "ambiguous" or candidate_count > 1:
+        return WORKFLOW_GAP_AMBIGUOUS_NEEDS_CLARIFICATION
+    if route == "no_match":
+        return WORKFLOW_GAP_NOT_SUPPORTED
+    if workflow_discovery:
+        return WORKFLOW_GAP_PARSER_FAILED
+    if explicit_resolution_type:
+        return explicit_resolution_type
+    return WORKFLOW_GAP_NOT_RESOLVED
+
+
+def _build_gap_consolidation_key(candidate: Any, resolution_type: Optional[str] = None) -> str:
+    channel = str(getattr(candidate, "channel", "") or "web").strip().lower() or "web"
+    resolution_type = str(resolution_type or getattr(candidate, "resolution_type", "") or "unknown").strip().lower() or "unknown"
+    normalized_intent = _slugify_words(getattr(candidate, "normalized_intent", None) or getattr(candidate, "user_request_text", None) or "")
+    return f"{channel}|{resolution_type}|{normalized_intent or 'sem_intencao'}"
+
+
+def build_workflow_gap_metrics(items: list[Any]) -> Dict[str, Any]:
+    by_resolution_type: Dict[str, int] = {}
+    by_channel: Dict[str, int] = {}
+    by_status: Dict[str, int] = {}
+    grouped: Dict[str, Dict[str, Any]] = {}
+
+    for item in items or []:
+        resolution_type = str(getattr(item, "resolution_type", None) or "unknown").strip() or "unknown"
+        channel = str(getattr(item, "channel", None) or "web").strip().lower() or "web"
+        status = str(getattr(item, "status", None) or "unknown").strip().lower() or "unknown"
+        by_resolution_type[resolution_type] = by_resolution_type.get(resolution_type, 0) + 1
+        by_channel[channel] = by_channel.get(channel, 0) + 1
+        by_status[status] = by_status.get(status, 0) + 1
+
+        key = _build_gap_consolidation_key(item)
+        bucket = grouped.setdefault(
+            key,
+            {
+                "key": key,
+                "count": 0,
+                "channel": channel,
+                "resolution_type": resolution_type,
+                "normalized_intent": _slugify_words(getattr(item, "normalized_intent", None) or getattr(item, "user_request_text", None) or ""),
+                "sample_request": getattr(item, "user_request_text", None),
+                "task_codes": [],
+            },
+        )
+        bucket["count"] += 1
+        task_code = str(getattr(item, "app_task_code", None) or "").strip()
+        if task_code and task_code not in bucket["task_codes"]:
+            bucket["task_codes"].append(task_code)
+
+    duplicate_clusters = sorted(
+        [bucket for bucket in grouped.values() if bucket["count"] > 1],
+        key=lambda bucket: (-bucket["count"], bucket["key"]),
+    )
+
+    return {
+        "total": len(items or []),
+        "by_resolution_type": by_resolution_type,
+        "by_channel": by_channel,
+        "by_status": by_status,
+        "duplicate_cluster_count": len(duplicate_clusters),
+        "duplicate_clusters": duplicate_clusters[:20],
+    }
+
+
+def reclassify_workflow_gap_candidates(
+    items: list[Any],
+    *,
+    persist: bool = False,
+    commit_changes: Optional[Any] = None,
+) -> Dict[str, Any]:
+    processed_items = list(items or [])
+    before = _resolution_type_counts(processed_items)
+    updated = 0
+
+    for item in processed_items:
+        previous = str(getattr(item, "resolution_type", None) or "").strip() or WORKFLOW_GAP_NOT_RESOLVED
+        new_value = _classify_existing_gap_candidate(item)
+        telemetry = dict(getattr(item, "telemetry", None) or {})
+        workflow_gap_meta = dict(telemetry.get("workflow_gap") or {})
+        workflow_gap_meta["resolution_type"] = new_value
+        workflow_gap_meta["previous_resolution_type"] = previous
+        workflow_gap_meta["consolidation_key"] = _build_gap_consolidation_key(item, new_value)
+        workflow_gap_meta["reclassified_at"] = datetime.utcnow().isoformat()
+        telemetry["workflow_gap"] = workflow_gap_meta
+        setattr(item, "telemetry", telemetry)
+        if previous != new_value:
+            setattr(item, "resolution_type", new_value)
+            updated += 1
+
+    if persist and updated:
+        if commit_changes is not None:
+            commit_changes()
+        else:
+            db.session.commit()
+
+    after = _resolution_type_counts(processed_items)
+    metrics = build_workflow_gap_metrics(processed_items)
+    return {
+        "processed": len(processed_items),
+        "updated": updated,
+        "resolution_counts_before": before,
+        "resolution_counts_after": after,
+        "metrics": metrics,
+    }
 
 
 def _infer_suggested_flow_name(request_text: str) -> str:
@@ -102,6 +292,14 @@ def _build_gap_task_how(
     selected_action = str(workflow_discovery.get("selected_action_key") or "").strip()
     if selected_action:
         lines.append(f"Action key sugerida: {selected_action}")
+    if resolution_type == "entity_resolution_failed":
+        lines.append("Taxonomia: falha de resolução de entidade/empresa/colaborador.")
+    elif resolution_type == "ambiguous_needs_clarification":
+        lines.append("Taxonomia: ambiguidade real; falta desambiguação segura.")
+    elif resolution_type == "parser_failed":
+        lines.append("Taxonomia: parser/discovery encontrou sinal, mas falhou na decisão.")
+    elif resolution_type == "not_supported_workflow":
+        lines.append("Taxonomia: intenção sem workflow suportado no catálogo atual.")
     lines.append("Objetivo: avaliar se este pedido deve virar um workflow determinístico do catálogo V3.")
     return "\n".join(lines)
 
@@ -121,6 +319,9 @@ def _build_gap_task_notes(
     workflow_discovery = dict((telemetry or {}).get("workflow_discovery") or {})
     if workflow_discovery:
         parts.append(f"Telemetria workflow_discovery: {workflow_discovery}")
+    resolution_type = str((telemetry or {}).get("workflow_gap", {}).get("resolution_type") or "").strip()
+    if resolution_type:
+        parts.append(f"Classificacao do gap: {resolution_type}")
     return "\n\n".join(parts)
 
 
@@ -271,6 +472,7 @@ class WorkflowGapService:
 
 def serialize_workflow_gap_candidate(candidate: Any) -> Dict[str, Any]:
     telemetry = dict(getattr(candidate, "telemetry", None) or {})
+    workflow_gap_meta = dict(telemetry.get("workflow_gap") or {})
     return {
         "id": getattr(candidate, "id", None),
         "company_id": getattr(candidate, "company_id", None),
@@ -287,6 +489,11 @@ def serialize_workflow_gap_candidate(candidate: Any) -> Dict[str, Any]:
         "business_outcome": getattr(candidate, "business_outcome", None),
         "matched_workflow_codes": list(getattr(candidate, "matched_workflow_codes", None) or []),
         "telemetry": telemetry,
+        "maintenance": {
+            "consolidation_key": workflow_gap_meta.get("consolidation_key"),
+            "previous_resolution_type": workflow_gap_meta.get("previous_resolution_type"),
+            "reclassified_at": workflow_gap_meta.get("reclassified_at"),
+        },
         "app_card": {
             "project_id": getattr(candidate, "app_project_id", None),
             "task_id": getattr(candidate, "app_task_id", None),

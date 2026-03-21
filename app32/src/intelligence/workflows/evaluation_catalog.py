@@ -47,6 +47,20 @@ def build_default_workflow_evaluation_cases() -> List[WorkflowEvaluationCase]:
             expected_action_key="my_work.completed_range",
         ),
         WorkflowEvaluationCase(
+            domain="my_work",
+            label="my_work_overdue_instances_by_collaborator",
+            text="Quais as instancias estao atrasadas para Caroline Marques da empresa Gandu Investimentos?",
+            expected_action_key="my_work.overdue",
+            channel="whatsapp",
+        ),
+        WorkflowEvaluationCase(
+            domain="my_work",
+            label="my_work_open_tasks_by_collaborator",
+            text="Quais sao as atividades em aberto para Joaquim Guga na empresa Gandu Investimentos?",
+            expected_action_key="my_work.open",
+            channel="whatsapp",
+        ),
+        WorkflowEvaluationCase(
             domain="collaborator",
             label="collaborator_occupancy",
             text="preciso da ocupacao do colaborador Fabiano nesta semana",

@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from src.intelligence.workflows.schemas import (
     MeetingReferenceInput,
     MeetingScheduleInput,
+    ProjectTaskCompleteInput,
     ProjectTaskCreateInput,
     SummaryExecutionInput,
 )
@@ -57,6 +58,19 @@ def test_project_task_create_input_maps_aliases():
     assert execution_input.description == "Criar painéis"
     assert execution_input.priority == "high"
     assert execution_input.notes == "Urgente"
+
+
+def test_project_task_complete_input_maps_batch_ids():
+    execution_input, error = ProjectTaskCompleteInput.build_from_legacy_payload(
+        {
+            "ids": "24 e 323",
+        }
+    )
+
+    assert error is None
+    assert execution_input is not None
+    assert execution_input.activity_code == "24"
+    assert execution_input.activity_codes == ["24", "323"]
 
 
 def test_meeting_schedule_input_splits_lists_and_deduplicates():

@@ -25,6 +25,18 @@ def _build_handler(**overrides):
         captured["employee_scope"] = {"user_id": user_id, "company_ids": list(company_ids)}
         return None
 
+    def fake_resolve_employee_scope_for_payload(payload, user_id, company_ids, default_employee_ids):
+        captured["employee_scope_payload"] = {
+            "payload": dict(payload or {}),
+            "user_id": user_id,
+            "company_ids": list(company_ids),
+            "default_employee_ids": None if default_employee_ids is None else list(default_employee_ids),
+        }
+        collaborator = payload.get("colaborador")
+        if collaborator:
+            return [91], collaborator, None
+        return default_employee_ids, None, None
+
     def fake_resolve_period_from_payload(payload):
         captured["period_payload"] = dict(payload or {})
         return date(2026, 3, 5), date(2026, 3, 19)
@@ -48,6 +60,7 @@ def _build_handler(**overrides):
     defaults = {
         "resolve_company_ids_for_payload": fake_resolve_company_ids_for_payload,
         "resolve_employee_ids_for_report": fake_resolve_employee_ids_for_report,
+        "resolve_employee_scope_for_payload": fake_resolve_employee_scope_for_payload,
         "resolve_period_from_payload": fake_resolve_period_from_payload,
         "load_project_tasks_report": fake_load_project_tasks_report,
         "load_process_instances_report": fake_load_process_instances_report,
@@ -151,3 +164,47 @@ def test_my_work_handler_restricts_collaborator_to_own_employee_ids():
     assert captured["tasks_calls"][0]["employee_ids"] == [77]
     assert captured["process_calls"][0]["employee_ids"] == [77]
     assert result.response_text == "report:my_work.open:empresa AA - Versus"
+
+
+def test_my_work_handler_filters_by_payload_collaborator_and_skips_non_requested_entities():
+    handler, captured = _build_handler()
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.overdue",
+            payload={
+                "empresa": "Versus",
+                "colaborador": "Caroline Marques",
+                "entidade": "process_instance",
+            },
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["employee_scope_payload"]["payload"]["colaborador"] == "Caroline Marques"
+    assert captured["process_calls"][0]["employee_ids"] == [91]
+    assert "tasks_calls" not in captured
+    assert "meeting_calls" not in captured
+    assert result.response_text == "report:my_work.overdue:empresa AA - Versus"
+
+
+def test_my_work_handler_returns_collaborator_resolution_error():
+    handler, _ = _build_handler(
+        resolve_employee_scope_for_payload=lambda payload, user_id, company_ids, default_employee_ids: (
+            None,
+            None,
+            "Nao encontrei colaborador para 'Joaquim Guga'.",
+        )
+    )
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.open",
+            payload={"empresa": "Versus", "colaborador": "Joaquim Guga"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert result.response_text == "Nao encontrei colaborador para 'Joaquim Guga'."

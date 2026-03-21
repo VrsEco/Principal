@@ -84,6 +84,70 @@ def test_create_gap_candidate_persists_and_links_project_card(monkeypatch):
     assert "Resposta atual entregue pela IA" in project_task_call["notes"]
 
 
+def test_build_gap_task_notes_includes_resolution_taxonomy():
+    notes = gap_service._build_gap_task_notes(
+        request_text="Quero as atividades abertas da Ventana com os Responsável Márcio Simoes",
+        telemetry={"workflow_gap": {"resolution_type": "entity_resolution_failed"}},
+        response_text="Nao encontrei empresa para 'Ventana'.",
+    )
+
+    assert "Classificacao do gap: entity_resolution_failed" in notes
+
+
+def test_reclassify_workflow_gap_candidates_updates_historical_taxonomy():
+    gap_a = SimpleNamespace(
+        resolution_type='resolved_by_ai',
+        user_request_text='Ops! Mensagem automática de ausência. Deixe sua mensagem.',
+        normalized_intent='ops mensagem automatica',
+        channel='whatsapp',
+        status='inbox',
+        telemetry={},
+        app_task_code='AA.J.31.301',
+    )
+    gap_b = SimpleNamespace(
+        resolution_type='resolved_by_ai',
+        user_request_text='Quais atividades em aberto da Ventana com responsável Márcio Simoes?',
+        normalized_intent='quais atividades ventana',
+        channel='whatsapp',
+        status='inbox',
+        telemetry={'workflow_discovery': {'confidence': {'route': 'ambiguous'}, 'candidate_count': 2}},
+        app_task_code='AA.J.31.302',
+    )
+
+    report = gap_service.reclassify_workflow_gap_candidates([gap_a, gap_b], persist=False)
+
+    assert report['processed'] == 2
+    assert report['updated'] == 2
+    assert gap_a.resolution_type == gap_service.WORKFLOW_GAP_NOISE_IGNORED
+    assert gap_b.resolution_type == gap_service.WORKFLOW_GAP_AMBIGUOUS_NEEDS_CLARIFICATION
+    assert gap_b.telemetry['workflow_gap']['consolidation_key'].startswith('whatsapp|ambiguous_needs_clarification|')
+
+
+def test_build_workflow_gap_metrics_groups_duplicate_clusters():
+    gap_a = SimpleNamespace(
+        resolution_type='not_supported_workflow',
+        user_request_text='Preciso saber o que tenho para hoje',
+        normalized_intent='preciso saber o que tenho para hoje',
+        channel='whatsapp',
+        status='inbox',
+        app_task_code='AA.J.31.401',
+    )
+    gap_b = SimpleNamespace(
+        resolution_type='not_supported_workflow',
+        user_request_text='Preciso saber o que tenho para hoje',
+        normalized_intent='preciso saber o que tenho para hoje',
+        channel='whatsapp',
+        status='inbox',
+        app_task_code='AA.J.31.402',
+    )
+
+    metrics = gap_service.build_workflow_gap_metrics([gap_a, gap_b])
+
+    assert metrics['total'] == 2
+    assert metrics['duplicate_cluster_count'] == 1
+    assert metrics['duplicate_clusters'][0]['count'] == 2
+
+
 
 def test_find_workflow_gap_by_task_prefers_task_id(monkeypatch):
     captured = {}

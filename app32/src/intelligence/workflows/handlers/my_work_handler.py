@@ -30,6 +30,10 @@ class MyWorkExecutionHandler:
         *,
         resolve_company_ids_for_payload: Callable[[Dict[str, Any], Optional[int], int], Tuple[List[int], str]],
         resolve_employee_ids_for_report: Callable[[int, List[int]], Optional[List[int]]],
+        resolve_employee_scope_for_payload: Callable[
+            [Dict[str, Any], int, List[int], Optional[List[int]]],
+            Tuple[Optional[List[int]], Optional[str], Optional[str]],
+        ],
         resolve_period_from_payload: Callable[[Dict[str, Any]], Tuple[Optional[date], Optional[date]]],
         load_project_tasks_report: Callable[..., List[Dict[str, Any]]],
         load_process_instances_report: Callable[..., List[Dict[str, Any]]],
@@ -38,6 +42,7 @@ class MyWorkExecutionHandler:
     ):
         self._resolve_company_ids_for_payload = resolve_company_ids_for_payload
         self._resolve_employee_ids_for_report = resolve_employee_ids_for_report
+        self._resolve_employee_scope_for_payload = resolve_employee_scope_for_payload
         self._resolve_period_from_payload = resolve_period_from_payload
         self._load_project_tasks_report = load_project_tasks_report
         self._load_process_instances_report = load_process_instances_report
@@ -64,10 +69,18 @@ class MyWorkExecutionHandler:
                 response_text=company_label_or_error or "Nao foi possivel identificar a empresa para consulta."
             )
 
-        report_employee_ids = self._resolve_employee_ids_for_report(
+        default_employee_ids = self._resolve_employee_ids_for_report(
             request.user_id,
             company_ids,
         )
+        report_employee_ids, collaborator_label, collaborator_error = self._resolve_employee_scope_for_payload(
+            payload,
+            request.user_id,
+            company_ids,
+            default_employee_ids,
+        )
+        if collaborator_error:
+            return MyWorkExecutionResult(response_text=collaborator_error)
 
         start_date = None
         end_date = None
@@ -82,26 +95,37 @@ class MyWorkExecutionHandler:
                     )
                 )
 
-        tasks = self._load_project_tasks_report(
-            company_ids=company_ids,
-            mode=execution_input.action,
-            start_date=start_date,
-            end_date=end_date,
-            employee_ids=report_employee_ids,
-        )
-        processes = self._load_process_instances_report(
-            company_ids=company_ids,
-            mode=execution_input.action,
-            start_date=start_date,
-            end_date=end_date,
-            employee_ids=report_employee_ids,
-        )
-        meetings = self._load_meetings_report(
-            company_ids=company_ids,
-            mode=execution_input.action,
-            start_date=start_date,
-            end_date=end_date,
-        )
+        entity = str(payload.get("entidade") or payload.get("entity") or "").strip().lower()
+        collaborator_terms = [collaborator_label] if collaborator_label else None
+
+        tasks: List[Dict[str, Any]] = []
+        processes: List[Dict[str, Any]] = []
+        meetings: List[Dict[str, Any]] = []
+
+        if entity in {"", "project_task"}:
+            tasks = self._load_project_tasks_report(
+                company_ids=company_ids,
+                mode=execution_input.action,
+                start_date=start_date,
+                end_date=end_date,
+                employee_ids=report_employee_ids,
+            )
+        if entity in {"", "process_instance"}:
+            processes = self._load_process_instances_report(
+                company_ids=company_ids,
+                mode=execution_input.action,
+                start_date=start_date,
+                end_date=end_date,
+                employee_ids=report_employee_ids,
+            )
+        if entity == "":
+            meetings = self._load_meetings_report(
+                company_ids=company_ids,
+                mode=execution_input.action,
+                start_date=start_date,
+                end_date=end_date,
+                collaborator_terms=collaborator_terms,
+            )
 
         return MyWorkExecutionResult(
             response_text=self._format_my_work_report(

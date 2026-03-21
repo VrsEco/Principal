@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Dict, Any, Optional
 from uuid import uuid4
 
@@ -13,6 +14,96 @@ from src.intelligence.work_agents.graph import create_work_agent_workflow
 from src.intelligence.menu_engine import handle_menu_message
 
 logger = logging.getLogger(__name__)
+
+WORKFLOW_GAP_NOISE_IGNORED = "noise_ignored"
+WORKFLOW_GAP_AMBIGUOUS_NEEDS_CLARIFICATION = "ambiguous_needs_clarification"
+WORKFLOW_GAP_ENTITY_RESOLUTION_FAILED = "entity_resolution_failed"
+WORKFLOW_GAP_PARSER_FAILED = "parser_failed"
+WORKFLOW_GAP_NOT_SUPPORTED = "not_supported_workflow"
+WORKFLOW_GAP_RESOLVED_BY_AI = "resolved_by_ai"
+WORKFLOW_GAP_NOT_RESOLVED = "not_resolved"
+
+_NOISE_PATTERNS = (
+    r"mensagem automatica",
+    r"mensagem automática",
+    r"fora do horario",
+    r"fora do horário",
+    r"fora do expediente",
+    r"ausencia",
+    r"ausência",
+    r"deixe sua mensagem",
+    r"como posso ajudar\?? deixe sua mensagem",
+    r"retornaremos",
+    r"retornarei",
+    r"proxima hora",
+    r"próxima hora",
+    r"proximo dia util",
+    r"próximo dia útil",
+)
+_LOW_SIGNAL_MESSAGES = {
+    "oi",
+    "ola",
+    "olá",
+    "bom dia",
+    "boa tarde",
+    "boa noite",
+    "ok",
+    "blz",
+    "ai lascou",
+    "aí lascou",
+}
+
+_ENTITY_RESOLUTION_FAILURE_PATTERNS = (
+    r"nao encontrei empresa",
+    r"não encontrei empresa",
+    r"encontrei mais de uma empresa",
+    r"escolha uma empresa",
+    r"informe a empresa",
+    r"nao encontrei colaborador",
+    r"não encontrei colaborador",
+    r"encontrei mais de um colaborador",
+    r"sem acesso ao colaborador",
+)
+
+
+def _classify_workflow_gap(
+    *,
+    user_msg: str,
+    response_text: str,
+    menu_metadata: Optional[Dict[str, Any]],
+) -> tuple[bool, str]:
+    raw_text = str(user_msg or "").strip()
+    if not raw_text:
+        return False, WORKFLOW_GAP_NOISE_IGNORED
+
+    normalized_text = re.sub(r"\s+", " ", raw_text.casefold()).strip()
+    if normalized_text in _LOW_SIGNAL_MESSAGES:
+        return False, WORKFLOW_GAP_NOISE_IGNORED
+
+    if any(re.search(pattern, normalized_text, flags=re.IGNORECASE) for pattern in _NOISE_PATTERNS):
+        return False, WORKFLOW_GAP_NOISE_IGNORED
+
+    workflow_discovery = dict((menu_metadata or {}).get("workflow_discovery") or {})
+    confidence = dict(workflow_discovery.get("confidence") or {})
+    route = str(confidence.get("route") or "").strip().lower()
+    candidate_count = int(workflow_discovery.get("candidate_count") or confidence.get("candidate_count") or 0)
+    normalized_response = re.sub(r"\s+", " ", str(response_text or "").casefold()).strip()
+
+    if normalized_response and any(
+        re.search(pattern, normalized_response, flags=re.IGNORECASE)
+        for pattern in _ENTITY_RESOLUTION_FAILURE_PATTERNS
+    ):
+        return True, WORKFLOW_GAP_ENTITY_RESOLUTION_FAILED
+
+    if route == "ambiguous" or candidate_count > 1:
+        return True, WORKFLOW_GAP_AMBIGUOUS_NEEDS_CLARIFICATION
+    if route == "no_match":
+        return True, WORKFLOW_GAP_NOT_SUPPORTED
+    if not response_text:
+        return True, WORKFLOW_GAP_NOT_RESOLVED
+    if workflow_discovery:
+        return True, WORKFLOW_GAP_PARSER_FAILED
+    return True, WORKFLOW_GAP_RESOLVED_BY_AI
 
 
 def _merge_execution_metadata(*items: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -70,6 +161,17 @@ def _capture_workflow_gap_from_execution(
     from services.workflow_gap_service import capture_workflow_gap
 
     try:
+        should_capture, resolution_type = _classify_workflow_gap(
+            user_msg=user_msg,
+            response_text=response_text,
+            menu_metadata=menu_metadata,
+        )
+        if not should_capture:
+            return
+        final_telemetry = dict(menu_metadata or {})
+        workflow_gap_meta = dict(final_telemetry.get("workflow_gap") or {})
+        workflow_gap_meta["resolution_type"] = resolution_type
+        final_telemetry["workflow_gap"] = workflow_gap_meta
         capture_workflow_gap(
             user_id=user_id,
             company_id=company_id,
@@ -77,9 +179,9 @@ def _capture_workflow_gap_from_execution(
             thread_id=thread_id,
             request_text=user_msg,
             response_text=response_text,
-            resolution_type="resolved_by_ai" if response_text else "not_resolved",
+            resolution_type=resolution_type,
             source="ai_fallback",
-            telemetry=dict(menu_metadata or {}),
+            telemetry=final_telemetry,
         )
     except Exception:
         logger.exception(

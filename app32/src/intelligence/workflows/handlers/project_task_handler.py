@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import re
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -163,35 +164,6 @@ class ProjectTaskCompleteExecutionHandler:
                 response_text="Nao consegui interpretar o payload de conclusao da atividade."
             )
 
-        task_id = self._extract_id_from_code(execution_input.activity_code)
-        if not task_id:
-            return ProjectTaskCompleteResult(
-                response_text=f"Nao consegui identificar o ID no codigo '{execution_input.activity_code}'."
-            )
-
-        task = self._load_task_by_id(task_id)
-        if not task:
-            return ProjectTaskCompleteResult(
-                response_text=f"Atividade de projeto com codigo '{execution_input.activity_code}' nao encontrada."
-            )
-
-        project = getattr(task, "project", None)
-        if not project:
-            return ProjectTaskCompleteResult(
-                response_text=f"A atividade '{getattr(task, 'what', 'Sem titulo')}' nao possui projeto vinculado."
-            )
-
-        project_company_id = getattr(project, "company_id", None)
-        if (
-            request.active_company_id
-            and project_company_id
-            and project_company_id != request.active_company_id
-            and not self._user_can_access_company(request.user_id, int(project_company_id))
-        ):
-            return ProjectTaskCompleteResult(
-                response_text="A atividade informada nao pertence ao contexto da empresa ativa."
-            )
-
         desired_date = None
         if execution_input.completion_date_raw:
             desired_date = self._parse_completion_date(execution_input.completion_date_raw)
@@ -202,44 +174,126 @@ class ProjectTaskCompleteExecutionHandler:
 
         final_date = desired_date or self._today_provider()
 
-        has_changes = False
+        requested_codes = execution_input.activity_codes or [execution_input.activity_code]
+        resolved_items: list[tuple[str, int]] = []
+        unresolved_codes: list[str] = []
+        for raw_code in requested_codes:
+            task_id = self._resolve_task_id(raw_code)
+            if not task_id:
+                unresolved_codes.append(raw_code)
+                continue
+            resolved_items.append((raw_code, task_id))
 
-        if getattr(task, "status", None) != "completed" or getattr(task, "stage", None) != "completed":
-            task.status = "completed"
-            task.stage = "completed"
-            task.completion_date = final_date
-            has_changes = True
-        elif desired_date and getattr(task, "completion_date", None) != desired_date:
-            task.completion_date = desired_date
-            final_date = desired_date
-            has_changes = True
-        else:
-            final_date = getattr(task, "completion_date", None) or final_date
-
-        try:
-            update_progress = getattr(project, "update_progress", None)
-            if callable(update_progress):
-                update_progress()
-                has_changes = True
-            if has_changes:
-                self._commit_changes()
-        except Exception:
-            self._rollback_changes()
-            task = self._load_task_by_id(task_id)
-            project = getattr(task, "project", None) if task else None
-
-        company = self._load_company_by_id(getattr(project, "company_id", 0)) if project else None
-        company_code = str(getattr(company, "client_code", "") or "").strip() or "CP"
-        project_code = str(getattr(project, "code", "") or "").strip() or f"{company_code}.J.{getattr(project, 'id', '-')}"
-        activity_code = str(getattr(task, "code", "") or "").strip() or f"{project_code}.{getattr(task, 'id', '-')}"
-        project_name = str(getattr(project, "name", "") or "").strip() or f"Projeto {getattr(project, 'id', '-')}"
-        task_title = str(getattr(task, "what", "") or "").strip() or "Atividade"
-
-        return ProjectTaskCompleteResult(
-            response_text=(
-                f"A atividade de projeto com o codigo \"{activity_code}\" foi concluida com sucesso!\n\n"
-                f"- Projeto: {project_code} - {project_name}\n"
-                f"- Atividade: {task_title}\n"
-                f"- Data de Conclusao: {final_date.isoformat()}"
+        if not resolved_items:
+            return ProjectTaskCompleteResult(
+                response_text=f"Nao consegui identificar o ID no codigo '{execution_input.activity_code}'."
             )
-        )
+
+        completed_lines: list[str] = []
+        not_found_lines: list[str] = [f"- {code}: ID nao identificado" for code in unresolved_codes]
+        has_changes = False
+        last_single_payload: Optional[Dict[str, Any]] = None
+
+        for raw_code, task_id in resolved_items:
+            task = self._load_task_by_id(task_id)
+            if not task:
+                not_found_lines.append(f"- {raw_code}: atividade nao encontrada")
+                continue
+
+            project = getattr(task, "project", None)
+            if not project:
+                not_found_lines.append(
+                    f"- {raw_code}: atividade '{getattr(task, 'what', 'Sem titulo')}' sem projeto vinculado"
+                )
+                continue
+
+            project_company_id = getattr(project, "company_id", None)
+            if (
+                request.active_company_id
+                and project_company_id
+                and project_company_id != request.active_company_id
+                and not self._user_can_access_company(request.user_id, int(project_company_id))
+            ):
+                not_found_lines.append(f"- {raw_code}: fora do contexto da empresa ativa")
+                continue
+
+            current_final_date = final_date
+            item_changed = False
+            if getattr(task, "status", None) != "completed" or getattr(task, "stage", None) != "completed":
+                task.status = "completed"
+                task.stage = "completed"
+                task.completion_date = current_final_date
+                item_changed = True
+            elif desired_date and getattr(task, "completion_date", None) != desired_date:
+                task.completion_date = desired_date
+                current_final_date = desired_date
+                item_changed = True
+            else:
+                current_final_date = getattr(task, "completion_date", None) or current_final_date
+
+            try:
+                update_progress = getattr(project, "update_progress", None)
+                if callable(update_progress):
+                    update_progress()
+                    item_changed = True
+            except Exception:
+                self._rollback_changes()
+                task = self._load_task_by_id(task_id)
+                project = getattr(task, "project", None) if task else None
+
+            has_changes = has_changes or item_changed
+            company = self._load_company_by_id(getattr(project, "company_id", 0)) if project else None
+            company_code = str(getattr(company, "client_code", "") or "").strip() or "CP"
+            project_code = str(getattr(project, "code", "") or "").strip() or f"{company_code}.J.{getattr(project, 'id', '-')}"
+            activity_code = str(getattr(task, "code", "") or "").strip() or f"{project_code}.{getattr(task, 'id', '-')}"
+            project_name = str(getattr(project, "name", "") or "").strip() or f"Projeto {getattr(project, 'id', '-')}"
+            task_title = str(getattr(task, "what", "") or "").strip() or "Atividade"
+
+            last_single_payload = {
+                "activity_code": activity_code,
+                "project_code": project_code,
+                "project_name": project_name,
+                "task_title": task_title,
+                "final_date": current_final_date,
+            }
+            completed_lines.append(
+                f"- {activity_code} | {task_title} | Projeto: {project_code} - {project_name} | Data: {current_final_date.isoformat()}"
+            )
+
+        if has_changes:
+            self._commit_changes()
+
+        if len(completed_lines) == 1 and not not_found_lines and last_single_payload:
+            return ProjectTaskCompleteResult(
+                response_text=(
+                    f"A atividade de projeto com o codigo \"{last_single_payload['activity_code']}\" foi concluida com sucesso!\n\n"
+                    f"- Projeto: {last_single_payload['project_code']} - {last_single_payload['project_name']}\n"
+                    f"- Atividade: {last_single_payload['task_title']}\n"
+                    f"- Data de Conclusao: {last_single_payload['final_date'].isoformat()}"
+                )
+            )
+
+        lines = [f"Conclusao em lote processada: {len(completed_lines)} atividade(s) concluida(s)."]
+        if completed_lines:
+            lines.append("")
+            lines.append("Atividades concluídas:")
+            lines.extend(completed_lines)
+        if not_found_lines:
+            lines.append("")
+            lines.append("Pendencias encontradas:")
+            lines.extend(not_found_lines)
+        return ProjectTaskCompleteResult(response_text="\n".join(lines))
+
+    def _resolve_task_id(self, raw_code: str) -> Optional[int]:
+        normalized_code = str(raw_code or "").strip()
+        if not normalized_code:
+            return None
+        task_id = self._extract_id_from_code(normalized_code)
+        if task_id:
+            return int(task_id)
+        if normalized_code.isdigit():
+            return int(normalized_code)
+        numeric_tail = re.search(r"(\d+)$", normalized_code)
+        if numeric_tail:
+            return int(numeric_tail.group(1))
+        return None

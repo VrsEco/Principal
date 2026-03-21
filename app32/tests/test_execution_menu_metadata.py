@@ -141,3 +141,41 @@ def test_run_agent_with_context_uses_contextvars_without_process_env(monkeypatch
     assert captured_gap["user_msg"] == "teste"
     assert captured_gap["response_text"] == "ok"
     assert captured_gap["menu_metadata"]["workflow_discovery"]["strategy"] == "hybrid"
+
+
+def test_classify_workflow_gap_ignores_whatsapp_auto_reply_noise():
+    should_capture, resolution_type = execution._classify_workflow_gap(
+        user_msg="Ops! Mensagem automática de ausência. Como posso ajudar? Deixe sua mensagem.",
+        response_text="Tudo bem, fico à disposição.",
+        menu_metadata={"workflow_discovery": {"candidate_count": 0}},
+    )
+
+    assert should_capture is False
+    assert resolution_type == execution.WORKFLOW_GAP_NOISE_IGNORED
+
+
+def test_classify_workflow_gap_marks_ambiguous_operational_request():
+    should_capture, resolution_type = execution._classify_workflow_gap(
+        user_msg="Quais atividades em aberto da Ventana com responsável Márcio Simoes?",
+        response_text="Encontrei mais de um fluxo possível.",
+        menu_metadata={
+            "workflow_discovery": {
+                "candidate_count": 2,
+                "confidence": {"route": "ambiguous"},
+            }
+        },
+    )
+
+    assert should_capture is True
+    assert resolution_type == execution.WORKFLOW_GAP_AMBIGUOUS_NEEDS_CLARIFICATION
+
+
+def test_classify_workflow_gap_marks_entity_resolution_failure():
+    should_capture, resolution_type = execution._classify_workflow_gap(
+        user_msg="Quais atividades em aberto da Ventana com responsável Márcio Simoes?",
+        response_text="Nao encontrei empresa para 'Ventana'.",
+        menu_metadata={"workflow_discovery": {"candidate_count": 1}},
+    )
+
+    assert should_capture is True
+    assert resolution_type == execution.WORKFLOW_GAP_ENTITY_RESOLUTION_FAILED

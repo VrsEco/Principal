@@ -263,3 +263,47 @@ def test_project_task_complete_handler_returns_invalid_date():
     )
 
     assert result.response_text == "Data de finalizacao invalida. Use DD/MM/AAAA ou AAAA-MM-DD."
+
+
+def test_project_task_complete_handler_supports_batch_ids():
+    project = DummyProject(17, "Projeto V3", "AA.J.17", company_id=9)
+
+    class DummyCompleteTask(DummyTask):
+        def __init__(self, task_id: int):
+            super().__init__(task_id, f"Atividade {task_id}", f"AA.J.17.{task_id}")
+            self.project = project
+            self.status = "planned"
+            self.stage = "inbox"
+            self.completion_date = None
+
+    tasks = {24: DummyCompleteTask(24), 323: DummyCompleteTask(323)}
+    captured = {}
+
+    def fake_commit_changes():
+        captured["commits"] = captured.get("commits", 0) + 1
+
+    handler = ProjectTaskCompleteExecutionHandler(
+        extract_id_from_code=lambda code: int(str(code).split(".")[-1]) if str(code).split(".")[-1].isdigit() else None,
+        parse_completion_date=lambda raw: None,
+        today_provider=lambda: date(2026, 3, 21),
+        load_task_by_id=lambda task_id: tasks.get(task_id),
+        load_company_by_id=lambda company_id: DummyCompany("AA", "Versus"),
+        user_can_access_company=lambda user_id, company_id: True,
+        commit_changes=fake_commit_changes,
+        rollback_changes=lambda: None,
+    )
+
+    result = handler.execute(
+        ProjectTaskCompleteRequest(
+            payload={"ids": "24 e 323"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["commits"] == 1
+    assert tasks[24].status == "completed"
+    assert tasks[323].status == "completed"
+    assert "Conclusao em lote processada: 2 atividade(s) concluida(s)." in result.response_text
+    assert "AA.J.17.24" in result.response_text
+    assert "AA.J.17.323" in result.response_text

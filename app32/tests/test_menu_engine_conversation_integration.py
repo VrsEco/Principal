@@ -440,3 +440,61 @@ def test_handle_menu_message_attaches_discovery_metadata_for_no_match(monkeypatc
     assert result.metadata["menu_engine"]["intercept_stage"] == "implicit_discovery_no_match"
     assert result.metadata["menu_engine"]["handled"] is False
     assert result.metadata["workflow_discovery"]["confidence"]["route"] == "no_match"
+
+
+def test_looks_like_command_accepts_operational_query_in_natural_language():
+    assert (
+        menu_engine._looks_like_command(
+            "quais as atividades abertas da ventana com os responsável márcio simoes"
+        )
+        is True
+    )
+
+
+def test_extract_fields_from_text_infers_company_collaborator_and_period():
+    payload = menu_engine._extract_fields_from_text(
+        "Quais as instâncias atrasadas para Caroline Marques da empresa Gandu Investimentos esta semana?"
+    )
+
+    assert payload["empresa"] == "Gandu Investimentos"
+    assert payload["colaborador"] == "Caroline Marques"
+    assert payload["periodo"] == "esta semana"
+    assert payload["entidade"] == "process_instance"
+    assert payload["status_consulta"] == "overdue"
+
+
+def test_extract_fields_from_text_infers_project_task_scope_and_open_status():
+    payload = menu_engine._extract_fields_from_text(
+        "Quais são as atividades em aberto para Joaquim Guga na empresa Gandu Investimentos?"
+    )
+
+    assert payload["empresa"] == "Gandu Investimentos"
+    assert payload["colaborador"] == "Joaquim Guga"
+    assert payload["entidade"] == "project_task"
+    assert payload["status_consulta"] == "open"
+
+
+def test_extract_fields_from_text_infers_implicit_company_alias_without_keyword_empresa():
+    payload = menu_engine._extract_fields_from_text(
+        "Quero as atividades abertas da Ventana com os Responsável Márcio Simoes"
+    )
+
+    assert payload["empresa"] == "Ventana"
+    assert payload["colaborador"] == "Márcio Simoes"
+    assert payload["entidade"] == "project_task"
+    assert payload["status_consulta"] == "open"
+
+
+def test_extract_fields_from_text_infers_batch_ids_for_completion():
+    payload = menu_engine._extract_fields_from_text(
+        "Pode dar como concluida as atividades de IDs: 24 e 323"
+    )
+
+    assert payload["ids"] == "24,323"
+    assert payload["codigo_atividade"] == "24,323"
+
+
+def test_extract_fields_from_text_accepts_company_alias_shortcut():
+    payload = menu_engine._extract_fields_from_text("AU - Gandu Investimentos e Participações")
+
+    assert payload["empresa"] == "AU - Gandu Investimentos e Participações"

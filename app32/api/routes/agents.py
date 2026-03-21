@@ -342,6 +342,87 @@ def list_workflow_gaps():
     })
 
 
+@agents_bp.route('/api/agents/workflow-gaps/metrics', methods=['GET'])
+@login_required
+def workflow_gap_metrics():
+    from flask import session
+    from sqlalchemy import or_
+    from models.workflow_gap import WorkflowGapCandidate
+    from services.workflow_gap_service import build_workflow_gap_metrics
+
+    active_company_id = session.get('active_company_id')
+    if not _has_operational_full_access(active_company_id):
+        return jsonify({"success": False, "error": "Sem permissão para consultar métricas operacionais de workflow gaps."}), 403
+
+    limit_raw = (request.args.get('limit') or '500').strip()
+    try:
+        limit = max(1, min(int(limit_raw), 1000))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    query = WorkflowGapCandidate.query
+    if active_company_id:
+        query = query.filter(
+            or_(
+                WorkflowGapCandidate.company_id == active_company_id,
+                WorkflowGapCandidate.company_id.is_(None),
+            )
+        )
+
+    items = query.order_by(WorkflowGapCandidate.created_at.desc()).limit(limit).all()
+    return jsonify({
+        "success": True,
+        "limit": limit,
+        "active_company_id": active_company_id,
+        "metrics": build_workflow_gap_metrics(items),
+    })
+
+
+@agents_bp.route('/api/agents/workflow-gaps/maintenance/reclassify', methods=['POST'])
+@login_required
+def reclassify_workflow_gaps():
+    from flask import session
+    from sqlalchemy import or_
+    from models.workflow_gap import WorkflowGapCandidate
+    from services.workflow_gap_service import reclassify_workflow_gap_candidates
+
+    active_company_id = session.get('active_company_id')
+    if not _has_operational_full_access(active_company_id):
+        return jsonify({"success": False, "error": "Sem permissão para reclassificar workflow gaps operacionais."}), 403
+
+    body = request.get_json(silent=True) or {}
+    status_filter = str(body.get('status') or 'inbox').strip().lower()
+    limit_raw = str(body.get('limit') or '200').strip()
+    persist = bool(body.get('persist'))
+
+    try:
+        limit = max(1, min(int(limit_raw), 1000))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    query = WorkflowGapCandidate.query
+    if active_company_id:
+        query = query.filter(
+            or_(
+                WorkflowGapCandidate.company_id == active_company_id,
+                WorkflowGapCandidate.company_id.is_(None),
+            )
+        )
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+
+    items = query.order_by(WorkflowGapCandidate.created_at.desc()).limit(limit).all()
+    report = reclassify_workflow_gap_candidates(items, persist=persist)
+    return jsonify({
+        "success": True,
+        "active_company_id": active_company_id,
+        "persist": persist,
+        "status": status_filter,
+        "limit": limit,
+        **report,
+    })
+
+
 @agents_bp.route('/api/agents/workflow-gaps/link', methods=['GET'])
 @login_required
 def get_workflow_gap_link():
