@@ -293,7 +293,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             {"horas", "disponiveis"} <= tokens
         )
         if occupancy_intent and action_key.startswith("summary."):
-            score -= 10
+            score -= 18
             reasons.append("reranker:summary_penalty_for_occupancy")
 
         if {"vencido", "vencidos", "vencida", "vencidas", "atrasado", "atrasados", "atrasada", "atrasadas"} & tokens:
@@ -369,7 +369,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="collaborator=occupancy",
             )
             if action_key == "collaborator.occupancy":
-                score += 10
+                score += 26
                 reasons.append("reranker:occupancy_boost")
 
         if {"colaborador", "usuario", "responsavel", "responsaveis"} & tokens and action_key == "collaborator.occupancy":
