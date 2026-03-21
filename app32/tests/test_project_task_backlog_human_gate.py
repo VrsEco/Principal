@@ -249,6 +249,70 @@ def test_execute_backlog_human_gate_operation_applies_legacy_deadline_extension(
     assert task.logs[-1]["status_after"] == "executed"
 
 
+def test_execute_backlog_human_gate_operation_allows_legacy_deadline_extension_with_company_mismatch(
+    monkeypatch,
+):
+    target_task = SimpleNamespace(
+        id=205,
+        due_date=date(2026, 3, 25),
+        logs=[],
+        project=SimpleNamespace(company_id=9),
+    )
+    action = SimpleNamespace(
+        id=89,
+        type="approval_request",
+        status="pending",
+        company_id=1,
+        user_id=3,
+        title="Solicitação de Adiamento: Fechar contrato",
+        description="Solicitação legada com company_id histórico divergente.",
+        requesting_agent="sapiens",
+        handling_agent="operations",
+        payload={
+            "task_type": "project_task",
+            "task_id": 205,
+            "new_deadline": "2026-04-20",
+            "reason": "Solicitação antiga com contexto desalinhado",
+            "requester": "Analista",
+        },
+        resolved_at=None,
+        executed_at=None,
+        user_feedback=None,
+    )
+    task = _build_backlog_task(id=311, code="AA.J.31.311")
+    link = SimpleNamespace(
+        backlog_project_code="AA.J.31",
+        link_type="approval_request",
+        action=action,
+    )
+
+    fake_project_task_class = type(
+        "FakeProjectTask",
+        (),
+        {"query": SimpleNamespace(get=lambda task_id: target_task if int(task_id) == 205 else None)},
+    )
+    monkeypatch.setattr(backlog_human_gate_service, "ProjectTask", fake_project_task_class)
+    monkeypatch.setattr(backlog_human_gate_service, "find_backlog_link_by_task_id", lambda task_id: link)
+    monkeypatch.setattr(backlog_human_gate_service, "sync_backlog_task_for_action", lambda action: None)
+    monkeypatch.setattr(backlog_human_gate_service.db.session, "commit", lambda: None)
+
+    outcome = backlog_human_gate_service.execute_backlog_human_gate_operation(
+        task=task,
+        operation="approve",
+        actor_user_id=7,
+        actor_name="Fabiano Ferreira",
+    )
+
+    assert outcome.success is True
+    assert outcome.message == "Solicitação de prazo aprovada e aplicada com sucesso."
+    assert target_task.due_date == date(2026, 4, 20)
+    assert target_task.logs[-1]["details"]["legacy_company_mismatch"] is True
+    assert target_task.logs[-1]["details"]["action_company_id"] == 1
+    assert target_task.logs[-1]["details"]["target_company_id"] == 9
+    assert outcome.audit_metadata["backlog_human_gate"]["legacy_company_mismatch"] is True
+    assert outcome.audit_metadata["backlog_human_gate"]["tenant_validation_mode"] == "linked_target_task_override"
+
+
 def test_project_task_resource_get_includes_backlog_human_gate(monkeypatch):
     app = Flask(__name__)
     app.secret_key = "test-secret"

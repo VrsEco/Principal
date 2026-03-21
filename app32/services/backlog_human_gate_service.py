@@ -606,12 +606,28 @@ def _approve_legacy_deadline_extension(
                 action=action,
             )
         project = getattr(target_task, "project", None)
-        if project is None or int(getattr(project, "company_id", 0) or 0) != int(getattr(action, "company_id", 0) or 0):
+        if project is None:
             return BacklogHumanGateOutcome(
                 success=False,
-                message="A atividade alvo não pertence à empresa original da solicitação.",
+                message="A atividade alvo está sem projeto/empresa vinculada para validação segura.",
                 http_status=403,
                 action=action,
+            )
+        target_company_id = int(getattr(project, "company_id", 0) or 0)
+        action_company_id = int(getattr(action, "company_id", 0) or 0)
+        company_mismatch = target_company_id != action_company_id
+        if company_mismatch:
+            audit_metadata = _merge_audit_metadata(
+                audit_metadata,
+                {
+                    "backlog_human_gate": {
+                        "legacy_company_mismatch": True,
+                        "action_company_id": action_company_id,
+                        "target_company_id": target_company_id,
+                        "target_task_id": getattr(target_task, "id", None),
+                        "tenant_validation_mode": "linked_target_task_override",
+                    }
+                },
             )
         previous_due_date = _serialize_datetime(getattr(target_task, "due_date", None))
         target_task.due_date = parsed_deadline
@@ -625,6 +641,9 @@ def _approve_legacy_deadline_extension(
                 "agent_action_id": getattr(action, "id", None),
                 "requester": payload.get("requester"),
                 "reason": payload.get("reason"),
+                "legacy_company_mismatch": company_mismatch,
+                "action_company_id": action_company_id,
+                "target_company_id": target_company_id,
             },
         )
     elif task_type == "process_instance":
