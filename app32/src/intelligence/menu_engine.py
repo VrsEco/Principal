@@ -2387,6 +2387,9 @@ def _build_process_instance_complete_execution_handler() -> ProcessInstanceCompl
 
 
 def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
+    from src.intelligence.intents import MyWorkIntentFormBuilder
+
+    intent_form_builder = MyWorkIntentFormBuilder()
     return MyWorkExecutionHandler(
         resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
         resolve_employee_ids_for_report=_resolve_employee_ids_for_my_work_report,
@@ -2396,6 +2399,12 @@ def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
         load_process_instances_report=_load_process_instances_report,
         load_meetings_report=_load_meetings_report,
         format_my_work_report=_format_my_work_report,
+        build_operational_form=lambda action, payload, active_company_id, channel: intent_form_builder.build(
+            action=action,
+            payload=payload,
+            active_company_id=active_company_id,
+            channel=channel,
+        ),
     )
 
 

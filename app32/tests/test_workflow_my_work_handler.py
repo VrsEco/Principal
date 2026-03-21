@@ -57,6 +57,15 @@ def _build_handler(**overrides):
         captured["formatted"] = dict(kwargs)
         return f"report:{kwargs['action']}:{kwargs['company_label']}"
 
+    def fake_build_operational_form(action, payload, active_company_id, channel):
+        captured["intent_form_request"] = {
+            "action": action,
+            "payload": dict(payload or {}),
+            "active_company_id": active_company_id,
+            "channel": channel,
+        }
+        return None, None
+
     defaults = {
         "resolve_company_ids_for_payload": fake_resolve_company_ids_for_payload,
         "resolve_employee_ids_for_report": fake_resolve_employee_ids_for_report,
@@ -66,6 +75,7 @@ def _build_handler(**overrides):
         "load_process_instances_report": fake_load_process_instances_report,
         "load_meetings_report": fake_load_meetings_report,
         "format_my_work_report": fake_format_my_work_report,
+        "build_operational_form": fake_build_operational_form,
     }
     defaults.update(overrides)
     return MyWorkExecutionHandler(**defaults), captured
@@ -226,3 +236,63 @@ def test_my_work_handler_requires_period_when_due_range_is_selected_for_today_qu
     assert captured["tasks_calls"][0]["start_date"] == date(2026, 3, 5)
     assert captured["tasks_calls"][0]["end_date"] == date(2026, 3, 19)
     assert result.response_text == "report:my_work.due_range:empresa AA - Versus"
+
+
+def test_my_work_handler_uses_canonical_intent_form_payload_when_available():
+    from src.intelligence.intents.schemas import (
+        CompanyScopeForm,
+        FilterScopeForm,
+        OperationalIntentForm,
+        ResolutionScopeForm,
+        SourceScopeForm,
+        SubjectScopeForm,
+    )
+
+    def fake_build_operational_form(action, payload, active_company_id, channel):
+        return (
+            OperationalIntentForm(
+                intent_kind="query",
+                intent_code="query.my_work.open",
+                entity_type="project_task",
+                company_scope=CompanyScopeForm(company_ids=[9]),
+                subject_scope=SubjectScopeForm(responsible_names=["Caroline Marques"]),
+                filter_scope=FilterScopeForm(status="open", entity_hint="project_task"),
+                resolution_scope=ResolutionScopeForm(status="ready"),
+                source_scope=SourceScopeForm(origin_channel=channel, detected_action_key=action),
+            ),
+            None,
+        )
+
+    handler, captured = _build_handler(build_operational_form=fake_build_operational_form)
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.open",
+            payload={"empresa": "Ignorar este termo"},
+            active_company_id=1,
+            user_id=10,
+        )
+    )
+
+    assert captured["resolved"]["payload"]["_selected_company_id"] == 9
+    assert captured["resolved"]["payload"]["colaborador"] == "Caroline Marques"
+    assert captured["resolved"]["payload"]["entidade"] == "project_task"
+    assert "meeting_calls" not in captured
+    assert result.response_text == "report:my_work.open:empresa AA - Versus"
+
+
+def test_my_work_handler_returns_form_missing_fields_error():
+    handler, _ = _build_handler(
+        build_operational_form=lambda action, payload, active_company_id, channel: (None, "Formulario invalido")
+    )
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.open",
+            payload={},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert result.response_text == "Formulario invalido"

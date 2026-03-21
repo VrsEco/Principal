@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ...intents.schemas import OperationalIntentForm
 from ..schemas import MyWorkExecutionInput
 
 
@@ -39,6 +40,9 @@ class MyWorkExecutionHandler:
         load_process_instances_report: Callable[..., List[Dict[str, Any]]],
         load_meetings_report: Callable[..., List[Dict[str, Any]]],
         format_my_work_report: Callable[..., str],
+        build_operational_form: Optional[
+            Callable[[str, Dict[str, Any], Optional[int], str], Tuple[Optional[OperationalIntentForm], Optional[str]]]
+        ] = None,
     ):
         self._resolve_company_ids_for_payload = resolve_company_ids_for_payload
         self._resolve_employee_ids_for_report = resolve_employee_ids_for_report
@@ -48,6 +52,7 @@ class MyWorkExecutionHandler:
         self._load_process_instances_report = load_process_instances_report
         self._load_meetings_report = load_meetings_report
         self._format_my_work_report = format_my_work_report
+        self._build_operational_form = build_operational_form
 
     def execute(self, request: MyWorkExecutionRequest) -> MyWorkExecutionResult:
         execution_input, input_error = MyWorkExecutionInput.build_from_action(request.action)
@@ -59,6 +64,23 @@ class MyWorkExecutionHandler:
             )
 
         payload = dict(request.payload or {})
+        if self._build_operational_form is not None:
+            form, form_error = self._build_operational_form(
+                request.action,
+                payload,
+                request.active_company_id,
+                request.channel,
+            )
+            if form_error:
+                return MyWorkExecutionResult(response_text=form_error)
+            if form is not None:
+                if form.resolution_scope.status == "missing_fields" and form.resolution_scope.missing_fields:
+                    missing_fields = ", ".join(form.resolution_scope.missing_fields)
+                    return MyWorkExecutionResult(
+                        response_text=f"Formulario incompleto para a consulta. Campos faltantes: {missing_fields}"
+                    )
+                payload = {**payload, **form.to_execution_payload()}
+
         company_ids, company_label_or_error = self._resolve_company_ids_for_payload(
             payload=payload,
             active_company_id=request.active_company_id,
