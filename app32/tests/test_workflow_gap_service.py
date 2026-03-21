@@ -148,6 +148,23 @@ def test_build_workflow_gap_metrics_groups_duplicate_clusters():
     assert metrics['duplicate_clusters'][0]['count'] == 2
 
 
+def test_reclassify_workflow_gap_candidates_ignores_contextual_feedback():
+    gap = SimpleNamespace(
+        resolution_type='resolved_by_ai',
+        user_request_text='Vamos em frente. Abraço, ficarei atento.',
+        normalized_intent='vamos em frente abraco ficarei atento',
+        channel='whatsapp',
+        status='inbox',
+        telemetry={},
+        app_task_code='AA.J.31.499',
+    )
+
+    report = gap_service.reclassify_workflow_gap_candidates([gap], persist=False)
+
+    assert report['processed'] == 1
+    assert gap.resolution_type == gap_service.WORKFLOW_GAP_NOISE_IGNORED
+
+
 
 def test_find_workflow_gap_by_task_prefers_task_id(monkeypatch):
     captured = {}

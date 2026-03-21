@@ -179,3 +179,14 @@ def test_classify_workflow_gap_marks_entity_resolution_failure():
 
     assert should_capture is True
     assert resolution_type == execution.WORKFLOW_GAP_ENTITY_RESOLUTION_FAILED
+
+
+def test_classify_workflow_gap_ignores_contextual_feedback_message():
+    should_capture, resolution_type = execution._classify_workflow_gap(
+        user_msg="Vamos em frente. Abraço, ficarei atento.",
+        response_text="Perfeito, seguimos.",
+        menu_metadata={"workflow_discovery": {"candidate_count": 0}},
+    )
+
+    assert should_capture is False
+    assert resolution_type == execution.WORKFLOW_GAP_NOISE_IGNORED

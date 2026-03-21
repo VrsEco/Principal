@@ -39,6 +39,15 @@ _NOISE_PATTERNS = (
     r"próxima hora",
     r"proximo dia util",
     r"próximo dia útil",
+    r"vamos em frente",
+    r"\babraco\b",
+    r"\babraço\b",
+    r"ficarei atento",
+    r"continue desenvolvendo",
+    r"muito bom o assistente",
+    r"você me disse",
+    r"voce me disse",
+    r"eu respondi que eu gostaria",
 )
 _LOW_SIGNAL_MESSAGES = {
     "oi",
@@ -51,6 +60,9 @@ _LOW_SIGNAL_MESSAGES = {
     "blz",
     "ai lascou",
     "aí lascou",
+    "obrigado",
+    "obrigada",
+    "valeu",
 }
 
 _ENTITY_RESOLUTION_FAILURE_PATTERNS = (

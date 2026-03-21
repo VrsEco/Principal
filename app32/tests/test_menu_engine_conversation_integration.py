@@ -593,3 +593,30 @@ def test_extract_choice_index_from_text_matches_collaborator_name():
     choices = [{"index": 2, "employee_id": 55, "name": "Fabiano"}]
 
     assert menu_engine._extract_choice_index_from_text("Fabiano", choices) == 2
+
+
+def test_extract_fields_from_text_parses_occupancy_without_false_collaborator_suffix():
+    payload = menu_engine._extract_fields_from_text(
+        "me diga a ocupação de Caroline Marques este mes."
+    )
+
+    assert payload["colaborador"] == "Caroline Marques"
+    assert payload["periodo"] == "este mes"
+
+
+def test_extract_fields_from_text_does_not_infer_collaborator_for_cross_company_analytics():
+    payload = menu_engine._extract_fields_from_text(
+        "Analise as atividades de projetos que estão sem responsável, de todas as empresas."
+    )
+
+    assert payload["entidade"] == "project_task"
+    assert "colaborador" not in payload
+
+
+def test_extract_fields_from_text_captures_pending_action_limit_without_false_company():
+    payload = menu_engine._extract_fields_from_text(
+        "Liste 20 ações do sistema que estão aguardando minha decisão."
+    )
+
+    assert payload["limite"] == "20"
+    assert "empresa" not in payload

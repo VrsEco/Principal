@@ -42,6 +42,8 @@ from src.intelligence.workflows.field_collection import (
     missing_required_fields as find_workflow_missing_required_fields,
 )
 from src.intelligence.workflows.handlers import (
+    AgentActionListPendingExecutionHandler,
+    AgentActionListPendingRequest,
     AgentActionOperationExecutionHandler,
     AgentActionOperationRequest,
     CollaboratorOccupancyExecutionHandler,
@@ -238,6 +240,7 @@ CANCEL_WORDS = {
 EXECUTE_HINTS = ("executar", "fazer", "iniciar", "finalizar", "cadastrar", "editar")
 COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo", "aprovar", "aprovado", "rejeitar", "revalidar", "colocar", "mudar")
 COMMAND_QUERY_HINTS = (
+    "liste",
     "quais",
     "qual",
     "quero saber",
@@ -245,6 +248,8 @@ COMMAND_QUERY_HINTS = (
     "me diga",
     "listar",
     "lista",
+    "analise",
+    "analisar",
     "mostrar",
     "mostra",
     "ver",
@@ -278,6 +283,10 @@ COMMAND_SCOPE_HINTS = (
     "solicitação",
     "aprovacao",
     "aprovação",
+    "acoes",
+    "ações",
+    "decisao",
+    "decisão",
     "ticket",
     "prazo",
     "dia",
@@ -917,6 +926,15 @@ def _looks_like_command(lower_text: str) -> bool:
     is_hitl_operation = bool(
         re.search(r"\b(aprovar|aprovado|aprova|rejeitar|rejeitado|recusar|revalidar)\b", normalized)
     )
+    is_pending_decision_query = bool(
+        (
+            "minha decisao" in normalized
+            or "minha decisão" in lower_text
+            or "aguardando minha decisao" in normalized
+            or "aguardando minha decisão" in lower_text
+        )
+        and re.search(r"\b(acao|acoes|ação|ações|solicitacao|solicitação)\b", lower_text, flags=re.IGNORECASE)
+    )
     is_deadline_rewrite = bool(
         re.search(
             r"\b(coloque|mudar|alterar)\b.*\b(para o dia|prazo|nova data|novo prazo)\b",
@@ -930,7 +948,7 @@ def _looks_like_command(lower_text: str) -> bool:
         )
         and re.search(r"\b(atividade|atividades|tarefa|tarefas)\b", normalized)
     )
-    if is_hitl_operation or is_deadline_rewrite or is_task_completion_operation:
+    if is_hitl_operation or is_pending_decision_query or is_deadline_rewrite or is_task_completion_operation:
         return True
     return (has_command or has_query) and (has_scope or has_status)
 
@@ -986,7 +1004,12 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
     )
     if company_match:
         company_name = company_match.group(1).strip(" ,.-")
-        if company_name:
+        normalized_company_name = _normalize_text(company_name)
+        if company_name and not (
+            normalized_company_name.startswith("sistema ")
+            or normalized_company_name == "sistema"
+            or "aguardando minha decisao" in normalized_company_name
+        ):
             data.setdefault("empresa", company_name)
 
     if "empresa" not in data:
@@ -997,13 +1020,18 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         )
         if implicit_company_match:
             implicit_company = implicit_company_match.group(1).strip(" ,.-")
-            if implicit_company and _normalize_text(implicit_company) not in {"mim", "me", "ele", "ela"}:
+            normalized_implicit_company = _normalize_text(implicit_company)
+            if implicit_company and normalized_implicit_company not in {"mim", "me", "ele", "ela"} and not (
+                normalized_implicit_company.startswith("sistema ")
+                or normalized_implicit_company == "sistema"
+                or "aguardando minha decisao" in normalized_implicit_company
+            ):
                 data.setdefault("empresa", implicit_company)
 
     collaborator_patterns = (
-        r"\brespons[aá]vel(?:\s+por)?\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
-        r"\bpara\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
-        r"\bde\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b)|[?.!,;]|$)",
+        r"\brespons[aá]vel(?:\s+por)?\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        r"\bpara\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        r"\bde\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b)|[?.!,;]|$)",
     )
     for pattern in collaborator_patterns:
         collaborator_match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -1011,6 +1039,12 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
             continue
         collaborator_name = collaborator_match.group(1).strip(" ,.-")
         collaborator_name = re.sub(r"\s+\b(?:na|no|da|do)\b$", "", collaborator_name, flags=re.IGNORECASE).strip(" ,.-")
+        collaborator_name = re.sub(
+            r"\s+\b(?:esta\s+semana|este\s+mes|este\s+m[eê]s|hoje)\b.*$",
+            "",
+            collaborator_name,
+            flags=re.IGNORECASE,
+        ).strip(" ,.-")
         normalized_collaborator = _normalize_text(collaborator_name)
         collaborator_tokens = [token for token in normalized_collaborator.split() if token]
         collaborator_leading_noise = {
@@ -1028,6 +1062,9 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
             "instancias",
             "processo",
             "processos",
+            "projetos",
+            "sistema",
+            "todas",
         }
         if collaborator_name and normalized_collaborator not in {
             "ids",
@@ -1047,6 +1084,10 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         ) and not (
             collaborator_tokens
             and all(token in collaborator_leading_noise for token in collaborator_tokens)
+        ) and not (
+            normalized_collaborator.startswith("projet")
+            or normalized_collaborator.startswith("sistema")
+            or normalized_collaborator.startswith("todas")
         ):
             data.setdefault("colaborador", collaborator_name)
             break
@@ -1097,6 +1138,14 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         )
         if action_id_match:
             data.setdefault("agent_action_id", action_id_match.group(1))
+
+    pending_action_limit_match = re.search(
+        r"\b(?:liste|listar|lista)\s+(\d{1,2})\s+(?:acoes|ações|solicitacoes|solicitações)\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if pending_action_limit_match:
+        data.setdefault("limite", pending_action_limit_match.group(1))
 
     if "periodo" not in data:
         if "hoje" in normalized_text:
@@ -1253,6 +1302,7 @@ def _is_read_only_action(action_key: Optional[str]) -> bool:
     action = (action_key or "").strip().lower()
     return action in {
         "collaborator.occupancy",
+        "agent_action.list_pending",
         "my_work.open",
         "my_work.overdue",
         "my_work.due_range",
@@ -2104,6 +2154,10 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                     }
                 },
             ),
+            "agent_action.list_pending": build_handler_executor(
+                handler_factory=_build_agent_action_list_pending_execution_handler,
+                request_model=AgentActionListPendingRequest,
+            ),
             "process_instance.complete": build_handler_executor(
                 handler_factory=_build_process_instance_complete_execution_handler,
                 request_model=ProcessInstanceCompleteRequest,
@@ -2271,6 +2325,15 @@ def _build_agent_action_operation_execution_handler() -> AgentActionOperationExe
         load_task_by_id=lambda task_id: db.session.get(ProjectTask, task_id) if task_id else None,
         execute_backlog_human_gate_operation=execute_backlog_human_gate_operation,
         user_can_access_company=_user_can_access_company,
+    )
+
+
+def _build_agent_action_list_pending_execution_handler() -> AgentActionListPendingExecutionHandler:
+    from services.agent_action_service import list_pending_actions
+
+    return AgentActionListPendingExecutionHandler(
+        resolve_company_ids_for_payload=_resolve_company_ids_for_payload,
+        list_pending_actions=list_pending_actions,
     )
 
 
@@ -4913,6 +4976,7 @@ def _ensure_default_menu_seed() -> None:
         {"code": "6.1", "title": "Aprovar Solicitacao", "parent_code": "6", "action_key": "agent_action.approve", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["aprovar solicitacao", "aprovar ticket", "aprovado", "aprovar"], "sort_order": 61},
         {"code": "6.2", "title": "Rejeitar Solicitacao", "parent_code": "6", "action_key": "agent_action.reject", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["rejeitar solicitacao", "recusar ticket", "rejeitar"], "sort_order": 62},
         {"code": "6.3", "title": "Revalidar Solicitacao", "parent_code": "6", "action_key": "agent_action.revalidate", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["revalidar solicitacao", "renovar prazo da solicitacao", "revalidar"], "sort_order": 63},
+        {"code": "6.4", "title": "Listar Solicitacoes Pendentes", "parent_code": "6", "action_key": "agent_action.list_pending", "required_fields": [], "keywords": ["listar solicitacoes pendentes", "acoes aguardando minha decisao", "acoes do sistema aguardando minha decisao", "minhas aprovacoes pendentes"], "sort_order": 64},
       ]
 
     code_to_id: Dict[str, int] = {}
@@ -5088,6 +5152,20 @@ def _ensure_default_menu_upgrades() -> None:
         required_fields=[{"key": "agent_action_id", "label": "ID da Solicitacao"}],
         keywords=["revalidar solicitacao", "renovar prazo da solicitacao", "revalidar"],
         sort_order=63,
+    )
+    _ensure_menu_option_exists(
+        code="6.4",
+        title="Listar Solicitacoes Pendentes",
+        parent_code="6",
+        action_key="agent_action.list_pending",
+        required_fields=[],
+        keywords=[
+            "listar solicitacoes pendentes",
+            "acoes aguardando minha decisao",
+            "acoes do sistema aguardando minha decisao",
+            "minhas aprovacoes pendentes",
+        ],
+        sort_order=64,
     )
     db.session.commit()
 

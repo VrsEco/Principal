@@ -237,6 +237,74 @@ def test_heuristic_reranker_prioritizes_agent_action_approve_for_approval_comman
     assert reranked[0].workflow.action_key == "agent_action.approve"
 
 
+def test_heuristic_reranker_prioritizes_collaborator_occupancy_over_summary_month():
+    options = [
+        _option(
+            option_id=44,
+            code="3.5.3",
+            title="Este Mes",
+            action_key="summary.month",
+            keywords=["resumo mes", "este mes"],
+            sort_order=38,
+        ),
+        _option(
+            option_id=45,
+            code="3.6",
+            title="Ocupacao de Colaborador",
+            action_key="collaborator.occupancy",
+            keywords=["ocupacao do colaborador", "capacidade do colaborador"],
+            sort_order=40,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=10, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=10, reasons=[]),
+    ]
+
+    reranked = HeuristicWorkflowReranker().rerank(
+        WorkflowDiscoveryRequest(text="me diga a ocupação de Caroline Marques este mes.", top_k=2),
+        matches,
+        registry,
+    )
+
+    assert reranked[0].workflow.action_key == "collaborator.occupancy"
+
+
+def test_heuristic_reranker_prioritizes_pending_decisions_listing():
+    options = [
+        _option(
+            option_id=46,
+            code="6.4",
+            title="Listar Solicitações Pendentes",
+            action_key="agent_action.list_pending",
+            keywords=["acoes aguardando minha decisao", "listar solicitacoes pendentes"],
+            sort_order=64,
+        ),
+        _option(
+            option_id=47,
+            code="5.2",
+            title="Diagnosticar Onboarding",
+            action_key="onboarding.diagnose",
+            keywords=["diagnosticar onboarding"],
+            sort_order=52,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=10, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=10, reasons=[]),
+    ]
+
+    reranked = HeuristicWorkflowReranker().rerank(
+        WorkflowDiscoveryRequest(text="Liste 20 ações do sistema que estão aguardando minha decisão.", top_k=2),
+        matches,
+        registry,
+    )
+
+    assert reranked[0].workflow.action_key == "agent_action.list_pending"
+
+
 def test_workflow_runtime_supports_explicit_code_discovery():
     options = [
         _option(

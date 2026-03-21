@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
 from src.intelligence.workflows.handlers.agent_action_handler import (
+    AgentActionListPendingExecutionHandler,
+    AgentActionListPendingRequest,
     AgentActionOperationExecutionHandler,
     AgentActionOperationRequest,
 )
@@ -57,3 +59,26 @@ def test_agent_action_operation_handler_falls_back_to_latest_pending_action():
     )
 
     assert result.response_text == "Solicitação aprovada com sucesso."
+
+
+def test_agent_action_list_pending_handler_formats_top_items():
+    actions = [
+        SimpleNamespace(id=331, title="Adiamento Lucro Real", type="approval_request", status="pending", company_id=9),
+        SimpleNamespace(id=334, title="Atividades da semana", type="workflow_approval_request", status="awaiting_approval", company_id=12),
+    ]
+    handler = AgentActionListPendingExecutionHandler(
+        resolve_company_ids_for_payload=lambda payload, active_company_id, user_id: ([9, 12], "empresas vinculadas"),
+        list_pending_actions=lambda company_ids: (actions, []),
+    )
+
+    result = handler.execute(
+        AgentActionListPendingRequest(
+            payload={"limite": "1"},
+            active_company_id=None,
+            user_id=7,
+        )
+    )
+
+    assert "Encontrei 2 solicitacao(oes) pendente(s)" in result.response_text
+    assert "#331 | Adiamento Lucro Real" in result.response_text
+    assert "...e mais 1 solicitacao(oes)." in result.response_text

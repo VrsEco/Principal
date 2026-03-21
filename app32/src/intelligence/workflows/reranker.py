@@ -289,6 +289,13 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             elif action_key in {"summary.today", "summary.week", "summary.month", "summary.custom"}:
                 score -= 4
 
+        occupancy_intent = bool({"ocupacao", "capacidade", "carga"} & tokens) or (
+            {"horas", "disponiveis"} <= tokens
+        )
+        if occupancy_intent and action_key.startswith("summary."):
+            score -= 10
+            reasons.append("reranker:summary_penalty_for_occupancy")
+
         if {"vencido", "vencidos", "vencida", "vencidas", "atrasado", "atrasados", "atrasada", "atrasadas"} & tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
@@ -353,9 +360,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 score -= 2
                 reasons.append(f"reranker:my_work=open_period_penalty:{period_hint}")
 
-        if {"ocupacao", "capacidade", "carga"} & tokens or (
-            {"horas", "disponiveis"} <= tokens
-        ):
+        if occupancy_intent:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="collaborator.occupancy",
@@ -363,6 +368,9 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 reasons=reasons,
                 label="collaborator=occupancy",
             )
+            if action_key == "collaborator.occupancy":
+                score += 10
+                reasons.append("reranker:occupancy_boost")
 
         if {"colaborador", "usuario", "responsavel", "responsaveis"} & tokens and action_key == "collaborator.occupancy":
             score += 8
@@ -468,6 +476,21 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
         if {"revalidar", "renovar"} & tokens and action_key == "agent_action.revalidate":
             score += 18
             reasons.append("reranker:agent_action=revalidate")
+
+        pending_decision_query = any(
+            snippet in normalized_text
+            for snippet in {
+                "aguardando minha decisao",
+                "aguardando minha decisão",
+                "minha decisao",
+                "minha decisão",
+                "solicitacoes pendentes",
+                "solicitações pendentes",
+            }
+        )
+        if pending_decision_query and action_key == "agent_action.list_pending":
+            score += 24
+            reasons.append("reranker:agent_action=list_pending")
 
         task_tokens = {"atividade", "atividades", "tarefa", "tarefas"} & tokens
         process_tokens = {"instancia", "instancias", "processo", "processos"} & tokens
