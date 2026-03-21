@@ -923,7 +923,14 @@ def _looks_like_command(lower_text: str) -> bool:
             normalized,
         )
     )
-    if is_hitl_operation or is_deadline_rewrite:
+    is_task_completion_operation = bool(
+        re.search(
+            r"\b(dar como conclu(?:ida|ido|ir)|concluir|concluida|concluido|finalizar|encerrar)\b",
+            normalized,
+        )
+        and re.search(r"\b(atividade|atividades|tarefa|tarefas)\b", normalized)
+    )
+    if is_hitl_operation or is_deadline_rewrite or is_task_completion_operation:
         return True
     return (has_command or has_query) and (has_scope or has_status)
 

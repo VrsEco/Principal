@@ -459,6 +459,14 @@ def test_looks_like_command_accepts_deadline_rewrite_short_phrase():
     assert menu_engine._looks_like_command("coloque todas para o dia 31/03/2026") is True
 
 
+def test_looks_like_command_accepts_batch_task_completion_phrase():
+    assert menu_engine._looks_like_command("Pode dar como concluida as atividades de IDs: 24 e 323") is True
+
+
+def test_looks_like_command_accepts_task_completion_without_ids():
+    assert menu_engine._looks_like_command("Pode dar como concluída as atividades") is True
+
+
 def test_extract_fields_from_text_infers_company_collaborator_and_period():
     payload = menu_engine._extract_fields_from_text(
         "Quais as instâncias atrasadas para Caroline Marques da empresa Gandu Investimentos esta semana?"
