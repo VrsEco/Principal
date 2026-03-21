@@ -1,0 +1,322 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Cadastros{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Cadastros</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="catalog-hub-page fade-in">
+    <header class="catalog-hub-header">
+        <div>
+            <h1>Cadastros do Financeiro</h1>
+        </div>
+    </header>
+
+    <section class="catalog-grid">
+        {% for slug, page in catalog_pages.items() %}
+        <a href="/financial/catalogs/{{ slug }}" class="catalog-card">
+            <div class="catalog-card-top">
+                <span class="catalog-badge">{{ page.eyebrow }}</span>
+            </div>
+            <h2>{{ page.title }}</h2>
+            <p>{{ page.description }}</p>
+            <span class="catalog-link">Abrir cadastro →</span>
+        </a>
+        {% endfor %}
+    </section>
+</div>
+
+<style>
+    .catalog-hub-page { padding: 0 2rem 2rem; }
+    .catalog-hub-header { margin-bottom: 1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:780px; }
+    .catalog-grid {
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:1rem;
+    }
+    .catalog-card {
+        display:flex;
+        flex-direction:column;
+        gap:.9rem;
+        padding:1.25rem;
+        border-radius:18px;
+        border:1px solid var(--border);
+        background:var(--surface);
+        box-shadow:var(--shadow-sm);
+        text-decoration:none;
+        color:inherit;
+        transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .catalog-card:hover {
+        transform:translateY(-2px);
+        border-color:var(--primary);
+        box-shadow:var(--shadow-md);
+    }
+    .catalog-card h2 { margin:0; font-size:1.1rem; }
+    .catalog-card p { margin:0; color:var(--text-secondary); line-height:1.55; }
+    .catalog-card-top { display:flex; justify-content:space-between; align-items:center; }
+    .catalog-badge {
+        display:inline-flex;
+        align-items:center;
+        padding:.28rem .65rem;
+        border-radius:999px;
+        background:var(--primary-light);
+        color:var(--primary);
+        font-size:.72rem;
+        font-weight:700;
+    }
+    .catalog-link { margin-top:auto; color:var(--primary); font-weight:700; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    @media (max-width: 960px) {
+        .catalog-hub-page { padding: 0 1rem 1.5rem; }
+        .catalog-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width: 768px) {
+        .catalog-hub-header h1 {
+            font-size: 1.5rem;
+            line-height: 1.2;
+        }
+        .catalog-card {
+            padding: 1rem;
+            border-radius: 16px;
+        }
+        .catalog-card h2 {
+            font-size: 1rem;
+            line-height: 1.3;
+        }
+        .catalog-card p {
+            font-size: .92rem;
+            line-height: 1.5;
+        }
+    }
+    @media (max-width: 520px) {
+        .catalog-hub-page {
+            padding: 0 .75rem 1rem;
+        }
+        .catalog-grid {
+            gap: .75rem;
+        }
+        .catalog-card {
+            padding: .9rem;
+        }
+        .catalog-badge {
+            font-size: .66rem;
+            padding: .24rem .55rem;
+        }
+        .catalog-link {
+            font-size: .9rem;
+        }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+{% endblock %}

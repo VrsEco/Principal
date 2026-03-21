@@ -1,0 +1,1506 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - {{ catalog_page.title }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">{{ catalog_page.title }}</span>
+{% endblock %}
+
+{% block navbar_actions %}{% endblock %}
+
+{% block workspace_content %}
+<div class="cw-page fade-in" data-company-id="{{ company_id or '' }}" data-catalog-type="{{ catalog_page.api_type }}">
+    <header class="cw-header">
+        <div>
+            <h1>{{ catalog_page.title }}</h1>
+        </div>
+        <button class="btn btn-primary" type="button" onclick="startNewItem()">{{ catalog_page.new_label or 'Novo cadastro' }}</button>
+    </header>
+
+    <section class="cw-shell">
+        <aside class="cw-list-rail">
+            <div class="cw-sidebar-card">
+                <div class="cw-sidebar-header">
+                    <h3>{{ catalog_page.title }}</h3>
+                    <span class="cw-counter" id="cw-counter">0</span>
+                </div>
+                <label class="cw-search">
+                    <span>Buscar</span>
+                    <input id="cw-search-input" type="search" placeholder="Código ou nome">
+                </label>
+                <div id="cw-list" class="cw-list">
+                    <div class="empty-state">Carregando cadastro...</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="cw-main">
+            <section class="cw-panel">
+                <form id="cw-form" class="cw-form"></form>
+            </section>
+        </main>
+
+        <aside class="cw-tabs-rail">
+            <div class="cw-sidebar-card">
+                <h3>Seções</h3>
+                <nav class="cw-section-nav" id="cw-section-nav"></nav>
+            </div>
+        </aside>
+    </section>
+</div>
+
+<style>
+    .cw-page { padding:0 2rem 2rem; }
+    .cw-header {
+        margin-bottom:1rem;
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:1rem;
+    }
+    .cw-shell { display:grid; grid-template-columns:320px minmax(0,1fr) 250px; gap:1rem; align-items:start; }
+    .cw-shell.single-page { grid-template-columns:320px minmax(0,1fr); }
+    .cw-shell.single-page .cw-tabs-rail { display:none; }
+    .cw-list-rail,
+    .cw-tabs-rail {
+        display:flex;
+        flex-direction:column;
+        gap:1rem;
+        position:sticky;
+        top:1rem;
+    }
+    .cw-sidebar-card,
+    .cw-panel {
+        background:var(--surface);
+        border:1px solid var(--border);
+        border-radius:18px;
+        box-shadow:var(--shadow-sm);
+    }
+    .cw-sidebar-card { padding:1rem; }
+    .cw-sidebar-card h3 { margin:0; }
+    .cw-sidebar-header {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:.75rem;
+    }
+    .cw-counter {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:30px;
+        height:30px;
+        padding:0 .5rem;
+        border-radius:999px;
+        background:var(--primary-light);
+        color:var(--primary);
+        font-weight:700;
+        font-size:.78rem;
+    }
+    .cw-search {
+        display:flex;
+        flex-direction:column;
+        gap:.4rem;
+        margin:1rem 0;
+        color:var(--text-secondary);
+        font-weight:600;
+    }
+    .cw-search input,
+    .cw-form input,
+    .cw-form select,
+    .cw-form textarea {
+        background:var(--surface-secondary);
+        border:1px solid var(--border);
+        border-radius:12px;
+        padding:.78rem .9rem;
+        color:var(--text-primary);
+    }
+    .cw-list {
+        display:flex;
+        flex-direction:column;
+        gap:.75rem;
+        max-height:calc(100vh - 320px);
+        overflow:auto;
+        padding-right:.2rem;
+    }
+    .cw-list.compact-tree {
+        gap:.35rem;
+    }
+    .cw-list-item {
+        border:1px solid transparent;
+        background:transparent;
+        border-radius:10px;
+        padding:.45rem .5rem;
+        cursor:pointer;
+        transition:all .15s ease;
+    }
+    .cw-list-item:hover,
+    .cw-list-item.active {
+        border-color:rgba(37, 99, 235, 0.12);
+        background:var(--surface-secondary);
+        box-shadow:none;
+        transform:none;
+    }
+    .cw-list-item-line {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.75rem;
+    }
+    .cw-list-item-title {
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:.2rem;
+    }
+    .cw-list-item-title strong,
+    .cw-list-item-title span {
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+    }
+    .cw-list-item-title span {
+        color:var(--text-secondary);
+        font-size:.78rem;
+        line-height:1.2;
+    }
+    .cw-list-item-status {
+        color:var(--text-secondary);
+        font-size:.72rem;
+        font-weight:700;
+        white-space:nowrap;
+    }
+    .cw-list-item-actions {
+        display:flex;
+        gap:.35rem;
+        flex-wrap:wrap;
+        margin-top:.4rem;
+    }
+    .cw-list-item-actions .btn {
+        padding:.34rem .5rem;
+        font-size:.72rem;
+        border-radius:8px;
+    }
+    .cw-tree {
+        display:flex;
+        flex-direction:column;
+        gap:.25rem;
+    }
+    .cw-tree-node {
+        display:flex;
+        flex-direction:column;
+        gap:.2rem;
+    }
+    .cw-tree-children {
+        display:flex;
+        flex-direction:column;
+        gap:.25rem;
+        margin-left:.5rem;
+        padding-left:.6rem;
+        border-left:1px dashed var(--border);
+    }
+    .cw-tree-children.collapsed {
+        display:none;
+    }
+    .cw-tree-toggle {
+        width:1.2rem;
+        height:1.2rem;
+        border:none;
+        border-radius:6px;
+        background:transparent;
+        color:var(--text-secondary);
+        font-weight:700;
+        cursor:pointer;
+        flex-shrink:0;
+        font-size:.8rem;
+        margin-top:.05rem;
+    }
+    .cw-tree-toggle.placeholder {
+        visibility:hidden;
+    }
+    .cw-tree-title-wrap {
+        display:flex;
+        align-items:flex-start;
+        gap:.35rem;
+        min-width:0;
+    }
+    .cw-tree-title-content {
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:.08rem;
+    }
+    .cw-tree-title-content strong,
+    .cw-tree-title-content span {
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+    }
+    .cw-tree-title-content strong {
+        font-size:.82rem;
+        line-height:1.2;
+        font-weight:700;
+    }
+    .cw-tree-title-content span {
+        color:var(--text-secondary);
+        font-size:.72rem;
+        line-height:1.15;
+    }
+    .cw-panel { overflow:hidden; }
+    .cw-form { padding:1.1rem; display:grid; gap:1rem; }
+    .cw-form-section { display:none; gap:1rem; }
+    .cw-form-section.active { display:grid; }
+    .section-title h3 { margin:0; }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .form-grid label {
+        display:flex;
+        flex-direction:column;
+        gap:.42rem;
+        color:var(--text-secondary);
+        font-weight:600;
+    }
+    .form-grid fieldset {
+        border:1px solid var(--border);
+        border-radius:12px;
+        padding:.75rem .9rem;
+        display:flex;
+        flex-direction:column;
+        gap:.65rem;
+        color:var(--text-secondary);
+        min-width:0;
+    }
+    .form-grid legend {
+        padding:0 .35rem;
+        font-weight:700;
+        color:var(--text-secondary);
+    }
+    .cw-radio-group {
+        display:flex;
+        flex-direction:column;
+        gap:.55rem;
+    }
+    .cw-radio-option {
+        display:flex !important;
+        flex-direction:row !important;
+        align-items:center;
+        gap:.5rem;
+        font-weight:600;
+        color:var(--text-primary);
+    }
+    .cw-radio-option input {
+        width:auto;
+        margin:0;
+    }
+    .cw-field-hidden {
+        display:none !important;
+    }
+    .field-hint {
+        margin-top:-.15rem;
+        color:var(--text-tertiary);
+        font-size:.78rem;
+        font-weight:600;
+    }
+    .col-span-2 { grid-column:span 2; }
+    .cw-form-actions {
+        display:flex;
+        gap:.75rem;
+        flex-wrap:wrap;
+        justify-content:flex-end;
+        padding-top:.5rem;
+    }
+    .cw-section-nav {
+        display:flex;
+        flex-direction:column;
+        gap:.5rem;
+        margin-top:1rem;
+    }
+    .cw-section-btn {
+        border:none;
+        background:var(--surface-secondary);
+        color:var(--text-secondary);
+        border-radius:12px;
+        padding:.8rem .95rem;
+        text-align:left;
+        font-weight:700;
+        cursor:pointer;
+    }
+    .cw-section-btn.active {
+        background:var(--primary-light);
+        color:var(--primary);
+        border:1px solid rgba(37, 99, 235, 0.16);
+    }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .btn-danger { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
+    .empty-state { text-align:center; color:var(--text-tertiary); padding:1.5rem 1rem; }
+
+    @media (max-width: 1180px) {
+        .cw-shell { grid-template-columns:280px minmax(0,1fr) 230px; }
+    }
+    @media (max-width: 960px) {
+        .cw-page { padding:0 1rem 1.5rem; }
+        .cw-shell { grid-template-columns:1fr; }
+        .cw-list-rail,
+        .cw-tabs-rail { position:static; }
+        .cw-list { max-height:none; }
+        .cw-shell.single-page { grid-template-columns:1fr; }
+    }
+    @media (max-width: 768px) {
+        .cw-header { flex-direction:column; }
+        .cw-header h1 { font-size:1.5rem; line-height:1.2; }
+        .cw-header .btn { width:100%; justify-content:center; }
+        .form-grid { grid-template-columns:1fr; }
+        .col-span-2 { grid-column:auto; }
+        .cw-form-actions { flex-direction:column; }
+        .cw-form-actions .btn { width:100%; }
+    }
+    @media (max-width: 520px) {
+        .cw-page { padding:0 .75rem 1rem; }
+        .cw-section-btn { padding:.72rem .82rem; }
+        .cw-form input,
+        .cw-form select,
+        .cw-form textarea,
+        .cw-search input { font-size:16px; }
+        .cw-list-item-actions { flex-direction:column; }
+        .cw-list-item-actions .btn { width:100%; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.cw-page')?.dataset.companyId);
+    const activeCatalog = document.querySelector('.cw-page')?.dataset.catalogType;
+    const catalogDefs = {
+        bank_accounts: {
+            titleField: 'name',
+            sections: [
+                { key: 'main', label: 'Dados principais' },
+                { key: 'account', label: 'Dados da conta' },
+                { key: 'holder', label: 'Titularidade e PIX' },
+                { key: 'notes', label: 'Outros dados / observações' },
+            ],
+            fields: [
+                { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'bank_code', label: 'Código do banco', section: 'account' },
+                { name: 'bank_name', label: 'Banco', section: 'account' },
+                { name: 'branch_number', label: 'Agência', section: 'account' },
+                { name: 'account_number', label: 'Conta', section: 'account' },
+                { name: 'account_digit', label: 'Dígito', section: 'account' },
+                { name: 'holder_name', label: 'Titular', section: 'holder' },
+                { name: 'holder_document', label: 'CPF / CNPJ', section: 'holder', inputmode: 'numeric', maxlength: 18, oninput: 'handleDocumentInput(this)', hintId: 'cw-document-type', hint: 'Digite CPF ou CNPJ' },
+                { name: 'pix_key', label: 'PIX', section: 'holder', colSpan: 2 },
+                { name: 'metadata_notes', label: 'Observações', section: 'notes', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        chart_accounts: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [
+                { key: 'main', label: 'Dados principais' },
+            ],
+            fields: [
+                { name: 'code', type: 'hidden', section: 'main' },
+                { name: 'parent_id', label: 'Conta pai', section: 'main', type: 'dynamic-select', optionSource: 'hierarchy_parent', placeholderOption: 'Sem conta pai' },
+                { name: 'code_suffix', label: 'Código da conta', section: 'main', inputmode: 'numeric', maxlength: 10, oninput: 'handleCodeSuffixInput(this)', hintId: 'cw-code-preview', hint: 'Código completo: -' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'account_kind', label: 'Tipo', section: 'main', type: 'select', options: [['asset', 'Ativo'], ['liability', 'Passivo'], ['equity', 'Patrimônio Líquido'], ['revenue', 'Receita'], ['result', 'Custo'], ['expense', 'Despesa']] },
+                { name: 'account_level_type', label: 'Estrutura', section: 'main', type: 'select', options: [['analytic', 'Analítica'], ['synthetic', 'Sintética']] },
+                { name: 'reduced_code', label: 'Código reduzido', section: 'main', maxlength: 3, hint: 'Até 3 caracteres alfanuméricos' },
+                { name: 'external_code', label: 'Plano de contas externo', section: 'main', maxlength: 120, hint: 'Campo livre para código do sistema externo' },
+                { name: 'metadata_notes', label: 'Outros dados / observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        cost_centers: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [
+                { key: 'main', label: 'Dados principais' },
+            ],
+            fields: [
+                { name: 'code', type: 'hidden', section: 'main' },
+                { name: 'parent_id', label: 'Centro pai', section: 'main', type: 'dynamic-select', optionSource: 'hierarchy_parent', placeholderOption: 'Sem centro pai' },
+                { name: 'code_suffix', label: 'Código do centro', section: 'main', inputmode: 'numeric', maxlength: 10, oninput: 'handleCodeSuffixInput(this)', hintId: 'cw-code-preview', hint: 'Código completo: -' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'reduced_code', label: 'Código reduzido', section: 'main', maxlength: 3, hint: 'Até 3 caracteres alfanuméricos' },
+                { name: 'external_code', label: 'Centro de resultados externo', section: 'main', maxlength: 120, hint: 'Campo livre para código do sistema externo' },
+                { name: 'manager_employee_id', label: 'Gestor', section: 'main', type: 'number' },
+                { name: 'description', label: 'Outros dados / observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        account_categories: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [{ key: 'main', label: 'Dados principais' }],
+            fields: [
+                { name: 'code', label: 'Código', section: 'main', required: true, maxlength: 30, hint: 'Livre: ex. 21, 2-1, 2.1, 2.01, 2100, 0021' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        payment_terms: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [{ key: 'main', label: 'Dados principais' }],
+            fields: [
+                { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'installment_count', label: 'Quantidade de parcelas', section: 'main', type: 'number', min: 1, max: 360, hint: 'Use 1 para condição à vista' },
+                { name: 'interval_days', label: 'Intervalo entre parcelas (dias)', section: 'main', type: 'number', min: 0, max: 3650, hint: 'Ex.: 30 para mensal' },
+                { name: 'external_code', label: 'Condição de pagamento externa', section: 'main', maxlength: 120, hint: 'Campo livre para integração com ERP ou sistema parceiro' },
+                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        asset_accounts: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [{ key: 'main', label: 'Dados principais' }],
+            fields: [
+                { name: 'code', label: 'Código', section: 'main', required: true, maxlength: 30, hint: 'Livre: ex. 21, 2-1, 2.1, 2.01, 2100, 0021' },
+                { name: 'name', label: 'Descrição', section: 'main', required: true, colSpan: 2 },
+                { name: 'patrimonial_type', label: 'Tipo', section: 'main', type: 'radio-group', options: [['asset', 'Ativo'], ['liability', 'Passivo'], ['equity', 'Patrimônio Líquido']] },
+                { name: 'account_class', label: 'Classe', section: 'main', type: 'radio-group', options: [['current', 'Circulante'], ['non_current', 'Não Circulante']] },
+                { name: 'category_id', label: 'Categoria', section: 'main', type: 'dynamic-select', optionSource: 'account_categories', placeholderOption: 'Selecione...' },
+                { name: 'chart_account_ids', label: 'Planos de Conta', section: 'main', type: 'multi-dynamic-select', optionSource: 'chart_accounts', placeholderOption: 'Selecione os planos de contas', colSpan: 2 },
+                { name: 'config_mode', label: 'Configurações', section: 'main', type: 'radio-group', options: [['due_dates', 'Por datas de Vcto'], ['bank_balances', 'Por Saldo das Contas Bancárias'], ['manual_value', 'Por Valor Digitado']], colSpan: 2, onchange: 'handleAssetConfigModeChange(this.value)' },
+                { name: 'due_scope', label: 'Por datas de Vcto', section: 'main', type: 'select', options: [['overdue', 'Vencidas'], ['all_future', 'Todas a Vencer'], ['due_in_days', 'A Vencer em dias']], visibilityMode: 'due_dates', onchange: 'updateAssetAccountConfigVisibility()' },
+                { name: 'due_in_days', label: 'A Vencer em dias', section: 'main', type: 'number', min: 0, max: 3650, visibilityMode: 'due_dates', visibilityDueScope: 'due_in_days' },
+                { name: 'bank_account_ids', label: 'Por Saldo das Contas Bancárias', section: 'main', type: 'multi-dynamic-select', optionSource: 'bank_accounts', placeholderOption: 'Selecione as contas bancárias', colSpan: 2, visibilityMode: 'bank_balances' },
+                { name: 'manual_value', label: 'Por Valor Digitado', section: 'main', type: 'number', min: 0, step: '0.01', visibilityMode: 'manual_value' },
+                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        correction_indexes: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [{ key: 'main', label: 'Dados principais' }],
+            fields: [
+                { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'chart_account_id', label: 'Plano de contas', section: 'main', type: 'dynamic-select', optionSource: 'chart_accounts', placeholderOption: 'Selecione uma conta analítica' },
+                { name: 'interest_rate', label: 'Alíquota Juros (%)', section: 'main', type: 'number', step: '0.0001', min: '0', max: '100' },
+                { name: 'interest_period', label: 'Período Juros', section: 'main', type: 'select', options: [['daily', 'Diário'], ['monthly', 'Mensal']] },
+                { name: 'penalty_rate', label: 'Alíquota Multa (%)', section: 'main', type: 'number', step: '0.0001', min: '0', max: '100' },
+                { name: 'penalty_period', label: 'Período Multa', section: 'main', type: 'select', options: [['daily', 'Diário'], ['monthly', 'Mensal']] },
+                { name: 'penalty_limit_rate', label: 'Limite da Multa (%)', section: 'main', type: 'number', step: '0.0001', min: '0', max: '100' },
+                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        discount_rules: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [{ key: 'main', label: 'Dados principais' }],
+            fields: [
+                { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'chart_account_id', label: 'Plano de contas', section: 'main', type: 'dynamic-select', optionSource: 'chart_accounts', placeholderOption: 'Selecione uma conta analítica', hint: 'Conta usada no lançamento secundário do desconto' },
+                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        payment_methods: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [{ key: 'main', label: 'Dados principais' }],
+            fields: [
+                { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'operation_type', label: 'Uso', section: 'main', type: 'select', options: [['both', 'Pagamento e recebimento'], ['payable', 'Somente pagamento'], ['receivable', 'Somente recebimento']] },
+                { name: 'settlement_days', label: 'Prazo de liquidação (dias)', section: 'main', type: 'number', min: 0, max: 3650, hint: 'Dias esperados para compensação' },
+                { name: 'external_code', label: 'Forma externa', section: 'main', maxlength: 120, hint: 'Campo livre para integração com outros sistemas' },
+                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+    };
+
+    let editingId = null;
+    let selectedListId = null;
+    let allItems = [];
+    const collapsedTreeNodes = new Set();
+    const deletableCatalogs = new Set(['chart_accounts', 'cost_centers', 'account_categories', 'payment_terms', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods']);
+    const auxiliaryData = { chart_accounts: [], account_categories: [], bank_accounts: [] };
+
+    function getCatalogDef() {
+        return catalogDefs[activeCatalog];
+    }
+
+    function renderSectionNav() {
+        const def = getCatalogDef();
+        const nav = document.getElementById('cw-section-nav');
+        if (def.singlePage) {
+            nav.innerHTML = '';
+            return;
+        }
+        nav.innerHTML = def.sections.map((section, index) => `
+            <button type="button" class="cw-section-btn ${index === 0 ? 'active' : ''}" data-section="${section.key}" onclick="activateSection('${section.key}')">
+                ${section.label}
+            </button>
+        `).join('');
+    }
+
+    function activateSection(sectionKey) {
+        document.querySelectorAll('.cw-section-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.section === sectionKey);
+        });
+        document.querySelectorAll('.cw-form-section').forEach(section => {
+            section.classList.toggle('active', section.dataset.section === sectionKey);
+        });
+    }
+
+    function fieldHtml(field) {
+        const colSpanClass = field.colSpan === 2 ? 'col-span-2' : '';
+        const requiredAttr = field.required ? 'required' : '';
+        const numericAttr = field.type === 'number'
+            ? `type="number"${field.min !== undefined ? ` min="${field.min}"` : ''}${field.max !== undefined ? ` max="${field.max}"` : ''}${field.step !== undefined ? ` step="${field.step}"` : ''}`
+            : '';
+        const readonlyAttr = field.readonly ? 'readonly' : '';
+        const placeholderAttr = field.placeholder ? `placeholder="${field.placeholder}"` : '';
+        const inputmodeAttr = field.inputmode ? `inputmode="${field.inputmode}"` : '';
+        const maxlengthAttr = field.maxlength ? `maxlength="${field.maxlength}"` : '';
+        const oninputAttr = field.oninput ? `oninput="${field.oninput}"` : '';
+        const onchangeAttr = field.onchange ? `onchange="${field.onchange}"` : '';
+        const hintHtml = field.hint ? `<small class="field-hint"${field.hintId ? ` id="${field.hintId}"` : ''}>${field.hint}</small>` : '';
+
+        if (field.type === 'hidden') {
+            return `<input type="hidden" name="${field.name}">`;
+        }
+
+        if (field.type === 'textarea') {
+            return `
+                <label class="${colSpanClass}">
+                    <span>${field.label}</span>
+                    <textarea name="${field.name}" rows="5" ${requiredAttr}></textarea>
+                    ${hintHtml}
+                </label>
+            `;
+        }
+
+        if (field.type === 'select') {
+            return `
+                <label class="${colSpanClass}">
+                    <span>${field.label}</span>
+                    <select name="${field.name}" ${onchangeAttr}>
+                        ${field.options.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}
+                    </select>
+                </label>
+            `;
+        }
+
+        if (field.type === 'radio-group') {
+            return `
+                <fieldset class="${colSpanClass}" data-field-name="${field.name}">
+                    <legend>${field.label}</legend>
+                    <div class="cw-radio-group">
+                        ${field.options.map(([value, label], index) => `
+                            <label class="cw-radio-option">
+                                <input type="radio" name="${field.name}" value="${value}" ${index === 0 ? 'checked' : ''} ${field.onchange ? `onchange="${field.onchange}"` : ''}>
+                                <span>${label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </fieldset>
+            `;
+        }
+
+        if (field.type === 'dynamic-select') {
+            return `
+                <label class="${colSpanClass}">
+                    <span>${field.label}</span>
+                    <select name="${field.name}" data-option-source="${field.optionSource || ''}" onchange="${field.onchange || 'updateGeneratedCode()'}">
+                        <option value="">${field.placeholderOption || 'Selecione'}</option>
+                    </select>
+                </label>
+            `;
+        }
+
+        if (field.type === 'multi-dynamic-select') {
+            return `
+                <label class="${colSpanClass}">
+                    <span>${field.label}</span>
+                    <select name="${field.name}" data-option-source="${field.optionSource || ''}" multiple size="6" ${onchangeAttr}>
+                    </select>
+                    ${hintHtml}
+                </label>
+            `;
+        }
+
+        return `
+            <label class="${colSpanClass}">
+                <span>${field.label}</span>
+                <input name="${field.name}" ${numericAttr} ${requiredAttr} ${readonlyAttr} ${placeholderAttr} ${inputmodeAttr} ${maxlengthAttr} ${oninputAttr} ${onchangeAttr}>
+                ${hintHtml}
+            </label>
+        `;
+    }
+
+    function renderForm() {
+        const def = getCatalogDef();
+        const form = document.getElementById('cw-form');
+        const sectionsHtml = def.sections.map((section, index) => {
+            const fieldsHtml = def.fields
+                .filter(field => field.section === section.key)
+                .map(field => fieldHtml(field))
+                .join('');
+
+            const statusField = section.key === 'main'
+                ? `
+                    <label>
+                        <span>Status</span>
+                        <input id="cw-status-display" value="Ativo" readonly tabindex="-1">
+                    </label>
+                `
+                : '';
+
+            return `
+                <section class="cw-form-section ${index === 0 ? 'active' : ''}" data-section="${section.key}">
+                    ${def.singlePage ? '' : `
+                    <div class="section-title">
+                        <h3>${section.label.charAt(0).toUpperCase() + section.label.slice(1)}</h3>
+                    </div>`}
+                    <div class="form-grid">
+                        ${fieldsHtml}
+                        ${statusField}
+                    </div>
+                </section>
+            `;
+        }).join('');
+
+        form.innerHTML = `
+            <input type="hidden" name="id" value="">
+            ${sectionsHtml}
+            <div class="cw-form-actions">
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Cancelar edição</button>
+                <button type="submit" class="btn btn-primary">Salvar cadastro</button>
+            </div>
+        `;
+        form.onsubmit = saveItem;
+        applyDefaultValues();
+    }
+
+    function updateStatusDisplay(isActive = true) {
+        const field = document.getElementById('cw-status-display');
+        if (field) {
+            field.value = isActive ? 'Ativo' : 'Inativo';
+        }
+    }
+
+    function digitsOnly(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
+
+    function formatDocumentValue(value) {
+        const digits = digitsOnly(value).slice(0, 14);
+        if (!digits) return { formatted: '', type: '' };
+        if (digits.length <= 11) {
+            return {
+                formatted: digits
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d{1,2})$/, '$1-$2'),
+                type: digits.length === 11 ? 'CPF' : 'CPF em digitação',
+            };
+        }
+        return {
+            formatted: digits
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2'),
+            type: digits.length === 14 ? 'CNPJ' : 'CNPJ em digitação',
+        };
+    }
+
+    function updateDocumentTypeLabel(type) {
+        const hint = document.getElementById('cw-document-type');
+        if (!hint) return;
+        hint.textContent = type || 'Digite CPF ou CNPJ';
+    }
+
+    function handleDocumentInput(input) {
+        if (!input) return;
+        const { formatted, type } = formatDocumentValue(input.value);
+        input.value = formatted;
+        updateDocumentTypeLabel(type);
+    }
+
+    function getHierarchyParentOptions() {
+        const blockedIds = new Set();
+        if (editingId) {
+            const stack = [editingId];
+            while (stack.length) {
+                const currentId = stack.pop();
+                blockedIds.add(currentId);
+                allItems
+                    .filter(item => item.parent_id === currentId)
+                    .forEach(item => {
+                        if (!blockedIds.has(item.id)) stack.push(item.id);
+                    });
+            }
+        }
+        return allItems
+            .filter(item => {
+                if (blockedIds.has(item.id)) return false;
+                if (activeCatalog === 'chart_accounts') {
+                    if (item.accepts_posting === true) return false;
+                }
+                return true;
+            })
+            .map(item => ({
+                value: String(item.id),
+                label: `${item.code || '-'} - ${item.name || '-'}`,
+            }));
+    }
+
+    function hydrateDynamicSelects() {
+        document.querySelectorAll('select[data-option-source]').forEach(select => {
+            const source = select.dataset.optionSource;
+            const currentValue = select.value;
+            let options = [];
+            if (source === 'hierarchy_parent') {
+                options = getHierarchyParentOptions();
+            } else if (source === 'chart_accounts') {
+                options = auxiliaryData.chart_accounts
+                    .filter(item => item.is_active !== false && item.accepts_posting === true)
+                    .map(item => ({
+                        value: String(item.id),
+                        label: `${item.code || '-'} - ${item.name || '-'}`,
+                    }));
+            } else if (source === 'account_categories') {
+                options = auxiliaryData.account_categories
+                    .filter(item => item.is_active !== false)
+                    .map(item => ({
+                        value: String(item.id),
+                        label: `${item.code || '-'} - ${item.name || '-'}`,
+                    }));
+            } else if (source === 'bank_accounts') {
+                options = auxiliaryData.bank_accounts
+                    .filter(item => item.is_active !== false)
+                    .map(item => ({
+                        value: String(item.id),
+                        label: `${item.code || '-'} - ${item.name || '-'}`,
+                    }));
+            }
+            const placeholder = select.querySelector('option[value=""]')?.textContent || 'Selecione';
+            if (select.multiple) {
+                select.innerHTML = `${options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}`;
+            } else {
+                select.innerHTML = `<option value="">${placeholder}</option>${options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}`;
+            }
+            if (currentValue) {
+                select.value = currentValue;
+            }
+        });
+    }
+
+    function normalizeHierarchicalSuffixInput(value) {
+        return digitsOnly(value).slice(0, 10);
+    }
+
+    function updateGeneratedCode() {
+        if (!['chart_accounts', 'cost_centers'].includes(activeCatalog)) return;
+        const form = document.getElementById('cw-form');
+        if (!form) return;
+        const codeField = form.querySelector('[name="code"]');
+        const parentField = form.querySelector('[name="parent_id"]');
+        const suffixField = form.querySelector('[name="code_suffix"]');
+        if (!codeField || !suffixField) return;
+
+        const rawSuffix = normalizeHierarchicalSuffixInput(suffixField.value);
+        if (suffixField.value !== rawSuffix) {
+            suffixField.value = rawSuffix;
+        }
+        const suffix = rawSuffix || '';
+
+        let baseCode = '';
+        if (parentField && parentField.value) {
+            const parent = allItems.find(item => String(item.id) === String(parentField.value));
+            baseCode = parent?.code || '';
+        }
+
+        const fullCode = suffix ? (baseCode ? `${baseCode}.${suffix}` : suffix) : '';
+        codeField.value = fullCode;
+        const hint = document.getElementById('cw-code-preview');
+        if (hint) {
+            hint.textContent = `Código completo: ${fullCode || '-'}`;
+        }
+    }
+
+    function handleCodeSuffixInput(input) {
+        if (!input) return;
+        input.value = normalizeHierarchicalSuffixInput(input.value);
+        updateGeneratedCode();
+    }
+
+    function applyDefaultValues() {
+        const form = document.getElementById('cw-form');
+        if (activeCatalog === 'chart_accounts') {
+            const levelField = form.querySelector('[name="account_level_type"]');
+            if (levelField && !levelField.value) levelField.value = 'analytic';
+        }
+        if (activeCatalog === 'asset_accounts') {
+            form.querySelector('[name="patrimonial_type"][value="asset"]')?.setAttribute('checked', 'checked');
+            form.querySelector('[name="account_class"][value="current"]')?.setAttribute('checked', 'checked');
+            form.querySelector('[name="config_mode"][value="due_dates"]')?.setAttribute('checked', 'checked');
+        }
+        updateStatusDisplay(true);
+        updateDocumentTypeLabel('');
+        hydrateDynamicSelects();
+        updateGeneratedCode();
+        updateAssetAccountConfigVisibility();
+    }
+
+    function updateAssetAccountConfigVisibility() {
+        if (activeCatalog !== 'asset_accounts') return;
+        const form = document.getElementById('cw-form');
+        if (!form) return;
+        const configMode = form.querySelector('[name="config_mode"]:checked')?.value || 'due_dates';
+        const dueScope = form.querySelector('[name="due_scope"]')?.value || 'overdue';
+        getCatalogDef().fields.forEach(field => {
+            const el = form.querySelector(`[name="${field.name}"]`)?.closest('label, fieldset');
+            if (!el) return;
+            const byMode = !field.visibilityMode || field.visibilityMode === configMode;
+            const byScope = !field.visibilityDueScope || field.visibilityDueScope === dueScope;
+            el.classList.toggle('cw-field-hidden', !(byMode && byScope));
+        });
+    }
+
+    function handleAssetConfigModeChange() {
+        updateAssetAccountConfigVisibility();
+    }
+
+    function normalizeValue(field, value) {
+        if (value === '') return null;
+        if (['parent_id', 'manager_employee_id', 'installment_count', 'interval_days', 'settlement_days', 'chart_account_id', 'category_id', 'due_in_days'].includes(field)) return Number(value);
+        if (field === 'value') return Number(value);
+        if (['interest_rate', 'penalty_rate', 'penalty_limit_rate', 'manual_value'].includes(field)) return Number(value);
+        if (field === 'reduced_code') return String(value).trim().toLowerCase();
+        if (field === 'external_code') return String(value).trim() || null;
+        return value;
+    }
+
+    function resetForm() {
+        editingId = null;
+        selectedListId = null;
+        renderForm();
+        document.querySelector('#cw-form [name="id"]').value = '';
+        renderList(allItems);
+        activateSection(getCatalogDef().sections[0].key);
+    }
+
+    function startNewItem() {
+        resetForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function fillForm(item) {
+        editingId = item.id;
+        selectedListId = item.id;
+        renderForm();
+        const form = document.getElementById('cw-form');
+        form.querySelector('[name="id"]').value = item.id;
+        Object.entries(item).forEach(([key, value]) => {
+            const field = form.querySelector(`[name="${key}"]`);
+            if (field) field.value = value ?? '';
+        });
+        if (activeCatalog === 'bank_accounts') {
+            const notesField = form.querySelector('[name="metadata_notes"]');
+            if (notesField) {
+                notesField.value = item?.metadata_json?.notes || '';
+            }
+            handleDocumentInput(form.querySelector('[name="holder_document"]'));
+        }
+        if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
+            const suffixField = form.querySelector('[name="code_suffix"]');
+            const reducedCodeField = form.querySelector('[name="reduced_code"]');
+            const externalCodeField = form.querySelector('[name="external_code"]');
+            const parentField = form.querySelector('[name="parent_id"]');
+            const derivedSuffix = item?.metadata_json?.code_suffix || String(item.code || '').split('.').pop() || '';
+            if (suffixField) suffixField.value = derivedSuffix;
+            if (reducedCodeField) reducedCodeField.value = item?.metadata_json?.reduced_code || '';
+            if (externalCodeField) externalCodeField.value = item?.metadata_json?.external_code || '';
+            const notesField = form.querySelector('[name="metadata_notes"]');
+            if (notesField) {
+                notesField.value = item?.metadata_json?.notes || '';
+            }
+            if (activeCatalog === 'chart_accounts') {
+                const levelField = form.querySelector('[name="account_level_type"]');
+                if (levelField) {
+                    levelField.value = item?.metadata_json?.account_level_type || (item.accepts_posting ? 'analytic' : 'synthetic');
+                }
+            }
+            if (parentField && item.parent_id) parentField.value = String(item.parent_id);
+            updateGeneratedCode();
+        }
+        if (['account_categories', 'payment_terms', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods'].includes(activeCatalog)) {
+            const externalCodeField = form.querySelector('[name="external_code"]');
+            if (externalCodeField) externalCodeField.value = item?.metadata_json?.external_code || '';
+            const installmentCountField = form.querySelector('[name="installment_count"]');
+            if (installmentCountField) installmentCountField.value = item?.metadata_json?.installment_count ?? 1;
+            const intervalDaysField = form.querySelector('[name="interval_days"]');
+            if (intervalDaysField) intervalDaysField.value = item?.metadata_json?.interval_days ?? 30;
+            const patrimonialTypeField = form.querySelector(`[name="patrimonial_type"][value="${item?.metadata_json?.patrimonial_type || 'asset'}"]`);
+            if (patrimonialTypeField) patrimonialTypeField.checked = true;
+            const accountClassField = form.querySelector(`[name="account_class"][value="${item?.metadata_json?.account_class || 'current'}"]`);
+            if (accountClassField) accountClassField.checked = true;
+            const categoryField = form.querySelector('[name="category_id"]');
+            if (categoryField) categoryField.value = item?.metadata_json?.category_id ? String(item.metadata_json.category_id) : '';
+            const chartAccountIdsField = form.querySelector('[name="chart_account_ids"]');
+            if (chartAccountIdsField) {
+                const selectedIds = new Set((item?.metadata_json?.chart_account_ids || []).map(String));
+                Array.from(chartAccountIdsField.options).forEach(option => option.selected = selectedIds.has(option.value));
+            }
+            const configModeField = form.querySelector(`[name="config_mode"][value="${item?.metadata_json?.config_mode || 'due_dates'}"]`);
+            if (configModeField) configModeField.checked = true;
+            const dueScopeField = form.querySelector('[name="due_scope"]');
+            if (dueScopeField) dueScopeField.value = item?.metadata_json?.due_scope || 'overdue';
+            const dueInDaysField = form.querySelector('[name="due_in_days"]');
+            if (dueInDaysField) dueInDaysField.value = item?.metadata_json?.due_in_days ?? '';
+            const bankAccountIdsField = form.querySelector('[name="bank_account_ids"]');
+            if (bankAccountIdsField) {
+                const selectedBankIds = new Set((item?.metadata_json?.bank_account_ids || []).map(String));
+                Array.from(bankAccountIdsField.options).forEach(option => option.selected = selectedBankIds.has(option.value));
+            }
+            const manualValueField = form.querySelector('[name="manual_value"]');
+            if (manualValueField) manualValueField.value = item?.metadata_json?.manual_value ?? '';
+            const correctionChartAccountField = form.querySelector('[name="chart_account_id"]');
+            if (correctionChartAccountField) correctionChartAccountField.value = item?.metadata_json?.chart_account_id ? String(item.metadata_json.chart_account_id) : '';
+            const interestRateField = form.querySelector('[name="interest_rate"]');
+            if (interestRateField) interestRateField.value = item?.metadata_json?.interest_rate ?? '';
+            const interestPeriodField = form.querySelector('[name="interest_period"]');
+            if (interestPeriodField) interestPeriodField.value = item?.metadata_json?.interest_period || 'daily';
+            const penaltyRateField = form.querySelector('[name="penalty_rate"]');
+            if (penaltyRateField) penaltyRateField.value = item?.metadata_json?.penalty_rate ?? '';
+            const penaltyPeriodField = form.querySelector('[name="penalty_period"]');
+            if (penaltyPeriodField) penaltyPeriodField.value = item?.metadata_json?.penalty_period || 'daily';
+            const penaltyLimitRateField = form.querySelector('[name="penalty_limit_rate"]');
+            if (penaltyLimitRateField) penaltyLimitRateField.value = item?.metadata_json?.penalty_limit_rate ?? '';
+            const discountTypeField = form.querySelector('[name="discount_type"]');
+            if (discountTypeField) discountTypeField.value = item?.metadata_json?.discount_type || 'percentage';
+            const chartAccountField = form.querySelector('[name="chart_account_id"]');
+            if (chartAccountField) chartAccountField.value = item?.metadata_json?.chart_account_id ? String(item.metadata_json.chart_account_id) : '';
+            const operationTypeField = form.querySelector('[name="operation_type"]');
+            if (operationTypeField) operationTypeField.value = item?.metadata_json?.operation_type || 'both';
+            const settlementDaysField = form.querySelector('[name="settlement_days"]');
+            if (settlementDaysField) settlementDaysField.value = item?.metadata_json?.settlement_days ?? 0;
+            const valueField = form.querySelector('[name="value"]');
+            if (valueField) valueField.value = item?.metadata_json?.value ?? '';
+            updateAssetAccountConfigVisibility();
+        }
+        updateStatusDisplay(item.is_active !== false);
+        activateSection(getCatalogDef().sections[0].key);
+        renderList(allItems);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderList(items) {
+        const def = getCatalogDef();
+        const list = document.getElementById('cw-list');
+        list.classList.remove('compact-tree');
+        document.getElementById('cw-counter').textContent = items.length;
+        if (!items.length) {
+            list.innerHTML = '<div class="empty-state">Nenhum cadastro encontrado.</div>';
+            return;
+        }
+        if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
+            renderHierarchicalTree(items, list);
+            return;
+        }
+        list.innerHTML = items.map(item => `
+            <article class="cw-list-item ${selectedListId === item.id ? 'active' : ''}" onclick="selectItemById(${item.id})">
+                <div class="cw-list-item-line">
+                    <div class="cw-list-item-title">
+                        <strong>${item.code || '-'}</strong>
+                        <span>${item[def.titleField] || '-'}</span>
+                    </div>
+                    <span class="cw-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
+                </div>
+                <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                    <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
+                    <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
+                    ${deletableCatalogs.has(activeCatalog) ? `<button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>` : ''}
+                </div>
+            </article>
+        `).join('');
+    }
+
+    function buildTreeMap(items) {
+        const byParent = new Map();
+        items.forEach(item => {
+            const key = item.parent_id || 0;
+            if (!byParent.has(key)) byParent.set(key, []);
+            byParent.get(key).push(item);
+        });
+        byParent.forEach(children => {
+            children.sort((a, b) => {
+                const codeCompare = String(a.code || '').localeCompare(String(b.code || ''));
+                if (codeCompare !== 0) return codeCompare;
+                return String(a.name || '').localeCompare(String(b.name || ''));
+            });
+        });
+        return byParent;
+    }
+
+    function renderHierarchicalTree(items, container) {
+        const treeMap = buildTreeMap(items);
+        const renderBranch = (parentId = 0) => {
+            const nodes = treeMap.get(parentId) || [];
+            return nodes.map(item => {
+                const children = treeMap.get(item.id) || [];
+                const hasChildren = children.length > 0;
+                const collapsed = collapsedTreeNodes.has(item.id);
+                return `
+                    <div class="cw-tree-node">
+                        <article class="cw-list-item ${selectedListId === item.id ? 'active' : ''}" onclick="selectItemById(${item.id})">
+                            <div class="cw-list-item-line">
+                                <div class="cw-tree-title-wrap">
+                                    <button
+                                        type="button"
+                                        class="cw-tree-toggle ${hasChildren ? '' : 'placeholder'}"
+                                        ${hasChildren ? `onclick="event.stopPropagation(); toggleTreeNode(${item.id})"` : 'tabindex="-1"'}
+                                    >${hasChildren ? (collapsed ? '+' : '–') : '·'}</button>
+                                    <div class="cw-tree-title-content">
+                                        <strong>${item.code || '-'}</strong>
+                                        <span>${item.name || '-'}</span>
+                                    </div>
+                                </div>
+                                <span class="cw-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
+                            </div>
+                            <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                                <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
+                                <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
+                                <button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>
+                            </div>
+                        </article>
+                        ${hasChildren ? `<div class="cw-tree-children ${collapsed ? 'collapsed' : ''}">${renderBranch(item.id)}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        };
+
+        container.classList.add('compact-tree');
+        container.innerHTML = `<div class="cw-tree">${renderBranch(0)}</div>`;
+    }
+
+    function toggleTreeNode(itemId) {
+        if (collapsedTreeNodes.has(itemId)) {
+            collapsedTreeNodes.delete(itemId);
+        } else {
+            collapsedTreeNodes.add(itemId);
+        }
+        renderList(allItems);
+    }
+
+    function selectItemById(id) {
+        const item = allItems.find(entry => entry.id === id);
+        if (!item) return;
+        fillForm(item);
+    }
+
+    function filterItems() {
+        const term = (document.getElementById('cw-search-input').value || '').trim().toLowerCase();
+        if (!term) {
+            renderList(allItems);
+            return;
+        }
+        const filtered = allItems.filter(item => {
+            return [item.code, item.name]
+                .filter(Boolean)
+                .some(value => String(value).toLowerCase().includes(term));
+        });
+        renderList(filtered);
+    }
+
+    async function loadItems() {
+        const response = await fetch(`/api/financial/catalogs/${activeCatalog}?company_id=${companyId}`);
+        const result = await response.json();
+        allItems = Array.isArray(result) ? result : [];
+        renderList(allItems);
+        hydrateDynamicSelects();
+        updateGeneratedCode();
+        if (selectedListId) {
+            const selected = allItems.find(item => item.id === selectedListId);
+            if (selected) fillForm(selected);
+        }
+    }
+
+    async function loadAuxiliaryData() {
+        if (['discount_rules', 'correction_indexes', 'asset_accounts'].includes(activeCatalog)) {
+            const chartResponse = await fetch(`/api/financial/catalogs/chart_accounts?company_id=${companyId}`);
+            const chartResult = await chartResponse.json();
+            auxiliaryData.chart_accounts = Array.isArray(chartResult) ? chartResult : [];
+        }
+        if (activeCatalog === 'asset_accounts') {
+            const categoryResponse = await fetch(`/api/financial/catalogs/account_categories?company_id=${companyId}`);
+            const categoryResult = await categoryResponse.json();
+            auxiliaryData.account_categories = Array.isArray(categoryResult) ? categoryResult : [];
+
+            const bankResponse = await fetch(`/api/financial/catalogs/bank_accounts?company_id=${companyId}`);
+            const bankResult = await bankResponse.json();
+            auxiliaryData.bank_accounts = Array.isArray(bankResult) ? bankResult : [];
+        }
+    }
+
+    async function saveItem(event) {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const id = formData.get('id');
+        const payload = {};
+        for (const [key, value] of formData.entries()) {
+            if (key === 'id') continue;
+            if (key === 'metadata_notes') continue;
+            payload[key] = normalizeValue(key, value);
+        }
+        if (activeCatalog === 'bank_accounts') {
+            const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
+            payload.metadata_json = {
+                ...(currentItem?.metadata_json || {}),
+                notes: (formData.get('metadata_notes') || '').trim() || null,
+            };
+        }
+        if (activeCatalog === 'chart_accounts') {
+            const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
+            payload.metadata_json = {
+                ...(currentItem?.metadata_json || {}),
+                external_code: formData.get('external_code') || null,
+                notes: (formData.get('metadata_notes') || '').trim() || null,
+            };
+        }
+        if (activeCatalog === 'cost_centers') {
+            const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
+            payload.metadata_json = {
+                ...(currentItem?.metadata_json || {}),
+                external_code: formData.get('external_code') || null,
+            };
+        }
+        if (['account_categories', 'payment_terms', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods'].includes(activeCatalog)) {
+            const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
+            payload.metadata_json = {
+                ...(currentItem?.metadata_json || {}),
+                external_code: formData.get('external_code') || null,
+            };
+            if (activeCatalog === 'payment_terms') {
+                payload.metadata_json.installment_count = normalizeValue('installment_count', formData.get('installment_count') || '1');
+                payload.metadata_json.interval_days = normalizeValue('interval_days', formData.get('interval_days') || '30');
+            }
+            if (activeCatalog === 'asset_accounts') {
+                const chartAccountSelect = event.currentTarget.querySelector('[name="chart_account_ids"]');
+                const bankAccountSelect = event.currentTarget.querySelector('[name="bank_account_ids"]');
+                payload.patrimonial_type = formData.get('patrimonial_type') || 'asset';
+                payload.account_class = formData.get('account_class') || 'current';
+                payload.category_id = normalizeValue('category_id', formData.get('category_id') || '');
+                payload.chart_account_ids = Array.from(chartAccountSelect?.selectedOptions || []).map(option => Number(option.value));
+                payload.config_mode = formData.get('config_mode') || 'due_dates';
+                payload.due_scope = formData.get('due_scope') || 'overdue';
+                payload.due_in_days = normalizeValue('due_in_days', formData.get('due_in_days') || '');
+                payload.bank_account_ids = Array.from(bankAccountSelect?.selectedOptions || []).map(option => Number(option.value));
+                payload.manual_value = normalizeValue('manual_value', formData.get('manual_value') || '');
+
+                payload.metadata_json.patrimonial_type = payload.patrimonial_type;
+                payload.metadata_json.account_class = payload.account_class;
+                payload.metadata_json.category_id = payload.category_id;
+                payload.metadata_json.chart_account_ids = payload.chart_account_ids;
+                payload.metadata_json.config_mode = payload.config_mode;
+                payload.metadata_json.due_scope = payload.due_scope;
+                payload.metadata_json.due_in_days = payload.due_in_days;
+                payload.metadata_json.bank_account_ids = payload.bank_account_ids;
+                payload.metadata_json.manual_value = payload.manual_value;
+            }
+            if (activeCatalog === 'correction_indexes') {
+                payload.metadata_json.chart_account_id = normalizeValue('chart_account_id', formData.get('chart_account_id') || '');
+                payload.metadata_json.interest_rate = normalizeValue('value', formData.get('interest_rate') || '');
+                payload.metadata_json.interest_period = formData.get('interest_period') || 'daily';
+                payload.metadata_json.penalty_rate = normalizeValue('value', formData.get('penalty_rate') || '');
+                payload.metadata_json.penalty_period = formData.get('penalty_period') || 'daily';
+                payload.metadata_json.penalty_limit_rate = normalizeValue('value', formData.get('penalty_limit_rate') || '');
+            }
+            if (activeCatalog === 'discount_rules') {
+                payload.metadata_json.chart_account_id = normalizeValue('chart_account_id', formData.get('chart_account_id') || '');
+                payload.metadata_json.discount_type = formData.get('discount_type') || null;
+                payload.metadata_json.value = normalizeValue('value', formData.get('value') || '');
+            }
+            if (activeCatalog === 'payment_methods') {
+                payload.metadata_json.operation_type = formData.get('operation_type') || 'both';
+                payload.metadata_json.settlement_days = normalizeValue('settlement_days', formData.get('settlement_days') || '0');
+            }
+        }
+        const url = id
+            ? `/api/financial/catalogs/${activeCatalog}/${id}?company_id=${companyId}`
+            : `/api/financial/catalogs/${activeCatalog}?company_id=${companyId}`;
+        const method = id ? 'PUT' : 'POST';
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao salvar cadastro.');
+            return;
+        }
+        await loadItems();
+        if (result && result.id) {
+            const saved = allItems.find(item => item.id === result.id);
+            if (saved) {
+                fillForm(saved);
+                return;
+            }
+        }
+        resetForm();
+    }
+
+    async function toggleItem(id, isActive) {
+        const response = await fetch(`/api/financial/catalogs/${activeCatalog}/${id}/toggle?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: isActive }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao alterar status.');
+            return;
+        }
+        await loadItems();
+        if (selectedListId === id) {
+            const selected = allItems.find(item => item.id === id);
+            if (selected) fillForm(selected);
+        }
+    }
+
+    async function deleteItem(id) {
+        if (!confirm('Deseja realmente excluir este cadastro?')) return;
+        const response = await fetch(`/api/financial/catalogs/${activeCatalog}/${id}?company_id=${companyId}`, {
+            method: 'DELETE',
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao excluir cadastro.');
+            return;
+        }
+        if (selectedListId === id) {
+            resetForm();
+        }
+        await loadItems();
+    }
+
+    window.selectItemById = selectItemById;
+    window.startNewItem = startNewItem;
+    window.handleDocumentInput = handleDocumentInput;
+    window.handleCodeSuffixInput = handleCodeSuffixInput;
+    window.updateGeneratedCode = updateGeneratedCode;
+    window.handleAssetConfigModeChange = handleAssetConfigModeChange;
+    window.deleteItem = deleteItem;
+    window.toggleTreeNode = toggleTreeNode;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (getCatalogDef().singlePage) {
+            document.querySelector('.cw-shell')?.classList.add('single-page');
+        }
+        renderSectionNav();
+        renderForm();
+        document.getElementById('cw-search-input').addEventListener('input', filterItems);
+        loadAuxiliaryData().then(loadItems);
+    });
+</script>
+{% endblock %}

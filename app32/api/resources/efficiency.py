@@ -316,8 +316,8 @@ class EfficiencyCollaborators(Resource):
                     c_ids = inst.collaborators_json if isinstance(inst.collaborators_json, list) else json.loads(inst.collaborators_json)
                     for cid in c_ids: 
                         try: involved_ids.add(int(cid))
-                        except: pass
-                except: pass
+                        except Exception: pass
+                except Exception: pass
             if inst.id in inst_collab_map:
                 for eid in inst_collab_map[inst.id]: involved_ids.add(eid)
             

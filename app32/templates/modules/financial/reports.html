@@ -1,0 +1,321 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Relatórios{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Relatórios</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="reports-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="reports-header">
+        <div>
+            <h1>Relatórios do Financeiro</h1>
+        </div>
+    </header>
+
+    <section class="panel">
+        <form id="report-form" class="form-grid">
+            <label><span>Relatório</span><select name="report_type" id="report-type"></select></label>
+            <label><span>Período inicial</span><input type="date" name="period_start" required></label>
+            <label><span>Período final</span><input type="date" name="period_end" required></label>
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Gerar relatório</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header"><h2>Resultado</h2></div>
+        <div id="report-output" class="output-box">
+            <div class="empty-state">Nenhum relatório gerado ainda.</div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .reports-page { padding:0 2rem 2rem; }
+    .reports-header { margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:760px; }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1rem; }
+    .panel-header { padding:1rem 1rem 0; }
+    .form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.9rem; padding:1rem; align-items:end; }
+    .form-grid label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); }
+    .form-grid input, .form-grid select { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.75rem .85rem; color:var(--text-primary); }
+    .actions { display:flex; gap:.75rem; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .output-box { padding:1rem; }
+    .stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin-bottom:1rem; }
+    .stat-card { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; }
+    .stat-card span { display:block; color:var(--text-secondary); font-size:.8rem; }
+    .stat-card strong { display:block; margin-top:.35rem; font-size:1.05rem; }
+    .report-list { display:flex; flex-direction:column; gap:.65rem; }
+    .report-item { border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; background:var(--surface-secondary); }
+    .empty-state { text-align:center; color:var(--text-tertiary); padding:1rem; }
+    pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:.85rem; }
+    @media (max-width: 960px) {
+        .reports-page { padding:0 1rem 1.5rem; }
+        .form-grid, .stat-grid { grid-template-columns:1fr; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.reports-page')?.dataset.companyId);
+
+    async function loadTypes() {
+        const response = await fetch(`/api/financial/reports/types?company_id=${companyId}`);
+        const result = await response.json();
+        const select = document.getElementById('report-type');
+        const items = Array.isArray(result) ? result : [];
+        select.innerHTML = items.map(item => `<option value="${item.code}">${item.label}</option>`).join('');
+    }
+
+    function renderReport(data) {
+        const output = document.getElementById('report-output');
+        const totals = data.totals || {};
+        const totalEntries = Object.entries(totals);
+        output.innerHTML = `
+            <div class="stat-grid">
+                ${totalEntries.map(([key, value]) => `
+                    <div class="stat-card">
+                        <span>${key}</span>
+                        <strong>${typeof value === 'number' ? value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : value}</strong>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="report-list">
+                ${(data.items || []).slice(0, 50).map(item => `
+                    <div class="report-item"><pre>${JSON.stringify(item, null, 2)}</pre></div>
+                `).join('') || '<div class="empty-state">Sem itens retornados para este período.</div>'}
+            </div>
+        `;
+    }
+
+    document.getElementById('report-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        const reportType = form.get('report_type');
+        const periodStart = form.get('period_start');
+        const periodEnd = form.get('period_end');
+
+        const response = await fetch(`/api/financial/reports/generate?company_id=${companyId}&report_type=${reportType}&period_start=${periodStart}&period_end=${periodEnd}`);
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao gerar relatório.');
+            return;
+        }
+        renderReport(result);
+    });
+
+    document.addEventListener('DOMContentLoaded', loadTypes);
+</script>
+{% endblock %}

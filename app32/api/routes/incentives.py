@@ -2,9 +2,47 @@ from datetime import datetime, date
 from flask import Blueprint, render_template, session, redirect, url_for, flash, jsonify, request
 from flask_login import login_required, current_user
 from services.incentive_service import IncentiveService
-from models import Company, IncentiveRuleSet, Employee, IncentiveCalculation, Indicator, IndicatorTree, IncentiveParticipant, db
+from models import Company, IncentiveRuleSet, Employee, IncentiveCalculation, Indicator, IndicatorTree, IncentiveParticipant, UserLog, db
+from utils.permissions import is_administrator
+import logging
+import json
 
 incentives_bp = Blueprint('incentives', __name__, template_folder='templates')
+logger = logging.getLogger(__name__)
+
+
+def _log_protected_action(company_id: int, action: str, entity_type: str, entity_id: str, entity_name: str, reason: str):
+    try:
+        log = UserLog(
+            user_id=getattr(current_user, 'id', None),
+            user_email=getattr(current_user, 'email', 'desconhecido') or 'desconhecido',
+            user_name=getattr(current_user, 'name', 'desconhecido') or 'desconhecido',
+            action=action,
+            entity_type=entity_type,
+            entity_id=str(entity_id),
+            entity_name=entity_name,
+            new_values=json.dumps({"reason": reason}, ensure_ascii=False),
+            ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
+            user_agent=request.headers.get('User-Agent'),
+            endpoint=request.path,
+            method=request.method,
+            description=f"Ação protegida em {entity_type}: {reason}",
+            company_id=company_id,
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+def _require_protected_mode(company_id: int):
+    if not is_administrator(company_id):
+        return False, (jsonify({"error": "Ação protegida disponível apenas para administradores."}), 403)
+
+    reason = (request.get_json(silent=True) or {}).get('reason') or request.form.get('reason') or request.args.get('reason')
+    if not reason or not str(reason).strip():
+        return False, (jsonify({"error": "Informe o motivo da ação protegida."}), 400)
+    return True, str(reason).strip()
 
 # ── INDICADORES ──────────────────────────────────────────────────────────────
 
@@ -168,7 +206,7 @@ def dashboard():
         status_filter = request.args.get('status', 'active')
         year_filter = request.args.get('year')
         
-        rs_query = IncentiveRuleSet.query.filter_by(company_id=company_id)
+        rs_query = IncentiveService.get_active_rule_sets_query(company_id)
         if status_filter == 'active':
             rs_query = rs_query.filter_by(is_active=True)
         elif status_filter == 'inactive':
@@ -182,16 +220,19 @@ def dashboard():
         indicators_count = Indicator.query.filter_by(company_id=company_id, is_active=True).count()
         
         # Get last calculation totals
-        last_calc = IncentiveCalculation.query.filter_by(company_id=company_id).order_by(IncentiveCalculation.created_at.desc()).first()
+        last_calc = IncentiveService.get_active_calculations_query(company_id).order_by(IncentiveCalculation.created_at.desc()).first()
         
         # Historical Summary
-        calc_query = IncentiveCalculation.query.filter_by(company_id=company_id)
+        calc_query = IncentiveService.get_active_calculations_query(company_id)
         if year_filter:
             calc_query = calc_query.filter(extract('year', IncentiveCalculation.period_start) == int(year_filter))
         history = calc_query.order_by(IncentiveCalculation.period_start.desc()).limit(12).all()
         
         # Disponibilizar anos para filtro
-        years = db.session.query(extract('year', IncentiveCalculation.period_start)).filter_by(company_id=company_id).distinct().all()
+        years = db.session.query(extract('year', IncentiveCalculation.period_start)).filter(
+            IncentiveCalculation.company_id == company_id,
+            IncentiveCalculation.deleted_at.is_(None),
+        ).distinct().all()
         years = [int(y[0]) for y in years if y[0]]
         years.sort(reverse=True)
         
@@ -229,18 +270,18 @@ def closings_list():
     company_id = session.get('active_company_id')
     if not company_id: return redirect(url_for('auth.portal'))
     
-    closings = IncentiveCalculation.query.filter_by(
-        company_id=int(company_id)
-    ).order_by(IncentiveCalculation.period_start.desc()).all()
+    closings = IncentiveService.get_active_calculations_query(int(company_id)).order_by(
+        IncentiveCalculation.period_start.desc()
+    ).all()
     
-    rule_sets = IncentiveRuleSet.query.filter_by(
-        company_id=int(company_id), 
+    rule_sets = IncentiveService.get_active_rule_sets_query(int(company_id)).filter_by(
         is_active=True
     ).all()
     
     return render_template('modules/incentives/closings_list.html', 
                           closings=closings, 
-                          rule_sets=rule_sets)
+                          rule_sets=rule_sets,
+                          is_protected_admin=is_administrator(int(company_id)))
 
 @incentives_bp.route('/incentives/comparative')
 @login_required
@@ -283,13 +324,19 @@ def create_rule_set():
 @login_required
 def rule_set_update(rule_set_id):
     company_id = int(session.get('active_company_id', 0))
-    rs = IncentiveRuleSet.query.get_or_404(rule_set_id)
-    if rs.company_id != company_id:
+    rs = IncentiveService.get_rule_set(company_id, rule_set_id)
+    if not rs:
         return jsonify({"error": "Acesso negado"}), 403
 
     data = request.get_json() or {}
-    for field in ('name', 'description', 'periodicity'):
-        if field in data: setattr(rs, field, data[field])
+    for field in ('name', 'description', 'periodicity', 'valid_from', 'valid_to'):
+        if field not in data:
+            continue
+        if field in ('valid_from', 'valid_to'):
+            raw_value = data[field]
+            setattr(rs, field, datetime.strptime(raw_value, '%Y-%m-%d').date() if raw_value else None)
+            continue
+        setattr(rs, field, data[field])
     
     for field in ('max_red_total',):
         if field in data: setattr(rs, field, float(data[field]) if data[field] else None)
@@ -304,21 +351,20 @@ def manage_rules(rule_set_id):
     if not company_id_raw:
         return redirect(url_for('auth.portal'))
     company_id = int(company_id_raw)
-    rule_set = IncentiveRuleSet.query.get_or_404(rule_set_id)
-
-    if rule_set.company_id != company_id:
+    rule_set = IncentiveService.get_rule_set(company_id, rule_set_id)
+    if not rule_set:
         flash("Acesso negado.", "danger")
         return redirect(url_for('incentives.dashboard'))
 
     from models import IncentiveRule, IncentiveParticipant
 
     # Participantes do plano
-    participants = IncentiveParticipant.query.filter_by(
-        rule_set_id=rule_set_id, company_id=company_id
+    participants = IncentiveService.get_active_participants_query(
+        company_id, rule_set_id
     ).all()
 
     # Vetores de Premiação configurados
-    vetores = IncentiveRule.query.filter_by(rule_set_id=rule_set_id).order_by(
+    vetores = IncentiveService.get_active_rules_query(company_id, rule_set_id).order_by(
         IncentiveRule.order_index
     ).all()
 
@@ -368,14 +414,53 @@ def manage_rules(rule_set_id):
     )
 
 
+@incentives_bp.route('/api/incentive-rule-sets/<int:rule_set_id>', methods=['DELETE'])
+@login_required
+def delete_rule_set(rule_set_id):
+    company_id = int(session.get('active_company_id', 0))
+    deleted, reason = IncentiveService.soft_delete_rule_set(company_id, rule_set_id)
+    if not deleted:
+        if "apurações" in reason.lower():
+            inactivated, _ = IncentiveService.inactivate_rule_set(company_id, rule_set_id)
+            if inactivated:
+                return jsonify({
+                    "ok": False,
+                    "inactivated": True,
+                    "error": "Plano possui fechamentos associados e foi inativado. Para excluir, use o modo protegido e remova os fechamentos vinculados.",
+                }), 409
+        status = 404 if "não encontrado" in reason.lower() else 409
+        return jsonify({"error": reason}), status
+    return jsonify({"ok": True}), 200
+
+
+@incentives_bp.route('/api/incentive-rule-sets/<int:rule_set_id>/protected-delete', methods=['DELETE'])
+@login_required
+def protected_delete_rule_set(rule_set_id):
+    company_id = int(session.get('active_company_id', 0))
+    allowed, payload = _require_protected_mode(company_id)
+    if not allowed:
+        return payload
+
+    deleted, reason = IncentiveService.soft_delete_rule_set_with_closings(
+        company_id,
+        rule_set_id,
+        allow_protected=True,
+    )
+    if not deleted:
+        return jsonify({"error": reason}), 409
+
+    _log_protected_action(company_id, 'DELETE', 'incentive_rule_set', str(rule_set_id), f'Plano {rule_set_id}', payload)
+    return jsonify({"ok": True}), 200
+
+
 # ── PARTICIPANTES ─────────────────────────────────────────────────────────────
 
 @incentives_bp.route('/incentives/rules/<int:rule_set_id>/participants', methods=['POST'])
 @login_required
 def participant_add(rule_set_id):
     company_id = int(session.get('active_company_id', 0))
-    rule_set = IncentiveRuleSet.query.get_or_404(rule_set_id)
-    if rule_set.company_id != company_id:
+    rule_set = IncentiveService.get_rule_set(company_id, rule_set_id)
+    if not rule_set:
         return jsonify({"error": "Acesso negado"}), 403
 
     from models import IncentiveParticipant
@@ -387,10 +472,20 @@ def participant_add(rule_set_id):
 
     # Evitar duplicata
     existing = IncentiveParticipant.query.filter_by(
-        rule_set_id=rule_set_id, employee_id=employee_id
+        company_id=company_id,
+        rule_set_id=rule_set_id,
+        employee_id=employee_id,
     ).first()
     if existing:
-        return jsonify({"error": "Colaborador já está no plano"}), 400
+        if existing.deleted_at is None:
+            return jsonify({"error": "Colaborador já está no plano"}), 400
+
+        existing.deleted_at = None
+        existing.elegivel = True
+        existing.valor_base = valor_base
+        existing.data_entrada = data_entrada
+        db.session.commit()
+        return jsonify({"ok": True, "participant": existing.to_dict()}), 200
 
     p = IncentiveParticipant(
         company_id=company_id,
@@ -410,13 +505,17 @@ def participant_add(rule_set_id):
 def participant_update(participant_id):
     company_id = int(session.get('active_company_id', 0))
     from models import IncentiveParticipant
-    p = IncentiveParticipant.query.get_or_404(participant_id)
+    p = IncentiveParticipant.query.filter(
+        IncentiveParticipant.id == participant_id,
+        IncentiveParticipant.deleted_at.is_(None),
+    ).first_or_404()
     if p.company_id != company_id:
         return jsonify({"error": "Acesso negado"}), 403
 
     if request.method == 'DELETE':
-        db.session.delete(p)
-        db.session.commit()
+        deleted, reason = IncentiveService.soft_delete_participant(company_id, p)
+        if not deleted:
+            return jsonify({"error": reason}), 409
         return jsonify({"ok": True}), 200
 
     data = request.get_json() or {}
@@ -438,8 +537,8 @@ def participant_update(participant_id):
 @login_required
 def vetor_add(rule_set_id):
     company_id = int(session.get('active_company_id', 0))
-    rule_set = IncentiveRuleSet.query.get_or_404(rule_set_id)
-    if rule_set.company_id != company_id:
+    rule_set = IncentiveService.get_rule_set(company_id, rule_set_id)
+    if not rule_set:
         return jsonify({"error": "Acesso negado"}), 403
 
     from models import IncentiveRule
@@ -470,7 +569,7 @@ def vetor_add(rule_set_id):
             impact_value=impact_val,
             weight=impact_val,
             incidencia=data.get('incidencia', 'individual'),
-            order_index=IncentiveRule.query.filter_by(rule_set_id=rule_set_id).count(),
+            order_index=IncentiveService.get_active_rules_query(actual_company_id, rule_set_id).count(),
         )
         db.session.add(v)
         db.session.commit()
@@ -478,7 +577,7 @@ def vetor_add(rule_set_id):
         db.session.rollback()
         import traceback
         error_msg = traceback.format_exc()
-        print(f"❌ ERRO NO BANCO: {error_msg}")
+        logger.exception("❌ ERRO NO BANCO: %s", error_msg)
         return jsonify({"error": "Erro interno ao processar dados de incentivos. Tente novamente ou contate o suporte."}), 500
 
     return jsonify({"ok": True, "vetor": v.to_dict()}), 201
@@ -489,14 +588,18 @@ def vetor_add(rule_set_id):
 def vetor_update(vetor_id):
     company_id = int(session.get('active_company_id', 0))
     from models import IncentiveRule
-    v = IncentiveRule.query.get_or_404(vetor_id)
-    rs = IncentiveRuleSet.query.get(v.rule_set_id)
-    if not rs or rs.company_id != company_id:
+    v = IncentiveRule.query.filter(
+        IncentiveRule.id == vetor_id,
+        IncentiveRule.deleted_at.is_(None),
+    ).first_or_404()
+    rs = IncentiveService.get_rule_set(company_id, v.rule_set_id)
+    if not rs:
         return jsonify({"error": "Acesso negado"}), 403
 
     if request.method == 'DELETE':
-        db.session.delete(v)
-        db.session.commit()
+        deleted, reason = IncentiveService.soft_delete_rule(company_id, v)
+        if not deleted:
+            return jsonify({"error": reason}), 409
         return jsonify({"ok": True}), 200
 
     data = request.get_json() or {}
@@ -525,9 +628,12 @@ def vetor_range_update(vetor_id):
     """Atualiza um único valor de faixa (color) no ranges_config do vetor."""
     company_id = int(session.get('active_company_id', 0))
     from models import IncentiveRule
-    v = IncentiveRule.query.get_or_404(vetor_id)
-    rs = IncentiveRuleSet.query.get(v.rule_set_id)
-    if not rs or rs.company_id != company_id:
+    v = IncentiveRule.query.filter(
+        IncentiveRule.id == vetor_id,
+        IncentiveRule.deleted_at.is_(None),
+    ).first_or_404()
+    rs = IncentiveService.get_rule_set(company_id, v.rule_set_id)
+    if not rs:
         return jsonify({"error": "Acesso negado"}), 403
 
     data = request.get_json() or {}
@@ -559,8 +665,8 @@ def reports_selector():
     if calc_id:
         return redirect(url_for('incentives.closing_report', calc_id=calc_id))
     
-    rule_sets = IncentiveRuleSet.query.filter_by(company_id=company_id).all()
-    calculations = IncentiveCalculation.query.filter_by(company_id=company_id).order_by(IncentiveCalculation.period_start.desc()).all()
+    rule_sets = IncentiveService.get_active_rule_sets_query(int(company_id)).all()
+    calculations = IncentiveService.get_active_calculations_query(int(company_id)).order_by(IncentiveCalculation.period_start.desc()).all()
     
     return render_template(
         'modules/incentives/reports_selector.html',
@@ -589,11 +695,14 @@ def statement(calc_id=None, employee_id=None):
     
     # Target calculation
     if calc_id:
-        calc = IncentiveCalculation.query.get_or_404(calc_id)
+        calc = IncentiveService.get_calculation(company_id, calc_id)
+        if not calc:
+            flash("Fechamento não encontrado.", "warning")
+            return redirect(url_for('incentives.closings_list'))
     else:
         # Search for any recent calculation to at least show the structure
-        calc = IncentiveCalculation.query.filter_by(
-            company_id=company_id
+        calc = IncentiveService.get_active_calculations_query(
+            company_id
         ).order_by(IncentiveCalculation.created_at.desc()).first()
     
     statement_data = None
@@ -621,7 +730,10 @@ def closing_report(calc_id):
             return redirect(url_for('auth.portal'))
         
         company_id = int(company_id)
-        calc = IncentiveCalculation.query.get_or_404(calc_id)
+        calc = IncentiveService.get_calculation(company_id, calc_id)
+        if not calc:
+            flash("Fechamento não encontrado.", "warning")
+            return redirect(url_for('incentives.closings_list'))
         
         # LOG
         with open('debug_inc_redirect.txt', 'a') as f:
@@ -636,7 +748,8 @@ def closing_report(calc_id):
         return render_template(
             'modules/incentives/closing.html',
             calculation=calc,
-            participants=participants
+            participants=participants,
+            is_protected_admin=is_administrator(company_id)
         )
     except Exception as e:
         import traceback
@@ -649,8 +762,8 @@ def closing_report(calc_id):
 @login_required
 def perform_action(calc_id, action):
     company_id = int(session.get('active_company_id', 0))
-    calc = IncentiveCalculation.query.get_or_404(calc_id)
-    if calc.company_id != company_id:
+    calc = IncentiveService.get_calculation(company_id, calc_id)
+    if not calc:
         flash("Acesso negado.", "danger")
         return redirect(url_for('incentives.dashboard'))
 
@@ -665,6 +778,58 @@ def perform_action(calc_id, action):
 
     db.session.commit()
     return redirect(url_for('incentives.closing_report', calc_id=calc_id))
+
+
+@incentives_bp.route('/api/incentives/closings/<int:calc_id>', methods=['PATCH', 'DELETE'])
+@login_required
+def closing_update_delete(calc_id):
+    company_id = int(session.get('active_company_id', 0))
+    calc = IncentiveService.get_calculation(company_id, calc_id)
+    if not calc:
+        return jsonify({"error": "Fechamento não encontrado."}), 404
+
+    if request.method == 'PATCH':
+        allowed, payload = _require_protected_mode(company_id)
+        if not allowed:
+            return payload
+
+        data = request.get_json() or {}
+        period_start = datetime.strptime(data['period_start'], '%Y-%m-%d').date() if data.get('period_start') else None
+        period_end = datetime.strptime(data['period_end'], '%Y-%m-%d').date() if data.get('period_end') else None
+        status = data.get('status')
+        updated, reason, calc = IncentiveService.update_calculation(
+            company_id,
+            calc_id,
+            period_start=period_start,
+            period_end=period_end,
+            status=status,
+        )
+        if not updated:
+            return jsonify({"error": reason}), 409
+        _log_protected_action(company_id, 'UPDATE', 'incentive_calculation', str(calc_id), f'Fechamento {calc_id}', payload)
+        return jsonify({"ok": True, "calculation": {
+            "id": calc.id,
+            "period_start": calc.period_start.isoformat() if calc.period_start else None,
+            "period_end": calc.period_end.isoformat() if calc.period_end else None,
+            "status": calc.status,
+        }}), 200
+
+    deleted, err = IncentiveService.soft_delete_calculation(
+        company_id,
+        calc_id,
+        allow_protected=False,
+    )
+    if not deleted:
+        return jsonify({"error": err}), 409
+    _log_protected_action(
+        company_id,
+        'DELETE',
+        'incentive_calculation',
+        str(calc_id),
+        f'Fechamento {calc_id}',
+        'Exclusão operacional',
+    )
+    return jsonify({"ok": True}), 200
 
 @incentives_bp.route('/incentives/validation')
 @login_required
@@ -735,7 +900,7 @@ def fact_verify(fact_id):
 def calculate_run():
     # Simplificado: pega o plano ativo e roda para o mês atual
     company_id = int(session.get('active_company_id', 0))
-    rs = IncentiveRuleSet.query.filter_by(company_id=company_id, is_active=True).first()
+    rs = IncentiveService.get_active_rule_sets_query(company_id).filter_by(is_active=True).first()
     if not rs:
         flash("Nenhum plano ativo encontrado para processar.", "warning")
         return redirect(url_for('incentives.dashboard'))

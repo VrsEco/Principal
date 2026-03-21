@@ -1,6 +1,7 @@
 import re
 import os
 import uuid
+import json
 from datetime import datetime, date
 from decimal import Decimal
 from flask import request, current_app, session
@@ -16,12 +17,36 @@ from schemas.process import (
     process_step_schema, process_steps_schema,
     process_instance_schema, process_instances_schema
 )
-from models import db, ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, Company, Indicator, ActivityWorkLog
+from models import (
+    db,
+    ProcessArea,
+    MacroProcess,
+    Process,
+    ProcessRoutine,
+    ProcessStep,
+    ProcessInstance,
+    ProcessInstanceCollaborator,
+    Company,
+    Indicator,
+    IndicatorData,
+    ActivityWorkLog,
+)
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required
+from utils.sql_execution import execute_formatted_query
 from database import get_db
 from sqlalchemy import or_
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
+
+def _append_process_instance_put_debug(message: str):
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        log_path = os.path.join(base_dir, 'request_debug.log')
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write(f"  ProcessInstance PUT Debug: {message}\n")
+    except Exception:
+        pass
 
 def _instance_visible_to_employee(instance, employee_id):
     if not instance or not employee_id:
@@ -136,7 +161,7 @@ def get_request_company_id():
             if data:
                 cid = clean(data.get('company_id'))
                 if cid is not None: return cid
-    except:
+    except Exception:
         pass
 
     # 3. Try Session
@@ -221,8 +246,9 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
 
         if routine_ids:
             placeholders = ",".join(["%s"] * len(routine_ids))
-            cursor.execute(
-                f"""
+            execute_formatted_query(
+                cursor,
+                """
                 SELECT id, routine_id, name, description, expected_result,
                        COALESCE(order_index, 0) AS order_index,
                        image_path, image_width, layout
@@ -521,7 +547,10 @@ class ProcessInstanceListResource(Resource):
                                     "actual_hours": 0
                                 })
                     except Exception as e:
-                        print(f"Error fetching routine collaborators: {e}")
+                        current_app.logger.warning(
+                            "Error fetching routine collaborators: %s",
+                            e,
+                        )
 
                 if collaborators:
                     data['collaborators_json'] = collaborators
@@ -548,7 +577,7 @@ class ProcessInstanceListResource(Resource):
                             notes=c.get('notes')
                         )
                         db.session.add(collab_obj)
-                    except:
+                    except Exception:
                         continue
                 db.session.commit()
 
@@ -571,45 +600,132 @@ class ProcessInstanceResource(Resource):
                 return {"error": "Acesso negado à instância."}, 403
         return process_instance_schema.dump(instance), 200
 
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def put(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
+        company_id = instance.company_id
+        can_edit_company_processes = has_permission(company_id, 'processes', 'edit')
+        is_contextual_collaborator_edit = False
+        _append_process_instance_put_debug(
+            f"enter instance_id={instance_id} company_id={company_id} "
+            f"user_id={getattr(current_user, 'id', None)} can_edit_company_processes={can_edit_company_processes}"
+        )
 
         # Colaboradores restritos só podem editar se participarem diretamente
-        if not has_company_full_access(instance.company_id):
+        if not has_company_full_access(company_id):
             from models.employee import Employee
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
             if not employee:
+                _append_process_instance_put_debug("deny: employee_not_found")
                 return {"error": "Viewer only: You can only view this process instance."}, 403
-            if instance.owner_employee_id != employee.id and \
-               instance.responsible_id != employee.id and \
-               instance.executor_id != employee.id:
+            if not _instance_visible_to_employee(instance, employee.id):
+                _append_process_instance_put_debug(
+                    f"deny: employee_not_in_instance employee_id={employee.id}"
+                )
                 return {"error": "Viewer only: You can only view this process instance."}, 403
+            is_contextual_collaborator_edit = not can_edit_company_processes
+        elif not can_edit_company_processes:
+            _append_process_instance_put_debug("deny: no_edit_permission_even_with_full_access")
+            return {"error": "Permission denied: edit on processes"}, 403
 
         try:
             data = request.get_json()
-            
+            _append_process_instance_put_debug(f"payload={json.dumps(data or {}, ensure_ascii=False)}")
+
+            if is_contextual_collaborator_edit:
+                allowed_fields = {
+                    'status',
+                    'actual_end_date',
+                    'completed_at',
+                    'notes',
+                }
+                data_keys = set(data.keys()) if isinstance(data, dict) else set()
+                if not data_keys:
+                    _append_process_instance_put_debug("deny: empty_payload")
+                    return {"error": "Nenhum dado informado para atualizar a instância."}, 400
+                disallowed_fields = sorted(data_keys - allowed_fields)
+                if disallowed_fields:
+                    _append_process_instance_put_debug(
+                        f"deny: disallowed_fields={disallowed_fields}"
+                    )
+                    return {
+                        "error": (
+                            "Colaborador vinculado pode apenas concluir a instância "
+                            "ou registrar observações finais."
+                        ),
+                        "details": {
+                            "blocked_fields": disallowed_fields,
+                            "allowed_fields": sorted(allowed_fields),
+                        },
+                    }, 403
+
             # Map frontend 'end_date' is now handled by Schema alias
-                
+
             instance = process_instance_schema.load(data, instance=instance, partial=True)
             db.session.commit()
+            current_status = getattr(instance, 'status', None)
+            current_actual_end_date = getattr(instance, 'actual_end_date', None)
+            _append_process_instance_put_debug(
+                f"success: status={current_status} actual_end_date={current_actual_end_date}"
+            )
             return process_instance_schema.dump(instance), 200
         except ValidationError as err:
+            _append_process_instance_put_debug(f"validation_error={err.messages}")
             return {"errors": err.messages}, 400
+        except Exception as e:
+            _append_process_instance_put_debug(f"exception={repr(e)}")
+            raise
 
     @permission_required('processes', 'delete')
     def delete(self, instance_id):
-        instance = ProcessInstance.query.get_or_404(instance_id)
-        
-        if not has_company_full_access(instance.company_id):
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "company_id é obrigatório para excluir instâncias de processo."}, 400
+
+        instance = ProcessInstance.query.filter_by(id=instance_id, company_id=company_id).first_or_404()
+
+        if not has_company_full_access(company_id):
             return {"error": "Viewer only: You cannot delete process instances."}, 403
 
         try:
+            linked_measurements_count = IndicatorData.query.filter_by(
+                company_id=company_id,
+                process_instance_id=instance.id
+            ).count()
+
+            if linked_measurements_count > 0:
+                return {
+                    "error": (
+                        "Não é possível excluir esta instância porque existem "
+                        "medições/lançamentos de indicador vinculados a ela."
+                    ),
+                    "code": "PROCESS_INSTANCE_HAS_INDICATOR_DATA",
+                    "details": {
+                        "instance_id": instance.id,
+                        "company_id": company_id,
+                        "linked_measurements_count": linked_measurements_count,
+                    }
+                }, 409
+
+            ProcessInstanceCollaborator.query.filter_by(
+                process_instance_id=instance.id
+            ).delete(synchronize_session=False)
+
+            ActivityWorkLog.query.filter_by(
+                activity_type='process_instance',
+                activity_id=instance.id
+            ).delete(synchronize_session=False)
+
             db.session.delete(instance)
             db.session.commit()
             return {"message": "Process instance deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao excluir instância de processo instance_id=%s company_id=%s",
+                instance_id,
+                company_id,
+            )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessInstanceWorkLogResource(Resource):
@@ -914,7 +1030,7 @@ class ProcessListResource(Resource):
                     try:
                         inds = Indicator.query.filter_by(process_id=pid).with_entities(Indicator.id, Indicator.name).all()
                         p_data['indicators'] = [{"id": i.id, "name": i.name} for i in inds]
-                    except:
+                    except Exception:
                         p_data['indicators'] = []
             
             return result, 200
@@ -1372,8 +1488,9 @@ class ProcessScheduleListResource(Resource):
 
                 if routine_ids:
                     placeholders = ",".join(["%s"] * len(routine_ids))
-                    cursor.execute(
-                        f"""
+                    execute_formatted_query(
+                        cursor,
+                        """
                         SELECT
                             rc.routine_id,
                             e.name

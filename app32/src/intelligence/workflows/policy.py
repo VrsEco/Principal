@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import logging
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .approval_utils import DEFAULT_WORKFLOW_APPROVAL_TTL_HOURS, is_workflow_approval_expired
 from .direct_execution import DirectExecutionRequest, DirectExecutionResult
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowApprovalRequest(BaseModel):
@@ -210,6 +213,16 @@ class WorkflowApprovalPolicyGuard:
         )
         db.session.add(action)
         db.session.commit()
+        try:
+            from services.agent_action_backlog_service import ensure_backlog_task_for_action
+
+            ensure_backlog_task_for_action(action, autocommit=True)
+        except Exception as exc:
+            logger.exception(
+                "Falha ao espelhar workflow approval #%s no backlog AA.J.31: %s",
+                action.id,
+                exc,
+            )
         return WorkflowApprovalRequest(
             approval_id=action.id,
             reused_existing=False,

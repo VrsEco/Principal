@@ -1,4 +1,8 @@
+import re
 from datetime import datetime
+
+from sqlalchemy import event
+
 from . import db
 
 
@@ -7,7 +11,7 @@ class UserLog(db.Model):
 
     __tablename__ = "user_logs"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     user_email = db.Column(
         db.String(120), nullable=False
@@ -41,6 +45,7 @@ class UserLog(db.Model):
     company_id = db.Column(
         db.Integer, db.ForeignKey("companies.id")
     )  # Related company if applicable
+    plan_id = db.Column(db.Text)  # Related plan if applicable (schema legado usa TEXT)
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -69,3 +74,49 @@ class UserLog(db.Model):
 
     def __repr__(self):
         return f"<UserLog {self.user_email} - {self.action} {self.entity_type}>"
+
+
+def _allocate_user_log_id(connection) -> int:
+    """Gera ID resiliente para ambientes com drift no schema de user_logs.
+
+    Prioridade:
+    1. sequência oficial associada à coluna `id`
+    2. fallback transacional com lock explícito da tabela
+    """
+
+    sequence_name = connection.exec_driver_sql(
+        "SELECT pg_get_serial_sequence('public.user_logs', 'id')"
+    ).scalar()
+    if not sequence_name:
+        column_default = connection.exec_driver_sql(
+            """
+            SELECT column_default
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'user_logs'
+              AND column_name = 'id'
+            """
+        ).scalar()
+        if isinstance(column_default, str):
+            match = re.search(r"nextval\('([^']+)'::regclass\)", column_default)
+            if match:
+                sequence_name = match.group(1)
+
+    if sequence_name:
+        next_id = connection.exec_driver_sql(
+            f"SELECT nextval('{sequence_name}')"
+        ).scalar()
+        return int(next_id)
+
+    connection.exec_driver_sql("LOCK TABLE public.user_logs IN EXCLUSIVE MODE")
+    next_id = connection.exec_driver_sql(
+        "SELECT COALESCE(MAX(id), 0) + 1 FROM public.user_logs"
+    ).scalar()
+    return int(next_id or 1)
+
+
+@event.listens_for(UserLog, "before_insert")
+def _ensure_user_log_id_before_insert(mapper, connection, target):
+    if target.id is not None:
+        return
+    target.id = _allocate_user_log_id(connection)

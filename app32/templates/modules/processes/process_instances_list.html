@@ -392,12 +392,20 @@
                 renderInstances(allInstances);
             } else {
                 let errMessage = 'Erro desconhecido';
+                let errCode = null;
                 try {
                     const err = await res.json();
                     errMessage = err.error || err.message || JSON.stringify(err);
+                    errCode = err.code || null;
                 } catch (e) {
                     errMessage = res.status + ' ' + res.statusText;
                 }
+
+                if (res.status === 409 && errCode === 'PROCESS_INSTANCE_HAS_INDICATOR_DATA') {
+                    alert('Não é possível excluir esta instância porque existem medições ou lançamentos de indicador vinculados a ela.');
+                    return;
+                }
+
                 alert('Erro ao excluir: ' + errMessage);
             }
         } catch (err) {

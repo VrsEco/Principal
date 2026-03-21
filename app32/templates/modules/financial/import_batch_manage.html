@@ -1,0 +1,539 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Lote de Importação{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Lote {{ batch_id }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="batch-page fade-in" data-company-id="{{ company_id or '' }}" data-batch-id="{{ batch_id }}">
+    <header class="batch-header">
+        <div>
+            <h1>Detalhe do lote {{ batch_id }}</h1>
+        </div>
+    </header>
+
+    <section class="page-actions" style="display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <button class="btn btn-primary" type="button" onclick="rankClassificationWithAI()">IA ranquear</button>
+        <button class="btn btn-secondary" type="button" onclick="suggestClassification()">Sugerir classificação</button>
+        <button class="btn btn-secondary" type="button" onclick="classifyBatch()">Classificar lote</button>
+        <button class="btn btn-secondary" type="button" onclick="processBatch()">Processar lote</button>
+        <button class="btn btn-secondary" type="button" onclick="reconcileBatch()">Conciliar lote</button>
+        <a href="/financial/entries" class="btn btn-secondary" style="text-decoration:none;">Voltar</a>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Resumo do lote</h2>
+                <p id="batch-summary-text">Carregando...</p>
+            </div>
+        </div>
+        <div class="summary-grid" id="batch-summary-grid"></div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Linhas staged</h2>
+                <p>Rastreabilidade completa antes da baixa/liqidação automática.</p>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Descrição</th>
+                        <th>Data</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Match</th>
+                        <th>Erro</th>
+                    </tr>
+                </thead>
+                <tbody id="rows-table-body">
+                    <tr><td colspan="7" class="empty-cell">Carregando linhas...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Sugestões de classificação</h2>
+                <p>Ranking persistido por memória/regra/IA para cada linha do lote.</p>
+            </div>
+        </div>
+        <div id="classification-suggestions-list" class="matches-list">
+            <div class="empty-cell" style="padding:1rem;">Nenhuma sugestão carregada.</div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Sugestões de conciliação</h2>
+                <p>Confirme ou rejeite os matches sugeridos pelo motor inicial.</p>
+            </div>
+        </div>
+        <div id="matches-list" class="matches-list">
+            <div class="empty-cell" style="padding:1rem;">Nenhuma sugestão carregada.</div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .batch-page { padding:0 2rem 2rem; }
+    .batch-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1.5rem; }
+    .panel-header { padding:1.25rem 1.25rem 0; }
+    .panel-header h2 { margin:0; }
+    .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); }
+    .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; padding:1.25rem; }
+    .summary-card { border:1px solid var(--border); background:var(--surface-secondary); border-radius:14px; padding:1rem; }
+    .summary-card strong { font-size:1.5rem; display:block; color:var(--text-primary); }
+    .table-wrap { padding:1.25rem; overflow:auto; }
+    .data-table { width:100%; border-collapse:collapse; }
+    .data-table th, .data-table td { padding:.9rem .75rem; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    .data-table th { color:var(--text-tertiary); font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; }
+    .empty-cell { text-align:center; color:var(--text-tertiary); }
+    .matches-list { display:flex; flex-direction:column; gap:.85rem; padding:1.25rem; }
+    .match-card { border:1px solid var(--border); background:var(--surface-secondary); border-radius:14px; padding:1rem; }
+    .match-card__top { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.5rem; }
+    .match-meta { color:var(--text-secondary); font-size:.92rem; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .inline-actions { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.75rem; }
+    .badge { display:inline-flex; align-items:center; border-radius:999px; padding:.25rem .6rem; font-size:.72rem; font-weight:700; }
+    .badge--staged { background:#e2e8f0; color:#475569; }
+    .badge--validated, .badge--suggested { background:#dbeafe; color:#1d4ed8; }
+    .badge--imported, .badge--confirmed { background:#dcfce7; color:#15803d; }
+    .badge--rejected { background:#fee2e2; color:#b91c1c; }
+    @media (max-width: 960px) {
+        .batch-page { padding:0 1rem 1.5rem; }
+        .batch-header, .summary-grid { grid-template-columns:1fr; display:grid; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.batch-page')?.dataset.companyId);
+    const batchId = Number(document.querySelector('.batch-page')?.dataset.batchId);
+
+    function brl(value) {
+        return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(Number(value || 0));
+    }
+
+    function badge(status) {
+        return `<span class="badge badge--${status || 'staged'}">${status || 'staged'}</span>`;
+    }
+
+    async function loadBatchDetail() {
+        const response = await fetch(`/api/financial/imports/${batchId}?company_id=${companyId}`);
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao carregar lote.');
+            return;
+        }
+        renderBatchSummary(result.batch || {});
+        renderRows(result.rows || [], result.matches || [], result.suggestions || []);
+        renderClassificationSuggestions(result.suggestions || []);
+        renderMatches(result.matches || []);
+    }
+
+    function renderBatchSummary(batch) {
+        document.getElementById('batch-summary-text').textContent = `${batch.batch_code || '-'} · ${batch.source_type || '-'} · ${batch.status || '-'}`;
+        document.getElementById('batch-summary-grid').innerHTML = `
+            <div class="summary-card"><span>Total</span><strong>${batch.total_rows || 0}</strong></div>
+            <div class="summary-card"><span>Válidas</span><strong>${batch.valid_rows || 0}</strong></div>
+            <div class="summary-card"><span>Com erro</span><strong>${batch.error_rows || 0}</strong></div>
+            <div class="summary-card"><span>Status</span><strong style="font-size:1rem;">${batch.status || '-'}</strong></div>
+        `;
+    }
+
+    function renderRows(rows, matches, suggestions) {
+        const matchMap = new Map(matches.map(item => [item.import_row_id, item]));
+        const suggestionMap = new Map();
+        for (const suggestion of suggestions) {
+            if (!suggestionMap.has(suggestion.import_row_id)) suggestionMap.set(suggestion.import_row_id, []);
+            suggestionMap.get(suggestion.import_row_id).push(suggestion);
+        }
+        const body = document.getElementById('rows-table-body');
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="7" class="empty-cell">Nenhuma linha staged.</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(row => {
+            const match = matchMap.get(row.id);
+            const rowSuggestions = suggestionMap.get(row.id) || [];
+            return `
+                <tr>
+                    <td>${row.row_number}</td>
+                    <td>${row.description || '-'}</td>
+                    <td>${row.occurred_on || row.due_date || '-'}</td>
+                    <td>${brl(row.amount)}</td>
+                    <td>${badge(row.processing_status)}</td>
+                    <td>
+                        ${match ? `Entry ${match.financial_entry_id} · ${badge(match.match_status)}` : '-'}
+                        ${rowSuggestions.length ? `<div style="margin-top:.35rem; color:var(--text-secondary); font-size:.85rem;">${rowSuggestions.length} sugestão(ões) de classificação</div>` : ''}
+                    </td>
+                    <td>${row.error_message || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderClassificationSuggestions(items) {
+        const container = document.getElementById('classification-suggestions-list');
+        if (!items.length) {
+            container.innerHTML = '<div class="empty-cell" style="padding:1rem;">Nenhuma sugestão de classificação.</div>';
+            return;
+        }
+        container.innerHTML = items.map(item => {
+            const payload = item.suggested_payload_json || {};
+            return `
+                <article class="match-card">
+                    <div class="match-card__top">
+                        <div>
+                            <strong>Linha ${item.import_row_id} · Rank ${item.rank_position}</strong>
+                            <div class="match-meta">${item.source_layer} · score ${(Number(item.score || 0) * 100).toFixed(1)}% · ${item.reason || 'sem justificativa'}</div>
+                        </div>
+                        <div>${badge(item.status)}</div>
+                    </div>
+                    <div class="match-meta">entry_type: ${payload.entry_type || '-'} · nature: ${payload.movement_nature || '-'} · conta: ${payload.chart_account_id || '-'} · centro: ${payload.cost_center_id || '-'} · atividade: ${payload.activity_id || '-'} · instância: ${payload.process_instance_id || '-'}</div>
+                    <div class="inline-actions">
+                        <button type="button" class="btn btn-primary" onclick="reviewClassificationSuggestion(${item.id}, 'applied')">Aplicar</button>
+                        <button type="button" class="btn btn-secondary" onclick="reviewClassificationSuggestion(${item.id}, 'confirmed')">Confirmar</button>
+                        <button type="button" class="btn btn-secondary" onclick="reviewClassificationSuggestion(${item.id}, 'rejected')">Rejeitar</button>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function renderMatches(matches) {
+        const container = document.getElementById('matches-list');
+        if (!matches.length) {
+            container.innerHTML = '<div class="empty-cell" style="padding:1rem;">Nenhuma sugestão de match.</div>';
+            return;
+        }
+        container.innerHTML = matches.map(match => `
+            <article class="match-card">
+                <div class="match-card__top">
+                    <div>
+                        <strong>Linha ${match.import_row_id} ↔ Entry ${match.financial_entry_id}</strong>
+                        <div class="match-meta">Confiança ${(Number(match.confidence_score || 0) * 100).toFixed(1)}% · ${match.match_reason || 'Sem motivo informado'}</div>
+                    </div>
+                    <div>${badge(match.match_status)}</div>
+                </div>
+                <div class="match-meta">Valor ${brl(match.matched_amount)} · Data ${match.matched_date || '-'}</div>
+                <div class="inline-actions">
+                    <button type="button" class="btn btn-primary" onclick="reviewMatch(${match.id}, 'confirmed')">Confirmar</button>
+                    <button type="button" class="btn btn-secondary" onclick="reviewMatch(${match.id}, 'rejected')">Rejeitar</button>
+                </div>
+            </article>
+        `).join('');
+    }
+
+    async function processBatch() {
+        const response = await fetch(`/api/financial/imports/${batchId}/process?company_id=${companyId}`, { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao processar lote.');
+            return;
+        }
+        const summary = result.summary || {};
+        alert(`Criados: ${summary.created_count || 0}, ignorados: ${summary.skipped_count || 0}, rejeitados: ${summary.rejected_count || 0}.`);
+        loadBatchDetail();
+    }
+
+    async function classifyBatch() {
+        const response = await fetch(`/api/financial/imports/${batchId}/classify?company_id=${companyId}`, { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao classificar lote.');
+            return;
+        }
+        alert(`Classificação concluída. Linhas classificadas: ${result.classified_count || 0}.`);
+        loadBatchDetail();
+    }
+
+    async function suggestClassification() {
+        const response = await fetch(`/api/financial/imports/${batchId}/suggest-classification?company_id=${companyId}`, { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao gerar sugestões de classificação.');
+            return;
+        }
+        alert(`Sugestões geradas: ${result.created_count || 0}.`);
+        loadBatchDetail();
+    }
+
+    async function rankClassificationWithAI() {
+        const response = await fetch(`/api/financial/imports/${batchId}/ai-rank-classification?company_id=${companyId}`, { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao ranquear classificações com IA.');
+            return;
+        }
+        alert(`Sugestões por IA geradas: ${result.created_count || 0}.`);
+        loadBatchDetail();
+    }
+
+    async function reconcileBatch() {
+        const response = await fetch(`/api/financial/imports/${batchId}/reconcile?company_id=${companyId}`, { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao conciliar lote.');
+            return;
+        }
+        alert(`Sugestões: ${result.suggested_count || 0}, sem match: ${result.unmatched_count || 0}.`);
+        loadBatchDetail();
+    }
+
+    async function reviewMatch(matchId, decision) {
+        const response = await fetch(`/api/financial/reconciliation-matches/${matchId}/review?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ decision }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao revisar match.');
+            return;
+        }
+        if (decision === 'confirmed') {
+            if (result.auto_settlement) {
+                alert(`Match confirmado e liquidação ${result.auto_settlement.settlement_code} gerada automaticamente.`);
+            } else if (result.auto_settlement_error) {
+                alert(`Match confirmado, mas a liquidação automática não foi gerada: ${result.auto_settlement_error}`);
+            }
+        }
+        loadBatchDetail();
+    }
+
+    async function reviewClassificationSuggestion(suggestionId, decision) {
+        const response = await fetch(`/api/financial/classification-suggestions/${suggestionId}/review?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ decision }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao revisar sugestão de classificação.');
+            return;
+        }
+        loadBatchDetail();
+    }
+
+    document.addEventListener('DOMContentLoaded', loadBatchDetail);
+</script>
+{% endblock %}

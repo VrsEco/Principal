@@ -1,0 +1,248 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Projetos / Processos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Projetos / Processos</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fde-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="fde-header">
+        <div>
+            <h1>Projetos / Processos</h1>
+        </div>
+    </header>
+
+    <section class="fde-shell">
+        <aside class="fde-rail">
+            <div class="fde-card">
+                <div class="fde-switcher">
+                    <button type="button" class="fde-switcher-btn active" data-domain-type="project" onclick="switchDomainType('project')">Projetos</button>
+                    <button type="button" class="fde-switcher-btn" data-domain-type="process" onclick="switchDomainType('process')">Processos</button>
+                </div>
+                <label class="fde-search">
+                    <span>Buscar</span>
+                    <input id="fde-search" type="search" placeholder="Código ou nome">
+                </label>
+                <div id="fde-list" class="fde-list">
+                    <div class="empty-state">Carregando vínculos...</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="fde-main">
+            <section class="fde-card">
+                <form id="fde-form" class="fde-form">
+                    <div class="fde-empty-form">Selecione um projeto ou processo para habilitar no Financeiro.</div>
+                </form>
+            </section>
+        </main>
+    </section>
+</div>
+
+<style>
+    .fde-page { padding:0 2rem 2rem; }
+    .fde-header { margin-bottom:1rem; display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
+    .fde-shell { display:grid; grid-template-columns:320px minmax(0,1fr); gap:1rem; align-items:start; }
+    .fde-rail { position:sticky; top:1rem; }
+    .fde-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem; }
+    .fde-switcher { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; margin-bottom:1rem; }
+    .fde-switcher-btn { border:1px solid var(--border); background:var(--surface-secondary); color:var(--text-secondary); border-radius:12px; padding:.8rem .9rem; font-weight:700; cursor:pointer; }
+    .fde-switcher-btn.active { background:var(--primary-light); color:var(--primary); border-color:rgba(37, 99, 235, 0.16); }
+    .fde-search { display:flex; flex-direction:column; gap:.4rem; color:var(--text-secondary); font-weight:600; margin-bottom:1rem; }
+    .fde-search input,
+    .fde-form input,
+    .fde-form textarea,
+    .fde-form select { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); }
+    .fde-list { display:flex; flex-direction:column; gap:.65rem; max-height:calc(100vh - 280px); overflow:auto; padding-right:.2rem; }
+    .fde-item { border:1px solid transparent; border-radius:12px; padding:.75rem .8rem; cursor:pointer; background:transparent; transition:all .15s ease; }
+    .fde-item:hover, .fde-item.active { background:var(--surface-secondary); border-color:rgba(37, 99, 235, 0.12); }
+    .fde-item strong, .fde-item span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .fde-item span { color:var(--text-secondary); font-size:.8rem; margin-top:.18rem; }
+    .fde-item-meta { display:flex; justify-content:space-between; gap:.5rem; margin-top:.55rem; align-items:center; }
+    .fde-pill { display:inline-flex; align-items:center; border-radius:999px; padding:.18rem .55rem; font-size:.7rem; font-weight:700; }
+    .fde-pill.enabled { background:#dcfce7; color:#166534; }
+    .fde-pill.disabled { background:#e5e7eb; color:#475569; }
+    .fde-pill.source-inactive { background:#fee2e2; color:#b91c1c; }
+    .fde-form { display:grid; gap:1rem; }
+    .fde-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .fde-form label { display:flex; flex-direction:column; gap:.42rem; color:var(--text-secondary); font-weight:600; }
+    .fde-readonly { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.82rem .9rem; color:var(--text-primary); min-height:46px; display:flex; align-items:center; }
+    .fde-empty-form { color:var(--text-tertiary); text-align:center; padding:2rem 1rem; }
+    .fde-status-line { display:flex; gap:.65rem; flex-wrap:wrap; }
+    .fde-actions { display:flex; justify-content:flex-end; gap:.75rem; flex-wrap:wrap; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .empty-state { text-align:center; color:var(--text-tertiary); padding:1.5rem 1rem; }
+    @media (max-width: 960px) {
+        .fde-page { padding:0 1rem 1.5rem; }
+        .fde-shell { grid-template-columns:1fr; }
+        .fde-rail { position:static; }
+        .fde-list { max-height:none; }
+    }
+    @media (max-width: 768px) {
+        .fde-header h1 { font-size:1.5rem; line-height:1.2; }
+        .fde-form-grid { grid-template-columns:1fr; }
+        .fde-actions { flex-direction:column; }
+        .fde-actions .btn { width:100%; }
+    }
+    @media (max-width: 520px) {
+        .fde-page { padding:0 .75rem 1rem; }
+        .fde-card { padding:.9rem; border-radius:14px; }
+        .fde-item-meta { flex-direction:column; align-items:flex-start; }
+    }
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.fde-page')?.dataset.companyId);
+    let currentDomainType = 'project';
+    let allItems = [];
+    let selectedItem = null;
+
+    function getBadgeClass(item) {
+        return item.is_enabled ? 'enabled' : 'disabled';
+    }
+
+    function renderList(items) {
+        const container = document.getElementById('fde-list');
+        if (!items.length) {
+            container.innerHTML = '<div class="empty-state">Nenhum registro disponível.</div>';
+            return;
+        }
+        container.innerHTML = items.map(item => `
+            <article class="fde-item ${selectedItem && selectedItem.source_id === item.source_id ? 'active' : ''}" onclick="selectItem(${item.source_id})">
+                <strong>${item.source_code ? `${item.source_code} - ` : ''}${item.source_name || '-'}</strong>
+                <span>${item.source_status || 'Sem status'}</span>
+                <div class="fde-item-meta">
+                    <span class="fde-pill ${getBadgeClass(item)}">${item.is_enabled ? 'Habilitado' : 'Desabilitado'}</span>
+                    ${item.source_is_active ? '' : '<span class="fde-pill source-inactive">Origem inativa</span>'}
+                </div>
+            </article>
+        `).join('');
+    }
+
+    function renderForm(item) {
+        const form = document.getElementById('fde-form');
+        if (!item) {
+            form.innerHTML = '<div class="fde-empty-form">Selecione um projeto ou processo para habilitar no Financeiro.</div>';
+            return;
+        }
+        form.innerHTML = `
+            <div class="fde-form-grid">
+                <label>
+                    <span>Tipo</span>
+                    <div class="fde-readonly">${item.domain_type === 'project' ? 'Projeto' : 'Processo'}</div>
+                </label>
+                <label>
+                    <span>Status da origem</span>
+                    <div class="fde-readonly">${item.source_status || 'Sem status'}</div>
+                </label>
+                <label>
+                    <span>Código</span>
+                    <div class="fde-readonly">${item.source_code || '-'}</div>
+                </label>
+                <label>
+                    <span>Nome</span>
+                    <div class="fde-readonly">${item.source_name || '-'}</div>
+                </label>
+                <label>
+                    <span>Habilitado no Financeiro</span>
+                    <select name="is_enabled">
+                        <option value="true" ${item.is_enabled ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!item.is_enabled ? 'selected' : ''}>Não</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Origem ativa</span>
+                    <div class="fde-readonly">${item.source_is_active ? 'Sim' : 'Não'}</div>
+                </label>
+                <label style="grid-column:1 / -1;">
+                    <span>Observações</span>
+                    <textarea name="notes" rows="5" placeholder="Observações e regras financeiras para este projeto/processo.">${item.notes || ''}</textarea>
+                </label>
+            </div>
+            <div class="fde-actions">
+                <button type="button" class="btn btn-secondary" onclick="toggleSelectedItem(${item.is_enabled ? 'false' : 'true'})">${item.is_enabled ? 'Desabilitar' : 'Habilitar'}</button>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        `;
+        form.onsubmit = saveSelectedItem;
+    }
+
+    function selectItem(sourceId) {
+        selectedItem = allItems.find(item => item.source_id === sourceId) || null;
+        renderList(allItems);
+        renderForm(selectedItem);
+    }
+
+    function switchDomainType(domainType) {
+        currentDomainType = domainType;
+        selectedItem = null;
+        document.querySelectorAll('.fde-switcher-btn').forEach(button => {
+            button.classList.toggle('active', button.dataset.domainType === domainType);
+        });
+        loadItems();
+    }
+
+    async function loadItems() {
+        const search = (document.getElementById('fde-search').value || '').trim().toLowerCase();
+        const response = await fetch(`/api/financial/domain-enablements?company_id=${companyId}&domain_type=${currentDomainType}`);
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao carregar habilitações financeiras.');
+            return;
+        }
+        const items = Array.isArray(result.items) ? result.items : [];
+        allItems = items.filter(item => !search || `${item.source_code || ''} ${item.source_name || ''}`.toLowerCase().includes(search));
+        renderList(allItems);
+        renderForm(selectedItem && allItems.find(item => item.source_id === selectedItem.source_id) ? allItems.find(item => item.source_id === selectedItem.source_id) : null);
+    }
+
+    async function saveSelectedItem(event) {
+        event.preventDefault();
+        if (!selectedItem) return;
+        const formData = new FormData(event.currentTarget);
+        const payload = {
+            is_enabled: formData.get('is_enabled') === 'true',
+            notes: formData.get('notes') || null,
+        };
+        const response = await fetch(`/api/financial/domain-enablements/${selectedItem.domain_type}/${selectedItem.source_id}?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao salvar habilitação financeira.');
+            return;
+        }
+        selectedItem = result;
+        await loadItems();
+    }
+
+    async function toggleSelectedItem(isEnabled) {
+        if (!selectedItem) return;
+        const response = await fetch(`/api/financial/domain-enablements/${selectedItem.domain_type}/${selectedItem.source_id}/toggle?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_enabled: isEnabled }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao alterar habilitação financeira.');
+            return;
+        }
+        selectedItem = result;
+        await loadItems();
+    }
+
+    document.getElementById('fde-search').addEventListener('input', loadItems);
+    document.addEventListener('DOMContentLoaded', loadItems);
+</script>
+{% endblock %}

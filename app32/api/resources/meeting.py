@@ -323,7 +323,7 @@ class MeetingActivitiesResource(Resource):
         meeting_activities = []
         try:
             meeting_activities = json.loads(meeting.activities_json or "[]")
-        except:
+        except Exception:
             pass
 
         # 2. Activities already created in projects
@@ -364,7 +364,7 @@ class MeetingSyncCheckResource(Resource):
         
         try:
             m_acts = json.loads(meeting.activities_json or "[]")
-        except:
+        except Exception:
             m_acts = []
             
         p_tasks = ProjectTask.query.filter_by(project_id=meeting.project_id).all()
@@ -411,7 +411,7 @@ class MeetingSyncActivitiesResource(Resource):
                 if title not in p_titles:
                     try:
                         due_date = datetime.strptime(act.get('deadline'), '%Y-%m-%d').date() if act.get('deadline') else None
-                    except:
+                    except Exception:
                         due_date = None
                         
                     task = ProjectTask(

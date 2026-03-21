@@ -1,0 +1,405 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Auditoria de Automação{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<a href="/financial/automation-rules">Automação</a>
+<span class="sep">/</span>
+<span class="current">Auditoria</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="finance-page" data-company-id="{{ company_id or '' }}">
+    <header class="finance-header">
+        <div>
+            <h1>Auditoria da automação financeira</h1>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Filtros</h2>
+                <p>Use filtros por regra ou instância para analisar a execução do motor.</p>
+            </div>
+        </div>
+        <div class="panel-body filters-grid">
+            <label><span>Regra</span><input type="number" min="1" id="filter-rule-id"></label>
+            <label><span>Instância</span><input type="number" min="1" id="filter-instance-id"></label>
+            <div style="display:flex; align-items:end;">
+                <button class="btn btn-primary" type="button" onclick="loadExecutions()">Aplicar</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Disparo manual</h2>
+                <p>Útil para homologação e reprocessamento controlado enquanto ampliamos os hooks automáticos.</p>
+            </div>
+        </div>
+        <div class="panel-body filters-grid">
+            <label><span>Instância</span><input type="number" min="1" id="dispatch-instance-id"></label>
+            <label>
+                <span>Status gatilho</span>
+                <select id="dispatch-trigger-status">
+                    <option value="">Usar status atual</option>
+                    <option value="pending">pending</option>
+                    <option value="in_progress">in_progress</option>
+                    <option value="completed">completed</option>
+                    <option value="overdue">overdue</option>
+                </select>
+            </label>
+            <div style="display:flex; align-items:end;">
+                <button class="btn btn-primary" type="button" onclick="dispatchTrigger()">Disparar</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Execuções recentes</h2>
+                <p>Sucesso, skip idempotente, erro e quantidade de tentativas por combinação regra/instância.</p>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Quando</th>
+                        <th>Regra</th>
+                        <th>Instância</th>
+                        <th>Status</th>
+                        <th>Tentativa</th>
+                        <th>Idempotência</th>
+                        <th>Detalhe</th>
+                    </tr>
+                </thead>
+                <tbody id="executions-table-body">
+                    <tr><td colspan="7" class="empty-cell">Carregando execuções...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<style>
+    .finance-page { padding: 0 2rem 2rem; }
+    .finance-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:760px; }
+    .panel { margin-bottom:1.5rem; background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+    .panel-header { padding:1.25rem 1.25rem 0; }
+    .panel-body, .table-wrap { padding:1.25rem; }
+    .panel-header h2 { margin:0; }
+    .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); }
+    .filters-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+    .filters-grid label { display:flex; flex-direction:column; gap:.45rem; font-weight:600; color:var(--text-secondary); }
+    .filters-grid input {
+        background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; color:var(--text-primary);
+    }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .data-table { width:100%; border-collapse:collapse; }
+    .data-table th, .data-table td { padding:.9rem .75rem; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    .data-table th { color:var(--text-tertiary); font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; }
+    .empty-cell { text-align:center; color:var(--text-tertiary); padding:2rem 1rem; }
+    .badge { display:inline-flex; align-items:center; border-radius:999px; padding:.25rem .6rem; font-size:.72rem; font-weight:700; }
+    .badge--success { background:#dcfce7; color:#15803d; }
+    .badge--skipped { background:#e2e8f0; color:#475569; }
+    .badge--error { background:#fee2e2; color:#b91c1c; }
+    @media (max-width: 720px) { .finance-page { padding:0 1rem 1.5rem; } .filters-grid { grid-template-columns:1fr; } }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.finance-page')?.dataset.companyId || 0);
+
+    async function apiFetch(url) {
+        const response = await fetch(url, {
+            headers: { 'X-Company-ID': String(companyId) },
+            credentials: 'same-origin'
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Erro na operação.');
+        return data;
+    }
+
+    function badgeClass(status) {
+        return `badge badge--${status || 'skipped'}`;
+    }
+
+    function renderRow(item) {
+        return `
+            <tr>
+                <td>${item.executed_at || '-'}</td>
+                <td>${item.rule_id}</td>
+                <td>${item.process_instance_id}</td>
+                <td><span class="${badgeClass(item.execution_status)}">${item.execution_status}</span></td>
+                <td>${item.attempt_number}</td>
+                <td><small>${item.idempotency_key || '-'}</small></td>
+                <td><small>${item.error_message || JSON.stringify(item.payload_json || {})}</small></td>
+            </tr>
+        `;
+    }
+
+    async function loadExecutions() {
+        const tbody = document.getElementById('executions-table-body');
+        const params = new URLSearchParams();
+        const ruleId = document.getElementById('filter-rule-id').value;
+        const instanceId = document.getElementById('filter-instance-id').value;
+        if (ruleId) params.set('rule_id', ruleId);
+        if (instanceId) params.set('process_instance_id', instanceId);
+
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Carregando...</td></tr>';
+        try {
+            const url = `/api/financial/automation-executions${params.toString() ? '?' + params.toString() : ''}`;
+            const data = await apiFetch(url);
+            tbody.innerHTML = data.length
+                ? data.map(renderRow).join('')
+                : '<tr><td colspan="7" class="empty-cell">Nenhuma execução encontrada.</td></tr>';
+        } catch (error) {
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-cell">${error.message}</td></tr>`;
+        }
+    }
+
+    async function dispatchTrigger() {
+        const instanceId = Number(document.getElementById('dispatch-instance-id').value || 0);
+        const triggerStatus = document.getElementById('dispatch-trigger-status').value;
+        if (!instanceId) {
+            alert('Informe a instância.');
+            return;
+        }
+        try {
+            const result = await fetch(`/api/financial/process-triggers/${instanceId}/dispatch`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Company-ID': String(companyId)
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    trigger_status: triggerStatus || null,
+                    event_name: 'manual_audit_dispatch'
+                })
+            });
+            const data = await result.json().catch(() => ({}));
+            if (!result.ok) throw new Error(data.error || 'Erro ao disparar gatilho.');
+            alert(`Disparo concluído. ${data.created_count || 0} agendamento(s) criado(s).`);
+            loadExecutions();
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    loadExecutions();
+</script>
+{% endblock %}

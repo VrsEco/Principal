@@ -1,6 +1,6 @@
 import json
 
-from flask import Blueprint, render_template, jsonify, request, send_file, url_for
+from flask import Blueprint, render_template, jsonify, request, send_file, url_for, session
 from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, User, Company, Employee, Project, ProjectTask, Process, ProcessInstance
@@ -676,6 +676,37 @@ def my_work_api_activities():
     except Exception as e:
         logger.exception("Erro ao listar atividades do My Work para user_id=%s", getattr(current_user, "id", None))
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@my_work_bp.route('/my-work/api/process-instances/<int:instance_id>/complete', methods=['POST'])
+@login_required
+def my_work_complete_process_instance_legacy(instance_id: int):
+    """
+    Endpoint legado de compatibilidade para front-ends antigos do My Work.
+    """
+    from services.my_work.process_actions_service import complete_process_instance_for_my_work
+
+    payload = request.get_json(silent=True) or {}
+    company_id = (
+        request.args.get('company_id', type=int)
+        or payload.get('company_id')
+        or session.get('active_company_id')
+    )
+
+    if not company_id:
+        return jsonify({
+            "success": False,
+            "error": "Empresa ativa não identificada para concluir a instância.",
+        }), 400
+
+    result = complete_process_instance_for_my_work(
+        user_id=current_user.id,
+        instance_id=instance_id,
+        company_id=int(company_id),
+        completion_comment=payload.get('completion_comment'),
+    )
+    status_code = result.pop("status_code", 200 if result.get("success") else 400)
+    return jsonify(result), status_code
 
 @my_work_bp.route('/my-work/api/occurrences/summary')
 @login_required

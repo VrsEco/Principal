@@ -1,11 +1,86 @@
-import re
+import ast
 import logging
+import operator
+import re
 from decimal import Decimal
 from datetime import datetime, date, timedelta
 from typing import Optional, Dict, List
 from models import db, Indicator, IndicatorData
 
 logger = logging.getLogger(__name__)
+
+ALLOWED_FORMULA_FUNCTIONS = {
+    "abs": abs,
+    "min": min,
+    "max": max,
+    "round": round,
+}
+
+ALLOWED_BINARY_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+}
+
+ALLOWED_UNARY_OPERATORS = {
+    ast.UAdd: operator.pos,
+    ast.USub: operator.neg,
+}
+
+
+def _evaluate_formula_expression(expression: str) -> float:
+    """Avalia fórmulas aritméticas de forma segura, via AST controlada."""
+
+    def _evaluate_node(node):
+        if isinstance(node, ast.Expression):
+            return _evaluate_node(node.body)
+
+        if isinstance(node, ast.Constant):
+            if isinstance(node.value, (int, float)):
+                return float(node.value)
+            raise ValueError(f"Constante não suportada: {type(node.value).__name__}")
+
+        if isinstance(node, ast.Num):  # pragma: no cover - compat legado do AST
+            return float(node.n)
+
+        if isinstance(node, ast.BinOp):
+            operator_fn = ALLOWED_BINARY_OPERATORS.get(type(node.op))
+            if operator_fn is None:
+                raise ValueError(
+                    f"Operador binário não suportado: {type(node.op).__name__}"
+                )
+            return operator_fn(_evaluate_node(node.left), _evaluate_node(node.right))
+
+        if isinstance(node, ast.UnaryOp):
+            operator_fn = ALLOWED_UNARY_OPERATORS.get(type(node.op))
+            if operator_fn is None:
+                raise ValueError(
+                    f"Operador unário não suportado: {type(node.op).__name__}"
+                )
+            return operator_fn(_evaluate_node(node.operand))
+
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name):
+                raise ValueError("Apenas chamadas diretas de funções são permitidas")
+
+            function_name = node.func.id
+            function = ALLOWED_FORMULA_FUNCTIONS.get(function_name)
+            if function is None:
+                raise ValueError(f"Função não suportada: {function_name}")
+            if node.keywords:
+                raise ValueError("Argumentos nomeados não são permitidos em fórmulas")
+
+            arguments = [_evaluate_node(argument) for argument in node.args]
+            return float(function(*arguments))
+
+        raise ValueError(f"Elemento não suportado na fórmula: {type(node).__name__}")
+
+    parsed_expression = ast.parse(expression, mode="eval")
+    return float(_evaluate_node(parsed_expression))
 
 class IndicatorService:
     """
@@ -66,9 +141,7 @@ class IndicatorService:
             eval_formula = eval_formula.replace(f'[{token}]', str(value))
 
         try:
-            # Uso de eval restrito por segurança (embora sejamos Squad de Elite, segurança é prioridade)
-            allowed_names = {"__builtins__": {}, "abs": abs, "min": min, "max": max, "round": round}
-            result = eval(eval_formula, allowed_names)
+            result = _evaluate_formula_expression(eval_formula)
             
             # Persistir o resultado para manter o histórico
             IndicatorService.upsert_measurement_calculated(

@@ -33,6 +33,82 @@ def _is_menu_like_message(text: str) -> bool:
     )
 
 
+def _is_non_critical_telegram_delivery_error(exc: Exception) -> bool:
+    text = _normalize_text_basic(str(exc))
+    known_fragments = (
+        "chat not found",
+        "bot was blocked by the user",
+        "user is deactivated",
+        "have no rights to send a message",
+    )
+    return any(fragment in text for fragment in known_fragments)
+
+
+def _safe_send_telegram_message(
+    chat_id,
+    text: str,
+    *,
+    parse_mode: str | None = None,
+    reply_to_message_id: int | None = None,
+    log_level: int = logging.WARNING,
+) -> bool:
+    if not bot:
+        logger.warning("Tentativa de envio Telegram sem bot ativo.")
+        return False
+
+    payload = {"chat_id": chat_id, "text": text}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    if reply_to_message_id is not None:
+        payload["reply_to_message_id"] = reply_to_message_id
+
+    try:
+        bot.send_message(**payload)
+        return True
+    except Exception as exc:
+        if _is_non_critical_telegram_delivery_error(exc):
+            logger.warning(
+                "Entrega Telegram ignorada para chat %s: %s",
+                chat_id,
+                exc,
+            )
+            return False
+        logger.log(
+            log_level,
+            "Falha ao enviar mensagem Telegram para chat %s: %s",
+            chat_id,
+            exc,
+        )
+        return False
+
+
+def _safe_send_telegram_with_fallbacks(
+    chat_id,
+    text: str,
+    *attempts: dict,
+) -> bool:
+    if not attempts:
+        attempts = ({},)
+    for attempt in attempts:
+        if _safe_send_telegram_message(chat_id, text, **attempt):
+            return True
+    return False
+
+
+def _safe_send_chat_action(chat_id, action: str) -> bool:
+    if not bot:
+        return False
+    try:
+        bot.send_chat_action(chat_id, action)
+        return True
+    except Exception as exc:
+        if _is_non_critical_telegram_delivery_error(exc):
+            logger.warning("Ação Telegram ignorada para chat %s: %s", chat_id, exc)
+            return False
+        logger.debug("Falha ao enviar chat action Telegram: %s", exc)
+        return False
+
+
 def _fallback_root_menu(company_id):
     try:
         from src.intelligence.menu_engine import list_menu_options
@@ -117,10 +193,12 @@ def process_telegram_message(app, message: telebot.types.Message):
                     "Parece que seu Telegram ainda não está vinculado à sua conta no sistema.\n"
                     f"Para me autorizar, acesse o sistema Gestão Versus, vá em seu perfil e informe seu Telegram ID: `{telegram_id}`"
                 )
-                try:
-                    bot.send_message(message.chat.id, msg, parse_mode='Markdown')
-                except:
-                    bot.send_message(message.chat.id, msg)
+                _safe_send_telegram_with_fallbacks(
+                    message.chat.id,
+                    msg,
+                    {"parse_mode": "Markdown"},
+                    {},
+                )
                 return
 
             # 2. Identify Company Context
@@ -166,28 +244,31 @@ def process_telegram_message(app, message: telebot.types.Message):
                 ))
                 db.session.commit()
 
-                try:
-                    bot.send_message(message.chat.id, email_confirm_response, parse_mode='HTML')
-                except Exception:
-                    bot.send_message(message.chat.id, email_confirm_response)
+                _safe_send_telegram_with_fallbacks(
+                    message.chat.id,
+                    email_confirm_response,
+                    {"parse_mode": "HTML"},
+                    {},
+                )
                 return
 
             # Se encontrou o usuário: enviar confirmação imediata para reduzir percepção de latência.
             try:
                 from src.intelligence.workflows.presenters import build_processing_ack_message
-                bot.send_message(
+                _safe_send_telegram_message(
                     message.chat.id,
                     build_processing_ack_message(channel="telegram"),
                     reply_to_message_id=message.message_id,
-                    parse_mode='HTML'
+                    parse_mode='HTML',
+                    log_level=logging.DEBUG,
                 )
             except Exception as ack_err:
                 logger.debug(f"Falha ao enviar mensagem intermediária de processamento: {ack_err}")
 
             # Mantém também a ação de digitação enquanto processa.
             try:
-                bot.send_chat_action(message.chat.id, 'typing')
-            except: pass
+                _safe_send_chat_action(message.chat.id, 'typing')
+            except Exception: pass
 
             # 3. Executa o Agente com Contexto Unificado (@ARQUITETO)
             from src.intelligence.execution import (
@@ -292,16 +373,19 @@ def process_telegram_message(app, message: telebot.types.Message):
             db.session.commit()
 
             # 5. Responde ao Telegram (Utilizando HTML para maior robustez @ARQUITETO)
-            try:
-                bot.send_message(message.chat.id, response_text, parse_mode='HTML')
-            except Exception as html_err:
-                logger.warning(f"Erro ao enviar via HTML: {html_err}. Tentando Markdown.")
-                try:
-                    bot.send_message(message.chat.id, response_text, parse_mode='Markdown')
-                except:
-                    bot.send_message(message.chat.id, response_text)
+            _safe_send_telegram_with_fallbacks(
+                message.chat.id,
+                response_text,
+                {"parse_mode": "HTML"},
+                {"parse_mode": "Markdown"},
+                {},
+            )
 
         except Exception as e:
+            if _is_non_critical_telegram_delivery_error(e):
+                logger.warning("Entrega Telegram descartada sem escalonamento técnico: %s", e)
+                return
+
             tb = traceback.format_exc()
             logger.error(f"❌ Erro crítico no Telegram Webhook: {str(e)}\n{tb}")
 
@@ -337,13 +421,27 @@ def process_telegram_message(app, message: telebot.types.Message):
                     )
                     db.session.add(action)
                     db.session.commit()
+                    try:
+                        from services.agent_action_backlog_service import ensure_backlog_task_for_action
+
+                        ensure_backlog_task_for_action(action, autocommit=True)
+                    except Exception:
+                        logger.exception(
+                            "Falha ao espelhar technical_fix #%s no backlog AA.J.31",
+                            action.id,
+                        )
                     logger.info(f"✅ Erro escalonado via Ticket #{action.id}")
             except Exception as esc_err:
                 logger.error(f"Falha catastrófica ao escalonar erro: {esc_err}")
 
             if bot:
                 from src.intelligence.workflows.presenters import build_internal_error_message
-                bot.send_message(message.chat.id, build_internal_error_message(channel="telegram"), reply_to_message_id=message.message_id, parse_mode='HTML')
+                _safe_send_telegram_message(
+                    message.chat.id,
+                    build_internal_error_message(channel="telegram"),
+                    reply_to_message_id=message.message_id,
+                    parse_mode='HTML',
+                )
 
 # Rota HTTP (Webhook) que será chamada pelo servidor do Telegram
 @telegram_bp.route('/telegram', methods=['POST'])

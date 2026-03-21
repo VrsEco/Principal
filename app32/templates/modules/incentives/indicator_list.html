@@ -236,7 +236,7 @@
                                 </a>
                                 <button class="btn-icon-xs btn-delete" 
                                         onclick="deleteIndicator({{ ind.id }}, '{{ ind.name }}')" 
-                                        {% if ind.goals_count > 0 or ind.data_count > 0 %}disabled title="Bloqueado: possui {{ ind.goals_count }} metas e {{ ind.data_count }} registros"{% else %}title="Excluir Permanentemente"{% endif %}>
+                                        {% if ind.goals_count > 0 or ind.data_count > 0 %}disabled title="Bloqueado: possui {{ ind.goals_count }} metas e {{ ind.data_count }} registros vinculados"{% else %}title="Excluir com soft delete (inativar)"{% endif %}>
                                     <i class="fas fa-trash"></i>
                                 </button>
 
@@ -313,7 +313,7 @@ async function toggleIndicatorActive(id, btn) {
 }
 
 async function deleteIndicator(id, name) {
-    if (!confirm(`Excluir "${name}"? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Excluir "${name}"? A exclusão será lógica (soft delete/inativação) e será bloqueada se houver vínculos.`)) return;
     try {
         const res = await fetch(`/api/indicators/${id}`, { method: 'DELETE' });
         if (res.ok) { location.reload(); }
@@ -395,4 +395,3 @@ async function processWizard() {
 }
 </script>
 {% endblock %}
-

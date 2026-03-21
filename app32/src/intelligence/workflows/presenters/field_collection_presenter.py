@@ -20,7 +20,8 @@ def build_missing_fields_prompt(
 
     blocks: List[ChatMessageBlock] = [
         ChatMessageBlock(kind="status", text=build_status_callout("warning", "Preencha somente o que ainda estiver pendente.", channel=channel)),
-        ChatMessageBlock(kind="body", text="Para concluir a solicitacao, preciso destes campos obrigatorios:"),
+        ChatMessageBlock(kind="body", text=f"Voce quer fazer {option.code} - {option.title}."),
+        ChatMessageBlock(kind="body", text="Para executar, faltam os seguintes dados:"),
     ]
 
     if fields:
@@ -31,7 +32,7 @@ def build_missing_fields_prompt(
     visible_payload = [f"{key}: {value}" for key, value in payload.items() if not str(key).startswith("_")]
     if visible_payload:
         blocks.append(ChatMessageBlock(kind="body", text="Dados ja recebidos:"))
-        blocks.append(make_list_block([f"• {item}" for item in visible_payload]))
+        blocks.append(make_list_block([f"- {item}" for item in visible_payload]))
 
     next_steps = [
         "Envie no formato: numero: valor",

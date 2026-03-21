@@ -4,6 +4,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/backlog-human-gate.css') }}" />
 <style>
     /* Kanban Board Layout from processes_v2 */
     .content-header-ws {
@@ -604,6 +605,8 @@
     </div>
 </div>
 
+<div id="backlogHumanGateBoardSection"></div>
+
 <!-- Kanban Board -->
 <div class="kanban-board-ws">
     {% for stage in stages %}
@@ -691,6 +694,8 @@
                     <label>Notas / Observações</label>
                     <textarea id="taskNotes" rows="2"></textarea>
                 </div>
+
+                <div id="backlogHumanGateSection" style="display: none;"></div>
 
                 <!-- Work Log Section -->
                 <div id="workLogSection" class="log-section" style="display: none;">
@@ -825,6 +830,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/backlog-human-gate.js') }}"></script>
 <script>
     const COMPANY_ID = parseInt("{{ company.id if company else '0' }}");
     const IS_COLLABORATOR = {{ 'true' if is_collaborator else 'false' }};
@@ -834,6 +840,46 @@
     let draggedTaskId = null;
     let currentTaskLogs = [];
     let pendingDrop = null;
+
+    window.BacklogHumanGate?.configure({
+        isReadOnly: IS_COLLABORATOR,
+        getTaskById: (taskId) => allTasks.find((task) => Number(task.id) === Number(taskId)),
+        afterOperation: async ({ taskId }) => {
+            await loadTasks();
+            if (taskId) {
+                openTaskModal(taskId);
+            }
+        },
+        onBoardFilterChange: () => applyKanbanFilters(),
+        notify: (message) => alert(message),
+    });
+
+    function isBacklogHumanGateTask(task) {
+        return Boolean(window.BacklogHumanGate && window.BacklogHumanGate.shouldLockTask(task));
+    }
+
+    function mountBacklogHumanGateSection(task) {
+        const container = document.getElementById('backlogHumanGateSection');
+        if (!container) return;
+        window.BacklogHumanGate?.mountTaskSection(task, container);
+    }
+
+    function getBacklogHumanGateVisibleTasks(tasks) {
+        return window.BacklogHumanGate ? window.BacklogHumanGate.filterTasks(tasks) : tasks;
+    }
+
+    function mountBacklogHumanGateBoard(tasks) {
+        const container = document.getElementById('backlogHumanGateBoardSection');
+        if (!container) return;
+        window.BacklogHumanGate?.mountBoardSection(tasks || allTasks, container);
+    }
+
+    function setTaskFieldsReadOnly(disabled) {
+        ['taskProjectId', 'taskWhat', 'taskEmployeeId', 'taskDueDate', 'taskEstimatedHours', 'taskScoreWeight', 'taskHow', 'taskNotes'].forEach((fieldId) => {
+            const field = document.getElementById(fieldId);
+            if (field) field.disabled = Boolean(disabled);
+        });
+    }
 
     const stageAbbreviations = {
         'inbox': 'CE',
@@ -861,7 +907,7 @@
             if (Array.isArray(data)) {
                 allTasks = data;
                 renderKanban();
-                updateStats();
+                updateStats(getBacklogHumanGateVisibleTasks(allTasks));
                 if (allTasks.length === 0) {
                     addDebugLog('Aviso: Nenhuma atividade encontrada para esta empresa.');
                 }
@@ -963,7 +1009,9 @@
 
     function renderKanban(tasksToRender = null) {
         addDebugLog('Renderizando Kanban...');
-        const tasks = tasksToRender || allTasks;
+        const baseTasks = tasksToRender || allTasks;
+        mountBacklogHumanGateBoard(baseTasks);
+        const tasks = getBacklogHumanGateVisibleTasks(baseTasks);
         if (!Array.isArray(tasks)) {
             addDebugLog('ERRO: Tarefas para renderizar não é um array');
             console.error('Tarefas inválidas para renderização:', tasks);
@@ -1002,11 +1050,20 @@
     function createCard(task) {
         const card = document.createElement('div');
         card.className = 'kanban-card-ws';
-        card.draggable = !IS_COLLABORATOR;
+        const isHumanGateTask = isBacklogHumanGateTask(task);
+        const humanGateCardHtml = window.BacklogHumanGate ? window.BacklogHumanGate.renderCardSection(task) : '';
+        card.draggable = !IS_COLLABORATOR && !isHumanGateTask;
         card.dataset.id = task.id;
         card.classList.add(`prio-${task.priority || 'normal'}`);
+        if (isHumanGateTask) {
+            card.classList.add('human-gate-locked');
+        }
 
         card.ondragstart = (e) => {
+            if (isHumanGateTask || IS_COLLABORATOR) {
+                e.preventDefault();
+                return false;
+            }
             draggedTaskId = task.id;
             card.classList.add('dragging');
             e.dataTransfer.setData('text/plain', task.id);
@@ -1048,12 +1105,14 @@
                     <span style="font-weight: 600; color: var(--text-primary);">${ownerName}</span>
                 </div>
             </div>
+
+            ${humanGateCardHtml}
             
             <div class="card-footer-meta">
                 <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary);">
                     ${task.worked_hours || 0}h <span style="font-weight: 400; color: var(--text-tertiary);">/ ${task.estimated_hours || 0}h</span>
                 </div>
-                <button class="btn btn-icon" onclick="openTaskModal(${task.id})" style="padding: 4px; color: var(--primary); background: var(--primary-light); border-radius: 6px;">
+                <button class="btn btn-icon" onclick="openTaskModal(${task.id})" style="padding: 4px; color: var(--primary); background: var(--primary-light); border-radius: 6px;" title="${isHumanGateTask ? 'Abrir cockpit HITL' : 'Editar atividade'}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -1102,6 +1161,11 @@
         const task = allTasks.find(t => t.id == taskId);
 
         if (!task || task.stage === targetStage) return;
+        if (isBacklogHumanGateTask(task)) {
+            alert('Este card HITL é espelhado. Use as ações operacionais do backlog.');
+            renderKanban();
+            return;
+        }
 
         // Visual feedback immediate
         const card = document.querySelector(`.kanban-card-ws[data-id="${taskId}"]`);
@@ -1235,49 +1299,62 @@
         }
         const modalTitle = document.getElementById('modalTitle');
         const idField = document.getElementById('taskId');
+        const saveButton = document.querySelector('#taskModal .btn-primary');
+        const deleteButton = document.getElementById('btnDeleteTask');
+        const workLogSection = document.getElementById('workLogSection');
+        const diaryLogSection = document.getElementById('diaryLogSection');
+        let currentTask = null;
+        let isHumanGateTask = false;
 
         if (taskId) {
-            const task = allTasks.find(t => t.id == taskId);
-            modalTitle.textContent = `#${task.id} - ${task.what.substring(0, 30)}...`;
-            idField.value = task.id;
+            currentTask = allTasks.find(t => t.id == taskId);
+            if (!currentTask) {
+                alert('Atividade não encontrada na memória da tela.');
+                return;
+            }
+            isHumanGateTask = isBacklogHumanGateTask(currentTask);
+            modalTitle.textContent = isHumanGateTask
+                ? `Cockpit HITL · ${currentTask.code || '#' + currentTask.id}`
+                : `#${currentTask.id} - ${currentTask.what.substring(0, 30)}...`;
+            idField.value = currentTask.id;
 
-            document.getElementById('taskProjectId').value = task.project_id;
-            document.getElementById('taskWhat').value = task.what;
-            document.getElementById('taskEmployeeId').value = task.employee_id || '';
-            document.getElementById('taskDueDate').value = task.due_date || '';
-            document.getElementById('taskEstimatedHours').value = task.estimated_hours || 0;
-            document.getElementById('taskScoreWeight').value = task.score_weight || 1.0;
-            document.getElementById('taskHow').value = task.how || '';
-            document.getElementById('taskNotes').value = task.notes || '';
+            document.getElementById('taskProjectId').value = currentTask.project_id;
+            document.getElementById('taskWhat').value = currentTask.what;
+            document.getElementById('taskEmployeeId').value = currentTask.employee_id || '';
+            document.getElementById('taskDueDate').value = currentTask.due_date || '';
+            document.getElementById('taskEstimatedHours').value = currentTask.estimated_hours || 0;
+            document.getElementById('taskScoreWeight').value = currentTask.score_weight || 1.0;
+            document.getElementById('taskHow').value = currentTask.how || '';
+            document.getElementById('taskNotes').value = currentTask.notes || '';
 
-            document.getElementById('workLogSection').style.display = 'block';
-            document.getElementById('diaryLogSection').style.display = 'block';
-            document.getElementById('btnDeleteTask').style.display = 'block';
+            workLogSection.style.display = isHumanGateTask ? 'none' : 'block';
+            diaryLogSection.style.display = isHumanGateTask ? 'none' : 'block';
+            deleteButton.style.display = (!IS_COLLABORATOR && !isHumanGateTask) ? 'block' : 'none';
 
-            currentTaskLogs = task.logs || [];
+            currentTaskLogs = currentTask.logs || [];
             renderDiaryLogs();
-            loadWorkLogs(taskId);
+            if (!isHumanGateTask) {
+                loadWorkLogs(taskId);
+            }
         } else {
             modalTitle.textContent = 'Nova Atividade';
             idField.value = '';
             taskForm.reset();
-            document.getElementById('workLogSection').style.display = 'none';
-            document.getElementById('diaryLogSection').style.display = 'none';
-            document.getElementById('btnDeleteTask').style.display = 'none';
+            workLogSection.style.display = 'none';
+            diaryLogSection.style.display = 'none';
+            deleteButton.style.display = 'none';
             currentTaskLogs = [];
+            mountBacklogHumanGateSection(null);
         }
-                const saveButton = document.querySelector('#taskModal .btn-primary');
-        if (saveButton) saveButton.style.display = IS_COLLABORATOR ? 'none' : 'inline-flex';
-        const deleteButton = document.getElementById('btnDeleteTask');
-        if (deleteButton) deleteButton.style.display = (IS_COLLABORATOR || !taskId) ? 'none' : deleteButton.style.display;
-        ['taskProjectId','taskWhat','taskEmployeeId','taskDueDate','taskEstimatedHours','taskScoreWeight','taskHow','taskNotes'].forEach((fieldId) => {
-            const field = document.getElementById(fieldId);
-            if (field) field.disabled = !!IS_COLLABORATOR;
-        });
+        mountBacklogHumanGateSection(currentTask);
+        if (saveButton) saveButton.style.display = (!IS_COLLABORATOR && !isHumanGateTask) ? 'inline-flex' : 'none';
+        if (deleteButton && (!taskId || IS_COLLABORATOR || isHumanGateTask)) deleteButton.style.display = 'none';
+        setTaskFieldsReadOnly(IS_COLLABORATOR || isHumanGateTask);
         taskModal.classList.add('open');
     }
 
     function closeTaskModal() {
+        mountBacklogHumanGateSection(null);
         taskModal.classList.remove('open');
     }
 
@@ -1287,6 +1364,11 @@
             return;
         }
         const taskId = document.getElementById('taskId').value;
+        const currentTask = taskId ? allTasks.find(t => String(t.id) === String(taskId)) : null;
+        if (currentTask && isBacklogHumanGateTask(currentTask)) {
+            alert('Este card operacional é espelhado. Use as ações do backlog para operar este item.');
+            return;
+        }
         const projectId = document.getElementById('taskProjectId').value;
 
         if (!projectId) { alert('Selecione um projeto'); return; }
@@ -1328,6 +1410,10 @@
         }
         if (!confirm('Excluir esta atividade permanentemente?')) return;
         const task = allTasks.find(t => t.id == taskId);
+        if (task && isBacklogHumanGateTask(task)) {
+            alert('Este card operacional é espelhado. Use as ações do backlog para operar este item.');
+            return;
+        }
         try {
             const response = await fetch(`/api/projects/${task.project_id}/tasks/${taskId}`, { method: 'DELETE' });
             if (response.ok) { closeTaskModal(); loadTasks(); }
@@ -1447,7 +1533,7 @@
             return matchesResp && matchesProj && matchesText && matchesDate;
         });
         renderKanban(filtered);
-        updateStats(filtered);
+        updateStats(getBacklogHumanGateVisibleTasks(filtered));
     }
 
     function resetKanbanFilters() {
@@ -1457,7 +1543,7 @@
         document.getElementById('filterDateStart').value = '';
         document.getElementById('filterDateEnd').value = '';
         renderKanban();
-        updateStats();
+        updateStats(getBacklogHumanGateVisibleTasks(allTasks));
     }
 
     // Initialize

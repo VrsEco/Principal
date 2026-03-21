@@ -59,9 +59,17 @@
                     </span>
                 </td>
                 <td style="padding: 1rem; text-align: center;">
-                    <a href="/incentives/closing/{{ c.id }}" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.75rem;">
-                        <i class="fas fa-eye"></i> Ver Relatório
-                    </a>
+                    <div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
+                        <a href="/incentives/closing/{{ c.id }}" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.75rem;">
+                            <i class="fas fa-eye"></i> Ver
+                        </a>
+                        <a href="/incentives/closing/{{ c.id }}?edit=1" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.75rem;">
+                            <i class="fas fa-pen"></i> Editar
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.75rem; color:#ef4444;" onclick="deleteClosing({{ c.id }}, '{{ c.status }}')">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
                 </td>
             </tr>
             {% else %}
@@ -166,6 +174,23 @@ async function confirmarFechamento() {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-play"></i> Processar Fechamento';
     }
+}
+
+async function deleteClosing(calcId, status) {
+    if (!confirm('Excluir este fechamento?')) {
+        return;
+    }
+
+    const response = await fetch(`/api/incentives/closings/${calcId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        alert(data.error || 'Erro ao excluir fechamento.');
+        return;
+    }
+    location.reload();
 }
 </script>
 {% endblock %}

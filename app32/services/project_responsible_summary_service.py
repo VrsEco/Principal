@@ -118,12 +118,15 @@ def _build_task_summary_payload(task: ProjectTask) -> dict[str, str | None]:
     project = task.project
     where_label = f'{project.code} - {project.name}' if project else 'Projeto não identificado'
     responsible_name = _normalize_text(getattr(task, 'employee_name', None) or getattr(task, 'who', None), 'Sem responsável definido')
+    task_code = getattr(task, 'code', None) or f'J.{task.id}'
+    score_weight = _to_float(getattr(task, 'score_weight', None), 1.0)
     return {
-        'subject': f'Resumo da Atividade - {task.code or f"J.{task.id}"}',
+        'subject': f'Resumo da Atividade - {task_code}',
         'body': (
             f'Olá, {responsible_name}!\n\n'
             'Segue o resumo da atividade sob sua responsabilidade:\n\n'
-            f'- Código: {task.code or f"J.{task.id}"}\n'
+            '5W1H da atividade:\n'
+            f'- Código: {task_code}\n'
             f'- O que: {_normalize_text(task.what)}\n'
             f'- Quem: {responsible_name}\n'
             f'- Quando: {_format_date_br(task.due_date)}\n'
@@ -133,28 +136,51 @@ def _build_task_summary_payload(task: ProjectTask) -> dict[str, str | None]:
             f'- Etapa: {_normalize_text(task.stage)}\n'
             f'- Horas previstas: {_to_float(task.estimated_hours):.1f}h\n'
             f'- Horas realizadas: {_to_float(task.worked_hours):.1f}h\n'
-            f'- Peso: {_to_float(task.score_weight, 1.0):.2f}\n'
+            f'- Peso: {score_weight:.2f}\n'
         ),
         'html_body': None,
     }
 
 
 def _build_project_summary_payload(project: Project) -> dict[str, str | None]:
-    stats = project.task_stats
+    stats = getattr(project, 'task_stats', None) or {}
+    tasks = []
+    task_query = getattr(project, 'tasks', None)
+    if task_query is not None and hasattr(task_query, 'order_by'):
+        try:
+            tasks = task_query.order_by(ProjectTask.due_date.asc(), ProjectTask.id.asc()).all()
+        except Exception:
+            tasks = task_query.all() if hasattr(task_query, 'all') else []
+
+    prioritized_lines = []
+    for index, task in enumerate(tasks[:5], start=1):
+        prioritized_lines.append(
+            f"{index}. {getattr(task, 'code', None) or f'J.{task.id}'} | "
+            f"{_normalize_text(getattr(task, 'what', None))} | "
+            f"Responsável: {_normalize_text(getattr(task, 'employee_name', None) or getattr(task, 'who', None), 'Não definido')} | "
+            f"Prazo: {_format_date_br(getattr(task, 'due_date', None))} | "
+            f"Status: {_normalize_text(getattr(task, 'status', None))}"
+        )
+
+    prioritized_block = '\n'.join(prioritized_lines) if prioritized_lines else '- Nenhuma atividade priorizada encontrada.\n'
     return {
         'subject': f'Resumo do Projeto - {project.code} - {project.name}',
         'body': (
             f'Olá, {_normalize_text(project.owner, "Responsável do projeto")}!\n\n'
             'Segue o resumo consolidado do projeto:\n\n'
+            'Panorama do projeto:\n'
             f'- Projeto: {project.code} - {project.name}\n'
             f'- Responsável: {_normalize_text(project.owner, "Não definido")}\n'
             f'- Status: {_normalize_text(project.status)}\n'
             f'- Prazo: {_format_date_br(project.deadline)}\n'
             f'- Progresso: {int(stats.get("progress", 0))}%\n'
-            f'- Total de atividades: {int(stats.get("total", 0))}\n'
+            f'- Total: {int(stats.get("total", 0))}\n'
             f'- Em aberto: {int(stats.get("open", 0))}\n'
             f'- Concluídas: {int(stats.get("completed", 0))}\n'
             f'- Atrasadas: {int(stats.get("delayed", 0))}\n'
+            '\n'
+            'Atividades priorizadas:\n'
+            f'{prioritized_block}'
         ),
         'html_body': None,
     }

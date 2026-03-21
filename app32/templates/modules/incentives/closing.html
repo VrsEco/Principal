@@ -155,10 +155,42 @@
     </div>
     <div class="header-actions">
         <button onclick="window.print()" class="btn btn-secondary btn-sm"><i class="fas fa-print"></i> Imprimir</button>
+        <button onclick="toggleProtectedEdit()" class="btn btn-secondary btn-sm"><i class="fas fa-pen"></i> Editar</button>
+        <button onclick="deleteCurrentClosing('{{ calculation.status }}')" class="btn btn-secondary btn-sm" style="color:#ef4444;"><i class="fas fa-trash"></i> Excluir</button>
     </div>
 </div>
 
 <div class="closing-wrapper fade-in">
+    <div id="protectedEditPanel" style="display:{% if request.args.get('edit') %}block{% else %}none{% endif %}; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1rem 1.25rem;">
+        <div style="font-weight:800; margin-bottom:0.75rem;">Modo protegido de edição</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.75rem; align-items:end;">
+            <div>
+                <label style="display:block; font-size:0.7rem; margin-bottom:0.35rem;">Início</label>
+                <input id="editPeriodStart" type="date" class="vs-input" value="{{ calculation.period_start.isoformat() if calculation.period_start else '' }}">
+            </div>
+            <div>
+                <label style="display:block; font-size:0.7rem; margin-bottom:0.35rem;">Fim</label>
+                <input id="editPeriodEnd" type="date" class="vs-input" value="{{ calculation.period_end.isoformat() if calculation.period_end else '' }}">
+            </div>
+            <div>
+                <label style="display:block; font-size:0.7rem; margin-bottom:0.35rem;">Status</label>
+                <select id="editStatus" class="vs-input">
+                    <option value="preview" {{ 'selected' if calculation.status == 'preview' }}>Preview</option>
+                    <option value="calculated" {{ 'selected' if calculation.status == 'calculated' }}>Calculated</option>
+                    <option value="approved" {{ 'selected' if calculation.status == 'approved' }}>Approved</option>
+                    <option value="paid" {{ 'selected' if calculation.status == 'paid' }}>Paid</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-top:0.75rem;">
+            <label style="display:block; font-size:0.7rem; margin-bottom:0.35rem;">Motivo da edição protegida *</label>
+            <input id="editReason" type="text" class="vs-input" placeholder="Descreva o motivo">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1rem;">
+            <button class="btn btn-secondary btn-sm" onclick="toggleProtectedEdit()">Cancelar</button>
+            <button class="btn btn-primary btn-sm" onclick="saveProtectedClosingEdit({{ calculation.id }})">Salvar alteração</button>
+        </div>
+    </div>
     <!-- Top Grid: Header + Stats -->
     <div class="report-top-grid">
         <!-- Header com Status -->
@@ -266,4 +298,54 @@
         <strong>Certificação de Auditoria:</strong> Relatório imutável gravado em JSON. Dados baseados em evidências de módulos periféricos e ajustes manuais homologados.
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleProtectedEdit() {
+    const panel = document.getElementById('protectedEditPanel');
+    if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveProtectedClosingEdit(calcId) {
+    const reason = document.getElementById('editReason')?.value?.trim();
+    if (!reason) {
+        alert('Informe o motivo da edição protegida.');
+        return;
+    }
+    const response = await fetch(`/api/incentives/closings/${calcId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            period_start: document.getElementById('editPeriodStart').value,
+            period_end: document.getElementById('editPeriodEnd').value,
+            status: document.getElementById('editStatus').value,
+            reason
+        })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        alert(data.error || 'Erro ao editar fechamento.');
+        return;
+    }
+    location.reload();
+}
+
+async function deleteCurrentClosing(status) {
+    if (!confirm('Excluir este fechamento?')) {
+        return;
+    }
+
+    const response = await fetch(`/api/incentives/closings/{{ calculation.id }}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        alert(data.error || 'Erro ao excluir fechamento.');
+        return;
+    }
+    window.location.href = '/incentives/closings';
+}
+</script>
 {% endblock %}

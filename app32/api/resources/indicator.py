@@ -39,7 +39,7 @@ def get_request_company_id():
             if data:
                 cid = clean(data.get('company_id'))
                 if cid is not None: return cid
-    except:
+    except Exception:
         pass
 
     # 3. Try Session
@@ -152,10 +152,20 @@ class IndicatorResource(Resource):
         company_id = get_request_company_id()
         indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first_or_404()
         try:
+            goals_count = IndicatorGoal.query.filter_by(company_id=company_id, indicator_id=indicator.id).count()
+            data_count = IndicatorData.query.filter_by(company_id=company_id, indicator_id=indicator.id).count()
+            if goals_count > 0 or data_count > 0:
+                return {
+                    "error": (
+                        "Não é possível excluir o indicador porque existem "
+                        f"{goals_count} meta(s) e {data_count} registro(s) vinculados."
+                    )
+                }, 409
+
             indicator.is_active = False
             db.session.commit()
             return {
-                "message": "Indicador inativado com sucesso",
+                "message": "Indicador excluído com soft delete (inativado) com sucesso",
                 "id": indicator.id,
                 "is_active": indicator.is_active,
             }, 200

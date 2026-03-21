@@ -223,29 +223,20 @@ class TestDatabaseStandards:
     """Testa padrões de banco de dados definidos em DATABASE_STANDARDS.md"""
 
     def test_no_postgresql_specific_types(self):
-        """Verifica se não há tipos específicos do PostgreSQL (incompatível com SQLite)."""
-        forbidden_types = ["JSONB", "ARRAY", "UUID", "HSTORE"]
-        violations = []
+        """
+        Gestão Versus é PostgreSQL-only por arquitetura.
 
-        for py_file in get_python_files():
-            # Apenas verificar arquivos de models
-            if "model" not in str(py_file).lower():
-                continue
+        Esta regra antiga existia para uma fase de compatibilidade com SQLite, mas
+        a governança vigente agora exige PostgreSQL e recomenda JSONB.
+        """
+        governance_doc = (
+            ROOT_DIR / "docs" / "governance" / "DATABASE_STANDARDS.md"
+        ).read_text(encoding="utf-8")
+        readme = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
 
-            content = py_file.read_text(encoding="utf-8")
-
-            for db_type in forbidden_types:
-                if db_type in content:
-                    # Verificar se não está em comentário
-                    lines = content.split("\n")
-                    for i, line in enumerate(lines, 1):
-                        if db_type in line and not line.strip().startswith("#"):
-                            violations.append(f"{py_file}:{i}:{db_type}")
-
-        assert not violations, (
-            f"Tipos PostgreSQL específicos encontrados (usar tipos compatíveis):\n"
-            + "\n".join(violations)
-        )
+        assert "PostgreSQL Only" in governance_doc
+        assert "Sempre prefira `JSONB`" in governance_doc
+        assert "Zero SQLite Policy" in readme
 
     def test_models_have_audit_fields(self):
         """Verifica se models têm campos de auditoria (created_at, updated_at)."""

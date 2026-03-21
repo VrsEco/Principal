@@ -1,0 +1,135 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Lançamento Rápido{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Lançamento Rápido</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="direct-entry-page" data-company-id="{{ company_id or '' }}" data-entry-type="payable">
+    <header class="direct-entry-header">
+        <div><h1>Lançamento Rápido</h1></div>
+    </header>
+
+    <section class="direct-entry-card">
+        <div class="direct-entry-type-switch" role="group" aria-label="Tipo do lançamento rápido">
+            <button type="button" class="type-chip active" data-entry-type="payable" onclick="setDirectEntryType('payable')">Conta a Pagar</button>
+            <button type="button" class="type-chip" data-entry-type="receivable" onclick="setDirectEntryType('receivable')">Conta a Receber</button>
+        </div>
+        <div id="direct-entry-banner" class="direct-entry-banner">Conta a pagar · preenchimento orientado para pagamentos imediatos.</div>
+
+        <form id="direct-entry-form" class="direct-entry-form">
+            <input type="hidden" name="entry_type" value="payable">
+
+            <section class="form-block">
+                <div class="form-grid">
+                    <label class="field field-span-4">
+                        <span>Histórico</span>
+                        <input id="direct-description" name="description" maxlength="255" required autofocus>
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Número do documento</span>
+                        <input id="direct-document-number" name="document_number" maxlength="80">
+                    </label>
+
+                    <label class="field field-span-3 field-counterparty">
+                        <span>Favorecido</span>
+                        <div class="field-inline">
+                            <select id="direct-counterparty" name="counterparty_id" required></select>
+                            <button type="button" class="btn btn-ghost btn-inline" onclick="openDirectCounterpartyModal()">Novo favorecido</button>
+                        </div>
+                    </label>
+                    <label class="field field-span-1">
+                        <span>Valor</span>
+                        <input id="direct-amount" name="original_amount_display" inputmode="numeric" autocomplete="off" placeholder="0,00" required>
+                    </label>
+                    <label class="field field-span-1">
+                        <span>Correção Financeira</span>
+                        <select id="direct-correction-index" name="correction_index_id"></select>
+                    </label>
+                    <label class="field field-span-1">
+                        <span>Desconto</span>
+                        <select id="direct-discount-rule" name="discount_rule_id"></select>
+                    </label>
+
+                    <label class="field field-span-2">
+                        <span>Competência</span>
+                        <input id="direct-competence-date" name="competence_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Data do lançamento</span>
+                        <input id="direct-occurred-on" name="occurred_on_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Vencimento</span>
+                        <input id="direct-due-date" name="due_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa">
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Conta bancária</span>
+                        <select id="direct-bank-account" name="bank_account_id" required></select>
+                    </label>
+                    <label class="field field-span-6">
+                        <span>Observações</span>
+                        <textarea id="direct-notes" name="notes" rows="3"></textarea>
+                    </label>
+                </div>
+            </section>
+
+            <section class="form-block">
+                <div class="section-head">
+                    <div><h2>Rateio</h2></div>
+                </div>
+                <div class="rateio-table-wrap">
+                    <table class="rateio-table">
+                        <thead>
+                            <tr>
+                                <th>Plano de Conta</th>
+                                <th>Centro de Resultado</th>
+                                <th>Projeto / Processo</th>
+                                <th>Porcentagem (%)</th>
+                                <th>Valor</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="direct-allocations-body"></tbody>
+                    </table>
+                </div>
+                <div id="direct-rateio-summary" class="rateio-summary"></div>
+            </section>
+
+            <footer class="direct-entry-actions">
+                <a href="/financial/entries" class="btn btn-secondary">Cancelar</a>
+                <button type="button" class="btn btn-primary" onclick="saveDirectEntry(false)">Salvar e Novo</button>
+                <button type="button" class="btn btn-success" onclick="saveDirectEntry(true)">Salvar e Abrir Lançamento</button>
+            </footer>
+        </form>
+    </section>
+</div>
+
+<div id="direct-counterparty-modal" class="modal-shell hidden" aria-hidden="true">
+    <div class="modal-backdrop" onclick="closeDirectCounterpartyModal()"></div>
+    <div class="modal-card">
+        <div class="modal-head">
+            <h2>Novo favorecido</h2>
+            <button type="button" class="btn btn-ghost" onclick="closeDirectCounterpartyModal()">Fechar</button>
+        </div>
+        <form id="direct-counterparty-form" class="modal-form">
+            <label class="field"><span>Nome fantasia / apelido</span><input name="name" maxlength="120" required></label>
+            <label class="field"><span>Razão Social / Nome</span><input name="legal_name" maxlength="255"></label>
+            <label class="field"><span>CPF / CNPJ</span><input id="direct-counterparty-document" name="document_number" inputmode="numeric" maxlength="18"></label>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDirectCounterpartyModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar favorecido</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<link rel="stylesheet" href="/static/css/financial_entry_direct.css">
+<script src="/static/js/financial_entry_direct.js"></script>
+{% endblock %}

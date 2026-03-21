@@ -29,7 +29,7 @@ def get_request_company_id():
             if data:
                 cid = clean(data.get('company_id'))
                 if cid is not None: return cid
-    except:
+    except Exception:
         pass
 
     cid = clean(session.get('active_company_id'))

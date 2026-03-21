@@ -1,4 +1,4 @@
-from flask import request
+from flask import current_app, request
 from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy import text
@@ -10,6 +10,61 @@ from utils.permissions import has_company_full_access, has_permission, permissio
 from datetime import datetime
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
+
+def _backlog_project_id() -> int | None:
+    from services.agent_backlog_service import DEFAULT_AGENT_BACKLOG_PROJECT_CODE
+    from services.project_task_service import ProjectTaskService
+
+    return ProjectTaskService.extract_id_from_code(DEFAULT_AGENT_BACKLOG_PROJECT_CODE)
+
+
+def _should_include_backlog_human_gate(project_id: int | None) -> bool:
+    backlog_project_id = _backlog_project_id()
+    return bool(backlog_project_id and int(project_id or 0) == int(backlog_project_id))
+
+
+def _serialize_task(task, *, include_backlog_human_gate: bool = False):
+    payload = project_task_schema.dump(task)
+    if not include_backlog_human_gate:
+        return payload
+
+    from services.backlog_human_gate_service import build_backlog_human_gate_context
+
+    backlog_human_gate = build_backlog_human_gate_context(task)
+    if backlog_human_gate:
+        payload["backlog_human_gate"] = backlog_human_gate
+    return payload
+
+
+def _serialize_task_list(tasks, *, project_id: int | None = None):
+    payload = project_tasks_schema.dump(tasks)
+    if not _should_include_backlog_human_gate(project_id):
+        return payload
+
+    from services.backlog_human_gate_service import build_backlog_human_gate_context_map
+
+    context_map = build_backlog_human_gate_context_map(
+        [int(getattr(task, "id", 0) or 0) for task in tasks]
+    )
+    for item in payload:
+        task_context = context_map.get(int(item.get("id", 0) or 0))
+        if task_context:
+            item["backlog_human_gate"] = task_context
+    return payload
+
+
+def _is_backlog_human_gate_task(task) -> bool:
+    return bool(getattr(task, "agent_action_backlog_link", None))
+
+
+def _build_backlog_human_gate_lock_response():
+    return {
+        "error": (
+            "Este card operacional é espelhado a partir da fila HITL."
+            " Use as ações do backlog para operar este item."
+        )
+    }, 409
 
 
 def _detach_workflow_gap_candidates_for_task(*, task_id, project_id, company_id):
@@ -104,7 +159,7 @@ class ProjectTaskListResource(Resource):
         query = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc())
         query = apply_task_employee_filter(query, company_id)
         tasks = query.all()
-        dumped_tasks = project_tasks_schema.dump(tasks)
+        dumped_tasks = _serialize_task_list(tasks, project_id=project_id)
         
         # Otimização: Busca todas as dependências do projeto de uma vez para evitar N+1 queries
         # Filtra por company_id para respeitar multi-tenancy no mapeamento de dependências
@@ -184,7 +239,10 @@ class ProjectTaskListResource(Resource):
                 task = _build_task()
                 db.session.commit()
 
-            return project_task_schema.dump(task), 201
+            return _serialize_task(
+                task,
+                include_backlog_human_gate=_should_include_backlog_human_gate(project_id),
+            ), 201
         except ValidationError as err:
             db.session.rollback()
             return {"errors": err.messages}, 400
@@ -201,7 +259,10 @@ class ProjectTaskResource(Resource):
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
-        return project_task_schema.dump(task), 200
+        return _serialize_task(
+            task,
+            include_backlog_human_gate=_should_include_backlog_human_gate(project_id),
+        ), 200
 
     @permission_required('projects', 'view')
     def put(self, project_id, task_id):
@@ -216,6 +277,8 @@ class ProjectTaskResource(Resource):
         task = query.first_or_404()
         try:
             data = request.get_json()
+            if _is_backlog_human_gate_task(task):
+                return _build_backlog_human_gate_lock_response()
             has_full_edit = has_permission(company_id, 'projects', 'edit')
             if not has_full_edit:
                 is_valid_payload, extra_fields = _validate_limited_task_update_payload(data)
@@ -259,7 +322,10 @@ class ProjectTaskResource(Resource):
                     task.status = 'in_progress'
 
             db.session.commit()
-            return project_task_schema.dump(task), 200
+            return _serialize_task(
+                task,
+                include_backlog_human_gate=_should_include_backlog_human_gate(project_id),
+            ), 200
         except ValidationError as err:
             return {"errors": err.messages}, 400
         except Exception as e:
@@ -279,6 +345,8 @@ class ProjectTaskResource(Resource):
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
+        if _is_backlog_human_gate_task(task):
+            return _build_backlog_human_gate_lock_response()
         try:
             _detach_workflow_gap_candidates_for_task(
                 task_id=task.id,
@@ -311,6 +379,8 @@ class ProjectTaskStageResource(Resource):
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
+        if _is_backlog_human_gate_task(task):
+            return _build_backlog_human_gate_lock_response()
         try:
             data = request.get_json()
             stage = data.get('stage')
@@ -348,7 +418,10 @@ class ProjectTaskStageResource(Resource):
                 project.update_progress()
                 
             db.session.commit()
-            return project_task_schema.dump(task), 200
+            return _serialize_task(
+                task,
+                include_backlog_human_gate=_should_include_backlog_human_gate(project_id),
+            ), 200
         except Exception as e:
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
@@ -469,7 +542,24 @@ class ProjectAllTasksResource(Resource):
             query = apply_task_employee_filter(query, company_id)
             tasks = query.order_by(ProjectTask.id.asc()).all()
             
-            return project_tasks_schema.dump(tasks), 200
+            payload = project_tasks_schema.dump(tasks)
+            backlog_project_id = _backlog_project_id()
+            if backlog_project_id:
+                from services.backlog_human_gate_service import build_backlog_human_gate_context_map
+
+                backlog_task_ids = [
+                    int(getattr(task, "id", 0) or 0)
+                    for task in tasks
+                    if int(getattr(task, "project_id", 0) or 0) == int(backlog_project_id)
+                ]
+                if backlog_task_ids:
+                    context_map = build_backlog_human_gate_context_map(backlog_task_ids)
+                    for item in payload:
+                        task_context = context_map.get(int(item.get("id", 0) or 0))
+                        if task_context:
+                            item["backlog_human_gate"] = task_context
+
+            return payload, 200
         except Exception as e:
             current_app.logger.exception("Erro ao listar todas as tarefas da empresa company_id=%s", company_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
@@ -482,6 +572,8 @@ class ProjectTaskTransferResource(Resource):
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
+        if _is_backlog_human_gate_task(task):
+            return _build_backlog_human_gate_lock_response()
         data = request.get_json()
         target_project_id = data.get('target_project_id')
         note = data.get('note', '')

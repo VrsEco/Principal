@@ -1,0 +1,363 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Dashboard Executivo{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Dashboard Executivo</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fin-dash-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="fin-dash-header">
+        <div>
+            <h1>Dashboard do Financeiro</h1>
+        </div>
+    </header>
+
+    <section class="panel">
+        <form id="dashboard-filter-form" class="filters">
+            <label><span>Período inicial</span><input type="date" name="period_start"></label>
+            <label><span>Período final</span><input type="date" name="period_end"></label>
+            <div class="actions"><button type="submit" class="btn btn-primary">Atualizar</button></div>
+        </form>
+    </section>
+
+    <section class="stats-grid" id="scoreboard"></section>
+
+    <section class="grid-2">
+        <article class="panel">
+            <div class="panel-header"><h2>Fluxo de caixa</h2></div>
+            <div id="cash-flow-box" class="box-content"></div>
+        </article>
+        <article class="panel">
+            <div class="panel-header"><h2>DRE gerencial</h2></div>
+            <div id="dre-box" class="box-content"></div>
+        </article>
+        <article class="panel">
+            <div class="panel-header"><h2>Classificação híbrida</h2></div>
+            <div id="classification-box" class="box-content"></div>
+        </article>
+        <article class="panel">
+            <div class="panel-header"><h2>Fechamento do período</h2></div>
+            <div id="closing-box" class="box-content"></div>
+        </article>
+    </section>
+</div>
+
+<style>
+    .fin-dash-page { padding:0 2rem 2rem; }
+    .fin-dash-header { margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:760px; }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1rem; }
+    .panel-header { padding:1rem 1rem 0; }
+    .filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.9rem; padding:1rem; align-items:end; }
+    .filters label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); }
+    .filters input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.75rem .85rem; color:var(--text-primary); }
+    .actions { display:flex; gap:.75rem; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .stats-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.9rem; margin-bottom:1rem; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1rem; box-shadow:var(--shadow-sm); }
+    .stat-card span { display:block; color:var(--text-secondary); font-size:.78rem; }
+    .stat-card strong { display:block; margin-top:.35rem; font-size:1.2rem; }
+    .grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .box-content { padding:1rem; display:flex; flex-direction:column; gap:.7rem; }
+    .line-item { border:1px solid var(--border); border-radius:12px; padding:.75rem .85rem; background:var(--surface-secondary); }
+    .empty-state { color:var(--text-tertiary); text-align:center; padding:1rem; }
+    @media (max-width: 960px) {
+        .fin-dash-page { padding:0 1rem 1.5rem; }
+        .filters, .stats-grid, .grid-2 { grid-template-columns:1fr; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.fin-dash-page')?.dataset.companyId);
+
+    function brl(value) {
+        return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function renderScoreboard(scoreboard) {
+        const box = document.getElementById('scoreboard');
+        const items = [
+            ['Lançamentos', scoreboard.entries],
+            ['Liquidações', scoreboard.settlements],
+            ['Lotes', scoreboard.batches],
+            ['Matches confirmados', scoreboard.confirmed_matches],
+            ['Caixa líquido', brl(scoreboard.net_cash)],
+            ['Resultado DRE', brl(scoreboard.dre_result)],
+            ['Em aberto', brl(scoreboard.open_amount)],
+            ['Cobertura IA', `${Number(scoreboard.classification_coverage || 0).toFixed(2)}%`],
+            ['Aplicação IA', `${Number(scoreboard.classification_applied_rate || 0).toFixed(2)}%`],
+            ['Pode fechar?', scoreboard.can_close ? 'Sim' : 'Não'],
+        ];
+        box.innerHTML = items.map(([label, value]) => `
+            <article class="stat-card">
+                <span>${label}</span>
+                <strong>${value ?? 0}</strong>
+            </article>
+        `).join('');
+    }
+
+    function renderList(containerId, items, mapper) {
+        const box = document.getElementById(containerId);
+        if (!items || !items.length) {
+            box.innerHTML = '<div class="empty-state">Sem dados para o período.</div>';
+            return;
+        }
+        box.innerHTML = items.slice(0, 10).map(mapper).join('');
+    }
+
+    async function loadDashboard(event) {
+        if (event) event.preventDefault();
+        const form = new FormData(document.getElementById('dashboard-filter-form'));
+        const params = new URLSearchParams({ company_id: companyId });
+        if (form.get('period_start')) params.set('period_start', form.get('period_start'));
+        if (form.get('period_end')) params.set('period_end', form.get('period_end'));
+
+        const response = await fetch(`/api/financial/dashboard?${params.toString()}`);
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao carregar dashboard.');
+            return;
+        }
+
+        renderScoreboard(result.scoreboard || {});
+        renderList('cash-flow-box', result.cash_flow?.items || [], item => `
+            <div class="line-item"><strong>${item.date}</strong><div>Entradas: ${brl(item.inflow)} · Saídas: ${brl(item.outflow)} · Líquido: ${brl(item.net)}</div></div>
+        `);
+        renderList('dre-box', result.dre?.items || [], item => `
+            <div class="line-item"><strong>${item.group}</strong><div>Valor: ${brl(item.amount)}</div></div>
+        `);
+        const classificationItems = [
+            { label: 'Cobertura', value: `${Number(result.classification?.summary?.coverage_rate || 0).toFixed(2)}%` },
+            { label: 'Aplicação', value: `${Number(result.classification?.summary?.applied_rate || 0).toFixed(2)}%` },
+            { label: 'Fila', value: result.classification?.summary?.queue_total || 0 },
+            { label: 'Perguntar usuário', value: `${Number(result.classification?.summary?.ask_user_rate || 0).toFixed(2)}%` },
+        ];
+        document.getElementById('classification-box').innerHTML = classificationItems.map(item => `
+            <div class="line-item"><strong>${item.label}</strong><div>${item.value}</div></div>
+        `).join('');
+        const closingItems = [
+            { label: 'Pode fechar?', value: result.closing_preview?.can_close ? 'Sim' : 'Não' },
+            { label: 'Pendências revisão', value: result.closing_preview?.pending_review_entries || 0 },
+            { label: 'Imports sem match', value: result.closing_preview?.imported_not_matched || 0 },
+            { label: 'Último fechamento', value: result.last_closing ? `${result.last_closing.period_start} até ${result.last_closing.period_end}` : 'Nenhum' },
+        ];
+        document.getElementById('closing-box').innerHTML = closingItems.map(item => `
+            <div class="line-item"><strong>${item.label}</strong><div>${item.value}</div></div>
+        `).join('');
+    }
+
+    document.getElementById('dashboard-filter-form').addEventListener('submit', loadDashboard);
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

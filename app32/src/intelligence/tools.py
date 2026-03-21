@@ -37,6 +37,7 @@ AUDITORIA DE CONFORMIDADE (@QA_AUTOMATION) - Checklist para novas tools:
 ======================================================================================
 """
 from langchain_core.tools import tool
+import logging
 from models import db
 from src.intelligence.rag import knowledge_base
 from sqlalchemy import text
@@ -1904,6 +1905,15 @@ def request_deadline_extension(task_type: str, task_id: int, new_deadline: str, 
         )
         db.session.add(action)
         db.session.commit()
+        try:
+            from services.agent_action_backlog_service import ensure_backlog_task_for_action
+
+            ensure_backlog_task_for_action(action, autocommit=True)
+        except Exception:
+            logger.exception(
+                "Falha ao espelhar approval_request #%s no backlog AA.J.31",
+                action.id,
+            )
 
         # Notifica o superior (busca admin/gestor da empresa)
         from models.employee import Employee
@@ -2302,3 +2312,4 @@ tools = [
     request_deadline_extension,
     list_team_workload,
 ]
+logger = logging.getLogger(__name__)

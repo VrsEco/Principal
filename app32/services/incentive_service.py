@@ -256,14 +256,16 @@ class IncentiveService:
 
     @staticmethod
     def calculate_incentive(company_id: int, rule_set_id: int, period_start: date, period_end: date):
-        rule_set = IncentiveRuleSet.query.get(rule_set_id)
-        if not rule_set or rule_set.company_id != company_id:
+        rule_set = IncentiveService.get_rule_set(company_id, rule_set_id)
+        if not rule_set:
             return {"error": "Plano de Incentivo inválido"}
 
-        rules = IncentiveRule.query.filter_by(rule_set_id=rule_set_id).order_by(IncentiveRule.order_index).all()
-        participants = IncentiveParticipant.query.filter_by(
-            rule_set_id=rule_set_id, company_id=company_id, elegivel=True
-        ).all()
+        rules = IncentiveService.get_active_rules_query(
+            company_id, rule_set_id
+        ).order_by(IncentiveRule.order_index).all()
+        participants = IncentiveService.get_active_participants_query(
+            company_id, rule_set_id
+        ).filter(IncentiveParticipant.elegivel == True).all()
 
         if not participants:
             return {"error": "Nenhum participante elegível configurado."}
@@ -405,7 +407,15 @@ class IncentiveService:
         ).outerjoin(IncentiveParticipant, IncentiveParticipant.rule_set_id == IncentiveRuleSet.id
         ).outerjoin(Employee, Employee.id == IncentiveParticipant.employee_id
         ).outerjoin(Role, Role.id == Employee.role_id
-        ).filter(IncentiveRuleSet.company_id == company_id).all()
+        ).filter(
+            IncentiveRuleSet.company_id == company_id,
+            IncentiveRuleSet.deleted_at.is_(None),
+            IncentiveRule.deleted_at.is_(None),
+            sa.or_(
+                IncentiveParticipant.id.is_(None),
+                IncentiveParticipant.deleted_at.is_(None),
+            ),
+        ).all()
         
         report = []
         seen = set()
@@ -437,3 +447,225 @@ class IncentiveService:
                     "indicator_code": ind.code, "unit": ind.unit
                 })
         return pending
+    @staticmethod
+    def get_active_rule_sets_query(company_id: int):
+        return IncentiveRuleSet.query.filter(
+            IncentiveRuleSet.company_id == company_id,
+            IncentiveRuleSet.deleted_at.is_(None),
+        )
+
+    @staticmethod
+    def get_rule_set(company_id: int, rule_set_id: int) -> Optional[IncentiveRuleSet]:
+        return IncentiveRuleSet.query.filter(
+            IncentiveRuleSet.id == rule_set_id,
+            IncentiveRuleSet.company_id == company_id,
+            IncentiveRuleSet.deleted_at.is_(None),
+        ).first()
+
+    @staticmethod
+    def get_active_participants_query(company_id: int, rule_set_id: Optional[int] = None):
+        query = IncentiveParticipant.query.filter(
+            IncentiveParticipant.company_id == company_id,
+            IncentiveParticipant.deleted_at.is_(None),
+        )
+        if rule_set_id is not None:
+            query = query.filter(IncentiveParticipant.rule_set_id == rule_set_id)
+        return query
+
+    @staticmethod
+    def get_active_rules_query(company_id: int, rule_set_id: Optional[int] = None):
+        query = IncentiveRule.query.filter(IncentiveRule.deleted_at.is_(None))
+        if rule_set_id is not None:
+            query = query.join(
+                IncentiveRuleSet,
+                IncentiveRuleSet.id == IncentiveRule.rule_set_id,
+            ).filter(
+                IncentiveRule.rule_set_id == rule_set_id,
+                IncentiveRuleSet.company_id == company_id,
+                IncentiveRuleSet.deleted_at.is_(None),
+            )
+        else:
+            query = query.filter(
+                sa.or_(
+                    IncentiveRule.company_id == company_id,
+                    IncentiveRule.company_id.is_(None),
+                )
+            )
+        return query
+
+    @staticmethod
+    def _rule_set_has_calculations(company_id: int, rule_set_id: int) -> bool:
+        return (
+            IncentiveService.get_active_calculations_query(company_id).filter_by(
+                rule_set_id=rule_set_id,
+            ).count()
+            > 0
+        )
+
+    @staticmethod
+    def get_active_calculations_query(company_id: int):
+        return IncentiveCalculation.query.filter(
+            IncentiveCalculation.company_id == company_id,
+            IncentiveCalculation.deleted_at.is_(None),
+        )
+
+    @staticmethod
+    def get_calculation(company_id: int, calc_id: int) -> Optional[IncentiveCalculation]:
+        return IncentiveCalculation.query.filter(
+            IncentiveCalculation.id == calc_id,
+            IncentiveCalculation.company_id == company_id,
+            IncentiveCalculation.deleted_at.is_(None),
+        ).first()
+
+    @classmethod
+    def validate_rule_set_soft_delete(cls, company_id: int, rule_set_id: int) -> tuple[bool, str]:
+        active_rules = cls.get_active_rules_query(company_id, rule_set_id).count()
+        if active_rules:
+            return False, "Não é possível excluir o plano porque existem vetores vinculados."
+
+        active_participants = cls.get_active_participants_query(company_id, rule_set_id).count()
+        if active_participants:
+            return False, "Não é possível excluir o plano porque existem participantes vinculados."
+
+        if cls._rule_set_has_calculations(company_id, rule_set_id):
+            return False, "Não é possível excluir o plano porque já existem apurações vinculadas."
+
+        return True, ""
+
+    @classmethod
+    def soft_delete_rule_set(cls, company_id: int, rule_set_id: int) -> tuple[bool, str]:
+        rule_set = cls.get_rule_set(company_id, rule_set_id)
+        if not rule_set:
+            return False, "Plano de incentivo não encontrado."
+
+        allowed, reason = cls.validate_rule_set_soft_delete(company_id, rule_set_id)
+        if not allowed:
+            return False, reason
+
+        rule_set.is_active = False
+        rule_set.deleted_at = datetime.utcnow()
+        db.session.commit()
+        return True, ""
+
+    @classmethod
+    def inactivate_rule_set(cls, company_id: int, rule_set_id: int) -> tuple[bool, str]:
+        rule_set = cls.get_rule_set(company_id, rule_set_id)
+        if not rule_set:
+            return False, "Plano de incentivo não encontrado."
+
+        rule_set.is_active = False
+        db.session.commit()
+        return True, ""
+
+    @classmethod
+    def soft_delete_participant(cls, company_id: int, participant: IncentiveParticipant) -> tuple[bool, str]:
+        if participant.company_id != company_id or participant.deleted_at is not None:
+            return False, "Participante não encontrado."
+
+        if cls._rule_set_has_calculations(company_id, participant.rule_set_id):
+            return False, "Não é possível excluir o participante porque o plano já possui apurações vinculadas."
+
+        participant.elegivel = False
+        participant.deleted_at = datetime.utcnow()
+        db.session.commit()
+        return True, ""
+
+    @classmethod
+    def soft_delete_rule(cls, company_id: int, rule: IncentiveRule) -> tuple[bool, str]:
+        rule_set = cls.get_rule_set(company_id, rule.rule_set_id)
+        if not rule_set or rule.deleted_at is not None:
+            return False, "Vetor não encontrado."
+
+        if cls._rule_set_has_calculations(company_id, rule.rule_set_id):
+            return False, "Não é possível excluir o vetor porque o plano já possui apurações vinculadas."
+
+        if rule.company_id is None:
+            rule.company_id = company_id
+        rule.deleted_at = datetime.utcnow()
+        db.session.commit()
+        return True, ""
+
+    @classmethod
+    def update_calculation(
+        cls,
+        company_id: int,
+        calc_id: int,
+        *,
+        period_start=None,
+        period_end=None,
+        status=None,
+    ) -> tuple[bool, str, Optional[IncentiveCalculation]]:
+        calc = cls.get_calculation(company_id, calc_id)
+        if not calc:
+            return False, "Fechamento não encontrado.", None
+
+        if period_start is not None:
+            calc.period_start = period_start
+        if period_end is not None:
+            calc.period_end = period_end
+        if status is not None:
+            calc.status = status
+
+        db.session.commit()
+        return True, "", calc
+
+    @classmethod
+    def soft_delete_calculation(
+        cls,
+        company_id: int,
+        calc_id: int,
+        *,
+        allow_protected: bool = False,
+    ) -> tuple[bool, str]:
+        calc = cls.get_calculation(company_id, calc_id)
+        if not calc:
+            return False, "Fechamento não encontrado."
+
+        calc.deleted_at = datetime.utcnow()
+        db.session.commit()
+        return True, ""
+
+    @classmethod
+    def soft_delete_rule_set_with_closings(
+        cls,
+        company_id: int,
+        rule_set_id: int,
+        *,
+        allow_protected: bool = False,
+    ) -> tuple[bool, str]:
+        rule_set = cls.get_rule_set(company_id, rule_set_id)
+        if not rule_set:
+            return False, "Plano de incentivo não encontrado."
+
+        if not allow_protected:
+            return False, "A exclusão encadeada do plano exige modo protegido."
+
+        calculations = cls.get_active_calculations_query(company_id).filter_by(rule_set_id=rule_set_id).all()
+        for calc in calculations:
+            deleted, reason = cls.soft_delete_calculation(company_id, calc.id, allow_protected=True)
+            if not deleted:
+                db.session.rollback()
+                return False, reason
+
+        participants = cls.get_active_participants_query(company_id, rule_set_id).all()
+        for participant in participants:
+            deleted, reason = cls.soft_delete_participant(company_id, participant)
+            if not deleted:
+                db.session.rollback()
+                return False, reason
+
+        rules = cls.get_active_rules_query(company_id, rule_set_id).all()
+        for rule in rules:
+            deleted, reason = cls.soft_delete_rule(company_id, rule)
+            if not deleted:
+                db.session.rollback()
+                return False, reason
+
+        allowed, reason = cls.validate_rule_set_soft_delete(company_id, rule_set_id)
+        if not allowed:
+            return False, reason
+
+        rule_set.deleted_at = datetime.utcnow()
+        rule_set.is_active = False
+        db.session.commit()
+        return True, ""

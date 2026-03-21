@@ -85,7 +85,7 @@ def get_request_company_id():
     if val:
         try:
             return int(float(val))
-        except:
+        except Exception:
             pass
             
     # 2. Try session

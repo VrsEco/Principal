@@ -1,0 +1,494 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Gestão do Lançamento{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">{{ entry.entry_code }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="entry-page fade-in" data-company-id="{{ company_id }}" data-entry-id="{{ entry_id }}">
+    <header class="entry-header">
+        <div>
+            <h1>{{ entry.entry_code }} · {{ entry.description }}</h1>
+        </div>
+    </header>
+
+    <section class="page-actions" style="display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <a href="/financial/entries" class="btn btn-secondary" style="text-decoration:none;">Voltar</a>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Dados do lançamento</h2>
+                <p>O lançamento é a origem. Rateio e liquidação permanecem desacoplados.</p>
+            </div>
+        </div>
+        <form id="entry-edit-form" class="form-grid">
+            <label><span>Descrição</span><input name="description" value="{{ entry.description or '' }}" required></label>
+            <label><span>Status</span>
+                <select name="status">
+                    <option value="draft" {{ 'selected' if entry.status == 'draft' else '' }}>Rascunho</option>
+                    <option value="posted" {{ 'selected' if entry.status == 'posted' else '' }}>Postado</option>
+                    <option value="partially_settled" {{ 'selected' if entry.status == 'partially_settled' else '' }}>Parcial</option>
+                    <option value="settled" {{ 'selected' if entry.status == 'settled' else '' }}>Liquidado</option>
+                    <option value="cancelled" {{ 'selected' if entry.status == 'cancelled' else '' }}>Cancelado</option>
+                </select>
+            </label>
+            <label><span>Competência</span><input type="date" name="competence_date" value="{{ entry.competence_date.isoformat() if entry.competence_date else '' }}"></label>
+            <label><span>Vencimento</span><input type="date" name="due_date" value="{{ entry.due_date.isoformat() if entry.due_date else '' }}"></label>
+            <label><span>Valor original</span><input type="number" step="0.01" min="0" name="original_amount" value="{{ entry.original_amount or 0 }}"></label>
+            <label><span>Atividade associada</span><input type="number" min="1" name="activity_id" value="{{ entry.activity_id or '' }}"></label>
+            <label><span>Instância associada</span><input type="number" min="1" name="process_instance_id" value="{{ entry.process_instance_id or '' }}"></label>
+            <label class="col-span-2"><span>Observações</span><textarea rows="3" name="notes">{{ entry.notes or '' }}</textarea></label>
+            <div class="col-span-2 form-actions">
+                <button type="submit" class="btn btn-primary">Salvar lançamento</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="grid-two">
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Rateio</h2>
+                    <p>Distribuição gerencial independente da liquidação.</p>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div id="allocations-list" class="list-stack"></div>
+                <form id="allocations-form" class="stack-form">
+                    <div class="form-grid compact">
+                        <label><span>Tipo</span>
+                            <select name="allocation_type">
+                                <option value="percentage">Percentual</option>
+                                <option value="amount">Valor</option>
+                            </select>
+                        </label>
+                        <label><span>%</span><input type="number" step="0.0001" min="0" name="percentage"></label>
+                        <label><span>Valor</span><input type="number" step="0.01" min="0" name="allocated_amount"></label>
+                        <label><span>Conta gerencial</span><input type="number" min="1" name="chart_account_id"></label>
+                        <label><span>Centro</span><input type="number" min="1" name="cost_center_id"></label>
+                        <label><span>Atividade</span><input type="number" min="1" name="activity_id"></label>
+                        <label><span>Instância</span><input type="number" min="1" name="process_instance_id"></label>
+                    </div>
+                    <div class="inline-actions">
+                        <button type="button" class="btn btn-secondary" onclick="addAllocationDraft()">Adicionar linha</button>
+                        <button type="submit" class="btn btn-primary">Salvar rateio</button>
+                    </div>
+                </form>
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Liquidações</h2>
+                    <p>Baixas reais com juros, multas, descontos e demais efeitos financeiros.</p>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div id="settlements-list" class="list-stack"></div>
+                <form id="settlement-form" class="stack-form">
+                    <div class="form-grid compact">
+                        <label><span>Código</span><input name="settlement_code" required></label>
+                        <label><span>Data</span><input type="date" name="settlement_date" required></label>
+                        <label><span>Principal</span><input type="number" step="0.01" min="0" name="principal_amount" required></label>
+                        <label><span>Juros</span><input type="number" step="0.01" min="0" name="interest_amount" value="0"></label>
+                        <label><span>Multa</span><input type="number" step="0.01" min="0" name="penalty_amount" value="0"></label>
+                        <label><span>Desconto</span><input type="number" step="0.01" min="0" name="discount_amount" value="0"></label>
+                        <label><span>Tarifa</span><input type="number" step="0.01" min="0" name="fee_amount" value="0"></label>
+                        <label><span>Outros ajustes</span><input type="number" step="0.01" min="0" name="other_adjustments_amount" value="0"></label>
+                    </div>
+                    <div class="inline-actions">
+                        <button type="submit" class="btn btn-primary">Lançar liquidação</button>
+                    </div>
+                </form>
+            </div>
+        </article>
+    </section>
+</div>
+
+<style>
+    .entry-page { padding:0 2rem 2rem; }
+    .entry-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1.5rem; }
+    .panel-header { padding:1.25rem 1.25rem 0; }
+    .panel-header h2 { margin:0; }
+    .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); }
+    .panel-body { padding:1.25rem; }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; padding:1.25rem; }
+    .form-grid.compact { padding:0; }
+    .form-grid label { display:flex; flex-direction:column; gap:.45rem; font-weight:600; color:var(--text-secondary); }
+    .form-grid input, .form-grid select, .form-grid textarea {
+        background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; color:var(--text-primary);
+    }
+    .grid-two { display:grid; grid-template-columns:1.05fr .95fr; gap:1.5rem; }
+    .list-stack { display:flex; flex-direction:column; gap:.75rem; margin-bottom:1rem; }
+    .list-item { border:1px solid var(--border); background:var(--surface-secondary); border-radius:14px; padding:.9rem 1rem; }
+    .list-item strong { display:block; margin-bottom:.25rem; }
+    .stack-form { display:flex; flex-direction:column; gap:1rem; }
+    .inline-actions, .form-actions { display:flex; justify-content:flex-end; gap:.75rem; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .col-span-2 { grid-column:span 2; }
+    @media (max-width: 1080px) {
+        .grid-two, .form-grid { grid-template-columns:1fr; }
+        .col-span-2 { grid-column:auto; }
+        .entry-page { padding:0 1rem 1.5rem; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.entry-page')?.dataset.companyId);
+    const entryId = Number(document.querySelector('.entry-page')?.dataset.entryId);
+    const allocationDrafts = [];
+
+    function brl(value) {
+        return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(Number(value || 0));
+    }
+
+    async function fetchEntry() {
+        const response = await fetch(`/api/financial/entries/${entryId}?company_id=${companyId}`);
+        const payload = await response.json();
+        renderAllocations(payload.allocations || []);
+        renderSettlements(payload.settlements || []);
+    }
+
+    function renderAllocations(items) {
+        const container = document.getElementById('allocations-list');
+        const source = allocationDrafts.length ? allocationDrafts : items;
+        if (!source.length) {
+            container.innerHTML = '<div class="list-item">Nenhum rateio cadastrado.</div>';
+            return;
+        }
+        container.innerHTML = source.map((item, index) => `
+            <div class="list-item">
+                <strong>${item.allocation_type === 'percentage' ? `${item.percentage || 0}%` : brl(item.allocated_amount)}</strong>
+                <div>Conta ${item.chart_account_id || '-'} · Centro ${item.cost_center_id || '-'} · Atividade ${item.activity_id || '-'} · Instância ${item.process_instance_id || '-'}</div>
+                ${allocationDrafts.length ? `<div style="margin-top:.5rem;"><button type="button" class="btn btn-secondary" onclick="removeAllocationDraft(${index})">Remover</button></div>` : ''}
+            </div>
+        `).join('');
+    }
+
+    function renderSettlements(items) {
+        const container = document.getElementById('settlements-list');
+        if (!items.length) {
+            container.innerHTML = '<div class="list-item">Nenhuma liquidação registrada.</div>';
+            return;
+        }
+        container.innerHTML = items.map(item => `
+            <div class="list-item">
+                <strong>${item.settlement_code} · ${item.settlement_date}</strong>
+                <div>Principal ${brl(item.principal_amount)} · Juros ${brl(item.interest_amount)} · Multa ${brl(item.penalty_amount)} · Desconto ${brl(item.discount_amount)} · Líquido ${brl(item.net_amount)}</div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('entry-edit-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const payload = Object.fromEntries(formData.entries());
+        payload.original_amount = payload.original_amount ? Number(payload.original_amount) : 0;
+        payload.activity_id = payload.activity_id ? Number(payload.activity_id) : null;
+        payload.process_instance_id = payload.process_instance_id ? Number(payload.process_instance_id) : null;
+
+        const response = await fetch(`/api/financial/entries/${entryId}?company_id=${companyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao salvar lançamento.');
+            return;
+        }
+        alert('Lançamento atualizado com sucesso.');
+        fetchEntry();
+    });
+
+    function addAllocationDraft() {
+        const formData = new FormData(document.getElementById('allocations-form'));
+        allocationDrafts.push({
+            allocation_type: formData.get('allocation_type'),
+            percentage: formData.get('percentage') ? Number(formData.get('percentage')) : null,
+            allocated_amount: formData.get('allocated_amount') ? Number(formData.get('allocated_amount')) : null,
+            chart_account_id: formData.get('chart_account_id') ? Number(formData.get('chart_account_id')) : null,
+            cost_center_id: formData.get('cost_center_id') ? Number(formData.get('cost_center_id')) : null,
+            activity_id: formData.get('activity_id') ? Number(formData.get('activity_id')) : null,
+            process_instance_id: formData.get('process_instance_id') ? Number(formData.get('process_instance_id')) : null,
+        });
+        renderAllocations([]);
+    }
+
+    function removeAllocationDraft(index) {
+        allocationDrafts.splice(index, 1);
+        renderAllocations([]);
+    }
+
+    document.getElementById('allocations-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!allocationDrafts.length) {
+            alert('Adicione ao menos uma linha de rateio.');
+            return;
+        }
+
+        const payload = {
+            company_id: companyId,
+            financial_entry_id: entryId,
+            allocations: allocationDrafts,
+        };
+
+        const response = await fetch(`/api/financial/entries/${entryId}/allocations?company_id=${companyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao salvar rateio.');
+            return;
+        }
+        allocationDrafts.length = 0;
+        document.getElementById('allocations-form').reset();
+        renderAllocations(result || []);
+        alert('Rateio salvo com sucesso.');
+    });
+
+    document.getElementById('settlement-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const payload = Object.fromEntries(formData.entries());
+        payload.principal_amount = Number(payload.principal_amount || 0);
+        payload.interest_amount = Number(payload.interest_amount || 0);
+        payload.penalty_amount = Number(payload.penalty_amount || 0);
+        payload.discount_amount = Number(payload.discount_amount || 0);
+        payload.fee_amount = Number(payload.fee_amount || 0);
+        payload.other_adjustments_amount = Number(payload.other_adjustments_amount || 0);
+        payload.settlement_type = 'manual';
+
+        const response = await fetch(`/api/financial/entries/${entryId}/settlements?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao registrar liquidação.');
+            return;
+        }
+        event.currentTarget.reset();
+        fetchEntry();
+        alert('Liquidação registrada com sucesso.');
+    });
+
+    document.addEventListener('DOMContentLoaded', fetchEntry);
+</script>
+{% endblock %}

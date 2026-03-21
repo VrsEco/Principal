@@ -1,0 +1,476 @@
+.backlog-human-gate-card-strip {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 14px;
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    background: linear-gradient(135deg, rgba(254, 243, 199, 0.55), rgba(255, 255, 255, 0.92));
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.backlog-human-gate-card-top,
+.backlog-human-gate-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.backlog-human-gate-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.backlog-human-gate-kind {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+.backlog-human-gate-caption {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.45;
+}
+
+.backlog-human-gate-board-panel {
+    margin-bottom: 1.5rem;
+    border-radius: 18px;
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    background: linear-gradient(180deg, rgba(255, 251, 235, 0.96), rgba(255, 255, 255, 0.98));
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.backlog-human-gate-board-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.backlog-human-gate-board-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.backlog-human-gate-board-caption {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+.backlog-human-gate-board-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.backlog-human-gate-board-stat {
+    padding: 0.85rem 0.9rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.backlog-human-gate-board-stat span {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+}
+
+.backlog-human-gate-board-stat strong {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--text-primary);
+}
+
+.backlog-human-gate-board-filters,
+.backlog-human-gate-operational-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.backlog-human-gate-filter-chip,
+.backlog-human-gate-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.backlog-human-gate-filter-chip {
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    background: rgba(255, 255, 255, 0.86);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.backlog-human-gate-filter-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.backlog-human-gate-filter-chip strong {
+    font-size: 0.74rem;
+    color: var(--text-primary);
+}
+
+.backlog-human-gate-filter-chip.active {
+    border-color: rgba(99, 102, 241, 0.35);
+    background: rgba(99, 102, 241, 0.12);
+    color: #4338ca;
+}
+
+.backlog-human-gate-chip {
+    border: 1px solid transparent;
+}
+
+.backlog-human-gate-last-event {
+    border-radius: 12px;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 0.32rem;
+}
+
+.backlog-human-gate-last-event-head,
+.backlog-human-gate-timeline-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.backlog-human-gate-last-event-time,
+.backlog-human-gate-timeline-time {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+
+.backlog-human-gate-last-event-summary,
+.backlog-human-gate-timeline-summary {
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.backlog-human-gate-last-event-meta,
+.backlog-human-gate-timeline-meta,
+.backlog-human-gate-timeline-feedback {
+    font-size: 0.74rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
+.backlog-human-gate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.backlog-human-gate-actions.compact {
+    gap: 0.35rem;
+}
+
+.backlog-human-gate-action {
+    border: none;
+    border-radius: 10px;
+    padding: 0.52rem 0.78rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.backlog-human-gate-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+}
+
+.backlog-human-gate-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.backlog-human-gate-panel {
+    margin-top: 0.25rem;
+    border-radius: 18px;
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    background: linear-gradient(180deg, rgba(255, 251, 235, 0.96), rgba(255, 255, 255, 0.98));
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.backlog-human-gate-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--warning-dark, #b45309);
+}
+
+.backlog-human-gate-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.backlog-human-gate-description,
+.backlog-human-gate-help {
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.backlog-human-gate-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.backlog-human-gate-meta-grid > div {
+    padding: 0.8rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+}
+
+.backlog-human-gate-meta-grid span {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.backlog-human-gate-meta-grid strong {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+}
+
+.backlog-human-gate-section-title {
+    font-size: 0.76rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+}
+
+.backlog-human-gate-timeline-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.backlog-human-gate-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.backlog-human-gate-timeline-item {
+    display: grid;
+    grid-template-columns: 0.8rem 1fr;
+    gap: 0.7rem;
+    align-items: flex-start;
+}
+
+.backlog-human-gate-timeline-dot {
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 999px;
+    margin-top: 0.42rem;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.backlog-human-gate-timeline-content {
+    border-radius: 14px;
+    padding: 0.82rem 0.9rem;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    display: flex;
+    flex-direction: column;
+    gap: 0.32rem;
+}
+
+.backlog-human-gate-timeline-empty {
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px dashed rgba(148, 163, 184, 0.45);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.backlog-human-gate-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 26050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(8px);
+}
+
+.backlog-human-gate-modal-backdrop.open {
+    display: flex;
+}
+
+.backlog-human-gate-modal-card {
+    width: min(100%, 640px);
+    border-radius: 22px;
+    background: var(--surface, #fff);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.25);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    overflow: hidden;
+}
+
+.backlog-human-gate-modal-header,
+.backlog-human-gate-modal-footer {
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.backlog-human-gate-modal-header {
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.backlog-human-gate-modal-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.backlog-human-gate-modal-close {
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.backlog-human-gate-modal-description {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.backlog-human-gate-modal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.backlog-human-gate-feedback-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.backlog-human-gate-feedback-wrap label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.backlog-human-gate-feedback-wrap textarea {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+    border-radius: 14px;
+    border: 1px solid var(--border, #cbd5e1);
+    padding: 0.85rem 1rem;
+    font: inherit;
+}
+
+.tone-warning {
+    background: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+}
+
+.tone-danger {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+}
+
+.tone-info {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
+.tone-success {
+    background: rgba(34, 197, 94, 0.12);
+    color: #15803d;
+}
+
+.tone-muted {
+    background: rgba(148, 163, 184, 0.14);
+    color: #475569;
+}
+
+.tone-primary {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4338ca;
+}
+
+button.tone-warning,
+button.tone-danger,
+button.tone-info,
+button.tone-success,
+button.tone-muted,
+button.tone-primary {
+    border: 1px solid transparent;
+}
+
+.kanban-card-ws.human-gate-locked {
+    cursor: default;
+}
+
+.kanban-card-ws.human-gate-locked:active {
+    cursor: default;
+}

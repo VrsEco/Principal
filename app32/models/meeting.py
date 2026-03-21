@@ -37,7 +37,7 @@ class Meeting(db.Model):
                 return None
             try:
                 return json.loads(val) if isinstance(val, str) else val
-            except:
+            except Exception:
                 return None
 
         return {

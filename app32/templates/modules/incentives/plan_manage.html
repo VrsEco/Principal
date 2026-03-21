@@ -307,6 +307,9 @@ function applyNumericMask(input, type = 'factor') {
                 <button class="btn btn-secondary btn-sm" onclick="deletePlan()" style="color:#ef4444; padding: 4px 12px; font-size: 0.75rem;">
                     <i class="fas fa-trash"></i> Excluir Plano
                 </button>
+                <button class="btn btn-secondary btn-sm" onclick="protectedDeletePlan()" style="color:#7c3aed; padding: 4px 12px; font-size: 0.75rem;">
+                    <i class="fas fa-shield-alt"></i> Excluir com Fechamentos
+                </button>
             </div>
             <!-- BOTÕES MODO EDIT -->
             <div class="show-on-edit" style="gap:8px;">
@@ -482,10 +485,16 @@ function applyNumericMask(input, type = 'factor') {
                     </label>
                 </td>
                 <td>
-                    <button class="btn-remove show-on-edit" onclick="removeParticipant({{ p.id }})" title="Remover do plano"
+                    <div style="display:flex;align-items:center;gap:6px;">
+                    <button type="button" onclick="editParticipantRow({{ p.id }})" title="Editar participante"
+                        style="background:rgba(37,99,235,0.08);color:#2563eb;border:none;padding:6px 10px;border-radius:8px;cursor:pointer;">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button type="button" onclick="removeParticipant({{ p.id }})" title="Excluir participante"
                         style="background:rgba(239,68,68,0.08);color:#ef4444;border:none;padding:6px 10px;border-radius:8px;cursor:pointer;">
                         <i class="fas fa-trash"></i>
                     </button>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
@@ -624,12 +633,12 @@ function applyNumericMask(input, type = 'factor') {
                         </select>
                         
                         <!-- Botão Expandir/Recolher (Sempre visível) -->
-                        <button class="btn btn-secondary btn-xs" onclick="toggleVetorCollapse({{ v.id }})" style="padding:2px 8px; font-size:0.65rem; height:24px;">
+                        <button class="btn btn-secondary btn-xs" onclick="editVetorCard({{ v.id }})" style="padding:2px 8px; font-size:0.65rem; height:24px;">
                             <span class="collapsed-label"><i class="fas fa-edit"></i> Editar</span>
                             <span class="expanded-label" style="display:none;"><i class="fas fa-check"></i> Salvar</span>
                         </button>
 
-                        <button onclick="removeVetor({{ v.id }})" title="Excluir Vetor" class="show-on-edit"
+                        <button onclick="removeVetor({{ v.id }})" title="Excluir Vetor"
                             style="background:rgba(239,68,68,0.08);color:#ef4444;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;height:24px;">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -822,16 +831,38 @@ function setEditMode(editing) {
 }
 
 async function deletePlan() {
-    if (!confirm('Deseja EXCLUIR permanentemente este plano e todas as suas regras?')) return;
+    if (!confirm('Deseja excluir este plano? A exclusão é lógica e será bloqueada se houver vínculos ativos ou apurações.')) return;
     try {
         const res = await fetch(`/api/incentive-rule-sets/${RULE_SET_ID}`, { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
-            showToast('Plano excluído.');
+            showToast('Plano excluído com soft delete.');
             setTimeout(() => location.href = '/incentives', 1000);
         } else {
-            showToast('Erro ao excluir plano.', 'error');
+            showToast(data.error || 'Erro ao excluir plano.', 'error');
         }
     } catch (e) { console.error(e); }
+}
+
+async function protectedDeletePlan() {
+    const reason = prompt('Modo protegido: informe o motivo para excluir o plano e os fechamentos vinculados:');
+    if (!reason) return;
+    try {
+        const res = await fetch(`/api/incentive-rule-sets/${RULE_SET_ID}/protected-delete`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showToast(data.error || 'Erro ao excluir plano no modo protegido.', 'error');
+            return;
+        }
+        showToast('Plano e fechamentos vinculados excluídos com soft delete.');
+        setTimeout(() => location.href = '/incentives', 1000);
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 function applyNewVetorVisibility() {
@@ -866,6 +897,21 @@ document.addEventListener('DOMContentLoaded', () => {
     applyNewVetorVisibility(); 
     setEditMode(false); // Carrega bloqueado
 });
+
+function editParticipantRow(id) {
+    setEditMode(true);
+    const row = document.getElementById(`part-row-${id}`);
+    row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function editVetorCard(id) {
+    setEditMode(true);
+    const card = document.getElementById(`vetor-card-${id}`);
+    if (card?.classList.contains('collapsed')) {
+        card.classList.remove('collapsed');
+    }
+    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
 async function updatePlan(field, value) {
     try {
@@ -915,9 +961,15 @@ async function updateParticipant(id, field, value) {
 }
 
 async function removeParticipant(id) {
-    if (!confirm('Remover participante?')) return;
+    if (!confirm('Excluir participante? A exclusão é lógica e poderá ser bloqueada se o plano já tiver apurações.')) return;
     const res = await fetch(`/incentives/participants/${id}`, { method: 'DELETE' });
-    if (res.ok) { document.getElementById(`part-row-${id}`)?.remove(); showToast('Removido.'); }
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+        document.getElementById(`part-row-${id}`)?.remove();
+        showToast('Participante excluído com soft delete.');
+        return;
+    }
+    showToast(data.error || 'Erro ao excluir participante.', 'error');
 }
 
 // ── VETORES ───────────────────────────────────────────────────────────────────
@@ -962,9 +1014,15 @@ async function updateVetor(id, field, value) {
 }
 
 async function removeVetor(id) {
-    if (!confirm('Remover vetor?')) return;
+    if (!confirm('Excluir vetor? A exclusão é lógica e poderá ser bloqueada se o plano já tiver apurações.')) return;
     const res = await fetch(`/incentives/vetores/${id}`, { method: 'DELETE' });
-    if (res.ok) { document.getElementById(`vetor-card-${id}`)?.remove(); showToast('Removido.'); }
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+        document.getElementById(`vetor-card-${id}`)?.remove();
+        showToast('Vetor excluído com soft delete.');
+        return;
+    }
+    showToast(data.error || 'Erro ao excluir vetor.', 'error');
 }
 </script>
 {% endblock %}

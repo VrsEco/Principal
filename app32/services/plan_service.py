@@ -656,7 +656,7 @@ class PlanService:
             if result > 10000 or result < -100:
                 return None
             return result
-        except:
+        except Exception:
             return None
 
 def _get_empty_finance():

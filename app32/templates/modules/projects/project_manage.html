@@ -4,6 +4,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/backlog-human-gate.css') }}" />
 <style>
     /* Kanban Board Layout from processes_v2 */
     .kanban-board-ws {
@@ -873,6 +874,8 @@
         </div>
     </div>
 
+    <div id="backlogHumanGateBoardSection"></div>
+
     <!-- Kanban Board Workspace Style -->
     <div class="kanban-board-ws no-scrollbar" id="kanbanBoard">
         {% for stage in stages %}
@@ -948,6 +951,8 @@
                             placeholder="Detalhes adicionais..."></textarea>
                     </div>
 
+                    <div class="form-group form-group--full" id="backlogHumanGateSection" style="display: none;"></div>
+
                     <!-- Dependências Section -->
                     <div class="form-group form-group--full" id="dependencySection" style="display: none;">
                         <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
@@ -974,6 +979,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="btnTaskSummaryInline" style="display:none;" onclick="openInlineTaskSummaryMenu(event)">🧾 Resumo</button>
+                <button type="button" class="btn btn-danger" id="btnDeleteTask" style="display:none; margin-right:auto;" onclick="openDeletePopup(document.getElementById('taskId').value)">Excluir</button>
                 <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar Atividade</button>
             </div>
@@ -1111,6 +1117,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/backlog-human-gate.js') }}"></script>
 <script>
     function parseLocalDate(dateString) {
         if (!dateString) return null;
@@ -1146,6 +1153,46 @@
     let allTasks = [];
     let employeeNames = {}; // Global mapping for backup
     let draggedTaskId = null;
+
+    window.BacklogHumanGate?.configure({
+        isReadOnly: IS_COLLABORATOR,
+        getTaskById: (taskId) => allTasks.find((task) => Number(task.id) === Number(taskId)),
+        afterOperation: async ({ taskId }) => {
+            await loadTasks();
+            if (taskId) {
+                openTaskModal(taskId);
+            }
+        },
+        onBoardFilterChange: () => applyKanbanFilters(),
+        notify: (message) => alert(message),
+    });
+
+    function isBacklogHumanGateTask(task) {
+        return Boolean(window.BacklogHumanGate && window.BacklogHumanGate.shouldLockTask(task));
+    }
+
+    function mountBacklogHumanGateSection(task) {
+        const container = document.getElementById('backlogHumanGateSection');
+        if (!container) return;
+        window.BacklogHumanGate?.mountTaskSection(task, container);
+    }
+
+    function getBacklogHumanGateVisibleTasks(tasks) {
+        return window.BacklogHumanGate ? window.BacklogHumanGate.filterTasks(tasks) : tasks;
+    }
+
+    function mountBacklogHumanGateBoard(tasks) {
+        const container = document.getElementById('backlogHumanGateBoardSection');
+        if (!container) return;
+        window.BacklogHumanGate?.mountBoardSection(tasks || allTasks, container);
+    }
+
+    function setTaskFieldsReadOnly(disabled) {
+        ['taskWhat', 'taskEmployeeId', 'taskDueDate', 'taskEstimatedHours', 'taskScoreWeight', 'taskHow', 'taskNotes'].forEach((fieldId) => {
+            const field = document.getElementById(fieldId);
+            if (field) field.disabled = Boolean(disabled);
+        });
+    }
 
     const stageAbbreviations = {
         'inbox': 'CE',
@@ -1255,7 +1302,7 @@
             const response = await fetch(`/api/projects/${PROJECT_ID}/tasks`);
             allTasks = await response.json();
             renderKanban();
-            updateStats();
+            updateStats(getBacklogHumanGateVisibleTasks(allTasks));
             maybeOpenTaskFromShortcut();
         } catch (error) {
             console.error('Erro ao carregar atividades:', error);
@@ -1263,7 +1310,9 @@
     }
 
     function renderKanban(tasksToRender = null) {
-        const tasks = tasksToRender || allTasks;
+        const baseTasks = tasksToRender || allTasks;
+        mountBacklogHumanGateBoard(baseTasks);
+        const tasks = getBacklogHumanGateVisibleTasks(baseTasks);
 
         // Clear columns
         document.querySelectorAll('.kanban-dropzone-ws').forEach(body => {
@@ -1338,6 +1387,7 @@
         });
 
         renderKanban(filteredTasks);
+        updateStats(getBacklogHumanGateVisibleTasks(filteredTasks));
     }
 
     function resetKanbanFilters() {
@@ -1345,15 +1395,25 @@
         document.getElementById('filterDeadline').value = '';
         document.getElementById('filterSearch').value = '';
         renderKanban(allTasks);
+        updateStats(getBacklogHumanGateVisibleTasks(allTasks));
     }
 
     function createCard(task) {
         const card = document.createElement('div');
         card.className = 'kanban-card-ws';
-        card.draggable = !IS_COLLABORATOR;
+        const isHumanGateTask = isBacklogHumanGateTask(task);
+        const humanGateCardHtml = window.BacklogHumanGate ? window.BacklogHumanGate.renderCardSection(task) : '';
+        card.draggable = !IS_COLLABORATOR && !isHumanGateTask;
         card.dataset.id = task.id;
+        if (isHumanGateTask) {
+            card.classList.add('human-gate-locked');
+        }
 
         card.ondragstart = (e) => {
+            if (isHumanGateTask || IS_COLLABORATOR) {
+                e.preventDefault();
+                return false;
+            }
             draggedTaskId = task.id;
             card.classList.add('dragging');
             e.dataTransfer.setData('text/plain', task.id);
@@ -1417,6 +1477,8 @@
                     <span style="font-size: 0.72rem; color: var(--text-secondary);">${PROJECT_OWNER}</span>
                 </div>
             </div>
+
+            ${humanGateCardHtml}
             
             <div class="card-footer-meta" style="margin-top: 4px; padding-top: 8px;">
                 <div class="hours-badge">
@@ -1424,13 +1486,13 @@
                 </div>
                 
                 <div style="display:flex; gap: 0.25rem;">
-                    <button class="btn-icon" onclick="openTaskModal(${task.id})" style="padding: 4px; color: var(--primary); background: var(--primary-light); border-radius: 6px;" title="Editar Atividade">
+                    <button class="btn-icon" onclick="openTaskModal(${task.id})" style="padding: 4px; color: var(--primary); background: var(--primary-light); border-radius: 6px;" title="${isHumanGateTask ? 'Abrir cockpit HITL' : 'Editar Atividade'}">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
                     </button>
-                    ${task.id ? `
+                    ${!isHumanGateTask && task.id ? `
                     <a href="/my-work/api/project-task/${task.id}/summary-pdf" target="_blank" rel="noopener" class="btn-icon" style="padding: 4px; color: #0f766e; background: #ccfbf1; border-radius: 6px; text-decoration: none; display: flex; align-items: center; justify-content: center;" title="Relatório da Atividade">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -1446,6 +1508,7 @@
                         </svg>
                     </a>
                     ` : ''}
+                    ${!isHumanGateTask ? `
                     <button class="btn-icon" onclick="openTransferModal(${task.id})" style="padding: 4px; color: #8b5cf6; background: #f5f3ff; border-radius: 6px;" title="Transferir Atividade">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path d="M16 3h5v5"></path>
@@ -1463,6 +1526,7 @@
                             <line x1="14" y1="11" x2="14" y2="17"></line>
                         </svg>
                     </button>
+                    ` : ''}
                 </div>
 
             </div>
@@ -1480,11 +1544,12 @@
         }
     }
 
-    function updateStats() {
-        const total = allTasks.length;
-        const completed = allTasks.filter(t => t.stage === 'completed').length;
-        const estHours = allTasks.reduce((sum, t) => sum + (parseFloat(t.estimated_hours) || 0), 0);
-        const workedHours = allTasks.reduce((sum, t) => sum + (parseFloat(t.worked_hours) || 0), 0);
+    function updateStats(tasksToCount = null) {
+        const tasks = tasksToCount || allTasks;
+        const total = tasks.length;
+        const completed = tasks.filter(t => t.stage === 'completed').length;
+        const estHours = tasks.reduce((sum, t) => sum + (parseFloat(t.estimated_hours) || 0), 0);
+        const workedHours = tasks.reduce((sum, t) => sum + (parseFloat(t.worked_hours) || 0), 0);
         const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
         const setStat = (id, val) => {
@@ -1642,6 +1707,11 @@
     function openDeletePopup(taskId) {
         taskToDeleteId = taskId;
         const task = allTasks.find(t => t.id == taskId);
+        if (task && isBacklogHumanGateTask(task)) {
+            taskToDeleteId = null;
+            alert('Este card operacional é espelhado. Use as ações do backlog para operar este item.');
+            return;
+        }
         if (task) {
             const nameEl = document.getElementById('deleteTaskName');
             if (nameEl) nameEl.textContent = task.what;
@@ -1705,6 +1775,11 @@
 
         const task = allTasks.find(t => t.id == taskId);
         if (!task || task.stage === targetStage) return;
+        if (isBacklogHumanGateTask(task)) {
+            alert('Este card HITL é espelhado. Use as ações operacionais do backlog.');
+            renderKanban();
+            return;
+        }
 
         const oldStage = task.stage;
 
@@ -1811,32 +1886,45 @@
         }
         const title = document.getElementById('modalTitle');
         const idField = document.getElementById('taskId');
+        const saveButton = document.querySelector('#taskModal .btn-primary');
+        const deleteButton = document.getElementById('btnDeleteTask');
+        const summaryButton = document.getElementById('btnTaskSummaryInline');
+        const dependencySection = document.getElementById('dependencySection');
         const draft = options?.draft || null;
+        let currentTask = null;
+        let isHumanGateTask = false;
 
         if (taskId) {
-            const task = allTasks.find(t => t.id == taskId);
-            title.textContent = 'Editar Atividade';
-            idField.value = task.id;
-            document.getElementById('taskWhat').value = task.what || '';
-            document.getElementById('taskEmployeeId').value = task.employee_id || '';
-            document.getElementById('taskDueDate').value = task.due_date || '';
-            document.getElementById('taskEstimatedHours').value = task.estimated_hours || '';
-            document.getElementById('taskScoreWeight').value = task.score_weight || 1.0;
-            document.getElementById('taskHow').value = task.how || '';
-            document.getElementById('taskNotes').value = task.notes || '';
-            
-            // Show dependencies section only for existing tasks
-            document.getElementById('dependencySection').style.display = 'block';
-            loadTaskDependencies(task.id);
+            currentTask = allTasks.find(t => t.id == taskId);
+            if (!currentTask) {
+                alert('Atividade não encontrada na memória da tela.');
+                return;
+            }
+            isHumanGateTask = isBacklogHumanGateTask(currentTask);
+            title.textContent = isHumanGateTask
+                ? `Cockpit HITL · ${currentTask.code || '#' + currentTask.id}`
+                : 'Editar Atividade';
+            idField.value = currentTask.id;
+            document.getElementById('taskWhat').value = currentTask.what || '';
+            document.getElementById('taskEmployeeId').value = currentTask.employee_id || '';
+            document.getElementById('taskDueDate').value = currentTask.due_date || '';
+            document.getElementById('taskEstimatedHours').value = currentTask.estimated_hours || '';
+            document.getElementById('taskScoreWeight').value = currentTask.score_weight || 1.0;
+            document.getElementById('taskHow').value = currentTask.how || '';
+            document.getElementById('taskNotes').value = currentTask.notes || '';
 
+            dependencySection.style.display = isHumanGateTask ? 'none' : 'block';
+            if (!isHumanGateTask) {
+                loadTaskDependencies(currentTask.id);
+            }
         } else {
             title.textContent = 'Nova Atividade';
             idField.value = '';
             taskForm.reset();
             currentTaskLogs = [];
-            // Hide dependencies section for new tasks
-            document.getElementById('dependencySection').style.display = 'none';
+            dependencySection.style.display = 'none';
             document.getElementById('taskScoreWeight').value = 1.0;
+            mountBacklogHumanGateSection(null);
 
             if (draft) {
                 document.getElementById('taskWhat').value = draft.what || '';
@@ -1846,20 +1934,16 @@
             }
         }
 
-                const saveButton = document.querySelector('#taskModal .btn-primary');
-        if (saveButton) saveButton.style.display = IS_COLLABORATOR ? 'none' : 'inline-flex';
-        const deleteButton = document.getElementById('btnDeleteTask');
-        if (deleteButton) deleteButton.style.display = (IS_COLLABORATOR || !taskId) ? 'none' : deleteButton.style.display;
-        const summaryButton = document.getElementById('btnTaskSummaryInline');
-        if (summaryButton) summaryButton.style.display = taskId ? 'inline-flex' : 'none';
-        ['taskProjectId','taskWhat','taskEmployeeId','taskDueDate','taskEstimatedHours','taskScoreWeight','taskHow','taskNotes'].forEach((fieldId) => {
-            const field = document.getElementById(fieldId);
-            if (field) field.disabled = !!IS_COLLABORATOR;
-        });
+        mountBacklogHumanGateSection(currentTask);
+        if (saveButton) saveButton.style.display = (!IS_COLLABORATOR && !isHumanGateTask) ? 'inline-flex' : 'none';
+        if (deleteButton) deleteButton.style.display = (!IS_COLLABORATOR && !isHumanGateTask && taskId) ? 'inline-flex' : 'none';
+        if (summaryButton) summaryButton.style.display = (taskId && !isHumanGateTask) ? 'inline-flex' : 'none';
+        setTaskFieldsReadOnly(IS_COLLABORATOR || isHumanGateTask);
         taskModal.classList.add('open');
     }
 
     function closeTaskModal() {
+        mountBacklogHumanGateSection(null);
         taskModal.classList.remove('open');
     }
 
@@ -1871,6 +1955,11 @@
         }
         e.preventDefault();
         const taskId = document.getElementById('taskId').value;
+        const currentTask = taskId ? allTasks.find(t => String(t.id) === String(taskId)) : null;
+        if (currentTask && isBacklogHumanGateTask(currentTask)) {
+            alert('Este card operacional é espelhado. Use as ações do backlog para operar este item.');
+            return;
+        }
         const payload = {
             what: document.getElementById('taskWhat').value,
             employee_id: document.getElementById('taskEmployeeId').value || null,
@@ -1905,6 +1994,11 @@
     async function deleteTask(taskId) {
         if (IS_COLLABORATOR) {
             alert('Colaborador não pode excluir atividades nesta tela.');
+            return;
+        }
+        const task = allTasks.find(t => t.id == taskId);
+        if (task && isBacklogHumanGateTask(task)) {
+            alert('Este card operacional é espelhado. Use as ações do backlog para operar este item.');
             return;
         }
         if (!confirm('Tem certeza que deseja excluir esta atividade?')) return;
@@ -1988,6 +2082,11 @@
     async function openTransferModal(taskId) {
         taskToTransferId = taskId;
         const task = allTasks.find(t => t.id == taskId);
+        if (task && isBacklogHumanGateTask(task)) {
+            alert('Este card operacional é espelhado. Use as ações do backlog para operar este item.');
+            taskToTransferId = null;
+            return;
+        }
         if (task) {
             document.getElementById('transferTaskTitle').textContent = task.what;
         }

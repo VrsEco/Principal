@@ -1,4 +1,5 @@
 import os
+import logging
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
@@ -12,6 +13,7 @@ from models import db, Company, Process, ProcessInstance, Employee, Indicator
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company
 
 processes_bp = Blueprint('processes', __name__)
+logger = logging.getLogger(__name__)
 
 
 def _coerce_optional_int(value, default=0):
@@ -167,7 +169,12 @@ def process_map_compact():
     arg_id = request.args.get('company_id')
     company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
     
-    print(f"[DEBUG] MP-2 View Request - arg_id: {arg_id}, session_id: {session.get('active_company_id')}, final_id: {company_id}")
+    logger.debug(
+        "[DEBUG] MP-2 View Request - arg_id: %s, session_id: %s, final_id: %s",
+        arg_id,
+        session.get('active_company_id'),
+        company_id,
+    )
     
     if not company_id:
         return "Nenhuma empresa ativa selecionada.", 400

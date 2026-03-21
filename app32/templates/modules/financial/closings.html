@@ -1,0 +1,376 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Fechamentos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Fechamentos</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="closings-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="closings-header">
+        <div>
+            <h1>Fechamento e conferência</h1>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Prévia do fechamento</h2>
+        </div>
+        <form id="closing-form" class="form-grid">
+            <label><span>Período inicial</span><input type="date" name="period_start" required></label>
+            <label><span>Período final</span><input type="date" name="period_end" required></label>
+            <label><span>Status</span><select name="status"><option value="closed">closed</option><option value="draft">draft</option></select></label>
+            <label class="col-span-3"><span>Notas</span><textarea name="notes" rows="3"></textarea></label>
+            <div class="col-span-3 actions">
+                <button type="button" class="btn btn-secondary" onclick="previewClosing()">Gerar prévia</button>
+                <button type="submit" class="btn btn-primary">Registrar fechamento</button>
+            </div>
+        </form>
+        <div id="closing-preview" class="preview-box">
+            <div class="empty-state">Nenhuma prévia gerada ainda.</div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Fechamentos registrados</h2>
+        </div>
+        <div id="closings-list" class="closing-list">
+            <div class="empty-state">Carregando fechamentos...</div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .closings-page { padding:0 2rem 2rem; }
+    .closings-header { margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:760px; }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1rem; }
+    .panel-header { padding:1rem 1rem 0; }
+    .form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.9rem; padding:1rem; }
+    .form-grid label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); }
+    .form-grid input, .form-grid select, .form-grid textarea { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.75rem .85rem; color:var(--text-primary); }
+    .col-span-3 { grid-column:span 3; }
+    .actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .preview-box, .closing-list { padding:1rem; }
+    .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin-bottom:1rem; }
+    .summary-item { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.8rem; }
+    .summary-item span { display:block; color:var(--text-secondary); font-size:.8rem; }
+    .summary-item strong { display:block; margin-top:.35rem; font-size:1.1rem; }
+    .checklist { display:flex; flex-direction:column; gap:.6rem; }
+    .check-item { border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; background:var(--surface-secondary); }
+    .check-item.ok { border-color:#bbf7d0; background:#f0fdf4; }
+    .check-item.attention { border-color:#fde68a; background:#fffbeb; }
+    .closing-card { border:1px solid var(--border); border-radius:12px; padding:.85rem .95rem; background:var(--surface-secondary); margin-bottom:.75rem; }
+    .empty-state { text-align:center; color:var(--text-tertiary); padding:1rem; }
+    @media (max-width: 960px) {
+        .closings-page { padding:0 1rem 1.5rem; }
+        .form-grid, .summary-grid { grid-template-columns:1fr; }
+        .col-span-3 { grid-column:auto; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.closings-page')?.dataset.companyId);
+    let lastPreview = null;
+
+    function renderPreview(data) {
+        const box = document.getElementById('closing-preview');
+        const summary = data || {};
+        const checklist = summary.checklist || [];
+        box.innerHTML = `
+            <div class="summary-grid">
+                <div class="summary-item"><span>Lançamentos</span><strong>${summary.total_entries ?? 0}</strong></div>
+                <div class="summary-item"><span>Liquidados</span><strong>${summary.settled_entries ?? 0}</strong></div>
+                <div class="summary-item"><span>Em aberto</span><strong>${summary.open_entries ?? 0}</strong></div>
+                <div class="summary-item"><span>Pode fechar?</span><strong>${summary.can_close ? 'Sim' : 'Não'}</strong></div>
+            </div>
+            <div class="summary-grid">
+                <div class="summary-item"><span>Valor original</span><strong>${(summary.total_original_amount || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</strong></div>
+                <div class="summary-item"><span>Valor liquidado</span><strong>${(summary.total_settled_amount || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</strong></div>
+                <div class="summary-item"><span>Imports sem match</span><strong>${summary.imported_not_matched ?? 0}</strong></div>
+                <div class="summary-item"><span>Linhas rejeitadas</span><strong>${summary.rejected_import_rows ?? 0}</strong></div>
+            </div>
+            <div class="checklist">
+                ${checklist.map(item => `
+                    <div class="check-item ${item.status}">
+                        <strong>${item.label}</strong>
+                        <div>Quantidade: ${item.count}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    async function previewClosing() {
+        const form = document.getElementById('closing-form');
+        const data = new FormData(form);
+        const periodStart = data.get('period_start');
+        const periodEnd = data.get('period_end');
+        const response = await fetch(`/api/financial/closings/preview?company_id=${companyId}&period_start=${periodStart}&period_end=${periodEnd}`);
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao gerar prévia.');
+            return;
+        }
+        lastPreview = result;
+        renderPreview(result);
+    }
+
+    async function loadClosings() {
+        const response = await fetch(`/api/financial/closings?company_id=${companyId}`);
+        const result = await response.json();
+        const items = Array.isArray(result) ? result : [];
+        const list = document.getElementById('closings-list');
+        if (!items.length) {
+            list.innerHTML = '<div class="empty-state">Nenhum fechamento registrado.</div>';
+            return;
+        }
+        list.innerHTML = items.map(item => `
+            <article class="closing-card">
+                <strong>${item.period_start} até ${item.period_end}</strong>
+                <div>Status: ${item.status} · fechado em: ${item.closed_at || '-'} · usuário: ${item.closed_by_user_id || '-'}</div>
+                <div>Notas: ${item.notes || '-'}</div>
+            </article>
+        `).join('');
+    }
+
+    document.getElementById('closing-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!lastPreview) {
+            await previewClosing();
+        }
+        const formData = new FormData(event.currentTarget);
+        const payload = Object.fromEntries(formData.entries());
+        payload.closed_by_user_id = null;
+        payload.summary_json = lastPreview || {};
+
+        const response = await fetch(`/api/financial/closings?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao registrar fechamento.');
+            return;
+        }
+        alert('Fechamento registrado com sucesso.');
+        loadClosings();
+    });
+
+    document.addEventListener('DOMContentLoaded', loadClosings);
+</script>
+{% endblock %}

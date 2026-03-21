@@ -1,0 +1,226 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Agendamentos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Agendamentos</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="sched-page" data-company-id="{{ company_id or '' }}" data-schedule-id="{{ schedule_id or '' }}" data-entry-type="receivable">
+    <header class="sched-header">
+        <div><h1>Agendamentos Financeiros</h1></div>
+        <div class="sched-header-actions">
+            <button type="button" class="btn btn-secondary" onclick="generateDueSchedules()">Gerar vencidos</button>
+            <button type="button" class="btn btn-primary" onclick="startNewSchedule()">Novo agendamento</button>
+        </div>
+    </header>
+
+    <section class="sched-shell">
+        <aside class="sched-rail">
+            <div class="sched-card rail-card">
+                <label class="sched-search">
+                    <span>Buscar</span>
+                    <input id="schedule-search" type="search" placeholder="Histórico, favorecido ou código">
+                </label>
+                <div id="schedule-list" class="schedule-list">
+                    <div class="empty-state">Carregando agendamentos...</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="sched-main">
+            <section class="sched-card">
+                <div class="sched-tabs">
+                    <button type="button" class="sched-tab active" data-tab="agendamento" onclick="switchScheduleTab('agendamento')">Agendamento</button>
+                    <button type="button" class="sched-tab" data-tab="recorrencia" onclick="switchScheduleTab('recorrencia')">Recorrência</button>
+                    <button type="button" class="sched-tab" data-tab="anexos" onclick="switchScheduleTab('anexos')">Anexos</button>
+                    <button type="button" class="sched-tab hidden" data-tab="baixas" id="baixas-tab-button" onclick="switchScheduleTab('baixas')">Baixas</button>
+                </div>
+
+                <form id="schedule-form" class="sched-form">
+                    <input type="hidden" name="schedule_id">
+                    <input type="hidden" name="schedule_code">
+                    <input type="hidden" name="status" value="active">
+                    <input type="hidden" name="entry_type" value="receivable">
+
+                    <section class="sched-tab-panel active" data-panel="agendamento">
+                        <div class="sched-type-switch" role="group" aria-label="Tipo do agendamento">
+                            <button type="button" class="type-chip active" data-entry-type="receivable" onclick="setEntryType('receivable')">Conta a Receber</button>
+                            <button type="button" class="type-chip" data-entry-type="payable" onclick="setEntryType('payable')">Conta a Pagar</button>
+                        </div>
+                        <div id="entry-type-banner" class="sched-type-banner sched-type-banner--receivable">Conta a receber · preenchimento orientado para recebimentos.</div>
+
+                        <div class="sched-grid sched-grid-main">
+                            <label class="field field-span-4">
+                                <span>Histórico</span>
+                                <input id="field-description" name="description" maxlength="255" required autofocus>
+                            </label>
+                            <label class="field field-span-2">
+                                <span>Número do documento</span>
+                                <input id="field-document-number" name="document_number" maxlength="80">
+                            </label>
+                            <label class="field field-span-3 field-counterparty">
+                                <span>Favorecido</span>
+                                <div class="field-inline">
+                                    <select id="field-counterparty" name="counterparty_id" required></select>
+                                    <button type="button" class="btn btn-ghost btn-inline" onclick="openCounterpartyModal()">Novo favorecido</button>
+                                </div>
+                            </label>
+                            <label class="field field-span-1">
+                                <span>Valor</span>
+                                <input id="field-amount" name="template_amount_display" inputmode="numeric" autocomplete="off" placeholder="0,00" required>
+                            </label>
+                            <label class="field field-span-2">
+                                <span>Correção Financeira</span>
+                                <select id="field-correction-index" name="correction_index_id"></select>
+                            </label>
+                            <label class="field field-span-2">
+                                <span>Competência</span>
+                                <input id="field-competence" name="competence_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                            </label>
+                            <label class="field field-span-2">
+                                <span>Vencimento</span>
+                                <input id="field-due-date" name="due_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                            </label>
+                            <label class="field field-span-2">
+                                <span>Desconto</span>
+                                <select id="field-discount-rule" name="discount_rule_id"></select>
+                            </label>
+                        </div>
+
+                        <section class="rateio-section">
+                            <div class="section-head">
+                                <div><h2>Rateio</h2></div>
+                            </div>
+                            <div class="rateio-table-wrap">
+                                <table class="rateio-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Plano de Conta</th>
+                                            <th>Centro de Resultado</th>
+                                            <th>Projeto / Processo</th>
+                                            <th>Porcentagem (%)</th>
+                                            <th>Valor</th>
+                                            <th class="actions-col">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="allocations-body"></tbody>
+                                </table>
+                            </div>
+                            <div id="rateio-summary" class="rateio-summary"></div>
+                        </section>
+                    </section>
+
+                    <section class="sched-tab-panel" data-panel="recorrencia">
+                        <div class="sched-grid">
+                            <label class="field field-toggle">
+                                <span>Repetir agendamento?</span>
+                                <select id="field-repeat-toggle" name="repeat_enabled" onchange="toggleRepeatFields()">
+                                    <option value="false" selected>Não</option>
+                                    <option value="true">Sim</option>
+                                </select>
+                            </label>
+                            <label class="field repeat-field">
+                                <span>Repetir a cada</span>
+                                <input id="field-interval-value" type="number" min="1" step="1" value="1">
+                            </label>
+                            <label class="field repeat-field">
+                                <span>Frequência</span>
+                                <select id="field-frequency">
+                                    <option value="weekly">Semana(s)</option>
+                                    <option value="monthly">Mês(es)</option>
+                                    <option value="yearly">Ano(s)</option>
+                                </select>
+                            </label>
+                            <label class="field repeat-field">
+                                <span>Nº de repetições</span>
+                                <input id="field-repeat-count" type="number" min="1" step="1" value="1">
+                            </label>
+                            <label class="field field-span-2 repeat-field">
+                                <span>Quanto à data de competência?</span>
+                                <select id="field-competence-mode">
+                                    <option value="same_as_due">Mudar competência conforme muda o vencimento</option>
+                                    <option value="keep_first_competence">Manter competência em todas as parcelas</option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="sched-tab-panel" data-panel="anexos">
+                        <div class="attachments-upload-row">
+                            <input id="schedule-attachment-input" type="file" multiple>
+                            <button type="button" class="btn btn-primary" onclick="uploadSelectedAttachments()">Adicionar arquivos</button>
+                        </div>
+                        <p class="attachments-help">Você pode anexar arquivos antes de salvar. Eles ficam em fila e são enviados automaticamente após salvar o agendamento.</p>
+                        <div id="attachments-empty" class="empty-state attachments-empty">Nenhum anexo selecionado ou vinculado.</div>
+                        <div id="attachments-shell" class="attachments-shell">
+                            <div id="attachments-list" class="attachments-list"></div>
+                        </div>
+                    </section>
+
+                    <section class="sched-tab-panel" data-panel="baixas">
+                        <div id="baixas-empty" class="empty-state">Nenhuma baixa vinculada a este agendamento.</div>
+                        <div id="baixas-list" class="baixas-list"></div>
+                    </section>
+
+                    <footer class="sched-footer-actions">
+                        <button type="button" class="btn btn-secondary" onclick="handleScheduleAction('cancel')">Cancelar</button>
+                        <button type="button" class="btn btn-primary" onclick="handleScheduleAction('save_and_settle')">Salvar e Baixar</button>
+                        <button type="button" class="btn btn-secondary" onclick="handleScheduleAction('save_and_new')">Salvar e Novo</button>
+                        <button type="button" class="btn btn-success" onclick="handleScheduleAction('save_and_back')">Salvar e Voltar</button>
+                    </footer>
+                </form>
+            </section>
+        </main>
+    </section>
+</div>
+
+<div id="attachment-preview-modal" class="modal-shell hidden" aria-hidden="true">
+    <div class="modal-backdrop" onclick="closeAttachmentPreview()"></div>
+    <div class="modal-card modal-card--preview">
+        <div class="modal-head">
+            <h2 id="attachment-preview-title">Visualizar anexo</h2>
+            <button type="button" class="btn btn-ghost" onclick="closeAttachmentPreview()">Fechar</button>
+        </div>
+        <div class="attachment-preview-body">
+            <iframe id="attachment-preview-frame" title="Visualização do anexo"></iframe>
+        </div>
+    </div>
+</div>
+
+<div id="counterparty-modal" class="modal-shell hidden" aria-hidden="true">
+    <div class="modal-backdrop" onclick="closeCounterpartyModal()"></div>
+    <div class="modal-card">
+        <div class="modal-head">
+            <h2>Novo favorecido</h2>
+            <button type="button" class="btn btn-ghost" onclick="closeCounterpartyModal()">Fechar</button>
+        </div>
+        <form id="counterparty-form" class="modal-form">
+            <label class="field">
+                <span>Nome fantasia / apelido</span>
+                <input name="name" maxlength="120" required>
+            </label>
+            <label class="field">
+                <span>Razão Social / Nome</span>
+                <input name="legal_name" maxlength="255">
+            </label>
+            <label class="field">
+                <span>CPF / CNPJ</span>
+                <input id="counterparty-document" name="document_number" inputmode="numeric" maxlength="18">
+            </label>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCounterpartyModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar favorecido</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<link rel="stylesheet" href="/static/css/financial_schedules.css">
+<script src="/static/js/financial_schedules.js"></script>
+{% endblock %}

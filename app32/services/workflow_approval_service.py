@@ -12,6 +12,7 @@ from src.intelligence.workflows.approval_utils import (
 )
 from src.intelligence.workflows.direct_execution import DirectExecutionResult
 from src.intelligence.workflows.presenters import build_channel_capabilities, format_channel_heading
+from services.agent_action_backlog_service import sync_backlog_task_for_action
 
 
 def serialize_workflow_approval_action(action: Any, *, now: Optional[datetime] = None) -> Dict[str, Any]:
@@ -54,6 +55,7 @@ def serialize_workflow_approval_action(action: Any, *, now: Optional[datetime] =
             "revalidated_at": payload.get("revalidated_at"),
             "revalidated_by_user_id": payload.get("revalidated_by_user_id"),
         },
+        "backlog_card": dict(payload.get("backlog_card") or {}),
     }
 
 
@@ -302,6 +304,7 @@ class WorkflowApprovalService:
         if not resume_payload.get("action_key"):
             action.payload = payload
             action.status = "approved"
+            sync_backlog_task_for_action(action)
             return WorkflowApprovalOutcome(
                 success=True,
                 message="Solicitação aprovada. Não havia payload de retomada para executar automaticamente.",
@@ -327,6 +330,8 @@ class WorkflowApprovalService:
             action.status = "approved"
             message = resume_result.response_text or "Solicitação aprovada, mas a retomada não executou automaticamente."
             event = "approved_without_execution"
+
+        sync_backlog_task_for_action(action)
 
         return WorkflowApprovalOutcome(
             success=True,
@@ -377,6 +382,7 @@ class WorkflowApprovalService:
             f"Rejeitado por {approver_name}: {feedback}" if feedback else f"Rejeitado por {approver_name}"
         )
         action.resolved_at = now
+        sync_backlog_task_for_action(action)
 
         return WorkflowApprovalOutcome(
             success=True,
@@ -421,6 +427,7 @@ class WorkflowApprovalService:
         payload.pop("expired_at", None)
         action.payload = payload
         action.user_feedback = f"Revalidado por {approver_name}"
+        sync_backlog_task_for_action(action)
 
         return WorkflowApprovalOutcome(
             success=True,

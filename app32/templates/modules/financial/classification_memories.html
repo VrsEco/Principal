@@ -1,0 +1,388 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Memórias de Classificação{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Memórias de Classificação</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% endblock %}
+
+{% block workspace_content %}
+<div class="memories-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="memories-header">
+        <div>
+            <h1>Memórias por cliente</h1>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Memórias cadastradas</h2>
+                <p>Edite ranges, classificação sugerida e status ativo/inativo sem perder rastreabilidade.</p>
+            </div>
+        </div>
+        <div id="memories-list" class="memories-list">
+            <div class="empty-state">Carregando memórias...</div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .memories-page { padding:0 2rem 2rem; }
+    .memories-header { margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:760px; }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1.5rem; }
+    .panel-header { padding:1.25rem 1.25rem 0; }
+    .panel-header h2 { margin:0; }
+    .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); }
+    .memories-list { display:flex; flex-direction:column; gap:1rem; padding:1.25rem; }
+    .memory-card { background:var(--surface-secondary); border:1px solid var(--border); border-radius:14px; padding:1rem; }
+    .memory-meta { color:var(--text-secondary); font-size:.92rem; margin-top:.35rem; }
+    .memory-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; margin-top:1rem; }
+    .memory-grid label { display:flex; flex-direction:column; gap:.35rem; font-size:.9rem; color:var(--text-secondary); }
+    .memory-grid input, .memory-grid select {
+        background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.7rem .8rem; color:var(--text-primary);
+    }
+    .inline-actions { display:flex; gap:.65rem; flex-wrap:wrap; margin-top:1rem; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .btn-danger { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
+    .badge { display:inline-flex; align-items:center; border-radius:999px; padding:.2rem .6rem; font-size:.72rem; font-weight:700; }
+    .badge--active { background:#dcfce7; color:#166534; }
+    .badge--inactive { background:#e5e7eb; color:#374151; }
+    .empty-state { text-align:center; color:var(--text-tertiary); padding:2rem 1rem; }
+    @media (max-width: 960px) {
+        .memories-page { padding:0 1rem 1.5rem; }
+        .memory-grid { grid-template-columns:1fr; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.memories-page')?.dataset.companyId);
+
+    function memoryFormHtml(memory) {
+        return `
+            <form onsubmit="saveMemory(event, ${memory.id})">
+                <div class="memory-grid">
+                    <label><span>Fornecedor</span><input name="supplier_name" value="${memory.supplier_name || ''}"></label>
+                    <label><span>Documento</span><input name="supplier_document" value="${memory.supplier_document || ''}"></label>
+                    <label><span>Descrição</span><input name="description_pattern" value="${memory.description_pattern || ''}"></label>
+                    <label><span>Valor mín.</span><input name="amount_range_min" type="number" step="0.01" value="${memory.amount_range_min ?? ''}"></label>
+                    <label><span>Valor máx.</span><input name="amount_range_max" type="number" step="0.01" value="${memory.amount_range_max ?? ''}"></label>
+                    <label><span>Confiança</span><input name="confidence_score" type="number" min="0" max="1" step="0.01" value="${memory.confidence_score ?? ''}"></label>
+                    <label>
+                        <span>entry_type</span>
+                        <select name="entry_type">
+                            <option value="">Não definir</option>
+                            <option value="payable" ${memory.entry_type === 'payable' ? 'selected' : ''}>payable</option>
+                            <option value="receivable" ${memory.entry_type === 'receivable' ? 'selected' : ''}>receivable</option>
+                            <option value="bank_movement" ${memory.entry_type === 'bank_movement' ? 'selected' : ''}>bank_movement</option>
+                            <option value="transfer" ${memory.entry_type === 'transfer' ? 'selected' : ''}>transfer</option>
+                            <option value="adjustment" ${memory.entry_type === 'adjustment' ? 'selected' : ''}>adjustment</option>
+                            <option value="forecast" ${memory.entry_type === 'forecast' ? 'selected' : ''}>forecast</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Natureza</span>
+                        <select name="movement_nature">
+                            <option value="">Não definir</option>
+                            <option value="debit" ${memory.movement_nature === 'debit' ? 'selected' : ''}>debit</option>
+                            <option value="credit" ${memory.movement_nature === 'credit' ? 'selected' : ''}>credit</option>
+                        </select>
+                    </label>
+                    <label><span>Conta</span><input name="chart_account_id" type="number" min="1" value="${memory.chart_account_id ?? ''}"></label>
+                    <label><span>Centro</span><input name="cost_center_id" type="number" min="1" value="${memory.cost_center_id ?? ''}"></label>
+                    <label><span>Atividade</span><input name="activity_id" type="number" min="1" value="${memory.activity_id ?? ''}"></label>
+                    <label><span>Instância</span><input name="process_instance_id" type="number" min="1" value="${memory.process_instance_id ?? ''}"></label>
+                    <label><span>Rotina</span><input name="routine_id" type="number" min="1" value="${memory.routine_id ?? ''}"></label>
+                    <label><span>Hint favorecido</span><input name="counterparty_hint" value="${memory.counterparty_hint || ''}"></label>
+                </div>
+                <div class="inline-actions">
+                    <button type="submit" class="btn btn-primary">Salvar ajustes</button>
+                    <button type="button" class="btn ${memory.is_active ? 'btn-danger' : 'btn-secondary'}" onclick="toggleMemory(${memory.id}, ${!memory.is_active})">
+                        ${memory.is_active ? 'Inativar' : 'Reativar'}
+                    </button>
+                </div>
+            </form>
+        `;
+    }
+
+    async function loadMemories() {
+        const container = document.getElementById('memories-list');
+        const response = await fetch(`/api/financial/classification-memories?company_id=${companyId}`);
+        const result = await response.json();
+        const items = Array.isArray(result) ? result : [];
+        if (!items.length) {
+            container.innerHTML = '<div class="empty-state">Nenhuma memória cadastrada.</div>';
+            return;
+        }
+        container.innerHTML = items.map(memory => `
+            <article class="memory-card">
+                <strong>#${memory.id} · ${memory.supplier_name || memory.description_pattern || 'Memória sem rótulo'}</strong>
+                <div class="memory-meta">
+                    confirmações: ${memory.times_confirmed || 0}
+                    · origem: ${memory.source || '-'}
+                    · <span class="badge badge--${memory.is_active ? 'active' : 'inactive'}">${memory.is_active ? 'ativa' : 'inativa'}</span>
+                </div>
+                <div class="memory-meta">última confirmação: ${memory.last_confirmed_at || '-'}</div>
+                ${memoryFormHtml(memory)}
+            </article>
+        `).join('');
+    }
+
+    async function saveMemory(event, memoryId) {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const payload = Object.fromEntries(formData.entries());
+        for (const field of ['amount_range_min', 'amount_range_max', 'confidence_score']) {
+            payload[field] = payload[field] ? Number(payload[field]) : null;
+        }
+        for (const field of ['chart_account_id', 'cost_center_id', 'activity_id', 'process_instance_id', 'routine_id']) {
+            payload[field] = payload[field] ? Number(payload[field]) : null;
+        }
+        payload.entry_type = payload.entry_type || null;
+        payload.movement_nature = payload.movement_nature || null;
+        payload.supplier_name = payload.supplier_name || null;
+        payload.supplier_document = payload.supplier_document || null;
+        payload.description_pattern = payload.description_pattern || null;
+        payload.counterparty_hint = payload.counterparty_hint || null;
+
+        const response = await fetch(`/api/financial/classification-memories/${memoryId}?company_id=${companyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao salvar memória.');
+            return;
+        }
+        alert('Memória atualizada com sucesso.');
+        loadMemories();
+    }
+
+    async function toggleMemory(memoryId, isActive) {
+        const response = await fetch(`/api/financial/classification-memories/${memoryId}/toggle?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: isActive }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao alterar status da memória.');
+            return;
+        }
+        loadMemories();
+    }
+
+    document.addEventListener('DOMContentLoaded', loadMemories);
+</script>
+{% endblock %}

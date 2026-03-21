@@ -1,6 +1,8 @@
 from flask_restful import Resource
 from flask import request, session
 import logging
+from datetime import datetime
+from sqlalchemy import or_
 logger = logging.getLogger(__name__)
 from services.incentive_service import IncentiveService
 from models import Indicator, IncentiveRuleSet, IncentiveCalculation, db
@@ -204,7 +206,8 @@ class IncentiveRuleResource(Resource):
         ).join(
             Indicator, Indicator.id == IncentiveRule.indicator_id
         ).filter(
-            IncentiveRule.rule_set_id == rule_set_id
+            IncentiveRule.rule_set_id == rule_set_id,
+            IncentiveRule.deleted_at.is_(None),
         ).order_by(IncentiveRule.order_index).all()
         
         return [
@@ -227,11 +230,22 @@ class IncentiveRuleResource(Resource):
         from models import IncentiveRule, IncentiveRuleSet
         
         # Verify ownership
-        rs = IncentiveRuleSet.query.get(rule_set_id)
-        if not rs or rs.company_id != company_id:
+        rs = IncentiveRuleSet.query.filter(
+            IncentiveRuleSet.id == rule_set_id,
+            IncentiveRuleSet.company_id == company_id,
+            IncentiveRuleSet.deleted_at.is_(None),
+        ).first()
+        if not rs:
             return {"error": "Unauthorized"}, 403
             
-        IncentiveRule.query.filter_by(rule_set_id=rule_set_id).delete()
+        IncentiveRule.query.filter(
+            IncentiveRule.rule_set_id == rule_set_id,
+            or_(
+                IncentiveRule.company_id == company_id,
+                IncentiveRule.company_id.is_(None),
+            ),
+            IncentiveRule.deleted_at.is_(None),
+        ).update({"deleted_at": datetime.utcnow()}, synchronize_session=False)
         
         for idx, r_data in enumerate(rules_data):
             rule = IncentiveRule(

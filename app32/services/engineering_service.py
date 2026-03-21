@@ -1,9 +1,13 @@
 import time
 import threading
 import os
+import logging
 from datetime import datetime
 from models import db, AgentAction
+from services.agent_action_backlog_service import sync_backlog_task_for_action
 from services.whatsapp_service import whatsapp_service
+
+logger = logging.getLogger(__name__)
 
 class EngineeringService:
     """
@@ -23,12 +27,12 @@ class EngineeringService:
         """Inicia a thread de monitoramento do squad de engenharia"""
         def run_loop():
             with app.app_context():
-                print("[SQUAD ENGENHARIA] Monitorando sistema...")
+                logger.info("[SQUAD ENGENHARIA] Monitorando sistema...")
                 while not self._stop_event.is_set():
                     try:
                         self._process_pending_escalations()
                     except Exception as e:
-                        print(f"FAILED Engineering Worker: {e}")
+                        logger.exception("FAILED Engineering Worker: %s", e)
                     time.sleep(15) # Intervalo de verificação
 
         thread = threading.Thread(target=run_loop, daemon=True)
@@ -42,7 +46,7 @@ class EngineeringService:
         
         for action in pending:
             try:
-                print(f"[ANALYSIS] @ARQUITETO analisando ticket #{action.id}...")
+                logger.info("[ANALYSIS] @ARQUITETO analisando ticket #%s...", action.id)
                 
                 # Simulação de análise técnica real
                 # Em produção, aqui chamaríamos um agente de IA de engenharia especializado
@@ -58,6 +62,7 @@ class EngineeringService:
                 action.status = 'awaiting_approval'
                 action.handling_agent = '@QA_AUTOMATION'
                 action.payload['proposal'] = patch_proposal
+                sync_backlog_task_for_action(action)
                 db.session.commit()
                 
                 # Notificação via WhatsApp
@@ -71,7 +76,11 @@ class EngineeringService:
                 whatsapp_service.send_message("5511999999999", msg) # Mock phone for demo
             except Exception as e:
                 db.session.rollback()
-                print(f"FAILED processing action #{getattr(action, 'id', 'unknown')}: {e}")
+                logger.exception(
+                    "FAILED processing action #%s: %s",
+                    getattr(action, 'id', 'unknown'),
+                    e,
+                )
 
     def execute_repair(self, action_id):
         """Executa o reparo aprovado com suporte a Rollback @QA_AUTOMATION"""
@@ -96,16 +105,18 @@ class EngineeringService:
             
             # 2. Aplica o Patches (Aqui simularíamos a escrita real do patch)
             # No futuro, o Agente de IA usaria replace_file_content aqui.
-            print(f"REPAIR: Aplicando hotfix no arquivo: {file_path}")
+            logger.info("REPAIR: Aplicando hotfix no arquivo: %s", file_path)
             
             # Marcamos como executado
             action.status = 'executed'
             action.executed_at = datetime.utcnow()
+            sync_backlog_task_for_action(action)
             db.session.commit()
             
             return True, "Reparo aplicado com sucesso. Backup gerado para segurança."
         except Exception as e:
             action.status = 'failed'
+            sync_backlog_task_for_action(action)
             db.session.commit()
             return False, f"Falha na execução do reparo: {str(e)}"
 
@@ -120,6 +131,7 @@ class EngineeringService:
                 f.write(action.backup_content)
             
             action.status = 'rolled_back'
+            sync_backlog_task_for_action(action)
             db.session.commit()
             return True, "Rollback executado com sucesso. Arquivo original restaurado."
         except Exception as e:

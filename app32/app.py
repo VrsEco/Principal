@@ -417,6 +417,7 @@ def register_api_resources(api):
         ProjectTaskHoursSummaryResource, ProjectAllTasksResource, ProjectTaskTransferResource,
         ProjectTaskDependencyListResource, ProjectTaskDependencyResource
     )
+    from api.resources.project_task_operational import ProjectTaskBacklogActionResource
 
     from api.resources.indicator import (
         IndicatorListResource, IndicatorResource, 
@@ -451,6 +452,63 @@ def register_api_resources(api):
         IncentiveIndicatorListResource, IncentiveCalculationResource,
         IncentiveSpiderWebResource, IncentiveRuleResource
     )
+    from api.resources.financial import (
+        FinancialEntryListResource,
+        FinancialDirectEntryOptionsResource,
+        FinancialDirectEntryCreateResource,
+        FinancialCatalogListResource,
+        FinancialCatalogResource,
+        FinancialCatalogToggleResource,
+        FinancialDomainEnablementListResource,
+        FinancialDomainEnablementResource,
+        FinancialDomainEnablementToggleResource,
+        FinancialIngestionRecordListResource,
+        FinancialIngestionRecordResource,
+        FinancialIngestionRecordReviewResource,
+        FinancialIngestionRecordConvertResource,
+        FinancialScheduleListResource,
+        FinancialScheduleOptionsResource,
+        FinancialScheduleResource,
+        FinancialScheduleToggleResource,
+        FinancialScheduleGenerateResource,
+        FinancialScheduleCreateEntryResource,
+        FinancialScheduleAttachmentListResource,
+        FinancialScheduleAttachmentResource,
+        FinancialAutomationRuleListResource,
+        FinancialAutomationRuleResource,
+        FinancialAutomationExecutionListResource,
+        FinancialAutomationApplyInstanceResource,
+        FinancialProcessTriggerDispatchResource,
+        FinancialEntryResource,
+        FinancialEntryAllocationListResource,
+        FinancialEntrySettlementListResource,
+        FinancialSettlementResource,
+        FinancialImportBatchListResource,
+        FinancialImportBatchResource,
+        FinancialImportBatchProcessResource,
+        FinancialImportBatchReconcileResource,
+        FinancialReconciliationMatchReviewResource,
+        FinancialClassificationRuleListResource,
+        FinancialClassificationRuleResource,
+        FinancialClassificationRuleToggleResource,
+        FinancialImportBatchClassifyResource,
+        FinancialClassificationMemoryListResource,
+        FinancialClassificationMemoryResource,
+        FinancialClassificationMemoryToggleResource,
+        FinancialImportBatchSuggestionResource,
+        FinancialClassificationSuggestionListResource,
+        FinancialClassificationSuggestionReviewResource,
+        FinancialImportBatchAIRankingResource,
+        FinancialClassificationPendingQueueResource,
+        FinancialClassificationDashboardResource,
+        FinancialClassificationAskUserResource,
+        FinancialClassificationResolveAnswerResource,
+        FinancialClosingListResource,
+        FinancialClosingPreviewResource,
+        FinancialReportTypeListResource,
+        FinancialReportGenerateResource,
+        FinancialExecutiveDashboardResource,
+    )
 
     api.add_resource(CompanyListResource, '/api/companies')
     api.add_resource(CompanyResource, '/api/companies/<int:company_id>')
@@ -463,6 +521,7 @@ def register_api_resources(api):
     api.add_resource(ProjectTaskCollaboratorResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/collaborators/<int:collaborator_id>')
     api.add_resource(ProjectTaskHoursSummaryResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/hours-summary')
     api.add_resource(ProjectTaskTransferResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/transfer')
+    api.add_resource(ProjectTaskBacklogActionResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/backlog-actions/<string:operation>')
     api.add_resource(ProjectTaskDependencyListResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/dependencies')
     api.add_resource(ProjectTaskDependencyResource, '/api/projects/<int:project_id>/tasks/<int:task_id>/dependencies/<int:dep_id>')
     api.add_resource(ProjectAllTasksResource, '/api/projects/all-tasks')
@@ -538,6 +597,61 @@ def register_api_resources(api):
     api.add_resource(IncentiveCalculationResource, '/api/incentives/calculate')
     api.add_resource(IncentiveSpiderWebResource, '/api/incentives/spider-web-data')
     api.add_resource(IncentiveRuleResource, '/api/incentives/rule-sets/<int:rule_set_id>/rules')
+    api.add_resource(FinancialEntryListResource, '/api/financial/entries')
+    api.add_resource(FinancialDirectEntryOptionsResource, '/api/financial/entries/direct/options')
+    api.add_resource(FinancialDirectEntryCreateResource, '/api/financial/entries/direct')
+    api.add_resource(FinancialCatalogListResource, '/api/financial/catalogs/<string:catalog_type>')
+    api.add_resource(FinancialCatalogResource, '/api/financial/catalogs/<string:catalog_type>/<int:item_id>')
+    api.add_resource(FinancialCatalogToggleResource, '/api/financial/catalogs/<string:catalog_type>/<int:item_id>/toggle')
+    api.add_resource(FinancialDomainEnablementListResource, '/api/financial/domain-enablements')
+    api.add_resource(FinancialDomainEnablementResource, '/api/financial/domain-enablements/<string:domain_type>/<int:source_id>')
+    api.add_resource(FinancialDomainEnablementToggleResource, '/api/financial/domain-enablements/<string:domain_type>/<int:source_id>/toggle')
+    api.add_resource(FinancialIngestionRecordListResource, '/api/financial/ingestions')
+    api.add_resource(FinancialIngestionRecordResource, '/api/financial/ingestions/<int:record_id>')
+    api.add_resource(FinancialIngestionRecordReviewResource, '/api/financial/ingestions/<int:record_id>/review')
+    api.add_resource(FinancialIngestionRecordConvertResource, '/api/financial/ingestions/<int:record_id>/convert')
+    api.add_resource(FinancialScheduleListResource, '/api/financial/schedules')
+    api.add_resource(FinancialScheduleOptionsResource, '/api/financial/schedules/options')
+    api.add_resource(FinancialScheduleResource, '/api/financial/schedules/<int:schedule_id>')
+    api.add_resource(FinancialScheduleToggleResource, '/api/financial/schedules/<int:schedule_id>/toggle')
+    api.add_resource(FinancialScheduleGenerateResource, '/api/financial/schedules/generate-due')
+    api.add_resource(FinancialScheduleCreateEntryResource, '/api/financial/schedules/<int:schedule_id>/create-entry')
+    api.add_resource(FinancialScheduleAttachmentListResource, '/api/financial/schedules/<int:schedule_id>/attachments')
+    api.add_resource(FinancialScheduleAttachmentResource, '/api/financial/schedules/<int:schedule_id>/attachments/<string:attachment_id>')
+    api.add_resource(FinancialAutomationRuleListResource, '/api/financial/automation-rules')
+    api.add_resource(FinancialAutomationRuleResource, '/api/financial/automation-rules/<int:rule_id>')
+    api.add_resource(FinancialAutomationExecutionListResource, '/api/financial/automation-executions')
+    api.add_resource(FinancialAutomationApplyInstanceResource, '/api/financial/automation-rules/<int:rule_id>/apply/<int:process_instance_id>')
+    api.add_resource(FinancialProcessTriggerDispatchResource, '/api/financial/process-triggers/<int:process_instance_id>/dispatch')
+    api.add_resource(FinancialEntryResource, '/api/financial/entries/<int:entry_id>')
+    api.add_resource(FinancialEntryAllocationListResource, '/api/financial/entries/<int:entry_id>/allocations')
+    api.add_resource(FinancialEntrySettlementListResource, '/api/financial/entries/<int:entry_id>/settlements')
+    api.add_resource(FinancialSettlementResource, '/api/financial/settlements/<int:settlement_id>')
+    api.add_resource(FinancialImportBatchListResource, '/api/financial/imports')
+    api.add_resource(FinancialImportBatchResource, '/api/financial/imports/<int:batch_id>')
+    api.add_resource(FinancialImportBatchProcessResource, '/api/financial/imports/<int:batch_id>/process')
+    api.add_resource(FinancialImportBatchClassifyResource, '/api/financial/imports/<int:batch_id>/classify')
+    api.add_resource(FinancialImportBatchSuggestionResource, '/api/financial/imports/<int:batch_id>/suggest-classification')
+    api.add_resource(FinancialImportBatchAIRankingResource, '/api/financial/imports/<int:batch_id>/ai-rank-classification')
+    api.add_resource(FinancialImportBatchReconcileResource, '/api/financial/imports/<int:batch_id>/reconcile')
+    api.add_resource(FinancialReconciliationMatchReviewResource, '/api/financial/reconciliation-matches/<int:match_id>/review')
+    api.add_resource(FinancialClassificationRuleListResource, '/api/financial/classification-rules')
+    api.add_resource(FinancialClassificationRuleResource, '/api/financial/classification-rules/<int:rule_id>')
+    api.add_resource(FinancialClassificationRuleToggleResource, '/api/financial/classification-rules/<int:rule_id>/toggle')
+    api.add_resource(FinancialClassificationMemoryListResource, '/api/financial/classification-memories')
+    api.add_resource(FinancialClassificationMemoryResource, '/api/financial/classification-memories/<int:memory_id>')
+    api.add_resource(FinancialClassificationMemoryToggleResource, '/api/financial/classification-memories/<int:memory_id>/toggle')
+    api.add_resource(FinancialClassificationSuggestionListResource, '/api/financial/classification-suggestions')
+    api.add_resource(FinancialClassificationSuggestionReviewResource, '/api/financial/classification-suggestions/<int:suggestion_id>/review')
+    api.add_resource(FinancialClassificationPendingQueueResource, '/api/financial/classification-pending')
+    api.add_resource(FinancialClassificationDashboardResource, '/api/financial/classification-dashboard')
+    api.add_resource(FinancialClassificationAskUserResource, '/api/financial/classification-pending/<int:import_row_id>/ask-user')
+    api.add_resource(FinancialClassificationResolveAnswerResource, '/api/financial/classification-pending/<int:import_row_id>/resolve')
+    api.add_resource(FinancialClosingListResource, '/api/financial/closings')
+    api.add_resource(FinancialClosingPreviewResource, '/api/financial/closings/preview')
+    api.add_resource(FinancialReportTypeListResource, '/api/financial/reports/types')
+    api.add_resource(FinancialReportGenerateResource, '/api/financial/reports/generate')
+    api.add_resource(FinancialExecutiveDashboardResource, '/api/financial/dashboard')
 
 def register_blueprints(app):
     # Route to serve uploaded files
@@ -561,6 +675,7 @@ def register_blueprints(app):
     from api.routes.configs import configs_bp
     from api.routes.integrations import integrations_bp
     from api.routes.portfolios import portfolios_bp
+    from api.routes.financial import financial_bp
     from api.user_employee import user_employee_bp
     from api.routes.meetings import meetings_bp
     # from api.routes.ai_board import ai_board_bp
@@ -583,6 +698,7 @@ def register_blueprints(app):
     app.register_blueprint(configs_bp)
     app.register_blueprint(integrations_bp)
     app.register_blueprint(portfolios_bp)
+    app.register_blueprint(financial_bp)
     app.register_blueprint(user_employee_bp)
     app.register_blueprint(meetings_bp, url_prefix='/meetings')
     # app.register_blueprint(ai_board_bp)

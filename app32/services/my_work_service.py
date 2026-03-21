@@ -13,6 +13,7 @@ import json
 
 from database.postgres_helper import connect as pg_connect
 from utils.project_activity_utils import normalize_project_activities
+from utils.sql_execution import execute_formatted_query
 
 DELIVERY_TAGS = [
     "open",
@@ -125,6 +126,7 @@ def get_employee_from_user(user_id: int) -> Optional[int]:
 _EMPLOYEE_HAS_IS_DELETED_COLUMN: Optional[bool] = None
 _PROJECT_ACTIVITIES_TABLE_EXISTS: Optional[bool] = None
 _PROCESS_COLLAB_TABLE_EXISTS: Optional[bool] = None
+_TABLE_COLUMN_EXISTS_CACHE: Dict[Tuple[str, str], bool] = {}
 
 
 def _build_employee_active_filter(cursor) -> str:
@@ -148,6 +150,37 @@ def _build_employee_active_filter(cursor) -> str:
 
     # Fallback for schemas sem coluna is_deleted
     return "AND (e.status IS NULL OR LOWER(e.status) <> 'inactive')"
+
+
+def _table_has_column(cursor, table_name: str, column_name: str) -> bool:
+    """Detecta se uma coluna existe no schema atual, com cache por tabela/coluna."""
+    cache_key = (table_name, column_name)
+    cached = _TABLE_COLUMN_EXISTS_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        cursor.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = :table_name
+              AND column_name = :column_name
+            LIMIT 1
+            """,
+            {"table_name": table_name, "column_name": column_name},
+        )
+        exists = cursor.fetchone() is not None
+        _TABLE_COLUMN_EXISTS_CACHE[cache_key] = exists
+        return exists
+    except Exception:
+        try:
+            if hasattr(cursor, "connection"):
+                cursor.connection.rollback()
+        except Exception:
+            pass
+        return False
 
 
 def _project_activities_table_available(cursor) -> bool:
@@ -177,7 +210,7 @@ def _project_activities_table_available(cursor) -> bool:
             try:
                 if hasattr(cursor, 'connection'):
                     cursor.connection.rollback()
-            except:
+            except Exception:
                 pass
             return False
     return bool(_PROJECT_ACTIVITIES_TABLE_EXISTS)
@@ -208,7 +241,7 @@ def _process_collaborators_table_available(cursor) -> bool:
             try:
                 if hasattr(cursor, 'connection'):
                     cursor.connection.rollback()
-            except:
+            except Exception:
                 pass
             return False
     return bool(_PROCESS_COLLAB_TABLE_EXISTS)
@@ -225,8 +258,10 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
     cursor = conn.cursor()
 
     def _fetch_by_user_id() -> List[tuple]:
-        cursor.execute(
-            f"""
+        active_filter = _build_employee_active_filter(cursor)
+        execute_formatted_query(
+            cursor,
+            """
             SELECT e.id,
                    e.name,
                    e.email,
@@ -236,15 +271,17 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
             FROM employees e
             LEFT JOIN companies c ON c.id = e.company_id
             WHERE e.user_id = %s
-              {_build_employee_active_filter(cursor)}
+              {active_filter}
             """,
             (user_id,),
         )
         return cursor.fetchall()
 
     def _fetch_by_email(email: str) -> List[tuple]:
-        cursor.execute(
-            f"""
+        active_filter = _build_employee_active_filter(cursor)
+        execute_formatted_query(
+            cursor,
+            """
             SELECT e.id,
                    e.name,
                    e.email,
@@ -254,7 +291,7 @@ def get_user_employees(user_id: int) -> List[Dict[str, Any]]:
             FROM employees e
             LEFT JOIN companies c ON c.id = e.company_id
             WHERE LOWER(TRIM(e.email)) = LOWER(TRIM(%s))
-              {_build_employee_active_filter(cursor)}
+              {active_filter}
             """,
             (email,),
         )
@@ -307,8 +344,9 @@ def _fetch_collaborator_directory(cursor, company_ids: List[int]) -> List[Dict[s
 
     placeholders = ",".join(["%s"] * len(company_ids))
     active_filter = _build_employee_active_filter(cursor)
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT e.id,
                e.name,
                e.email,
@@ -347,8 +385,9 @@ def _fetch_project_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
     placeholders = ",".join(["%s"] * len(company_ids))
     projects = []
     try:
-        cursor.execute(
-            f"""
+        execute_formatted_query(
+            cursor,
+            """
             SELECT cp.id,
                    cp.title,
                    cp.code,
@@ -386,10 +425,11 @@ def _fetch_project_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
         logger.warning("Fallback project directory (sem código): %s", exc)
         try:
             cursor.connection.rollback()
-        except:
+        except Exception:
             pass
-        cursor.execute(
-            f"""
+        execute_formatted_query(
+            cursor,
+            """
             SELECT cp.id,
                    cp.title,
                    cp.company_id,
@@ -425,8 +465,9 @@ def _fetch_process_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
     placeholders = ",".join(["%s"] * len(company_ids))
     processes = []
     try:
-        cursor.execute(
-            f"""
+        execute_formatted_query(
+            cursor,
+            """
             SELECT p.id,
                    p.name,
                    p.code,
@@ -467,7 +508,7 @@ def _fetch_process_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
         logger.error("Erro ao buscar diretório de processos: %s", exc)
         try:
             cursor.connection.rollback()
-        except:
+        except Exception:
             pass
         return []
 
@@ -502,8 +543,9 @@ def _build_employee_lookup(
         return {}, {}
 
     placeholders = ",".join(["%s"] * len(employee_ids))
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT id, name, email
         FROM employees
         WHERE id IN ({placeholders})
@@ -532,8 +574,9 @@ def _build_employee_lookup_by_companies(
         return {}, {}
 
     placeholders = ",".join(["%s"] * len(company_ids))
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT id, name, email
         FROM employees
         WHERE company_id IN ({placeholders})
@@ -881,10 +924,13 @@ def _fetch_v2_project_rows(
         rows = cursor.fetchall()
         return [_project_activity_row_from_normalized(row) for row in rows]
     except Exception as e:
-        print("Warning: _fetch_v2_project_rows failed:", getattr(e, "message", str(e)))
+        logger.warning(
+            "Warning: _fetch_v2_project_rows failed: %s",
+            getattr(e, "message", str(e)),
+        )
         try:
             cursor.connection.rollback()
-        except:
+        except Exception:
             pass
         return []
 
@@ -939,10 +985,31 @@ def _fetch_normalized_project_rows(
         )
         return legacy_activities + v2_activities
 
+    project_code_expression = (
+        "COALESCE(NULLIF(TRIM(cp.code), ''), 'PRJ-' || cp.id::text)"
+        if _table_has_column(cursor, "company_projects", "code")
+        else "'PRJ-' || cp.id::text"
+    )
+    activity_code_expression = (
+        f"COALESCE(NULLIF(TRIM(pa.code), ''), {project_code_expression} || '.' || pa.id::text)"
+        if _table_has_column(cursor, "project_activities", "code")
+        else f"{project_code_expression} || '.' || pa.id::text"
+    )
+    amount_expression = (
+        "pa.amount"
+        if _table_has_column(cursor, "project_activities", "amount")
+        else "NULL"
+    )
+    metadata_expression = (
+        "pa.metadata"
+        if _table_has_column(cursor, "project_activities", "metadata")
+        else "NULL"
+    )
+
     query = f"""
         SELECT
             pa.id AS activity_id,
-            pa.code AS activity_code,
+            {activity_code_expression} AS activity_code,
             pa.title AS activity_title,
             pa.description AS activity_description,
             pa.status AS activity_status,
@@ -951,8 +1018,8 @@ def _fetch_normalized_project_rows(
             pa.deadline AS activity_deadline,
             pa.estimated_hours,
             pa.worked_hours,
-            pa.amount,
-            pa.metadata,
+            {amount_expression} AS amount,
+            {metadata_expression} AS metadata,
             pa.project_id,
             pa.responsible_id,
             pa.executor_id,
@@ -968,7 +1035,7 @@ def _fetch_normalized_project_rows(
             cp.end_date,
             cp.created_at,
             cp.updated_at,
-            cp.code AS project_code,
+            {project_code_expression} AS project_code,
             pl.title AS plan_name,
             c.name AS company_name
         FROM project_activities pa
@@ -1033,8 +1100,9 @@ def _fetch_project_rows_from_json(
         params.extend(project_ids)
 
     where_clause = " AND ".join(conditions) if conditions else "TRUE"
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT
             cp.id,
             cp.company_id,
@@ -1088,8 +1156,9 @@ def _fetch_process_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
     placeholders = ",".join(["%s"] * len(company_ids))
     processes = []
     try:
-        cursor.execute(
-            f"""
+        execute_formatted_query(
+            cursor,
+            """
             SELECT p.id,
                    p.name,
                    p.code,
@@ -1125,8 +1194,9 @@ def _fetch_process_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
         return processes
     except Exception as exc:
         logger.warning("Fallback process directory (instâncias): %s", exc)
-        cursor.execute(
-            f"""
+        execute_formatted_query(
+            cursor,
+            """
             SELECT pi.id,
                    pi.title,
                    pi.company_id,
@@ -1697,8 +1767,9 @@ def _fetch_projects_for_employee(cursor, employee_ids: List[int]):
     # Precisamos duplicar os parametros para usar no OR (responsible IN (...) OR executor IN (...))
     params = tuple(employee_ids) + tuple(employee_ids)
     
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT 
             cp.id,
             cp.company_id,
@@ -1787,8 +1858,9 @@ def _fetch_projects_for_members(cursor, member_ids: Sequence[int]):
     # Precisamos dobrar os parametros pois usamos em dois lugares (responsible e executor)
     params = member_tuple + member_tuple
     
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT 
             cp.id,
             cp.company_id,
@@ -2303,8 +2375,9 @@ def _fetch_employee_company_id(cursor, employee_id: int) -> Optional[int]:
 def _fetch_companies_for_members(cursor, member_ids: Sequence[int]) -> List[int]:
     """ObtÃ©m empresas vinculadas aos membros."""
     placeholders = ",".join(["%s"] * len(member_ids))
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT DISTINCT company_id
         FROM employees
         WHERE id IN ({placeholders})
@@ -3169,8 +3242,9 @@ def _resolve_team_for_employee(
         params.append(company_id)
         company_filter = " AND t.company_id = %s"
 
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT t.id, t.name, t.company_id
         FROM teams t
         JOIN team_members tm ON tm.team_id = t.id
@@ -3451,8 +3525,9 @@ def _build_company_team_metrics(cursor, company_id: int) -> Dict[str, Any]:
 def _count_company_employees(cursor, company_id: int) -> int:
     """Conta colaboradores ativos da empresa."""
     active_filter = _build_employee_active_filter(cursor)
-    cursor.execute(
-        f"""
+    execute_formatted_query(
+        cursor,
+        """
         SELECT COUNT(*) AS total
         FROM employees e
         WHERE e.company_id = %s

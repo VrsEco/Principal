@@ -745,11 +745,21 @@ def delete_indicator(indicator_id):
     ind = Indicator.query.filter_by(id=indicator_id, company_id=int(company_id)).first_or_404()
 
     try:
+        goals_count = IndicatorGoal.query.filter_by(company_id=int(company_id), indicator_id=ind.id).count()
+        data_count = IndicatorData.query.filter_by(company_id=int(company_id), indicator_id=ind.id).count()
+        if goals_count > 0 or data_count > 0:
+            return jsonify({
+                "error": (
+                    "Não é possível excluir o indicador porque existem "
+                    f"{goals_count} meta(s) e {data_count} registro(s) vinculados."
+                )
+            }), 409
+
         ind.is_active = False
         db.session.commit()
         return jsonify({
             "status": "success",
-            "message": "Indicador inativado com sucesso.",
+            "message": "Indicador excluído com soft delete (inativado) com sucesso.",
             "id": ind.id,
             "is_active": ind.is_active,
         })

@@ -23,7 +23,7 @@ def extract_evidence_data(messages):
                     "tool": msg.name or "database",
                     "content": content
                 })
-            except:
+            except Exception:
                 evidences.append({
                     "tool": msg.name or "database",
                     "content": msg.content

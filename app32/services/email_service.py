@@ -114,16 +114,20 @@ class EmailService:
             True if sent successfully, False otherwise
         """
         try:
-            self._reload_runtime_config()
+            provider = (self.provider or "smtp").strip().lower()
+            if provider != "local":
+                self._reload_runtime_config()
+                provider = (self.provider or "smtp").strip().lower()
+
             html_body = html_body or self.build_transactional_email_html(
                 subject=subject,
                 body=body,
             )
-            if self.provider == "smtp":
+            if provider == "smtp":
                 return self._send_smtp_email(
                     to_emails, subject, body, html_body, attachments
                 )
-            elif self.provider == "webhook":
+            elif provider == "webhook":
                 return self._send_webhook_email(
                     to_emails, subject, body, html_body, attachments
                 )
@@ -504,7 +508,8 @@ class EmailService:
                 client = imaplib.IMAP4_SSL(self.inbound_host, port)
             else:
                 client = imaplib.IMAP4(self.inbound_host, port)
-            client.login(self.inbound_username, self.inbound_password)
+            inbound_secret = self.inbound_password
+            client.login(self.inbound_username, inbound_secret)
             client.logout()
             return {
                 "success": True,

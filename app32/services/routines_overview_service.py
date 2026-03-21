@@ -7,6 +7,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from config_database import get_db
+from utils.sql_execution import execute_formatted_query
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +51,9 @@ def _load_routine_collaborators(
         conn = db._get_connection()
         cursor = conn.cursor()
         placeholders = ", ".join(["%s"] * len(routine_ids))
-        cursor.execute(
-            f"""
+        execute_formatted_query(
+            cursor,
+            """
             SELECT
                 rc.id,
                 rc.routine_id,

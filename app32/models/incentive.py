@@ -26,6 +26,7 @@ class IncentiveRuleSet(db.Model):
     # Redutores/Multiplicadores Máximos Globais
     max_red_total = db.Column(db.Numeric(15, 4))
     max_mult_total = db.Column(db.Numeric(15, 4))
+    deleted_at = db.Column(db.DateTime)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -75,6 +76,7 @@ class IncentiveRule(db.Model):
     impact_type = db.Column(db.String(20), default='multiplier')
     incidencia = db.Column(db.String(20), default='individual') # individual, coletiva_equipe, coletiva_empresa
     order_index = db.Column(db.Integer, default=0)
+    deleted_at = db.Column(db.DateTime)
 
     # Relationships
     indicator = db.relationship('Indicator', backref='incentive_rules')
@@ -125,6 +127,7 @@ class IncentiveCalculation(db.Model):
     total_distributed = db.Column(db.Numeric(15, 2))
     participants_count = db.Column(db.Integer)
     results_payload = db.Column(db.JSON)
+    deleted_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class IncentiveParticipant(db.Model):
@@ -140,6 +143,7 @@ class IncentiveParticipant(db.Model):
     elegivel = db.Column(db.Boolean, default=True)
     data_entrada = db.Column(db.Date, nullable=True)
     notas = db.Column(db.Text, nullable=True)
+    deleted_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

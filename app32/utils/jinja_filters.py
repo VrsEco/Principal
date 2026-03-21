@@ -19,10 +19,10 @@ def format_date_br(value, include_time=False):
             else:
                 # Try common SQL format
                 dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
-        except:
+        except Exception:
             try:
                 dt = datetime.strptime(value, '%Y-%m-%d')
-            except:
+            except Exception:
                 return value # Return as is if parsing fails
     else:
         dt = value

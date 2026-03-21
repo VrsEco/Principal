@@ -1,0 +1,726 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Favorecidos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<a href="/financial/catalogs">Cadastros</a>
+<span class="sep">/</span>
+<span class="current">Favorecidos</span>
+{% endblock %}
+
+{% block navbar_actions %}{% endblock %}
+
+{% block workspace_content %}
+<div class="cp-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="cp-header">
+        <div>
+            <h1>{{ catalog_page.title }}</h1>
+        </div>
+        <button class="btn btn-primary" type="button" onclick="startNewCounterparty()">Novo favorecido</button>
+    </header>
+
+    <section class="cp-shell">
+        <aside class="cp-list-rail">
+            <div class="cp-sidebar-card">
+                <div class="cp-sidebar-header">
+                    <h3>Favorecidos</h3>
+                    <span id="cp-counter" class="cp-counter">0</span>
+                </div>
+                <label class="cp-search">
+                    <span>Buscar</span>
+                    <input id="cp-search-input" type="search" placeholder="Nome, código ou documento">
+                </label>
+                <div id="cp-list" class="cp-list">
+                    <div class="empty-state">Carregando favorecidos...</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="cp-main">
+            <section class="cp-panel">
+                <form id="cp-form" class="cp-form">
+                    <input type="hidden" name="id" value="">
+
+                    <section class="cp-form-section active" data-section="main">
+                        <div class="section-title">
+                            <h3>Dados Principais</h3>
+                        </div>
+                        <div class="form-grid">
+                            <label>
+                                <span>Código</span>
+                                <input name="code" readonly placeholder="Gerado automaticamente">
+                            </label>
+                            <label>
+                                <span>Nome fantasia / apelido</span>
+                                <input name="name" required>
+                            </label>
+                            <label>
+                                <span>Razão Social / Nome</span>
+                                <input name="legal_name">
+                            </label>
+                            <label>
+                                <span>CPF / CNPJ</span>
+                                <input name="document_number" inputmode="numeric" maxlength="18" oninput="handleDocumentInput(this)">
+                                <small class="field-hint" id="cp-document-type">Digite CPF ou CNPJ</small>
+                            </label>
+                            <label>
+                                <span>Status</span>
+                                <input id="cp-status-display" value="Ativo" readonly tabindex="-1">
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="cp-form-section" data-section="contacts">
+                        <div class="section-title">
+                            <h3>Contatos e recebimento</h3>
+                        </div>
+                        <div class="form-grid">
+                            <label><span>E-mail</span><input name="email" type="email"></label>
+                            <label><span>Telefone</span><input name="phone"></label>
+                            <label class="col-span-2"><span>PIX</span><input name="pix_key"></label>
+                        </div>
+                    </section>
+
+                    <section class="cp-form-section" data-section="defaults">
+                        <div class="section-title">
+                            <h3>Defaults financeiros</h3>
+                        </div>
+                        <div class="form-grid">
+                            <label><span>Conta padrão</span><input name="default_chart_account_id" type="number" min="1"></label>
+                            <label><span>Centro padrão</span><input name="default_cost_center_id" type="number" min="1"></label>
+                        </div>
+                    </section>
+
+                    <section class="cp-form-section" data-section="notes">
+                        <div class="section-title">
+                            <h3>Notas</h3>
+                        </div>
+                        <div class="form-grid">
+                            <label class="col-span-2"><span>Observações</span><textarea name="notes" rows="5"></textarea></label>
+                        </div>
+                    </section>
+
+                    <div class="cp-form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="resetCounterpartyForm()">Cancelar edição</button>
+                        <button type="submit" class="btn btn-primary">Salvar favorecido</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+
+        <aside class="cp-tabs-rail">
+            <div class="cp-sidebar-card">
+                <h3>Seções do cadastro</h3>
+                <nav class="cp-section-nav" id="cp-section-nav"></nav>
+            </div>
+        </aside>
+    </section>
+</div>
+
+<style>
+    .cp-page { padding: 0 2rem 2rem; }
+    .cp-header {
+        margin-bottom: 1rem;
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:1rem;
+    }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:840px; }
+    .cp-shell { display:grid; grid-template-columns: 320px minmax(0,1fr) 260px; gap:1rem; align-items:start; }
+    .cp-list-rail,
+    .cp-tabs-rail {
+        display:flex;
+        flex-direction:column;
+        gap:1rem;
+        position:sticky;
+        top:1rem;
+    }
+    .cp-sidebar-card, .cp-panel {
+        background:var(--surface);
+        border:1px solid var(--border);
+        border-radius:18px;
+        box-shadow:var(--shadow-sm);
+    }
+    .cp-sidebar-card { padding:1rem; }
+    .cp-sidebar-card h3 { margin:0; }
+    .cp-sidebar-card p { color:var(--text-secondary); margin:.35rem 0 0; line-height:1.45; }
+    .cp-section-nav { display:flex; flex-direction:column; gap:.5rem; margin-top:1rem; }
+    .cp-section-btn {
+        border:none;
+        background:var(--surface-secondary);
+        color:var(--text-secondary);
+        border-radius:12px;
+        padding:.8rem .95rem;
+        text-align:left;
+        font-weight:700;
+        cursor:pointer;
+    }
+    .cp-section-btn.active {
+        background:var(--primary-light);
+        color:var(--primary);
+        border:1px solid rgba(37, 99, 235, 0.16);
+    }
+    .cp-sidebar-header { display:flex; justify-content:space-between; align-items:center; gap:.75rem; }
+    .cp-counter {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:30px;
+        height:30px;
+        padding:0 .5rem;
+        border-radius:999px;
+        background:var(--primary-light);
+        color:var(--primary);
+        font-weight:700;
+        font-size:.78rem;
+    }
+    .cp-search { display:flex; flex-direction:column; gap:.4rem; margin:1rem 0; color:var(--text-secondary); font-weight:600; }
+    .cp-search input, .cp-form input, .cp-form select, .cp-form textarea {
+        background:var(--surface-secondary);
+        border:1px solid var(--border);
+        border-radius:12px;
+        padding:.78rem .9rem;
+        color:var(--text-primary);
+    }
+    .cp-list { display:flex; flex-direction:column; gap:.75rem; max-height:calc(100vh - 320px); overflow:auto; padding-right:.2rem; }
+    .cp-list-item {
+        border:1px solid var(--border);
+        background:var(--surface-secondary);
+        border-radius:14px;
+        padding:.9rem;
+        cursor:pointer;
+        transition:all .18s ease;
+    }
+    .cp-list-item:hover, .cp-list-item.active {
+        border-color:var(--primary);
+        box-shadow:var(--shadow-sm);
+        transform:translateY(-1px);
+    }
+    .cp-list-item strong { display:block; line-height:1.35; }
+    .cp-list-item-line {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.75rem;
+    }
+    .cp-list-item-title {
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:.2rem;
+    }
+    .cp-list-item-title strong,
+    .cp-list-item-title span {
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+    }
+    .cp-list-item-title span {
+        color:var(--text-secondary);
+        font-size:.9rem;
+    }
+    .cp-list-item-status {
+        color:var(--text-secondary);
+        font-size:.82rem;
+        font-weight:700;
+        white-space:nowrap;
+    }
+    .cp-list-item-actions { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.75rem; }
+    .cp-list-item-actions .btn { padding:.58rem .75rem; font-size:.82rem; }
+    .cp-panel { overflow:hidden; }
+    .cp-form { padding:1.1rem; display:grid; gap:1rem; }
+    .cp-form-section { display:none; gap:1rem; }
+    .cp-form-section.active { display:grid; }
+    .section-title h3 { margin:0; }
+    .section-title p { margin:.3rem 0 0; color:var(--text-secondary); }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .form-grid label { display:flex; flex-direction:column; gap:.42rem; color:var(--text-secondary); font-weight:600; }
+    .field-hint {
+        margin-top:-.15rem;
+        color:var(--text-tertiary);
+        font-size:.78rem;
+        font-weight:600;
+    }
+    .col-span-2 { grid-column:span 2; }
+    .cp-form-actions { display:flex; gap:.75rem; flex-wrap:wrap; justify-content:flex-end; padding-top:.5rem; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .btn-danger { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
+    .empty-state { text-align:center; color:var(--text-tertiary); padding:1.5rem 1rem; }
+
+    @media (max-width: 1180px) {
+        .cp-shell { grid-template-columns: 280px minmax(0,1fr) 240px; }
+    }
+    @media (max-width: 960px) {
+        .cp-page { padding:0 1rem 1.5rem; }
+        .cp-shell { grid-template-columns:1fr; }
+        .cp-list-rail,
+        .cp-tabs-rail { position:static; }
+        .cp-list { max-height:none; }
+    }
+    @media (max-width: 768px) {
+        .cp-header h1 { font-size:1.5rem; line-height:1.2; }
+        .cp-header {
+            flex-direction:column;
+        }
+        .cp-header .btn {
+            width:100%;
+            justify-content:center;
+        }
+        .form-grid { grid-template-columns:1fr; }
+        .col-span-2 { grid-column:auto; }
+        .cp-form-actions { flex-direction:column; }
+        .cp-form-actions .btn { width:100%; }
+    }
+    @media (max-width: 520px) {
+        .cp-page { padding:0 .75rem 1rem; }
+        .cp-section-btn { padding:.72rem .82rem; }
+        .cp-form input, .cp-form select, .cp-form textarea, .cp-search input { font-size:16px; }
+        .cp-list-item-actions { flex-direction:column; }
+        .cp-list-item-actions .btn { width:100%; }
+    }
+
+    /* Responsive hardening shared across Gestão Financeira */
+    @media (max-width: 960px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        .table-wrap {
+            padding: .9rem !important;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-wrap table {
+            min-width: 720px;
+        }
+        .panel-header,
+        .panel-body,
+        .filters-grid,
+        .summary-grid {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .finance-header,
+        .cw-header,
+        .cp-header,
+        .batch-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .85rem;
+        }
+        .finance-header .btn,
+        .finance-header a.btn,
+        .cw-header .btn,
+        .cp-header .btn,
+        .page-actions .btn,
+        .inline-actions .btn,
+        .form-actions .btn,
+        .actions .btn,
+        .modal-actions .btn,
+        .filters-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+        .page-actions,
+        .inline-actions,
+        .form-actions,
+        .actions,
+        .modal-actions,
+        .filters-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        .stat-grid,
+        .stats-grid,
+        .summary-grid,
+        .form-grid,
+        .filters-grid,
+        .memory-grid,
+        .grid-two,
+        .grid-2,
+        .panels-grid,
+        .summary-table {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 520px) {
+        .finance-page,
+        .cw-page,
+        .cp-page,
+        .catalog-hub-page,
+        .dash-page,
+        .memories-page,
+        .queue-page,
+        .rules-page,
+        .closings-page,
+        .fin-dash-page,
+        .entry-page,
+        .batch-page,
+        .reports-page {
+            padding-left: .75rem !important;
+            padding-right: .75rem !important;
+        }
+        .panel-header,
+        .panel-body,
+        .table-wrap,
+        .filters-grid,
+        .summary-grid {
+            padding-left: .85rem !important;
+            padding-right: .85rem !important;
+        }
+        .cw-list-item-actions,
+        .cp-list-item-actions {
+            flex-direction: column;
+        }
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            width: 100%;
+        }
+    }
+
+
+    /* Responsive polish pass */
+    @media (max-width: 768px) {
+        .entry-header,
+        .fin-dash-header,
+        .dash-header,
+        .reports-header,
+        .rules-header,
+        .queue-header,
+        .memories-header,
+        .closings-header {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .85rem;
+        }
+        .entry-header h1,
+        .fin-dash-header h1,
+        .dash-header h1,
+        .reports-header h1,
+        .rules-header h1,
+        .queue-header h1,
+        .memories-header h1,
+        .closings-header h1,
+        .batch-header h1,
+        .finance-header h1,
+        .cw-header h1,
+        .cp-header h1 {
+            font-size: 1.45rem !important;
+            line-height: 1.2;
+        }
+        .match-card__top,
+        .cw-list-item-line,
+        .cp-list-item-line {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .35rem;
+        }
+        .stat-card,
+        .summary-card,
+        .line-item,
+        .list-item,
+        .match-card,
+        .cw-list-item,
+        .cp-list-item {
+            padding: .85rem !important;
+        }
+        .data-table th,
+        .data-table td {
+            padding: .7rem .6rem;
+        }
+    }
+    @media (max-width: 520px) {
+        .btn,
+        .cw-list-item-actions .btn,
+        .cp-list-item-actions .btn {
+            padding: .72rem .85rem !important;
+            font-size: .9rem;
+        }
+        .panel,
+        .cw-sidebar-card,
+        .cw-panel,
+        .cp-sidebar-card,
+        .cp-panel,
+        .stat-card,
+        .summary-card,
+        .match-card,
+        .line-item {
+            border-radius: 14px;
+        }
+        .cw-search input,
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea,
+        .filters input,
+        .filters select,
+        .filters-grid input,
+        .filters-grid select,
+        .import-form input,
+        .import-form select {
+            padding: .72rem .82rem;
+        }
+    }
+
+</style>
+
+<script>
+    const companyId = Number(document.querySelector('.cp-page')?.dataset.companyId);
+    const catalogType = 'counterparties';
+    const sections = [
+        { key: 'main', label: 'Dados principais' },
+        { key: 'contacts', label: 'Contatos e recebimento' },
+        { key: 'defaults', label: 'Defaults financeiros' },
+        { key: 'notes', label: 'Notas' },
+    ];
+
+    let editingId = null;
+    let selectedListId = null;
+    let allItems = [];
+
+    function digitsOnly(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
+
+    function formatDocumentValue(value) {
+        const digits = digitsOnly(value).slice(0, 14);
+        if (!digits) return { formatted: '', type: '' };
+        if (digits.length <= 11) {
+            return {
+                formatted: digits
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d{1,2})$/, '$1-$2'),
+                type: digits.length === 11 ? 'CPF' : 'CPF em digitação',
+            };
+        }
+        return {
+            formatted: digits
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2'),
+            type: digits.length === 14 ? 'CNPJ' : 'CNPJ em digitação',
+        };
+    }
+
+    function updateDocumentTypeLabel(type) {
+        const hint = document.getElementById('cp-document-type');
+        if (!hint) return;
+        hint.textContent = type || 'Digite CPF ou CNPJ';
+    }
+
+    function handleDocumentInput(input) {
+        if (!input) return;
+        const { formatted, type } = formatDocumentValue(input.value);
+        input.value = formatted;
+        updateDocumentTypeLabel(type);
+    }
+
+    function updateStatusDisplay(isActive = true) {
+        const field = document.getElementById('cp-status-display');
+        if (!field) return;
+        field.value = isActive ? 'Ativo' : 'Inativo';
+    }
+
+    function renderSectionNav() {
+        const nav = document.getElementById('cp-section-nav');
+        nav.innerHTML = sections.map((section, index) => `
+            <button type="button" class="cp-section-btn ${index === 0 ? 'active' : ''}" data-section="${section.key}" onclick="activateSection('${section.key}')">
+                ${section.label}
+            </button>
+        `).join('');
+    }
+
+    function activateSection(sectionKey) {
+        document.querySelectorAll('.cp-section-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.section === sectionKey);
+        });
+        document.querySelectorAll('.cp-form-section').forEach(section => {
+            section.classList.toggle('active', section.dataset.section === sectionKey);
+        });
+    }
+
+    function normalizeValue(field, value) {
+        if (value === '') return null;
+        if (['default_chart_account_id', 'default_cost_center_id'].includes(field)) return Number(value);
+        return value;
+    }
+
+    function resetCounterpartyForm() {
+        editingId = null;
+        selectedListId = null;
+        document.getElementById('cp-form').reset();
+        document.querySelector('#cp-form [name="id"]').value = '';
+        document.querySelector('#cp-form [name="code"]').value = '';
+        updateStatusDisplay(true);
+        updateDocumentTypeLabel('');
+        activateSection('main');
+        renderList(allItems);
+    }
+
+    function startNewCounterparty() {
+        resetCounterpartyForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function fillForm(item) {
+        editingId = item.id;
+        selectedListId = item.id;
+        const form = document.getElementById('cp-form');
+        form.reset();
+        form.querySelector('[name="id"]').value = item.id;
+        Object.entries(item).forEach(([key, value]) => {
+            const field = form.querySelector(`[name="${key}"]`);
+            if (field) field.value = value ?? '';
+        });
+        handleDocumentInput(form.querySelector('[name="document_number"]'));
+        updateStatusDisplay(item.is_active !== false);
+        activateSection('main');
+        renderList(allItems);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderList(items) {
+        const list = document.getElementById('cp-list');
+        document.getElementById('cp-counter').textContent = items.length;
+        if (!items.length) {
+            list.innerHTML = '<div class="empty-state">Nenhum favorecido encontrado.</div>';
+            return;
+        }
+        list.innerHTML = items.map(item => `
+            <article class="cp-list-item ${selectedListId === item.id ? 'active' : ''}" onclick="selectItemById(${item.id})">
+                <div class="cp-list-item-line">
+                    <div class="cp-list-item-title">
+                        <strong>${item.code || '-'}</strong>
+                        <span>${item.name || '-'}</span>
+                    </div>
+                    <span class="cp-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
+                </div>
+                <div class="cp-list-item-actions" onclick="event.stopPropagation()">
+                    <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
+                    <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
+                </div>
+            </article>
+        `).join('');
+    }
+
+    function selectItemById(id) {
+        const item = allItems.find(entry => entry.id === id);
+        if (!item) return;
+        fillForm(item);
+    }
+
+    function filterItems() {
+        const term = (document.getElementById('cp-search-input').value || '').trim().toLowerCase();
+        if (!term) {
+            renderList(allItems);
+            return;
+        }
+        const filtered = allItems.filter(item => {
+            return [item.code, item.name, item.legal_name, item.document_number]
+                .filter(Boolean)
+                .some(value => String(value).toLowerCase().includes(term));
+        });
+        renderList(filtered);
+    }
+
+    async function loadItems() {
+        const response = await fetch(`/api/financial/catalogs/${catalogType}?company_id=${companyId}`);
+        const result = await response.json();
+        allItems = Array.isArray(result) ? result : [];
+        renderList(allItems);
+        if (selectedListId) {
+            const selected = allItems.find(item => item.id === selectedListId);
+            if (selected) {
+                fillForm(selected);
+            }
+        }
+    }
+
+    async function saveCounterparty(event) {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const payload = {};
+        for (const [key, value] of formData.entries()) {
+            if (key === 'id') continue;
+            payload[key] = normalizeValue(key, value);
+        }
+        const id = formData.get('id');
+        const url = id
+            ? `/api/financial/catalogs/${catalogType}/${id}?company_id=${companyId}`
+            : `/api/financial/catalogs/${catalogType}?company_id=${companyId}`;
+        const method = id ? 'PUT' : 'POST';
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao salvar favorecido.');
+            return;
+        }
+        await loadItems();
+        if (result && result.id) {
+            const saved = allItems.find(item => item.id === result.id);
+            if (saved) {
+                fillForm(saved);
+                return;
+            }
+        }
+        resetCounterpartyForm();
+    }
+
+    async function toggleItem(id, isActive) {
+        const response = await fetch(`/api/financial/catalogs/${catalogType}/${id}/toggle?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: isActive }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao alterar status.');
+            return;
+        }
+        await loadItems();
+        if (selectedListId === id) {
+            const selected = allItems.find(item => item.id === id);
+            if (selected) fillForm(selected);
+        }
+    }
+
+    window.selectItemById = selectItemById;
+    window.handleDocumentInput = handleDocumentInput;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderSectionNav();
+        document.getElementById('cp-form').addEventListener('submit', saveCounterparty);
+        document.getElementById('cp-search-input').addEventListener('input', filterItems);
+        loadItems();
+    });
+</script>
+{% endblock %}
