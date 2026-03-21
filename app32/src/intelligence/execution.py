@@ -3,6 +3,12 @@ import re
 from typing import Dict, Any, Optional
 from uuid import uuid4
 
+try:
+    from openai import APIConnectionError, APIError, APITimeoutError, RateLimitError
+    TRANSIENT_AI_EXCEPTIONS = (RateLimitError, APITimeoutError, APIConnectionError, APIError)
+except Exception:  # pragma: no cover - fallback defensivo
+    TRANSIENT_AI_EXCEPTIONS = tuple()
+
 from src.intelligence.tool_context import (
     set_sapiens_context,
     reset_sapiens_context,
@@ -155,6 +161,17 @@ def _build_execution_metadata(
             "thread_prefix": thread_prefix,
             "menu_intercepted": menu_intercepted,
         }
+    }
+
+
+def _is_transient_ai_error(exc: Exception) -> bool:
+    if TRANSIENT_AI_EXCEPTIONS and isinstance(exc, TRANSIENT_AI_EXCEPTIONS):
+        return True
+    return exc.__class__.__name__ in {
+        "RateLimitError",
+        "APITimeoutError",
+        "APIConnectionError",
+        "APIError",
     }
 
 
@@ -374,6 +391,58 @@ def run_agent_with_context(
             return response
 
     except Exception as e:
+        if _is_transient_ai_error(e):
+            from src.intelligence.workflows.presenters import build_recovery_message
+
+            logger.warning(
+                "SAPIENS TRANSIENT AI ERROR [%s]: Thread %s | User %s | Company %s | Execution %s | Error=%s",
+                channel.upper(),
+                thread_id,
+                user_id,
+                company_id,
+                execution_id,
+                str(e),
+            )
+            temporary_message = build_recovery_message(
+                "Nao consegui consultar a IA agora",
+                "Houve uma instabilidade temporaria no provedor de IA durante a resposta.",
+                channel=channel,
+                next_steps=[
+                    "Tente novamente em alguns segundos.",
+                    "Se persistir, repita a mesma mensagem para nova tentativa automatica.",
+                ],
+            )
+            transient_metadata = _merge_execution_metadata(
+                {
+                    "ai_runtime": {
+                        "transient_error": True,
+                        "error_type": e.__class__.__name__,
+                    }
+                },
+                _build_execution_metadata(
+                    execution_id=execution_id,
+                    user_id=user_id,
+                    company_id=company_id,
+                    channel=channel,
+                    thread_id=thread_id,
+                    thread_prefix=thread_prefix,
+                    menu_intercepted=False,
+                ),
+            )
+            _capture_workflow_usage_from_execution(
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                user_msg=user_msg,
+                response_text=temporary_message,
+                menu_metadata=transient_metadata,
+            )
+            return {
+                "messages": [("ai", temporary_message)],
+                "next_node": "sapiens",
+                "menu_metadata": transient_metadata,
+            }
         logger.error(
             "SAPIENS ERROR [%s]: Thread %s | User %s | Company %s | Execution %s | Error=%s",
             channel.upper(),

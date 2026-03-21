@@ -190,3 +190,49 @@ def test_classify_workflow_gap_ignores_contextual_feedback_message():
 
     assert should_capture is False
     assert resolution_type == execution.WORKFLOW_GAP_NOISE_IGNORED
+
+
+def test_run_agent_with_context_returns_recovery_message_for_transient_ai_error(monkeypatch):
+    class RateLimitError(Exception):
+        pass
+
+    monkeypatch.setattr(execution, "TRANSIENT_AI_EXCEPTIONS", tuple())
+    monkeypatch.setattr(execution, "set_sapiens_context", lambda **kwargs: "token")
+    monkeypatch.setattr(execution, "reset_sapiens_context", lambda token: None)
+    monkeypatch.setattr(
+        execution,
+        "handle_menu_message",
+        lambda **kwargs: MenuInterceptResult(handled=False, metadata={"workflow_discovery": {"strategy": "hybrid"}}),
+    )
+
+    captured_usage = {}
+
+    @contextmanager
+    def fake_checkpointer():
+        yield object()
+
+    class FakeGraph:
+        def invoke(self, inputs, config=None):
+            raise RateLimitError("rate limited")
+
+    monkeypatch.setattr(execution, "get_checkpointer", fake_checkpointer)
+    monkeypatch.setattr(execution, "create_work_agent_workflow", lambda checkpointer: FakeGraph())
+    monkeypatch.setattr(
+        execution,
+        "_capture_workflow_usage_from_execution",
+        lambda **kwargs: captured_usage.update(kwargs),
+    )
+
+    response = execution.run_agent_with_context(
+        user_id=3,
+        user_msg="Preciso das atividades em aberto da Caroline",
+        channel="whatsapp",
+        thread_id="wa-rate-limit",
+        company_id=9,
+    )
+
+    assert response["next_node"] == "sapiens"
+    assert "Nao consegui consultar a IA agora" in response["messages"][0][1]
+    assert response["menu_metadata"]["ai_runtime"]["transient_error"] is True
+    assert response["menu_metadata"]["ai_runtime"]["error_type"] == "RateLimitError"
+    assert captured_usage["response_text"] == response["messages"][0][1]
