@@ -42,6 +42,8 @@ from src.intelligence.workflows.field_collection import (
     missing_required_fields as find_workflow_missing_required_fields,
 )
 from src.intelligence.workflows.handlers import (
+    AgentActionOperationExecutionHandler,
+    AgentActionOperationRequest,
     CollaboratorOccupancyExecutionHandler,
     CollaboratorOccupancyRequest,
     MeetingScheduleExecutionHandler,
@@ -66,6 +68,8 @@ from src.intelligence.workflows.handlers import (
     ProjectTaskCompleteRequest,
     ProjectTaskCreateExecutionHandler,
     ProjectTaskCreateRequest,
+    ProjectTaskUpdateExecutionHandler,
+    ProjectTaskUpdateRequest,
     SummaryExecutionRequest,
     SummaryWorkflowExecutionHandler,
 )
@@ -232,7 +236,7 @@ CANCEL_WORDS = {
     "sair",
 }
 EXECUTE_HINTS = ("executar", "fazer", "iniciar", "finalizar", "cadastrar", "editar")
-COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo")
+COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo", "aprovar", "aprovado", "rejeitar", "revalidar", "colocar", "mudar")
 COMMAND_QUERY_HINTS = (
     "quais",
     "qual",
@@ -270,6 +274,13 @@ COMMAND_SCOPE_HINTS = (
     "responsável",
     "empresa",
     "empresas",
+    "solicitacao",
+    "solicitação",
+    "aprovacao",
+    "aprovação",
+    "ticket",
+    "prazo",
+    "dia",
     "ocupacao",
     "ocupação",
     "capacidade",
@@ -1042,6 +1053,32 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
             joined_ids = ",".join(raw_ids)
             data.setdefault("ids", joined_ids)
             data.setdefault("codigo_atividade", joined_ids)
+
+    deadline_match = re.search(
+        r"\b(?:para\s+o\s+dia|para\s+dia|pra\s+o\s+dia|pra\s+dia|novo\s+prazo|nova\s+data|prazo\s+para)\s+(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if deadline_match:
+        due_date_value = deadline_match.group(1).strip()
+        data.setdefault("due_date", due_date_value)
+        data.setdefault("prazo", due_date_value)
+
+    if re.search(r"\b(aprovar|aprovado|aprova)\b", normalized_text):
+        data.setdefault("agent_action_operation", "approve")
+    elif re.search(r"\b(rejeitar|rejeitado|recusar|recusado)\b", normalized_text):
+        data.setdefault("agent_action_operation", "reject")
+    elif re.search(r"\b(revalidar|renovar prazo|renove o prazo)\b", normalized_text):
+        data.setdefault("agent_action_operation", "revalidate")
+
+    if "agent_action_operation" in data:
+        action_id_match = re.search(
+            r"\b(?:ticket|solicitacao|solicitação|aprovacao|aprovação|acao|ação)?\s*#?\s*(\d{1,6})\b",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if action_id_match:
+            data.setdefault("agent_action_id", action_id_match.group(1))
 
     if "periodo" not in data:
         if "hoje" in normalized_text:
@@ -1960,6 +1997,43 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                 handler_factory=_build_project_task_complete_execution_handler,
                 request_model=ProjectTaskCompleteRequest,
             ),
+            "project_task.update": build_handler_executor(
+                handler_factory=_build_project_task_update_execution_handler,
+                request_model=ProjectTaskUpdateRequest,
+            ),
+            "agent_action.approve": build_handler_executor(
+                handler_factory=_build_agent_action_operation_execution_handler,
+                request_model=AgentActionOperationRequest,
+                extra_fields_builder=lambda request: {
+                    "payload": {
+                        **dict(request.payload or {}),
+                        "agent_action_operation": "approve",
+                        "actor_name": "Sapiens",
+                    }
+                },
+            ),
+            "agent_action.reject": build_handler_executor(
+                handler_factory=_build_agent_action_operation_execution_handler,
+                request_model=AgentActionOperationRequest,
+                extra_fields_builder=lambda request: {
+                    "payload": {
+                        **dict(request.payload or {}),
+                        "agent_action_operation": "reject",
+                        "actor_name": "Sapiens",
+                    }
+                },
+            ),
+            "agent_action.revalidate": build_handler_executor(
+                handler_factory=_build_agent_action_operation_execution_handler,
+                request_model=AgentActionOperationRequest,
+                extra_fields_builder=lambda request: {
+                    "payload": {
+                        **dict(request.payload or {}),
+                        "agent_action_operation": "revalidate",
+                        "actor_name": "Sapiens",
+                    }
+                },
+            ),
             "process_instance.complete": build_handler_executor(
                 handler_factory=_build_process_instance_complete_execution_handler,
                 request_model=ProcessInstanceCompleteRequest,
@@ -2087,6 +2161,46 @@ def _build_project_task_complete_execution_handler() -> ProjectTaskCompleteExecu
         user_can_access_company=_user_can_access_company,
         commit_changes=lambda: db.session.commit(),
         rollback_changes=lambda: db.session.rollback(),
+    )
+
+
+def _build_project_task_update_execution_handler() -> ProjectTaskUpdateExecutionHandler:
+    from models.company import Company
+    from models.project import ProjectTask
+    from services.project_task_service import ProjectTaskService
+
+    return ProjectTaskUpdateExecutionHandler(
+        extract_id_from_code=_extract_id_from_code,
+        parse_due_date=ProjectTaskService.parse_due_date,
+        load_task_by_id=lambda task_id: db.session.get(ProjectTask, task_id),
+        load_company_by_id=lambda company_id: db.session.get(Company, company_id),
+        user_can_access_company=_user_can_access_company,
+        commit_changes=lambda: db.session.commit(),
+    )
+
+
+def _build_agent_action_operation_execution_handler() -> AgentActionOperationExecutionHandler:
+    from models.agent_action import AgentAction
+    from models.project import ProjectTask
+    from services.agent_action_backlog_service import find_backlog_link_by_action_id
+    from services.backlog_human_gate_service import execute_backlog_human_gate_operation
+
+    def _load_latest_pending_action(user_id: int, active_company_id: Optional[int]) -> Any:
+        query = AgentAction.query.filter(
+            AgentAction.status.in_(["pending", "awaiting_approval"]),
+            AgentAction.user_id == user_id,
+        )
+        if active_company_id:
+            query = query.filter(AgentAction.company_id == active_company_id)
+        return query.order_by(AgentAction.created_at.desc()).first()
+
+    return AgentActionOperationExecutionHandler(
+        load_action_by_id=lambda action_id: db.session.get(AgentAction, action_id),
+        load_latest_pending_action=_load_latest_pending_action,
+        find_backlog_link_by_action_id=find_backlog_link_by_action_id,
+        load_task_by_id=lambda task_id: db.session.get(ProjectTask, task_id) if task_id else None,
+        execute_backlog_human_gate_operation=execute_backlog_human_gate_operation,
+        user_can_access_company=_user_can_access_company,
     )
 
 
@@ -4701,7 +4815,7 @@ def _ensure_default_menu_seed() -> None:
         {"code": "1.3", "title": "Finalizar Projeto", "parent_code": "1", "action_key": "project.complete", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}], "keywords": ["finalizar projeto", "encerrar projeto"], "sort_order": 13},
         {"code": "1.4", "title": "Cadastrar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.create", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}, {"key": "nome_atividade", "label": "Nome da Atividade"}], "keywords": ["cadastrar atividade", "nova atividade de projeto"], "sort_order": 14},
         {"code": "1.5", "title": "Finalizar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.complete", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}], "keywords": ["finalizar atividade de projeto", "concluir atividade"], "sort_order": 15},
-        {"code": "1.6", "title": "Editar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.update", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}, {"key": "dados", "label": "Dados para atualizacao"}], "keywords": ["editar atividade", "alterar atividade de projeto"], "sort_order": 16},
+        {"code": "1.6", "title": "Editar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.update", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}, {"key": "due_date", "label": "Novo Prazo"}], "keywords": ["editar atividade", "alterar atividade de projeto", "alterar prazo da atividade", "mudar prazo da atividade", "colocar atividade para o dia"], "sort_order": 16},
         {"code": "2", "title": "Gestao de Processos", "parent_code": None, "sort_order": 20},
         {"code": "2.1", "title": "Iniciar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.start", "required_fields": [{"key": "codigo_processo", "label": "Codigo do Processo"}], "keywords": ["iniciar instancia", "abrir processo"], "sort_order": 21},
         {"code": "2.2", "title": "Finalizar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.complete", "required_fields": [{"key": "codigo_instancia", "label": "Codigo da Instancia"}], "keywords": ["finalizar instancia", "encerrar processo"], "sort_order": 22},
@@ -4725,7 +4839,11 @@ def _ensure_default_menu_seed() -> None:
         {"code": "5.2", "title": "Status do Onboarding", "parent_code": "5", "action_key": "onboarding.status", "required_fields": [], "keywords": ["status onboarding", "campos faltantes", "onboarding"], "sort_order": 52},
         {"code": "5.3", "title": "Iniciar Onboarding Assistido", "parent_code": "5", "action_key": "onboarding.start", "required_fields": [{"key": "tipo_cadastro", "label": "Tipo de Cadastro (real ou modelo)"}], "keywords": ["iniciar onboarding", "cadastro assistido", "onboarding assistido"], "sort_order": 53},
         {"code": "5.4", "title": "Checklist para Producao", "parent_code": "5", "action_key": "onboarding.go_live_check", "required_fields": [], "keywords": ["checklist producao", "prontidao producao", "go live"], "sort_order": 54},
-    ]
+        {"code": "6", "title": "Operacoes HITL", "parent_code": None, "sort_order": 60},
+        {"code": "6.1", "title": "Aprovar Solicitacao", "parent_code": "6", "action_key": "agent_action.approve", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["aprovar solicitacao", "aprovar ticket", "aprovado", "aprovar"], "sort_order": 61},
+        {"code": "6.2", "title": "Rejeitar Solicitacao", "parent_code": "6", "action_key": "agent_action.reject", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["rejeitar solicitacao", "recusar ticket", "rejeitar"], "sort_order": 62},
+        {"code": "6.3", "title": "Revalidar Solicitacao", "parent_code": "6", "action_key": "agent_action.revalidate", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["revalidar solicitacao", "renovar prazo da solicitacao", "revalidar"], "sort_order": 63},
+      ]
 
     code_to_id: Dict[str, int] = {}
     for item in seed_items:
@@ -4867,6 +4985,39 @@ def _ensure_default_menu_upgrades() -> None:
         required_fields=[],
         keywords=["checklist producao", "prontidao producao", "go live"],
         sort_order=54,
+    )
+    _ensure_menu_option_exists(
+        code="6",
+        title="Operacoes HITL",
+        parent_code=None,
+        sort_order=60,
+    )
+    _ensure_menu_option_exists(
+        code="6.1",
+        title="Aprovar Solicitacao",
+        parent_code="6",
+        action_key="agent_action.approve",
+        required_fields=[{"key": "agent_action_id", "label": "ID da Solicitacao"}],
+        keywords=["aprovar solicitacao", "aprovar ticket", "aprovado", "aprovar"],
+        sort_order=61,
+    )
+    _ensure_menu_option_exists(
+        code="6.2",
+        title="Rejeitar Solicitacao",
+        parent_code="6",
+        action_key="agent_action.reject",
+        required_fields=[{"key": "agent_action_id", "label": "ID da Solicitacao"}],
+        keywords=["rejeitar solicitacao", "recusar ticket", "rejeitar"],
+        sort_order=62,
+    )
+    _ensure_menu_option_exists(
+        code="6.3",
+        title="Revalidar Solicitacao",
+        parent_code="6",
+        action_key="agent_action.revalidate",
+        required_fields=[{"key": "agent_action_id", "label": "ID da Solicitacao"}],
+        keywords=["revalidar solicitacao", "renovar prazo da solicitacao", "revalidar"],
+        sort_order=63,
     )
     db.session.commit()
 

@@ -167,6 +167,76 @@ def test_lexical_matcher_prioritizes_project_task_create_for_cadastro():
     assert matches[0].workflow.action_key == "project_task.create"
 
 
+def test_heuristic_reranker_prioritizes_deadline_update_for_coloque_para_o_dia():
+    options = [
+        _option(
+            option_id=40,
+            code="1.5",
+            title="Finalizar Atividade de Projeto",
+            action_key="project_task.complete",
+            keywords=["concluir atividade"],
+            sort_order=15,
+        ),
+        _option(
+            option_id=41,
+            code="1.6",
+            title="Editar Atividade de Projeto",
+            action_key="project_task.update",
+            keywords=["editar atividade", "alterar prazo da atividade"],
+            sort_order=16,
+        ),
+    ]
+
+    registry = WorkflowRegistry.from_menu_options(options)
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=10, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=10, reasons=[]),
+    ]
+
+    reranked = HeuristicWorkflowReranker().rerank(
+        WorkflowDiscoveryRequest(text="coloque todas para o dia 31/03/2026", top_k=2),
+        matches,
+        registry,
+    )
+
+    assert reranked[0].workflow.action_key == "project_task.update"
+
+
+def test_heuristic_reranker_prioritizes_agent_action_approve_for_approval_command():
+    options = [
+        _option(
+            option_id=42,
+            code="6.1",
+            title="Aprovar Solicitação",
+            action_key="agent_action.approve",
+            keywords=["aprovar ticket", "aprovado"],
+            sort_order=61,
+        ),
+        _option(
+            option_id=43,
+            code="1.5",
+            title="Finalizar Atividade de Projeto",
+            action_key="project_task.complete",
+            keywords=["concluir atividade"],
+            sort_order=15,
+        ),
+    ]
+
+    registry = WorkflowRegistry.from_menu_options(options)
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=10, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=10, reasons=[]),
+    ]
+
+    reranked = HeuristicWorkflowReranker().rerank(
+        WorkflowDiscoveryRequest(text="aprovar 331", top_k=2),
+        matches,
+        registry,
+    )
+
+    assert reranked[0].workflow.action_key == "agent_action.approve"
+
+
 def test_workflow_runtime_supports_explicit_code_discovery():
     options = [
         _option(

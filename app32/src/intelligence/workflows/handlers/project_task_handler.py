@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..schemas import ProjectTaskCompleteInput, ProjectTaskCreateInput
+from ..schemas import ProjectTaskCompleteInput, ProjectTaskCreateInput, ProjectTaskUpdateInput
 
 
 class ProjectTaskCreateRequest(BaseModel):
@@ -32,6 +32,20 @@ class ProjectTaskCompleteRequest(BaseModel):
 
 
 class ProjectTaskCompleteResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_text: str
+
+
+class ProjectTaskUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    active_company_id: Optional[int] = None
+    user_id: int
+
+
+class ProjectTaskUpdateResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     response_text: str
@@ -283,6 +297,135 @@ class ProjectTaskCompleteExecutionHandler:
             lines.append("Pendencias encontradas:")
             lines.extend(not_found_lines)
         return ProjectTaskCompleteResult(response_text="\n".join(lines))
+
+    def _resolve_task_id(self, raw_code: str) -> Optional[int]:
+        normalized_code = str(raw_code or "").strip()
+        if not normalized_code:
+            return None
+        task_id = self._extract_id_from_code(normalized_code)
+        if task_id:
+            return int(task_id)
+        if normalized_code.isdigit():
+            return int(normalized_code)
+        numeric_tail = re.search(r"(\d+)$", normalized_code)
+        if numeric_tail:
+            return int(numeric_tail.group(1))
+        return None
+
+
+class ProjectTaskUpdateExecutionHandler:
+    def __init__(
+        self,
+        *,
+        extract_id_from_code: Callable[[str], Optional[int]],
+        parse_due_date: Callable[[str], tuple[Optional[date], Optional[str]]],
+        load_task_by_id: Callable[[int], Any],
+        load_company_by_id: Callable[[int], Any],
+        user_can_access_company: Callable[[int, int], bool],
+        commit_changes: Callable[[], None],
+    ):
+        self._extract_id_from_code = extract_id_from_code
+        self._parse_due_date = parse_due_date
+        self._load_task_by_id = load_task_by_id
+        self._load_company_by_id = load_company_by_id
+        self._user_can_access_company = user_can_access_company
+        self._commit_changes = commit_changes
+
+    def execute(self, request: ProjectTaskUpdateRequest) -> ProjectTaskUpdateResult:
+        payload = dict(request.payload or {})
+
+        execution_input, input_error = ProjectTaskUpdateInput.build_from_legacy_payload(payload)
+        if input_error:
+            return ProjectTaskUpdateResult(response_text=input_error)
+        if not execution_input:
+            return ProjectTaskUpdateResult(
+                response_text="Nao consegui interpretar o payload de atualizacao da atividade."
+            )
+
+        parsed_due_date = None
+        if execution_input.due_date_raw:
+            parsed_due_date, due_date_error = self._parse_due_date(execution_input.due_date_raw)
+            if due_date_error:
+                return ProjectTaskUpdateResult(response_text=due_date_error)
+
+        requested_codes = execution_input.activity_codes or [execution_input.activity_code]
+        resolved_items: list[tuple[str, int]] = []
+        unresolved_codes: list[str] = []
+        for raw_code in requested_codes:
+            task_id = self._resolve_task_id(raw_code)
+            if not task_id:
+                unresolved_codes.append(raw_code)
+                continue
+            resolved_items.append((raw_code, task_id))
+
+        if not resolved_items:
+            return ProjectTaskUpdateResult(
+                response_text=f"Nao consegui identificar o ID no codigo '{execution_input.activity_code}'."
+            )
+
+        changed_lines: list[str] = []
+        not_found_lines: list[str] = [f"- {code}: ID nao identificado" for code in unresolved_codes]
+
+        for raw_code, task_id in resolved_items:
+            task = self._load_task_by_id(task_id)
+            if not task:
+                not_found_lines.append(f"- {raw_code}: atividade nao encontrada")
+                continue
+
+            project = getattr(task, "project", None)
+            if not project:
+                not_found_lines.append(
+                    f"- {raw_code}: atividade '{getattr(task, 'what', 'Sem titulo')}' sem projeto vinculado"
+                )
+                continue
+
+            project_company_id = getattr(project, "company_id", None)
+            if (
+                request.active_company_id
+                and project_company_id
+                and project_company_id != request.active_company_id
+                and not self._user_can_access_company(request.user_id, int(project_company_id))
+            ):
+                not_found_lines.append(f"- {raw_code}: fora do contexto da empresa ativa")
+                continue
+
+            if parsed_due_date is not None:
+                task.due_date = parsed_due_date
+            if execution_input.notes:
+                current_notes = str(getattr(task, "notes", None) or "").strip()
+                extra_notes = str(execution_input.notes).strip()
+                task.notes = f"{current_notes}\n\n{extra_notes}".strip() if current_notes else extra_notes
+
+            company = self._load_company_by_id(getattr(project, "company_id", 0)) if project else None
+            company_code = str(getattr(company, "client_code", "") or "").strip() or "CP"
+            project_code = str(getattr(project, "code", "") or "").strip() or f"{company_code}.J.{getattr(project, 'id', '-')}"
+            activity_code = str(getattr(task, "code", "") or "").strip() or f"{project_code}.{getattr(task, 'id', '-')}"
+            task_title = str(getattr(task, "what", "") or "").strip() or "Atividade"
+            parts = [f"- {activity_code} | {task_title}"]
+            if parsed_due_date is not None:
+                parts.append(f"Novo prazo: {parsed_due_date.isoformat()}")
+            if execution_input.notes:
+                parts.append("Observacao registrada")
+            changed_lines.append(" | ".join(parts))
+
+        if changed_lines:
+            self._commit_changes()
+
+        if len(changed_lines) == 1 and not not_found_lines:
+            return ProjectTaskUpdateResult(
+                response_text=f"Atualizacao concluida com sucesso.\n\n{changed_lines[0]}"
+            )
+
+        lines = [f"Atualizacao em lote processada: {len(changed_lines)} atividade(s) atualizada(s)."]
+        if changed_lines:
+            lines.append("")
+            lines.append("Atividades atualizadas:")
+            lines.extend(changed_lines)
+        if not_found_lines:
+            lines.append("")
+            lines.append("Pendencias encontradas:")
+            lines.extend(not_found_lines)
+        return ProjectTaskUpdateResult(response_text="\n".join(lines))
 
     def _resolve_task_id(self, raw_code: str) -> Optional[int]:
         normalized_code = str(raw_code or "").strip()

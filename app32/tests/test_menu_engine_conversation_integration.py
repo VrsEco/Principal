@@ -539,3 +539,17 @@ def test_extract_fields_from_text_accepts_company_alias_shortcut():
     payload = menu_engine._extract_fields_from_text("AU - Gandu Investimentos e Participações")
 
     assert payload["empresa"] == "AU - Gandu Investimentos e Participações"
+
+
+def test_extract_fields_from_text_detects_agent_action_approval_command():
+    payload = menu_engine._extract_fields_from_text("aprovar 331")
+
+    assert payload["agent_action_operation"] == "approve"
+    assert payload["agent_action_id"] == "331"
+
+
+def test_extract_fields_from_text_detects_deadline_update_command():
+    payload = menu_engine._extract_fields_from_text("coloque todas para o dia 31/03/2026")
+
+    assert payload["due_date"] == "31/03/2026"
+    assert payload["prazo"] == "31/03/2026"

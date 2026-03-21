@@ -3,6 +3,11 @@ from .collaborator_handler import (
     CollaboratorOccupancyRequest,
     CollaboratorOccupancyResult,
 )
+from .agent_action_handler import (
+    AgentActionOperationExecutionHandler,
+    AgentActionOperationRequest,
+    AgentActionOperationResult,
+)
 from .project_task_handler import (
     ProjectTaskCompleteExecutionHandler,
     ProjectTaskCompleteRequest,
@@ -10,6 +15,9 @@ from .project_task_handler import (
     ProjectTaskCreateExecutionHandler,
     ProjectTaskCreateRequest,
     ProjectTaskCreateResult,
+    ProjectTaskUpdateExecutionHandler,
+    ProjectTaskUpdateRequest,
+    ProjectTaskUpdateResult,
 )
 from .my_work_handler import (
     MyWorkExecutionHandler,
@@ -49,6 +57,9 @@ from .meeting_handler import (
 from .summary_handler import SummaryExecutionRequest, SummaryExecutionResult, SummaryWorkflowExecutionHandler
 
 __all__ = [
+    "AgentActionOperationExecutionHandler",
+    "AgentActionOperationRequest",
+    "AgentActionOperationResult",
     "CollaboratorOccupancyExecutionHandler",
     "CollaboratorOccupancyRequest",
     "CollaboratorOccupancyResult",
@@ -85,6 +96,9 @@ __all__ = [
     "ProjectTaskCreateExecutionHandler",
     "ProjectTaskCreateRequest",
     "ProjectTaskCreateResult",
+    "ProjectTaskUpdateExecutionHandler",
+    "ProjectTaskUpdateRequest",
+    "ProjectTaskUpdateResult",
     "SummaryExecutionRequest",
     "SummaryExecutionResult",
     "SummaryWorkflowExecutionHandler",

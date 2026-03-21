@@ -101,3 +101,64 @@ class ProjectTaskCompleteInput(BaseModel):
             activity_codes=activity_codes,
             completion_date_raw=coalesce_str(payload, "completion_date", "data_finalizacao"),
         ), None
+
+
+class ProjectTaskUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    activity_code: str
+    activity_codes: List[str] = Field(default_factory=list)
+    due_date_raw: Optional[str] = None
+    notes: Optional[str] = None
+
+    @classmethod
+    def build_from_legacy_payload(
+        cls,
+        payload: Dict[str, Any],
+    ) -> Tuple[Optional["ProjectTaskUpdateInput"], Optional[str]]:
+        activity_code = coalesce_str(
+            payload,
+            "codigo_atividade",
+            "activity_code",
+            "task_code",
+            "codigo",
+        )
+        raw_ids = positive_int_list(payload.get("ids"))
+        if not raw_ids:
+            explicit_ids_text = str(payload.get("ids") or "").strip()
+            raw_ids = positive_int_list(re.findall(r"\d+", explicit_ids_text)) if explicit_ids_text else []
+
+        if not activity_code:
+            if raw_ids:
+                activity_code = str(raw_ids[0])
+            else:
+                return None, "Nao encontrei o codigo da atividade. Informe no formato: codigo_atividade: AA.J.26.175"
+
+        if raw_ids:
+            activity_codes = [str(value) for value in raw_ids]
+        elif activity_code:
+            normalized_activity_code = str(activity_code or "").strip()
+            if re.search(r"[A-Za-z]", normalized_activity_code) and "." in normalized_activity_code:
+                activity_codes = [normalized_activity_code]
+            else:
+                extracted_codes = re.findall(r"\b\d+\b", normalized_activity_code)
+                activity_codes = [code.strip() for code in extracted_codes if str(code or "").strip()] or [normalized_activity_code]
+
+        due_date_raw = coalesce_str(
+            payload,
+            "prazo",
+            "due_date",
+            "data_limite",
+            "nova_data",
+            "novo_prazo",
+        )
+        notes = coalesce_str(payload, "observacoes", "notes")
+        if not due_date_raw and not notes:
+            return None, "Nao encontrei os dados da atualizacao. Informe ao menos um novo prazo ou observacao."
+
+        return cls(
+            activity_code=activity_code,
+            activity_codes=activity_codes,
+            due_date_raw=due_date_raw,
+            notes=notes,
+        ), None

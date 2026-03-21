@@ -442,6 +442,33 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 score += 6
                 reasons.append("reranker:complete=batch_ids")
 
+        if any(snippet in normalized_text for snippet in {"dar como conclu", "dar como concluida", "dar como concluído"}):
+            score, reasons = self._apply_action_hint(
+                action_key=action_key,
+                expected="project_task.complete",
+                score=score + 4,
+                reasons=reasons,
+                label="task=complete_phrase",
+            )
+
+        if (
+            any(snippet in normalized_text for snippet in {"coloque", "mudar", "alterar"})
+            and any(snippet in normalized_text for snippet in {"para o dia", "prazo", "nova data", "novo prazo"})
+            and action_key == "project_task.update"
+        ):
+            score += 18
+            reasons.append("reranker:task=deadline_update")
+
+        if {"aprovar", "aprovado", "aprova"} & tokens and action_key == "agent_action.approve":
+            score += 18
+            reasons.append("reranker:agent_action=approve")
+        if {"rejeitar", "rejeitado", "recusar", "recusado"} & tokens and action_key == "agent_action.reject":
+            score += 18
+            reasons.append("reranker:agent_action=reject")
+        if {"revalidar", "renovar"} & tokens and action_key == "agent_action.revalidate":
+            score += 18
+            reasons.append("reranker:agent_action=revalidate")
+
         task_tokens = {"atividade", "atividades", "tarefa", "tarefas"} & tokens
         process_tokens = {"instancia", "instancias", "processo", "processos"} & tokens
         if task_tokens:

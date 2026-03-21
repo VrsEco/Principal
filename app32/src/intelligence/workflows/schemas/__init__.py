@@ -9,7 +9,7 @@ from .meeting import MeetingReferenceInput, MeetingScheduleInput
 from .my_work import MyWorkExecutionInput
 from .onboarding import OnboardingDiagnoseInput, OnboardingStartInput
 from .process_instance import ProcessInstanceCompleteInput
-from .project_task import ProjectTaskCompleteInput, ProjectTaskCreateInput
+from .project_task import ProjectTaskCompleteInput, ProjectTaskCreateInput, ProjectTaskUpdateInput
 from .selection import AssistedSelectionContext
 from .summary import SummaryExecutionInput
 
@@ -28,6 +28,7 @@ __all__ = [
     "ProcessInstanceCompleteInput",
     "ProjectTaskCompleteInput",
     "ProjectTaskCreateInput",
+    "ProjectTaskUpdateInput",
     "SummaryExecutionInput",
     "WorkflowRequiredField",
     "normalize_field_key",
