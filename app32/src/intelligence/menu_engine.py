@@ -973,7 +973,7 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
 
     collaborator_patterns = (
         r"\brespons[aá]vel(?:\s+por)?\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
-        r"\bpara\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        r"\bpara\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
         r"\bde\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|semana\b|mes\b|m[eê]s\b)|[?.!,;]|$)",
     )
     for pattern in collaborator_patterns:
@@ -981,7 +981,44 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         if not collaborator_match:
             continue
         collaborator_name = collaborator_match.group(1).strip(" ,.-")
-        if collaborator_name and _normalize_text(collaborator_name) not in {"ids", "id"}:
+        collaborator_name = re.sub(r"\s+\b(?:na|no|da|do)\b$", "", collaborator_name, flags=re.IGNORECASE).strip(" ,.-")
+        normalized_collaborator = _normalize_text(collaborator_name)
+        collaborator_tokens = [token for token in normalized_collaborator.split() if token]
+        collaborator_leading_noise = {
+            "fazer",
+            "este",
+            "esta",
+            "hoje",
+            "semana",
+            "mes",
+            "atividade",
+            "atividades",
+            "tarefa",
+            "tarefas",
+            "instancia",
+            "instancias",
+            "processo",
+            "processos",
+        }
+        if collaborator_name and normalized_collaborator not in {
+            "ids",
+            "id",
+            "fazer",
+            "fazer hoje",
+            "este",
+            "esta",
+            "este mes",
+            "esta semana",
+            "hoje",
+            "semana",
+            "mes",
+        } and not (
+            collaborator_tokens
+            and collaborator_tokens[0] in collaborator_leading_noise
+        ) and not (
+            collaborator_tokens
+            and all(token in collaborator_leading_noise for token in collaborator_tokens)
+        ):
             data.setdefault("colaborador", collaborator_name)
             break
 

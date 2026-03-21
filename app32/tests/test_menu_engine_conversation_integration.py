@@ -491,6 +491,7 @@ def test_extract_fields_from_text_infers_due_range_period_for_today_queue_langua
     )
 
     assert payload["periodo"] == "hoje"
+    assert "colaborador" not in payload
 
 
 def test_extract_fields_from_text_infers_month_period_for_pending_company_queue():
@@ -502,6 +503,27 @@ def test_extract_fields_from_text_infers_month_period_for_pending_company_queue(
     assert payload["entidade"] == "project_task"
     assert payload["status_consulta"] == "open"
     assert payload["periodo"] == "este mes"
+    assert "colaborador" not in payload
+
+
+def test_extract_fields_from_text_avoids_false_positive_collaborator_for_week_period():
+    payload = menu_engine._extract_fields_from_text(
+        "Qual atividades eu tenho pendente para esta semana na empresa versus gestão corporativa"
+    )
+
+    assert payload["empresa"] == "versus gestão corporativa"
+    assert payload["periodo"] == "esta semana"
+    assert "colaborador" not in payload
+
+
+def test_extract_fields_from_text_strips_trailing_preposition_from_collaborator():
+    payload = menu_engine._extract_fields_from_text(
+        "gostaria de saber as atividade vencidas de Caroline Marques na empresa Gandu Motor"
+    )
+
+    assert payload["empresa"] == "Gandu Motor"
+    assert payload["colaborador"] == "Caroline Marques"
+    assert payload["status_consulta"] == "overdue"
 
 
 def test_extract_fields_from_text_infers_batch_ids_for_completion():
