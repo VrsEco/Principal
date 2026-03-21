@@ -39,6 +39,17 @@ def _build_project_task_option() -> AgentMenuOption:
     return option
 
 
+def _build_my_work_open_option() -> AgentMenuOption:
+    option = AgentMenuOption(
+        code="3.1",
+        title="Atividades em Aberto",
+        action_key="my_work.open",
+        required_fields=[],
+    )
+    option.id = 31
+    return option
+
+
 def _install_common_patches(monkeypatch, session, option):
     monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
     monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
@@ -236,6 +247,84 @@ def test_handle_menu_message_back_navigation_restores_previous_steps(monkeypatch
 
     assert result.handled is True
     assert result.response_text == "ROOT MENU"
+    assert session.status == "idle"
+
+
+def test_handle_menu_message_operation_company_selection_executes_my_work_with_selected_company(monkeypatch):
+    option = _build_my_work_open_option()
+    session = _DummySession(option)
+    captured = {}
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(
+        menu_engine,
+        "_find_option_by_code",
+        lambda company_id, code, include_inactive=False: option if code == option.code else None,
+    )
+    monkeypatch.setattr(menu_engine, "_list_children", lambda company_id, parent_id: [])
+    monkeypatch.setattr(
+        menu_engine,
+        "_load_summary_company_choices",
+        lambda user_id: [
+            {
+                "index": 1,
+                "company_id": 9,
+                "company_name": "Gandu Investimentos e Participações",
+                "company_code": "AU",
+                "label": "AU - Gandu Investimentos e Participações",
+            },
+            {
+                "index": 2,
+                "company_id": 2,
+                "company_name": "Gas Evolution",
+                "company_code": "AB",
+                "label": "AB - Gas Evolution",
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_resolve_explicit_company_id_from_payload",
+        lambda payload, user_id: payload.get("_selected_company_id") or payload.get("_summary_company_id"),
+    )
+    monkeypatch.setattr(menu_engine, "_user_can_access_company", lambda user_id, company_id: company_id in {9, 2})
+    monkeypatch.setattr(
+        menu_engine,
+        "_try_execute_direct_option_result",
+        lambda option, payload, company_id, user_id, channel="web": (
+            captured.update({"payload": dict(payload), "company_id": company_id})
+            or menu_engine.DirectExecutionResult(executed=True, response_text=f"OK empresa {company_id}", metadata={})
+        ),
+    )
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+    monkeypatch.setattr(menu_engine, "_format_root_menu", lambda company_id: "ROOT MENU")
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-my-work",
+        message="3.1",
+    )
+
+    assert result.handled is True
+    assert "Escolha a empresa para continuar:" in result.response_text
+    assert session.status == menu_engine.COMPANY_SELECTION_STATUS
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-my-work",
+        message="1",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "OK empresa 9"
+    assert captured["company_id"] == 9
+    assert captured["payload"]["_selected_company_id"] == 9
     assert session.status == "idle"
 
 

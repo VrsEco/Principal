@@ -806,6 +806,12 @@ def _advance_option_after_payload_collection(
     option: AgentMenuOption,
     payload: Dict[str, Any],
 ) -> MenuInterceptResult:
+    original_payload = dict(payload or {})
+    preserved_hidden_payload = {
+        key: value
+        for key, value in original_payload.items()
+        if str(key).startswith("_")
+    }
     coordinator = _build_field_collection_coordinator()
     workflow_state = WorkflowSessionState.from_agent_menu_session(
         session,
@@ -818,6 +824,8 @@ def _advance_option_after_payload_collection(
         payload=payload,
     )
     payload = decision.payload
+    if preserved_hidden_payload:
+        payload = {**payload, **preserved_hidden_payload}
     missing = [field.model_dump() for field in decision.missing_fields]
 
     if decision.route == FIELD_COLLECTION_ROUTE_PROMPT_MISSING:
@@ -842,10 +850,15 @@ def _advance_option_after_payload_collection(
         )
 
     if _is_read_only_action(option.action_key):
+        effective_company_id = _resolve_effective_company_id_for_payload(
+            payload=original_payload,
+            fallback_company_id=session.company_id,
+            user_id=session.user_id,
+        )
         direct_execution = _try_execute_direct_option_result(
             option=option,
             payload=payload,
-            company_id=session.company_id,
+            company_id=effective_company_id,
             user_id=session.user_id,
             channel=session.channel or "web",
         )
