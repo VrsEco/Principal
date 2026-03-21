@@ -325,6 +325,34 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="my_work=due_range",
             )
 
+        asks_for_work_queue = any(
+            snippet in normalized_text
+            for snippet in {
+                "para fazer",
+                "temos para fazer",
+                "tenho para fazer",
+                "atividades pendentes para",
+                "atividade pendente para",
+                "instancias pendentes para",
+                "instancia pendente para",
+            }
+        )
+        period_scoped_queue = period_hint in {"today", "week", "month"} and (
+            asks_for_work_queue
+            or bool({"pendente", "pendentes"} & tokens)
+        )
+        if period_scoped_queue:
+            score, reasons = self._apply_action_hint(
+                action_key=action_key,
+                expected="my_work.due_range",
+                score=score + 4,
+                reasons=reasons,
+                label=f"my_work=period_queue:{period_hint}",
+            )
+            if action_key == "my_work.open":
+                score -= 2
+                reasons.append(f"reranker:my_work=open_period_penalty:{period_hint}")
+
         if {"ocupacao", "capacidade", "carga"} & tokens or (
             {"horas", "disponiveis"} <= tokens
         ):

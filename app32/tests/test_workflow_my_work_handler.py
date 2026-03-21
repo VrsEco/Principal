@@ -208,3 +208,21 @@ def test_my_work_handler_returns_collaborator_resolution_error():
     )
 
     assert result.response_text == "Nao encontrei colaborador para 'Joaquim Guga'."
+
+
+def test_my_work_handler_requires_period_when_due_range_is_selected_for_today_queue():
+    handler, captured = _build_handler()
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.due_range",
+            payload={"periodo": "hoje", "empresa": "Versus"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["period_payload"]["periodo"] == "hoje"
+    assert captured["tasks_calls"][0]["start_date"] == date(2026, 3, 5)
+    assert captured["tasks_calls"][0]["end_date"] == date(2026, 3, 19)
+    assert result.response_text == "report:my_work.due_range:empresa AA - Versus"

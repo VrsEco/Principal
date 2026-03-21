@@ -61,6 +61,27 @@ def build_default_workflow_evaluation_cases() -> List[WorkflowEvaluationCase]:
             channel="whatsapp",
         ),
         WorkflowEvaluationCase(
+            domain="my_work",
+            label="my_work_due_today_queue",
+            text="Me diga o que temos para fazer hoje?",
+            expected_action_key="my_work.due_range",
+            channel="web",
+        ),
+        WorkflowEvaluationCase(
+            domain="my_work",
+            label="my_work_due_week_pending",
+            text="Quais atividades eu tenho pendentes para esta semana na empresa versus consultoria e participações",
+            expected_action_key="my_work.due_range",
+            channel="whatsapp",
+        ),
+        WorkflowEvaluationCase(
+            domain="my_work",
+            label="my_work_due_month_pending",
+            text="Preciso saber o que tenho de atividades pendentes para este mês na empresa Gás Evolution",
+            expected_action_key="my_work.due_range",
+            channel="whatsapp",
+        ),
+        WorkflowEvaluationCase(
             domain="collaborator",
             label="collaborator_occupancy",
             text="preciso da ocupacao do colaborador Fabiano nesta semana",

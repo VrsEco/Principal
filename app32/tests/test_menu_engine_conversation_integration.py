@@ -485,6 +485,25 @@ def test_extract_fields_from_text_infers_implicit_company_alias_without_keyword_
     assert payload["status_consulta"] == "open"
 
 
+def test_extract_fields_from_text_infers_due_range_period_for_today_queue_language():
+    payload = menu_engine._extract_fields_from_text(
+        "Me diga o que temos para fazer hoje?"
+    )
+
+    assert payload["periodo"] == "hoje"
+
+
+def test_extract_fields_from_text_infers_month_period_for_pending_company_queue():
+    payload = menu_engine._extract_fields_from_text(
+        "Preciso saber o que tenho de atividades pendentes para este mês na empresa Gás Evolution"
+    )
+
+    assert payload["empresa"] == "Gás Evolution"
+    assert payload["entidade"] == "project_task"
+    assert payload["status_consulta"] == "open"
+    assert payload["periodo"] == "este mes"
+
+
 def test_extract_fields_from_text_infers_batch_ids_for_completion():
     payload = menu_engine._extract_fields_from_text(
         "Pode dar como concluida as atividades de IDs: 24 e 323"

@@ -775,6 +775,9 @@ def test_default_workflow_evaluation_catalog_covers_multiple_domains():
     assert {
         "my_work_overdue_instances_by_collaborator",
         "my_work_open_tasks_by_collaborator",
+        "my_work_due_today_queue",
+        "my_work_due_week_pending",
+        "my_work_due_month_pending",
     } <= labels
 
 
@@ -986,3 +989,79 @@ def test_heuristic_reranker_preserves_my_work_for_process_instance_queries():
     assert reranked
     assert reranked[0].workflow.action_key == "my_work.overdue"
     assert any("process_instance" in reason for reason in reranked[0].reasons)
+
+
+def test_heuristic_reranker_prioritizes_due_range_for_today_work_queue():
+    options = [
+        _option(
+            option_id=66,
+            code="3.1",
+            title="Atividades em Aberto",
+            action_key="my_work.open",
+            keywords=["atividades em aberto"],
+            sort_order=31,
+        ),
+        _option(
+            option_id=67,
+            code="3.3",
+            title="Vencendo no Periodo",
+            action_key="my_work.due_range",
+            keywords=["o que vence no periodo", "tarefas desta semana"],
+            sort_order=33,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Me diga o que temos para fazer hoje?",
+        company_id=9,
+        channel="web",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=12, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "my_work.due_range"
+    assert any("period_queue" in reason for reason in reranked[0].reasons)
+
+
+def test_heuristic_reranker_prioritizes_due_range_for_pending_month_queue():
+    options = [
+        _option(
+            option_id=68,
+            code="3.1",
+            title="Atividades em Aberto",
+            action_key="my_work.open",
+            keywords=["atividades em aberto"],
+            sort_order=31,
+        ),
+        _option(
+            option_id=69,
+            code="3.3",
+            title="Vencendo no Periodo",
+            action_key="my_work.due_range",
+            keywords=["o que vence no periodo", "tarefas deste mes"],
+            sort_order=33,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Preciso saber o que tenho de atividades pendentes para este mês na empresa Gás Evolution",
+        company_id=9,
+        channel="whatsapp",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=12, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "my_work.due_range"
+    assert any("period_queue" in reason for reason in reranked[0].reasons)
