@@ -1,5 +1,18 @@
 from datetime import date
+from pathlib import Path
+import sys
 from types import SimpleNamespace
+
+ROOT_DIR = Path(r"C:\GestaoVersus\app32")
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+
+def _get_tasks_today_function_source() -> str:
+    content = (ROOT_DIR / "src" / "intelligence" / "tools.py").read_text(encoding="utf-8")
+    start = content.index("def get_tasks_today")
+    end = content.index("@tool", start + 1)
+    return content[start:end]
 
 
 def test_complete_task_project_task_commits_once(monkeypatch):
@@ -71,8 +84,16 @@ def test_complete_task_project_task_commits_once(monkeypatch):
 
 
 def test_get_tasks_today_uses_project_title_column():
-    from pathlib import Path
+    function_source = _get_tasks_today_function_source()
 
-    content = Path(r"C:\GestaoVersus\app32\src\intelligence\tools.py").read_text(encoding="utf-8")
+    assert 'Project.title.label("project_name")' in function_source
 
-    assert "p.title as project_name" in content
+
+def test_get_tasks_today_uses_current_process_assignment_fields():
+    function_source = _get_tasks_today_function_source()
+
+    assert "ProcessInstance.responsible_id" in function_source
+    assert "ProcessInstance.executor_id" in function_source
+    assert "ProcessInstance.owner_employee_id" in function_source
+    assert "pi.employee_id" not in function_source
+    assert "ProcessInstance.employee_id" not in function_source

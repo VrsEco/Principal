@@ -1433,7 +1433,10 @@ def get_tasks_today(scope: str = "me"):
     """
     
     from datetime import date
-    import json
+    from models.employee import Employee
+    from models.process import Process, ProcessInstance, ProcessRoutine
+    from models.project import Project, ProjectTask
+    from sqlalchemy import func
 
     company_id = get_active_company_id()
     if not company_id:
@@ -1443,35 +1446,57 @@ def get_tasks_today(scope: str = "me"):
     today_str = today.isoformat()
 
     try:
-        with db.engine.connect() as conn:
-            from sqlalchemy import text as sqltext
+        tasks = [
+            dict(row._mapping)
+            for row in (
+                db.session.query(
+                    ProjectTask.id,
+                    ProjectTask.what.label("title"),
+                    ProjectTask.due_date,
+                    ProjectTask.status,
+                    ProjectTask.who.label("responsible"),
+                    Project.title.label("project_name"),
+                )
+                .join(Project, Project.id == ProjectTask.project_id)
+                .filter(Project.company_id == company_id)
+                .filter(ProjectTask.status.notin_(["completed", "cancelled"]))
+                .filter(ProjectTask.due_date <= today)
+                .order_by(ProjectTask.due_date.asc())
+                .all()
+            )
+        ]
 
-            # Tarefas de Projetos vencendo hoje ou atrasadas
-            q_tasks = sqltext("""
-                SELECT pt.id, pt.what as title, pt.due_date, pt.status, pt.who as responsible,
-                       p.title as project_name
-                FROM project_tasks pt
-                JOIN projects p ON p.id = pt.project_id
-                WHERE p.company_id = :cid
-                  AND pt.status NOT IN ('completed', 'cancelled')
-                  AND pt.due_date <= :today
-                ORDER BY pt.due_date ASC
-            """)
-            tasks = [dict(r._mapping) for r in conn.execute(q_tasks, {"cid": company_id, "today": today_str})]
+        responsible_employee_id = func.coalesce(
+            ProcessInstance.responsible_id,
+            ProcessInstance.executor_id,
+            ProcessInstance.owner_employee_id,
+        )
+        process_title = func.coalesce(
+            ProcessRoutine.name,
+            Process.name,
+            ProcessInstance.title,
+        )
 
-            # Instâncias de Processos vencendo hoje ou atrasadas
-            q_proc = sqltext("""
-                SELECT pi.id, pr.name as title, pi.due_date, pi.status,
-                       e.name as responsible
-                FROM process_instances pi
-                JOIN process_routines pr ON pr.id = pi.routine_id
-                LEFT JOIN employees e ON e.id = pi.employee_id
-                WHERE pi.company_id = :cid
-                  AND pi.status NOT IN ('completed', 'cancelled')
-                  AND pi.due_date <= :today
-                ORDER BY pi.due_date ASC
-            """)
-            procs = [dict(r._mapping) for r in conn.execute(q_proc, {"cid": company_id, "today": today_str})]
+        procs = [
+            dict(row._mapping)
+            for row in (
+                db.session.query(
+                    ProcessInstance.id,
+                    process_title.label("title"),
+                    ProcessInstance.due_date,
+                    ProcessInstance.status,
+                    Employee.name.label("responsible"),
+                )
+                .outerjoin(ProcessRoutine, ProcessRoutine.id == ProcessInstance.routine_id)
+                .outerjoin(Process, Process.id == ProcessInstance.process_id)
+                .outerjoin(Employee, Employee.id == responsible_employee_id)
+                .filter(ProcessInstance.company_id == company_id)
+                .filter(ProcessInstance.status.notin_(["completed", "cancelled"]))
+                .filter(ProcessInstance.due_date <= today)
+                .order_by(ProcessInstance.due_date.asc())
+                .all()
+            )
+        ]
 
         if not tasks and not procs:
             return f"🟢 Nenhuma tarefa vencendo hoje ({today_str}) ou atrasada. Ótimo!"
