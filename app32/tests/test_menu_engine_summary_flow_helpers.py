@@ -770,3 +770,41 @@ def test_resolve_company_ids_for_payload_requires_explicit_company_for_collabora
 
     assert company_ids == []
     assert "mais de uma empresa" in label.lower()
+
+
+def test_resolve_company_ids_for_payload_honors_selected_company_id_before_ambiguous_term(monkeypatch):
+    class DummyCompany:
+        def __init__(self, company_id, name, client_code, is_active=True):
+            self.id = company_id
+            self.name = name
+            self.client_code = client_code
+            self.legal_name = name
+            self.is_active = is_active
+
+    monkeypatch.setattr(menu_engine, "_resolve_user_role_for_company_resolution", lambda user_id: "admin")
+    monkeypatch.setattr(
+        menu_engine,
+        "_load_accessible_companies_for_user",
+        lambda user_id: [
+            DummyCompany(9, "Gandu Investimentos e Participações", "AU"),
+            DummyCompany(2, "Gás Evolution", "AB"),
+            DummyCompany(7, "Versus Gestao Corporativa", "AA"),
+        ],
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_match_companies_by_term",
+        lambda companies, term: companies,
+    )
+
+    company_ids, label = menu_engine._resolve_company_ids_for_payload(
+        payload={
+            "empresa": "Gandu Investimentos e Participações",
+            "_selected_company_id": 9,
+        },
+        active_company_id=None,
+        user_id=10,
+    )
+
+    assert company_ids == [9]
+    assert label == "empresa AU - Gandu Investimentos e Participações"

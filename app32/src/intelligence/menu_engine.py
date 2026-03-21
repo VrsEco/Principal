@@ -3906,6 +3906,20 @@ def _resolve_company_ids_for_payload(
     if not accessible:
         return [], "Nenhuma empresa vinculada ao seu usuário."
 
+    selected_company_id = payload.get("_selected_company_id") or payload.get("_summary_company_id")
+    if selected_company_id is not None:
+        try:
+            selected_company_id = int(selected_company_id)
+        except (TypeError, ValueError):
+            selected_company_id = None
+
+    if selected_company_id:
+        chosen = next((company for company in accessible if int(getattr(company, "id", 0) or 0) == selected_company_id), None)
+        if chosen:
+            label = f"{chosen.client_code} - {chosen.name}" if chosen.client_code else chosen.name
+            return [chosen.id], f"empresa {label}"
+        return [], "Voce nao possui acesso a empresa selecionada."
+
     empresa_term = str(payload.get("empresa") or payload.get("company") or "").strip()
     if empresa_term:
         matches = _match_companies_by_term(accessible, empresa_term)
