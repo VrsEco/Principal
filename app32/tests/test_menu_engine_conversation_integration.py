@@ -451,6 +451,14 @@ def test_looks_like_command_accepts_operational_query_in_natural_language():
     )
 
 
+def test_looks_like_command_accepts_hitl_approval_short_reply():
+    assert menu_engine._looks_like_command("aprovado.") is True
+
+
+def test_looks_like_command_accepts_deadline_rewrite_short_phrase():
+    assert menu_engine._looks_like_command("coloque todas para o dia 31/03/2026") is True
+
+
 def test_extract_fields_from_text_infers_company_collaborator_and_period():
     payload = menu_engine._extract_fields_from_text(
         "Quais as instâncias atrasadas para Caroline Marques da empresa Gandu Investimentos esta semana?"

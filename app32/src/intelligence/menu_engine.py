@@ -914,6 +914,17 @@ def _looks_like_command(lower_text: str) -> bool:
     has_query = any(token in normalized for token in COMMAND_QUERY_HINTS)
     has_scope = any(token in normalized for token in COMMAND_SCOPE_HINTS)
     has_status = any(token in normalized for token in COMMAND_STATUS_HINTS)
+    is_hitl_operation = bool(
+        re.search(r"\b(aprovar|aprovado|aprova|rejeitar|rejeitado|recusar|revalidar)\b", normalized)
+    )
+    is_deadline_rewrite = bool(
+        re.search(
+            r"\b(coloque|mudar|alterar)\b.*\b(para o dia|prazo|nova data|novo prazo)\b",
+            normalized,
+        )
+    )
+    if is_hitl_operation or is_deadline_rewrite:
+        return True
     return (has_command or has_query) and (has_scope or has_status)
 
 
