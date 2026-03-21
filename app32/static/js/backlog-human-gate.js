@@ -296,12 +296,11 @@
 
     function renderBoardSection(tasks) {
         const metrics = buildBoardMetrics(tasks);
-        const filterOptions = getBoardFilterOptions(tasks);
-        const activeMode = String(state.boardFilterMode || 'all').trim().toLowerCase();
+        if (!metrics.totalHitl) return '';
 
         return `
-            <div class="backlog-human-gate-board-panel">
-                <div class="backlog-human-gate-board-head">
+            <div class="backlog-human-gate-board-panel embedded-overview">
+                <div class="backlog-human-gate-board-head embedded-overview">
                     <div>
                         <div class="backlog-human-gate-eyebrow">Cockpit HITL do backlog</div>
                         <div class="backlog-human-gate-board-title">Fila operacional unificada do board</div>
@@ -332,7 +331,36 @@
                         <strong>${escapeHtml(metrics.oldestAgeLabel)}</strong>
                     </div>
                 </div>
-                <div class="backlog-human-gate-board-filters">
+            </div>
+        `;
+    }
+
+    function mountBoardSection(tasks, container) {
+        if (!container) return;
+        const html = renderBoardSection(tasks);
+        container.innerHTML = html;
+        container.style.display = html ? 'block' : 'none';
+    }
+
+    function renderBoardFilterSection(tasks) {
+        const metrics = buildBoardMetrics(tasks);
+        if (!metrics.totalHitl) return '';
+
+        const filterOptions = getBoardFilterOptions(tasks);
+        const activeMode = String(state.boardFilterMode || 'all').trim().toLowerCase();
+
+        return `
+            <div class="backlog-human-gate-filter-group">
+                <div class="backlog-human-gate-filter-group-head">
+                    <div>
+                        <div class="backlog-human-gate-eyebrow">Cockpit HITL do backlog</div>
+                        <div class="backlog-human-gate-filter-group-title">Fila operacional unificada do board</div>
+                    </div>
+                    <div class="backlog-human-gate-filter-group-caption">
+                        ${metrics.totalHitl} HITL · ${metrics.pending} pendente(s)
+                    </div>
+                </div>
+                <div class="backlog-human-gate-board-filters integrated-with-sidebar">
                     ${filterOptions.map((option) => `
                         <button
                             type="button"
@@ -347,10 +375,11 @@
         `;
     }
 
-    function mountBoardSection(tasks, container) {
+    function mountFilterSection(tasks, container) {
         if (!container) return;
-        container.innerHTML = renderBoardSection(tasks);
-        container.style.display = 'block';
+        const html = renderBoardFilterSection(tasks);
+        container.innerHTML = html;
+        container.style.display = html ? 'block' : 'none';
     }
 
     function getOperationButtonsHtml(task, options = {}) {
@@ -617,6 +646,7 @@
         filterTasks,
         setBoardFilter,
         mountBoardSection,
+        mountFilterSection,
         buildBoardMetrics,
         renderCardSection,
         mountTaskSection,

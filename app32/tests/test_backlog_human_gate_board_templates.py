@@ -15,8 +15,10 @@ def test_project_manage_board_loads_backlog_human_gate_assets_and_slot():
     assert "js/backlog-human-gate.js" in content
     assert 'id="backlogHumanGateSection"' in content
     assert 'id="backlogHumanGateBoardSection"' in content
+    assert 'id="backlogHumanGateFilterSection"' in content
     assert "BacklogHumanGate?.configure" in content
     assert "mountBoardSection" in content
+    assert "mountFilterSection" in content
 
 
 def test_project_analysis_board_loads_backlog_human_gate_assets_and_slot():
@@ -26,5 +28,7 @@ def test_project_analysis_board_loads_backlog_human_gate_assets_and_slot():
     assert "js/backlog-human-gate.js" in content
     assert 'id="backlogHumanGateSection"' in content
     assert 'id="backlogHumanGateBoardSection"' in content
+    assert 'id="backlogHumanGateFilterSection"' in content
     assert "BacklogHumanGate?.configure" in content
     assert "mountBoardSection" in content
+    assert "mountFilterSection" in content

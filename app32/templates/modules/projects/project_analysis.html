@@ -603,9 +603,8 @@
         <span class="stat-label-ws">Atrasadas</span>
         <div class="stat-value-ws" style="color: var(--danger);" id="stats-overdue">0</div>
     </div>
+    <div id="backlogHumanGateBoardSection" style="grid-column: 1 / -1;"></div>
 </div>
-
-<div id="backlogHumanGateBoardSection"></div>
 
 <!-- Kanban Board -->
 <div class="kanban-board-ws">
@@ -874,6 +873,12 @@
         window.BacklogHumanGate?.mountBoardSection(tasks || allTasks, container);
     }
 
+    function mountBacklogHumanGateFilters(tasks) {
+        const container = document.getElementById('backlogHumanGateFilterSection');
+        if (!container) return;
+        window.BacklogHumanGate?.mountFilterSection(tasks || allTasks, container);
+    }
+
     function setTaskFieldsReadOnly(disabled) {
         ['taskProjectId', 'taskWhat', 'taskEmployeeId', 'taskDueDate', 'taskEstimatedHours', 'taskScoreWeight', 'taskHow', 'taskNotes'].forEach((fieldId) => {
             const field = document.getElementById(fieldId);
@@ -1011,6 +1016,7 @@
         addDebugLog('Renderizando Kanban...');
         const baseTasks = tasksToRender || allTasks;
         mountBacklogHumanGateBoard(baseTasks);
+        mountBacklogHumanGateFilters(baseTasks);
         const tasks = getBacklogHumanGateVisibleTasks(baseTasks);
         if (!Array.isArray(tasks)) {
             addDebugLog('ERRO: Tarefas para renderizar não é um array');
@@ -1586,6 +1592,7 @@
             <input type="text" id="filterSearch" class="form-input" placeholder="O que você busca?"
                 onkeyup="applyKanbanFilters()">
         </div>
+        <div id="backlogHumanGateFilterSection"></div>
         <button class="btn btn-secondary w-100" onclick="resetKanbanFilters()">Limpar Filtros</button>
     </div>
 </div>

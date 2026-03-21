@@ -54,11 +54,21 @@
     gap: 0.9rem;
 }
 
+.backlog-human-gate-board-panel.embedded-overview {
+    margin: 0.9rem 0 0;
+    border-radius: 16px;
+    padding: 0.95rem 1rem;
+}
+
 .backlog-human-gate-board-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
+}
+
+.backlog-human-gate-board-head.embedded-overview {
+    margin-bottom: 0.1rem;
 }
 
 .backlog-human-gate-board-title {
@@ -111,6 +121,37 @@
     gap: 0.5rem;
 }
 
+.backlog-human-gate-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.backlog-human-gate-filter-group-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.backlog-human-gate-filter-group-title {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.35;
+}
+
+.backlog-human-gate-filter-group-caption {
+    font-size: 0.74rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+.backlog-human-gate-board-filters.integrated-with-sidebar {
+    gap: 0.4rem;
+}
+
 .backlog-human-gate-filter-chip,
 .backlog-human-gate-chip {
     display: inline-flex;
@@ -145,6 +186,11 @@
     border-color: rgba(99, 102, 241, 0.35);
     background: rgba(99, 102, 241, 0.12);
     color: #4338ca;
+}
+
+.backlog-human-gate-board-filters.integrated-with-sidebar .backlog-human-gate-filter-chip {
+    width: 100%;
+    justify-content: space-between;
 }
 
 .backlog-human-gate-chip {

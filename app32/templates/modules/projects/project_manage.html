@@ -871,10 +871,9 @@
                     <span class="mini-stat-label">Realizado</span>
                 </div>
             </div>
+            <div id="backlogHumanGateBoardSection"></div>
         </div>
     </div>
-
-    <div id="backlogHumanGateBoardSection"></div>
 
     <!-- Kanban Board Workspace Style -->
     <div class="kanban-board-ws no-scrollbar" id="kanbanBoard">
@@ -1187,6 +1186,12 @@
         window.BacklogHumanGate?.mountBoardSection(tasks || allTasks, container);
     }
 
+    function mountBacklogHumanGateFilters(tasks) {
+        const container = document.getElementById('backlogHumanGateFilterSection');
+        if (!container) return;
+        window.BacklogHumanGate?.mountFilterSection(tasks || allTasks, container);
+    }
+
     function setTaskFieldsReadOnly(disabled) {
         ['taskWhat', 'taskEmployeeId', 'taskDueDate', 'taskEstimatedHours', 'taskScoreWeight', 'taskHow', 'taskNotes'].forEach((fieldId) => {
             const field = document.getElementById(fieldId);
@@ -1312,6 +1317,7 @@
     function renderKanban(tasksToRender = null) {
         const baseTasks = tasksToRender || allTasks;
         mountBacklogHumanGateBoard(baseTasks);
+        mountBacklogHumanGateFilters(baseTasks);
         const tasks = getBacklogHumanGateVisibleTasks(baseTasks);
 
         // Clear columns
@@ -2426,6 +2432,8 @@
             <input type="text" id="filterSearch" class="form-input" placeholder="Pesquisar..."
                 onkeyup="applyKanbanFilters()">
         </div>
+
+        <div id="backlogHumanGateFilterSection"></div>
 
         <button class="btn btn-secondary w-100" onclick="resetKanbanFilters()" style="margin-top: 0.5rem;">
             Limpar Filtros
