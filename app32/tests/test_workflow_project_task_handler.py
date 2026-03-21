@@ -248,7 +248,9 @@ def test_project_task_complete_handler_rolls_back_when_progress_update_fails():
     )
 
     assert captured.get("rolled_back") is True
-    assert "AA.J.17.31" in result.response_text
+    assert captured.get("commits") is None
+    assert "Erro ao concluir atividades" in result.response_text
+    assert "Nenhuma alteracao foi persistida" in result.response_text
 
 
 def test_project_task_complete_handler_returns_invalid_date():
@@ -307,3 +309,22 @@ def test_project_task_complete_handler_supports_batch_ids():
     assert "Conclusao em lote processada: 2 atividade(s) concluida(s)." in result.response_text
     assert "AA.J.17.24" in result.response_text
     assert "AA.J.17.323" in result.response_text
+
+
+def test_project_task_complete_handler_rolls_back_when_commit_fails():
+    handler, captured, task, _project = _build_complete_handler(
+        commit_changes=lambda: (_ for _ in ()).throw(RuntimeError("This transaction is closed"))
+    )
+
+    result = handler.execute(
+        ProjectTaskCompleteRequest(
+            payload={"codigo_atividade": "AA.J.17.31", "data_finalizacao": "20/03/2026"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured.get("rolled_back") is True
+    assert "transacao de persistencia falhou e foi revertida" in result.response_text
+    assert "Nenhuma alteracao foi salva" in result.response_text
+    assert task.status == "completed"

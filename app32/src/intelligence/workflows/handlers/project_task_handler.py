@@ -297,6 +297,7 @@ class ProjectTaskCompleteExecutionHandler:
 
             current_final_date = final_date
             item_changed = False
+            task_title = str(getattr(task, "what", "") or "").strip() or "Atividade"
             if getattr(task, "status", None) != "completed" or getattr(task, "stage", None) != "completed":
                 task.status = "completed"
                 task.stage = "completed"
@@ -316,8 +317,12 @@ class ProjectTaskCompleteExecutionHandler:
                     item_changed = True
             except Exception:
                 self._rollback_changes()
-                task = self._load_task_by_id(task_id)
-                project = getattr(task, "project", None) if task else None
+                return ProjectTaskCompleteResult(
+                    response_text=(
+                        "Erro ao concluir atividades: falha ao atualizar o progresso do projeto "
+                        f"para '{raw_code}' ({task_title}). Nenhuma alteracao foi persistida."
+                    )
+                )
 
             has_changes = has_changes or item_changed
             company = self._load_company_by_id(getattr(project, "company_id", 0)) if project else None
@@ -325,7 +330,6 @@ class ProjectTaskCompleteExecutionHandler:
             project_code = str(getattr(project, "code", "") or "").strip() or f"{company_code}.J.{getattr(project, 'id', '-')}"
             activity_code = str(getattr(task, "code", "") or "").strip() or f"{project_code}.{getattr(task, 'id', '-')}"
             project_name = str(getattr(project, "name", "") or "").strip() or f"Projeto {getattr(project, 'id', '-')}"
-            task_title = str(getattr(task, "what", "") or "").strip() or "Atividade"
 
             last_single_payload = {
                 "activity_code": activity_code,
@@ -339,7 +343,16 @@ class ProjectTaskCompleteExecutionHandler:
             )
 
         if has_changes:
-            self._commit_changes()
+            try:
+                self._commit_changes()
+            except Exception:
+                self._rollback_changes()
+                return ProjectTaskCompleteResult(
+                    response_text=(
+                        "Erro ao concluir atividades: a transacao de persistencia falhou e foi revertida. "
+                        "Nenhuma alteracao foi salva."
+                    )
+                )
 
         if len(completed_lines) == 1 and not not_found_lines and last_single_payload:
             return ProjectTaskCompleteResult(
