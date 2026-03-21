@@ -1455,7 +1455,7 @@ def get_tasks_today(scope: str = "me"):
                     ProjectTask.due_date,
                     ProjectTask.status,
                     ProjectTask.who.label("responsible"),
-                    Project.title.label("project_name"),
+                    Project.name.label("project_name"),
                 )
                 .join(Project, Project.id == ProjectTask.project_id)
                 .filter(Project.company_id == company_id)

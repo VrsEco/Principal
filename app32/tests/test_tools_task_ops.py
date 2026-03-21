@@ -86,7 +86,7 @@ def test_complete_task_project_task_commits_once(monkeypatch):
 def test_get_tasks_today_uses_project_title_column():
     function_source = _get_tasks_today_function_source()
 
-    assert 'Project.title.label("project_name")' in function_source
+    assert 'Project.name.label("project_name")' in function_source
 
 
 def test_get_tasks_today_uses_current_process_assignment_fields():
