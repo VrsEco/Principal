@@ -1109,9 +1109,13 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
             break
 
     normalized_text = _normalize_text(text)
-    if any(token in normalized_text for token in {"instancia", "instancias", "processo", "processos"}):
+    mentions_processes = any(token in normalized_text for token in {"instancia", "instancias", "processo", "processos"})
+    mentions_tasks = any(token in normalized_text for token in {"atividade", "atividades", "tarefa", "tarefas"})
+    if mentions_processes and mentions_tasks:
+        data["entidade"] = "mixed"
+    elif mentions_processes:
         data.setdefault("entidade", "process_instance")
-    if any(token in normalized_text for token in {"atividade", "atividades", "tarefa", "tarefas"}):
+    elif mentions_tasks:
         data["entidade"] = "project_task"
 
     if re.search(r"\bsem\s+respons[aá]vel\b", text, flags=re.IGNORECASE):

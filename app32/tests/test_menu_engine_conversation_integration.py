@@ -727,3 +727,13 @@ def test_extract_fields_from_text_detects_project_task_audit_missing_due_date():
 
     assert payload["entidade"] == "project_task"
     assert payload["tipo_auditoria"] == "missing_due_date"
+
+
+def test_extract_fields_from_text_preserves_mixed_entity_when_tasks_and_instances_are_requested():
+    payload = menu_engine._extract_fields_from_text(
+        "Me dê as atividades e instâncias de Joaquim Guga da empresa Gandu Investimentos"
+    )
+
+    assert payload["empresa"] == "Gandu Investimentos"
+    assert payload["colaborador"] == "Joaquim Guga"
+    assert payload["entidade"] == "mixed"

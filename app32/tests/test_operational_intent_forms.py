@@ -51,6 +51,28 @@ def test_my_work_intent_form_builder_marks_missing_period_for_due_range():
     assert form.resolution_scope.missing_fields == ["periodo"]
 
 
+def test_my_work_intent_form_builder_does_not_override_explicit_company_with_active_company():
+    builder = MyWorkIntentFormBuilder()
+
+    form, error = builder.build(
+        action="my_work.open",
+        payload={
+            "empresa": "Gandu Investimentos",
+            "colaborador": "Joaquim Guga",
+        },
+        active_company_id=1,
+        channel="whatsapp",
+        raw_text="Me dê as atividades e instâncias de Joaquim Guga da empresa Gandu Investimentos",
+    )
+
+    assert error is None
+    assert form is not None
+    assert form.company_scope.company_ids == []
+    assert form.company_scope.selection_mode == "implicit"
+    assert form.company_scope.requires_disambiguation is True
+    assert "_selected_company_id" not in form.to_execution_payload()
+
+
 def test_operational_intent_confirmation_presenter_builds_readable_text():
     builder = MyWorkIntentFormBuilder()
     presenter = OperationalIntentConfirmationPresenter()

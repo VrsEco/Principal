@@ -48,6 +48,12 @@ class MyWorkIntentFormBuilder:
             return None, "Nao foi possivel montar o formulario da consulta."
 
         normalized_payload = dict(payload or {})
+        explicit_company_term = str(
+            normalized_payload.get("empresa")
+            or normalized_payload.get("company")
+            or normalized_payload.get("company_name")
+            or ""
+        ).strip()
         company_ids = []
         hidden_company_id = normalized_payload.get("_selected_company_id") or normalized_payload.get("_summary_company_id")
         if hidden_company_id not in (None, ""):
@@ -55,7 +61,7 @@ class MyWorkIntentFormBuilder:
                 company_ids = [int(hidden_company_id)]
             except (TypeError, ValueError):
                 company_ids = []
-        elif active_company_id not in (None, ""):
+        elif not explicit_company_term and active_company_id not in (None, ""):
             try:
                 company_ids = [int(active_company_id)]
             except (TypeError, ValueError):
@@ -105,8 +111,8 @@ class MyWorkIntentFormBuilder:
             entity_type="mixed" if entity_hint == "mixed" else entity_hint,
             company_scope=CompanyScopeForm(
                 company_ids=company_ids,
-                selection_mode="explicit" if company_ids else "none",
-                requires_disambiguation=not bool(company_ids),
+                selection_mode="explicit" if company_ids else ("implicit" if explicit_company_term else "none"),
+                requires_disambiguation=not bool(company_ids) and bool(explicit_company_term),
             ),
             subject_scope=SubjectScopeForm(
                 responsible_names=collaborator_names,
@@ -137,6 +143,7 @@ class MyWorkIntentFormBuilder:
                 field_sources={
                     "action": "workflow_action",
                     "company_ids": "payload_hidden_or_active_company",
+                    "empresa": "payload",
                     "colaborador": "payload",
                     "periodo": "payload",
                     "entidade": "payload",
