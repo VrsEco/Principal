@@ -579,6 +579,17 @@ def test_extract_fields_from_text_infers_project_task_scope_and_open_status():
     assert payload["status_consulta"] == "open"
 
 
+def test_extract_fields_from_text_strips_company_suffix_from_collaborator_with_accents():
+    payload = menu_engine._extract_fields_from_text(
+        "Quais as atividades em aberto para Márcio Simões da empresa Ventana?"
+    )
+
+    assert payload["empresa"] == "Ventana"
+    assert payload["colaborador"] == "Márcio Simões"
+    assert payload["entidade"] == "project_task"
+    assert payload["status_consulta"] == "open"
+
+
 def test_extract_fields_from_text_infers_implicit_company_alias_without_keyword_empresa():
     payload = menu_engine._extract_fields_from_text(
         "Quero as atividades abertas da Ventana com os Responsável Márcio Simoes"

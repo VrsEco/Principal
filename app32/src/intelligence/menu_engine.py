@@ -1054,6 +1054,12 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         if not collaborator_match:
             continue
         collaborator_name = collaborator_match.group(1).strip(" ,.-")
+        collaborator_name = re.sub(
+            r"\s+\b(?:na|no|da|do)\s+empresa\b.*$",
+            "",
+            collaborator_name,
+            flags=re.IGNORECASE,
+        ).strip(" ,.-")
         collaborator_name = re.sub(r"\s+\b(?:na|no|da|do)\b$", "", collaborator_name, flags=re.IGNORECASE).strip(" ,.-")
         collaborator_name = re.sub(
             r"\s+\b(?:esta\s+semana|este\s+mes|este\s+m[eê]s|hoje)\b.*$",
