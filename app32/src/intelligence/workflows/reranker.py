@@ -502,6 +502,23 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             score += 24
             reasons.append("reranker:agent_action=list_pending")
 
+        my_companies_query = (
+            bool({"empresa", "empresas"} & tokens)
+            and (
+                "vinculad" in normalized_text
+                or "tenho acesso" in normalized_text
+                or "minhas empresas" in normalized_text
+                or "quantas empresas" in normalized_text
+            )
+            and bool({"mim", "minhas", "me"} & tokens or "a mim" in normalized_text)
+        )
+        if my_companies_query and action_key == "company.list_accessible":
+            score += 28
+            reasons.append("reranker:company=list_accessible")
+        elif my_companies_query and action_key.startswith("project"):
+            score -= 8
+            reasons.append("reranker:project_penalty_for_company_access")
+
         project_task_audit_query = (
             "sem responsavel" in normalized_text
             or "sem data" in normalized_text

@@ -48,6 +48,8 @@ from src.intelligence.workflows.handlers import (
     AgentActionOperationRequest,
     CollaboratorOccupancyExecutionHandler,
     CollaboratorOccupancyRequest,
+    CompanyAccessExecutionHandler,
+    CompanyAccessExecutionRequest,
     MeetingScheduleExecutionHandler,
     MeetingScheduleRequest,
     MeetingStartExecutionHandler,
@@ -243,6 +245,8 @@ EXECUTE_HINTS = ("executar", "fazer", "iniciar", "finalizar", "cadastrar", "edit
 COMMAND_HINTS = ("cadastrar", "criar", "iniciar", "finalizar", "editar", "executar", "resumo", "aprovar", "aprovado", "rejeitar", "revalidar", "colocar", "mudar")
 COMMAND_QUERY_HINTS = (
     "liste",
+    "quantas",
+    "quantos",
     "quais",
     "qual",
     "quero saber",
@@ -1344,6 +1348,7 @@ def _is_read_only_action(action_key: Optional[str]) -> bool:
     action = (action_key or "").strip().lower()
     return action in {
         "collaborator.occupancy",
+        "company.list_accessible",
         "agent_action.list_pending",
         "project_task.audit",
         "my_work.open",
@@ -2152,6 +2157,10 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                 handler_factory=_build_collaborator_occupancy_execution_handler,
                 request_model=CollaboratorOccupancyRequest,
             ),
+            "company.list_accessible": build_handler_executor(
+                handler_factory=_build_company_access_execution_handler,
+                request_model=CompanyAccessExecutionRequest,
+            ),
             "project_task.create": build_handler_executor(
                 handler_factory=_build_project_task_create_execution_handler,
                 request_model=ProjectTaskCreateRequest,
@@ -2426,6 +2435,43 @@ def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
             active_company_id=active_company_id,
             channel=channel,
         ),
+    )
+
+
+def _format_company_access_report(*, companies: List[Any], channel: str = "web") -> str:
+    total = len(companies or [])
+    if total <= 0:
+        return "Nenhuma empresa vinculada ao seu usuário."
+
+    lines = [
+        f"Atualmente, voce possui acesso a {total} empresa(s) ativa(s).",
+        "",
+        "Empresas vinculadas:",
+    ]
+    for index, company in enumerate(companies, start=1):
+        prefix = str(getattr(company, "client_code", "") or "").strip() or "SEM PREFIXO"
+        name = str(getattr(company, "name", "") or f"Empresa {getattr(company, 'id', '-')}")
+        company_id = getattr(company, "id", None)
+        line = f"{index}. {prefix} - {name}"
+        if company_id is not None:
+            line = f"{line} (ID: {company_id})"
+        lines.append(line)
+
+    if str(channel or "web").strip().lower() == "whatsapp":
+        lines.extend(
+            [
+                "",
+                "Proximo passo:",
+                "→ Se quiser, posso detalhar atividades, instancias ou pendencias de uma dessas empresas.",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _build_company_access_execution_handler() -> CompanyAccessExecutionHandler:
+    return CompanyAccessExecutionHandler(
+        load_accessible_companies_for_user=_load_accessible_companies_for_user,
+        format_report=_format_company_access_report,
     )
 
 
@@ -5108,6 +5154,7 @@ def _ensure_default_menu_seed() -> None:
         {"code": "3.4", "title": "Atividades Concluidas no Periodo", "parent_code": "3", "action_key": "my_work.completed_range", "required_fields": [{"key": "empresa", "label": "Empresa"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["concluidas no periodo", "atividades concluidas"], "sort_order": 34},
         {"code": "3.5", "title": "Resumos", "parent_code": "3", "sort_order": 35},
         {"code": "3.6", "title": "Ocupacao de Colaborador", "parent_code": "3", "action_key": "collaborator.occupancy", "required_fields": [{"key": "colaborador", "label": "Colaborador"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["ocupacao do colaborador", "ocupacao do usuario", "capacidade do colaborador", "carga do colaborador", "horas disponiveis do colaborador"], "sort_order": 40},
+        {"code": "3.7", "title": "Empresas Vinculadas ao Usuario", "parent_code": "3", "action_key": "company.list_accessible", "required_fields": [], "keywords": ["quantas empresas estão vinculadas a mim", "quantas empresas estao vinculadas a mim", "minhas empresas", "empresas vinculadas a mim", "empresas que tenho acesso", "listar minhas empresas"], "sort_order": 41},
         {"code": "3.5.1", "title": "Hoje", "parent_code": "3.5", "action_key": "summary.today", "required_fields": [], "keywords": ["resumo hoje", "resumo do dia"], "sort_order": 36},
         {"code": "3.5.2", "title": "Esta Semana", "parent_code": "3.5", "action_key": "summary.week", "required_fields": [], "keywords": ["resumo semana", "esta semana"], "sort_order": 37},
         {"code": "3.5.3", "title": "Este Mes", "parent_code": "3.5", "action_key": "summary.month", "required_fields": [], "keywords": ["resumo mes", "este mes"], "sort_order": 38},
@@ -5202,6 +5249,22 @@ def _ensure_default_menu_upgrades() -> None:
                 "horas disponiveis do colaborador",
             ],
             sort_order=36,
+        )
+        _ensure_menu_option_exists(
+            code="3.7",
+            title="Empresas Vinculadas ao Usuario",
+            parent_code="3",
+            action_key="company.list_accessible",
+            required_fields=[],
+            keywords=[
+                "quantas empresas estão vinculadas a mim",
+                "quantas empresas estao vinculadas a mim",
+                "minhas empresas",
+                "empresas vinculadas a mim",
+                "empresas que tenho acesso",
+                "listar minhas empresas",
+            ],
+            sort_order=41,
         )
         _ensure_menu_option_exists(
             code="3.5",

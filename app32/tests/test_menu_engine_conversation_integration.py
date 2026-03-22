@@ -556,6 +556,10 @@ def test_looks_like_command_accepts_task_completion_without_ids():
     assert menu_engine._looks_like_command("Pode dar como concluída as atividades") is True
 
 
+def test_looks_like_command_accepts_my_companies_query():
+    assert menu_engine._looks_like_command("Quantas empresas estão vinculadas a mim atualmente?") is True
+
+
 def test_extract_fields_from_text_infers_company_collaborator_and_period():
     payload = menu_engine._extract_fields_from_text(
         "Quais as instâncias atrasadas para Caroline Marques da empresa Gandu Investimentos esta semana?"

@@ -305,6 +305,42 @@ def test_heuristic_reranker_prioritizes_pending_decisions_listing():
     assert reranked[0].workflow.action_key == "agent_action.list_pending"
 
 
+def test_heuristic_reranker_prioritizes_company_access_listing():
+    options = [
+        _option(
+            option_id=146,
+            code="3.7",
+            title="Empresas Vinculadas ao Usuario",
+            action_key="company.list_accessible",
+            keywords=["quantas empresas estão vinculadas a mim", "minhas empresas"],
+            sort_order=41,
+        ),
+        _option(
+            option_id=147,
+            code="1.1",
+            title="Cadastrar Projeto",
+            action_key="project.create",
+            keywords=["cadastrar projeto", "novo projeto"],
+            sort_order=11,
+        ),
+    ]
+
+    registry = WorkflowRegistry.from_menu_options(options)
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=10, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=10, reasons=[]),
+    ]
+
+    reranked = HeuristicWorkflowReranker().rerank(
+        WorkflowDiscoveryRequest(text="Quantas empresas estão vinculadas a mim atualmente?", top_k=2),
+        matches,
+        registry,
+    )
+
+    assert reranked[0].workflow.action_key == "company.list_accessible"
+    assert any("company=list_accessible" in reason for reason in reranked[0].reasons)
+
+
 def test_heuristic_reranker_prioritizes_project_task_audit_for_missing_responsible():
     options = [
         _option(

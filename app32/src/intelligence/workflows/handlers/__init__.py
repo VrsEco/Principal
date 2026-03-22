@@ -3,6 +3,11 @@ from .collaborator_handler import (
     CollaboratorOccupancyRequest,
     CollaboratorOccupancyResult,
 )
+from .company_handler import (
+    CompanyAccessExecutionHandler,
+    CompanyAccessExecutionRequest,
+    CompanyAccessExecutionResult,
+)
 from .agent_action_handler import (
     AgentActionListPendingExecutionHandler,
     AgentActionListPendingRequest,
@@ -72,6 +77,9 @@ __all__ = [
     "CollaboratorOccupancyExecutionHandler",
     "CollaboratorOccupancyRequest",
     "CollaboratorOccupancyResult",
+    "CompanyAccessExecutionHandler",
+    "CompanyAccessExecutionRequest",
+    "CompanyAccessExecutionResult",
     "MeetingScheduleExecutionHandler",
     "MeetingScheduleRequest",
     "MeetingScheduleResult",
