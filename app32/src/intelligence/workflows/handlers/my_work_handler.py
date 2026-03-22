@@ -124,7 +124,7 @@ class MyWorkExecutionHandler:
         processes: List[Dict[str, Any]] = []
         meetings: List[Dict[str, Any]] = []
 
-        if entity in {"", "project_task"}:
+        if entity in {"", "mixed", "project_task"}:
             tasks = self._load_project_tasks_report(
                 company_ids=company_ids,
                 mode=execution_input.action,
@@ -132,7 +132,7 @@ class MyWorkExecutionHandler:
                 end_date=end_date,
                 employee_ids=report_employee_ids,
             )
-        if entity in {"", "process_instance"}:
+        if entity in {"", "mixed", "process_instance"}:
             processes = self._load_process_instances_report(
                 company_ids=company_ids,
                 mode=execution_input.action,
@@ -140,7 +140,7 @@ class MyWorkExecutionHandler:
                 end_date=end_date,
                 employee_ids=report_employee_ids,
             )
-        if entity == "":
+        if entity in {"", "mixed"}:
             meetings = self._load_meetings_report(
                 company_ids=company_ids,
                 mode=execution_input.action,

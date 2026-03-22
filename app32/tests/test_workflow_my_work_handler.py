@@ -199,6 +199,28 @@ def test_my_work_handler_filters_by_payload_collaborator_and_skips_non_requested
     assert result.response_text == "report:my_work.overdue:empresa AA - Versus"
 
 
+def test_my_work_handler_loads_tasks_and_processes_for_mixed_entity_scope():
+    handler, captured = _build_handler()
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.open",
+            payload={
+                "empresa": "Versus",
+                "colaborador": "Caroline Marques",
+                "entidade": "mixed",
+            },
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["tasks_calls"][0]["employee_ids"] == [91]
+    assert captured["process_calls"][0]["employee_ids"] == [91]
+    assert captured["meeting_calls"][0]["collaborator_terms"] == ["Caroline Marques"]
+    assert result.response_text == "report:my_work.open:empresa AA - Versus"
+
+
 def test_my_work_handler_returns_collaborator_resolution_error():
     handler, _ = _build_handler(
         resolve_employee_scope_for_payload=lambda payload, user_id, company_ids, default_employee_ids: (
