@@ -748,3 +748,14 @@ def test_extract_fields_from_text_preserves_mixed_entity_when_tasks_and_instance
     assert payload["empresa"] == "Gandu Investimentos"
     assert payload["colaborador"] == "Joaquim Guga"
     assert payload["entidade"] == "mixed"
+
+
+def test_extract_fields_from_text_handles_mixed_entity_question_with_que_and_open_suffix():
+    payload = menu_engine._extract_fields_from_text(
+        "Quais as atividades e instâncias que Joaquim Guga da empresa Gandu Investimentos tem em aberto?"
+    )
+
+    assert payload["empresa"] == "Gandu Investimentos"
+    assert payload["colaborador"] == "Joaquim Guga"
+    assert payload["entidade"] == "mixed"
+    assert payload["status_consulta"] == "open"

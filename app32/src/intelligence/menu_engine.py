@@ -1014,7 +1014,7 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
             data.setdefault("empresa", f"{alias_code} - {alias_name}".strip(" -") if alias_name else alias_code)
 
     company_match = re.search(
-        r"(?:\bda?\s+empresa\b|\bempresa\b)\s+(.+?)(?=\s+(?:com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        r"(?:\bda?\s+empresa\b|\bempresa\b)\s+(.+?)(?=\s+(?:com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|tem\b|t[eê]m\b|ids?\b)|[?.!,;]|$)",
         text,
         flags=re.IGNORECASE,
     )
@@ -1030,7 +1030,7 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
 
     if "empresa" not in data:
         implicit_company_match = re.search(
-            r"\b(?:da|do|na|no)\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'`.-]+(?:\s+(?!com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)[A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'`.-]+){0,5})(?=\s+(?:com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+            r"\b(?:da|do|na|no)\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'`.-]+(?:\s+(?!com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|tem\b|t[eê]m\b|ids?\b)[A-ZÀ-Ý][A-Za-zÀ-ÿ0-9&'`.-]+){0,5})(?=\s+(?:com\b|para\b|respons[aá]vel\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|tem\b|t[eê]m\b|ids?\b)|[?.!,;]|$)",
             text,
             flags=re.IGNORECASE,
         )
@@ -1046,6 +1046,7 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
 
     collaborator_patterns = (
         r"\brespons[aá]vel(?:\s+por)?\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
+        r"\bque\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|tem\b|t[eê]m\b|ids?\b)|[?.!,;]|$)",
         r"\bpara\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
         r"\bde\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b)|[?.!,;]|$)",
     )
@@ -1070,6 +1071,11 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         normalized_collaborator = _normalize_text(collaborator_name)
         collaborator_tokens = [token for token in normalized_collaborator.split() if token]
         collaborator_leading_noise = {
+            "tem",
+            "temos",
+            "tenho",
+            "estao",
+            "estão",
             "fazer",
             "este",
             "esta",
@@ -1093,6 +1099,11 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
             "id",
             "fazer",
             "fazer hoje",
+            "tem",
+            "temos",
+            "tenho",
+            "estao",
+            "estão",
             "este",
             "esta",
             "este mes",
