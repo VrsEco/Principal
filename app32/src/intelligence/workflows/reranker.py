@@ -296,7 +296,14 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             score -= 18
             reasons.append("reranker:summary_penalty_for_occupancy")
 
-        if {"vencido", "vencidos", "vencida", "vencidas", "atrasado", "atrasados", "atrasada", "atrasadas"} & tokens:
+        has_overdue_tokens = bool(
+            {"vencido", "vencidos", "vencida", "vencidas", "atrasado", "atrasados", "atrasada", "atrasadas"} & tokens
+        )
+        has_open_tokens = bool(
+            {"aberto", "abertos", "aberta", "abertas", "pendente", "pendentes"} & tokens
+        )
+
+        if has_overdue_tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="my_work.overdue",
@@ -305,7 +312,7 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 label="my_work=overdue",
             )
 
-        if {"aberto", "abertos", "aberta", "abertas", "pendente", "pendentes"} & tokens:
+        if has_open_tokens and not has_overdue_tokens:
             score, reasons = self._apply_action_hint(
                 action_key=action_key,
                 expected="my_work.open",
@@ -313,6 +320,9 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 reasons=reasons,
                 label="my_work=open",
             )
+        elif has_open_tokens and has_overdue_tokens and action_key == "my_work.open":
+            score -= 4
+            reasons.append("reranker:my_work=open_penalty_due_to_overdue_conflict")
 
         if {"concluido", "concluidos", "concluida", "concluidas", "finalizado", "finalizados", "finalizada", "finalizadas"} & tokens:
             score, reasons = self._apply_action_hint(

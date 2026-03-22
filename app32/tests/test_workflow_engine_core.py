@@ -1166,6 +1166,44 @@ def test_heuristic_reranker_preserves_my_work_for_process_instance_queries():
     assert any("process_instance" in reason for reason in reranked[0].reasons)
 
 
+def test_heuristic_reranker_prioritizes_overdue_when_phrase_also_contains_em_aberto():
+    options = [
+        _option(
+            option_id=81,
+            code="3.1",
+            title="Atividades em Aberto",
+            action_key="my_work.open",
+            keywords=["atividades em aberto"],
+            sort_order=31,
+        ),
+        _option(
+            option_id=82,
+            code="3.2",
+            title="Meu Trabalho Atrasado",
+            action_key="my_work.overdue",
+            keywords=["trabalho atrasado", "instancias atrasadas"],
+            sort_order=32,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Quais as atividades e instancias atrasadas que Joaquim Guga da empresa Gandu Investimentos tem em aberto?",
+        company_id=7,
+        channel="whatsapp",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=22, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=20, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "my_work.overdue"
+    assert any("my_work=overdue" in reason for reason in reranked[0].reasons)
+
+
 def test_heuristic_reranker_prioritizes_due_range_for_today_work_queue():
     options = [
         _option(
