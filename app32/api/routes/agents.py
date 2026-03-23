@@ -455,6 +455,8 @@ def run_conversation_regression_pipeline():
             company_id = int(company_id)
         except (TypeError, ValueError):
             return jsonify({"success": False, "error": "Parâmetro company_id inválido."}), 400
+        if not _has_operational_full_access(company_id):
+            return jsonify({"success": False, "error": "Sem permissão para executar a pipeline no escopo informado."}), 403
 
     candidates = ConversationRegressionService.collect_workflow_gap_candidates(
         status=status_filter,
@@ -472,6 +474,7 @@ def run_conversation_regression_pipeline():
         backlog_sync = ConversationRegressionBacklogService.apply_sync_payload(
             snapshot.get('backlog_sync') or {},
             user_id=int(getattr(current_user, 'id', 0) or 0),
+            allowed_company_ids=[company_id] if company_id is not None else None,
             persist=persist_backlog,
         )
 

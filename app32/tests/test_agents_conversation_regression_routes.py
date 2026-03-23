@@ -40,7 +40,12 @@ def test_run_conversation_regression_pipeline_returns_report(monkeypatch):
     monkeypatch.setattr(
         backlog_module.ConversationRegressionBacklogService,
         'apply_sync_payload',
-        staticmethod(lambda payload, user_id, persist=True: {'processed': len(payload.get('items') or [])}),
+        staticmethod(
+            lambda payload, user_id, allowed_company_ids=None, persist=True: {
+                'processed': len(payload.get('items') or []),
+                'allowed_company_ids': list(allowed_company_ids or []),
+            }
+        ),
     )
 
     with app.test_request_context(
@@ -55,6 +60,7 @@ def test_run_conversation_regression_pipeline_returns_report(monkeypatch):
     assert body['success'] is True
     assert body['report']['summary']['total_cases'] == 3
     assert body['backlog_sync']['processed'] == 1
+    assert body['backlog_sync']['allowed_company_ids'] == [9]
 
 
 def test_run_conversation_regression_pipeline_blocks_unauthorized(monkeypatch):
@@ -89,3 +95,21 @@ def test_run_conversation_regression_pipeline_validates_inputs(monkeypatch):
     body = response.get_json()
     assert status_code == 400
     assert 'limit inválido' in body['error']
+
+
+def test_run_conversation_regression_pipeline_blocks_unauthorized_company_scope(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(agents_route, 'current_user', SimpleNamespace(id=7, name='Fabiano Ferreira', role='admin'))
+    monkeypatch.setattr(agents_route, '_has_operational_full_access', lambda company_id=None: company_id == 9)
+
+    with app.test_request_context(
+        '/api/agents/conversation-regression/run',
+        method='POST',
+        json={'company_id': 10},
+    ):
+        session['active_company_id'] = 9
+        response, status_code = agents_route.run_conversation_regression_pipeline.__wrapped__()
+
+    body = response.get_json()
+    assert status_code == 403
+    assert body['success'] is False
