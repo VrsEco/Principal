@@ -38,6 +38,8 @@ sys.path.insert(0, '.')
 from dotenv import load_dotenv
 load_dotenv('.env')
 os.environ.setdefault('FLASK_CONFIG', 'production')
+os.environ['APP_BOOTSTRAP_DB_SCHEMA'] = '0'
+os.environ['APP_BOOTSTRAP_RUNTIME_SERVICES'] = '0'
 from flask_migrate import upgrade
 from app import create_app
 app = create_app('production')
