@@ -1,0 +1,979 @@
+{
+  "date": "2026-03-23",
+  "strategy": "reorganizacao_segura_raiz",
+  "moved_count": 242,
+  "moved": [
+    {
+      "from": ".codex_temp_auth_smoke_meetings_agents_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_auth_smoke_meetings_agents_prod.py"
+    },
+    {
+      "from": ".codex_temp_auth_smoke_pages_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_auth_smoke_pages_prod.py"
+    },
+    {
+      "from": ".codex_temp_auth_write_meetings_agents_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_auth_write_meetings_agents_prod.py"
+    },
+    {
+      "from": ".codex_temp_check_incentives_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_check_incentives_prod.py"
+    },
+    {
+      "from": ".codex_temp_check_register_endpoint_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_check_register_endpoint_prod.py"
+    },
+    {
+      "from": ".codex_temp_close_phase6.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_close_phase6.py"
+    },
+    {
+      "from": ".codex_temp_deploy_key",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_deploy_key"
+    },
+    {
+      "from": ".codex_temp_direct_dashboard_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_direct_dashboard_prod.py"
+    },
+    {
+      "from": ".codex_temp_find_missing_endpoints_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_find_missing_endpoints_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_configr.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_configr.py"
+    },
+    {
+      "from": ".codex_temp_probe_entities_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_entities_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_incentive_companies_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_incentive_companies_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_incentive_module_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_incentive_module_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_incentive_run_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_incentive_run_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_meetings_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_meetings_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_mywork_process_activity_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_mywork_process_activity_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_report_entities_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_report_entities_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_route_modules_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_route_modules_prod.py"
+    },
+    {
+      "from": ".codex_temp_probe_urlmap_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_probe_urlmap_prod.py"
+    },
+    {
+      "from": ".codex_temp_prod_smoke_strategic.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_prod_smoke_strategic.py"
+    },
+    {
+      "from": ".codex_temp_project31_manage_prod.png",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_project31_manage_prod.png"
+    },
+    {
+      "from": ".codex_temp_project_analysis_prod.png",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_project_analysis_prod.png"
+    },
+    {
+      "from": ".codex_temp_project_manage_prod.png",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_project_manage_prod.png"
+    },
+    {
+      "from": ".codex_temp_touch_restart.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_touch_restart.py"
+    },
+    {
+      "from": ".codex_temp_trace_spider_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_trace_spider_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_detail_client_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_detail_client_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_detail_views_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_detail_views_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_incentive_ctor_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_incentive_ctor_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_incentive_manage_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_incentive_manage_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_incentive_routes_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_incentive_routes_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_incentive_rule_ctor_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_incentive_rule_ctor_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_incentives_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_incentives_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_meeting_contracts_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_meeting_contracts_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_process_subpages_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_process_subpages_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_report_endpoints_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_report_endpoints_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_strategic_views_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_strategic_views_prod.py"
+    },
+    {
+      "from": ".codex_temp_validate_write_endpoints_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_validate_write_endpoints_prod.py"
+    },
+    {
+      "from": ".codex_temp_verify_mywork_fix_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_verify_mywork_fix_prod.py"
+    },
+    {
+      "from": ".codex_temp_visual_hitl_manage_prod.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\codex_temp\\.codex_temp_visual_hitl_manage_prod.py"
+    },
+    {
+      "from": "actions_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\actions_out.txt"
+    },
+    {
+      "from": "activities_test_output.json",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\activities_test_output.json"
+    },
+    {
+      "from": "agents_logic_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\agents_logic_REMOTE.py"
+    },
+    {
+      "from": "agents_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\agents_REMOTE.py"
+    },
+    {
+      "from": "agents_route_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\agents_route_REMOTE.py"
+    },
+    {
+      "from": "all_tasks.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\all_tasks.txt"
+    },
+    {
+      "from": "api_out.json",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\api_out.json"
+    },
+    {
+      "from": "api_response.json",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\api_response.json"
+    },
+    {
+      "from": "app.py.remote_backup",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\app.py.remote_backup"
+    },
+    {
+      "from": "apply_sql_v2_status.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\apply_sql_v2_status.txt"
+    },
+    {
+      "from": "audit_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\audit_output.txt"
+    },
+    {
+      "from": "audit_results.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\audit_results.txt"
+    },
+    {
+      "from": "audit_results_v2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\audit_results_v2.txt"
+    },
+    {
+      "from": "check_actions_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\check_actions_output.txt"
+    },
+    {
+      "from": "check_all_dates.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\check_all_dates.txt"
+    },
+    {
+      "from": "check_db_final_v3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\check_db_final_v3.txt"
+    },
+    {
+      "from": "check_db_out_final.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\check_db_out_final.txt"
+    },
+    {
+      "from": "check_db_out_prod.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\check_db_out_prod.txt"
+    },
+    {
+      "from": "collab_debug_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\collab_debug_output.txt"
+    },
+    {
+      "from": "column_types_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\column_types_log.txt"
+    },
+    {
+      "from": "companies_codes.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\companies_codes.txt"
+    },
+    {
+      "from": "companies_data.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\companies_data.txt"
+    },
+    {
+      "from": "companies_list.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\companies_list.txt"
+    },
+    {
+      "from": "company_projects_count.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\company_projects_count.txt"
+    },
+    {
+      "from": "company_projects_schema.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\company_projects_schema.txt"
+    },
+    {
+      "from": "config.py.remote_backup",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\config.py.remote_backup"
+    },
+    {
+      "from": "constraints.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\constraints.log"
+    },
+    {
+      "from": "current_pg_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\current_pg_log.txt"
+    },
+    {
+      "from": "cycle_test_p4.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\cycle_test_p4.txt"
+    },
+    {
+      "from": "db_check_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\db_check_output.txt"
+    },
+    {
+      "from": "db_fix_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\db_fix_output.txt"
+    },
+    {
+      "from": "db_list.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\db_list.txt"
+    },
+    {
+      "from": "debug_error.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\debug_error.txt"
+    },
+    {
+      "from": "debug_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\debug_log.txt"
+    },
+    {
+      "from": "debug_msgs.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\debug_msgs.txt"
+    },
+    {
+      "from": "debug_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\debug_output.txt"
+    },
+    {
+      "from": "deploy_final_confirm.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\deploy_final_confirm.txt"
+    },
+    {
+      "from": "deploy_final_status.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\deploy_final_status.txt"
+    },
+    {
+      "from": "deploy_meeting_fix.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\deploy_meeting_fix.txt"
+    },
+    {
+      "from": "deploy_res.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\deploy_res.txt"
+    },
+    {
+      "from": "deploy_stderr.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\deploy_stderr.txt"
+    },
+    {
+      "from": "deploy_stdout.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\deploy_stdout.txt"
+    },
+    {
+      "from": "diagnose_results.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\diagnose_results.txt"
+    },
+    {
+      "from": "diff.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\diff.txt"
+    },
+    {
+      "from": "diff_full.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\diff_full.txt"
+    },
+    {
+      "from": "employees_fks_report.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\employees_fks_report.txt"
+    },
+    {
+      "from": "emps_test.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\emps_test.txt"
+    },
+    {
+      "from": "err.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\err.txt"
+    },
+    {
+      "from": "error.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\error.log"
+    },
+    {
+      "from": "error_full.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\error_full.txt"
+    },
+    {
+      "from": "error_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\error_log.txt"
+    },
+    {
+      "from": "error_trace.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\error_trace.txt"
+    },
+    {
+      "from": "errors_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\errors_out.txt"
+    },
+    {
+      "from": "example_error.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\example_error.txt"
+    },
+    {
+      "from": "example_error_2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\example_error_2.txt"
+    },
+    {
+      "from": "example_error_3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\example_error_3.txt"
+    },
+    {
+      "from": "example_run_final.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\example_run_final.txt"
+    },
+    {
+      "from": "final_test.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\final_test.txt"
+    },
+    {
+      "from": "fix_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\fix_output.txt"
+    },
+    {
+      "from": "fix_roles_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\fix_roles_output.txt"
+    },
+    {
+      "from": "full_traceback.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\full_traceback.txt"
+    },
+    {
+      "from": "gandu_db_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\gandu_db_out.txt"
+    },
+    {
+      "from": "gandu_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\gandu_output.txt"
+    },
+    {
+      "from": "github_deploy_key_temp",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\orphan_misc\\github_deploy_key_temp"
+    },
+    {
+      "from": "graph_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\graph_REMOTE.py"
+    },
+    {
+      "from": "inspect_titan.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\inspect_titan.txt"
+    },
+    {
+      "from": "inspection_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\inspection_output.txt"
+    },
+    {
+      "from": "inspection_output_2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\inspection_output_2.txt"
+    },
+    {
+      "from": "inspection_output_3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\inspection_output_3.txt"
+    },
+    {
+      "from": "inspection_output_4.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\inspection_output_4.txt"
+    },
+    {
+      "from": "inspection_output_5.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\inspection_output_5.txt"
+    },
+    {
+      "from": "integration_final.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\integration_final.log"
+    },
+    {
+      "from": "integration_test.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\integration_test.log"
+    },
+    {
+      "from": "last_areas.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\last_areas.txt"
+    },
+    {
+      "from": "last_macros.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\last_macros.txt"
+    },
+    {
+      "from": "latest_errors_output.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\latest_errors_output.log"
+    },
+    {
+      "from": "llm_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\llm_REMOTE.py"
+    },
+    {
+      "from": "log_1000.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\log_1000.txt"
+    },
+    {
+      "from": "log_debug_2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\log_debug_2.txt"
+    },
+    {
+      "from": "log_latest.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\log_latest.txt"
+    },
+    {
+      "from": "ls_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\ls_log.txt"
+    },
+    {
+      "from": "ls_www.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\ls_www.txt"
+    },
+    {
+      "from": "memory_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\memory_REMOTE.py"
+    },
+    {
+      "from": "migrate_err.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\migrate_err.txt"
+    },
+    {
+      "from": "migration.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\migration.log"
+    },
+    {
+      "from": "migration_comparison_report.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\migration_comparison_report.txt"
+    },
+    {
+      "from": "missing_endpoints.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\missing_endpoints.txt"
+    },
+    {
+      "from": "null",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\orphan_misc\\null"
+    },
+    {
+      "from": "ops_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\ops_out.txt"
+    },
+    {
+      "from": "out2_utf8.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\out2_utf8.txt"
+    },
+    {
+      "from": "out_acts.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\out_acts.txt"
+    },
+    {
+      "from": "out_msgs.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\out_msgs.txt"
+    },
+    {
+      "from": "out_msgs_new.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\out_msgs_new.txt"
+    },
+    {
+      "from": "out_msgs_REMOTE_NEW.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\out_msgs_REMOTE_NEW.txt"
+    },
+    {
+      "from": "out_proc.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\out_proc.txt"
+    },
+    {
+      "from": "output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\output.txt"
+    },
+    {
+      "from": "output2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\output2.txt"
+    },
+    {
+      "from": "output3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\output3.txt"
+    },
+    {
+      "from": "output_msgs.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\output_msgs.txt"
+    },
+    {
+      "from": "output_msgs2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\output_msgs2.txt"
+    },
+    {
+      "from": "p26_info.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\p26_info.txt"
+    },
+    {
+      "from": "p2_info.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\p2_info.txt"
+    },
+    {
+      "from": "p4_info.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\p4_info.txt"
+    },
+    {
+      "from": "pg_manual.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\pg_manual.log"
+    },
+    {
+      "from": "pg_start.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\pg_start.log"
+    },
+    {
+      "from": "proactive_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\proactive_REMOTE.py"
+    },
+    {
+      "from": "processes_check_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\processes_check_output.txt"
+    },
+    {
+      "from": "processes_patch_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\processes_patch_output.txt"
+    },
+    {
+      "from": "prod_check_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\prod_check_output.txt"
+    },
+    {
+      "from": "prod_root_error.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\prod_root_error.txt"
+    },
+    {
+      "from": "prod_startup_error.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\prod_startup_error.txt"
+    },
+    {
+      "from": "prod_uwsgi_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\prod_uwsgi_log.txt"
+    },
+    {
+      "from": "production_error_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\production_error_log.txt"
+    },
+    {
+      "from": "projects_id5.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\projects_id5.txt"
+    },
+    {
+      "from": "projects_id5_data.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\projects_id5_data.txt"
+    },
+    {
+      "from": "ps_check.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\ps_check.txt"
+    },
+    {
+      "from": "ps_uwsgi.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\ps_uwsgi.txt"
+    },
+    {
+      "from": "push_error.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\push_error.txt"
+    },
+    {
+      "from": "push_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\push_log.txt"
+    },
+    {
+      "from": "qc",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\orphan_misc\\qc"
+    },
+    {
+      "from": "query",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\orphan_misc\\query"
+    },
+    {
+      "from": "real_results.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\real_results.txt"
+    },
+    {
+      "from": "recent_errors_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\recent_errors_out.txt"
+    },
+    {
+      "from": "remote_debug_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\remote_debug_output.txt"
+    },
+    {
+      "from": "remote_env.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\remote_env.txt"
+    },
+    {
+      "from": "remote_log_capture.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\remote_log_capture.txt"
+    },
+    {
+      "from": "remote_log_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\remote_log_output.txt"
+    },
+    {
+      "from": "remote_passenger.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\remote_passenger.txt"
+    },
+    {
+      "from": "remote_passenger_root.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\remote_passenger_root.txt"
+    },
+    {
+      "from": "remote_roles_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\remote_roles_output.txt"
+    },
+    {
+      "from": "request_debug.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\request_debug.log"
+    },
+    {
+      "from": "request_debug_END.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\request_debug_END.log"
+    },
+    {
+      "from": "request_debug_local.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\request_debug_local.log"
+    },
+    {
+      "from": "request_debug_REMOTE.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\request_debug_REMOTE.log"
+    },
+    {
+      "from": "request_debug_tail.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\request_debug_tail.txt"
+    },
+    {
+      "from": "requirements.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\requirements.txt"
+    },
+    {
+      "from": "reset_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\reset_log.txt"
+    },
+    {
+      "from": "reset_log_v2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\reset_log_v2.txt"
+    },
+    {
+      "from": "reset_log_v3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\reset_log_v3.txt"
+    },
+    {
+      "from": "result_children.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\result_children.txt"
+    },
+    {
+      "from": "result_employees.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\result_employees.txt"
+    },
+    {
+      "from": "router_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\router_out.txt"
+    },
+    {
+      "from": "routines_cols.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\routines_cols.log"
+    },
+    {
+      "from": "script_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\script_output.txt"
+    },
+    {
+      "from": "server_error.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\server_error.log"
+    },
+    {
+      "from": "server_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\server_log.txt"
+    },
+    {
+      "from": "simulation_output_v2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\simulation_output_v2.txt"
+    },
+    {
+      "from": "smoke_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\smoke_output.txt"
+    },
+    {
+      "from": "status.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\status.txt"
+    },
+    {
+      "from": "steps_cols.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\steps_cols.log"
+    },
+    {
+      "from": "tables.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\tables.txt"
+    },
+    {
+      "from": "tables_utf8.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\tables_utf8.txt"
+    },
+    {
+      "from": "tasks_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\tasks_output.txt"
+    },
+    {
+      "from": "tasks_p2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\tasks_p2.txt"
+    },
+    {
+      "from": "tb_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\tb_out.txt"
+    },
+    {
+      "from": "telegram_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\telegram_REMOTE.py"
+    },
+    {
+      "from": "test_api_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_api_out.txt"
+    },
+    {
+      "from": "test_api_out_3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_api_out_3.txt"
+    },
+    {
+      "from": "test_api_out_6.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_api_out_6.txt"
+    },
+    {
+      "from": "test_collaboration_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_collaboration_output.txt"
+    },
+    {
+      "from": "test_endpoints.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_endpoints.log"
+    },
+    {
+      "from": "test_enhanced_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_enhanced_output.txt"
+    },
+    {
+      "from": "test_my_work_colab.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_my_work_colab.log"
+    },
+    {
+      "from": "test_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_out.txt"
+    },
+    {
+      "from": "test_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\test_output.txt"
+    },
+    {
+      "from": "teste_saida.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\teste_saida.txt"
+    },
+    {
+      "from": "teste_saida2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\teste_saida2.txt"
+    },
+    {
+      "from": "testrender.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\testrender.txt"
+    },
+    {
+      "from": "tg_log.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\tg_log.txt"
+    },
+    {
+      "from": "tmp_env_prod",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\orphan_misc\\tmp_env_prod"
+    },
+    {
+      "from": "tool_context_REMOTE.py",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\legacy_backups\\tool_context_REMOTE.py"
+    },
+    {
+      "from": "tool_test_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\tool_test_output.txt"
+    },
+    {
+      "from": "trace_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trace_output.txt"
+    },
+    {
+      "from": "trace_output_clean.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trace_output_clean.txt"
+    },
+    {
+      "from": "trigger_test_err.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trigger_test_err.txt"
+    },
+    {
+      "from": "trigger_test_final.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trigger_test_final.txt"
+    },
+    {
+      "from": "trigger_test_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trigger_test_out.txt"
+    },
+    {
+      "from": "trigger_test_v2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trigger_test_v2.txt"
+    },
+    {
+      "from": "trigger_test_v3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trigger_test_v3.txt"
+    },
+    {
+      "from": "trigger_test_v4.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trigger_test_v4.txt"
+    },
+    {
+      "from": "trigger_test_v5.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\trigger_test_v5.txt"
+    },
+    {
+      "from": "upgrade_err.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\upgrade_err.txt"
+    },
+    {
+      "from": "upgrade_err_2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\upgrade_err_2.txt"
+    },
+    {
+      "from": "user_info.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\user_info.txt"
+    },
+    {
+      "from": "user_roles_out.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\user_roles_out.txt"
+    },
+    {
+      "from": "users_debug.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\users_debug.txt"
+    },
+    {
+      "from": "users_output.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\users_output.txt"
+    },
+    {
+      "from": "uwsgi.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi.log"
+    },
+    {
+      "from": "uwsgi_after_restore.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_after_restore.txt"
+    },
+    {
+      "from": "uwsgi_app_final.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_app_final.log"
+    },
+    {
+      "from": "uwsgi_app_prod.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_app_prod.log"
+    },
+    {
+      "from": "uwsgi_app_real.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_app_real.log"
+    },
+    {
+      "from": "uwsgi_current.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_current.log"
+    },
+    {
+      "from": "uwsgi_final_check.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_final_check.log"
+    },
+    {
+      "from": "uwsgi_prod.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_prod.log"
+    },
+    {
+      "from": "uwsgi_restart_error.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_restart_error.txt"
+    },
+    {
+      "from": "uwsgi_shim_check.log",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_shim_check.log"
+    },
+    {
+      "from": "uwsgi_tail.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_tail.txt"
+    },
+    {
+      "from": "uwsgi_tail_v2.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_tail_v2.txt"
+    },
+    {
+      "from": "uwsgi_tail_v3.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_tail_v3.txt"
+    },
+    {
+      "from": "uwsgi_tail_v4.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\uwsgi_tail_v4.txt"
+    },
+    {
+      "from": "webhook_err.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\webhook_err.txt"
+    },
+    {
+      "from": "webhook_info.txt",
+      "to": "archive\\temporary\\root_reorg_2026-03-23\\generated_reports\\webhook_info.txt"
+    }
+  ],
+  "notes": [
+    "Somente artefatos gerados, temporarios, backups remotos e arquivos orfaos foram removidos da raiz.",
+    "Arquivos Python raiz e configuracoes de runtime foram mantidos para evitar quebra operacional."
+  ]
+}
