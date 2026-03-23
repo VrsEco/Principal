@@ -1,0 +1,35 @@
+<section class="budget-panel">
+    <div class="budget-panel__header">
+        <p class="budget-eyebrow">Filtros</p>
+        <h2>Versão e período</h2>
+    </div>
+    <div class="budget-panel__body">
+        <form id="budget-matrix-filters" class="budget-filters-grid">
+            <label class="budget-field">
+                <span>Versão</span>
+                <select name="budget_version_id">
+                    <option value="">Selecione</option>
+                    {% for version in versions %}
+                        <option value="{{ version.id }}" {% if active_version and version.id == active_version.id %}selected{% endif %}>{{ version.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="budget-field">
+                <span>Início</span>
+                <input type="date" name="period_start" value="{{ active_version.period_start if active_version and active_version.period_start else '' }}">
+            </label>
+            <label class="budget-field">
+                <span>Fim</span>
+                <input type="date" name="period_end" value="{{ active_version.period_end if active_version and active_version.period_end else '' }}">
+            </label>
+            <label class="budget-field">
+                <span>Cenário</span>
+                <select name="scenario_type">
+                    <option value="original">Original</option>
+                    <option value="forecast">Forecast</option>
+                    <option value="reforecast">Reforecast</option>
+                </select>
+            </label>
+        </form>
+    </div>
+</section>

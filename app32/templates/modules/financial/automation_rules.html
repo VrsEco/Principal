@@ -144,6 +144,9 @@
     .badge { display:inline-flex; align-items:center; border-radius:999px; padding:.25rem .6rem; font-size:.72rem; font-weight:700; }
     .badge--active { background:#dcfce7; color:#15803d; }
     .badge--inactive { background:#e2e8f0; color:#475569; }
+    .amount-pill { font-weight:800; font-variant-numeric:tabular-nums; }
+    .amount-pill--negative { color:#dc2626; }
+    .amount-pill--positive { color:#2563eb; }
     .col-span-2 { grid-column: span 2; }
     @media (max-width: 1100px) { .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width: 720px) { .finance-page { padding:0 1rem 1.5rem; } .form-grid { grid-template-columns:1fr; } .col-span-2 { grid-column:auto; } }
@@ -362,13 +365,21 @@
         return data;
     }
 
+    function money(value) {
+        return Number(value || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+    }
+
+    function amountClass(value) {
+        return Number(value || 0) < 0 ? 'amount-pill amount-pill--negative' : 'amount-pill amount-pill--positive';
+    }
+
     function ruleRow(item) {
         return `
             <tr>
                 <td>${item.rule_code}<br><small>${item.name}</small></td>
                 <td>Processo: ${item.process_id || '-'}<br>Atividade: ${item.activity_id || '-'}</td>
                 <td>${item.trigger_status}</td>
-                <td>${item.entry_type} / ${item.movement_nature}<br><small>${Number(item.template_amount || 0).toLocaleString('pt-BR', { style:'currency', currency: item.currency_code || 'BRL' })}</small></td>
+                <td>${item.entry_type} / ${item.movement_nature}<br><small class="${amountClass(item.signed_template_amount ?? item.template_amount)}">${money(item.signed_template_amount ?? item.template_amount)}</small></td>
                 <td><span class="badge ${item.is_active ? 'badge--active' : 'badge--inactive'}">${item.is_active ? 'ativa' : 'inativa'}</span></td>
                 <td>
                     <div style="display:flex; gap:.5rem; flex-wrap:wrap;">

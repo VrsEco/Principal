@@ -1,0 +1,141 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Lista de Agendamentos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Agendamentos</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="sched-navbar-filter-count" id="schedule-filters-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="sched-list-page" data-company-id="{{ company_id or '' }}">
+    <header class="sched-list-header">
+        <div>
+            <h1>Agendamentos</h1>
+            <p class="sched-list-subtitle">Visão operacional com filtros, subtotais e ações rápidas para pagamento e recebimento.</p>
+        </div>
+        <div class="sched-list-actions">
+            <a class="btn btn-secondary" href="/financial/schedules/new?entry_type=receivable">Criar agendamento a receber</a>
+            <a class="btn btn-primary" href="/financial/schedules/new?entry_type=payable">Criar agendamento a pagar</a>
+        </div>
+    </header>
+
+    <section class="sched-list-kpis" id="schedule-kpis">
+        <article class="sched-kpi"><span>Total</span><strong>0</strong><small>Agendamentos filtrados</small></article>
+        <article class="sched-kpi"><span>A Receber</span><strong>R$ 0,00</strong><small>Saldo em recebimentos</small></article>
+        <article class="sched-kpi"><span>A Pagar</span><strong>R$ 0,00</strong><small>Saldo em pagamentos</small></article>
+        <article class="sched-kpi"><span>Em Aberto</span><strong>0</strong><small>Sem baixa integral</small></article>
+    </section>
+
+    <section class="sched-list-card">
+        <div class="sched-table-wrap">
+            <table class="sched-table">
+                <thead>
+                    <tr>
+                        <th>Situação</th>
+                        <th>ID</th>
+                        <th>Histórico</th>
+                        <th>Tipo</th>
+                        <th>Valor Título</th>
+                        <th>Saldo</th>
+                        <th>Favorecido</th>
+                        <th>Competência</th>
+                        <th>Vencimento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-table-body">
+                    <tr><td colspan="10" class="empty-state">Carregando agendamentos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<link rel="stylesheet" href="/static/css/financial_schedules_list.css">
+<script src="/static/js/financial_schedules_list.js"></script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="sched-sidebar-subtitle">Padrão obrigatório: filtros na sidebar direita acionada pelo cabeçalho.</p>
+</div>
+
+<div class="sidebar-content-ws sched-sidebar-filters">
+    <div class="filter-group">
+        <label class="filter-label">Buscar</label>
+        <input id="schedule-filter-search" type="search" placeholder="Código, histórico ou favorecido">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Tipo</label>
+        <select id="schedule-filter-type" class="filter-select">
+            <option value="">Todos</option>
+            <option value="payable">Pagamentos</option>
+            <option value="receivable">Recebimentos</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Liquidação</label>
+        <select id="schedule-filter-settlement" class="filter-select">
+            <option value="">Todos</option>
+            <option value="open">Em aberto</option>
+            <option value="partial">Liquidado parcial</option>
+            <option value="settled">Liquidado</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Favorecido</label>
+        <input id="schedule-filter-counterparty" type="search" placeholder="Nome do favorecido">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Vencimento De</label>
+        <input id="schedule-filter-due-date-from" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Vencimento Até</label>
+        <input id="schedule-filter-due-date-to" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Competência De</label>
+        <input id="schedule-filter-competence-date-from" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Competência Até</label>
+        <input id="schedule-filter-competence-date-to" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Valor do Título</label>
+        <input id="schedule-filter-title-amount" type="number" min="0" step="0.01" placeholder="Valor original">
+    </div>
+
+    <div class="sched-sidebar-actions">
+        <button type="button" class="btn btn-primary w-100" onclick="closeAllSidebars()">Aplicar Filtros</button>
+        <button type="button" class="btn btn-secondary w-100 mt-2" id="schedule-clear-filters">Limpar filtros</button>
+    </div>
+</div>
+{% endblock %}

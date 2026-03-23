@@ -11,28 +11,15 @@
 {% endblock %}
 
 {% block workspace_content %}
-<div class="sched-page" data-company-id="{{ company_id or '' }}" data-schedule-id="{{ schedule_id or '' }}" data-entry-type="receivable">
+<div class="sched-page sched-page--form" data-company-id="{{ company_id or '' }}" data-schedule-id="{{ schedule_id or '' }}" data-entry-type="" data-initial-entry-type="{{ initial_entry_type or '' }}">
     <header class="sched-header">
-        <div><h1>Agendamentos Financeiros</h1></div>
-        <div class="sched-header-actions">
-            <button type="button" class="btn btn-secondary" onclick="generateDueSchedules()">Gerar vencidos</button>
-            <button type="button" class="btn btn-primary" onclick="startNewSchedule()">Novo agendamento</button>
+        <div>
+            <h1>{{ 'Editar Agendamento' if schedule_id else 'Novo Agendamento' }}</h1>
+            <p class="sched-header-subtitle">Cadastro individual do agendamento. O retorno operacional acontece na lista de agendamentos.</p>
         </div>
     </header>
 
-    <section class="sched-shell">
-        <aside class="sched-rail">
-            <div class="sched-card rail-card">
-                <label class="sched-search">
-                    <span>Buscar</span>
-                    <input id="schedule-search" type="search" placeholder="Histórico, favorecido ou código">
-                </label>
-                <div id="schedule-list" class="schedule-list">
-                    <div class="empty-state">Carregando agendamentos...</div>
-                </div>
-            </div>
-        </aside>
-
+    <section class="sched-shell sched-shell--form">
         <main class="sched-main">
             <section class="sched-card">
                 <div class="sched-tabs">
@@ -46,14 +33,10 @@
                     <input type="hidden" name="schedule_id">
                     <input type="hidden" name="schedule_code">
                     <input type="hidden" name="status" value="active">
-                    <input type="hidden" name="entry_type" value="receivable">
+                    <input type="hidden" name="entry_type" value="">
 
                     <section class="sched-tab-panel active" data-panel="agendamento">
-                        <div class="sched-type-switch" role="group" aria-label="Tipo do agendamento">
-                            <button type="button" class="type-chip active" data-entry-type="receivable" onclick="setEntryType('receivable')">Conta a Receber</button>
-                            <button type="button" class="type-chip" data-entry-type="payable" onclick="setEntryType('payable')">Conta a Pagar</button>
-                        </div>
-                        <div id="entry-type-banner" class="sched-type-banner sched-type-banner--receivable">Conta a receber · preenchimento orientado para recebimentos.</div>
+                        <div id="entry-type-banner" class="sched-type-banner">Selecione Recebimentos ou Pagamentos para iniciar o agendamento. Após escolher, o tipo fica travado.</div>
 
                         <div class="sched-grid sched-grid-main">
                             <label class="field field-span-4">

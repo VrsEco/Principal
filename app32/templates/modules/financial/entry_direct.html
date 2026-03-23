@@ -11,13 +11,16 @@
 {% endblock %}
 
 {% block workspace_content %}
-<div class="direct-entry-page" data-company-id="{{ company_id or '' }}" data-entry-type="payable">
+<div class="direct-entry-page" data-company-id="{{ company_id or '' }}" data-entry-type="payable" data-initial-entry-type="{{ initial_entry_type or '' }}">
     <header class="direct-entry-header">
-        <div><h1>Lançamento Rápido</h1></div>
+        <div>
+            <h1>Lançamento Rápido</h1>
+            <p class="direct-entry-header-subtitle">Cadastro rápido com a mesma formatação operacional dos Agendamentos.</p>
+        </div>
     </header>
 
     <section class="direct-entry-card">
-        <div class="direct-entry-type-switch" role="group" aria-label="Tipo do lançamento rápido">
+        <div id="direct-entry-type-switch" class="direct-entry-type-switch" role="group" aria-label="Tipo do lançamento rápido">
             <button type="button" class="type-chip active" data-entry-type="payable" onclick="setDirectEntryType('payable')">Conta a Pagar</button>
             <button type="button" class="type-chip" data-entry-type="receivable" onclick="setDirectEntryType('receivable')">Conta a Receber</button>
         </div>
@@ -26,7 +29,7 @@
         <form id="direct-entry-form" class="direct-entry-form">
             <input type="hidden" name="entry_type" value="payable">
 
-            <section class="form-block">
+            <section class="form-block form-block--main">
                 <div class="form-grid">
                     <label class="field field-span-4">
                         <span>Histórico</span>
@@ -45,16 +48,12 @@
                         </div>
                     </label>
                     <label class="field field-span-1">
-                        <span>Valor</span>
+                        <span>Valor do Título</span>
                         <input id="direct-amount" name="original_amount_display" inputmode="numeric" autocomplete="off" placeholder="0,00" required>
                     </label>
-                    <label class="field field-span-1">
+                    <label class="field field-span-2">
                         <span>Correção Financeira</span>
                         <select id="direct-correction-index" name="correction_index_id"></select>
-                    </label>
-                    <label class="field field-span-1">
-                        <span>Desconto</span>
-                        <select id="direct-discount-rule" name="discount_rule_id"></select>
                     </label>
 
                     <label class="field field-span-2">
@@ -62,12 +61,16 @@
                         <input id="direct-competence-date" name="competence_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
                     </label>
                     <label class="field field-span-2">
-                        <span>Data do lançamento</span>
-                        <input id="direct-occurred-on" name="occurred_on_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
-                    </label>
-                    <label class="field field-span-2">
                         <span>Vencimento</span>
                         <input id="direct-due-date" name="due_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa">
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Desconto</span>
+                        <select id="direct-discount-rule" name="discount_rule_id"></select>
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Data do lançamento</span>
+                        <input id="direct-occurred-on" name="occurred_on_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
                     </label>
                     <label class="field field-span-2">
                         <span>Conta bancária</span>
@@ -104,7 +107,7 @@
 
             <footer class="direct-entry-actions">
                 <a href="/financial/entries" class="btn btn-secondary">Cancelar</a>
-                <button type="button" class="btn btn-primary" onclick="saveDirectEntry(false)">Salvar e Novo</button>
+                <button type="button" class="btn btn-secondary" onclick="saveDirectEntry(false)">Salvar e Novo</button>
                 <button type="button" class="btn btn-success" onclick="saveDirectEntry(true)">Salvar e Abrir Lançamento</button>
             </footer>
         </form>

@@ -1027,6 +1027,108 @@ def run_mcp_server():
         return {"success": True, **result}
 
     @mcp.tool()
+    def list_financial_budget_versions(company_id: int) -> dict:
+        """
+        Lista versões do orçamento matricial financeiro da empresa.
+        """
+        from services.financial_budget_service import FinancialBudgetService
+
+        result, error = _run_financial_action(
+            FinancialBudgetService.list_versions,
+            company_id=company_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "items": result, "count": len(result)}
+
+    @mcp.tool()
+    def create_financial_budget_version(payload: dict) -> dict:
+        """
+        Cria uma nova versão de orçamento matricial financeiro.
+        """
+        from services.financial_budget_service import FinancialBudgetService
+
+        result, error = _run_financial_action(
+            FinancialBudgetService.create_version,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def duplicate_financial_budget_version(company_id: int, version_id: int, payload: Optional[dict] = None) -> dict:
+        """
+        Duplica uma versão existente do orçamento matricial financeiro.
+        """
+        from services.financial_budget_version_clone_service import FinancialBudgetVersionCloneService
+
+        result, error = _run_financial_action(
+            FinancialBudgetVersionCloneService.duplicate_version,
+            company_id=company_id,
+            source_version_id=version_id,
+            payload=payload or {},
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def get_financial_budget_matrix(company_id: int, version_id: int) -> dict:
+        """
+        Retorna a matriz orçamentária de uma versão financeira.
+        """
+        from services.financial_budget_service import FinancialBudgetService
+
+        result, error = _run_financial_action(
+            FinancialBudgetService.get_matrix,
+            company_id=company_id,
+            version_id=version_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def upsert_financial_budget_matrix(payload: dict) -> dict:
+        """
+        Atualiza ou cria linhas e valores da matriz orçamentária financeira.
+        """
+        from services.financial_budget_service import FinancialBudgetService
+
+        result, error = _run_financial_action(
+            FinancialBudgetService.upsert_matrix,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def import_financial_budget_matrix(company_id: int, version_id: int, file_name: str, file_base64: str) -> dict:
+        """
+        Importa uma planilha XLSX da matriz orçamentária financeira.
+        """
+        import base64
+        from services.financial_budget_import_service import FinancialBudgetImportService
+
+        try:
+            file_bytes = base64.b64decode(file_base64)
+        except Exception:
+            return {"success": False, "error": "file_base64 inválido para importação da matriz orçamentária."}
+
+        result, error = _run_financial_action(
+            FinancialBudgetImportService.import_matrix_file,
+            company_id=company_id,
+            version_id=version_id,
+            file_name=file_name,
+            file_bytes=file_bytes,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
     def ask_user_for_financial_classification(
         company_id: int,
         import_row_id: int,

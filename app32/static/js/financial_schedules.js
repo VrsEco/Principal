@@ -4,8 +4,11 @@
 
   const companyId = Number(page.dataset.companyId || 0);
   const initialScheduleId = Number(page.dataset.scheduleId || 0);
+  const initialEntryType = String(page.dataset.initialEntryType || '').trim().toLowerCase();
+  const isFormMode = page.classList.contains('sched-page--form');
   let schedules = [];
   let selectedSchedule = null;
+  let entryTypeLocked = false;
   let optionsCache = { counterparties: [], chart_accounts: [], cost_centers: [], correction_indexes: [], discount_rules: [], enabled_domains: [] };
   let allocationRows = [];
   let pendingAttachments = [];
@@ -14,6 +17,8 @@
   const form = $('schedule-form');
   const entryTypeBanner = $('entry-type-banner');
   const rateioSummary = $('rateio-summary');
+  const scheduleListEl = $('schedule-list');
+  const scheduleSearchEl = $('schedule-search');
 
   const revokePendingUrls = () => pendingAttachments.forEach((item) => { try { URL.revokeObjectURL(item.url); } catch (_) {} });
   const clearPendingAttachments = () => { revokePendingUrls(); pendingAttachments = []; };
@@ -68,6 +73,11 @@
   };
 
   const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const signedAmount = (value, movementNature) => {
+    const normalized = Math.abs(Number(value || 0));
+    return movementNature === 'debit' ? normalized * -1 : normalized;
+  };
+  const amountClass = (value) => Number(value || 0) < 0 ? 'amount-negative' : 'amount-positive';
   const statusLabel = (status) => ({ active: 'Ativo', paused: 'Pausado', draft: 'Rascunho', completed: 'Concluído', cancelled: 'Cancelado' }[status] || status || 'Sem status');
   const statusClass = (status) => status === 'active' ? 'badge badge--active' : status === 'completed' ? 'badge badge--completed' : status === 'cancelled' ? 'badge badge--cancelled' : 'badge badge--draft';
 
@@ -86,16 +96,34 @@
   function updateEntryTypePresentation(entryType) {
     page.dataset.entryType = entryType;
     if (!entryTypeBanner) return;
+    if (!entryType) {
+      entryTypeBanner.textContent = 'Selecione Recebimentos ou Pagamentos para iniciar o agendamento. Após escolher, o tipo fica travado.';
+      return;
+    }
     const receivable = entryType === 'receivable';
     entryTypeBanner.textContent = receivable
-      ? 'Conta a receber · preenchimento orientado para recebimentos.'
-      : 'Conta a pagar · preenchimento orientado para pagamentos.';
+      ? `Recebimentos · tipo travado para este agendamento. Para trocar, cancele e crie um novo.`
+      : `Pagamentos · tipo travado para este agendamento. Para trocar, cancele e crie um novo.`;
   }
 
-  window.setEntryType = (entryType) => {
+  function applyEntryType(entryType, { locked = false } = {}) {
+    entryTypeLocked = locked;
     form.querySelector('input[name="entry_type"]').value = entryType;
-    document.querySelectorAll('.type-chip').forEach((chip) => chip.classList.toggle('active', chip.dataset.entryType === entryType));
+    document.querySelectorAll('.type-chip').forEach((chip) => {
+      const isActive = chip.dataset.entryType === entryType;
+      chip.classList.toggle('active', isActive);
+      chip.classList.toggle('is-locked', entryTypeLocked && isActive);
+      chip.classList.toggle('is-disabled', entryTypeLocked && !isActive);
+      chip.disabled = entryTypeLocked;
+    });
     updateEntryTypePresentation(entryType);
+  }
+
+  window.setEntryType = (entryType) => applyEntryType(entryType, { locked: entryTypeLocked });
+
+  window.chooseEntryType = (entryType) => {
+    if (entryTypeLocked) return;
+    applyEntryType(entryType, { locked: true });
   };
 
   window.toggleRepeatFields = () => {
@@ -249,12 +277,13 @@
   };
 
   function renderList() {
-    const search = ($('schedule-search').value || '').trim().toLowerCase();
+    if (!scheduleListEl || !scheduleSearchEl) return;
+    const search = (scheduleSearchEl.value || '').trim().toLowerCase();
     const items = schedules.filter((item) => `${item.schedule_code || ''} ${item.description || item.name || ''} ${item.metadata_json?.counterparty_name || ''}`.toLowerCase().includes(search));
-    $('schedule-list').innerHTML = items.length ? items.map((item) => `
+    scheduleListEl.innerHTML = items.length ? items.map((item) => `
       <article class="schedule-item ${selectedSchedule && selectedSchedule.id === item.id ? 'active' : ''}" data-id="${item.id}">
         <strong>${item.description || item.name || 'Sem histórico'}</strong>
-        <small>${item.schedule_code || '-'} · ${money(item.template_amount || 0)}</small>
+        <small>${item.schedule_code || '-'} · <span class="${amountClass(item.signed_template_amount ?? 0)}">${money(item.signed_template_amount ?? item.template_amount ?? 0)}</span></small>
         <div class="schedule-item-meta"><span class="${statusClass(item.status)}">${statusLabel(item.status)}</span><small>${formatIso(item.next_due_date || item.first_due_date)}</small></div>
       </article>`).join('') : '<div class="empty-state">Nenhum agendamento encontrado.</div>';
   }
@@ -290,7 +319,7 @@
     $('baixas-list').innerHTML = entries.map((entry, index) => `
       <article class="baixa-card">
         <strong>${index + 1}. ${entry.description || 'Baixa sem histórico'}</strong>
-        <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · ${money(entry.original_amount || 0)}</small>
+        <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · <span class="${amountClass(entry.signed_amount ?? 0)}">${money(entry.signed_amount ?? signedAmount(entry.original_amount, entry.movement_nature))}</span></small>
         <table class="settlement-table">
           <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Valor</th><th>Multa</th><th>Juros</th><th>Desconto</th></tr></thead>
           <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlement.penalty_amount || 0)}</td><td>${money(settlement.interest_amount || 0)}</td><td>${money(settlement.discount_amount || 0)}</td></tr>`).join('') : '<tr><td colspan="7">Sem liquidações registradas.</td></tr>'}</tbody>
@@ -320,7 +349,7 @@
     form.schedule_id.value = schedule.id || '';
     form.schedule_code.value = schedule.schedule_code || '';
     form.status.value = schedule.status || 'active';
-    window.setEntryType(schedule.entry_type || 'receivable');
+    applyEntryType(schedule.entry_type || '', { locked: true });
     $('field-description').value = schedule.description || schedule.name || '';
     $('field-document-number').value = schedule.document_number || '';
     $('field-counterparty').value = schedule.counterparty_id || '';
@@ -349,6 +378,9 @@
   }
 
   function buildPayload() {
+    if (!form.entry_type.value) {
+      throw new Error('Escolha primeiro se o agendamento é de Recebimentos ou Pagamentos.');
+    }
     const description = $('field-description').value.trim();
     const counterpartyId = Number($('field-counterparty').value || 0);
     const competenceIso = parseDateToIso($('field-competence').value);
@@ -426,7 +458,7 @@
     schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}`);
     renderList();
     if (initialScheduleId && !selectedSchedule) return selectSchedule(initialScheduleId);
-    if (!selectedSchedule) window.startNewSchedule();
+    if (!selectedSchedule) window.startNewSchedule(initialEntryType);
   }
 
   window.selectSchedule = async (scheduleId) => {
@@ -435,13 +467,13 @@
     renderList();
   };
 
-  window.startNewSchedule = () => {
+  window.startNewSchedule = (entryType = initialEntryType) => {
     selectedSchedule = null;
     form.reset();
     form.schedule_id.value = '';
     form.schedule_code.value = '';
     form.status.value = 'active';
-    window.setEntryType('receivable');
+    applyEntryType(entryType || '', { locked: !!entryType });
     clearPendingAttachments();
     allocationRows = [createAllocationRow({ percentage: '100' })];
     recalculateAllRowsFromPercentages();
@@ -467,16 +499,20 @@
       await flushPendingAttachments(saved.id);
     }
     selectedSchedule = saved;
-    await loadSchedules();
-    if (saved.id) await window.selectSchedule(saved.id);
+    if (isFormMode) {
+      if (saved.id) await window.selectSchedule(saved.id);
+    } else {
+      await loadSchedules();
+      if (saved.id) await window.selectSchedule(saved.id);
+    }
     return saved;
   }
 
   window.handleScheduleAction = async (action) => {
     try {
-      if (action === 'cancel') return window.startNewSchedule();
+      if (action === 'cancel') return window.location.href = '/financial/schedules';
       const saved = await saveSchedule();
-      if (action === 'save_and_new') return window.startNewSchedule();
+      if (action === 'save_and_new') return window.startNewSchedule(initialEntryType);
       if (action === 'save_and_back') return window.location.href = '/financial/schedules';
       if (action === 'save_and_settle') {
         const result = await fetchJson(`/api/financial/schedules/${saved.id}/create-entry?company_id=${companyId}`, { method: 'POST' });
@@ -590,7 +626,7 @@
     }
   });
 
-  $('schedule-search').addEventListener('input', renderList);
+  if (scheduleSearchEl) scheduleSearchEl.addEventListener('input', renderList);
 
   $('field-amount').addEventListener('input', (event) => {
     event.target.value = formatCurrencyFromDigits(event.target.value);
@@ -699,15 +735,25 @@
     if (button) deleteAttachment(button.dataset.attachmentDelete);
   });
 
-  $('schedule-list').addEventListener('click', (event) => {
-    const item = event.target.closest('.schedule-item[data-id]');
-    if (item) window.selectSchedule(Number(item.dataset.id));
-  });
+  if (scheduleListEl) {
+    scheduleListEl.addEventListener('click', (event) => {
+      const item = event.target.closest('.schedule-item[data-id]');
+      if (item) window.selectSchedule(Number(item.dataset.id));
+    });
+  }
 
   document.addEventListener('DOMContentLoaded', async () => {
     try {
       await loadOptions();
-      await loadSchedules();
+      if (isFormMode) {
+        if (initialScheduleId) {
+          await window.selectSchedule(initialScheduleId);
+        } else {
+          window.startNewSchedule(initialEntryType);
+        }
+      } else {
+        await loadSchedules();
+      }
       window.toggleRepeatFields();
     } catch (error) {
       alert(error.message);

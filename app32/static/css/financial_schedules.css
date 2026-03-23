@@ -28,6 +28,11 @@
   margin-bottom: 1rem;
 }
 
+.sched-header-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
 .sched-header-actions,
 .rateio-actions,
 .sched-footer-actions,
@@ -43,6 +48,10 @@
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
+}
+
+.sched-shell--form {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .sched-rail {
@@ -194,6 +203,15 @@
   border-color: var(--form-tint-text);
 }
 
+.type-chip.is-locked {
+  cursor: not-allowed;
+}
+
+.type-chip.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .sched-type-banner {
   display: flex;
   align-items: center;
@@ -280,6 +298,16 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
+}
+
+.amount-negative {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.amount-positive {
+  color: #2563eb;
+  font-weight: 800;
 }
 
 .rateio-summary {

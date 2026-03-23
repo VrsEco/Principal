@@ -48,6 +48,11 @@ from .financial import (
     FinancialClassificationSuggestion,
     FinancialIngestionRecord,
 )
+from .financial_budget import (
+    FinancialBudgetVersion,
+    FinancialBudgetLine,
+    FinancialBudgetAmount,
+)
 
 # Operations & Governance
 from .meeting import Meeting, MeetingAgendaItem
@@ -87,6 +92,7 @@ __all__ = [
     'Routine', 'RoutineCollaborator',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialClosing', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialPaymentTerm', 'FinancialSchedule',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',
+    'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
     'UiCatalog', 'UserLog',

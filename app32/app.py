@@ -509,6 +509,14 @@ def register_api_resources(api):
         FinancialReportGenerateResource,
         FinancialExecutiveDashboardResource,
     )
+    from api.resources.financial_budget import (
+        FinancialBudgetVersionListResource,
+        FinancialBudgetVersionResource,
+        FinancialBudgetVersionDuplicateResource,
+        FinancialBudgetMatrixResource,
+        FinancialBudgetOptionsResource,
+        FinancialBudgetImportResource,
+    )
 
     api.add_resource(CompanyListResource, '/api/companies')
     api.add_resource(CompanyResource, '/api/companies/<int:company_id>')
@@ -652,6 +660,16 @@ def register_api_resources(api):
     api.add_resource(FinancialReportTypeListResource, '/api/financial/reports/types')
     api.add_resource(FinancialReportGenerateResource, '/api/financial/reports/generate')
     api.add_resource(FinancialExecutiveDashboardResource, '/api/financial/dashboard')
+    api.add_resource(FinancialBudgetVersionListResource, '/api/financial/budget/versions')
+    api.add_resource(FinancialBudgetVersionResource, '/api/financial/budget/versions/<int:version_id>')
+    api.add_resource(FinancialBudgetVersionDuplicateResource, '/api/financial/budget/versions/<int:version_id>/duplicate')
+    api.add_resource(
+        FinancialBudgetMatrixResource,
+        '/api/financial/budget/versions/<int:version_id>/lines',
+        '/api/financial/budget/versions/<int:version_id>/matrix',
+    )
+    api.add_resource(FinancialBudgetOptionsResource, '/api/financial/budget/options')
+    api.add_resource(FinancialBudgetImportResource, '/api/financial/budget/versions/<int:version_id>/import')
 
 def register_blueprints(app):
     # Route to serve uploaded files

@@ -11,10 +11,7 @@ from models import db, FinancialEntry, FinancialEntryAllocation, FinancialSchedu
 from schemas.financial import (
     financial_entry_allocation_schema,
     financial_entry_allocations_schema,
-    financial_entry_schema,
-    financial_entries_schema,
     financial_settlement_schema,
-    financial_settlements_schema,
 )
 from services.financial_service import FinancialService
 from services.financial_import_service import FinancialImportService
@@ -46,26 +43,7 @@ PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o s
 
 
 def _serialize_entry(entry: FinancialEntry) -> dict:
-    payload = financial_entry_schema.dump(entry)
-    payload["allocations"] = financial_entry_allocations_schema.dump(
-        FinancialEntryAllocation.query.filter(
-            FinancialEntryAllocation.company_id == entry.company_id,
-            FinancialEntryAllocation.financial_entry_id == entry.id,
-            FinancialEntryAllocation.deleted_at.is_(None),
-        )
-        .order_by(FinancialEntryAllocation.id.asc())
-        .all()
-    )
-    payload["settlements"] = financial_settlements_schema.dump(
-        FinancialSettlement.query.filter(
-            FinancialSettlement.company_id == entry.company_id,
-            FinancialSettlement.financial_entry_id == entry.id,
-            FinancialSettlement.deleted_at.is_(None),
-        )
-        .order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc())
-        .all()
-    )
-    return payload
+    return FinancialService.serialize_entry(entry)
 
 
 def _recalculate_entry_status(entry: FinancialEntry) -> None:
@@ -135,7 +113,7 @@ class FinancialEntryListResource(Resource):
             query = query.filter(FinancialEntry.competence_date <= competence_date_to)
 
         entries = query.order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc()).all()
-        return financial_entries_schema.dump(entries), 200
+        return [FinancialService.serialize_entry(entry, include_children=False) for entry in entries], 200
 
     @permission_required("financial", "create")
     def post(self):
@@ -523,6 +501,18 @@ class FinancialScheduleResource(Resource):
             schedule_id=schedule_id,
             company_id=company_id,
             payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "delete")
+    def delete(self, schedule_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialScheduleService.delete_schedule(
+            schedule_id=schedule_id,
+            company_id=company_id,
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

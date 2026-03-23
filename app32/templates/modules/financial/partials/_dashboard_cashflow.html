@@ -1,0 +1,30 @@
+<section class="dash-panel">
+    <div class="dash-panel__header">
+        <p class="dash-eyebrow">Fluxo de caixa</p>
+        <h2>Posição e projeção</h2>
+        <p class="dash-muted">Transferências bancárias ficam fora deste relatório e lançamentos não financeiros não entram em vencimento nem liquidação.</p>
+    </div>
+    <div class="dash-panel__body dash-stack">
+        <div id="cashflow-overdue" class="dash-metric-grid"></div>
+        <div class="dash-periods">
+            <article class="dash-period-card">
+                <div class="dash-title-row">
+                    <div>
+                        <strong>Período atual</strong>
+                        <div id="cashflow-period-current" class="dash-muted"></div>
+                    </div>
+                </div>
+                <div id="cashflow-current" class="dash-period-card__grid"></div>
+            </article>
+            <article class="dash-period-card">
+                <div class="dash-title-row">
+                    <div>
+                        <strong>Período seguinte</strong>
+                        <div id="cashflow-period-next" class="dash-muted"></div>
+                    </div>
+                </div>
+                <div id="cashflow-next" class="dash-period-card__grid"></div>
+            </article>
+        </div>
+    </div>
+</section>

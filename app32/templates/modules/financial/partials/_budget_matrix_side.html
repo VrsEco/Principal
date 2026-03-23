@@ -1,0 +1,50 @@
+<div class="budget-side-stack">
+    <div class="budget-panel__header">
+        <p class="budget-eyebrow">Importação</p>
+        <h2>Future-ready</h2>
+    </div>
+    <div class="budget-panel__body">
+        <div class="budget-upload-box">
+            <form id="budget-import-form">
+                <strong>Entrada por planilha</strong>
+                <p class="budget-muted">Faça upload da planilha XLSX da versão selecionada. O arquivo será convertido em linhas e valores mensais da matriz.</p>
+                <input type="file" id="budget-import-file" accept=".xlsx">
+                <div class="budget-actions" style="margin-top:.25rem;">
+                    <button type="button" id="budget-download-template" class="budget-btn budget-btn--secondary">Baixar modelo</button>
+                    <button type="submit" class="budget-btn budget-btn--primary">Importar planilha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="budget-panel__body">
+        <div class="budget-notes-box" id="budget-future-ready"></div>
+    </div>
+
+    <div class="budget-panel__body">
+        <div class="budget-legend">
+            <div class="budget-legend-item"><span class="budget-dot budget-dot--planned"></span>Valor planejado</div>
+            <div class="budget-legend-item"><span class="budget-dot budget-dot--actual"></span>Realizado</div>
+            <div class="budget-legend-item"><span class="budget-dot budget-dot--variance"></span>Desvio</div>
+        </div>
+    </div>
+
+    <div class="budget-panel__body">
+        <div class="budget-action-list">
+            <a href="/financial/dashboard" class="budget-action-card">
+                <div>
+                    <strong>Voltar ao cockpit</strong>
+                    <span class="budget-muted">Acompanhar caixa e DRE.</span>
+                </div>
+                <span>↩</span>
+            </a>
+            <a href="/financial/reports" class="budget-action-card">
+                <div>
+                    <strong>Relatórios</strong>
+                    <span class="budget-muted">Conferir análises formais.</span>
+                </div>
+                <span>→</span>
+            </a>
+        </div>
+    </div>
+</div>

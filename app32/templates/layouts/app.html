@@ -51,21 +51,26 @@
         localStorage.setItem('sidebarCollapsed', isCollapsed);
     }
 
-    function toggleSidebarGroup(btn) {
-        // Find the immediate parent group or subgroup
-        const group = btn.parentElement;
-        if (group.classList.contains('sidebar-group') || group.classList.contains('sidebar-subgroup')) {
-            group.classList.toggle('open');
-        } else {
-            // Fallback for more complex structures
-            const target = btn.closest('.sidebar-subgroup') || btn.closest('.sidebar-group');
-            if (target) target.classList.toggle('open');
+    function toggleSidebarGroup(btn, event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
         }
+
+        const group = btn?.closest('.sidebar-subgroup, .sidebar-group');
+        if (!group) return false;
+
+        group.classList.toggle('open');
+        return false;
     }
 
 
     // Apply persisted state on load
     document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.sidebar .nav-button, .sidebar .subgroup-button').forEach((button) => {
+            button.setAttribute('type', 'button');
+        });
+
         // Sidebar is collapsed by default in HTML (class="sidebar-collapsed")
 
         const storedState = localStorage.getItem('sidebarCollapsed');

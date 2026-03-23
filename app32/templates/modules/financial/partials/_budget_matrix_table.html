@@ -1,0 +1,62 @@
+{% macro brl(value) -%}
+R$ {{ '{:,.2f}'.format((value if value is not none else 0)|float).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+{%- endmacro %}
+
+<div id="budget-matrix-table" class="budget-panel__header">
+    <p class="budget-eyebrow">Matriz</p>
+    <h2>Linhas x mês</h2>
+    <p class="budget-muted">Cada célula já está preparada para receber planejado, realizado e desvio quando o backend matricial for ligado.</p>
+</div>
+<div class="budget-panel__body">
+    {% if lines and months %}
+    <div class="budget-table-wrap">
+        <table class="budget-table">
+            <thead>
+                <tr>
+                    <th>Linha matricial</th>
+                    {% for month in months %}
+                        <th>{{ month }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td>
+                        <div class="budget-line-meta">
+                            <strong>{{ line.name or line.line_name or 'Linha sem nome' }}</strong>
+                            <small>{{ line.chart_account_name or line.cost_center_name or line.group_name or 'Dimensão matricial' }}</small>
+                        </div>
+                    </td>
+                    {% for cell in line.months | default([], true) %}
+                    {% set var_value = cell.variance if cell.variance is defined else (cell.actual - cell.planned) if (cell.actual is defined and cell.planned is defined) else 0 %}
+                    {% set cell_class = 'budget-cell--positive' if var_value > 0 else 'budget-cell--negative' if var_value < 0 else '' %}
+                    <td>
+                        <div class="budget-cell {{ cell_class }}">
+                            <span class="budget-cell__planned">{{ brl(cell.planned if cell.planned is defined else cell.amount if cell.amount is defined else 0) }}</span>
+                            <small class="budget-cell__actual">Realizado: {{ brl(cell.actual if cell.actual is defined else 0) }}</small>
+                            <small class="budget-cell__variance">Desvio: {{ brl(var_value) }}</small>
+                        </div>
+                    </td>
+                    {% else %}
+                    {% for _ in months %}
+                    <td>
+                        <div class="budget-cell">
+                            <span class="budget-cell__planned">—</span>
+                            <small class="budget-cell__actual">Realizado: —</small>
+                            <small class="budget-cell__variance">Desvio: —</small>
+                        </div>
+                    </td>
+                    {% endfor %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="budget-empty">
+        Sem dados matriciais carregados ainda. A estrutura está pronta para receber as linhas e os meses da primeira versão orçamentária.
+    </div>
+    {% endif %}
+</div>

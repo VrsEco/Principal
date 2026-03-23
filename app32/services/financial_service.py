@@ -22,8 +22,28 @@ class FinancialService:
     """Serviço determinístico do núcleo financeiro."""
 
     @staticmethod
+    def get_signed_amount(amount: Decimal | float | int | None, movement_nature: str | None) -> float:
+        normalized_amount = Decimal(str(amount or 0))
+        absolute_amount = abs(normalized_amount)
+        signed_amount = -absolute_amount if movement_nature == "debit" else absolute_amount
+        return float(signed_amount)
+
+    @staticmethod
+    def get_amount_direction(movement_nature: str | None) -> str:
+        return "outflow" if movement_nature == "debit" else "inflow"
+
+    @staticmethod
+    def enrich_amount_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+        movement_nature = payload.get("movement_nature")
+        signed_amount = FinancialService.get_signed_amount(payload.get("original_amount"), movement_nature)
+        payload["signed_amount"] = signed_amount
+        payload["amount_direction"] = FinancialService.get_amount_direction(movement_nature)
+        payload["display_variant"] = "negative" if signed_amount < 0 else "positive"
+        return payload
+
+    @staticmethod
     def serialize_entry(entry: FinancialEntry, *, include_children: bool = True) -> Dict[str, Any]:
-        payload = entry.to_dict()
+        payload = FinancialService.enrich_amount_payload(entry.to_dict())
         if not include_children:
             return payload
 

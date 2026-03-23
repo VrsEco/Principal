@@ -7,6 +7,7 @@
   const body = document.getElementById('direct-allocations-body');
   const banner = document.getElementById('direct-entry-banner');
   const rateioSummary = document.getElementById('direct-rateio-summary');
+  const entryTypeSwitch = document.getElementById('direct-entry-type-switch');
   let optionsCache = { counterparties: [], bank_accounts: [], chart_accounts: [], cost_centers: [], correction_indexes: [], discount_rules: [], enabled_domains: [] };
   let allocationRows = [];
 
@@ -92,6 +93,9 @@
   const buildChartAccountLabel = (item) => item.code ? `${item.code} - ${item.name}` : (item.name || item.id);
   const buildCostCenterLabel = (item) => item.code ? `${item.code} - ${item.name}` : (item.name || item.id);
   const cloneAllocationRows = () => allocationRows.map((row) => ({ ...row }));
+  const lockedEntryType = ['payable', 'receivable'].includes(String(page.dataset.initialEntryType || '').trim().toLowerCase())
+    ? String(page.dataset.initialEntryType || '').trim().toLowerCase()
+    : '';
 
   function getTopAmount() {
     return round2(parseCurrency($('direct-amount').value));
@@ -230,6 +234,7 @@
   };
 
   window.setDirectEntryType = (entryType) => {
+    if (lockedEntryType && entryType !== lockedEntryType) return;
     form.querySelector('input[name="entry_type"]').value = entryType;
     document.querySelectorAll('.type-chip').forEach((chip) => chip.classList.toggle('active', chip.dataset.entryType === entryType));
     updateEntryTypePresentation(entryType);
@@ -498,7 +503,12 @@
       ensureDateDefaults({ force: true });
       recalculateAllRowsFromPercentages();
       renderAllocations();
-      window.setDirectEntryType('payable');
+      if (lockedEntryType) {
+        entryTypeSwitch?.classList.add('is-locked');
+        window.setDirectEntryType(lockedEntryType);
+      } else {
+        window.setDirectEntryType('payable');
+      }
       $('direct-description').focus();
     } catch (error) {
       alert(error.message);

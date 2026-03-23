@@ -28,12 +28,16 @@
   margin-bottom: 1rem;
 }
 
+.direct-entry-header-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
 .direct-entry-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
   box-shadow: var(--shadow-sm);
-  padding: 1rem;
   overflow: hidden;
 }
 
@@ -50,6 +54,7 @@
 
 .direct-entry-type-switch {
   margin-bottom: 0.75rem;
+  padding: 1rem 1rem 0;
 }
 
 .type-chip {
@@ -69,6 +74,15 @@
   border-color: var(--form-tint-text);
 }
 
+.direct-entry-type-switch.is-locked .type-chip {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.direct-entry-type-switch.is-locked .type-chip.active {
+  opacity: 1;
+}
+
 .direct-entry-banner {
   display: flex;
   align-items: center;
@@ -79,14 +93,16 @@
   background: var(--form-tint-strong);
   color: var(--form-tint-text);
   font-weight: 700;
+  margin-left: 1rem;
+  margin-right: 1rem;
 }
 
 .form-block {
+  padding: 1rem;
+  margin: 0 1rem 1rem;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--surface);
-  padding: 1rem;
-  margin-bottom: 1rem;
 }
 
 .form-grid {
@@ -139,7 +155,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 0.8rem;
+  margin: 0 0 0.8rem;
 }
 
 .section-head h2,
@@ -215,6 +231,10 @@
 
 .direct-entry-actions {
   justify-content: flex-end;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0 1rem 1rem;
 }
 
 .btn {
@@ -235,6 +255,10 @@
 .btn-secondary { background: var(--surface-secondary); color: var(--text-primary); border: 1px solid var(--border); }
 .btn-ghost { background: transparent; color: var(--text-secondary); padding: 0.55rem 0.75rem; border: 1px solid var(--border); }
 .btn-inline { white-space: nowrap; }
+
+.direct-entry-form {
+  padding-top: 0.25rem;
+}
 
 .modal-shell.hidden { display: none !important; }
 .modal-shell { position: fixed; inset: 0; z-index: 70; }
@@ -269,6 +293,9 @@
   .direct-entry-card,
   .form-block,
   .modal-card { padding: 0.9rem; border-radius: 16px; }
+  .direct-entry-banner,
+  .form-block,
+  .direct-entry-actions { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
   .form-grid { grid-template-columns: 1fr; }
   .field-span-4,
   .field-span-6,

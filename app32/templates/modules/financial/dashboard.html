@@ -1,363 +1,286 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Financeiro - Dashboard Executivo{% endblock %}
+{% block title %}Financeiro - Dashboard{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
-<a href="/financial/entries">Financeiro</a>
-<span class="sep">/</span>
-<span class="current">Dashboard Executivo</span>
-{% endblock %}
-
-{% block navbar_actions %}
+<span class="current">Financeiro</span>
 {% endblock %}
 
 {% block workspace_content %}
 <div class="fin-dash-page fade-in" data-company-id="{{ company_id or '' }}">
-    <header class="fin-dash-header">
-        <div>
-            <h1>Dashboard do Financeiro</h1>
-        </div>
-    </header>
+    {% include "modules/financial/partials/_dashboard_header.html" %}
+    {% include "modules/financial/partials/_dashboard_filters.html" %}
 
-    <section class="panel">
-        <form id="dashboard-filter-form" class="filters">
-            <label><span>Período inicial</span><input type="date" name="period_start"></label>
-            <label><span>Período final</span><input type="date" name="period_end"></label>
-            <div class="actions"><button type="submit" class="btn btn-primary">Atualizar</button></div>
-        </form>
-    </section>
+    <section id="scoreboard" class="dash-scoreboard"></section>
 
-    <section class="stats-grid" id="scoreboard"></section>
+    <div class="dash-grid">
+        {% include "modules/financial/partials/_dashboard_cashflow.html" %}
+        {% include "modules/financial/partials/_dashboard_dre.html" %}
+    </div>
 
-    <section class="grid-2">
-        <article class="panel">
-            <div class="panel-header"><h2>Fluxo de caixa</h2></div>
-            <div id="cash-flow-box" class="box-content"></div>
-        </article>
-        <article class="panel">
-            <div class="panel-header"><h2>DRE gerencial</h2></div>
-            <div id="dre-box" class="box-content"></div>
-        </article>
-        <article class="panel">
-            <div class="panel-header"><h2>Classificação híbrida</h2></div>
-            <div id="classification-box" class="box-content"></div>
-        </article>
-        <article class="panel">
-            <div class="panel-header"><h2>Fechamento do período</h2></div>
-            <div id="closing-box" class="box-content"></div>
-        </article>
-    </section>
+    <div class="dash-grid dash-grid--secondary">
+        {% include "modules/financial/partials/_dashboard_quick_actions.html" %}
+        {% include "modules/financial/partials/_dashboard_controls.html" %}
+    </div>
 </div>
 
 <style>
-    .fin-dash-page { padding:0 2rem 2rem; }
-    .fin-dash-header { margin-bottom:1.5rem; }
-    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
-    .subtitle { color:var(--text-secondary); max-width:760px; }
-    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1rem; }
-    .panel-header { padding:1rem 1rem 0; }
-    .filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.9rem; padding:1rem; align-items:end; }
-    .filters label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); }
-    .filters input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.75rem .85rem; color:var(--text-primary); }
-    .actions { display:flex; gap:.75rem; }
-    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
-    .btn-primary { background:var(--primary); color:#fff; }
-    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
-    .stats-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.9rem; margin-bottom:1rem; }
-    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1rem; box-shadow:var(--shadow-sm); }
-    .stat-card span { display:block; color:var(--text-secondary); font-size:.78rem; }
-    .stat-card strong { display:block; margin-top:.35rem; font-size:1.2rem; }
-    .grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
-    .box-content { padding:1rem; display:flex; flex-direction:column; gap:.7rem; }
-    .line-item { border:1px solid var(--border); border-radius:12px; padding:.75rem .85rem; background:var(--surface-secondary); }
-    .empty-state { color:var(--text-tertiary); text-align:center; padding:1rem; }
-    @media (max-width: 960px) {
-        .fin-dash-page { padding:0 1rem 1.5rem; }
-        .filters, .stats-grid, .grid-2 { grid-template-columns:1fr; }
-    }
-
-    /* Responsive hardening shared across Gestão Financeira */
-    @media (max-width: 960px) {
-        .finance-page,
-        .cw-page,
-        .cp-page,
-        .catalog-hub-page,
-        .dash-page,
-        .memories-page,
-        .queue-page,
-        .rules-page,
-        .closings-page,
-        .fin-dash-page,
-        .entry-page,
-        .batch-page,
-        .reports-page {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        .table-wrap {
-            padding: .9rem !important;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        .table-wrap table {
-            min-width: 720px;
-        }
-        .panel-header,
-        .panel-body,
-        .filters-grid,
-        .summary-grid {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
+    .fin-dash-page { padding: 0 2rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
+    .dash-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-sm); overflow: hidden; }
+    .dash-panel__header { padding: 1.1rem 1.2rem 0; }
+    .dash-panel__body { padding: 1.1rem 1.2rem 1.2rem; }
+    .dash-eyebrow { margin: 0 0 .35rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--primary); font-weight: 700; }
+    .dash-title-row { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+    .dash-title-row h1,
+    .dash-title-row h2 { margin: 0; }
+    .dash-subtitle, .dash-muted { color: var(--text-secondary); }
+    .dash-filter-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; align-items: end; }
+    .dash-filter-form label { display: flex; flex-direction: column; gap: .35rem; color: var(--text-secondary); font-size: .92rem; }
+    .dash-filter-form input { background: var(--surface-secondary); border: 1px solid var(--border); border-radius: 12px; padding: .78rem .88rem; color: var(--text-primary); }
+    .dash-actions-inline { display: flex; gap: .75rem; }
+    .dash-btn { border: none; border-radius: 12px; padding: .82rem 1rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .45rem; text-decoration: none; }
+    .dash-btn--primary { background: var(--primary); color: #fff; }
+    .dash-btn--secondary { background: var(--surface-secondary); border: 1px solid var(--border); color: var(--text-primary); }
+    .dash-scoreboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; }
+    .dash-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; box-shadow: var(--shadow-sm); }
+    .dash-kpi span { display: block; color: var(--text-secondary); font-size: .8rem; }
+    .dash-kpi strong { display: block; margin-top: .3rem; font-size: 1.15rem; }
+    .dash-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 1rem; }
+    .dash-grid--secondary { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+    .dash-metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+    .dash-metric { border: 1px solid var(--border); border-radius: 14px; padding: .9rem; background: var(--surface-secondary); }
+    .dash-metric label { display: block; color: var(--text-secondary); font-size: .8rem; margin-bottom: .35rem; }
+    .dash-metric strong { display: block; font-size: 1.12rem; }
+    .dash-periods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .dash-period-card { border: 1px solid var(--border); border-radius: 16px; padding: 1rem; background: var(--surface-secondary); }
+    .dash-period-card__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: .8rem; }
+    .dash-table-wrap { overflow-x: auto; }
+    .dash-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    .dash-table th, .dash-table td { padding: .8rem .7rem; border-bottom: 1px solid var(--border); text-align: right; }
+    .dash-table th:first-child, .dash-table td:first-child { text-align: left; }
+    .dash-table th { color: var(--text-secondary); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    .dash-table tfoot td { font-weight: 700; }
+    .dash-actions-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    .dash-action-card { border: 1px solid var(--border); border-radius: 14px; padding: .95rem; background: var(--surface-secondary); text-decoration: none; color: inherit; }
+    .dash-action-card strong { display: block; }
+    .dash-stack { display: flex; flex-direction: column; gap: .75rem; }
+    .dash-empty { color: var(--text-tertiary); text-align: center; padding: 1rem; }
+    .is-positive { color: #15803d; }
+    .is-negative { color: #b91c1c; }
+    @media (max-width: 1080px) {
+        .dash-scoreboard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .dash-grid, .dash-grid--secondary, .dash-periods { grid-template-columns: 1fr; }
     }
     @media (max-width: 768px) {
-        .finance-header,
-        .cw-header,
-        .cp-header,
-        .batch-header {
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: .85rem;
-        }
-        .finance-header .btn,
-        .finance-header a.btn,
-        .cw-header .btn,
-        .cp-header .btn,
-        .page-actions .btn,
-        .inline-actions .btn,
-        .form-actions .btn,
-        .actions .btn,
-        .modal-actions .btn,
-        .filters-actions .btn {
-            width: 100%;
-            justify-content: center;
-            text-align: center;
-        }
-        .page-actions,
-        .inline-actions,
-        .form-actions,
-        .actions,
-        .modal-actions,
-        .filters-actions {
-            flex-direction: column !important;
-            align-items: stretch !important;
-        }
-        .stat-grid,
-        .stats-grid,
-        .summary-grid,
-        .form-grid,
-        .filters-grid,
-        .memory-grid,
-        .grid-two,
-        .grid-2,
-        .panels-grid,
-        .summary-table {
-            grid-template-columns: 1fr !important;
-        }
+        .fin-dash-page { padding: 0 1rem 1.5rem; }
+        .dash-title-row, .dash-actions-inline { flex-direction: column; align-items: stretch; }
+        .dash-filter-form, .dash-metric-grid, .dash-period-card__grid, .dash-actions-grid, .dash-scoreboard { grid-template-columns: 1fr; }
+        .dash-btn { width: 100%; }
     }
-    @media (max-width: 520px) {
-        .finance-page,
-        .cw-page,
-        .cp-page,
-        .catalog-hub-page,
-        .dash-page,
-        .memories-page,
-        .queue-page,
-        .rules-page,
-        .closings-page,
-        .fin-dash-page,
-        .entry-page,
-        .batch-page,
-        .reports-page {
-            padding-left: .75rem !important;
-            padding-right: .75rem !important;
-        }
-        .panel-header,
-        .panel-body,
-        .table-wrap,
-        .filters-grid,
-        .summary-grid {
-            padding-left: .85rem !important;
-            padding-right: .85rem !important;
-        }
-        .cw-list-item-actions,
-        .cp-list-item-actions {
-            flex-direction: column;
-        }
-        .cw-list-item-actions .btn,
-        .cp-list-item-actions .btn {
-            width: 100%;
-        }
-    }
-
-
-    /* Responsive polish pass */
-    @media (max-width: 768px) {
-        .entry-header,
-        .fin-dash-header,
-        .dash-header,
-        .reports-header,
-        .rules-header,
-        .queue-header,
-        .memories-header,
-        .closings-header {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: .85rem;
-        }
-        .entry-header h1,
-        .fin-dash-header h1,
-        .dash-header h1,
-        .reports-header h1,
-        .rules-header h1,
-        .queue-header h1,
-        .memories-header h1,
-        .closings-header h1,
-        .batch-header h1,
-        .finance-header h1,
-        .cw-header h1,
-        .cp-header h1 {
-            font-size: 1.45rem !important;
-            line-height: 1.2;
-        }
-        .match-card__top,
-        .cw-list-item-line,
-        .cp-list-item-line {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: .35rem;
-        }
-        .stat-card,
-        .summary-card,
-        .line-item,
-        .list-item,
-        .match-card,
-        .cw-list-item,
-        .cp-list-item {
-            padding: .85rem !important;
-        }
-        .data-table th,
-        .data-table td {
-            padding: .7rem .6rem;
-        }
-    }
-    @media (max-width: 520px) {
-        .btn,
-        .cw-list-item-actions .btn,
-        .cp-list-item-actions .btn {
-            padding: .72rem .85rem !important;
-            font-size: .9rem;
-        }
-        .panel,
-        .cw-sidebar-card,
-        .cw-panel,
-        .cp-sidebar-card,
-        .cp-panel,
-        .stat-card,
-        .summary-card,
-        .match-card,
-        .line-item {
-            border-radius: 14px;
-        }
-        .cw-search input,
-        .form-grid input,
-        .form-grid select,
-        .form-grid textarea,
-        .filters input,
-        .filters select,
-        .filters-grid input,
-        .filters-grid select,
-        .import-form input,
-        .import-form select {
-            padding: .72rem .82rem;
-        }
-    }
-
 </style>
 
 <script>
-    const companyId = Number(document.querySelector('.fin-dash-page')?.dataset.companyId);
+    const dashboardRoot = document.querySelector('.fin-dash-page');
+    const companyId = Number(dashboardRoot?.dataset.companyId || 0);
 
-    function brl(value) {
+    function formatCurrency(value) {
         return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
-    function renderScoreboard(scoreboard) {
-        const box = document.getElementById('scoreboard');
+    function cssClassForValue(value) {
+        const number = Number(value || 0);
+        if (number > 0) return 'is-positive';
+        if (number < 0) return 'is-negative';
+        return '';
+    }
+
+    function renderScoreboard(scoreboard = {}) {
         const items = [
-            ['Lançamentos', scoreboard.entries],
-            ['Liquidações', scoreboard.settlements],
-            ['Lotes', scoreboard.batches],
-            ['Matches confirmados', scoreboard.confirmed_matches],
-            ['Caixa líquido', brl(scoreboard.net_cash)],
-            ['Resultado DRE', brl(scoreboard.dre_result)],
-            ['Em aberto', brl(scoreboard.open_amount)],
-            ['Cobertura IA', `${Number(scoreboard.classification_coverage || 0).toFixed(2)}%`],
-            ['Aplicação IA', `${Number(scoreboard.classification_applied_rate || 0).toFixed(2)}%`],
-            ['Pode fechar?', scoreboard.can_close ? 'Sim' : 'Não'],
+            ['Período', scoreboard.period_label || '-'],
+            ['Receber em atraso', formatCurrency(scoreboard.receivables_overdue)],
+            ['Pagar em atraso', formatCurrency(scoreboard.payables_overdue)],
+            ['Saldo atual', formatCurrency(scoreboard.current_balance)],
+            ['Saldo final sem limites', formatCurrency(scoreboard.projected_final_without_limits)],
+            ['Saldo final com limites', formatCurrency(scoreboard.projected_final_with_limits)],
+            ['DRE competência', formatCurrency(scoreboard.dre_competence_result)],
+            ['DRE liquidação', formatCurrency(scoreboard.dre_liquidation_result)],
         ];
-        box.innerHTML = items.map(([label, value]) => `
-            <article class="stat-card">
+        document.getElementById('scoreboard').innerHTML = items.map(([label, value]) => `
+            <article class="dash-kpi">
                 <span>${label}</span>
-                <strong>${value ?? 0}</strong>
+                <strong>${value}</strong>
             </article>
         `).join('');
     }
 
-    function renderList(containerId, items, mapper) {
-        const box = document.getElementById(containerId);
-        if (!items || !items.length) {
-            box.innerHTML = '<div class="empty-state">Sem dados para o período.</div>';
+    function renderCashFlow(panel = {}) {
+        const overdue = panel.overdue || {};
+        const current = panel.current || {};
+        const next = panel.next_period || {};
+
+        const overdueBox = document.getElementById('cashflow-overdue');
+        overdueBox.innerHTML = `
+            <article class="dash-metric">
+                <label>Contas a Receber em Atraso</label>
+                <strong class="${cssClassForValue(overdue.receivable)}">${formatCurrency(overdue.receivable)}</strong>
+                <small class="dash-muted">${overdue.receivable_count || 0} títulos</small>
+            </article>
+            <article class="dash-metric">
+                <label>Contas a Pagar em Atraso</label>
+                <strong class="${cssClassForValue(-(overdue.payable || 0))}">${formatCurrency(overdue.payable)}</strong>
+                <small class="dash-muted">${overdue.payable_count || 0} títulos</small>
+            </article>
+        `;
+
+        const currentBox = document.getElementById('cashflow-current');
+        currentBox.innerHTML = `
+            <article class="dash-metric"><label>Saldo Atual</label><strong>${formatCurrency(current.balance)}</strong></article>
+            <article class="dash-metric"><label>Limites de Cheque Especial</label><strong>${formatCurrency(current.overdraft_limit)}</strong></article>
+            <article class="dash-metric"><label>Contas a Receber do Período</label><strong>${formatCurrency(current.receivables)}</strong></article>
+            <article class="dash-metric"><label>Contas a Pagar do Período</label><strong>${formatCurrency(current.payables)}</strong></article>
+            <article class="dash-metric"><label>Saldo Final Sem Limites</label><strong class="${cssClassForValue(current.final_without_limits)}">${formatCurrency(current.final_without_limits)}</strong></article>
+            <article class="dash-metric"><label>Saldo Final Com os Limites</label><strong class="${cssClassForValue(current.final_with_limits)}">${formatCurrency(current.final_with_limits)}</strong></article>
+        `;
+
+        const nextBox = document.getElementById('cashflow-next');
+        nextBox.innerHTML = `
+            <article class="dash-metric"><label>Saldo Inicial Período Seguinte</label><strong>${formatCurrency(next.initial_balance)}</strong></article>
+            <article class="dash-metric"><label>Limites de Cheque Especial</label><strong>${formatCurrency(next.overdraft_limit)}</strong></article>
+            <article class="dash-metric"><label>Contas a Receber do Período</label><strong>${formatCurrency(next.receivables)}</strong></article>
+            <article class="dash-metric"><label>Contas a Pagar do Período</label><strong>${formatCurrency(next.payables)}</strong></article>
+            <article class="dash-metric"><label>Saldo Final Sem Limites</label><strong class="${cssClassForValue(next.final_without_limits)}">${formatCurrency(next.final_without_limits)}</strong></article>
+            <article class="dash-metric"><label>Saldo Final Com os Limites</label><strong class="${cssClassForValue(next.final_with_limits)}">${formatCurrency(next.final_with_limits)}</strong></article>
+        `;
+
+        document.getElementById('cashflow-period-current').textContent = `${current.period_start || '-'} até ${current.period_end || '-'}`;
+        document.getElementById('cashflow-period-next').textContent = `${next.period_start || '-'} até ${next.period_end || '-'}`;
+    }
+
+    function renderDre(matrix = {}) {
+        const rows = matrix.rows || [];
+        const totals = matrix.totals || {};
+        const table = document.getElementById('dre-table');
+        if (!rows.length) {
+            table.innerHTML = '<div class="dash-empty">Sem dados para montar a DRE do período.</div>';
             return;
         }
-        box.innerHTML = items.slice(0, 10).map(mapper).join('');
+        table.innerHTML = `
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Grupo</th>
+                            <th>Orçado</th>
+                            <th>Competência</th>
+                            <th>Vencimento</th>
+                            <th>Liquidação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                            <tr>
+                                <td>${row.group}</td>
+                                <td class="${cssClassForValue(row.budget)}">${formatCurrency(row.budget)}</td>
+                                <td class="${cssClassForValue(row.competence)}">${formatCurrency(row.competence)}</td>
+                                <td class="${cssClassForValue(row.due)}">${formatCurrency(row.due)}</td>
+                                <td class="${cssClassForValue(row.liquidation)}">${formatCurrency(row.liquidation)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td>Total</td>
+                            <td class="${cssClassForValue(totals.budget)}">${formatCurrency(totals.budget)}</td>
+                            <td class="${cssClassForValue(totals.competence)}">${formatCurrency(totals.competence)}</td>
+                            <td class="${cssClassForValue(totals.due)}">${formatCurrency(totals.due)}</td>
+                            <td class="${cssClassForValue(totals.liquidation)}">${formatCurrency(totals.liquidation)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+    }
+
+    function renderQuickActions(actions = []) {
+        const container = document.getElementById('dashboard-quick-actions');
+        if (!actions.length) {
+            container.innerHTML = '<div class="dash-empty">Sem atalhos disponíveis.</div>';
+            return;
+        }
+        container.innerHTML = actions.map(action => `
+            <a href="${action.href}" class="dash-action-card">
+                <strong>${action.label}</strong>
+                <span class="dash-muted">${action.href}</span>
+            </a>
+        `).join('');
+    }
+
+    function renderControls(payload = {}) {
+        const box = document.getElementById('dashboard-controls');
+        const lastClosing = payload.last_closing;
+        box.innerHTML = `
+            <article class="dash-metric">
+                <label>Último fechamento</label>
+                <strong>${lastClosing?.period_end || 'Sem fechamento registrado'}</strong>
+            </article>
+            <article class="dash-metric">
+                <label>Lotes processados no período</label>
+                <strong>${payload.scoreboard?.import_batches ?? 0}</strong>
+            </article>
+            <article class="dash-metric">
+                <label>Conciliações confirmadas</label>
+                <strong>${payload.scoreboard?.confirmed_matches ?? 0}</strong>
+            </article>
+            <article class="dash-metric">
+                <label>Status do cockpit</label>
+                <strong>Pronto para análise</strong>
+            </article>
+        `;
     }
 
     async function loadDashboard(event) {
         if (event) event.preventDefault();
-        const form = new FormData(document.getElementById('dashboard-filter-form'));
-        const params = new URLSearchParams({ company_id: companyId });
-        if (form.get('period_start')) params.set('period_start', form.get('period_start'));
-        if (form.get('period_end')) params.set('period_end', form.get('period_end'));
+        if (!companyId) return;
+
+        const form = document.getElementById('dashboard-filter-form');
+        const params = new URLSearchParams({ company_id: String(companyId) });
+        const periodStart = form.period_start.value;
+        const periodEnd = form.period_end.value;
+        if (periodStart) params.set('period_start', periodStart);
+        if (periodEnd) params.set('period_end', periodEnd);
 
         const response = await fetch(`/api/financial/dashboard?${params.toString()}`);
-        const result = await response.json();
+        const payload = await response.json();
         if (!response.ok) {
-            alert(result.error || 'Falha ao carregar dashboard.');
+            document.getElementById('scoreboard').innerHTML = `<div class="dash-empty">${payload.error || 'Erro ao carregar dashboard.'}</div>`;
             return;
         }
 
-        renderScoreboard(result.scoreboard || {});
-        renderList('cash-flow-box', result.cash_flow?.items || [], item => `
-            <div class="line-item"><strong>${item.date}</strong><div>Entradas: ${brl(item.inflow)} · Saídas: ${brl(item.outflow)} · Líquido: ${brl(item.net)}</div></div>
-        `);
-        renderList('dre-box', result.dre?.items || [], item => `
-            <div class="line-item"><strong>${item.group}</strong><div>Valor: ${brl(item.amount)}</div></div>
-        `);
-        const classificationItems = [
-            { label: 'Cobertura', value: `${Number(result.classification?.summary?.coverage_rate || 0).toFixed(2)}%` },
-            { label: 'Aplicação', value: `${Number(result.classification?.summary?.applied_rate || 0).toFixed(2)}%` },
-            { label: 'Fila', value: result.classification?.summary?.queue_total || 0 },
-            { label: 'Perguntar usuário', value: `${Number(result.classification?.summary?.ask_user_rate || 0).toFixed(2)}%` },
-        ];
-        document.getElementById('classification-box').innerHTML = classificationItems.map(item => `
-            <div class="line-item"><strong>${item.label}</strong><div>${item.value}</div></div>
-        `).join('');
-        const closingItems = [
-            { label: 'Pode fechar?', value: result.closing_preview?.can_close ? 'Sim' : 'Não' },
-            { label: 'Pendências revisão', value: result.closing_preview?.pending_review_entries || 0 },
-            { label: 'Imports sem match', value: result.closing_preview?.imported_not_matched || 0 },
-            { label: 'Último fechamento', value: result.last_closing ? `${result.last_closing.period_start} até ${result.last_closing.period_end}` : 'Nenhum' },
-        ];
-        document.getElementById('closing-box').innerHTML = closingItems.map(item => `
-            <div class="line-item"><strong>${item.label}</strong><div>${item.value}</div></div>
-        `).join('');
+        renderScoreboard(payload.scoreboard || {});
+        renderCashFlow(payload.cash_flow_panel || {});
+        renderDre(payload.dre_matrix || {});
+        renderQuickActions(payload.quick_actions || []);
+        renderControls(payload);
     }
 
-    document.getElementById('dashboard-filter-form').addEventListener('submit', loadDashboard);
-    document.addEventListener('DOMContentLoaded', loadDashboard);
+    function seedDefaultDates() {
+        const form = document.getElementById('dashboard-filter-form');
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const toIso = (value) => {
+            const offset = value.getTimezoneOffset() * 60000;
+            return new Date(value.getTime() - offset).toISOString().slice(0, 10);
+        };
+        form.period_start.value = toIso(monthStart);
+        form.period_end.value = toIso(now);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        seedDefaultDates();
+        document.getElementById('dashboard-filter-form')?.addEventListener('submit', loadDashboard);
+        loadDashboard();
+    });
 </script>
 {% endblock %}

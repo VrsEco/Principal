@@ -316,7 +316,7 @@ body {
     opacity: 0.6;
 }
 
-.sidebar-subgroup.open .subgroup-button .chevron {
+.sidebar-subgroup.open > .subgroup-button .chevron {
     transform: rotate(180deg);
 }
 
@@ -330,8 +330,12 @@ body {
     margin-bottom: 4px;
 }
 
-.sidebar-subgroup.open .subgroup-content {
+.sidebar-subgroup.open > .subgroup-content {
     display: flex;
+}
+
+.sidebar-subgroup:not(.open) > .subgroup-content {
+    display: none !important;
 }
 
 .sub-nav-link.active {

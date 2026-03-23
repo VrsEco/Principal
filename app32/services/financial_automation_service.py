@@ -21,6 +21,16 @@ class FinancialAutomationService:
     MAX_ATTEMPTS = 3
 
     @staticmethod
+    def _serialize_rule(rule: FinancialAutomationRule) -> Dict[str, Any]:
+        payload = rule.to_dict()
+        payload["signed_template_amount"] = FinancialService.get_signed_amount(
+            payload.get("template_amount"),
+            payload.get("movement_nature"),
+        )
+        payload["display_variant"] = "negative" if payload["signed_template_amount"] < 0 else "positive"
+        return payload
+
+    @staticmethod
     def list_rules(
         *,
         company_id: int,
@@ -34,7 +44,7 @@ class FinancialAutomationService:
             FinancialAutomationRule.company_id == company_id,
             FinancialAutomationRule.deleted_at.is_(None),
         ).order_by(FinancialAutomationRule.id.desc()).all()
-        return [rule.to_dict() for rule in rules], None
+        return [FinancialAutomationService._serialize_rule(rule) for rule in rules], None
 
     @staticmethod
     def list_executions(
@@ -99,7 +109,7 @@ class FinancialAutomationService:
             rule = FinancialAutomationRule(**data.model_dump())
             db.session.add(rule)
             db.session.commit()
-            return rule.to_dict(), None
+            return FinancialAutomationService._serialize_rule(rule), None
         except Exception as exc:
             db.session.rollback()
             logger.exception("Erro ao criar regra de automação financeira")
@@ -148,7 +158,7 @@ class FinancialAutomationService:
             for key, value in merged.items():
                 setattr(rule, key, value)
             db.session.commit()
-            return rule.to_dict(), None
+            return FinancialAutomationService._serialize_rule(rule), None
         except Exception as exc:
             db.session.rollback()
             logger.exception("Erro ao atualizar regra de automação financeira %s", rule_id)

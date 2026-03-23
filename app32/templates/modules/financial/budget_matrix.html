@@ -1,0 +1,383 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Orçamento Matricial{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Orçamento Matricial</span>
+{% endblock %}
+
+{% block workspace_content %}
+{% set versions = budget_versions | default([], true) %}
+{% set months = budget_months | default([], true) %}
+{% set lines = budget_lines | default([], true) %}
+{% set active_version = selected_budget_version | default(None, true) %}
+
+<div class="budget-page fade-in" data-company-id="{{ company_id or '' }}">
+    {% include "modules/financial/partials/_budget_matrix_header.html" %}
+    {% include "modules/financial/partials/_budget_matrix_filters.html" %}
+
+    <section class="budget-summary-grid">
+        <article class="budget-kpi">
+            <span>Versão ativa</span>
+            <strong>{{ active_version.name if active_version else 'Sem versão selecionada' }}</strong>
+            <small>{{ active_version.status if active_version else 'Selecione uma versão para iniciar a análise.' }}</small>
+        </article>
+        <article class="budget-kpi">
+            <span>Período</span>
+            <strong>
+                {% if months %}
+                    {{ months|first }} → {{ months|last }}
+                {% else %}
+                    Sem período definido
+                {% endif %}
+            </strong>
+            <small>Controle mensal por competência, vencimento e cenários futuros.</small>
+        </article>
+        <article class="budget-kpi">
+            <span>Linhas matriciais</span>
+            <strong>{{ lines|length }}</strong>
+            <small>Contas, centros de custo, processos e versões.</small>
+        </article>
+        <article class="budget-kpi">
+            <span>Status de importação</span>
+            <strong>Importação ativa</strong>
+            <small>Baixe o modelo XLSX da versão e reimporte para popular a matriz.</small>
+        </article>
+    </section>
+
+    <div class="budget-grid">
+        <section class="budget-panel budget-panel--matrix">
+            {% include "modules/financial/partials/_budget_matrix_actions.html" %}
+            {% include "modules/financial/partials/_budget_matrix_table.html" %}
+        </section>
+
+        <aside class="budget-panel budget-panel--side">
+            {% include "modules/financial/partials/_budget_matrix_side.html" %}
+        </aside>
+    </div>
+</div>
+
+<style>
+    .budget-page { padding: 0 2rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
+    .budget-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-sm); overflow: hidden; }
+    .budget-panel__header { padding: 1.1rem 1.2rem 0; }
+    .budget-panel__body { padding: 1.1rem 1.2rem 1.2rem; }
+    .budget-eyebrow { margin: 0 0 .35rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--primary); font-weight: 700; }
+    .budget-title-row { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+    .budget-title-row h1,
+    .budget-title-row h2 { margin: 0; }
+    .budget-subtitle,
+    .budget-muted { color: var(--text-secondary); }
+    .budget-actions-row,
+    .budget-filters-grid,
+    .budget-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; }
+    .budget-summary-grid { margin-top: .25rem; }
+    .budget-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; box-shadow: var(--shadow-sm); }
+    .budget-kpi span { display: block; color: var(--text-secondary); font-size: .8rem; }
+    .budget-kpi strong { display: block; margin-top: .3rem; font-size: 1.05rem; }
+    .budget-kpi small { display: block; margin-top: .2rem; color: var(--text-secondary); }
+    .budget-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, .8fr); gap: 1rem; }
+    .budget-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+    .budget-btn { border: none; border-radius: 12px; padding: .82rem 1rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .45rem; text-decoration: none; }
+    .budget-btn--primary { background: var(--primary); color: #fff; }
+    .budget-btn--secondary { background: var(--surface-secondary); border: 1px solid var(--border); color: var(--text-primary); }
+    .budget-btn--ghost { background: transparent; border: 1px dashed var(--border); color: var(--text-secondary); }
+    .budget-filters-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .budget-field { display: flex; flex-direction: column; gap: .35rem; color: var(--text-secondary); font-size: .92rem; }
+    .budget-field input,
+    .budget-field select { background: var(--surface-secondary); border: 1px solid var(--border); border-radius: 12px; padding: .78rem .88rem; color: var(--text-primary); }
+    .budget-table-wrap { overflow-x: auto; }
+    .budget-table { width: 100%; border-collapse: collapse; min-width: 920px; }
+    .budget-table th,
+    .budget-table td { padding: .82rem .72rem; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
+    .budget-table th:first-child,
+    .budget-table td:first-child { text-align: left; }
+    .budget-table th { color: var(--text-secondary); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    .budget-line-meta { display: flex; flex-direction: column; gap: .2rem; }
+    .budget-line-meta strong { font-size: .98rem; }
+    .budget-line-meta small { color: var(--text-secondary); }
+    .budget-cell { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+    .budget-cell__planned { font-weight: 700; }
+    .budget-cell__actual { font-size: .78rem; color: var(--text-secondary); }
+    .budget-cell__variance { font-size: .75rem; font-weight: 700; }
+    .budget-cell--positive .budget-cell__variance { color: #15803d; }
+    .budget-cell--negative .budget-cell__variance { color: #b91c1c; }
+    .budget-empty { color: var(--text-tertiary); text-align: center; padding: 1.2rem; }
+    .budget-side-stack { display: flex; flex-direction: column; gap: 1rem; }
+    .budget-action-list { display: flex; flex-direction: column; gap: .65rem; }
+    .budget-action-card { border: 1px solid var(--border); border-radius: 14px; padding: .95rem; background: var(--surface-secondary); text-decoration: none; color: inherit; display: flex; justify-content: space-between; gap: .8rem; align-items: start; }
+    .budget-action-card strong { display: block; }
+    .budget-upload-box,
+    .budget-notes-box { border: 1px solid var(--border); border-radius: 14px; padding: 1rem; background: var(--surface-secondary); }
+    .budget-upload-box form { display: flex; flex-direction: column; gap: .75rem; }
+    .budget-upload-box input[type="file"] { width: 100%; }
+    .budget-upload-box .budget-muted { font-size: .9rem; }
+    .budget-legend { display: grid; gap: .55rem; }
+    .budget-legend-item { display: flex; gap: .55rem; align-items: center; color: var(--text-secondary); }
+    .budget-dot { width: .7rem; height: .7rem; border-radius: 999px; display: inline-block; }
+    .budget-dot--planned { background: var(--primary); }
+    .budget-dot--actual { background: #6b7280; }
+    .budget-dot--variance { background: #f59e0b; }
+    @media (max-width: 1100px) {
+        .budget-actions-row,
+        .budget-filters-grid,
+        .budget-summary-grid,
+        .budget-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+        .budget-page { padding: 0 1rem 1.5rem; }
+        .budget-title-row,
+        .budget-actions { flex-direction: column; align-items: stretch; }
+        .budget-btn { width: 100%; }
+    }
+</style>
+
+<script>
+    const budgetRoot = document.querySelector('.budget-page');
+    const companyId = Number(budgetRoot?.dataset.companyId || 0);
+
+    function formatCurrency(value) {
+        return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function varianceClass(value) {
+        const number = Number(value || 0);
+        if (number > 0) return 'budget-cell--positive';
+        if (number < 0) return 'budget-cell--negative';
+        return '';
+    }
+
+    function renderFutureReadyHint() {
+        const box = document.getElementById('budget-future-ready');
+        if (!box) return;
+        box.innerHTML = `
+            <div class="budget-notes-box">
+                <strong>Importação habilitada</strong>
+                <p class="budget-muted" style="margin:.4rem 0 0;">O modelo XLSX da versão selecionada pode ser baixado e reimportado para popular a matriz do orçamento matricial.</p>
+            </div>
+        `;
+    }
+
+    function renderVersionOptions(items = []) {
+        const select = document.querySelector('select[name="budget_version_id"]');
+        if (!select) return;
+        const current = select.value;
+        select.innerHTML = `<option value="">Selecione</option>` + items.map(item => `
+            <option value="${item.id}" ${String(item.id) === String(current) ? 'selected' : ''}>${item.name} (${item.scenario_type})</option>
+        `).join('');
+        if (!select.value && items.length) {
+            const active = items.find(item => item.status === 'active') || items[0];
+            select.value = String(active.id);
+        }
+    }
+
+    function renderSummary(matrix = {}) {
+        const version = matrix.version || {};
+        const lines = matrix.lines || [];
+        const months = matrix.months || [];
+        const cards = document.querySelectorAll('.budget-kpi');
+        if (cards.length < 4) return;
+        cards[0].querySelector('strong').textContent = version.name || 'Sem versão selecionada';
+        cards[0].querySelector('small').textContent = version.status || 'Selecione uma versão para iniciar a análise.';
+        cards[1].querySelector('strong').textContent = months.length ? `${months[0]} → ${months[months.length - 1]}` : 'Sem período definido';
+        cards[2].querySelector('strong').textContent = String(lines.length);
+    }
+
+    function renderMatrixTable(matrix = {}) {
+        const months = matrix.months || [];
+        const lines = matrix.lines || [];
+        const wrapper = document.querySelector('.budget-panel--matrix .budget-panel__body:last-child');
+        if (!wrapper) return;
+        if (!months.length || !lines.length) {
+            wrapper.innerHTML = `<div class="budget-empty">Sem dados matriciais carregados ainda. Crie uma versão e adicione linhas para iniciar.</div>`;
+            return;
+        }
+        wrapper.innerHTML = `
+            <div class="budget-table-wrap">
+                <table class="budget-table">
+                    <thead>
+                        <tr>
+                            <th>Linha matricial</th>
+                            ${months.map(month => `<th>${month}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${lines.map(line => `
+                            <tr>
+                                <td>
+                                    <div class="budget-line-meta">
+                                        <strong>${line.line_name}</strong>
+                                        <small>${line.chart_account_name || line.cost_center_name || line.budget_view || 'Dimensão matricial'}</small>
+                                    </div>
+                                </td>
+                                ${(line.amounts || []).map(cell => {
+                                    const planned = Number(cell.budget_amount || 0);
+                                    const actual = Number(cell.actual_amount || 0);
+                                    const variance = actual - planned;
+                                    return `
+                                        <td>
+                                            <div class="budget-cell ${varianceClass(variance)}">
+                                                <span class="budget-cell__planned">${formatCurrency(planned)}</span>
+                                                <small class="budget-cell__actual">Realizado: ${formatCurrency(actual)}</small>
+                                                <small class="budget-cell__variance">Desvio: ${formatCurrency(variance)}</small>
+                                            </div>
+                                        </td>
+                                    `;
+                                }).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    async function loadVersions() {
+        const response = await fetch(`/api/financial/budget/versions?company_id=${companyId}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Erro ao carregar versões orçamentárias.');
+        renderVersionOptions(payload);
+        return payload;
+    }
+
+    async function loadMatrix() {
+        const select = document.querySelector('select[name="budget_version_id"]');
+        const versionId = select?.value;
+        if (!versionId) {
+            renderMatrixTable({});
+            return;
+        }
+        const response = await fetch(`/api/financial/budget/versions/${versionId}/matrix?company_id=${companyId}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Erro ao carregar matriz orçamentária.');
+        renderSummary(payload);
+        renderMatrixTable(payload);
+    }
+
+    async function createVersion() {
+        const name = window.prompt('Nome da versão orçamentária:');
+        if (!name) return;
+        const today = new Date();
+        const year = today.getFullYear();
+        const payload = {
+            code: `BUD-${year}-${Date.now().toString().slice(-4)}`,
+            name,
+            scenario_type: document.querySelector('select[name="scenario_type"]')?.value || 'original',
+            status: 'draft',
+            period_start: `${year}-01-01`,
+            period_end: `${year}-12-31`,
+        };
+        const response = await fetch(`/api/financial/budget/versions?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Erro ao criar versão.');
+        await loadVersions();
+        document.querySelector('select[name="budget_version_id"]').value = String(result.id);
+        await loadMatrix();
+    }
+
+    async function activateVersion() {
+        const versionId = document.querySelector('select[name="budget_version_id"]')?.value;
+        if (!versionId) return;
+        const response = await fetch(`/api/financial/budget/versions/${versionId}?company_id=${companyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'active' }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Erro ao ativar versão.');
+        await loadVersions();
+        document.querySelector('select[name="budget_version_id"]').value = String(result.id);
+        await loadMatrix();
+    }
+
+    async function downloadTemplate() {
+        const versionId = document.querySelector('select[name="budget_version_id"]')?.value;
+        if (!versionId) {
+            alert('Selecione uma versão antes de baixar o modelo.');
+            return;
+        }
+        window.location.href = `/financial/budget-template?company_id=${companyId}&version_id=${versionId}`;
+    }
+
+    async function importBudgetFile(event) {
+        event.preventDefault();
+        const versionId = document.querySelector('select[name="budget_version_id"]')?.value;
+        const fileInput = document.getElementById('budget-import-file');
+        const file = fileInput?.files?.[0];
+        if (!versionId) {
+            alert('Selecione uma versão antes de importar.');
+            return;
+        }
+        if (!file) {
+            alert('Selecione um arquivo XLSX para importar.');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`/api/financial/budget/versions/${versionId}/import?company_id=${companyId}`, {
+            method: 'POST',
+            body: formData,
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.error || 'Erro ao importar a planilha do orçamento.');
+        }
+        await loadMatrix();
+        alert(`Importação concluída: ${payload.import_summary?.lines_imported || 0} linhas processadas.`);
+        if (fileInput) fileInput.value = '';
+    }
+
+    async function duplicateVersion() {
+        const select = document.querySelector('select[name="budget_version_id"]');
+        const versionId = select?.value;
+        if (!versionId) {
+            alert('Selecione uma versão para duplicar.');
+            return;
+        }
+        const selectedLabel = select.options[select.selectedIndex]?.text || 'Versão selecionada';
+        const name = window.prompt('Nome da nova cópia:', `${selectedLabel} - Cópia`);
+        if (!name) return;
+        const response = await fetch(`/api/financial/budget/versions/${versionId}/duplicate?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, status: 'draft' }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.error || 'Erro ao duplicar a versão orçamentária.');
+        }
+        const versions = await loadVersions();
+        const duplicated = versions.find(item => String(item.id) === String(payload.id)) || payload;
+        if (select && duplicated?.id) {
+            select.value = String(duplicated.id);
+        }
+        await loadMatrix();
+        alert('Versão duplicada com sucesso.');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        renderFutureReadyHint();
+        document.querySelector('select[name="budget_version_id"]')?.addEventListener('change', loadMatrix);
+        document.getElementById('budget-create-version')?.addEventListener('click', () => createVersion().catch(error => alert(error.message)));
+        document.getElementById('budget-activate-version')?.addEventListener('click', () => activateVersion().catch(error => alert(error.message)));
+        document.getElementById('budget-duplicate-version')?.addEventListener('click', () => duplicateVersion().catch(error => alert(error.message)));
+        document.getElementById('budget-import-sheet')?.addEventListener('click', () => document.getElementById('budget-import-file')?.click());
+        document.getElementById('budget-download-template')?.addEventListener('click', downloadTemplate);
+        document.getElementById('budget-import-form')?.addEventListener('submit', (event) => importBudgetFile(event).catch(error => alert(error.message)));
+        try {
+            await loadVersions();
+            await loadMatrix();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+</script>
+{% endblock %}
