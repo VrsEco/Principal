@@ -1,0 +1,42 @@
+{
+  "date": "2026-03-23",
+  "strategy": "shadowed_by_official",
+  "moved": [
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\check_data.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\check_data.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\check_db.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\check_db.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\check_db_state.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\check_db_state.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\check_indicators_cols.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\check_indicators_cols.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\check_prod_db.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\check_prod_db.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\check_schema.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\check_schema.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\debug_import.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\debug_import.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\list_remote_www.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\list_remote_www.py"
+    },
+    {
+      "from": "scripts\\root_legacy\\diagnostics\\list_tables.py",
+      "to": "scripts\\root_legacy\\shadowed_by_official\\diagnostics\\list_tables.py"
+    }
+  ]
+}

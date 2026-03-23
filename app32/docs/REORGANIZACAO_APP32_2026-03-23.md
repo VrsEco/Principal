@@ -94,3 +94,44 @@ Executar uma **fase 3** opcional para saneamento definitivo:
 - deduplicação entre scripts antigos e novos
 - remoção controlada de legados obsoletos
 - normalização de nomenclatura e READMEs por domínio
+
+## Fase 3 executada
+
+Foi executada uma terceira etapa focada em **colisões de nomenclatura** entre:
+
+- `C:\GestaoVersus\app32\scripts\`
+- `C:\GestaoVersus\app32\scripts\root_legacy\`
+
+### Estratégia adotada
+
+Quando um script legado possuía o **mesmo nome** de um script já existente na área oficial `scripts/`, ele **não foi removido** automaticamente.
+
+Como os arquivos não eram idênticos, eles foram reclassificados para:
+
+- `C:\GestaoVersus\app32\scripts\root_legacy\shadowed_by_official\`
+
+Isso preserva histórico sem gerar ambiguidade sobre qual caminho é canônico.
+
+### Resultado da fase 3
+
+- colisões classificadas com segurança: **9**
+- nenhum script oficial em `scripts/` foi alterado
+- nenhum script legado colidente foi descartado
+
+Manifesto da fase 3:
+
+- `C:\GestaoVersus\app32\scripts\root_legacy\manifest_phase3_shadowed_2026-03-23.json`
+
+### Política resultante
+
+- `scripts/` = superfície operacional oficial
+- `scripts/root_legacy/` = acervo histórico reorganizado
+- `scripts/root_legacy/shadowed_by_official/` = legados preservados, mas explicitamente não canônicos
+
+## Próxima evolução recomendada
+
+Executar uma fase 4 orientada a arquitetura operacional:
+
+1. promover scripts realmente úteis de `root_legacy/` para domínios oficiais
+2. encapsular utilitários recorrentes em CLI única ou módulos reutilizáveis
+3. remover legados obsoletos apenas após validação de uso real
