@@ -10,6 +10,36 @@ from schemas import ma
 from utils.error_handling import register_global_error_handlers
 
 
+def _env_flag(name: str, default: bool) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_migration_command() -> bool:
+    import sys
+
+    argv = " ".join(sys.argv).lower()
+    return ("flask" in argv and " db" in f" {argv}") or "alembic" in argv
+
+
+def _should_run_schema_bootstrap(config_name: str) -> bool:
+    if "APP_BOOTSTRAP_DB_SCHEMA" in os.environ:
+        return _env_flag("APP_BOOTSTRAP_DB_SCHEMA", default=False)
+    if _is_migration_command():
+        return False
+    return config_name != "production"
+
+
+def _should_run_runtime_bootstrap(config_name: str) -> bool:
+    if "APP_BOOTSTRAP_RUNTIME_SERVICES" in os.environ:
+        return _env_flag("APP_BOOTSTRAP_RUNTIME_SERVICES", default=True)
+    if _is_migration_command():
+        return False
+    return True
+
+
 def _backfill_user_channel_contacts():
     """Move legacy contacts from employees to users when user fields are empty."""
     from models.employee import Employee
@@ -129,154 +159,157 @@ def create_app(config_name=None):
     for folder in ['flows', 'pop']:
         os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], folder), exist_ok=True)
 
-    print("DEBUG: Checking DB connection and creating tables...")
-    with app.app_context():
-        try:
-            db.create_all()
-            inspector = inspect(db.engine)
-            table_names = set(inspector.get_table_names())
-            if "users" in table_names:
-                user_columns = {col["name"] for col in inspector.get_columns("users")}
-                with db.engine.begin() as conn:
-                    if "instagram" not in user_columns:
-                        conn.execute(text("ALTER TABLE users ADD COLUMN instagram VARCHAR(100)"))
-                        print("DEBUG: users.instagram column added successfully.")
-                    if "summary_delivery_channels" not in user_columns:
-                        conn.execute(text("ALTER TABLE users ADD COLUMN summary_delivery_channels VARCHAR(100) NOT NULL DEFAULT 'telegram'"))
-                        print("DEBUG: users.summary_delivery_channels column added successfully.")
-            if "indicators" in table_names:
-                indicator_columns = {col["name"] for col in inspector.get_columns("indicators")}
-                with db.engine.begin() as conn:
-                    if "indicator_type" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN indicator_type VARCHAR(50) NOT NULL DEFAULT 'result'"))
-                    if "source_module" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_module VARCHAR(50) NOT NULL DEFAULT 'manual'"))
-                    if "source_id" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_id INTEGER"))
-                    if "source_scope" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_scope VARCHAR(50) NOT NULL DEFAULT 'company'"))
-                        print("DEBUG: indicators.source_scope column added successfully.")
-                    if "source_config" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN source_config JSON"))
-                        print("DEBUG: indicators.source_config column added successfully.")
-                    if "collection_mode" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN collection_mode VARCHAR(30) NOT NULL DEFAULT 'manual'"))
-                    if "aggregation_function" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN aggregation_function VARCHAR(30) NOT NULL DEFAULT 'sum'"))
-                    if "unit" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN unit VARCHAR(50) DEFAULT 'pts'"))
-                    if "polarity" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN polarity VARCHAR(20) DEFAULT 'positive'"))
-                    if "measurement_frequency" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN measurement_frequency VARCHAR(30) DEFAULT 'monthly'"))
-                    if "formula" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN formula TEXT"))
-                    if "process_id" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN process_id INTEGER REFERENCES processes(id)"))
-                    if "project_id" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
-                    if "responsible_id" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN responsible_id INTEGER REFERENCES employees(id)"))
-                    if "collaborators" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN collaborators JSON"))
-                    if "data_source" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN data_source TEXT"))
-                    if "notes" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN notes TEXT"))
-                    if "okr_reference" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN okr_reference VARCHAR(255)"))
-                    if "okr_level" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN okr_level VARCHAR(50)"))
-                    if "is_active" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
-                    if "routine_id" not in indicator_columns:
-                        conn.execute(text("ALTER TABLE indicators ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
-            if "indicator_data" in table_names:
-                indicator_data_columns = {col["name"] for col in inspector.get_columns("indicator_data")}
-                with db.engine.begin() as conn:
-                    if "indicator_id" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN indicator_id INTEGER"))
-                        conn.execute(text("""
-                            UPDATE indicator_data
-                            SET indicator_id = indicator_goals.indicator_id
-                            FROM indicator_goals
-                            WHERE indicator_data.goal_id = indicator_goals.id
-                              AND indicator_data.indicator_id IS NULL
-                        """))
-                        print("DEBUG: indicator_data.indicator_id column added successfully.")
-                    if "record_date" in indicator_data_columns and "measured_date" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data RENAME COLUMN record_date TO measured_date"))
-                        print("DEBUG: indicator_data.record_date renamed to measured_date.")
-                    if "value" in indicator_data_columns and "measured_value" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data RENAME COLUMN value TO measured_value"))
-                        conn.execute(text("ALTER TABLE indicator_data ALTER COLUMN measured_value TYPE NUMERIC(15, 4) USING measured_value::numeric"))
-                        print("DEBUG: indicator_data.value renamed to measured_value.")
-                    if "period_start" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN period_start DATE"))
-                    if "period_end" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN period_end DATE"))
-                    if "employee_id" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN employee_id INTEGER REFERENCES employees(id)"))
-                    if "collaborator_id" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN collaborator_id INTEGER REFERENCES employees(id)"))
-                    if "source_ref" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN source_ref VARCHAR(255)"))
-                    if "evidence_payload" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN evidence_payload JSON"))
-                    if "routine_id" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
-                    if "process_instance_id" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN process_instance_id INTEGER REFERENCES process_instances(id)"))
-                    if "status" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN status VARCHAR(30) DEFAULT 'draft'"))
-                    if "is_manual" not in indicator_data_columns:
-                        conn.execute(text("ALTER TABLE indicator_data ADD COLUMN is_manual BOOLEAN DEFAULT FALSE"))
-            if "indicator_goals" in table_names:
-                indicator_goal_columns = {col["name"] for col in inspector.get_columns("indicator_goals")}
-                with db.engine.begin() as conn:
-                    if "performance_ranges" not in indicator_goal_columns:
-                        conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN performance_ranges JSON"))
-                    if "routine_id" not in indicator_goal_columns:
-                        conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
-                    if "collection_method" not in indicator_goal_columns:
-                        conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN collection_method VARCHAR(50) DEFAULT 'manual'"))
-            if "incentive_rules" in table_names:
-                incentive_rule_columns = {col["name"] for col in inspector.get_columns("incentive_rules")}
-                with db.engine.begin() as conn:
-                    if "impact_value" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN impact_value NUMERIC(15, 4) DEFAULT 1.0"))
-                    if "weight" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN weight NUMERIC(10, 4) DEFAULT 1.0"))
-                    if "use_indicator_goal" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN use_indicator_goal BOOLEAN DEFAULT TRUE"))
-                    if "calculation_mode" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN calculation_mode VARCHAR(30) DEFAULT 'ranges'"))
-                    if "ranges_config" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN ranges_config JSON"))
-                    if "target_value" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN target_value NUMERIC(15, 4)"))
-                    if "min_threshold" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN min_threshold NUMERIC(15, 4)"))
-                    if "max_cap" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN max_cap NUMERIC(15, 4)"))
-                    if "max_reduction" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN max_reduction NUMERIC(15, 4)"))
-                    if "impact_type" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN impact_type VARCHAR(20) DEFAULT 'multiplier'"))
-                    if "order_index" not in incentive_rule_columns:
-                        conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN order_index INTEGER DEFAULT 0"))
-            if {"users", "employees"}.issubset(table_names):
-                stats = _backfill_user_channel_contacts()
-                print(
-                    "DEBUG: users contact backfill completed "
-                    f"(users={stats['users_updated']}, "
-                    f"whatsapp={stats['whatsapp_filled']}, "
-                    f"telegram={stats['telegram_filled']})."
-                )
-            print("DEBUG: DB tables verified/created successfully.")
-        except Exception as e:
-            db.session.rollback()
-            print(f"DEBUG: Error in db.create_all(): {e}")
+    if _should_run_schema_bootstrap(config_name):
+        print("DEBUG: Checking DB connection and creating tables...")
+        with app.app_context():
+            try:
+                db.create_all()
+                inspector = inspect(db.engine)
+                table_names = set(inspector.get_table_names())
+                if "users" in table_names:
+                    user_columns = {col["name"] for col in inspector.get_columns("users")}
+                    with db.engine.begin() as conn:
+                        if "instagram" not in user_columns:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN instagram VARCHAR(100)"))
+                            print("DEBUG: users.instagram column added successfully.")
+                        if "summary_delivery_channels" not in user_columns:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN summary_delivery_channels VARCHAR(100) NOT NULL DEFAULT 'telegram'"))
+                            print("DEBUG: users.summary_delivery_channels column added successfully.")
+                if "indicators" in table_names:
+                    indicator_columns = {col["name"] for col in inspector.get_columns("indicators")}
+                    with db.engine.begin() as conn:
+                        if "indicator_type" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN indicator_type VARCHAR(50) NOT NULL DEFAULT 'result'"))
+                        if "source_module" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN source_module VARCHAR(50) NOT NULL DEFAULT 'manual'"))
+                        if "source_id" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN source_id INTEGER"))
+                        if "source_scope" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN source_scope VARCHAR(50) NOT NULL DEFAULT 'company'"))
+                            print("DEBUG: indicators.source_scope column added successfully.")
+                        if "source_config" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN source_config JSON"))
+                            print("DEBUG: indicators.source_config column added successfully.")
+                        if "collection_mode" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN collection_mode VARCHAR(30) NOT NULL DEFAULT 'manual'"))
+                        if "aggregation_function" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN aggregation_function VARCHAR(30) NOT NULL DEFAULT 'sum'"))
+                        if "unit" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN unit VARCHAR(50) DEFAULT 'pts'"))
+                        if "polarity" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN polarity VARCHAR(20) DEFAULT 'positive'"))
+                        if "measurement_frequency" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN measurement_frequency VARCHAR(30) DEFAULT 'monthly'"))
+                        if "formula" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN formula TEXT"))
+                        if "process_id" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN process_id INTEGER REFERENCES processes(id)"))
+                        if "project_id" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN project_id INTEGER REFERENCES projects(id)"))
+                        if "responsible_id" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN responsible_id INTEGER REFERENCES employees(id)"))
+                        if "collaborators" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN collaborators JSON"))
+                        if "data_source" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN data_source TEXT"))
+                        if "notes" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN notes TEXT"))
+                        if "okr_reference" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN okr_reference VARCHAR(255)"))
+                        if "okr_level" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN okr_level VARCHAR(50)"))
+                        if "is_active" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN is_active BOOLEAN DEFAULT TRUE"))
+                        if "routine_id" not in indicator_columns:
+                            conn.execute(text("ALTER TABLE indicators ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
+                if "indicator_data" in table_names:
+                    indicator_data_columns = {col["name"] for col in inspector.get_columns("indicator_data")}
+                    with db.engine.begin() as conn:
+                        if "indicator_id" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN indicator_id INTEGER"))
+                            conn.execute(text("""
+                                UPDATE indicator_data
+                                SET indicator_id = indicator_goals.indicator_id
+                                FROM indicator_goals
+                                WHERE indicator_data.goal_id = indicator_goals.id
+                                  AND indicator_data.indicator_id IS NULL
+                            """))
+                            print("DEBUG: indicator_data.indicator_id column added successfully.")
+                        if "record_date" in indicator_data_columns and "measured_date" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data RENAME COLUMN record_date TO measured_date"))
+                            print("DEBUG: indicator_data.record_date renamed to measured_date.")
+                        if "value" in indicator_data_columns and "measured_value" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data RENAME COLUMN value TO measured_value"))
+                            conn.execute(text("ALTER TABLE indicator_data ALTER COLUMN measured_value TYPE NUMERIC(15, 4) USING measured_value::numeric"))
+                            print("DEBUG: indicator_data.value renamed to measured_value.")
+                        if "period_start" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN period_start DATE"))
+                        if "period_end" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN period_end DATE"))
+                        if "employee_id" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN employee_id INTEGER REFERENCES employees(id)"))
+                        if "collaborator_id" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN collaborator_id INTEGER REFERENCES employees(id)"))
+                        if "source_ref" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN source_ref VARCHAR(255)"))
+                        if "evidence_payload" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN evidence_payload JSON"))
+                        if "routine_id" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
+                        if "process_instance_id" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN process_instance_id INTEGER REFERENCES process_instances(id)"))
+                        if "status" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN status VARCHAR(30) DEFAULT 'draft'"))
+                        if "is_manual" not in indicator_data_columns:
+                            conn.execute(text("ALTER TABLE indicator_data ADD COLUMN is_manual BOOLEAN DEFAULT FALSE"))
+                if "indicator_goals" in table_names:
+                    indicator_goal_columns = {col["name"] for col in inspector.get_columns("indicator_goals")}
+                    with db.engine.begin() as conn:
+                        if "performance_ranges" not in indicator_goal_columns:
+                            conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN performance_ranges JSON"))
+                        if "routine_id" not in indicator_goal_columns:
+                            conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN routine_id INTEGER REFERENCES routines(id)"))
+                        if "collection_method" not in indicator_goal_columns:
+                            conn.execute(text("ALTER TABLE indicator_goals ADD COLUMN collection_method VARCHAR(50) DEFAULT 'manual'"))
+                if "incentive_rules" in table_names:
+                    incentive_rule_columns = {col["name"] for col in inspector.get_columns("incentive_rules")}
+                    with db.engine.begin() as conn:
+                        if "impact_value" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN impact_value NUMERIC(15, 4) DEFAULT 1.0"))
+                        if "weight" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN weight NUMERIC(10, 4) DEFAULT 1.0"))
+                        if "use_indicator_goal" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN use_indicator_goal BOOLEAN DEFAULT TRUE"))
+                        if "calculation_mode" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN calculation_mode VARCHAR(30) DEFAULT 'ranges'"))
+                        if "ranges_config" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN ranges_config JSON"))
+                        if "target_value" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN target_value NUMERIC(15, 4)"))
+                        if "min_threshold" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN min_threshold NUMERIC(15, 4)"))
+                        if "max_cap" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN max_cap NUMERIC(15, 4)"))
+                        if "max_reduction" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN max_reduction NUMERIC(15, 4)"))
+                        if "impact_type" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN impact_type VARCHAR(20) DEFAULT 'multiplier'"))
+                        if "order_index" not in incentive_rule_columns:
+                            conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN order_index INTEGER DEFAULT 0"))
+                if {"users", "employees"}.issubset(table_names):
+                    stats = _backfill_user_channel_contacts()
+                    print(
+                        "DEBUG: users contact backfill completed "
+                        f"(users={stats['users_updated']}, "
+                        f"whatsapp={stats['whatsapp_filled']}, "
+                        f"telegram={stats['telegram_filled']})."
+                    )
+                print("DEBUG: DB tables verified/created successfully.")
+            except Exception as e:
+                db.session.rollback()
+                print(f"DEBUG: Error in db.create_all(): {e}")
+    else:
+        print("DEBUG: DB bootstrap skipped for this runtime context.")
 
     @app.context_processor
     def inject_permissions():
@@ -394,16 +427,19 @@ def create_app(config_name=None):
                         except: pass
                         return redirect(url_for('auth.portal'))
     
-    print("DEBUG: Starting Engineering Service worker...")
-    from services.engineering_service import engineering_service
-    engineering_service.start_worker(app)
-    print("DEBUG: Engineering Service worker started.")
+    if _should_run_runtime_bootstrap(config_name):
+        print("DEBUG: Starting Engineering Service worker...")
+        from services.engineering_service import engineering_service
+        engineering_service.start_worker(app)
+        print("DEBUG: Engineering Service worker started.")
 
-    print("DEBUG: Initializing Scheduler...")
-    # Inicializa o Scheduler (Rotinas e Proatividade Sapiens Fase 4)
-    from services.scheduler_service import initialize_scheduler
-    initialize_scheduler(app)
-    print("DEBUG: Scheduler initialized.")
+        print("DEBUG: Initializing Scheduler...")
+        # Inicializa o Scheduler (Rotinas e Proatividade Sapiens Fase 4)
+        from services.scheduler_service import initialize_scheduler
+        initialize_scheduler(app)
+        print("DEBUG: Scheduler initialized.")
+    else:
+        print("DEBUG: Runtime background bootstrap skipped for this context.")
 
     print("DEBUG: create_app() finished successfully.")
     return app
@@ -747,7 +783,7 @@ def register_blueprints(app):
     is_debug = app.config.get('DEBUG', False)
     should_setup_webhook = (not is_debug) or (allow_dev_webhook and has_dev_token)
 
-    if app.config.get('TELEGRAM_SETUP_WEBHOOK') and app.config.get('EXTERNAL_URL') and should_setup_webhook:
+    if _should_run_runtime_bootstrap(app.config.get('FLASK_CONFIG', 'default')) and app.config.get('TELEGRAM_SETUP_WEBHOOK') and app.config.get('EXTERNAL_URL') and should_setup_webhook:
         print(f"BOT [TELEGRAM] Verificando registro de Webhook para: {app.config.get('EXTERNAL_URL')}")
         setup_webhook(app.config.get('EXTERNAL_URL'))
     elif is_debug and app.config.get('TELEGRAM_SETUP_WEBHOOK') and not has_dev_token:
