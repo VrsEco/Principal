@@ -32,3 +32,25 @@ Manifesto da fase 3:
 - Scripts em `C:\GestaoVersus\app32\scripts\` são a referência operacional oficial.
 - Scripts em `C:\GestaoVersus\app32\scripts\root_legacy\` são histórico controlado.
 - Scripts em `C:\GestaoVersus\app32\scripts\root_legacy\shadowed_by_official\` não devem ser usados como entrypoint padrão sem revisão técnica explícita.
+
+## Fase 4 — curadoria operacional
+
+Na fase 4, apenas grupos com **alto sinal de domínio** e **baixo risco de ambiguidade** foram promovidos para áreas oficiais:
+
+- `remote_legacy/` → `C:\GestaoVersus\app32\scripts\deploy\legacy_curated_remote\`
+- `seed_and_simulation/` → `C:\GestaoVersus\app32\scripts\data\legacy_curated_seed_and_simulation\`
+
+Manifesto da fase 4:
+
+- `C:\GestaoVersus\app32\scripts\root_legacy\manifest_phase4_curated_2026-03-23.json`
+
+### O que permaneceu em `root_legacy`
+
+Permaneceu histórico o que ainda demanda auditoria semântica antes de promoção:
+
+- `diagnostics/`
+- `database/`
+- `migrations/`
+- `tests_manual/`
+- `misc/`
+- `shadowed_by_official/`

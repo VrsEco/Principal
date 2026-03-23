@@ -1,0 +1,46 @@
+{
+  "date": "2026-03-23",
+  "strategy": "promote_high_confidence_domains",
+  "promoted_to_official": [
+    {
+      "from": "root_legacy\\remote_legacy\\graph_PROD.py",
+      "to": "deploy\\legacy_curated_remote\\graph_PROD.py"
+    },
+    {
+      "from": "root_legacy\\remote_legacy\\telegram_webhook_PROD.py",
+      "to": "deploy\\legacy_curated_remote\\telegram_webhook_PROD.py"
+    },
+    {
+      "from": "root_legacy\\remote_legacy\\tools_PROD.py",
+      "to": "deploy\\legacy_curated_remote\\tools_PROD.py"
+    },
+    {
+      "from": "root_legacy\\seed_and_simulation\\seed_complex_incentive.py",
+      "to": "data\\legacy_curated_seed_and_simulation\\seed_complex_incentive.py"
+    },
+    {
+      "from": "root_legacy\\seed_and_simulation\\seed_incentive_module.py",
+      "to": "data\\legacy_curated_seed_and_simulation\\seed_incentive_module.py"
+    },
+    {
+      "from": "root_legacy\\seed_and_simulation\\seed_test_data.py",
+      "to": "data\\legacy_curated_seed_and_simulation\\seed_test_data.py"
+    },
+    {
+      "from": "root_legacy\\seed_and_simulation\\simulate_capped_incentive.py",
+      "to": "data\\legacy_curated_seed_and_simulation\\simulate_capped_incentive.py"
+    },
+    {
+      "from": "root_legacy\\seed_and_simulation\\simulate_negative_incentive.py",
+      "to": "data\\legacy_curated_seed_and_simulation\\simulate_negative_incentive.py"
+    }
+  ],
+  "retained_in_root_legacy": {
+    "diagnostics": "alto volume e baixa padronizacao; requer consolidacao semantica antes de promocao",
+    "database": "scripts potencialmente mutantes em banco; exige auditoria DBA antes de promocao",
+    "migrations": "historico operacional; deve ser consolidado com Alembic/processo oficial antes de mover",
+    "tests_manual": "material util para QA, mas ainda nao empacotado como suite oficial",
+    "misc": "grupo heterogeneo; precisa decomposicao por dominio antes de promocao",
+    "shadowed_by_official": "historico preservado explicitamente nao canonico"
+  }
+}

@@ -135,3 +135,56 @@ Executar uma fase 4 orientada a arquitetura operacional:
 1. promover scripts realmente úteis de `root_legacy/` para domínios oficiais
 2. encapsular utilitários recorrentes em CLI única ou módulos reutilizáveis
 3. remover legados obsoletos apenas após validação de uso real
+
+## Fase 4 executada
+
+Foi executada uma curadoria operacional com abordagem **conservadora e orientada a domínio**.
+
+Em vez de promover em massa o conteúdo restante de `root_legacy/`, foram elevados apenas grupos de **alta confiança**:
+
+### Promoções realizadas
+
+- `C:\GestaoVersus\app32\scripts\root_legacy\remote_legacy\` →
+  `C:\GestaoVersus\app32\scripts\deploy\legacy_curated_remote\`
+- `C:\GestaoVersus\app32\scripts\root_legacy\seed_and_simulation\` →
+  `C:\GestaoVersus\app32\scripts\data\legacy_curated_seed_and_simulation\`
+
+Total de scripts promovidos para áreas oficiais: **8**
+
+Manifesto da fase 4:
+
+- `C:\GestaoVersus\app32\scripts\root_legacy\manifest_phase4_curated_2026-03-23.json`
+
+### Critério adotado
+
+Foram promovidos apenas arquivos que atendiam simultaneamente a estes requisitos:
+
+1. domínio funcional claro
+2. baixo risco de colisão com superfície oficial existente
+3. utilidade operacional evidente para `deploy` ou `data`
+
+### O que ficou explicitamente retido
+
+Os grupos abaixo permaneceram em `root_legacy/` por exigirem auditoria mais profunda:
+
+- `diagnostics/` — alto volume e baixa padronização
+- `database/` — potencial mutação de schema/dados; exige auditoria DBA
+- `migrations/` — precisa convergir com processo oficial Alembic
+- `tests_manual/` — útil para QA, mas ainda não estruturado como suíte oficial
+- `misc/` — heterogêneo e sem fronteira arquitetural clara
+- `shadowed_by_official/` — histórico preservado explicitamente não canônico
+
+## Estado arquitetural após a fase 4
+
+- raiz de `app32` saneada
+- legado da raiz removido da superfície principal
+- colisões classificadas
+- ativos de `deploy` e `data` com valor operacional já reposicionados
+
+## Próximo passo realmente maduro
+
+O próximo passo não é mais reorganização estrutural ampla. É **industrialização**:
+
+1. consolidar scripts recorrentes em CLIs oficiais por domínio
+2. transformar verificações úteis de `diagnostics/` e `tests_manual/` em automação de QA
+3. aposentar legado restante com métrica de uso e revisão de impacto
