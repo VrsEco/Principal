@@ -6,12 +6,15 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from models.workflow_gap import WorkflowGapCandidate
-from tests.conversation_regression.operational_report import build_operational_report
-from tests.conversation_regression.real_case_catalog import (
+from services.conversation_regression_runtime import (
+    FIXTURES_PATH,
     build_real_case_backlog_sync_payload,
     build_real_case_export,
+    build_operational_report,
+    load_catalog,
+    render_operational_report_html,
+    render_operational_report_json,
 )
-from tests.conversation_regression.runner import FIXTURES_PATH, load_catalog
 
 
 def _ensure_dir(path: Path) -> Path:
@@ -139,11 +142,6 @@ class ConversationRegressionService:
         output_dir: str,
         stem: str = "conversation_regression_snapshot",
     ) -> Dict[str, str]:
-        from tests.conversation_regression.operational_report import (
-            render_operational_report_html,
-            render_operational_report_json,
-        )
-
         root = _ensure_dir(Path(output_dir))
         catalog_path = root / f"{stem}.catalog.json"
         report_json_path = root / f"{stem}.report.json"

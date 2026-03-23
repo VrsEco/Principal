@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import db
 from models.project import ProjectTask
@@ -101,6 +101,7 @@ class ConversationRegressionBacklogService:
         *,
         project_code: str,
         user_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[ProjectTask], Optional[str]]:
         result, error = ProjectTaskService.create_project_task(
             project_code=project_code,
@@ -114,7 +115,7 @@ class ConversationRegressionBacklogService:
             stage=str(item.get("stage") or "inbox"),
             priority="normal",
             notes=ConversationRegressionBacklogService.build_task_notes(item),
-            allowed_company_ids=None,
+            allowed_company_ids=allowed_company_ids,
         )
         if error:
             return None, error
@@ -134,10 +135,15 @@ class ConversationRegressionBacklogService:
         *,
         project_code: str,
         user_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
         persist: bool = True,
     ) -> Dict[str, Any]:
         existing = ConversationRegressionBacklogService.find_existing_task_by_code(item.get("app_task_code"))
         if existing is not None:
+            if allowed_company_ids is not None:
+                normalized_company_ids = {int(cid) for cid in allowed_company_ids if cid}
+                if not normalized_company_ids or getattr(existing.project, "company_id", None) not in normalized_company_ids:
+                    return {"action": "error", "error": "Atividade fora do escopo autorizado da empresa.", "case_id": item.get("case_id")}
             task = ConversationRegressionBacklogService.update_existing_task(existing, item)
             if persist:
                 db.session.commit()
@@ -147,6 +153,7 @@ class ConversationRegressionBacklogService:
             item,
             project_code=project_code,
             user_id=user_id,
+            allowed_company_ids=allowed_company_ids,
         )
         if error:
             if persist:
@@ -161,6 +168,7 @@ class ConversationRegressionBacklogService:
         payload: Dict[str, Any],
         *,
         user_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
         persist: bool = True,
     ) -> Dict[str, Any]:
         project_code = str(payload.get("project_code") or ConversationRegressionBacklogService.DEFAULT_PROJECT_CODE).strip()
@@ -172,6 +180,7 @@ class ConversationRegressionBacklogService:
                     dict(item),
                     project_code=project_code,
                     user_id=user_id,
+                    allowed_company_ids=allowed_company_ids,
                     persist=persist,
                 )
             )
