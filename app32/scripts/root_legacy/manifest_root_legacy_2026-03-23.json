@@ -1,0 +1,1592 @@
+{
+  "date": "2026-03-23",
+  "strategy": "fase2_scripts_raiz_para_root_legacy",
+  "moved_count": 317,
+  "moved": [
+    {
+      "from": "add_max_mult_col.py",
+      "to": "scripts\\root_legacy\\migrations\\add_max_mult_col.py",
+      "category": "migrations"
+    },
+    {
+      "from": "add_routine_code.py",
+      "to": "scripts\\root_legacy\\migrations\\add_routine_code.py",
+      "category": "migrations"
+    },
+    {
+      "from": "add_score_weight.py",
+      "to": "scripts\\root_legacy\\migrations\\add_score_weight.py",
+      "category": "migrations"
+    },
+    {
+      "from": "align_fks.py",
+      "to": "scripts\\root_legacy\\database\\align_fks.py",
+      "category": "database"
+    },
+    {
+      "from": "apply_remote_sql.py",
+      "to": "scripts\\root_legacy\\database\\apply_remote_sql.py",
+      "category": "database"
+    },
+    {
+      "from": "apply_remote_sql_v2.py",
+      "to": "scripts\\root_legacy\\database\\apply_remote_sql_v2.py",
+      "category": "database"
+    },
+    {
+      "from": "audit_37_fix.py",
+      "to": "scripts\\root_legacy\\diagnostics\\audit_37_fix.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "audit_architecture_37.py",
+      "to": "scripts\\root_legacy\\diagnostics\\audit_architecture_37.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "audit_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\audit_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "audit_full.py",
+      "to": "scripts\\root_legacy\\diagnostics\\audit_full.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "audit_telegram.py",
+      "to": "scripts\\root_legacy\\diagnostics\\audit_telegram.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_actions.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_actions.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_active_companies.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_active_companies.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_agents_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_agents_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_api.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_api.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_cmp1.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_cmp1.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_co1.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_co1.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_cols.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_cols.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_companies_columns.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_companies_columns.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_counts.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_counts.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_counts2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_counts2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_crontab.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_crontab.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_data.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_data.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_data_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_data_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_db_direct.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_db_direct.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_db_perm.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_db_perm.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_db_state.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_db_state.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_emp.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_emp.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_employees_schema.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_employees_schema.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_errors.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_errors.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_gandu.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_gandu.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_gandu_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_gandu_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_id.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_id.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_ids.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_ids.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_indicator_data.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_indicator_data.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_indicators_cols.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_indicators_cols.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_integrations_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_integrations_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_latest_errors.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_latest_errors.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_lg_tables.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_lg_tables.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_mappers.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_mappers.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_messages_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_messages_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_messages_full.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_messages_full.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_occurrences_schema.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_occurrences_schema.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_participants_schema.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_participants_schema.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_pending_actions.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_pending_actions.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_plan_10.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_plan_10.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_plan_10_statuses.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_plan_10_statuses.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_pos.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_pos.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_pos_lines.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_pos_lines.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_process_instances_columns.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_process_instances_columns.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_process_map_data.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_process_map_data.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_processes.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_processes.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_prod_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_prod_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_prod_incoming.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_prod_incoming.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_prod_logs.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_prod_logs.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_prod_processes_perms.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_prod_processes_perms.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_prod_schema.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_prod_schema.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_prod_status.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_prod_status.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_projects.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_projects.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_projects_id5.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_projects_id5.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_projects_id5_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_projects_id5_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_projects_schema_dump.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_projects_schema_dump.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_recent_errors.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_recent_errors.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_remote_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_remote_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_remote_env.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_remote_env.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_req_log.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_req_log.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_reqs.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_reqs.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_schema.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_schema.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_schema3.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_schema3.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_section_status_table.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_section_status_table.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_server_ports.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_server_ports.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_settings.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_settings.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_tables_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_tables_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_task_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_task_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_tg_user.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_tg_user.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_top.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_top.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_trace.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_trace.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_types.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_types.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_types_2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_types_2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_user_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_user_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_user_roles.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_user_roles.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_users.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_users.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_version.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_version.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "check_webhook.py",
+      "to": "scripts\\root_legacy\\diagnostics\\check_webhook.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "compare_stats.py",
+      "to": "scripts\\root_legacy\\diagnostics\\compare_stats.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "count_jinja.py",
+      "to": "scripts\\root_legacy\\diagnostics\\count_jinja.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "count_jinja_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\count_jinja_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "count_lines.py",
+      "to": "scripts\\root_legacy\\diagnostics\\count_lines.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "count_lines_fast.py",
+      "to": "scripts\\root_legacy\\diagnostics\\count_lines_fast.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "create_delete_test_instance.py",
+      "to": "scripts\\root_legacy\\migrations\\create_delete_test_instance.py",
+      "category": "migrations"
+    },
+    {
+      "from": "db_check.py",
+      "to": "scripts\\root_legacy\\database\\db_check.py",
+      "category": "database"
+    },
+    {
+      "from": "db_check_118.py",
+      "to": "scripts\\root_legacy\\database\\db_check_118.py",
+      "category": "database"
+    },
+    {
+      "from": "db_count_check.py",
+      "to": "scripts\\root_legacy\\database\\db_count_check.py",
+      "category": "database"
+    },
+    {
+      "from": "db_diagnose.py",
+      "to": "scripts\\root_legacy\\database\\db_diagnose.py",
+      "category": "database"
+    },
+    {
+      "from": "db_direct_check.py",
+      "to": "scripts\\root_legacy\\database\\db_direct_check.py",
+      "category": "database"
+    },
+    {
+      "from": "db_fix_constraint.py",
+      "to": "scripts\\root_legacy\\database\\db_fix_constraint.py",
+      "category": "database"
+    },
+    {
+      "from": "debug_all_tasks_api.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_all_tasks_api.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_ao_code.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_ao_code.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_app.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_app.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_collab_prod.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_collab_prod.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_companies.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_companies.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_companies_schema.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_companies_schema.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_gas_data.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_gas_data.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_import.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_import.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_imports.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_imports.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_inc_closing.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_inc_closing.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_incentives.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_incentives.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_isolation_deep.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_isolation_deep.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_participants.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_participants.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_plans.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_plans.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_process_118.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_process_118.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_process_tables.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_process_tables.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_processes.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_processes.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_remote.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_remote.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_routine_tables.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_routine_tables.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_task.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_task.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_tasks.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_tasks.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_tasks_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_tasks_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_telegram_crash.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_telegram_crash.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_telegram_crash_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_telegram_crash_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "debug_users.py",
+      "to": "scripts\\root_legacy\\diagnostics\\debug_users.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "delete_instances.py",
+      "to": "scripts\\root_legacy\\migrations\\delete_instances.py",
+      "category": "migrations"
+    },
+    {
+      "from": "diag_vetor.py",
+      "to": "scripts\\root_legacy\\diagnostics\\diag_vetor.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "diagnose_37.py",
+      "to": "scripts\\root_legacy\\diagnostics\\diagnose_37.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "django_shim.py",
+      "to": "scripts\\root_legacy\\misc\\django_shim.py",
+      "category": "misc"
+    },
+    {
+      "from": "dump_integrations.py",
+      "to": "scripts\\root_legacy\\misc\\dump_integrations.py",
+      "category": "misc"
+    },
+    {
+      "from": "explicit_audit.py",
+      "to": "scripts\\root_legacy\\diagnostics\\explicit_audit.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "explicit_audit_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\explicit_audit_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "explore_system_final.py",
+      "to": "scripts\\root_legacy\\diagnostics\\explore_system_final.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "extract_occurrences_table.py",
+      "to": "scripts\\root_legacy\\diagnostics\\extract_occurrences_table.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "extract_table_to_file.py",
+      "to": "scripts\\root_legacy\\diagnostics\\extract_table_to_file.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "extract_traceback.py",
+      "to": "scripts\\root_legacy\\diagnostics\\extract_traceback.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "fast_complete.py",
+      "to": "scripts\\root_legacy\\diagnostics\\fast_complete.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "fetch_logs.py",
+      "to": "scripts\\root_legacy\\diagnostics\\fetch_logs.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "final_check.py",
+      "to": "scripts\\root_legacy\\misc\\final_check.py",
+      "category": "misc"
+    },
+    {
+      "from": "final_fix.py",
+      "to": "scripts\\root_legacy\\misc\\final_fix.py",
+      "category": "misc"
+    },
+    {
+      "from": "find_activity.py",
+      "to": "scripts\\root_legacy\\diagnostics\\find_activity.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "find_cp_projects.py",
+      "to": "scripts\\root_legacy\\diagnostics\\find_cp_projects.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "find_unclosed_ifs.py",
+      "to": "scripts\\root_legacy\\diagnostics\\find_unclosed_ifs.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "fix_braces.py",
+      "to": "scripts\\root_legacy\\misc\\fix_braces.py",
+      "category": "misc"
+    },
+    {
+      "from": "fix_db_alignment.py",
+      "to": "scripts\\root_legacy\\database\\fix_db_alignment.py",
+      "category": "database"
+    },
+    {
+      "from": "fix_diag_db.py",
+      "to": "scripts\\root_legacy\\database\\fix_diag_db.py",
+      "category": "database"
+    },
+    {
+      "from": "fix_drivers.py",
+      "to": "scripts\\root_legacy\\misc\\fix_drivers.py",
+      "category": "misc"
+    },
+    {
+      "from": "fix_goal_fk.py",
+      "to": "scripts\\root_legacy\\database\\fix_goal_fk.py",
+      "category": "database"
+    },
+    {
+      "from": "fix_missing_roles_prod.py",
+      "to": "scripts\\root_legacy\\misc\\fix_missing_roles_prod.py",
+      "category": "misc"
+    },
+    {
+      "from": "fix_occurrence.py",
+      "to": "scripts\\root_legacy\\database\\fix_occurrence.py",
+      "category": "database"
+    },
+    {
+      "from": "fix_occurrence_nulls.py",
+      "to": "scripts\\root_legacy\\database\\fix_occurrence_nulls.py",
+      "category": "database"
+    },
+    {
+      "from": "fix_statuses.py",
+      "to": "scripts\\root_legacy\\database\\fix_statuses.py",
+      "category": "database"
+    },
+    {
+      "from": "fix_tools_auth.py",
+      "to": "scripts\\root_legacy\\database\\fix_tools_auth.py",
+      "category": "database"
+    },
+    {
+      "from": "force_fix_db.py",
+      "to": "scripts\\root_legacy\\misc\\force_fix_db.py",
+      "category": "misc"
+    },
+    {
+      "from": "force_fix_drivers.py",
+      "to": "scripts\\root_legacy\\misc\\force_fix_drivers.py",
+      "category": "misc"
+    },
+    {
+      "from": "get_actions.py",
+      "to": "scripts\\root_legacy\\diagnostics\\get_actions.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "get_msgs.py",
+      "to": "scripts\\root_legacy\\diagnostics\\get_msgs.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "get_webhook_err.py",
+      "to": "scripts\\root_legacy\\diagnostics\\get_webhook_err.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "graph_PROD.py",
+      "to": "scripts\\root_legacy\\remote_legacy\\graph_PROD.py",
+      "category": "remote_legacy"
+    },
+    {
+      "from": "inspect_column_types.py",
+      "to": "scripts\\root_legacy\\diagnostics\\inspect_column_types.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "inspect_constraints.py",
+      "to": "scripts\\root_legacy\\diagnostics\\inspect_constraints.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "inspect_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\inspect_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "inspect_db_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\inspect_db_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "inventory_db.py",
+      "to": "scripts\\root_legacy\\diagnostics\\inventory_db.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_all_companies.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_all_companies.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_all_companies_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_all_companies_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_all_companies_v3.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_all_companies_v3.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_companies_simple.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_companies_simple.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_plans.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_plans.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_remote_www.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_remote_www.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_tables.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_tables.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "list_tables_file.py",
+      "to": "scripts\\root_legacy\\diagnostics\\list_tables_file.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "log_error.py",
+      "to": "scripts\\root_legacy\\diagnostics\\log_error.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "log_error_2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\log_error_2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "log_error_3.py",
+      "to": "scripts\\root_legacy\\diagnostics\\log_error_3.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "manage_admin.py",
+      "to": "scripts\\root_legacy\\misc\\manage_admin.py",
+      "category": "misc"
+    },
+    {
+      "from": "migrate_actual_end_date.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_actual_end_date.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_all_drivers_id.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_all_drivers_id.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_companies.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_companies.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_companies_is_active.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_companies_is_active.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_goal_date.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_goal_date.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_impact_fields.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_impact_fields.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_indicator_data.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_indicator_data.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_indicators_responsible.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_indicators_responsible.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_is_active.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_is_active.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_participants_schema.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_participants_schema.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_pop.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_pop.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_process_instances.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_process_instances.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_project_tables.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_project_tables.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_project_tasks.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_project_tasks.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_projects_schema.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_projects_schema.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_routines.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_routines.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_sensor_fields.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_sensor_fields.py",
+      "category": "migrations"
+    },
+    {
+      "from": "migrate_vision_id.py",
+      "to": "scripts\\root_legacy\\migrations\\migrate_vision_id.py",
+      "category": "migrations"
+    },
+    {
+      "from": "passenger_debug.py",
+      "to": "scripts\\root_legacy\\misc\\passenger_debug.py",
+      "category": "misc"
+    },
+    {
+      "from": "patch_prod_processes_perms.py",
+      "to": "scripts\\root_legacy\\database\\patch_prod_processes_perms.py",
+      "category": "database"
+    },
+    {
+      "from": "patch_roles_remote.py",
+      "to": "scripts\\root_legacy\\database\\patch_roles_remote.py",
+      "category": "database"
+    },
+    {
+      "from": "print_cols.py",
+      "to": "scripts\\root_legacy\\diagnostics\\print_cols.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "read_deploy_out.py",
+      "to": "scripts\\root_legacy\\diagnostics\\read_deploy_out.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "read_remote_env.py",
+      "to": "scripts\\root_legacy\\diagnostics\\read_remote_env.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "read_remote_passenger.py",
+      "to": "scripts\\root_legacy\\diagnostics\\read_remote_passenger.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "read_remote_passenger_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\read_remote_passenger_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "reset_and_seed_incentives.py",
+      "to": "scripts\\root_legacy\\migrations\\reset_and_seed_incentives.py",
+      "category": "migrations"
+    },
+    {
+      "from": "reset_incentive_rules_fk.py",
+      "to": "scripts\\root_legacy\\migrations\\reset_incentive_rules_fk.py",
+      "category": "migrations"
+    },
+    {
+      "from": "reset_permissions.py",
+      "to": "scripts\\root_legacy\\database\\reset_permissions.py",
+      "category": "database"
+    },
+    {
+      "from": "scan_templates.py",
+      "to": "scripts\\root_legacy\\diagnostics\\scan_templates.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "search_sql.py",
+      "to": "scripts\\root_legacy\\diagnostics\\search_sql.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "seed_complex_incentive.py",
+      "to": "scripts\\root_legacy\\seed_and_simulation\\seed_complex_incentive.py",
+      "category": "seed_and_simulation"
+    },
+    {
+      "from": "seed_incentive_module.py",
+      "to": "scripts\\root_legacy\\seed_and_simulation\\seed_incentive_module.py",
+      "category": "seed_and_simulation"
+    },
+    {
+      "from": "seed_test_data.py",
+      "to": "scripts\\root_legacy\\seed_and_simulation\\seed_test_data.py",
+      "category": "seed_and_simulation"
+    },
+    {
+      "from": "setup_db_checkpointer.py",
+      "to": "scripts\\root_legacy\\migrations\\setup_db_checkpointer.py",
+      "category": "migrations"
+    },
+    {
+      "from": "setup_lg_v2.py",
+      "to": "scripts\\root_legacy\\migrations\\setup_lg_v2.py",
+      "category": "migrations"
+    },
+    {
+      "from": "setup_lg_v3.py",
+      "to": "scripts\\root_legacy\\migrations\\setup_lg_v3.py",
+      "category": "migrations"
+    },
+    {
+      "from": "setup_lg_v4.py",
+      "to": "scripts\\root_legacy\\migrations\\setup_lg_v4.py",
+      "category": "migrations"
+    },
+    {
+      "from": "simple_check_areas.py",
+      "to": "scripts\\root_legacy\\diagnostics\\simple_check_areas.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "simple_count.py",
+      "to": "scripts\\root_legacy\\diagnostics\\simple_count.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "simple_find.py",
+      "to": "scripts\\root_legacy\\diagnostics\\simple_find.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "simulate_capped_incentive.py",
+      "to": "scripts\\root_legacy\\seed_and_simulation\\simulate_capped_incentive.py",
+      "category": "seed_and_simulation"
+    },
+    {
+      "from": "simulate_negative_incentive.py",
+      "to": "scripts\\root_legacy\\seed_and_simulation\\simulate_negative_incentive.py",
+      "category": "seed_and_simulation"
+    },
+    {
+      "from": "sync_db.py",
+      "to": "scripts\\root_legacy\\database\\sync_db.py",
+      "category": "database"
+    },
+    {
+      "from": "telegram_webhook_PROD.py",
+      "to": "scripts\\root_legacy\\remote_legacy\\telegram_webhook_PROD.py",
+      "category": "remote_legacy"
+    },
+    {
+      "from": "test_api_areas.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_api_areas.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_api_areas_v2.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_api_areas_v2.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_api_model.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_api_model.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_audit_api.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_audit_api.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_chat.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_chat.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_company.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_company.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_crash_scenario.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_crash_scenario.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_db_connection.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_db_connection.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_db_direct.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_db_direct.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_efficiency_colab.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_efficiency_colab.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_endpoint.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_endpoint.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_graph.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_graph.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_http.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_http.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_import.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_import.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_insert.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_insert.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_llm.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_llm.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_mappers.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_mappers.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_mappers_v2.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_mappers_v2.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_my_work.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_my_work.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_my_work_colab.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_my_work_colab.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_occurrence.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_occurrence.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_openai_key.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_openai_key.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_ops.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_ops.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_prod_agent.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_prod_agent.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_prod_init.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_prod_init.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_prod_roles.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_prod_roles.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_rag_init.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_rag_init.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_remote_v3.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_remote_v3.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_router.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_router.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_run_tool.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_run_tool.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_schema.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_schema.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_section_api.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_section_api.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_setattr.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_setattr.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_tg.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_tg.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_tool_companies.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_tool_companies.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_update_company.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_update_company.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "test_user_id.py",
+      "to": "scripts\\root_legacy\\tests_manual\\test_user_id.py",
+      "category": "tests_manual"
+    },
+    {
+      "from": "tmp_add_freq_col.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_add_freq_col.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_app_prod.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_app_prod.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_all_tasks.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_all_tasks.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_cols.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_cols.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_db.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_db.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_db_v3.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_db_v3.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_p26_company.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_p26_company.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_p2_company.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_p2_company.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_p2_company_v2.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_p2_company_v2.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_p4.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_p4.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_p4_v2.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_p4_v2.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_p4_v3.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_p4_v3.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_p_company.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_p_company.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_proj.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_proj.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_tasks.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_tasks.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_tasks_p2.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_tasks_p2.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_tasks_p2_v2.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_tasks_p2_v2.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_check_users.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_check_users.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_debug_import.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_debug_import.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_debug_user.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_debug_user.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_dev_prod.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_dev_prod.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_diagnose_tasks.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_diagnose_tasks.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_list_projects.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_list_projects.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_list_users.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_list_users.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_migrate_incentive.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_migrate_incentive.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_migrate_ranges_config.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_migrate_ranges_config.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_model_check.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_model_check.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_passenger.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_passenger.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_passenger_bak.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_passenger_bak.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_passenger_prod.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_passenger_prod.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_probe_server.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_probe_server.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_smoke_test_incentives.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_smoke_test_incentives.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_cycle.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_cycle.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_cycle_p4.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_cycle_p4.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_cycle_p4_v2.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_cycle_p4_v2.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_cycle_p4_v3.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_cycle_p4_v3.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_dependency.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_dependency.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_dependency_v2.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_dependency_v2.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_indicator_query.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_indicator_query.py",
+      "category": "misc"
+    },
+    {
+      "from": "tmp_test_server.py",
+      "to": "scripts\\root_legacy\\misc\\tmp_test_server.py",
+      "category": "misc"
+    },
+    {
+      "from": "tools_PROD.py",
+      "to": "scripts\\root_legacy\\remote_legacy\\tools_PROD.py",
+      "category": "remote_legacy"
+    },
+    {
+      "from": "trace_jinja.py",
+      "to": "scripts\\root_legacy\\diagnostics\\trace_jinja.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "trace_map.py",
+      "to": "scripts\\root_legacy\\diagnostics\\trace_map.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "trace_mapper.py",
+      "to": "scripts\\root_legacy\\diagnostics\\trace_mapper.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "ultimate_fix.py",
+      "to": "scripts\\root_legacy\\misc\\ultimate_fix.py",
+      "category": "misc"
+    },
+    {
+      "from": "ultra_fix.py",
+      "to": "scripts\\root_legacy\\misc\\ultra_fix.py",
+      "category": "misc"
+    },
+    {
+      "from": "unify_indicators_db.py",
+      "to": "scripts\\root_legacy\\misc\\unify_indicators_db.py",
+      "category": "misc"
+    },
+    {
+      "from": "update_db.py",
+      "to": "scripts\\root_legacy\\migrations\\update_db.py",
+      "category": "migrations"
+    },
+    {
+      "from": "update_db_data.py",
+      "to": "scripts\\root_legacy\\migrations\\update_db_data.py",
+      "category": "migrations"
+    },
+    {
+      "from": "update_db_schema.py",
+      "to": "scripts\\root_legacy\\migrations\\update_db_schema.py",
+      "category": "migrations"
+    },
+    {
+      "from": "update_db_schema_v21.py",
+      "to": "scripts\\root_legacy\\migrations\\update_db_schema_v21.py",
+      "category": "migrations"
+    },
+    {
+      "from": "update_fk_goals.py",
+      "to": "scripts\\root_legacy\\migrations\\update_fk_goals.py",
+      "category": "migrations"
+    },
+    {
+      "from": "update_goal_code_db.py",
+      "to": "scripts\\root_legacy\\migrations\\update_goal_code_db.py",
+      "category": "migrations"
+    },
+    {
+      "from": "update_goal_ranges_db.py",
+      "to": "scripts\\root_legacy\\migrations\\update_goal_ranges_db.py",
+      "category": "migrations"
+    },
+    {
+      "from": "update_routine_link_db.py",
+      "to": "scripts\\root_legacy\\migrations\\update_routine_link_db.py",
+      "category": "migrations"
+    },
+    {
+      "from": "verify_cols_final.py",
+      "to": "scripts\\root_legacy\\diagnostics\\verify_cols_final.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "verify_cols_v2.py",
+      "to": "scripts\\root_legacy\\diagnostics\\verify_cols_v2.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "verify_companies_schema.py",
+      "to": "scripts\\root_legacy\\diagnostics\\verify_companies_schema.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "verify_remote_deploy.py",
+      "to": "scripts\\root_legacy\\diagnostics\\verify_remote_deploy.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "verify_render.py",
+      "to": "scripts\\root_legacy\\diagnostics\\verify_render.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "verify_request.py",
+      "to": "scripts\\root_legacy\\diagnostics\\verify_request.py",
+      "category": "diagnostics"
+    },
+    {
+      "from": "verify_urls.py",
+      "to": "scripts\\root_legacy\\diagnostics\\verify_urls.py",
+      "category": "diagnostics"
+    }
+  ]
+}
