@@ -423,6 +423,72 @@ def reclassify_workflow_gaps():
     })
 
 
+@agents_bp.route('/api/agents/conversation-regression/run', methods=['POST'])
+@login_required
+def run_conversation_regression_pipeline():
+    from flask import session
+    from services.conversation_regression_backlog_service import ConversationRegressionBacklogService
+    from services.conversation_regression_service import ConversationRegressionService
+
+    active_company_id = session.get('active_company_id')
+    if not _has_operational_full_access(active_company_id):
+        return jsonify({"success": False, "error": "Sem permissão para executar a pipeline de regressão conversacional."}), 403
+
+    body = request.get_json(silent=True) or {}
+    status_filter = str(body.get('status') or 'inbox').strip().lower() or 'inbox'
+    limit_raw = str(body.get('limit') or '100').strip()
+    snapshot_dir = str(body.get('snapshot_dir') or '').strip() or None
+    sync_backlog = bool(body.get('sync_backlog', True))
+    persist_snapshot = bool(body.get('persist_snapshot', False))
+    persist_backlog = bool(body.get('persist_backlog', True))
+    company_id = body.get('company_id', active_company_id)
+    if company_id in {'', None}:
+        company_id = active_company_id
+
+    try:
+        limit = max(1, min(int(limit_raw), 500))
+    except ValueError:
+        return jsonify({"success": False, "error": "Parâmetro limit inválido."}), 400
+
+    if company_id is not None:
+        try:
+            company_id = int(company_id)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "error": "Parâmetro company_id inválido."}), 400
+
+    candidates = ConversationRegressionService.collect_workflow_gap_candidates(
+        status=status_filter,
+        limit=limit,
+        company_id=company_id,
+    )
+    snapshot = ConversationRegressionService.build_snapshot(workflow_gap_candidates=candidates)
+
+    persisted_paths = None
+    if persist_snapshot and snapshot_dir:
+        persisted_paths = ConversationRegressionService.persist_snapshot(snapshot, output_dir=snapshot_dir)
+
+    backlog_sync = snapshot.get('backlog_sync')
+    if sync_backlog:
+        backlog_sync = ConversationRegressionBacklogService.apply_sync_payload(
+            snapshot.get('backlog_sync') or {},
+            user_id=int(getattr(current_user, 'id', 0) or 0),
+            persist=persist_backlog,
+        )
+
+    return jsonify({
+        "success": True,
+        "filters": {
+            "status": status_filter,
+            "limit": limit,
+            "company_id": company_id,
+            "active_company_id": active_company_id,
+        },
+        "report": snapshot.get('report'),
+        "backlog_sync": backlog_sync,
+        "persisted_paths": persisted_paths,
+    })
+
+
 @agents_bp.route('/api/agents/workflow-gaps/link', methods=['GET'])
 @login_required
 def get_workflow_gap_link():

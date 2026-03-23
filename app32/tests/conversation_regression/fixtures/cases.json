@@ -1,0 +1,270 @@
+{
+  "a_consultar": [
+    {
+      "id": "consultar_mixed_open_joaquim",
+      "type": "parsing",
+      "failure_class": "parsing",
+      "source": "real_whatsapp_incident",
+      "input": "Quais as atividades e instâncias que Joaquim Guga da empresa Gandu Investimentos tem em aberto?",
+      "expected_payload": {
+        "empresa": "Gandu Investimentos",
+        "colaborador": "Joaquim Guga",
+        "entidade": "mixed",
+        "status_consulta": "open"
+      }
+    },
+    {
+      "id": "consultar_mixed_overdue_joaquim",
+      "type": "parsing",
+      "failure_class": "parsing",
+      "source": "real_whatsapp_incident",
+      "input": "Quais as atividades e instâncias atrasadas que Joaquim Guga da empresa Gandu Investimentos tem em aberto?",
+      "expected_payload": {
+        "empresa": "Gandu Investimentos",
+        "colaborador": "Joaquim Guga",
+        "entidade": "mixed",
+        "status_consulta": "overdue"
+      }
+    },
+    {
+      "id": "consultar_marcio_acento_ventana",
+      "type": "parsing",
+      "failure_class": "parsing",
+      "source": "real_whatsapp_incident",
+      "input": "Quais as atividades em aberto para Márcio Simões da empresa Ventana?",
+      "expected_payload": {
+        "empresa": "Ventana",
+        "colaborador": "Márcio Simões",
+        "entidade": "project_task",
+        "status_consulta": "open"
+      }
+    },
+    {
+      "id": "routing_consulta_overdue_prioritario",
+      "type": "routing",
+      "failure_class": "routing",
+      "source": "real_whatsapp_incident",
+      "input": "Quais as atividades e instâncias atrasadas que Joaquim Guga da empresa Gandu Investimentos tem em aberto?",
+      "options": [
+        {
+          "option_id": 31,
+          "code": "3.1",
+          "title": "Atividades em Aberto",
+          "action_key": "my_work.open",
+          "keywords": ["atividades em aberto"]
+        },
+        {
+          "option_id": 32,
+          "code": "3.2",
+          "title": "Meu Trabalho Atrasado",
+          "action_key": "my_work.overdue",
+          "keywords": ["trabalho atrasado", "instancias atrasadas"]
+        }
+      ],
+      "expected_action_key": "my_work.overdue"
+    },
+    {
+      "id": "routing_consulta_open_marcio",
+      "type": "routing",
+      "failure_class": "routing",
+      "source": "real_whatsapp_incident",
+      "input": "Quais as atividades em aberto para Márcio Simões da empresa Ventana?",
+      "options": [
+        {
+          "option_id": 31,
+          "code": "3.1",
+          "title": "Atividades em Aberto",
+          "action_key": "my_work.open",
+          "keywords": ["atividades em aberto"]
+        },
+        {
+          "option_id": 32,
+          "code": "3.2",
+          "title": "Meu Trabalho Atrasado",
+          "action_key": "my_work.overdue",
+          "keywords": ["trabalho atrasado", "instancias atrasadas"]
+        }
+      ],
+      "expected_action_key": "my_work.open"
+    }
+  ],
+  "b_cadastrar_iniciar": [
+    {
+      "id": "cadastrar_atividade_multiturn_confirmacao",
+      "type": "multiturn",
+      "failure_class": "multi_turn",
+      "source": "curated_regression",
+      "option": {
+        "option_id": 14,
+        "code": "1.4",
+        "title": "Cadastrar Atividade de Projeto",
+        "action_key": "project_task.create",
+        "required_fields": [
+          {"key": "codigo_projeto", "label": "Codigo do Projeto"},
+          {"key": "nome_atividade", "label": "Nome da Atividade"}
+        ]
+      },
+      "turns": ["1.4", "1", "1", "1: Criar briefing da campanha", "sim"],
+      "direct_executor": "project_task_create",
+      "selection_payload": {
+        "selection_kind": "project_picker",
+        "field_key": "codigo_projeto",
+        "value_key": "code",
+        "scope_label": "empresa AU - Gandu Investimentos e Participações",
+        "item_label_plural": "projetos",
+        "choices": [
+          {
+            "index": 1,
+            "code": "AU.J.11",
+            "title": "Reunião Semanal",
+            "status": "in_progress",
+            "progress": 55,
+            "due_date": "2026-03-23"
+          }
+        ]
+      },
+      "expected_turn_contains": [
+        "Escolha a empresa para continuar:",
+        "Escolha o projeto ativo",
+        "Para executar, faltam os seguintes dados:",
+        "Confirme que voce quer:"
+      ],
+      "expected_final_response": "atividade criada: AU.J.11 - Criar briefing da campanha",
+      "expected_session_status": "idle"
+    },
+    {
+      "id": "iniciar_processo_descoberta_direta",
+      "type": "routing",
+      "failure_class": "routing",
+      "source": "curated_regression",
+      "input": "Iniciar processo agora",
+      "options": [
+        {
+          "option_id": 41,
+          "code": "4.1",
+          "title": "Iniciar Instancia de Processo",
+          "action_key": "process_instance.complete",
+          "keywords": ["iniciar instancia", "iniciar processo"]
+        },
+        {
+          "option_id": 42,
+          "code": "4.2",
+          "title": "Agendar Reuniao",
+          "action_key": "meeting.schedule",
+          "keywords": ["agendar reuniao", "nova reuniao"]
+        }
+      ],
+      "expected_action_key": "process_instance.complete"
+    }
+  ],
+  "c_encerrar": [
+    {
+      "id": "encerrar_ids_lote_parsing",
+      "type": "parsing",
+      "failure_class": "parsing",
+      "source": "real_whatsapp_incident",
+      "input": "Pode dar como concluida as atividades de IDs: 24 e 323",
+      "expected_payload": {
+        "ids": "24,323",
+        "codigo_atividade": "24,323"
+      }
+    },
+    {
+      "id": "encerrar_atividade_routing",
+      "type": "routing",
+      "failure_class": "routing",
+      "source": "real_whatsapp_incident",
+      "input": "Pode dar como concluida as atividades de IDs: 24 e 323",
+      "options": [
+        {
+          "option_id": 15,
+          "code": "1.5",
+          "title": "Finalizar Atividade de Projeto",
+          "action_key": "project_task.complete",
+          "keywords": ["concluir atividade", "finalizar atividade"]
+        },
+        {
+          "option_id": 21,
+          "code": "2.2",
+          "title": "Finalizar Instancia de Processo",
+          "action_key": "process_instance.complete",
+          "keywords": ["concluir instancia", "finalizar processo"]
+        }
+      ],
+      "expected_action_key": "project_task.complete"
+    },
+    {
+      "id": "encerrar_instancia_routing",
+      "type": "routing",
+      "failure_class": "routing",
+      "source": "curated_regression",
+      "input": "Concluir instância 24 do processo agora",
+      "options": [
+        {
+          "option_id": 15,
+          "code": "1.5",
+          "title": "Finalizar Atividade de Projeto",
+          "action_key": "project_task.complete",
+          "keywords": ["concluir atividade", "finalizar atividade"]
+        },
+        {
+          "option_id": 21,
+          "code": "2.2",
+          "title": "Finalizar Instancia de Processo",
+          "action_key": "process_instance.complete",
+          "keywords": ["concluir instancia", "finalizar processo"]
+        }
+      ],
+      "expected_action_key": "process_instance.complete"
+    }
+  ],
+  "d_analisar": [
+    {
+      "id": "analisar_atividades_sem_responsavel",
+      "type": "parsing",
+      "failure_class": "parsing",
+      "source": "real_flow_gap",
+      "input": "Analise as atividades de projetos que estão sem responsável, de todas as empresas.",
+      "expected_payload": {
+        "entidade": "project_task",
+        "tipo_auditoria": "missing_responsible"
+      },
+      "expected_absent_keys": ["colaborador"]
+    },
+    {
+      "id": "analisar_atividades_sem_data",
+      "type": "parsing",
+      "failure_class": "parsing",
+      "source": "real_flow_gap",
+      "input": "Analise as atividades de todas as empresas que estão sem data.",
+      "expected_payload": {
+        "entidade": "project_task",
+        "tipo_auditoria": "missing_due_date"
+      }
+    },
+    {
+      "id": "analisar_routing_project_task_audit",
+      "type": "routing",
+      "failure_class": "routing",
+      "source": "real_flow_gap",
+      "input": "Analise as atividades de projetos que estão sem responsável, de todas as empresas.",
+      "options": [
+        {
+          "option_id": 17,
+          "code": "1.7",
+          "title": "Auditar Atividades de Projeto",
+          "action_key": "project_task.audit",
+          "keywords": ["atividades sem responsável", "atividades sem data", "auditoria de atividades"]
+        },
+        {
+          "option_id": 31,
+          "code": "3.1",
+          "title": "Atividades em Aberto",
+          "action_key": "my_work.open",
+          "keywords": ["atividades em aberto"]
+        }
+      ],
+      "expected_action_key": "project_task.audit"
+    }
+  ]
+}
