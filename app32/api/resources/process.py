@@ -30,11 +30,15 @@ from models import (
     Indicator,
     IndicatorData,
     ActivityWorkLog,
+    Routine,
+    Occurrence,
+    FinancialAutomationRule,
 )
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required
 from utils.sql_execution import execute_formatted_query
 from database import get_db
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
@@ -303,6 +307,59 @@ def _get_process_with_access(process_id: int, action: str = 'view', sync_session
         session['active_company_id'] = process.company_id
 
     return process
+
+
+def _get_process_delete_blockers(process: Process) -> dict[str, int]:
+    if not process:
+        return {}
+
+    company_id = getattr(process, 'company_id', None)
+    process_id = getattr(process, 'id', None)
+    if not company_id or not process_id:
+        return {}
+
+    blocker_queries = {
+        'linked_routines_count': Routine.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_instances_count': ProcessInstance.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_indicators_count': Indicator.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_occurrences_count': Occurrence.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_financial_automations_count': FinancialAutomationRule.query.filter_by(company_id=company_id, process_id=process_id),
+    }
+
+    blockers = {}
+    for key, query in blocker_queries.items():
+        count = query.count()
+        if count > 0:
+            blockers[key] = count
+
+    return blockers
+
+
+def _build_process_delete_conflict(process: Process, blockers: dict[str, int]):
+    labels = {
+        'linked_routines_count': 'rotina(s) agendada(s)',
+        'linked_instances_count': 'instância(s)',
+        'linked_indicators_count': 'indicador(es)',
+        'linked_occurrences_count': 'ocorrência(s)',
+        'linked_financial_automations_count': 'automação(ões) financeira(s)',
+    }
+    blocker_summary = ", ".join(
+        f"{count} {labels[key]}"
+        for key, count in blockers.items()
+    )
+
+    return {
+        "error": (
+            "Não é possível excluir este processo porque existem registros vinculados: "
+            f"{blocker_summary}. Remova ou desvincule esses itens primeiro."
+        ),
+        "code": "PROCESS_HAS_LINKED_DATA",
+        "details": {
+            "process_id": getattr(process, 'id', None),
+            "company_id": getattr(process, 'company_id', None),
+            **blockers,
+        }
+    }, 409
 
 
 def fetch_pop_routine_by_id(routine_id: int):
@@ -1159,11 +1216,38 @@ class ProcessResource(Resource):
         if not process:
             return {"error": "Permission denied: delete on processes"}, 403
         try:
+            blockers = _get_process_delete_blockers(process)
+            if blockers:
+                return _build_process_delete_conflict(process, blockers)
+
             db.session.delete(process)
             db.session.commit()
             return {"message": "Process deleted successfully"}, 200
+        except IntegrityError:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro de integridade ao excluir processo process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {
+                "error": (
+                    "Não foi possível excluir o processo porque ainda existem "
+                    "registros vinculados em outras estruturas do sistema."
+                ),
+                "code": "PROCESS_DELETE_BLOCKED_BY_REFERENCES",
+                "details": {
+                    "process_id": process_id,
+                    "company_id": getattr(process, 'company_id', None),
+                }
+            }, 409
         except Exception as e:
             db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao excluir processo process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessRoutineListResource(Resource):

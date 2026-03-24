@@ -499,22 +499,69 @@ function editProcess(id) {
 }
 
 // Deletes
+async function parseDeleteResponse(res) {
+    try {
+        return await res.json();
+    } catch (e) {
+        return null;
+    }
+}
+
+function extractDeleteErrorMessage(payload) {
+    if (!payload) return 'Não foi possível excluir o registro.';
+    if (typeof payload.error === 'string' && payload.error.trim()) return payload.error;
+    if (typeof payload.message === 'string' && payload.message.trim()) return payload.message;
+    if (payload.errors) return JSON.stringify(payload.errors);
+    return 'Não foi possível excluir o registro.';
+}
+
+function notifyDeleteError(message) {
+    if (window.showMessage) {
+        window.showMessage(message, 'error');
+        return;
+    }
+    alert(message);
+}
+
+async function requestDelete(url, confirmMessage) {
+    if (!confirm(confirmMessage)) return false;
+
+    try {
+        const res = await fetch(url, { method: 'DELETE' });
+        const payload = await parseDeleteResponse(res);
+
+        if (!res.ok) {
+            notifyDeleteError(extractDeleteErrorMessage(payload));
+            return false;
+        }
+
+        if (payload?.message && window.showMessage) {
+            window.showMessage(payload.message, 'success');
+        }
+        return true;
+    } catch (e) {
+        console.error('Erro ao excluir registro:', e);
+        notifyDeleteError('Erro técnico: Não foi possível concluir a exclusão.');
+        return false;
+    }
+}
+
 async function deleteArea(id) {
-    if (!confirm("Excluir área e todos os macros/processos vinculados?")) return;
-    await fetch(`/api/process-areas/${id}`, { method: 'DELETE' });
-    initArchitecture();
+    const deleted = await requestDelete(`/api/process-areas/${id}`, "Excluir área e todos os macros/processos vinculados?");
+    if (!deleted) return;
+    await initArchitecture();
 }
 
 async function deleteMacro(id) {
-    if (!confirm("Excluir macroprocesso e seus processos?")) return;
-    await fetch(`/api/macro-processes/${id}`, { method: 'DELETE' });
-    initArchitecture();
+    const deleted = await requestDelete(`/api/macro-processes/${id}`, "Excluir macroprocesso e seus processos?");
+    if (!deleted) return;
+    await initArchitecture();
 }
 
 async function deleteProcess(id) {
-    if (!confirm("Excluir este processo?")) return;
-    await fetch(`/api/processes/${id}`, { method: 'DELETE' });
-    initArchitecture();
+    const deleted = await requestDelete(`/api/processes/${id}`, "Excluir este processo?");
+    if (!deleted) return;
+    await initArchitecture();
 }
 
 // Actions
