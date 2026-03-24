@@ -46,6 +46,8 @@ SCHEDULE_LABELS = {
     "specific": "Data específica",
 }
 
+PROCESS_SOURCE_MODULES = ("processo", "process")
+
 
 @dataclass(frozen=True)
 class ProcessBookContext:
@@ -266,7 +268,16 @@ def _load_routines(*, process_id: int, company_id: int) -> list[dict[str, Any]]:
 def _load_indicators(*, process_id: int, company_id: int) -> list[dict[str, Any]]:
     indicators = (
         Indicator.query.options(joinedload(Indicator.group))
-        .filter(Indicator.company_id == company_id, Indicator.process_id == process_id)
+        .filter(Indicator.company_id == company_id)
+        .filter(
+            or_(
+                Indicator.process_id == process_id,
+                and_(
+                    Indicator.source_module.in_(PROCESS_SOURCE_MODULES),
+                    Indicator.source_id == process_id,
+                ),
+            )
+        )
         .order_by(Indicator.code.asc(), Indicator.id.asc())
         .all()
     )
@@ -283,16 +294,11 @@ def _load_indicators(*, process_id: int, company_id: int) -> list[dict[str, Any]
         )
 
         latest_record = (
-            IndicatorData.query.join(
-                IndicatorGoal,
-                and_(
-                    IndicatorGoal.id == IndicatorData.goal_id,
-                    IndicatorGoal.company_id == company_id,
-                    IndicatorGoal.indicator_id == indicator.id,
-                ),
+            IndicatorData.query.filter(
+                IndicatorData.company_id == company_id,
+                IndicatorData.indicator_id == indicator.id,
             )
-            .filter(IndicatorData.company_id == company_id)
-            .order_by(IndicatorData.record_date.desc(), IndicatorData.created_at.desc())
+            .order_by(IndicatorData.measured_date.desc(), IndicatorData.created_at.desc())
             .first()
         )
 
@@ -305,10 +311,10 @@ def _load_indicators(*, process_id: int, company_id: int) -> list[dict[str, Any]
                 "formula": indicator.formula,
                 "data_source": indicator.data_source,
                 "polarity": indicator.polarity,
-                "current_value": _format_indicator_value(latest_record.value if latest_record else None, indicator.unit),
+                "current_value": _format_indicator_value(latest_record.measured_value if latest_record else None, indicator.unit),
                 "goal_value": _format_indicator_value(latest_goal.goal_value if latest_goal else None, indicator.unit),
                 "goal_date": latest_goal.goal_date.strftime("%d/%m/%Y") if latest_goal and latest_goal.goal_date else None,
-                "last_record_date": latest_record.record_date.strftime("%d/%m/%Y") if latest_record and latest_record.record_date else None,
+                "last_record_date": latest_record.measured_date.strftime("%d/%m/%Y") if latest_record and latest_record.measured_date else None,
             }
         )
 
