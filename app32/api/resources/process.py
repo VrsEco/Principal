@@ -339,6 +339,24 @@ def _get_process_delete_blockers(process: Process) -> dict[str, int]:
     return blockers
 
 
+def _unlink_soft_deleted_routines(process: Process) -> None:
+    if not process:
+        return
+
+    company_id = getattr(process, 'company_id', None)
+    process_id = getattr(process, 'id', None)
+    if not company_id or not process_id:
+        return
+
+    (
+        Routine.query
+        .filter_by(company_id=company_id, process_id=process_id)
+        .filter(Routine.is_active.is_(False))
+        .update({Routine.process_id: None}, synchronize_session=False)
+    )
+    db.session.flush()
+
+
 def _build_process_delete_conflict(process: Process, blockers: dict[str, int]):
     labels = {
         'linked_routines_count': 'rotina(s) agendada(s)',
@@ -1220,6 +1238,7 @@ class ProcessResource(Resource):
         if not process:
             return {"error": "Permission denied: delete on processes"}, 403
         try:
+            _unlink_soft_deleted_routines(process)
             blockers = _get_process_delete_blockers(process)
             if blockers:
                 return _build_process_delete_conflict(process, blockers)

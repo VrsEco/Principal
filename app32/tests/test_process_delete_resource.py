@@ -11,7 +11,11 @@ from api.resources import process as process_resource
 
 
 def _fake_routine_model(query):
-    return SimpleNamespace(query=query, is_active=column('routines.is_active'))
+    return SimpleNamespace(
+        query=query,
+        is_active=column('routines.is_active'),
+        process_id=column('routines.process_id'),
+    )
 
 
 class _FakeCountQuery:
@@ -27,6 +31,11 @@ class _FakeCountQuery:
     def filter(self, *conditions):
         self.filter_conditions.extend(conditions)
         return self
+
+    def update(self, values, synchronize_session=False):
+        self.updated_values = values
+        self.updated_synchronize_session = synchronize_session
+        return 1
 
     def count(self):
         return self.count_value
@@ -46,6 +55,9 @@ class _FakeSession:
 
     def rollback(self):
         self.rolled_back = True
+
+    def flush(self):
+        self.flushed = True
 
 
 def _build_app():
@@ -94,7 +106,10 @@ def test_process_delete_returns_conflict_when_linked_records_exist(monkeypatch):
     assert fake_session.deleted == []
     assert fake_session.committed == 0
 
-    assert routine_query.filters == [{'company_id': 12, 'process_id': 77}]
+    assert routine_query.filters == [
+        {'company_id': 12, 'process_id': 77},
+        {'company_id': 12, 'process_id': 77},
+    ]
     assert instance_query.filters == [{'company_id': 12, 'process_id': 77}]
     assert indicator_query.filters == [{'company_id': 12, 'process_id': 77}]
     assert occurrence_query.filters == [{'company_id': 12, 'process_id': 77}]
@@ -143,6 +158,25 @@ def test_process_delete_blockers_ignore_soft_deleted_routines(monkeypatch):
     assert routine_query.filters == [{'company_id': 33, 'process_id': 101}]
     assert len(routine_query.filter_conditions) == 1
     assert 'routines.is_active' in str(routine_query.filter_conditions[0])
+
+
+def test_unlink_soft_deleted_routines_clears_process_reference(monkeypatch):
+    fake_process = SimpleNamespace(id=55, company_id=44)
+    fake_session = _FakeSession()
+    routine_query = _FakeCountQuery(0)
+
+    monkeypatch.setattr(process_resource, 'Routine', _fake_routine_model(routine_query))
+    monkeypatch.setattr(process_resource.db, 'session', fake_session)
+
+    process_resource._unlink_soft_deleted_routines(fake_process)
+
+    assert routine_query.filters == [{'company_id': 44, 'process_id': 55}]
+    assert len(routine_query.filter_conditions) == 1
+    assert 'routines.is_active' in str(routine_query.filter_conditions[0])
+    assert any('routines.process_id' in str(key) for key in routine_query.updated_values.keys())
+    assert list(routine_query.updated_values.values()) == [None]
+    assert routine_query.updated_synchronize_session is False
+    assert fake_session.flushed is True
 
 
 def test_process_architecture_js_handles_delete_failures_gracefully():
