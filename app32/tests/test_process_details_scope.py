@@ -139,4 +139,8 @@ def test_process_details_template_uses_app32_visual_pattern():
     assert 'process-kpi-card' in content
     assert 'process-tabs-nav' in content
     assert 'process-section__eyebrow' in content
-    assert 'indicator-process-card' in content
+    assert 'process-indicators-list' in content
+    assert 'instance-card--highlight' in content
+    assert 'btn-instance-action' in content
+    assert 'compact-meta' in content
+    assert 'indicator-process-card' not in content

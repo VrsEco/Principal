@@ -153,11 +153,11 @@
                 <div>
                     <span class="process-section__eyebrow">Medição</span>
                     <h2 class="text-h2">Indicadores do Processo</h2>
-                    <p class="process-section__description">Acompanhe os indicadores vinculados a este processo em cards legíveis e consistentes com o APP32.</p>
+                    <p class="process-section__description">Acompanhe os indicadores vinculados a este processo em uma listagem compacta, no mesmo padrão visual das instâncias do APP32.</p>
                 </div>
             </div>
             <div class="process-section__body">
-                <div class="indicators-grid indicators-grid--process" id="indicatorsGrid">
+                <div class="process-indicators-list" id="indicatorsGrid">
                     <!-- JS will populate -->
                 </div>
             </div>
@@ -555,126 +555,183 @@
         padding: 1.5rem;
     }
 
-    .indicators-grid--process {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1rem;
-    }
-
-    .indicator-process-card {
+    .process-indicators-list {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
-        min-height: 240px;
-        padding: 1.2rem;
-        border-radius: 18px;
+        gap: 0.65rem;
+    }
+
+    .process-indicators-list .instance-card {
+        background: var(--surface);
         border: 1px solid var(--border);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+        border-radius: 14px;
+        padding: 0.95rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        transition: var(--transition);
+        position: relative;
         box-shadow: var(--shadow-sm);
-        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     }
 
-    .indicator-process-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(37, 99, 235, 0.12);
+    .process-indicators-list .instance-card:hover {
+        border-color: var(--primary);
         box-shadow: var(--shadow-md);
+        z-index: 1;
     }
 
-    .indicator-process-card--highlight {
-        border-color: rgba(16, 185, 129, 0.32);
+    .process-indicators-list .instance-card--highlight {
+        border-color: rgba(16, 185, 129, 0.28);
         box-shadow: 0 10px 28px rgba(16, 185, 129, 0.08);
     }
 
-    .indicator-process-card__head {
+    .process-indicators-list .compact-row {
         display: flex;
-        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .process-indicators-list .compact-row--top {
+        align-items: flex-start;
+    }
+
+    .process-indicator-main {
+        display: flex;
         align-items: flex-start;
         gap: 0.75rem;
+        min-width: 0;
+        flex: 1 1 320px;
     }
 
-    .indicator-process-card__code {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.32rem 0.6rem;
-        border-radius: 999px;
-        background: var(--primary-light);
-        color: var(--primary);
+    .process-indicator-copy {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .process-indicators-list .instance-code {
         font-size: 0.7rem;
         font-weight: 800;
-        letter-spacing: 0.02em;
-        margin-bottom: 0.65rem;
-    }
-
-    .indicator-process-card__title {
-        margin: 0;
-        font-size: 1.05rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        letter-spacing: -0.02em;
-    }
-
-    .indicator-process-card__badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.35rem 0.6rem;
-        border-radius: 999px;
-        background: #10b981;
-        color: #fff;
-        font-size: 0.63rem;
-        font-weight: 800;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-    }
-
-    .indicator-process-card__metric {
-        display: flex;
-        align-items: baseline;
-        gap: 0.45rem;
-    }
-
-    .indicator-process-card__value {
-        font-size: 2rem;
-        font-weight: 800;
-        line-height: 1;
-        color: var(--text-primary);
-        letter-spacing: -0.03em;
-    }
-
-    .indicator-process-card__unit {
-        font-size: 0.9rem;
-        color: var(--text-tertiary);
-        font-weight: 600;
-    }
-
-    .indicator-process-card__meta {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.75rem;
-    }
-
-    .indicator-process-card__meta-item {
-        padding: 0.7rem 0.8rem;
-        border-radius: 14px;
         background: var(--surface-secondary);
-        border: 1px solid rgba(15, 23, 42, 0.04);
-    }
-
-    .indicator-process-card__meta-label {
-        display: block;
-        margin-bottom: 0.28rem;
-        font-size: 0.64rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
         color: var(--text-tertiary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        flex-shrink: 0;
+        margin-top: 0.2rem;
     }
 
-    .indicator-process-card__meta-value {
-        font-size: 0.9rem;
+    .process-indicators-list .instance-name {
+        font-size: 1rem;
         font-weight: 700;
         color: var(--text-primary);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .process-indicators-list .instance-process {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        line-height: 1.45;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .process-indicators-list .compact-meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        flex: 1 1 320px;
+    }
+
+    .process-indicators-list .compact-meta strong {
+        color: var(--text-tertiary);
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        margin-right: 2px;
+    }
+
+    .process-indicators-list .indicator-current-value {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.22rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.08);
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .process-indicators-list .instance-badges {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .process-indicators-list .badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .process-indicators-list .badge--neutral {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .process-indicators-list .badge--primary {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .process-indicators-list .badge--success {
+        background: var(--success-light);
+        color: var(--success);
+    }
+
+    .process-indicators-list .instance-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+
+    .process-indicators-list .btn-instance-action {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        border: 1px solid transparent;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .process-indicators-list .btn-instance-action:hover {
+        background: var(--surface);
+        border-color: var(--border);
     }
 
     .process-empty-state,
@@ -1178,8 +1235,24 @@
             flex: 1 1 100%;
         }
 
-        .indicator-process-card__meta {
-            grid-template-columns: 1fr;
+        .process-indicators-list .compact-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.55rem;
+        }
+
+        .process-indicator-main {
+            width: 100%;
+        }
+
+        .process-indicators-list .instance-badges,
+        .process-indicators-list .instance-actions {
+            margin-left: 0;
+            justify-content: flex-start;
+        }
+
+        .process-indicators-list .instance-actions {
+            width: 100%;
         }
     }
 
@@ -2013,6 +2086,68 @@
         return labels[frequency] || 'Não informada';
     }
 
+    function getIndicatorPolarityLabel(polarity) {
+        const labels = {
+            positive: 'Quanto maior, melhor',
+            negative: 'Quanto menor, melhor',
+            neutral: 'Faixa ideal'
+        };
+        return labels[polarity] || 'Não informada';
+    }
+
+    function getAggregationFunctionLabel(aggregationFunction) {
+        const labels = {
+            sum: 'Soma',
+            average: 'Média',
+            avg: 'Média',
+            count: 'Contagem',
+            max: 'Máximo',
+            min: 'Mínimo',
+            last: 'Último valor'
+        };
+        return labels[aggregationFunction] || 'Não informada';
+    }
+
+    function getCollectionModeLabel(collectionMode) {
+        const labels = {
+            manual: 'Manual',
+            automatic: 'Automática',
+            api: 'API',
+            webhook: 'Webhook',
+            mcp: 'MCP',
+            system: 'Sistema'
+        };
+        return labels[collectionMode] || 'Não informada';
+    }
+
+    function formatIndicatorNumber(value, maximumFractionDigits = 2) {
+        if (value === null || value === undefined || value === '') {
+            return '--';
+        }
+
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) {
+            return String(value);
+        }
+
+        const hasDecimals = Math.abs(numericValue % 1) > 0;
+        return new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: hasDecimals ? maximumFractionDigits : 0
+        }).format(numericValue);
+    }
+
+    function getIndicatorSummary(indicator) {
+        const description = String(indicator.description || '').trim();
+        if (description) {
+            return description.length > 130 ? `${description.slice(0, 127)}...` : description;
+        }
+
+        const type = getIndicatorTypeLabel(indicator.indicator_type).toLowerCase();
+        const frequency = getMeasurementFrequencyLabel(indicator.measurement_frequency).toLowerCase();
+        return `Indicador ${type} com medição ${frequency}.`;
+    }
+
     function renderIndicators() {
         const grid = document.getElementById('indicatorsGrid');
         if (state.indicators.length === 0) {
@@ -2025,38 +2160,58 @@
             `;
             return;
         }
+
+        const incentiveIndicatorId = state.process && state.process.incentive_indicator
+            ? state.process.incentive_indicator.id
+            : null;
+
         grid.innerHTML = state.indicators.map(i => {
-            const isIncentive = state.process.incentive_indicator && state.process.incentive_indicator.id === i.id;
-            const displayValue = i.last_value !== null && i.last_value !== undefined ? escapeHtml(i.last_value) : '--';
+            const isIncentive = incentiveIndicatorId === i.id;
+            const displayValue = i.last_value !== null && i.last_value !== undefined
+                ? escapeHtml(formatIndicatorNumber(i.last_value))
+                : '--';
             const code = escapeHtml(i.code || 'Sem código');
             const name = escapeHtml(i.name || 'Indicador sem nome');
-            const unit = escapeHtml(i.unit || 'sem unidade');
+            const unit = escapeHtml(i.unit || 'Sem unidade');
             const type = escapeHtml(getIndicatorTypeLabel(i.indicator_type));
             const frequency = escapeHtml(getMeasurementFrequencyLabel(i.measurement_frequency));
+            const polarity = escapeHtml(getIndicatorPolarityLabel(i.polarity));
+            const aggregation = escapeHtml(getAggregationFunctionLabel(i.aggregation_function));
+            const collectionMode = escapeHtml(getCollectionModeLabel(i.collection_mode));
+            const summary = escapeHtml(getIndicatorSummary(i));
+            const performance = i.performance !== null && i.performance !== undefined
+                ? `${escapeHtml(formatIndicatorNumber(i.performance, 1))}%`
+                : 'Sem meta';
+            const currentValue = displayValue === '--' ? '--' : `${displayValue} ${unit}`;
+
             return `
-                <article class="indicator-process-card ${isIncentive ? 'indicator-process-card--highlight' : ''}">
-                    <div class="indicator-process-card__head">
-                        <div>
-                            <span class="indicator-process-card__code">${isIncentive ? '🏆 ' : ''}${code}</span>
-                            <h4 class="indicator-process-card__title">${name}</h4>
+                <article class="instance-card ${isIncentive ? 'instance-card--highlight' : ''}">
+                    <div class="compact-row compact-row--top">
+                        <div class="process-indicator-main">
+                            <span class="instance-code">${isIncentive ? '🏆 ' : ''}${code}</span>
+                            <div class="process-indicator-copy">
+                                <h4 class="instance-name">${name}</h4>
+                                <span class="instance-process">${summary}</span>
+                            </div>
                         </div>
-                        ${isIncentive ? '<span class="indicator-process-card__badge">Incentivo</span>' : ''}
-                    </div>
-                    <div class="indicator-process-card__metric">
-                        <span class="indicator-process-card__value">${displayValue}</span>
-                        <span class="indicator-process-card__unit">${unit}</span>
-                    </div>
-                    <div class="indicator-process-card__meta">
-                        <div class="indicator-process-card__meta-item">
-                            <span class="indicator-process-card__meta-label">Tipo</span>
-                            <span class="indicator-process-card__meta-value">${type}</span>
-                        </div>
-                        <div class="indicator-process-card__meta-item">
-                            <span class="indicator-process-card__meta-label">Frequência</span>
-                            <span class="indicator-process-card__meta-value">${frequency}</span>
+                        <div class="instance-badges">
+                            <span class="badge badge--neutral">${frequency}</span>
+                            <span class="badge badge--primary">${type}</span>
+                            ${isIncentive ? '<span class="badge badge--success">Incentivo</span>' : ''}
                         </div>
                     </div>
-                    <a href="/indicators/${i.id}" class="btn btn-secondary btn-sm" style="width:100%; justify-content:center;">Ver indicador</a>
+                    <div class="compact-row">
+                        <div class="compact-meta">
+                            <span class="indicator-current-value"><strong>Atual</strong><span>${currentValue}</span></span>
+                            <span><strong>Polaridade:</strong> ${polarity}</span>
+                            <span><strong>Coleta:</strong> ${collectionMode}</span>
+                            <span><strong>Agregação:</strong> ${aggregation}</span>
+                            <span><strong>Performance:</strong> ${performance}</span>
+                        </div>
+                        <div class="instance-actions">
+                            <a href="/indicators/${i.id}" class="btn-instance-action" title="Abrir indicador">Ver indicador</a>
+                        </div>
+                    </div>
                 </article>
             `;
         }).join('');
