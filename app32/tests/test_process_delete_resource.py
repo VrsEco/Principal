@@ -3,19 +3,29 @@ import sys
 from types import SimpleNamespace
 
 from flask import Flask
+from sqlalchemy.sql import column
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from api.resources import process as process_resource
 
 
+def _fake_routine_model(query):
+    return SimpleNamespace(query=query, is_active=column('routines.is_active'))
+
+
 class _FakeCountQuery:
     def __init__(self, count_value):
         self.count_value = count_value
         self.filters = []
+        self.filter_conditions = []
 
     def filter_by(self, **kwargs):
         self.filters.append(kwargs)
+        return self
+
+    def filter(self, *conditions):
+        self.filter_conditions.extend(conditions)
         return self
 
     def count(self):
@@ -62,7 +72,7 @@ def test_process_delete_returns_conflict_when_linked_records_exist(monkeypatch):
         '_get_process_with_access',
         lambda process_id, action='delete', sync_session=True: fake_process,
     )
-    monkeypatch.setattr(process_resource, 'Routine', SimpleNamespace(query=routine_query))
+    monkeypatch.setattr(process_resource, 'Routine', _fake_routine_model(routine_query))
     monkeypatch.setattr(process_resource, 'ProcessInstance', SimpleNamespace(query=instance_query))
     monkeypatch.setattr(process_resource, 'Indicator', SimpleNamespace(query=indicator_query))
     monkeypatch.setattr(process_resource, 'Occurrence', SimpleNamespace(query=occurrence_query))
@@ -101,7 +111,7 @@ def test_process_delete_executes_when_no_linked_records_exist(monkeypatch):
         '_get_process_with_access',
         lambda process_id, action='delete', sync_session=True: fake_process,
     )
-    monkeypatch.setattr(process_resource, 'Routine', SimpleNamespace(query=_FakeCountQuery(0)))
+    monkeypatch.setattr(process_resource, 'Routine', _fake_routine_model(_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource, 'ProcessInstance', SimpleNamespace(query=_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource, 'Indicator', SimpleNamespace(query=_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource, 'Occurrence', SimpleNamespace(query=_FakeCountQuery(0)))
@@ -115,6 +125,24 @@ def test_process_delete_executes_when_no_linked_records_exist(monkeypatch):
     assert response['message'] == 'Process deleted successfully'
     assert fake_session.deleted == [fake_process]
     assert fake_session.committed == 1
+
+
+def test_process_delete_blockers_ignore_soft_deleted_routines(monkeypatch):
+    fake_process = SimpleNamespace(id=101, company_id=33)
+    routine_query = _FakeCountQuery(0)
+
+    monkeypatch.setattr(process_resource, 'Routine', _fake_routine_model(routine_query))
+    monkeypatch.setattr(process_resource, 'ProcessInstance', SimpleNamespace(query=_FakeCountQuery(0)))
+    monkeypatch.setattr(process_resource, 'Indicator', SimpleNamespace(query=_FakeCountQuery(0)))
+    monkeypatch.setattr(process_resource, 'Occurrence', SimpleNamespace(query=_FakeCountQuery(0)))
+    monkeypatch.setattr(process_resource, 'FinancialAutomationRule', SimpleNamespace(query=_FakeCountQuery(0)))
+
+    blockers = process_resource._get_process_delete_blockers(fake_process)
+
+    assert blockers == {}
+    assert routine_query.filters == [{'company_id': 33, 'process_id': 101}]
+    assert len(routine_query.filter_conditions) == 1
+    assert 'routines.is_active' in str(routine_query.filter_conditions[0])
 
 
 def test_process_architecture_js_handles_delete_failures_gracefully():

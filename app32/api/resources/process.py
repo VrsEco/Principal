@@ -319,7 +319,11 @@ def _get_process_delete_blockers(process: Process) -> dict[str, int]:
         return {}
 
     blocker_queries = {
-        'linked_routines_count': Routine.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_routines_count': (
+            Routine.query
+            .filter_by(company_id=company_id, process_id=process_id)
+            .filter(or_(Routine.is_active.is_(True), Routine.is_active.is_(None)))
+        ),
         'linked_instances_count': ProcessInstance.query.filter_by(company_id=company_id, process_id=process_id),
         'linked_indicators_count': Indicator.query.filter_by(company_id=company_id, process_id=process_id),
         'linked_occurrences_count': Occurrence.query.filter_by(company_id=company_id, process_id=process_id),
