@@ -2,6 +2,7 @@ from flask import request
 from flask_restful import Resource
 from marshmallow import ValidationError
 import logging
+from sqlalchemy import and_, or_
 logger = logging.getLogger(__name__)
 from models import db, IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
 from schemas.indicator import (
@@ -15,6 +16,8 @@ from utils.permissions import permission_required
 
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+PROCESS_SOURCE_MODULES = ("processo", "process")
+PROJECT_SOURCE_MODULES = ("projeto", "project")
 
 def get_request_company_id():
     from flask import session
@@ -46,6 +49,88 @@ def get_request_company_id():
     cid = clean(session.get('active_company_id'))
     return cid
 
+
+def _coerce_optional_int(value):
+    if value in (None, '', 'null', 'undefined', 'None'):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
+
+
+def _normalize_source_module(value):
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return normalized or None
+
+
+def _sync_indicator_context_links(data, current_indicator=None):
+    if not isinstance(data, dict):
+        return data
+
+    source_module_provided = 'source_module' in data
+    source_id_provided = 'source_id' in data
+
+    source_module = _normalize_source_module(
+        data.get('source_module', getattr(current_indicator, 'source_module', None))
+    )
+    previous_source_module = _normalize_source_module(getattr(current_indicator, 'source_module', None))
+    source_id = _coerce_optional_int(
+        data.get('source_id', getattr(current_indicator, 'source_id', None))
+    )
+
+    if source_id_provided:
+        data['source_id'] = source_id
+
+    if source_module in PROCESS_SOURCE_MODULES:
+        data['process_id'] = source_id
+        data['project_id'] = None
+        return data
+
+    if source_module in PROJECT_SOURCE_MODULES:
+        data['project_id'] = source_id
+        data['process_id'] = None
+        return data
+
+    if source_module_provided:
+        if previous_source_module in PROCESS_SOURCE_MODULES or 'process_id' in data:
+            data['process_id'] = None
+        if previous_source_module in PROJECT_SOURCE_MODULES or 'project_id' in data:
+            data['project_id'] = None
+
+    return data
+
+
+def _apply_indicator_context_filters(query, process_id=None, project_id=None):
+    if process_id is not None:
+        query = query.filter(
+            or_(
+                Indicator.process_id == process_id,
+                and_(
+                    Indicator.source_module.in_(PROCESS_SOURCE_MODULES),
+                    Indicator.source_id == process_id,
+                ),
+            )
+        )
+
+    if project_id is not None:
+        query = query.filter(
+            or_(
+                Indicator.project_id == project_id,
+                and_(
+                    Indicator.source_module.in_(PROJECT_SOURCE_MODULES),
+                    Indicator.source_id == project_id,
+                ),
+            )
+        )
+
+    return query
+
 class IndicatorListResource(Resource):
     @permission_required('indicators', 'view')
     def get(self):
@@ -53,14 +138,11 @@ class IndicatorListResource(Resource):
         if not company_id:
             return [], 200
             
-        process_id = request.args.get('process_id')
-        project_id = request.args.get('project_id')
+        process_id = request.args.get('process_id', type=int)
+        project_id = request.args.get('project_id', type=int)
         
         query = Indicator.query.filter_by(company_id=company_id)
-        if process_id:
-            query = query.filter_by(process_id=process_id)
-        if project_id:
-            query = query.filter_by(project_id=project_id)
+        query = _apply_indicator_context_filters(query, process_id=process_id, project_id=project_id)
             
         indicators = query.all()
         return indicators_schema.dump(indicators), 200
@@ -72,6 +154,7 @@ class IndicatorListResource(Resource):
             cid = get_request_company_id()
             if cid:
                 data['company_id'] = cid
+            data = _sync_indicator_context_links(data)
                 
             # --- Automatic Code Generation ---
             if not data.get('code') or data.get('code') in ('Auto', 'Gerado automaticamente'):
@@ -137,6 +220,7 @@ class IndicatorResource(Resource):
         try:
             data = request.get_json()
             data['company_id'] = company_id
+            data = _sync_indicator_context_links(data, current_indicator=indicator)
             indicator = indicator_schema.load(data, instance=indicator, partial=True)
             db.session.commit()
             return indicator_schema.dump(indicator), 200

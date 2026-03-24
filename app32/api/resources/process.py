@@ -37,10 +37,11 @@ from models import (
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required
 from utils.sql_execution import execute_formatted_query
 from database import get_db
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+PROCESS_SOURCE_MODULES = ("processo", "process")
 
 
 def _append_process_instance_put_debug(message: str):
@@ -51,6 +52,22 @@ def _append_process_instance_put_debug(message: str):
             f.write(f"  ProcessInstance PUT Debug: {message}\n")
     except Exception:
         pass
+
+
+def _build_linked_process_indicator_query(company_id: int, process_id: int):
+    return (
+        Indicator.query
+        .filter_by(company_id=company_id)
+        .filter(
+            or_(
+                Indicator.process_id == process_id,
+                and_(
+                    Indicator.source_module.in_(PROCESS_SOURCE_MODULES),
+                    Indicator.source_id == process_id,
+                ),
+            )
+        )
+    )
 
 def _instance_visible_to_employee(instance, employee_id):
     if not instance or not employee_id:
@@ -325,7 +342,7 @@ def _get_process_delete_blockers(process: Process) -> dict[str, int]:
             .filter(or_(Routine.is_active.is_(True), Routine.is_active.is_(None)))
         ),
         'linked_instances_count': ProcessInstance.query.filter_by(company_id=company_id, process_id=process_id),
-        'linked_indicators_count': Indicator.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_indicators_count': _build_linked_process_indicator_query(company_id, process_id),
         'linked_occurrences_count': Occurrence.query.filter_by(company_id=company_id, process_id=process_id),
         'linked_financial_automations_count': FinancialAutomationRule.query.filter_by(company_id=company_id, process_id=process_id),
     }
@@ -1107,7 +1124,11 @@ class ProcessListResource(Resource):
                     
                     # Fetch Indicators
                     try:
-                        inds = Indicator.query.filter_by(process_id=pid).with_entities(Indicator.id, Indicator.name).all()
+                        inds = (
+                            _build_linked_process_indicator_query(company_id, pid)
+                            .with_entities(Indicator.id, Indicator.name)
+                            .all()
+                        )
                         p_data['indicators'] = [{"id": i.id, "name": i.name} for i in inds]
                     except Exception:
                         p_data['indicators'] = []

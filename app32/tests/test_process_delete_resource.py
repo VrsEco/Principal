@@ -18,6 +18,16 @@ def _fake_routine_model(query):
     )
 
 
+def _fake_indicator_model(query):
+    return SimpleNamespace(
+        query=query,
+        company_id=column('indicators.company_id'),
+        process_id=column('indicators.process_id'),
+        source_module=column('indicators.source_module'),
+        source_id=column('indicators.source_id'),
+    )
+
+
 class _FakeCountQuery:
     def __init__(self, count_value):
         self.count_value = count_value
@@ -86,7 +96,7 @@ def test_process_delete_returns_conflict_when_linked_records_exist(monkeypatch):
     )
     monkeypatch.setattr(process_resource, 'Routine', _fake_routine_model(routine_query))
     monkeypatch.setattr(process_resource, 'ProcessInstance', SimpleNamespace(query=instance_query))
-    monkeypatch.setattr(process_resource, 'Indicator', SimpleNamespace(query=indicator_query))
+    monkeypatch.setattr(process_resource, 'Indicator', _fake_indicator_model(indicator_query))
     monkeypatch.setattr(process_resource, 'Occurrence', SimpleNamespace(query=occurrence_query))
     monkeypatch.setattr(process_resource, 'FinancialAutomationRule', SimpleNamespace(query=financial_query))
     monkeypatch.setattr(process_resource.db, 'session', fake_session)
@@ -111,7 +121,11 @@ def test_process_delete_returns_conflict_when_linked_records_exist(monkeypatch):
         {'company_id': 12, 'process_id': 77},
     ]
     assert instance_query.filters == [{'company_id': 12, 'process_id': 77}]
-    assert indicator_query.filters == [{'company_id': 12, 'process_id': 77}]
+    assert indicator_query.filters == [{'company_id': 12}]
+    assert len(indicator_query.filter_conditions) == 1
+    assert 'indicators.process_id' in str(indicator_query.filter_conditions[0])
+    assert 'indicators.source_module' in str(indicator_query.filter_conditions[0])
+    assert 'indicators.source_id' in str(indicator_query.filter_conditions[0])
     assert occurrence_query.filters == [{'company_id': 12, 'process_id': 77}]
     assert financial_query.filters == [{'company_id': 12, 'process_id': 77}]
 
@@ -128,7 +142,7 @@ def test_process_delete_executes_when_no_linked_records_exist(monkeypatch):
     )
     monkeypatch.setattr(process_resource, 'Routine', _fake_routine_model(_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource, 'ProcessInstance', SimpleNamespace(query=_FakeCountQuery(0)))
-    monkeypatch.setattr(process_resource, 'Indicator', SimpleNamespace(query=_FakeCountQuery(0)))
+    monkeypatch.setattr(process_resource, 'Indicator', _fake_indicator_model(_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource, 'Occurrence', SimpleNamespace(query=_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource, 'FinancialAutomationRule', SimpleNamespace(query=_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource.db, 'session', fake_session)
@@ -148,7 +162,8 @@ def test_process_delete_blockers_ignore_soft_deleted_routines(monkeypatch):
 
     monkeypatch.setattr(process_resource, 'Routine', _fake_routine_model(routine_query))
     monkeypatch.setattr(process_resource, 'ProcessInstance', SimpleNamespace(query=_FakeCountQuery(0)))
-    monkeypatch.setattr(process_resource, 'Indicator', SimpleNamespace(query=_FakeCountQuery(0)))
+    indicator_query = _FakeCountQuery(0)
+    monkeypatch.setattr(process_resource, 'Indicator', _fake_indicator_model(indicator_query))
     monkeypatch.setattr(process_resource, 'Occurrence', SimpleNamespace(query=_FakeCountQuery(0)))
     monkeypatch.setattr(process_resource, 'FinancialAutomationRule', SimpleNamespace(query=_FakeCountQuery(0)))
 
@@ -158,6 +173,8 @@ def test_process_delete_blockers_ignore_soft_deleted_routines(monkeypatch):
     assert routine_query.filters == [{'company_id': 33, 'process_id': 101}]
     assert len(routine_query.filter_conditions) == 1
     assert 'routines.is_active' in str(routine_query.filter_conditions[0])
+    assert indicator_query.filters == [{'company_id': 33}]
+    assert len(indicator_query.filter_conditions) == 1
 
 
 def test_unlink_soft_deleted_routines_clears_process_reference(monkeypatch):
