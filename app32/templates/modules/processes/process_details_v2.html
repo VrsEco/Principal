@@ -16,72 +16,81 @@
 
 
 {% block workspace_content %}
-<div class="process-details-container" id="processDetails">
-    <!-- Header Section -->
-    <div class="workspace-header">
-        <div class="header-content">
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-                <span class="badge" id="detArea"
-                    style="background: var(--primary-light); color: var(--primary);">Área</span>
-                <span class="badge" id="detStage">Estágio</span>
-                <div id="incentiveBadge" style="display:none; align-items: center; gap: 0.5rem; background: #ecfdf5; color: #10b981; padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; border: 1px solid #10b98144;">
-                    🏆 Incentivo Ativo: <span id="incentiveRuleName">--</span>
+<div class="process-page-shell process-details-container" id="processDetails">
+    <section class="process-hero workspace-header fade-in">
+        <div class="process-hero__content">
+            <div class="process-meta-chips">
+                <span class="process-chip process-chip--primary" id="detArea">Área</span>
+                <span class="process-chip process-chip--neutral" id="detStage">Estágio</span>
+                <div id="incentiveBadge" class="process-chip process-chip--success" style="display:none;">
+                    <span class="process-chip__icon">🏆</span>
+                    <span>Incentivo ativo:</span>
+                    <span id="incentiveRuleName">--</span>
                 </div>
             </div>
-            <h1 class="text-h1" id="detName">Carregando Processo...</h1>
-            <p class="text-secondary" id="detDescription">Aguarde enquanto carregamos as informações.</p>
-            <div class="process-header-actions">
-                <a href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank" class="btn btn-secondary" onclick="setTimeout(() => this.blur(), 150)">🖨️ Versão de Impressão</a>
-            </div>
+            <h1 class="text-h1 process-hero__title" id="detName">Carregando Processo...</h1>
+            <p class="text-secondary process-hero__description" id="detDescription">Aguarde enquanto carregamos as informações.</p>
         </div>
-    </div>
+        <div class="process-hero__actions">
+            <a href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank" class="btn btn-secondary" onclick="setTimeout(() => this.blur(), 150)">🖨️ Versão de Impressão</a>
+        </div>
+    </section>
 
-    <!-- Stats Grid -->
-    <div class="stats-overview">
-        <div class="stat-card">
-            <span class="stat-label">Dono</span>
-            <div class="stat-value-container">
-                <span class="stat-value" style="font-size: 1.25rem;" id="detOwner">--</span>
+    <section class="process-kpis" aria-label="Resumo do processo">
+        <article class="process-kpi-card">
+            <div class="process-kpi-card__icon">👤</div>
+            <div class="process-kpi-card__content">
+                <span class="process-kpi-card__label">Dono</span>
+                <strong class="process-kpi-card__value process-kpi-card__value--compact" id="detOwner">--</strong>
             </div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Responsável</span>
-            <div class="stat-value-container">
-                <span class="stat-value" style="font-size: 1.25rem;" id="detResponsible">--</span>
+        </article>
+        <article class="process-kpi-card">
+            <div class="process-kpi-card__icon">🧭</div>
+            <div class="process-kpi-card__content">
+                <span class="process-kpi-card__label">Responsável</span>
+                <strong class="process-kpi-card__value process-kpi-card__value--compact" id="detResponsible">--</strong>
             </div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Macroprocesso</span>
-            <div class="stat-value-container">
-                <span class="stat-value" style="font-size: 1.25rem;" id="detMacro">--</span>
+        </article>
+        <article class="process-kpi-card">
+            <div class="process-kpi-card__icon">🗂️</div>
+            <div class="process-kpi-card__content">
+                <span class="process-kpi-card__label">Macroprocesso</span>
+                <strong class="process-kpi-card__value process-kpi-card__value--compact" id="detMacro">--</strong>
             </div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Indicadores</span>
-            <div class="stat-value-container">
-                <span class="stat-value" id="detIndicatorCount">0</span>
+        </article>
+        <article class="process-kpi-card">
+            <div class="process-kpi-card__icon">📊</div>
+            <div class="process-kpi-card__content">
+                <span class="process-kpi-card__label">Indicadores</span>
+                <strong class="process-kpi-card__value" id="detIndicatorCount">0</strong>
             </div>
-        </div>
-    </div>
+        </article>
+    </section>
 
-    <!-- Tabs Navigation -->
-    <div class="tabs-nav mt-5">
-        <button class="tab-btn active" onclick="switchTab('modeling')">📐 Fluxo</button>
-        <button class="tab-btn" onclick="switchTab('pops')">📋 POP</button>
-        <button class="tab-btn" onclick="switchTab('routine')">📅 Rotinas do Processo</button>
-        <button class="tab-btn" onclick="switchTab('indicators')">📊 Indicadores</button>
+    <div class="tabs-nav process-tabs-nav">
+        <button class="tab-btn process-tab-btn active" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
+        <button class="tab-btn process-tab-btn" onclick="switchTab('pops')"><span class="process-tab-btn__icon">📋</span><span>POP</span></button>
+        <button class="tab-btn process-tab-btn" onclick="switchTab('routine')"><span class="process-tab-btn__icon">📅</span><span>Rotinas</span></button>
+        <button class="tab-btn process-tab-btn" onclick="switchTab('indicators')"><span class="process-tab-btn__icon">📊</span><span>Indicadores</span></button>
     </div>
 
     <!-- Tab: Modeling -->
     <div id="tab-modeling" class="tab-content active">
-        <div class="card p-4 mt-4">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2 class="text-h2">📐 Fluxo de Processo</h2>
+        <section class="process-section mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Modelagem</span>
+                    <h2 class="text-h2">Fluxo do Processo</h2>
+                    <p class="process-section__description">Visualize e atualize o fluxograma principal do processo.</p>
+                </div>
                 <input type="file" id="flowUploadInput" style="display: none;" accept="image/*,.pdf"
                     onchange="uploadFlowDocument(this)">
-                <button class="btn btn-secondary btn-sm"
-                    onclick="document.getElementById('flowUploadInput').click()">Upload Novo Fluxo</button>
+                <div class="process-section__actions">
+                    <button class="btn btn-secondary btn-sm"
+                        onclick="document.getElementById('flowUploadInput').click()">Upload Novo Fluxo</button>
+                </div>
             </div>
+            <div class="process-section__body">
             <div class="flow-container" id="flowContainer">
                 <div class="empty-state" onclick="document.getElementById('flowUploadInput').click()"
                     style="cursor: pointer;">
@@ -90,11 +99,21 @@
                     <span class="text-tertiary" style="font-size: 0.8rem;">Clique para fazer upload</span>
                 </div>
             </div>
-        </div>
+            </div>
+        </section>
     </div>
 
     <div id="tab-pops" class="tab-content">
-        <div class="pop-manager mt-4">
+        <section class="process-section mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Execução padrão</span>
+                    <h2 class="text-h2">POP do Processo</h2>
+                    <p class="process-section__description">Organize atividades, passos e documentação operacional em um layout APP32 mais claro.</p>
+                </div>
+            </div>
+            <div class="process-section__body">
+        <div class="pop-manager">
             <div class="pop-create-form" id="routineCreateForm">
                 <div class="pop-code-group">
                     <label class="pop-field-label">Código</label>
@@ -123,21 +142,38 @@
                 <!-- JS will populate -->
             </div>
         </div>
+            </div>
+        </section>
     </div>
 
     <!-- Tab: Indicators -->
     <div id="tab-indicators" class="tab-content">
-        <div class="indicators-grid mt-4" id="indicatorsGrid">
-            <!-- JS will populate -->
-        </div>
+        <section class="process-section mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Medição</span>
+                    <h2 class="text-h2">Indicadores do Processo</h2>
+                    <p class="process-section__description">Acompanhe os indicadores vinculados a este processo em cards legíveis e consistentes com o APP32.</p>
+                </div>
+            </div>
+            <div class="process-section__body">
+                <div class="indicators-grid indicators-grid--process" id="indicatorsGrid">
+                    <!-- JS will populate -->
+                </div>
+            </div>
+        </section>
     </div>
 
     <!-- Tab: Rotina -->
     <div id="tab-routine" class="tab-content">
-        <!-- Process Schedules Section -->
-        <div class="card p-4 mt-4">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 class="text-h2">🕒 Rotinas do Processo</h2>
+        <section class="process-section mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Agenda operacional</span>
+                    <h2 class="text-h2">Rotinas do Processo</h2>
+                    <p class="process-section__description">Visualize frequência, início, prazo e equipe executora das rotinas ativas.</p>
+                </div>
+                <div class="process-section__actions">
                 <a href="{{ url_for('processes.process_routines_page', company_id=company.id) }}"
                     class="btn btn-secondary btn-sm" target="_blank">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -148,6 +184,8 @@
                     Gerenciar Rotinas
                 </a>
             </div>
+            </div>
+            <div class="process-section__body">
 
             <div id="routineSchedules" class="table-responsive">
                 <table class="table table-hover">
@@ -165,7 +203,8 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+            </div>
+        </section>
     </div>
 
 </div>
@@ -239,15 +278,423 @@
 
 
 <style>
-    .workspace-header {
-        margin-bottom: 2rem;
+    .process-page-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
     }
 
-    .process-header-actions {
+    .process-hero {
+        margin-bottom: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1.5rem;
+        padding: 1.75rem 2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(37, 99, 235, 0.12);
+        background:
+            radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 34%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 251, 0.94));
+        box-shadow: var(--shadow-md);
+    }
+
+    .process-hero__content {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+
+    .process-hero__title {
+        margin: 0;
+        line-height: 1.08;
+    }
+
+    .process-hero__description {
+        margin: 0;
+        max-width: 76ch;
+        font-size: 0.95rem;
+        color: var(--text-tertiary);
+    }
+
+    .process-hero__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+
+    .process-meta-chips {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .process-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 34px;
+        padding: 0.45rem 0.85rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-secondary);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .process-chip__icon {
+        font-size: 0.85rem;
+    }
+
+    .process-chip--primary {
+        background: var(--primary-light);
+        color: var(--primary);
+        border-color: rgba(37, 99, 235, 0.16);
+    }
+
+    .process-chip--neutral {
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+    }
+
+    .process-chip--success {
+        background: #ecfdf5;
+        color: #047857;
+        border-color: rgba(16, 185, 129, 0.22);
+    }
+
+    .process-chip.stage-inbox {
+        background: #eef2ff;
+        color: #4338ca;
+    }
+
+    .process-chip.stage-designing {
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+    .process-chip.stage-deploying {
+        background: #f5f3ff;
+        color: #7c3aed;
+    }
+
+    .process-chip.stage-stabilizing {
+        background: #fffbeb;
+        color: #b45309;
+    }
+
+    .process-chip.stage-stable {
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .process-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .process-kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.15rem 1.2rem;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        min-height: 100px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .process-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: rgba(37, 99, 235, 0.14);
+    }
+
+    .process-kpi-card__icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-light);
+        color: var(--primary);
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+
+    .process-kpi-card__content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        min-width: 0;
+    }
+
+    .process-kpi-card__label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-tertiary);
+    }
+
+    .process-kpi-card__value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.05;
+        color: var(--text-primary);
+        letter-spacing: -0.03em;
+        word-break: break-word;
+    }
+
+    .process-kpi-card__value--compact {
+        font-size: 1.08rem;
+        line-height: 1.35;
+        letter-spacing: -0.02em;
+    }
+
+    .process-tabs-nav {
         display: flex;
         flex-wrap: wrap;
         gap: 0.75rem;
-        margin-top: 1.25rem;
+        padding: 0.8rem;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .process-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        padding: 0.85rem 1rem;
+        min-height: 46px;
+        border: 1px solid transparent;
+        border-radius: 14px;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 700;
+    }
+
+    .process-tab-btn__icon {
+        font-size: 1rem;
+    }
+
+    .process-tab-btn:hover {
+        background: var(--surface-secondary);
+        color: var(--primary);
+    }
+
+    .process-tab-btn.active {
+        background: var(--primary-light);
+        color: var(--primary);
+        border-color: rgba(37, 99, 235, 0.14);
+        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+    }
+
+    .process-section {
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+
+    .process-section__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.35rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.96));
+    }
+
+    .process-section__header h2 {
+        margin: 0.15rem 0 0.35rem;
+    }
+
+    .process-section__eyebrow {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.6rem;
+        border-radius: 999px;
+        background: var(--surface-secondary);
+        color: var(--text-tertiary);
+        font-size: 0.66rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .process-section__description {
+        margin: 0;
+        color: var(--text-tertiary);
+        font-size: 0.9rem;
+    }
+
+    .process-section__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .process-section__body {
+        padding: 1.5rem;
+    }
+
+    .indicators-grid--process {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+
+    .indicator-process-card {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-height: 240px;
+        padding: 1.2rem;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .indicator-process-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(37, 99, 235, 0.12);
+        box-shadow: var(--shadow-md);
+    }
+
+    .indicator-process-card--highlight {
+        border-color: rgba(16, 185, 129, 0.32);
+        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.08);
+    }
+
+    .indicator-process-card__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .indicator-process-card__code {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.32rem 0.6rem;
+        border-radius: 999px;
+        background: var(--primary-light);
+        color: var(--primary);
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        margin-bottom: 0.65rem;
+    }
+
+    .indicator-process-card__title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+
+    .indicator-process-card__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        background: #10b981;
+        color: #fff;
+        font-size: 0.63rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .indicator-process-card__metric {
+        display: flex;
+        align-items: baseline;
+        gap: 0.45rem;
+    }
+
+    .indicator-process-card__value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+        color: var(--text-primary);
+        letter-spacing: -0.03em;
+    }
+
+    .indicator-process-card__unit {
+        font-size: 0.9rem;
+        color: var(--text-tertiary);
+        font-weight: 600;
+    }
+
+    .indicator-process-card__meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .indicator-process-card__meta-item {
+        padding: 0.7rem 0.8rem;
+        border-radius: 14px;
+        background: var(--surface-secondary);
+        border: 1px solid rgba(15, 23, 42, 0.04);
+    }
+
+    .indicator-process-card__meta-label {
+        display: block;
+        margin-bottom: 0.28rem;
+        font-size: 0.64rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-tertiary);
+    }
+
+    .indicator-process-card__meta-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .process-empty-state,
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        min-height: 220px;
+        padding: 2rem;
+        border-radius: 18px;
+        border: 1px dashed var(--border);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.96));
+        color: var(--text-tertiary);
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 2.4rem;
     }
 
     /* POP Manager and Activity Styles from APP31 */
@@ -540,29 +987,20 @@
 
     .tabs-nav {
         display: flex;
-        gap: 1rem;
-        border-bottom: 1px solid var(--border);
-        padding-bottom: 0.5rem;
+        flex-wrap: wrap;
     }
 
     .tab-btn {
-        background: none;
-        border: none;
-        padding: 0.5rem 1rem;
-        font-weight: 600;
-        color: var(--text-tertiary);
         cursor: pointer;
         transition: var(--transition);
-        border-bottom: 2px solid transparent;
     }
 
     .tab-btn:hover {
-        color: var(--primary);
+        transform: translateY(-1px);
     }
 
     .tab-btn.active {
-        color: var(--primary);
-        border-bottom-color: var(--primary);
+        outline: none;
     }
 
     .tab-content {
@@ -694,6 +1132,57 @@
     }
 
     /* Print Styles */
+    @media (max-width: 1100px) {
+        .process-kpis {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 840px) {
+        .process-hero,
+        .process-section__header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .process-hero__actions,
+        .process-section__actions {
+            justify-content: flex-start;
+        }
+
+        .process-tab-btn {
+            flex: 1 1 calc(50% - 0.5rem);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .process-hero {
+            padding: 1.25rem;
+            border-radius: 20px;
+        }
+
+        .process-kpis {
+            grid-template-columns: 1fr;
+        }
+
+        .process-kpi-card {
+            min-height: auto;
+        }
+
+        .process-section__body,
+        .process-section__header {
+            padding: 1rem;
+        }
+
+        .process-tab-btn {
+            flex: 1 1 100%;
+        }
+
+        .indicator-process-card__meta {
+            grid-template-columns: 1fr;
+        }
+    }
+
     @media print {
 
         .tabs-nav,
@@ -1016,7 +1505,7 @@
         const stage = document.getElementById('detStage');
         if (stage) {
             stage.textContent = getStageLabel(state.process.kanban_stage);
-            stage.className = `badge stage-${state.process.kanban_stage || 'inbox'}`;
+            stage.className = `process-chip process-chip--neutral stage-${state.process.kanban_stage || 'inbox'}`;
         } else {
             console.warn('Elemento ausente no DOM: #detStage');
         }
@@ -1493,27 +1982,82 @@
         }
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getIndicatorTypeLabel(type) {
+        const labels = {
+            effort: 'Esforço',
+            result: 'Resultado',
+            impact: 'Impacto'
+        };
+        return labels[type] || 'Não informado';
+    }
+
+    function getMeasurementFrequencyLabel(frequency) {
+        const labels = {
+            weekly: 'Semanal',
+            monthly: 'Mensal',
+            bimonthly: 'Bimestral',
+            quarterly: 'Trimestral',
+            four_monthly: 'Quadrimestral',
+            semiannual: 'Semestral',
+            annual: 'Anual'
+        };
+        return labels[frequency] || 'Não informada';
+    }
+
     function renderIndicators() {
         const grid = document.getElementById('indicatorsGrid');
         if (state.indicators.length === 0) {
-            grid.innerHTML = '<p class="text-tertiary text-center p-5">Nenhum indicador vinculado.</p>';
+            grid.innerHTML = `
+                <div class="process-empty-state">
+                    <div class="empty-icon">📊</div>
+                    <h3 style="margin:0; color:var(--text-primary);">Nenhum indicador vinculado</h3>
+                    <p style="margin:0; max-width:48ch;">Quando houver indicadores associados a este processo, eles aparecerão aqui em cards padronizados do APP32.</p>
+                </div>
+            `;
             return;
         }
         grid.innerHTML = state.indicators.map(i => {
             const isIncentive = state.process.incentive_indicator && state.process.incentive_indicator.id === i.id;
+            const displayValue = i.last_value !== null && i.last_value !== undefined ? escapeHtml(i.last_value) : '--';
+            const code = escapeHtml(i.code || 'Sem código');
+            const name = escapeHtml(i.name || 'Indicador sem nome');
+            const unit = escapeHtml(i.unit || 'sem unidade');
+            const type = escapeHtml(getIndicatorTypeLabel(i.indicator_type));
+            const frequency = escapeHtml(getMeasurementFrequencyLabel(i.measurement_frequency));
             return `
-                <div class="card p-4" style="${isIncentive ? 'border: 2px solid #10b981; background: #ecfdf505;' : ''}">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="indicator-code">${isIncentive ? '🏆 ' : ''}${i.code}</span>
-                        ${isIncentive ? '<span class="badge" style="background:#10b981; color:#fff; font-size:0.6rem;">INCENTIVO</span>' : ''}
+                <article class="indicator-process-card ${isIncentive ? 'indicator-process-card--highlight' : ''}">
+                    <div class="indicator-process-card__head">
+                        <div>
+                            <span class="indicator-process-card__code">${isIncentive ? '🏆 ' : ''}${code}</span>
+                            <h4 class="indicator-process-card__title">${name}</h4>
+                        </div>
+                        ${isIncentive ? '<span class="indicator-process-card__badge">Incentivo</span>' : ''}
                     </div>
-                    <h4 class="text-h3 mt-2">${i.name}</h4>
-                    <div class="mt-3">
-                        <span style="font-size: 1.5rem; font-weight: 700;">${i.last_value || '--'}</span>
-                        <span style="color: var(--text-tertiary);">${i.unit || ''}</span>
+                    <div class="indicator-process-card__metric">
+                        <span class="indicator-process-card__value">${displayValue}</span>
+                        <span class="indicator-process-card__unit">${unit}</span>
                     </div>
-                    <a href="/indicators/${i.id}" class="btn btn-secondary btn-sm mt-3" style="width:100%">Ver Indicador</a>
-                </div>
+                    <div class="indicator-process-card__meta">
+                        <div class="indicator-process-card__meta-item">
+                            <span class="indicator-process-card__meta-label">Tipo</span>
+                            <span class="indicator-process-card__meta-value">${type}</span>
+                        </div>
+                        <div class="indicator-process-card__meta-item">
+                            <span class="indicator-process-card__meta-label">Frequência</span>
+                            <span class="indicator-process-card__meta-value">${frequency}</span>
+                        </div>
+                    </div>
+                    <a href="/indicators/${i.id}" class="btn btn-secondary btn-sm" style="width:100%; justify-content:center;">Ver indicador</a>
+                </article>
             `;
         }).join('');
     }

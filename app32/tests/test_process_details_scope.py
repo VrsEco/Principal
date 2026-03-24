@@ -128,3 +128,15 @@ def test_process_details_template_bootstraps_initial_payload_and_fallback():
     assert 'mantendo payload inicial da rota SSR' in content
     assert 'function setElementText(id, value)' in content
     assert "Elemento ausente no DOM" in content
+
+
+def test_process_details_template_uses_app32_visual_pattern():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'process-hero' in content
+    assert 'process-kpi-card' in content
+    assert 'process-tabs-nav' in content
+    assert 'process-section__eyebrow' in content
+    assert 'indicator-process-card' in content
