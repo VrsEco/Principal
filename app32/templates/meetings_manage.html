@@ -282,6 +282,140 @@
     .workspace-main {
         background-color: var(--bg-main) !important;
     }
+
+    .meeting-save-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        margin: 20px 0 24px;
+        border: 1px solid rgba(37, 99, 235, 0.16);
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, rgba(239, 246, 255, 0.96), rgba(248, 250, 252, 0.98));
+        box-shadow: var(--shadow-md);
+        position: sticky;
+        top: 16px;
+        z-index: 20;
+    }
+
+    .meeting-save-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .meeting-save-status-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .save-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .save-status-pill::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: currentColor;
+        opacity: 0.85;
+    }
+
+    .save-status-pill.is-clean {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .save-status-pill.is-dirty {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .save-status-pill.is-saving {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .save-status-hint,
+    .save-status-time {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+
+    .meeting-live-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.95fr);
+        gap: 20px;
+        align-items: start;
+        margin: 24px 0;
+    }
+
+    .meeting-live-panel {
+        background: rgba(248, 250, 252, 0.72);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .meeting-live-panel .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .save-toast {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        max-width: 320px;
+        padding: 14px 18px;
+        border-radius: 14px;
+        color: #fff;
+        background: #0f172a;
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        transform: translateY(12px);
+        pointer-events: none;
+        transition: opacity 0.22s ease, transform 0.22s ease;
+        z-index: 26000;
+    }
+
+    .save-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .save-toast.is-error {
+        background: #991b1b;
+    }
+
+    .save-toast.is-warning {
+        background: #92400e;
+    }
+
+    @media (max-width: 1100px) {
+        .meeting-save-bar {
+            position: static;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .meeting-live-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -885,8 +1019,451 @@
     const projectCodeMap = {};
     {% for project in projects %}
     projectTitleMap['{{ project.id }}'] = JSON.parse('{{ project.name | tojson | safe if project.name else "null" }}');
-    projectCodeMap['{{ project.id }}'] = JSON.parse('{{ project.name | default("", true) | tojson | safe }}');
+    projectCodeMap['{{ project.id }}'] = JSON.parse('{{ project.code | default("", true) | tojson | safe }}');
     {% endfor %}
+    const MEETING_DRAFT_STORAGE_PREFIX = 'gv:meeting:draft';
+    let hasUnsavedChanges = false;
+    let isSavingMeeting = false;
+    let lastSavedAt = null;
+    let currentMeetingServerUpdatedAt = null;
+    let localDraftPersistTimer = null;
+    let saveToastTimer = null;
+
+    function getExecutionTabKey() {
+        const executionTab = document.querySelector('[id^="tab-realiz"]');
+        return executionTab ? executionTab.id.replace('tab-', '') : 'realizacao';
+    }
+
+    function deepClone(value) {
+        return value == null ? value : JSON.parse(JSON.stringify(value));
+    }
+
+    function formatSavedAtLabel(value) {
+        if (!value) return '';
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return '';
+        return new Intl.DateTimeFormat('pt-BR', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        }).format(parsed);
+    }
+
+    function getMeetingDraftStorageKey(meetingId = currentMeetingId) {
+        const suffix = meetingId ? String(meetingId) : 'new';
+        return `${MEETING_DRAFT_STORAGE_PREFIX}:${meetingsCompanyId}:${suffix}`;
+    }
+
+    function clearStoredMeetingDraft(meetingId = currentMeetingId) {
+        try {
+            window.localStorage.removeItem(getMeetingDraftStorageKey(meetingId));
+        } catch (error) {
+            console.warn('Não foi possível remover o rascunho local da reunião.', error);
+        }
+    }
+
+    function toggleEditorActionButtons() {
+        const display = currentMeetingId ? 'flex' : 'none';
+        const reportButton = document.getElementById('btn-gerar-ata-editor');
+        const deleteButton = document.getElementById('btn-excluir-reuniao-editor');
+        if (reportButton) reportButton.style.display = display;
+        if (deleteButton) deleteButton.style.display = display;
+        const hiddenInput = document.getElementById('current-meeting-id');
+        if (hiddenInput) hiddenInput.value = currentMeetingId || '';
+    }
+
+    function showSaveToast(message, variant = 'success') {
+        const toast = document.getElementById('meeting-save-toast');
+        if (!toast) return;
+
+        toast.textContent = message;
+        toast.classList.remove('is-error', 'is-warning', 'show');
+        if (variant === 'error') toast.classList.add('is-error');
+        if (variant === 'warning') toast.classList.add('is-warning');
+
+        window.clearTimeout(saveToastTimer);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        saveToastTimer = window.setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2800);
+    }
+
+    function updateSaveStatusUi() {
+        const pill = document.getElementById('meeting-save-status-pill');
+        const hint = document.getElementById('meeting-save-status-hint');
+        const time = document.getElementById('meeting-save-status-time');
+        const button = document.getElementById('btn-salvar-reuniao');
+        if (!pill || !hint || !time) return;
+
+        pill.classList.remove('is-clean', 'is-dirty', 'is-saving');
+
+        if (isSavingMeeting) {
+            pill.classList.add('is-saving');
+            pill.textContent = 'Salvando no sistema';
+            hint.textContent = 'Gravando reunião manualmente. Aguarde a confirmação.';
+        } else if (hasUnsavedChanges) {
+            pill.classList.add('is-dirty');
+            pill.textContent = 'Alterações pendentes';
+            hint.textContent = 'Há mudanças não salvas no servidor. O rascunho local está protegido neste navegador.';
+        } else {
+            pill.classList.add('is-clean');
+            pill.textContent = 'Tudo salvo';
+            hint.textContent = 'Use o botão Salvar reunião sempre que concluir um bloco importante da reunião.';
+        }
+
+        time.textContent = lastSavedAt
+            ? `Último salvamento no sistema: ${formatSavedAtLabel(lastSavedAt)}`
+            : 'Nenhum salvamento confirmado ainda nesta sessão.';
+
+        if (button) {
+            button.disabled = isSavingMeeting;
+            button.textContent = isSavingMeeting ? 'Salvando...' : 'Salvar reunião';
+        }
+    }
+
+    function setSavingState(nextState) {
+        isSavingMeeting = nextState;
+        updateSaveStatusUi();
+    }
+
+    function syncDiscussionsFromDom() {
+        const discussionItems = document.querySelectorAll('#discussions-list .discussion-item');
+        discussions = Array.from(discussionItems).map((item) => ({
+            title: item.querySelector('input[type="text"]')?.value?.trim() || '',
+            discussion: item.querySelector('textarea')?.value || '',
+        })).filter((item) => item.title || item.discussion);
+    }
+
+    function syncActivitiesFromDom() {
+        const activityItems = document.querySelectorAll('#activities-list .activity-item');
+        activities = Array.from(activityItems).map((item) => {
+            const titleInput = item.querySelector('input[type="text"]');
+            const deadlineInput = item.querySelector('input[type="date"]');
+            const howInput = item.querySelector('textarea');
+            const selects = item.querySelectorAll('select');
+            const responsibleSelect = selects[0];
+            const projectSelect = selects[1];
+
+            return {
+                title: titleInput?.value?.trim() || '',
+                employee_id: responsibleSelect?.value || null,
+                responsible: responsibleSelect?.value ? (responsibleSelect.selectedOptions[0]?.text || '') : '',
+                deadline: deadlineInput?.value || '',
+                how: howInput?.value || '',
+                project_id: projectSelect?.value || null,
+            };
+        }).filter((item) => item.title || item.employee_id || item.deadline || item.how || item.project_id);
+    }
+
+    function syncMeetingStateFromDom() {
+        syncDiscussionsFromDom();
+        syncActivitiesFromDom();
+    }
+
+    function collectMeetingSnapshot() {
+        syncMeetingStateFromDom();
+        return {
+            meeting_id: currentMeetingId || null,
+            title: document.getElementById('meeting-title')?.value || '',
+            scheduled_date: document.getElementById('meeting-scheduled-date')?.value || '',
+            scheduled_time: document.getElementById('meeting-scheduled-time')?.value || '',
+            planned_duration_minutes: document.getElementById('meeting-planned-duration')?.value || '',
+            invite_notes: document.getElementById('meeting-invite-notes')?.value || '',
+            actual_date: document.getElementById('meeting-actual-date')?.value || '',
+            actual_time: document.getElementById('meeting-actual-time')?.value || '',
+            actual_duration_minutes: document.getElementById('meeting-actual-duration')?.value || '',
+            meeting_notes: document.getElementById('meeting-notes')?.value || '',
+            guestsInternal: deepClone(guestsInternal) || [],
+            guestsExternal: deepClone(guestsExternal) || [],
+            agendaItems: deepClone(agendaItems) || [],
+            participants: deepClone(participants) || { internal: [], external: [] },
+            discussions: deepClone(discussions) || [],
+            activities: deepClone(activities) || [],
+            currentMeetingStatus,
+            linkedProjectId,
+            linkedProjectTitle,
+            linkedProjectCode,
+            activeTab: document.querySelector('.tab-btn.active')?.id?.replace('tab-', '') || 'agendamento',
+        };
+    }
+
+    function snapshotHasMeaningfulData(snapshot) {
+        if (!snapshot) return false;
+        return Boolean(
+            snapshot.title ||
+            snapshot.scheduled_date ||
+            snapshot.scheduled_time ||
+            snapshot.planned_duration_minutes ||
+            snapshot.invite_notes ||
+            snapshot.actual_date ||
+            snapshot.actual_time ||
+            snapshot.actual_duration_minutes ||
+            snapshot.meeting_notes ||
+            (snapshot.guestsInternal || []).length ||
+            (snapshot.guestsExternal || []).length ||
+            (snapshot.agendaItems || []).length ||
+            (snapshot.participants?.internal || []).length ||
+            (snapshot.participants?.external || []).length ||
+            (snapshot.discussions || []).length ||
+            (snapshot.activities || []).length
+        );
+    }
+
+    function persistLocalDraftSnapshot(dirtyState = hasUnsavedChanges) {
+        try {
+            const snapshot = collectMeetingSnapshot();
+            if (!snapshotHasMeaningfulData(snapshot) && !snapshot.meeting_id) {
+                clearStoredMeetingDraft(null);
+                return;
+            }
+
+            const payload = {
+                dirty: dirtyState,
+                changed_at: new Date().toISOString(),
+                server_updated_at: currentMeetingServerUpdatedAt,
+                snapshot,
+            };
+            window.localStorage.setItem(getMeetingDraftStorageKey(snapshot.meeting_id), JSON.stringify(payload));
+        } catch (error) {
+            console.warn('Não foi possível salvar o rascunho local da reunião.', error);
+        }
+    }
+
+    function queueLocalDraftBackup() {
+        window.clearTimeout(localDraftPersistTimer);
+        localDraftPersistTimer = window.setTimeout(() => {
+            persistLocalDraftSnapshot(true);
+        }, 350);
+    }
+
+    function markMeetingDirty() {
+        hasUnsavedChanges = true;
+        queueLocalDraftBackup();
+        updateSaveStatusUi();
+    }
+
+    function markMeetingSaved(updatedAt = null) {
+        hasUnsavedChanges = false;
+        currentMeetingServerUpdatedAt = updatedAt || new Date().toISOString();
+        lastSavedAt = currentMeetingServerUpdatedAt;
+        clearStoredMeetingDraft(null);
+        persistLocalDraftSnapshot(false);
+        toggleEditorActionButtons();
+        updateSaveStatusUi();
+    }
+
+    function getStoredMeetingDraft(meetingId = currentMeetingId) {
+        try {
+            const raw = window.localStorage.getItem(getMeetingDraftStorageKey(meetingId));
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            console.warn('Não foi possível ler o rascunho local da reunião.', error);
+            return null;
+        }
+    }
+
+    function applyMeetingSnapshot(snapshot) {
+        if (!snapshot) return;
+
+        const fieldMap = {
+            'meeting-title': snapshot.title || '',
+            'meeting-scheduled-date': snapshot.scheduled_date || '',
+            'meeting-scheduled-time': snapshot.scheduled_time || '',
+            'meeting-planned-duration': snapshot.planned_duration_minutes || '',
+            'meeting-invite-notes': snapshot.invite_notes || '',
+            'meeting-actual-date': snapshot.actual_date || '',
+            'meeting-actual-time': snapshot.actual_time || '',
+            'meeting-actual-duration': snapshot.actual_duration_minutes || '',
+            'meeting-notes': snapshot.meeting_notes || '',
+        };
+
+        Object.entries(fieldMap).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.value = value;
+        });
+
+        guestsInternal = deepClone(snapshot.guestsInternal) || [];
+        guestsExternal = deepClone(snapshot.guestsExternal) || [];
+        agendaItems = deepClone(snapshot.agendaItems) || [];
+        participants = deepClone(snapshot.participants) || { internal: [], external: [] };
+        if (Array.isArray(participants)) {
+            participants = { internal: participants, external: [] };
+        }
+        discussions = deepClone(snapshot.discussions) || [];
+        activities = deepClone(snapshot.activities) || [];
+        currentMeetingStatus = snapshot.currentMeetingStatus || 'draft';
+
+        updateProjectLinkDisplay(
+            snapshot.linkedProjectId || null,
+            snapshot.linkedProjectTitle || null,
+            snapshot.linkedProjectCode || null
+        );
+        renderGuestsInternal();
+        renderGuestsExternal();
+        renderAgenda();
+        renderParticipants();
+        renderDiscussions();
+        renderActivities();
+        updateMeetingStatus(currentMeetingStatus);
+
+        const activeTab = snapshot.activeTab === 'atividades' ? getExecutionTabKey() : (snapshot.activeTab || 'agendamento');
+        trocarAba(activeTab);
+    }
+
+    function maybeRestoreLocalDraft(meetingId = currentMeetingId, serverUpdatedAt = null) {
+        const storedDraft = getStoredMeetingDraft(meetingId);
+        if (!storedDraft?.dirty || !storedDraft?.snapshot) return;
+
+        const draftChangedAt = Date.parse(storedDraft.changed_at || '');
+        const serverChangedAt = Date.parse(serverUpdatedAt || '');
+        const shouldOfferRestore = Number.isNaN(serverChangedAt) || Number.isNaN(draftChangedAt) || draftChangedAt >= serverChangedAt;
+        if (!shouldOfferRestore) return;
+
+        const scopeLabel = meetingId ? 'desta reunião' : 'de uma nova reunião';
+        if (window.confirm(`Encontramos um rascunho local mais recente ${scopeLabel}. Deseja restaurar agora?`)) {
+            applyMeetingSnapshot(storedDraft.snapshot);
+            markMeetingDirty();
+            showSaveToast('Rascunho local restaurado. Clique em Salvar reunião para gravar no sistema.', 'warning');
+        }
+    }
+
+    function confirmEditorNavigation(message) {
+        if (!hasUnsavedChanges) return true;
+        return window.confirm(message || 'Há alterações não salvas. Seu rascunho local continuará protegido neste navegador. Deseja continuar sem salvar no sistema?');
+    }
+
+    function hasExecutionContent() {
+        syncMeetingStateFromDom();
+        return Boolean(
+            document.getElementById('meeting-actual-date')?.value ||
+            document.getElementById('meeting-actual-time')?.value ||
+            document.getElementById('meeting-actual-duration')?.value ||
+            document.getElementById('meeting-notes')?.value?.trim() ||
+            (participants.internal || []).length ||
+            (participants.external || []).length ||
+            discussions.length ||
+            activities.length
+        );
+    }
+
+    function focusActivitiesPanel() {
+        document.getElementById('activities-live-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function setupMeetingEditorEnhancements() {
+        const editorSection = document.getElementById('meeting-editor-section');
+        if (!editorSection) return;
+
+        if (!document.getElementById('meeting-save-bar')) {
+            const hiddenInput = document.getElementById('current-meeting-id');
+            if (hiddenInput) {
+                const saveBar = document.createElement('div');
+                saveBar.id = 'meeting-save-bar';
+                saveBar.className = 'meeting-save-bar';
+                saveBar.innerHTML = `
+                    <div class="meeting-save-meta">
+                        <div class="meeting-save-status-row">
+                            <span id="meeting-save-status-pill" class="save-status-pill is-clean">Tudo salvo</span>
+                            <strong style="color: var(--text-main);">Salvamento manual obrigatório</strong>
+                        </div>
+                        <span id="meeting-save-status-hint" class="save-status-hint">Use o botão Salvar reunião sempre que concluir um bloco importante da reunião.</span>
+                        <span id="meeting-save-status-time" class="save-status-time">Nenhum salvamento confirmado ainda nesta sessão.</span>
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button type="button" class="button button-primary" id="btn-salvar-reuniao">
+                            Salvar reunião
+                        </button>
+                    </div>
+                `;
+                hiddenInput.insertAdjacentElement('afterend', saveBar);
+                saveBar.querySelector('#btn-salvar-reuniao')?.addEventListener('click', () => {
+                    salvarReuniaoCompleta();
+                });
+            }
+        }
+
+        if (!document.getElementById('meeting-save-toast')) {
+            const toast = document.createElement('div');
+            toast.id = 'meeting-save-toast';
+            toast.className = 'save-toast';
+            toast.setAttribute('role', 'status');
+            toast.setAttribute('aria-live', 'polite');
+            document.body.appendChild(toast);
+        }
+
+        const executionTab = document.querySelector('[id^="tab-realiz"]');
+        if (executionTab) executionTab.textContent = 'b) Discussões, Definições e Atividades';
+
+        const activitiesTab = document.getElementById('tab-atividades');
+        if (activitiesTab) activitiesTab.style.display = 'none';
+
+        const schedulingContent = document.getElementById('content-agendamento');
+        if (schedulingContent && !schedulingContent.dataset.labelsUpdated) {
+            const schedulingButtons = Array.from(schedulingContent.querySelectorAll('button'))
+                .filter((button) => (button.getAttribute('onclick') || '').includes('salvarPrelim'));
+            if (schedulingButtons[0]) schedulingButtons[0].textContent = 'Salvar reunião';
+            if (schedulingButtons[1]) schedulingButtons[1].textContent = 'Salvar e abrir realização';
+            schedulingContent.dataset.labelsUpdated = 'true';
+        }
+
+        const executionContent = document.querySelector('[id^="content-realiz"]');
+        const activitiesContent = document.getElementById('content-atividades');
+        if (executionContent && activitiesContent && executionContent.dataset.combinedLayout !== 'true') {
+            const executionFormSection = executionContent.querySelector('.form-section');
+            const activitiesFormSection = activitiesContent.querySelector('.form-section');
+            const discussionsGroup = document.getElementById('discussions-list')?.closest('.form-group');
+            const notesGroup = document.getElementById('meeting-notes')?.closest('.form-group');
+            const actionBar = Array.from(executionFormSection?.querySelectorAll('div') || []).find((container) =>
+                container.querySelector('button[onclick*="salvarExecu"]')
+            );
+
+            if (executionFormSection && activitiesFormSection && discussionsGroup && notesGroup && actionBar) {
+                const liveGrid = document.createElement('div');
+                liveGrid.id = 'meeting-live-grid';
+                liveGrid.className = 'meeting-live-grid';
+
+                const discussionsPanel = document.createElement('div');
+                discussionsPanel.className = 'meeting-live-panel';
+
+                const activitiesPanel = document.createElement('div');
+                activitiesPanel.id = 'activities-live-panel';
+                activitiesPanel.className = 'meeting-live-panel';
+
+                executionFormSection.insertBefore(liveGrid, actionBar);
+                liveGrid.appendChild(discussionsPanel);
+                liveGrid.appendChild(activitiesPanel);
+
+                discussionsPanel.appendChild(discussionsGroup);
+                discussionsPanel.appendChild(notesGroup);
+                activitiesPanel.appendChild(activitiesFormSection);
+                activitiesContent.remove();
+
+                executionContent.dataset.combinedLayout = 'true';
+            }
+
+            const executionButtons = Array.from(executionFormSection?.querySelectorAll('button') || [])
+                .filter((button) => (button.getAttribute('onclick') || '').includes('salvarExecu'));
+            if (executionButtons[0]) executionButtons[0].textContent = 'Salvar reunião';
+            if (executionButtons[1]) executionButtons[1].textContent = 'Salvar e focar plano de ação';
+
+            const syncButton = document.getElementById('sync-activities-btn');
+            if (syncButton) syncButton.textContent = 'Sincronizar com Projeto';
+        }
+
+        if (editorSection.dataset.draftWatchersBound !== 'true') {
+            const markDirtyFromEvent = (event) => {
+                if (!event.target || !editorSection.contains(event.target)) return;
+                if (event.target.closest('#project-selection-modal')) return;
+                if ((event.target.tagName || '').toLowerCase() === 'button') return;
+                markMeetingDirty();
+            };
+
+            editorSection.addEventListener('input', markDirtyFromEvent);
+            editorSection.addEventListener('change', markDirtyFromEvent);
+            editorSection.dataset.draftWatchersBound = 'true';
+        }
+
+        updateSaveStatusUi();
+    }
 
     function resolveActivityCode(activity) {
         if (!activity) return null;
@@ -960,24 +1537,29 @@
     }
 
     window.novaReuniao = function () {
-        document.getElementById("btn-gerar-ata-editor").style.display = "none";
-        document.getElementById("btn-excluir-reuniao-editor").style.display = "none";
+        if (!confirmEditorNavigation('Há alterações não salvas. Deseja abrir uma nova reunião sem salvar no sistema?')) return;
+        setupMeetingEditorEnhancements();
         currentMeetingId = null;
+        currentMeetingServerUpdatedAt = null;
+        lastSavedAt = null;
         currentMeetingStatus = 'draft';
         document.getElementById('meeting-editor-title').textContent = 'Nova Reunião';
         limparFormulario();
+        toggleEditorActionButtons();
         updateMeetingStatus('draft');
         document.getElementById('meetings-list-section').style.display = 'none';
         document.getElementById('meeting-editor-section').style.display = 'block';
         trocarAba('agendamento');
+        maybeRestoreLocalDraft(null, null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     window.editarReuniao = async function (meetingId) {
-        document.getElementById("btn-gerar-ata-editor").style.display = "flex";
-        document.getElementById("btn-excluir-reuniao-editor").style.display = "flex";
+        if (!confirmEditorNavigation('Há alterações não salvas. Deseja abrir outra reunião sem salvar no sistema?')) return;
+        setupMeetingEditorEnhancements();
         currentMeetingId = meetingId;
         document.getElementById('meeting-editor-title').textContent = 'Editar Reunião';
+        toggleEditorActionButtons();
 
         try {
             const response = await fetch(`/meetings/api/meeting/${meetingId}?company_id=${meetingsCompanyId}`);
@@ -1006,6 +1588,8 @@
                 }
                 discussions = meeting.discussions || [];
                 activities = meeting.activities || [];
+                currentMeetingServerUpdatedAt = meeting.updated_at || null;
+                lastSavedAt = meeting.updated_at || null;
 
                 updateProjectLinkDisplay(meeting.project_id || null, meeting.project_title || null, meeting.project_code || null);
 
@@ -1018,9 +1602,12 @@
                 await atualizarAtividades();
 
                 updateMeetingStatus(meeting.status || 'draft');
+                hasUnsavedChanges = false;
+                updateSaveStatusUi();
 
                 document.getElementById('meetings-list-section').style.display = 'none';
                 document.getElementById('meeting-editor-section').style.display = 'block';
+                maybeRestoreLocalDraft(meetingId, meeting.updated_at || null);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         } catch (error) {
@@ -1044,7 +1631,9 @@
                 alert(result.message || 'Não foi possível excluir a reunião.');
                 return;
             }
+            clearStoredMeetingDraft(meetingId);
             if (currentMeetingId === meetingId) {
+                hasUnsavedChanges = false;
                 fecharEditor();
             }
             window.location.href = `/meetings/company/${meetingsCompanyId}`;
@@ -1062,6 +1651,7 @@
     }
 
     window.fecharEditor = function () {
+        if (!confirmEditorNavigation('Há alterações não salvas. Deseja voltar para a lista sem salvar no sistema?')) return;
         document.getElementById('meeting-editor-section').style.display = 'none';
         document.getElementById('meetings-list-section').style.display = 'block';
         limparFormulario();
@@ -1073,11 +1663,18 @@
     }
 
     function trocarAba(aba) {
+        const executionTabKey = getExecutionTabKey();
+        if (aba === 'atividades') {
+            aba = executionTabKey;
+        }
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
-        document.getElementById(`tab-${aba}`).classList.add('active');
-        document.getElementById(`content-${aba}`).style.display = 'block';
-        if (aba === 'atividades') atualizarAtividades();
+        const targetTab = document.getElementById(`tab-${aba}`);
+        const targetContent = document.getElementById(`content-${aba}`);
+        if (!targetTab || !targetContent) return;
+        targetTab.classList.add('active');
+        targetContent.style.display = 'block';
+        if (aba === executionTabKey) atualizarAtividades();
     }
 
     function adicionarColaborador() {
@@ -1088,6 +1685,7 @@
         if (!guestsInternal.find(g => g.id == guest.id)) {
             guestsInternal.push(guest);
             renderGuestsInternal();
+            markMeetingDirty();
         }
         select.value = '';
     }
@@ -1108,6 +1706,7 @@
     function removerGuestInternal(index) {
         guestsInternal.splice(index, 1);
         renderGuestsInternal();
+        markMeetingDirty();
     }
 
     function adicionarExterno() {
@@ -1120,6 +1719,7 @@
         document.getElementById('external-email').value = '';
         document.getElementById('external-whatsapp').value = '';
         renderGuestsExternal();
+        markMeetingDirty();
     }
 
     function renderGuestsExternal() {
@@ -1138,6 +1738,7 @@
     function removerGuestExternal(index) {
         guestsExternal.splice(index, 1);
         renderGuestsExternal();
+        markMeetingDirty();
     }
 
     function adicionarPauta() {
@@ -1147,6 +1748,7 @@
         agendaItems.push({ title });
         input.value = '';
         renderAgenda();
+        markMeetingDirty();
     }
 
     function renderAgenda() {
@@ -1162,6 +1764,7 @@
     function removerAgenda(index) {
         agendaItems.splice(index, 1);
         renderAgenda();
+        markMeetingDirty();
     }
 
     function mostrarPautaSalva() { document.getElementById('saved-agenda-modal').style.display = 'block'; }
@@ -1171,15 +1774,12 @@
         renderAgenda();
         fetch(`/meetings/api/agenda-item/${itemId}/use`, { method: 'POST' });
         fecharPautaSalva();
+        markMeetingDirty();
     }
 
-    async function salvarPreliminares(options = {}) {
-        const { advance = false } = options;
-        const title = document.getElementById('meeting-title').value.trim();
-        if (!title) return alert('Título  obrigatrio');
-
-        const data = {
-            title,
+    function buildPreliminaresPayload() {
+        return {
+            title: document.getElementById('meeting-title').value.trim(),
             scheduled_date: document.getElementById('meeting-scheduled-date').value,
             scheduled_time: document.getElementById('meeting-scheduled-time').value,
             planned_duration_minutes: document.getElementById('meeting-planned-duration').value || null,
@@ -1187,8 +1787,19 @@
             guests: { internal: guestsInternal, external: guestsExternal },
             agenda: agendaItems
         };
+    }
+
+    async function persistPreliminaresData() {
+        const data = buildPreliminaresPayload();
+        if (!data.title) {
+            return {
+                success: false,
+                message: 'Informe o título da reunião para salvar no sistema. O rascunho local continua protegido neste navegador.'
+            };
+        }
 
         try {
+            const previousMeetingId = currentMeetingId;
             let response;
             if (currentMeetingId) {
                 response = await fetch(`/meetings/api/meeting/${currentMeetingId}/preliminares?company_id=${meetingsCompanyId}`, {
@@ -1205,17 +1816,83 @@
             }
 
             const result = await response.json();
-            if (result.success) {
-                if (result.meeting_id) currentMeetingId = result.meeting_id;
-                if (advance) {
-                    trocarAba('realizacação');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                    alert('Agendamento salvo com sucesso');
-                }
+            if (!response.ok || !result.success) {
+                return {
+                    success: false,
+                    message: result.message || 'Não foi possível salvar o agendamento da reunião.'
+                };
             }
+
+            if (result.meeting_id) currentMeetingId = result.meeting_id;
+            if (!previousMeetingId && currentMeetingId) clearStoredMeetingDraft(null);
+            toggleEditorActionButtons();
+            return result;
         } catch (error) {
             console.error('Erro ação salvar:', error);
+            return {
+                success: false,
+                message: 'Erro de conexão ao salvar o agendamento da reunião.'
+            };
+        }
+    }
+
+    async function salvarReuniaoCompleta(options = {}) {
+        const { advanceTo = null, focusActivities = false, showToast = true } = options;
+        setupMeetingEditorEnhancements();
+
+        if (isSavingMeeting) return false;
+        setSavingState(true);
+
+        try {
+            const prelimResult = await persistPreliminaresData();
+            if (!prelimResult.success) {
+                showSaveToast(prelimResult.message || 'Não foi possível salvar a reunião.', 'error');
+                return false;
+            }
+
+            let executionResult = null;
+            if (hasExecutionContent()) {
+                executionResult = await persistExecucação({ silent: true });
+                if (!executionResult.success) {
+                    showSaveToast(executionResult.message || 'Não foi possível salvar a execução da reunião.', 'error');
+                    return false;
+                }
+            }
+
+            const updatedAt = executionResult?.updated_at || prelimResult.updated_at || new Date().toISOString();
+            markMeetingSaved(updatedAt);
+
+            if (advanceTo) {
+                trocarAba(advanceTo);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            if (focusActivities) focusActivitiesPanel();
+
+            await atualizarAtividades();
+
+            if (showToast) {
+                showSaveToast('Reunião salva com sucesso.');
+            }
+            return true;
+        } catch (error) {
+            console.error('Erro ao salvar reunião:', error);
+            showSaveToast('Não foi possível salvar a reunião agora.', 'error');
+            return false;
+        } finally {
+            setSavingState(false);
+        }
+    }
+
+    window.salvarReuniaoCompleta = salvarReuniaoCompleta;
+
+    async function salvarPreliminares(options = {}) {
+        const { advance = false } = options;
+        const saved = await salvarReuniaoCompleta({
+            advanceTo: advance ? getExecutionTabKey() : null,
+            showToast: !advance,
+        });
+        if (saved && advance) {
+            showSaveToast('Agendamento salvo. Agora você pode registrar a realização.');
         }
     }
 
@@ -1234,8 +1911,9 @@
         a.click();
     }
 
-    function iniciarReuniao() {
-        if (!currentMeetingId) return alert('Salve a reuniao primeiro');
+    async function iniciarReuniao() {
+        const saved = await salvarReuniaoCompleta({ showToast: false });
+        if (!saved || !currentMeetingId) return;
         document.getElementById('project-selection-modal').style.display = 'block';
     }
 
@@ -1248,8 +1926,8 @@
         document.getElementById('existing-project-select-container').style.display = isExisting ? 'block' : 'none';
     }
 
-    async function confirmarInicioReuniao() {
-        const btn = event.target.closest('button');
+    async function confirmarInicioReuniao(event) {
+        const btn = event?.target?.closest('button');
         if (btn) btn.disabled = true;
 
         const choice = document.querySelector('input[name="project_choice"]:checked').value;
@@ -1280,6 +1958,8 @@
                 const now = new Date();
                 document.getElementById('meeting-actual-date').value = result.actual_date || now.toISOString().split('T')[0];
                 document.getElementById('meeting-actual-time').value = result.actual_time || now.toTimeString().split(' ')[0].substring(0, 5);
+                markMeetingSaved(result.updated_at || new Date().toISOString());
+                showSaveToast('Reunião iniciada e vinculada ao projeto com sucesso.');
             } else {
                 alert('Erro: ' + result.message);
             }
@@ -1294,6 +1974,7 @@
     function adicionarDiscussação() {
         discussions.push({ title: '', discussion: '' });
         renderDiscussions();
+        markMeetingDirty();
     }
 
     function renderDiscussions() {
@@ -1314,11 +1995,13 @@
     function removerDiscussação(index) {
         discussions.splice(index, 1);
         renderDiscussions();
+        markMeetingDirty();
     }
 
     function adicionarAtividade() {
         activities.push({ title: '', responsible: '', deadline: '', how: '', project_id: null, employee_id: null });
         renderActivities();
+        markMeetingDirty();
     }
 
     function renderActivities() {
@@ -1360,6 +2043,7 @@
             if (!participants.internal.find(p => p.id == participant.id)) {
                 participants.internal.push(participant);
                 renderParticipants();
+                markMeetingDirty();
             }
             select.value = '';
         } else {
@@ -1369,6 +2053,7 @@
             participants.external.push({ name: name });
             renderParticipants();
             input.value = '';
+            markMeetingDirty();
         }
     }
 
@@ -1379,6 +2064,7 @@
             participants.external.splice(index, 1);
         }
         renderParticipants();
+        markMeetingDirty();
     }
 
     function renderParticipants() {
@@ -1426,6 +2112,7 @@
     async function persistExecucação(options = {}) {
         const { silent = false } = options;
         if (!currentMeetingId) return { success: false };
+        syncMeetingStateFromDom();
         const payload = {
             actual_date: document.getElementById('meeting-actual-date').value,
             actual_time: document.getElementById('meeting-actual-time').value,
@@ -1440,33 +2127,47 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            return await response.json();
-        } catch (error) { return { success: false }; }
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                return {
+                    success: false,
+                    message: result.message || 'Não foi possível salvar a execução da reunião.'
+                };
+            }
+            return result;
+        } catch (error) {
+            if (!silent) console.error(error);
+            return {
+                success: false,
+                message: 'Erro de conexão ao salvar a execução da reunião.'
+            };
+        }
     }
 
     async function salvarExecucação(options = {}) {
         const { advance = false } = options;
-        const result = await persistExecucação();
-        if (result.success) {
-            await atualizarAtividades();
-            if (advance) {
-                trocarAba('atividades');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                alert('Dados da realização salvos com sucesso');
-            }
+        const saved = await salvarReuniaoCompleta({
+            focusActivities: advance,
+            showToast: !advance,
+        });
+        if (saved && advance) {
+            showSaveToast('Discussões, definições e atividades salvas. O plano de ação já está disponível ao lado.');
         }
     }
 
     async function finalizarReuniao() {
         if (!currentMeetingId) return;
         if (!confirm('Deseja finalizar a reuniao?')) return;
+        const saved = await salvarReuniaoCompleta({ showToast: false });
+        if (!saved) return;
         try {
             const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/finalizar?company_id=${meetingsCompanyId}`, { method: 'POST' });
             const result = await response.json();
             if (result.success) {
                 updateMeetingStatus('completed');
-                trocarAba('atividades');
+                markMeetingSaved(result.updated_at || new Date().toISOString());
+                showSaveToast('Reunião finalizada com sucesso.');
+                trocarAba(getExecutionTabKey());
             }
         } catch (error) { console.error(error); }
     }
@@ -1526,13 +2227,18 @@
                 finishBtn.textContent = 'Reunião Finalizada';
             } else {
                 finishBtn.disabled = false;
-                finishBtn.textContent = '? Finalizar Reunião';
+                finishBtn.textContent = 'Finalizar Reunião';
             }
         }
     }
 
     function limparFormulario() {
+        window.clearTimeout(localDraftPersistTimer);
+        currentMeetingId = null;
         currentMeetingStatus = 'draft';
+        currentMeetingServerUpdatedAt = null;
+        lastSavedAt = null;
+        hasUnsavedChanges = false;
         ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-planned-duration', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-actual-duration', 'meeting-notes'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -1544,11 +2250,14 @@
         renderParticipants(); renderDiscussions(); renderActivities();
         const container = document.getElementById('generated-activities-list');
         if (container) container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Nenhuma atividade gerada ainda.</p>';
+        toggleEditorActionButtons();
         updateMeetingStatus('draft');
+        updateSaveStatusUi();
     }
 
     async function atualizarListaAtividades(btn) {
-        if (!currentMeetingId) return alert('Salve a reuniao primeiro');
+        const saved = await salvarReuniaoCompleta({ showToast: false });
+        if (!saved || !currentMeetingId) return alert('Salve a reuniao primeiro');
         if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
 
         try {
@@ -1561,6 +2270,7 @@
             if (!confirm('Deseja sincronizar as atividades com o projeto?')) return;
 
             const payload = {
+                ...buildPreliminaresPayload(),
                 activities, participants, discussions,
                 meeting_notes: document.getElementById('meeting-notes').value,
                 status: currentMeetingStatus,
@@ -1577,11 +2287,12 @@
             });
             const sync = await syncRes.json();
             if (sync.success) {
-                alert('Sincronizado com sucesso');
+                markMeetingSaved(new Date().toISOString());
+                showSaveToast('Atividades sincronizadas com o projeto.');
                 await atualizarAtividades();
             }
         } catch (e) { console.error(e); }
-        finally { if (btn) { btn.disabled = false; btn.textContent = '?? Atualizar Lista'; } }
+        finally { if (btn) { btn.disabled = false; btn.textContent = 'Sincronizar com Projeto'; } }
     }
 
     async function removerAtividadeComConfirmacação(index) {
@@ -1596,6 +2307,7 @@
         }
         activities.splice(index, 1);
         renderActivities();
+        markMeetingDirty();
         await persistExecucação({ silent: true });
         await atualizarAtividades();
     }
@@ -1696,6 +2408,12 @@
         filtrarReuniãoes();
     };
 
+    window.addEventListener('beforeunload', (event) => {
+        if (!hasUnsavedChanges) return;
+        event.preventDefault();
+        event.returnValue = '';
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
         try {
             employeesData = JSON.parse('{{ employees | tojson | safe if employees else "[]" }}');
@@ -1703,6 +2421,9 @@
             console.error('Error parsing employeesData:', e);
             employeesData = [];
         }
+
+        setupMeetingEditorEnhancements();
+        updateSaveStatusUi();
     });
 </script>
 {% endblock %}

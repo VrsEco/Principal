@@ -62,7 +62,8 @@ class Meeting(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             # Extra fields often needed in UI
-            'project_title': self.project.name if self.project else None
+            'project_title': self.project.name if self.project else None,
+            'project_code': self.project.code if self.project else None,
         }
 
 class MeetingAgendaItem(db.Model):
