@@ -881,8 +881,6 @@
                             <button type="button" class="button button-outline"
                                 onclick="salvarExecucao({ advance: false })">?? Salvar
                                 Discusses e Decises</button>
-                            <button type="button" class="button button-primary"
-                                onclick="salvarExecucao({ advance: true })">?? Salvar e Definir Atividades ?</button>
                         </div>
                     </div>
                 </div>
@@ -1028,6 +1026,7 @@
     let currentMeetingServerUpdatedAt = null;
     let localDraftPersistTimer = null;
     let saveToastTimer = null;
+    const APP_DISPLAY_TIMEZONE = 'America/Bahia';
 
     function getExecutionTabKey() {
         const executionTab = document.querySelector('[id^="tab-realiz"]');
@@ -1040,12 +1039,26 @@
 
     function formatSavedAtLabel(value) {
         if (!value) return '';
-        const parsed = new Date(value);
+        const parsed = parseMeetingTimestamp(value);
         if (Number.isNaN(parsed.getTime())) return '';
         return new Intl.DateTimeFormat('pt-BR', {
             dateStyle: 'short',
             timeStyle: 'short',
+            timeZone: APP_DISPLAY_TIMEZONE,
         }).format(parsed);
+    }
+
+    function parseMeetingTimestamp(value) {
+        if (!value) return new Date('');
+        if (value instanceof Date) return value;
+        const rawValue = String(value).trim();
+        if (!rawValue) return new Date('');
+
+        const hasTimezoneInfo = /(?:Z|[+-]\d{2}:\d{2})$/i.test(rawValue);
+        const normalizedValue = (!hasTimezoneInfo && /^\d{4}-\d{2}-\d{2}T/.test(rawValue))
+            ? `${rawValue}Z`
+            : rawValue;
+        return new Date(normalizedValue);
     }
 
     function getMeetingDraftStorageKey(meetingId = currentMeetingId) {
@@ -1111,8 +1124,8 @@
         }
 
         time.textContent = lastSavedAt
-            ? `Último salvamento no sistema: ${formatSavedAtLabel(lastSavedAt)}`
-            : 'Nenhum salvamento confirmado ainda nesta sessão.';
+            ? `Último salvamento no sistema (America/Bahia): ${formatSavedAtLabel(lastSavedAt)}`
+            : 'Nenhum salvamento confirmado ainda nesta sessão. Horários exibidos em America/Bahia.';
 
         if (button) {
             button.disabled = isSavingMeeting;
@@ -1146,14 +1159,62 @@
 
             return {
                 ...existingActivity,
-                title: titleInput?.value?.trim() || '',
-                employee_id: responsibleSelect?.value || null,
-                responsible: responsibleSelect?.value ? (responsibleSelect.selectedOptions[0]?.text || '') : '',
-                deadline: deadlineInput?.value || '',
-                how: howInput?.value || '',
-                project_id: projectSelect?.value || null,
+                title: titleInput ? (titleInput.value?.trim() || '') : (existingActivity.title || ''),
+                employee_id: responsibleSelect ? (responsibleSelect?.value || null) : (existingActivity.employee_id || null),
+                responsible: responsibleSelect
+                    ? (responsibleSelect?.value ? (responsibleSelect.selectedOptions[0]?.text || '') : '')
+                    : (existingActivity.responsible || ''),
+                deadline: deadlineInput ? (deadlineInput.value || '') : (existingActivity.deadline || ''),
+                how: howInput ? (howInput.value || '') : (existingActivity.how || ''),
+                project_id: projectSelect ? (projectSelect?.value || null) : (existingActivity.project_id || null),
             };
         }).filter((item) => item.title || item.employee_id || item.deadline || item.how || item.project_id);
+    }
+
+    function normalizeActivityUiState(activity = {}) {
+        return {
+            title: '',
+            responsible: '',
+            deadline: '',
+            how: '',
+            project_id: linkedProjectId || null,
+            employee_id: null,
+            ui_state: 'saved',
+            ui_is_new: false,
+            ui_backup: null,
+            ...activity,
+        };
+    }
+
+    function sanitizeActivityForPersistence(activity = {}) {
+        return {
+            title: activity.title || '',
+            employee_id: activity.employee_id || null,
+            responsible: activity.responsible || '',
+            deadline: activity.deadline || '',
+            how: activity.how || '',
+            project_id: activity.project_id || null,
+            source_discussion_index: Number.isInteger(activity.source_discussion_index) ? activity.source_discussion_index : null,
+            source_discussion_title: activity.source_discussion_title || '',
+            source_uid: activity.source_uid || null,
+        };
+    }
+
+    function getPersistableActivities() {
+        syncActivitiesFromDom();
+        return activities
+            .flatMap((activity) => {
+                const normalized = normalizeActivityUiState(activity);
+                if (normalized.ui_state === 'editing' && normalized.ui_is_new) {
+                    return [];
+                }
+
+                const sourceForPersistence = (normalized.ui_state === 'editing' && normalized.ui_backup)
+                    ? { ...normalized, ...normalized.ui_backup }
+                    : normalized;
+                return [sanitizeActivityForPersistence(sourceForPersistence)];
+            })
+            .filter((item) => item.title || item.employee_id || item.deadline || item.how || item.project_id);
     }
 
     function syncMeetingStateFromDom() {
@@ -1368,17 +1429,23 @@
                             <strong style="color: var(--text-main);">Salvamento manual obrigatório</strong>
                         </div>
                         <span id="meeting-save-status-hint" class="save-status-hint">Use o botão Salvar reunião sempre que concluir um bloco importante da reunião.</span>
-                        <span id="meeting-save-status-time" class="save-status-time">Nenhum salvamento confirmado ainda nesta sessão.</span>
+                        <span id="meeting-save-status-time" class="save-status-time">Nenhum salvamento confirmado ainda nesta sessão. Horários exibidos em America/Bahia.</span>
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <button type="button" class="button button-primary" id="btn-salvar-reuniao">
                             Salvar reunião
+                        </button>
+                        <button type="button" class="button button-outline" id="btn-finalizar-reuniao-quick" style="display: none;">
+                            Finalizar reunião
                         </button>
                     </div>
                 `;
                 hiddenInput.insertAdjacentElement('afterend', saveBar);
                 saveBar.querySelector('#btn-salvar-reuniao')?.addEventListener('click', () => {
                     salvarReuniaoCompleta();
+                });
+                saveBar.querySelector('#btn-finalizar-reuniao-quick')?.addEventListener('click', () => {
+                    finalizarReuniao();
                 });
             }
         }
@@ -1445,7 +1512,7 @@
             const executionButtons = Array.from(executionFormSection?.querySelectorAll('button') || [])
                 .filter((button) => (button.getAttribute('onclick') || '').includes('salvarExecu'));
             if (executionButtons[0]) executionButtons[0].textContent = 'Salvar reunião';
-            if (executionButtons[1]) executionButtons[1].textContent = 'Salvar e focar plano de ação';
+            executionButtons.slice(1).forEach((button) => button.remove());
 
             const syncButton = document.getElementById('sync-activities-btn');
             if (syncButton) syncButton.textContent = 'Sincronizar com Projeto';
@@ -1997,6 +2064,9 @@
             source_discussion_index: index,
             source_discussion_title: (discussion.title || '').trim(),
             source_uid: `meeting-discussion-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            ui_state: 'editing',
+            ui_is_new: true,
+            ui_backup: null,
         });
 
         renderActivities();
@@ -2039,14 +2109,78 @@
     }
 
     function adicionarAtividade() {
-        activities.push({ title: '', responsible: '', deadline: '', how: '', project_id: null, employee_id: null });
+        activities.push(normalizeActivityUiState({
+            project_id: linkedProjectId || null,
+            ui_state: 'editing',
+            ui_is_new: true,
+        }));
         renderActivities();
         markMeetingDirty();
     }
 
+    function iniciarEdicaoAtividade(index) {
+        const current = normalizeActivityUiState(activities[index] || {});
+        activities[index] = {
+            ...current,
+            ui_state: 'editing',
+            ui_is_new: false,
+            ui_backup: sanitizeActivityForPersistence(current),
+        };
+        renderActivities();
+
+        requestAnimationFrame(() => {
+            const card = document.querySelectorAll('#activities-list .activity-item')[index];
+            card?.querySelector('input[type="text"]')?.focus();
+        });
+    }
+
+    function salvarAtividade(index) {
+        syncActivitiesFromDom();
+        const current = normalizeActivityUiState(activities[index] || {});
+        if (!current.title?.trim()) {
+            showSaveToast('Informe o O que da atividade antes de salvar este item.', 'warning');
+            return;
+        }
+
+        activities[index] = {
+            ...current,
+            title: current.title.trim(),
+            ui_state: 'saved',
+            ui_is_new: false,
+            ui_backup: null,
+        };
+        renderActivities();
+        markMeetingDirty();
+        showSaveToast('Atividade preparada. Agora salve a reunião para gravar no sistema.');
+    }
+
+    function cancelarEdicaoAtividade(index) {
+        syncActivitiesFromDom();
+        const current = normalizeActivityUiState(activities[index] || {});
+        if (current.ui_is_new) {
+            activities.splice(index, 1);
+            renderActivities();
+            markMeetingDirty();
+            return;
+        }
+
+        const restored = normalizeActivityUiState({
+            ...current,
+            ...(current.ui_backup || {}),
+            ui_state: 'saved',
+            ui_is_new: false,
+            ui_backup: null,
+        });
+        activities[index] = restored;
+        renderActivities();
+        showSaveToast('Edição da atividade cancelada.', 'warning');
+    }
+
     function renderActivities() {
         const container = document.getElementById('activities-list');
-        container.innerHTML = activities.map((act, index) => {
+        container.innerHTML = activities.map((rawActivity, index) => {
+            const act = normalizeActivityUiState(rawActivity);
+            activities[index] = act;
             const employeeOptions = employeesData.map(emp =>
                 `<option value="${emp.id}" ${act.employee_id == emp.id ? 'selected' : ''}>${emp.name}</option>`
             ).join('');
@@ -2056,27 +2190,57 @@
                     ? `Gerada da discussão ${act.source_discussion_index + 1}`
                     : '');
 
+            if (act.ui_state === 'editing') {
+                return `
+                <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #bfdbfe; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08); margin-bottom: 12px;">
+                    ${discussionSourceLabel ? `
+                    <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
+                        ${discussionSourceLabel}
+                    </div>` : ''}
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <input type="text" class="form-input" placeholder="O que da atividade" value="${act.title || ''}" onchange="activities[${index}].title = this.value">
+                        <select class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.options[this.selectedIndex].text">
+                            <option value="">Responsvel...</option>
+                            ${employeeOptions}
+                        </select>
+                        <input type="date" class="form-input" value="${act.deadline || ''}" onchange="activities[${index}].deadline = this.value">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <textarea class="form-textarea" rows="2" placeholder="Como do projeto / detalhes da execução..." onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
+                        <select class="form-select" onchange="activities[${index}].project_id = this.value">
+                            <option value="">Projeto Padro</option>
+                            {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                        <button type="button" class="button button-outline" onclick="cancelarEdicaoAtividade(${index})">Cancelar</button>
+                        <button type="button" class="button button-primary" onclick="salvarAtividade(${index})">Salvar</button>
+                    </div>
+                </div>
+                `;
+            }
+
             return `
             <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
                 ${discussionSourceLabel ? `
                 <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
                     ${discussionSourceLabel}
                 </div>` : ''}
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; margin-bottom: 12px;">
-                    <input type="text" class="form-input" placeholder="O que da atividade" value="${act.title || ''}" onchange="activities[${index}].title = this.value">
-                    <select class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.options[this.selectedIndex].text">
-                        <option value="">Responsvel...</option>
-                        ${employeeOptions}
-                    </select>
-                    <input type="date" class="form-input" value="${act.deadline || ''}" onchange="activities[${index}].deadline = this.value">
-                    <button type="button" class="button button-sm button-ghost" onclick="removerAtividadeComConfirmacação(${index})" style="color: #ef4444;">?</button>
+                <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">${act.title || 'Atividade sem título'}</div>
+                        <div style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 4px;">
+                            Responsável: ${act.responsible || 'N/D'} · Prazo: ${act.deadline || 'N/D'}
+                        </div>
+                        <div style="font-size: 0.86rem; color: var(--text-main); white-space: pre-wrap;">${act.how || 'Sem detalhamento do como.'}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                        <button type="button" class="button button-sm button-outline" onclick="iniciarEdicaoAtividade(${index})">Editar</button>
+                        <button type="button" class="button button-sm button-ghost" onclick="removerAtividadeComConfirmacação(${index})" style="color: #ef4444;">Excluir</button>
+                    </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
-                    <textarea class="form-textarea" rows="2" placeholder="Como do projeto / detalhes da execução..." onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
-                    <select class="form-select" onchange="activities[${index}].project_id = this.value">
-                        <option value="">Projeto Padro</option>
-                        {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}
-                    </select>
+                <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 10px;">
+                    Projeto destino: ${resolveActivityProjectTitle(act, linkedProjectTitle) || 'Projeto padrão da reunião'}
                 </div>
             </div>
             `;
@@ -2166,7 +2330,7 @@
             actual_date: document.getElementById('meeting-actual-date').value,
             actual_time: document.getElementById('meeting-actual-time').value,
             actual_duration_minutes: document.getElementById('meeting-actual-duration').value || null,
-            participants, discussions, activities,
+            participants, discussions, activities: getPersistableActivities(),
             meeting_notes: document.getElementById('meeting-notes').value,
             status: currentMeetingStatus
         };
@@ -2279,6 +2443,18 @@
                 finishBtn.textContent = 'Finalizar Reunião';
             }
         }
+
+        const quickFinishBtn = document.getElementById('btn-finalizar-reuniao-quick');
+        if (quickFinishBtn) {
+            quickFinishBtn.style.display = currentMeetingId && status !== 'draft' ? 'inline-flex' : 'none';
+            if (status === 'completed') {
+                quickFinishBtn.disabled = true;
+                quickFinishBtn.textContent = 'Reunião finalizada';
+            } else {
+                quickFinishBtn.disabled = false;
+                quickFinishBtn.textContent = 'Finalizar reunião';
+            }
+        }
     }
 
     function limparFormulario() {
@@ -2320,7 +2496,7 @@
 
             const payload = {
                 ...buildPreliminaresPayload(),
-                activities, participants, discussions,
+                activities: getPersistableActivities(), participants, discussions,
                 meeting_notes: document.getElementById('meeting-notes').value,
                 status: currentMeetingStatus,
                 actual_date: document.getElementById('meeting-actual-date').value,
@@ -2345,9 +2521,12 @@
     }
 
     async function removerAtividadeComConfirmacação(index) {
-        const activity = activities[index];
-        if (!confirm('Deseja remover esta atividade do projeto vinculado também?')) return;
-        if (currentMeetingId && linkedProjectId && activity?.title) {
+        syncActivitiesFromDom();
+        const activity = normalizeActivityUiState(activities[index] || {});
+        if (!confirm('Deseja excluir esta atividade?')) return;
+
+        const canRemoveFromProject = Boolean(currentMeetingId && linkedProjectId && activity?.title && !activity.ui_is_new);
+        if (canRemoveFromProject && confirm('Deseja remover esta atividade do projeto vinculado também?')) {
             await fetch('/meetings/api/meeting/' + currentMeetingId + '/remove-from-project?company_id=' + meetingsCompanyId, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

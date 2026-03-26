@@ -151,6 +151,32 @@ def test_meetings_template_can_create_activity_from_discussion():
     assert '+ Atividade' in content
 
 
+def test_meetings_template_keeps_finalize_button_and_timezone_label():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'meetings_manage.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'btn-finalizar-reuniao-quick' in content
+    assert 'America/Bahia' in content
+    assert 'Salvar e Definir Atividades' not in content
+    assert 'Salvar e focar plano de ação' not in content
+
+
+def test_meetings_template_has_activity_edit_delete_save_cancel_flow():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'meetings_manage.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'function iniciarEdicaoAtividade(index)' in content
+    assert 'function salvarAtividade(index)' in content
+    assert 'function cancelarEdicaoAtividade(index)' in content
+    assert '>Editar</button>' in content
+    assert '>Excluir</button>' in content
+    assert '>Cancelar</button>' in content
+    assert '>Salvar</button>' in content
+    assert 'getPersistableActivities()' in content
+
+
 def test_get_meeting_or_404_returns_403_when_company_not_accessible(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='collaborator'))
