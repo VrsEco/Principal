@@ -879,10 +879,10 @@
                         <div
                             style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color);">
                             <button type="button" class="button button-outline"
-                                onclick="salvarExecucação({ advance: false })">?? Salvar
+                                onclick="salvarExecucao({ advance: false })">?? Salvar
                                 Discusses e Decises</button>
                             <button type="button" class="button button-primary"
-                                onclick="salvarExecucação({ advance: true })">?? Salvar e Definir Atividades ?</button>
+                                onclick="salvarExecucao({ advance: true })">?? Salvar e Definir Atividades ?</button>
                         </div>
                     </div>
                 </div>
@@ -1852,7 +1852,7 @@
 
             let executionResult = null;
             if (hasExecutionContent()) {
-                executionResult = await persistExecucação({ silent: true });
+                executionResult = await persistExecucao({ silent: true });
                 if (!executionResult.success) {
                     showSaveToast(executionResult.message || 'Não foi possível salvar a execução da reunião.', 'error');
                     return false;
@@ -2109,7 +2109,7 @@
         container.innerHTML = html;
     }
 
-    async function persistExecucação(options = {}) {
+    async function persistExecucao(options = {}) {
         const { silent = false } = options;
         if (!currentMeetingId) return { success: false };
         syncMeetingStateFromDom();
@@ -2122,7 +2122,7 @@
             status: currentMeetingStatus
         };
         try {
-            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/execucação?company_id=${meetingsCompanyId}`, {
+            const response = await fetch(`/meetings/api/meeting/${currentMeetingId}/execucao?company_id=${meetingsCompanyId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -2144,7 +2144,7 @@
         }
     }
 
-    async function salvarExecucação(options = {}) {
+    async function salvarExecucao(options = {}) {
         const { advance = false } = options;
         const saved = await salvarReuniaoCompleta({
             focusActivities: advance,
@@ -2308,7 +2308,7 @@
         activities.splice(index, 1);
         renderActivities();
         markMeetingDirty();
-        await persistExecucação({ silent: true });
+        await persistExecucao({ silent: true });
         await atualizarAtividades();
     }
 
