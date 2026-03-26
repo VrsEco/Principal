@@ -1135,7 +1135,8 @@
 
     function syncActivitiesFromDom() {
         const activityItems = document.querySelectorAll('#activities-list .activity-item');
-        activities = Array.from(activityItems).map((item) => {
+        activities = Array.from(activityItems).map((item, index) => {
+            const existingActivity = activities[index] || {};
             const titleInput = item.querySelector('input[type="text"]');
             const deadlineInput = item.querySelector('input[type="date"]');
             const howInput = item.querySelector('textarea');
@@ -1144,6 +1145,7 @@
             const projectSelect = selects[1];
 
             return {
+                ...existingActivity,
                 title: titleInput?.value?.trim() || '',
                 employee_id: responsibleSelect?.value || null,
                 responsible: responsibleSelect?.value ? (responsibleSelect.selectedOptions[0]?.text || '') : '',
@@ -1977,6 +1979,40 @@
         markMeetingDirty();
     }
 
+    function criarAtividadeDaDiscussao(index) {
+        syncDiscussionsFromDom();
+        const discussion = discussions[index] || {};
+        if (!discussion.title && !discussion.discussion) {
+            showSaveToast('Preencha o título ou a decisão da discussão antes de gerar a atividade.', 'warning');
+            return;
+        }
+
+        activities.push({
+            title: (discussion.title || '').trim(),
+            responsible: '',
+            deadline: '',
+            how: discussion.discussion || '',
+            project_id: linkedProjectId || null,
+            employee_id: null,
+            source_discussion_index: index,
+            source_discussion_title: (discussion.title || '').trim(),
+            source_uid: `meeting-discussion-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        });
+
+        renderActivities();
+        markMeetingDirty();
+        focusActivitiesPanel();
+        showSaveToast('Atividade criada a partir da discussão. Revise os campos antes de salvar.', 'warning');
+
+        const newIndex = activities.length - 1;
+        requestAnimationFrame(() => {
+            const newActivityCard = document.querySelectorAll('#activities-list .activity-item')[newIndex];
+            if (!newActivityCard) return;
+            newActivityCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            newActivityCard.querySelector('input[type="text"]')?.focus();
+        });
+    }
+
     function renderDiscussions() {
         const container = document.getElementById('discussions-list');
         container.innerHTML = discussions.map((disc, index) => `
@@ -1984,10 +2020,14 @@
             <div style="display: flex; gap: 12px; margin-bottom: 12px;">
                 <input type="text" class="form-input" placeholder="Tpico / Título" 
                        value="${disc.title || ''}" onchange="discussions[${index}].title = this.value" style="flex: 1;">
+                <button type="button" class="button button-sm button-outline" onclick="criarAtividadeDaDiscussao(${index})" title="Criar atividade de projeto a partir desta discussão">+ Atividade</button>
                 <button type="button" class="button button-sm button-ghost" onclick="removerDiscussação(${index})" style="color: #ef4444;">?</button>
             </div>
             <textarea class="form-textarea" rows="3" placeholder="Discusso e definies..."
                       onchange="discussions[${index}].discussion = this.value">${disc.discussion || ''}</textarea>
+            <div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
+                Use <strong>+ Atividade</strong> para transformar o título em <strong>O que</strong> e a decisão em <strong>Como</strong> do projeto.
+            </div>
         </div>
     `).join('');
     }
@@ -2010,11 +2050,20 @@
             const employeeOptions = employeesData.map(emp =>
                 `<option value="${emp.id}" ${act.employee_id == emp.id ? 'selected' : ''}>${emp.name}</option>`
             ).join('');
+            const discussionSourceLabel = act.source_discussion_title
+                ? `Gerada da discussão: ${act.source_discussion_title}`
+                : (Number.isInteger(act.source_discussion_index)
+                    ? `Gerada da discussão ${act.source_discussion_index + 1}`
+                    : '');
 
             return `
             <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
+                ${discussionSourceLabel ? `
+                <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
+                    ${discussionSourceLabel}
+                </div>` : ''}
                 <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; margin-bottom: 12px;">
-                    <input type="text" class="form-input" placeholder="Atividade" value="${act.title || ''}" onchange="activities[${index}].title = this.value">
+                    <input type="text" class="form-input" placeholder="O que da atividade" value="${act.title || ''}" onchange="activities[${index}].title = this.value">
                     <select class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.options[this.selectedIndex].text">
                         <option value="">Responsvel...</option>
                         ${employeeOptions}
@@ -2023,7 +2072,7 @@
                     <button type="button" class="button button-sm button-ghost" onclick="removerAtividadeComConfirmacação(${index})" style="color: #ef4444;">?</button>
                 </div>
                 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
-                    <textarea class="form-textarea" rows="2" placeholder="Como executar..." onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
+                    <textarea class="form-textarea" rows="2" placeholder="Como do projeto / detalhes da execução..." onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
                     <select class="form-select" onchange="activities[${index}].project_id = this.value">
                         <option value="">Projeto Padro</option>
                         {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}

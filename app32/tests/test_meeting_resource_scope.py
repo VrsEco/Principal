@@ -141,6 +141,16 @@ def test_meetings_template_uses_execucao_endpoint_without_accent():
     assert '/execucação?company_id=${meetingsCompanyId}' not in content
 
 
+def test_meetings_template_can_create_activity_from_discussion():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'meetings_manage.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'function criarAtividadeDaDiscussao(index)' in content
+    assert 'source_discussion_title' in content
+    assert '+ Atividade' in content
+
+
 def test_get_meeting_or_404_returns_403_when_company_not_accessible(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='collaborator'))
