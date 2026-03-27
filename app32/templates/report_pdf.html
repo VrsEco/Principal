@@ -3,67 +3,50 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>Ata de Reunião - {{ meeting.title }}</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
-    rel="stylesheet">
+  <title>Ata de Reunião - {{ report.title }}</title>
   <style>
     :root {
       --primary: #0f172a;
-      --accent: #39f2ae;
-      --accent-soft: rgba(57, 242, 174, 0.1);
+      --primary-soft: #1e293b;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.12);
+      --versus-green: #15803d;
+      --versus-blue: #1d4ed8;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --surface-muted: #f1f5f9;
+      --border: #dbe3ee;
+      --border-strong: #cbd5e1;
       --text-main: #1e293b;
       --text-muted: #64748b;
-      --border: #e2e8f0;
-      --surface: #ffffff;
-      --bg-page: #f8fafc;
+      --text-light: #94a3b8;
+      --page-side: 10mm;
+      --page-top: 10mm;
+      --page-bottom: 10mm;
     }
 
     @page {
       size: A4 portrait;
-      margin: 20mm;
-
-      @bottom-right {
-        content: "Página " counter(page) " de " counter(pages);
-        font-family: 'Inter', sans-serif;
-        font-size: 8pt;
-        color: var(--text-muted);
-      }
-
-      @bottom-left {
-        content: "Versus Gestão Corporativa - Todos os direitos reservados.";
-        font-family: 'Inter', sans-serif;
-        font-size: 8pt;
-        color: var(--text-muted);
-      }
-    }
-
-    @media print {
-      body {
-        background: white;
-      }
-
-      .no-print {
-        display: none;
-      }
-
-      .page-break {
-        page-break-before: always;
-      }
+      margin: var(--page-top) var(--page-side) var(--page-bottom) var(--page-side);
     }
 
     * {
-      margin: 0;
-      padding: 0;
       box-sizing: border-box;
       -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
       color: var(--text-main);
-      line-height: 1.6;
-      background: var(--bg-page);
+      line-height: 1.55;
+      background: #e2e8f0;
       font-size: 10.5pt;
     }
 
@@ -71,456 +54,926 @@
     h2,
     h3,
     h4 {
-      font-family: 'Outfit', sans-serif;
+      margin: 0;
       color: var(--primary);
+      font-family: "Outfit", "Inter", "Segoe UI", Arial, sans-serif;
     }
 
-    /* --- CAPA --- */
-    .cover {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 40mm 20mm;
-      text-align: center;
+    p {
+      margin: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
       background: var(--surface);
-      position: relative;
-      overflow: hidden;
-      page-break-after: always;
     }
 
-    .cover-accent {
-      position: absolute;
-      top: -100px;
-      right: -100px;
-      width: 300px;
-      height: 300px;
-      background: var(--accent-soft);
-      border-radius: 50%;
-      z-index: 0;
+    thead {
+      display: table-header-group;
     }
 
-    .logo-container {
-      margin-bottom: 22px;
-      z-index: 1;
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      text-align: left;
     }
 
-    .logo-placeholder {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 800;
-      font-size: 24pt;
-      letter-spacing: -1px;
-      color: var(--primary);
-    }
-
-    .logo-placeholder span {
-      color: var(--accent);
-    }
-
-    .cover-eyebrow {
+    th {
+      background: var(--surface-muted);
+      color: var(--versus-blue);
+      font-size: 8.5pt;
       text-transform: uppercase;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) td {
+      background: rgba(248, 250, 252, 0.65);
+    }
+
+    .report-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 24px 44px;
+    }
+
+    .report-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .document-chrome {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .document-footer {
+      margin-top: 14px;
+    }
+
+    .document-chrome-left,
+    .document-chrome-right {
+      min-width: 0;
+    }
+
+    .document-chrome-left {
       font-size: 9pt;
       font-weight: 700;
-      color: var(--accent);
+      color: var(--primary);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .document-chrome-right {
+      font-size: 8.5pt;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .intro-section {
+      padding: 26px 28px;
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .intro-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .intro-copy {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .intro-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #166534;
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       margin-bottom: 12px;
-      z-index: 1;
     }
 
-    .cover h1 {
-      font-size: 34pt;
-      font-weight: 800;
+    .intro-title {
+      font-size: 24pt;
       line-height: 1.1;
-      margin-bottom: 24px;
-      max-width: 600px;
-      z-index: 1;
-    }
-
-    .cover-meta {
-      margin-top: 34px;
-      padding-top: 18px;
-      border-top: 1px solid var(--border);
-      width: 100%;
-      max-width: 400px;
-      z-index: 1;
-    }
-
-    .meta-item {
+      letter-spacing: -0.03em;
       margin-bottom: 8px;
+    }
+
+    .intro-subtitle {
       font-size: 10pt;
       color: var(--text-muted);
     }
 
-    .meta-item strong {
-      color: var(--primary);
+    .intro-logo {
+      flex: 0 0 auto;
+      max-width: 180px;
+      max-height: 68px;
+      object-fit: contain;
     }
 
-    /* --- CONTEUDO --- */
-    .content {
-      padding: 10mm 0;
+    .intro-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .intro-meta-item {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.9));
+    }
+
+    .intro-meta-label,
+    .card-kicker,
+    .data-item-label,
+    .person-label,
+    .rich-label {
+      display: block;
+      font-size: 8pt;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .intro-meta-value {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 10.5pt;
+      line-height: 1.35;
+      word-break: break-word;
     }
 
     .section {
-      margin-bottom: 18px;
-      padding-bottom: 6px;
+      margin-bottom: 14px;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+
+    .section-card {
+      padding: 16px 18px 18px;
     }
 
     .section-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 10px;
-      border-bottom: 1px solid rgba(57, 242, 174, 0.28);
-      padding-bottom: 4px;
-    }
-
-    .section-header h2 {
-      font-size: 16pt;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--accent);
-    }
-
-    .section-header .line {
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-      display: none;
-    }
-
-    /* --- GRID INFO --- */
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      justify-content: space-between;
+      gap: 14px;
       margin-bottom: 12px;
-    }
-
-    .info-card {
-      background: #fff;
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-
-    .info-label {
-      display: block;
-      font-size: 8pt;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .info-value {
-      font-weight: 600;
-      font-size: 11pt;
-      color: var(--primary);
-    }
-
-    /* --- TEXTOS --- */
-    .rich-text {
-      color: var(--text-main);
-      white-space: pre-wrap;
-      background: #fff;
-      padding: 14px 16px;
-      border-radius: 8px;
-      border-left: 4px solid var(--accent);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-
-    /* --- TABELAS --- */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 10px;
-      background: #fff;
-    }
-
-    th {
-      background: #f1f5f9;
-      text-align: left;
-      padding: 12px 15px;
-      font-size: 9pt;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--primary);
-      border-bottom: 2px solid var(--border);
-    }
-
-    td {
-      padding: 12px 15px;
-      font-size: 10pt;
+      padding-bottom: 8px;
       border-bottom: 1px solid var(--border);
-      vertical-align: top;
     }
 
-    tr:nth-child(even) {
-      background: #fafafa;
+    .section-title {
+      font-size: 15pt;
+      letter-spacing: -0.02em;
+      color: var(--versus-green);
     }
 
-    /* --- LISTAS --- */
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 8pt;
+    .section-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 38px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      color: var(--primary-soft);
+      font-size: 8.5pt;
       font-weight: 700;
-      text-transform: uppercase;
     }
 
-    .tag-internal {
-      background: #dbeafe;
-      color: #1e40af;
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
 
-    .tag-external {
-      background: #d1fae5;
-      color: #065f46;
+    .section-dates .data-card {
+      height: 100%;
     }
 
-    /* --- DISCUSSÕES --- */
-    .discussion-block {
-      margin-bottom: 12px;
+    .data-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      padding: 14px;
       page-break-inside: avoid;
+      break-inside: avoid-page;
     }
 
-    .discussion-title {
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 8px;
-      font-size: 11pt;
+    .card-title-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 13pt;
+      letter-spacing: -0.02em;
+    }
+
+    .status-pill,
+    .type-pill,
+    .flag-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 7.8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .status-pill {
+      background: rgba(15, 23, 42, 0.08);
+      color: var(--primary);
+    }
+
+    .type-pill.internal {
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+    }
+
+    .type-pill.external {
+      background: rgba(22, 163, 74, 0.12);
+      color: #15803d;
+    }
+
+    .flag-pill.yes {
+      background: rgba(22, 163, 74, 0.12);
+      color: #166534;
+    }
+
+    .flag-pill.no {
+      background: rgba(148, 163, 184, 0.14);
+      color: #64748b;
+    }
+
+    .data-list {
+      display: flex;
+      flex-direction: column;
       gap: 8px;
     }
 
-    .discussion-title::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
+    .data-item {
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: var(--surface-soft);
+      border: 1px solid rgba(219, 227, 238, 0.85);
+    }
+
+    .data-item-value {
+      color: var(--primary);
+      font-size: 10pt;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .rich-card {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 0.9));
+    }
+
+    .rich-text {
+      white-space: pre-wrap;
+      color: var(--text-main);
+      font-size: 9.6pt;
+    }
+
+    .people-table th,
+    .people-table td {
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .person-name {
+      font-size: 10pt;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 3px;
+    }
+
+    .person-contact-inline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 3px 8px;
+    }
+
+    .person-contact-line {
+      font-size: 8.8pt;
+      color: var(--text-muted);
+      word-break: break-word;
+    }
+
+    .person-contact-separator {
+      color: var(--text-light);
+      font-size: 8pt;
+    }
+
+    .people-table td {
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+
+    .people-table .type-pill,
+    .people-table .flag-pill {
+      font-size: 7.2pt;
+      padding: 3px 8px;
+    }
+
+    .agenda-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .agenda-item {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 12px;
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .agenda-index {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-soft);
+      color: #15803d;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    .agenda-body {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+
+    .agenda-title {
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .agenda-description {
+      font-size: 9pt;
+      color: var(--text-muted);
+    }
+
+    .discussion-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .discussion-block {
+      padding: 16px 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .discussion-title {
+      font-size: 11pt;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
     }
 
     .discussion-content {
-      padding-left: 16px;
-      border-left: 2px solid var(--border);
-      margin-left: 3px;
+      color: var(--text-main);
+      font-size: 9.6pt;
+      white-space: pre-wrap;
     }
 
+    .empty-state {
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px dashed var(--border-strong);
+      color: var(--text-muted);
+      background: rgba(248, 250, 252, 0.9);
+      text-align: center;
+      font-style: italic;
+    }
+
+    .floating-print {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 1000;
+    }
+
+    .floating-print button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 24px;
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22);
+      font-family: inherit;
+    }
+
+    @media (max-width: 860px) {
+      .report-shell {
+        padding: 18px 12px 30px;
+      }
+
+      .intro-top,
+      .section-header,
+      .document-chrome {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .intro-meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .document-chrome-right {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        font-size: 9.2pt;
+        line-height: 1.4;
+      }
+
+      .report-shell {
+        max-width: none;
+        padding: 0;
+      }
+
+      .report-card {
+        border-radius: 0;
+        box-shadow: none;
+        border-color: rgba(219, 227, 238, 0.95);
+        overflow: visible;
+      }
+
+      .document-chrome {
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0 0 2.2mm;
+        background: #ffffff;
+      }
+
+      .document-footer {
+        margin-top: 8px;
+        padding-top: 2.2mm;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        border-top: 1px solid var(--border-strong);
+      }
+
+      .document-chrome-left,
+      .document-chrome-right {
+        font-size: 7.8pt;
+      }
+
+      .section-card {
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .intro-section {
+        padding: 24px 26px;
+        margin-bottom: 12px;
+        border-radius: 18px;
+      }
+
+      .intro-top {
+        margin-bottom: 18px;
+      }
+
+      .intro-title {
+        font-size: 22pt;
+      }
+
+      .intro-subtitle {
+        font-size: 9.6pt;
+      }
+
+      .intro-meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .intro-meta-item {
+        padding: 12px 14px;
+      }
+
+      .section {
+        margin-bottom: 10px;
+      }
+
+      .section-card {
+        padding-top: 10px;
+        padding-bottom: 12px;
+      }
+
+      .section-header {
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+      }
+
+      .section-title {
+        font-size: 13pt;
+      }
+
+      .section-badge {
+        font-size: 7.5pt;
+        padding: 4px 8px;
+      }
+
+      .cards-grid {
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .data-card {
+        padding: 10px;
+      }
+
+      .card-title {
+        font-size: 11pt;
+      }
+
+      .data-list {
+        gap: 6px;
+      }
+
+      .data-item {
+        padding: 7px 8px;
+      }
+
+      .data-item-value {
+        font-size: 9pt;
+      }
+
+      .rich-card {
+        margin-top: 8px;
+        padding: 10px 12px;
+      }
+
+      .floating-print,
+      .no-print {
+        display: none !important;
+      }
+
+      .agenda-item,
+      .discussion-block,
+      .data-card,
+      tr {
+        page-break-inside: avoid;
+        break-inside: avoid-page;
+      }
+
+      th,
+      td {
+        padding: 7px 9px;
+      }
+
+      .people-table td {
+        padding-top: 6px;
+        padding-bottom: 6px;
+      }
+
+      .person-name {
+        font-size: 8.8pt;
+        margin-bottom: 2px;
+      }
+
+      .person-contact-inline {
+        gap: 2px 6px;
+      }
+
+      .person-contact-line {
+        font-size: 7.8pt;
+      }
+
+      .people-table .type-pill,
+      .people-table .flag-pill {
+        font-size: 6.8pt;
+        padding: 2px 7px;
+      }
+
+      .discussion-block {
+        padding: 10px 12px;
+      }
+
+      .agenda-item {
+        gap: 8px;
+      }
+
+      .agenda-body {
+        padding: 8px 10px;
+      }
+
+      .empty-state {
+        padding: 10px;
+      }
+    }
   </style>
 </head>
 
 <body>
-
-  <!-- CAPA -->
-  <section class="cover">
-    <div class="cover-accent"></div>
-    <div class="logo-container">
-      {% if company.logo_primary %}
-      <img src="{{ company.logo_primary }}" alt="Logo" style="max-height: 80px;">
-      {% endif %}
-    </div>
-
-    <div class="cover-eyebrow">Ata de Reunião</div>
-    <h1>{{ meeting.title }}</h1>
-
-    <div class="cover-meta">
-      <div class="meta-item">Empresa: <strong>{{ company.name }}</strong></div>
-      <div class="meta-item">Data: <strong>{{ meeting.actual_date if meeting.actual_date else meeting.scheduled_date
-          }}</strong></div>
-      {% if meeting.project_title %}
-      <div class="meta-item">Projeto: <strong>{{ meeting.project_title }}</strong></div>
-      {% endif %}
-    </div>
-  </section>
-
-  <div class="content" style="padding: 20mm;">
-
-    <!-- INFORMAÇÕES GERAIS -->
-    <section class="section">
-      <div class="section-header">
-        <h2>Informações de Registro</h2>
-      </div>
-      <div class="info-grid">
-        <div class="info-card">
-          <span class="info-label">Data e Hora (Realizada)</span>
-          <div class="info-value">
-            {{ (meeting.actual_date|default('', true)) or (meeting.scheduled_date|default('', true)) }}
-            às {{ (meeting.actual_time|default('', true)) or (meeting.scheduled_time|default('', true)) }}
-          </div>
+  <main class="report-shell">
+    <section class="report-card intro-section">
+      <div class="intro-top">
+        <div class="intro-copy">
+          <span class="intro-eyebrow">Ata de Reunião</span>
+          <h1 class="intro-title">{{ report.title }}</h1>
+          <p class="intro-subtitle">Documento formal da reunião com datas, participantes, deliberações e plano de ação.</p>
         </div>
-        <div class="info-card">
-          <span class="info-label">Status da Reunião</span>
-          <div class="info-value" style="text-transform: capitalize;">
-            {{ meeting.status }}
-          </div>
+        {% if company.logo_primary %}
+        <img class="intro-logo" src="{{ company.logo_primary }}" alt="Logo da empresa">
+        {% endif %}
+      </div>
+
+      <div class="intro-meta-grid">
+        <div class="intro-meta-item">
+          <span class="intro-meta-label">Empresa</span>
+          <div class="intro-meta-value">{{ company.name }}</div>
+        </div>
+        <div class="intro-meta-item">
+          <span class="intro-meta-label">Projeto</span>
+          <div class="intro-meta-value">{{ report.project_label if report.project_label else 'Sem projeto vinculado' }}</div>
         </div>
       </div>
-      {% if meeting.invite_notes %}
-      <div class="info-label">Pauta Enviada no Convite</div>
-      <div class="rich-text" style="font-size: 9pt; margin-top: 8px; background: #fcfcfc;">{{ meeting.invite_notes }}
-      </div>
-      {% endif %}
     </section>
 
-    <!-- PARTICIPANTES -->
+    <section class="section section-dates">
+      <div class="report-card section-card">
+        <div class="section-header">
+          <h2 class="section-title">Datas</h2>
+        </div>
+
+        <div class="cards-grid">
+          {% for card in [report.dates.scheduling, report.dates.execution] %}
+          <article class="data-card">
+            <div class="card-title-row">
+              <div>
+                <h3 class="card-title">{{ card.title }}</h3>
+              </div>
+            </div>
+
+                <div class="data-list">
+                  {% for item in card['items'] %}
+              <div class="data-item">
+                <span class="data-item-label">{{ item.label }}</span>
+                <div class="data-item-value">{{ item.value }}</div>
+              </div>
+              {% endfor %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+
+        {% if meeting.invite_notes %}
+        <div class="rich-card">
+          <span class="rich-label">Observações do convite</span>
+          <div class="rich-text">{{ meeting.invite_notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
     <section class="section">
-      <div class="section-header">
-        <h2>Participantes Presentes</h2>
+      <div class="report-card section-card">
+        <div class="section-header">
+          <h2 class="section-title">Participantes</h2>
+          <span class="section-badge">{{ report.counts.present }} presentes / {{ report.counts.invited }} convidados</span>
+        </div>
+
+        <table class="people-table">
+          <thead>
+            <tr>
+              <th style="width: 46%;">Nome e dados</th>
+              <th style="width: 16%;">Tipo</th>
+              <th style="width: 19%;">Convidado</th>
+              <th style="width: 19%;">Presença</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if report.participants %}
+            {% for person in report.participants %}
+            <tr>
+              <td>
+                <div class="person-name">{{ person.name }}</div>
+                <div class="person-contact-inline">
+                  <span class="person-contact-line">{{ person.email if person.email else 'Sem e-mail' }}</span>
+                  <span class="person-contact-separator">•</span>
+                  <span class="person-contact-line">{{ person.phone if person.phone else 'Sem telefone' }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="type-pill {{ 'internal' if person.type_label == 'Colaborador' else 'external' }}">{{ person.type_label }}</span>
+              </td>
+              <td>
+                <span class="flag-pill {{ 'yes' if person.invited else 'no' }}">{{ 'Sim' if person.invited else 'Não' }}</span>
+              </td>
+              <td>
+                <span class="flag-pill {{ 'yes' if person.present else 'no' }}">{{ 'Presente' if person.present else 'Ausente' }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="4">
+                <div class="empty-state">Nenhum participante ou convidado registrado para esta reunião.</div>
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Nome do Participante</th>
-            <th>Tipo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if meeting.participants %}
-          {% for p in meeting.participants.internal or [] %}
-          <tr>
-            <td><strong>{{ p.name }}</strong></td>
-            <td><span class="tag tag-internal">Colaborador</span></td>
-          </tr>
-          {% endfor %}
-          {% for p in meeting.participants.external or [] %}
-          <tr>
-            <td><strong>{{ p.name }}</strong></td>
-            <td><span class="tag tag-external">Externo</span></td>
-          </tr>
-          {% endfor %}
-          {% else %}
-          <tr>
-            <td colspan="2" style="text-align: center; color: var(--text-muted);">Nenhum participante registrado.</td>
-          </tr>
-          {% endif %}
-        </tbody>
-      </table>
     </section>
 
-    <!-- AGENDA PLANEJADA -->
     {% if meeting.agenda %}
     <section class="section">
-      <div class="section-header">
-        <h2>Pauta da Reunião</h2>
+      <div class="report-card section-card">
+        <div class="section-header">
+          <h2 class="section-title">Pauta da Reunião</h2>
+          <span class="section-badge">{{ meeting.agenda|length }} itens</span>
+        </div>
+
+        <ol class="agenda-list">
+          {% for item in meeting.agenda %}
+          <li class="agenda-item">
+            <span class="agenda-index">{{ loop.index }}</span>
+            <div class="agenda-body">
+              <div class="agenda-title">{{ item.title }}</div>
+              {% if item.description %}
+              <div class="agenda-description">{{ item.description }}</div>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ol>
       </div>
-      <ul style="list-style: none; padding-left: 0;">
-        {% for item in meeting.agenda %}
-        <li style="margin-bottom: 12px; display: flex; gap: 12px;">
-          <div style="font-weight: 800; color: var(--accent);">{{ loop.index }}.</div>
-          <div>
-            <div style="font-weight: 700; color: var(--primary);">{{ item.title }}</div>
-            {% if item.description %}
-            <div style="font-size: 9pt; color: var(--text-muted);">{{ item.description }}</div>
-            {% endif %}
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
     </section>
     {% endif %}
 
-    <!-- DISCUSSÕES E DELIBERAÇÕES -->
     <section class="section">
-      <div class="section-header">
-        <h2>Deliberações e Discussão</h2>
-      </div>
-      {% if meeting.discussions %}
-      {% for disc in meeting.discussions %}
-      <div class="discussion-block">
-        <div class="discussion-title">{{ disc.title }}</div>
-        <div class="discussion-content">
-          <p>{{ disc.discussion }}</p>
+      <div class="report-card section-card">
+        <div class="section-header">
+          <h2 class="section-title">Deliberações e Discussão</h2>
+          <span class="section-badge">{{ meeting.discussions|length if meeting.discussions else 0 }}</span>
         </div>
-      </div>
-      {% endfor %}
-      {% else %}
-      <div class="rich-text" style="font-style: italic; color: var(--text-muted);">Nenhuma discussão registrada nesta
-        sessão.</div>
-      {% endif %}
-    </section>
 
-    <!-- ATIVIDADES E PLANO DE AÇÃO -->
-    <section class="section">
-      <div class="section-header">
-        <h2>Plano de Ação / Atividades</h2>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 34%;">Atividade</th>
-            <th style="width: 28%;">Projeto</th>
-            <th>Responsável</th>
-            <th>Prazo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if meeting.activities %}
-          {% for act in meeting.activities %}
-          <tr>
-            <td>
-              <strong>{{ act.title }}</strong>
-              {% if act.how %}
-              <div style="font-size: 8pt; color: var(--text-muted); margin-top: 4px;">{{ act.how }}</div>
-              {% endif %}
-            </td>
-            <td>
-              {% set activity_project_title = act.project_title or act.project_name or meeting.project_title %}
-              {% set activity_project_code = act.project_code or meeting.project_code %}
-              {% if activity_project_title %}
-              <strong>{{ activity_project_title }}</strong>
-              {% if activity_project_code %}
-              <div style="font-size: 8pt; color: var(--text-muted); margin-top: 4px;">{{ activity_project_code }}</div>
-              {% endif %}
-              {% elif act.project_id %}
-              <span style="color: var(--text-muted);">Projeto #{{ act.project_id }}</span>
-              {% else %}
-              <span style="color: var(--text-muted);">Sem projeto vinculado</span>
-              {% endif %}
-            </td>
-            <td>{{ act.responsible }}</td>
-            <td>{{ act.deadline if act.deadline else 'A definir' }}</td>
-          </tr>
+        {% if meeting.discussions %}
+        <div class="discussion-list">
+          {% for disc in meeting.discussions %}
+          <article class="discussion-block">
+            <h3 class="discussion-title">{{ disc.title }}</h3>
+            <div class="discussion-content">{{ disc.discussion }}</div>
+          </article>
           {% endfor %}
-          {% else %}
-          <tr>
-            <td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma atividade registrada.</td>
-          </tr>
-          {% endif %}
-        </tbody>
-      </table>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhuma discussão registrada nesta sessão.</div>
+        {% endif %}
+      </div>
     </section>
 
-    <!-- NOTAS FINAIS -->
+    <section class="section">
+      <div class="report-card section-card">
+        <div class="section-header">
+          <h2 class="section-title">Plano de Ação / Atividades</h2>
+          <span class="section-badge">{{ meeting.activities|length if meeting.activities else 0 }}</span>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">Atividade</th>
+              <th style="width: 28%;">Projeto</th>
+              <th style="width: 20%;">Responsável</th>
+              <th style="width: 20%;">Prazo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if meeting.activities %}
+            {% for act in meeting.activities %}
+            <tr>
+              <td>
+                <strong>{{ act.title }}</strong>
+                {% if act.how %}
+                <div class="person-contact-line" style="margin-top: 6px;">{{ act.how }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% set activity_project_title = act.project_title or act.project_name or meeting.project_title %}
+                {% set activity_project_code = act.project_code or meeting.project_code %}
+                {% if activity_project_title %}
+                <strong>{{ activity_project_title }}</strong>
+                {% if activity_project_code %}
+                <div class="person-contact-line" style="margin-top: 6px;">{{ activity_project_code }}</div>
+                {% endif %}
+                {% elif act.project_id %}
+                <span class="person-contact-line">Projeto #{{ act.project_id }}</span>
+                {% else %}
+                <span class="person-contact-line">Sem projeto vinculado</span>
+                {% endif %}
+              </td>
+              <td>{{ act.responsible if act.responsible else 'A definir' }}</td>
+              <td>{{ act.deadline if act.deadline else 'A definir' }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="4">
+                <div class="empty-state">Nenhuma atividade registrada.</div>
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     {% if meeting.meeting_notes %}
     <section class="section">
-      <div class="section-header">
-        <h2>Decisões e Conclusões</h2>
+      <div class="report-card section-card">
+        <div class="section-header">
+          <h2 class="section-title">Decisões e Conclusões</h2>
+        </div>
+        <div class="rich-card" style="margin-top: 0;">
+          <div class="rich-text">{{ meeting.meeting_notes }}</div>
+        </div>
       </div>
-      <div class="rich-text">{{ meeting.meeting_notes }}</div>
     </section>
     {% endif %}
 
-  </div>
+    <footer class="document-chrome document-footer">
+      <div class="document-chrome-left">Versus Gestão Corporativa - Todos os Direitos Reservados;</div>
+      <div class="document-chrome-right">Emitido em {{ generated_at }}</div>
+    </footer>
+  </main>
 
-  <div class="no-print" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
-    <button onclick="window.print()"
-      style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 50px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px;">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-        <rect x="6" y="14" width="12" height="8"></rect>
-      </svg>
-      Imprimir / Salvar PDF
-    </button>
+  <div class="floating-print no-print">
+    <button onclick="window.print()">Imprimir / Salvar PDF</button>
   </div>
 
   <script>
-    // Trigger print dialog auto if query param is present
     if (window.location.search.includes('print=true')) {
       window.onload = () => window.print();
     }

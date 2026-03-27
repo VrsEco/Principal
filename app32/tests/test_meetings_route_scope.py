@@ -10,8 +10,9 @@ from api.routes import meetings as meetings_route
 
 
 class _FakeEmployeeQuery:
-    def __init__(self, matches=None):
+    def __init__(self, matches=None, employees=None):
         self.matches = matches or {}
+        self.employees = employees or []
         self.last_filter_kwargs = None
 
     def filter_by(self, **kwargs):
@@ -28,6 +29,16 @@ class _FakeEmployeeQuery:
 
     def order_by(self, *args, **kwargs):
         return self
+
+    def all(self):
+        company_id = self.last_filter_kwargs.get('company_id')
+        status = self.last_filter_kwargs.get('status')
+        return [
+            employee
+            for employee in self.employees
+            if (company_id is None or getattr(employee, 'company_id', None) == company_id)
+            and (status is None or getattr(employee, 'status', None) == status)
+        ]
 
 
 class _FakeCompanyQuery:
@@ -189,7 +200,26 @@ def test_meeting_report_enriches_activity_project_titles(monkeypatch):
 
     monkeypatch.setattr(meetings_route, 'current_user', SimpleNamespace(id=1, is_authenticated=True, role='admin'))
     monkeypatch.setattr(meetings_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery({1: company_obj})))
-    monkeypatch.setattr(meetings_route, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery({})))
+    monkeypatch.setattr(
+        meetings_route,
+        'Employee',
+        SimpleNamespace(
+            query=_FakeEmployeeQuery(
+                {},
+                employees=[
+                    SimpleNamespace(
+                        id=1,
+                        company_id=1,
+                        status='active',
+                        name='Ana',
+                        email='ana@empresa.com',
+                        phone='7133334444',
+                        whatsapp='71999990000',
+                    )
+                ],
+            )
+        ),
+    )
     monkeypatch.setattr(
         meetings_route,
         'Meeting',
@@ -220,3 +250,5 @@ def test_meeting_report_enriches_activity_project_titles(monkeypatch):
     assert captured['context']['meeting']['activities'][1]['project_title'] == 'Projeto Base'
     assert captured['context']['meeting']['activities'][1]['project_code'] == 'PB.1'
     assert 'project_title' not in captured['context']['meeting']['activities'][2]
+    assert captured['context']['report']['title'] == 'Sem título'
+    assert captured['context']['report']['participants'] == []

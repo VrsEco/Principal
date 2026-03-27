@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, request, jsonify, redirect, url_for, abort
 from flask_login import current_user, login_required
 from models import Company, Meeting, MeetingAgendaItem, Employee, Project, db
+from services.meeting_report_service import build_meeting_report_context
 from utils.permissions import get_default_company_id, has_company_full_access, permission_required
 
 meetings_bp = Blueprint('meetings', __name__)
@@ -156,9 +157,13 @@ def meeting_report(company_id, meeting_id):
 
         meeting_data['activities'] = enriched_activities
 
+    employees = Employee.query.filter_by(company_id=company_id, status='active').all()
+    report_context = build_meeting_report_context(meeting_data, employees)
+
     return render_template(
         'report_pdf.html',
         meeting=meeting_data,
+        report=report_context,
         company=company.to_dict(),
         generated_at=datetime.now().strftime("%d/%m/%Y %H:%M")
     )
