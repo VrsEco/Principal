@@ -1,0 +1,94 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Transferência Bancária{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Transferência Bancária</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="bank-transfer-page" data-company-id="{{ company_id or '' }}">
+    <header class="bank-transfer-header">
+        <div><h1>Transferência Bancária</h1></div>
+        <div class="bank-transfer-header-actions">
+            <button type="button" class="btn btn-primary" onclick="startNewBankTransfer()">Nova transferência</button>
+        </div>
+    </header>
+
+    <section class="bank-transfer-shell">
+        <aside class="bank-transfer-rail">
+            <div class="bank-transfer-card rail-card">
+                <label class="bank-transfer-search">
+                    <span>Buscar</span>
+                    <input id="bank-transfer-search" type="search" placeholder="Código, histórico ou documento">
+                </label>
+                <div id="bank-transfer-list" class="bank-transfer-list">
+                    <div class="empty-state">Carregando transferências...</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="bank-transfer-main">
+            <section class="bank-transfer-card bank-transfer-form-shell">
+                <div class="bank-transfer-banner">Movimente recursos entre contas bancárias sem gerar efeito gerencial no DRE.</div>
+
+                <form id="bank-transfer-form" class="bank-transfer-form">
+                    <div class="bank-transfer-grid">
+                        <label class="field field-span-4">
+                            <span>Histórico</span>
+                            <input id="transfer-description" name="description" maxlength="255" required autofocus>
+                        </label>
+                        <label class="field field-span-2">
+                            <span>Número do documento</span>
+                            <input id="transfer-document-number" name="document_number" maxlength="80">
+                        </label>
+
+                        <label class="field field-span-3">
+                            <span>Conta de origem</span>
+                            <select id="transfer-origin-bank-account" name="origin_bank_account_id" required></select>
+                        </label>
+                        <label class="field field-span-3">
+                            <span>Conta de destino</span>
+                            <select id="transfer-destination-bank-account" name="destination_bank_account_id" required></select>
+                        </label>
+
+                        <label class="field field-span-2">
+                            <span>Valor</span>
+                            <input id="transfer-amount" name="amount_display" inputmode="numeric" autocomplete="off" placeholder="0,00" required>
+                        </label>
+                        <label class="field field-span-4">
+                            <span>Data da transferência</span>
+                            <input id="transfer-date" name="transfer_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                        </label>
+
+                        <label class="field field-span-6">
+                            <span>Observações</span>
+                            <textarea id="transfer-notes" name="notes" rows="3"></textarea>
+                        </label>
+                    </div>
+
+                    <footer class="bank-transfer-actions">
+                        <a href="/financial/entries" class="btn btn-secondary">Cancelar</a>
+                        <button type="button" class="btn btn-primary" onclick="saveBankTransfer(false)">Salvar e Novo</button>
+                        <button type="button" class="btn btn-success" onclick="saveBankTransfer(true)">Salvar e Voltar</button>
+                    </footer>
+                </form>
+            </section>
+
+            <section id="bank-transfer-detail" class="bank-transfer-card bank-transfer-detail hidden">
+                <div class="section-head">
+                    <div><h2>Transferência selecionada</h2></div>
+                </div>
+                <div id="bank-transfer-detail-body" class="bank-transfer-detail-body"></div>
+            </section>
+        </main>
+    </section>
+</div>
+
+<link rel="stylesheet" href="/static/css/financial_bank_transfers.css">
+<script src="/static/js/financial_bank_transfers.js"></script>
+{% endblock %}

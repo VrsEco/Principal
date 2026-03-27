@@ -17,6 +17,8 @@ from services.financial_service import FinancialService
 from services.financial_import_service import FinancialImportService
 from services.financial_ingestion_service import FinancialIngestionService
 from services.financial_direct_entry_service import FinancialDirectEntryService
+from services.financial_bank_transfer_service import FinancialBankTransferService
+from services.financial_non_financial_launch_service import FinancialNonFinancialLaunchService
 from services.financial_classification_service import FinancialClassificationService
 from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 from services.financial_classification_dashboard_service import FinancialClassificationDashboardService
@@ -158,6 +160,115 @@ class FinancialDirectEntryCreateResource(Resource):
         if error:
             return {"error": error}, 400
         return result, 201
+
+
+class FinancialBankTransferOptionsResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialBankTransferService.list_options(
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
+class FinancialBankTransferListResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialBankTransferService.list_transfers(
+            company_id=company_id,
+            query=request.args.get("query"),
+            bank_account_id=request.args.get("bank_account_id", type=int),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "create")
+    def post(self):
+        payload = request.get_json(silent=True) or {}
+        payload["company_id"] = get_request_company_id()
+        payload.setdefault("created_by_user_id", getattr(current_user, "id", None))
+        result, error = FinancialBankTransferService.create_transfer(
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
+class FinancialBankTransferResource(Resource):
+    @permission_required("financial", "view")
+    def get(self, transfer_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialBankTransferService.get_transfer(
+            company_id=company_id,
+            transfer_id=transfer_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 404
+        return result, 200
+
+
+class FinancialNonFinancialLaunchOptionsResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialNonFinancialLaunchService.list_options(
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
+class FinancialNonFinancialLaunchListResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialNonFinancialLaunchService.list_launches(
+            company_id=company_id,
+            query=request.args.get("query"),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "create")
+    def post(self):
+        payload = request.get_json(silent=True) or {}
+        payload["company_id"] = get_request_company_id()
+        payload.setdefault("created_by_user_id", getattr(current_user, "id", None))
+        result, error = FinancialNonFinancialLaunchService.create_launch(
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
+class FinancialNonFinancialLaunchResource(Resource):
+    @permission_required("financial", "view")
+    def get(self, launch_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialNonFinancialLaunchService.get_launch(
+            company_id=company_id,
+            launch_id=launch_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 404
+        return result, 200
 
 
 class FinancialCatalogListResource(Resource):

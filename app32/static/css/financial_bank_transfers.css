@@ -1,0 +1,283 @@
+.bank-transfer-page {
+  --form-bg: rgba(59, 130, 246, 0.08);
+  --form-border: rgba(59, 130, 246, 0.22);
+  --form-tint-strong: rgba(59, 130, 246, 0.14);
+  --form-tint-text: #1d4ed8;
+  padding: 0 2rem 2rem;
+}
+
+.bank-transfer-header,
+.bank-transfer-header-actions,
+.bank-transfer-actions,
+.transfer-detail-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bank-transfer-header {
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.bank-transfer-shell {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.bank-transfer-rail {
+  position: sticky;
+  top: 1rem;
+}
+
+.bank-transfer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.rail-card,
+.bank-transfer-form {
+  padding: 1rem;
+}
+
+.bank-transfer-search {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+}
+
+.bank-transfer-search input,
+.bank-transfer-form input,
+.bank-transfer-form select,
+.bank-transfer-form textarea {
+  width: 100%;
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
+  border-radius: 12px;
+  padding: 0.82rem 0.9rem;
+  color: var(--text-primary);
+}
+
+.bank-transfer-form input:focus,
+.bank-transfer-form select:focus,
+.bank-transfer-form textarea:focus {
+  outline: none;
+  border-color: var(--form-tint-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--form-tint-text) 15%, transparent);
+}
+
+.bank-transfer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: calc(100vh - 240px);
+  overflow: auto;
+}
+
+.bank-transfer-item {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bank-transfer-item:hover,
+.bank-transfer-item.active {
+  background: var(--surface-secondary);
+  border-color: rgba(59, 130, 246, 0.18);
+}
+
+.bank-transfer-item strong,
+.bank-transfer-item small {
+  display: block;
+}
+
+.bank-transfer-item small {
+  color: var(--text-secondary);
+}
+
+.bank-transfer-item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.bank-transfer-form-shell {
+  padding: 1rem;
+}
+
+.bank-transfer-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: var(--form-tint-strong);
+  color: var(--form-tint-text);
+  font-weight: 700;
+}
+
+.bank-transfer-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.field-span-2 { grid-column: span 2; }
+.field-span-3 { grid-column: span 3; }
+.field-span-4 { grid-column: span 4; }
+.field-span-6 { grid-column: span 6; }
+
+.bank-transfer-actions {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.bank-transfer-detail {
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
+.bank-transfer-detail-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.detail-item {
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+}
+
+.detail-item span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-item strong {
+  display: block;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: none;
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-success { background: #16a34a; color: #fff; }
+.btn-secondary { background: var(--surface-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.badge--posted { background: #dbeafe; color: #1d4ed8; }
+.badge--cancelled { background: #fee2e2; color: #b91c1c; }
+
+.empty-state {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: 1.5rem 1rem;
+}
+
+.hidden { display: none !important; }
+
+@media (max-width: 1100px) {
+  .bank-transfer-shell { grid-template-columns: 1fr; }
+  .bank-transfer-rail { position: static; }
+  .bank-transfer-list { max-height: 280px; }
+  .bank-transfer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .field-span-6,
+  .field-span-4,
+  .field-span-3,
+  .field-span-2 { grid-column: span 1; }
+}
+
+@media (max-width: 768px) {
+  .bank-transfer-page { padding: 0 1rem 1.5rem; }
+  .bank-transfer-header h1 { font-size: 1.55rem; }
+  .bank-transfer-header,
+  .bank-transfer-header-actions,
+  .bank-transfer-actions,
+  .transfer-detail-actions { flex-direction: column; align-items: stretch; }
+  .bank-transfer-form-shell,
+  .rail-card,
+  .bank-transfer-detail { padding: 0.9rem; }
+  .bank-transfer-grid,
+  .detail-grid { grid-template-columns: 1fr; }
+  .field-span-6,
+  .field-span-4,
+  .field-span-3,
+  .field-span-2 { grid-column: auto; }
+  .bank-transfer-header-actions .btn,
+  .bank-transfer-actions .btn,
+  .transfer-detail-actions .btn { width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .bank-transfer-page { padding: 0 0.75rem 1rem; }
+  .bank-transfer-card { border-radius: 14px; }
+  .bank-transfer-banner { padding: 0.75rem 0.85rem; font-size: 0.93rem; }
+  .bank-transfer-list { max-height: 240px; gap: 0.45rem; }
+  .bank-transfer-item { padding: 0.65rem 0.75rem; }
+  .bank-transfer-item-meta { flex-direction: column; align-items: flex-start; }
+  .detail-item { padding: 0.8rem 0.85rem; }
+}
