@@ -6,6 +6,9 @@ from utils.permissions import get_default_company_id, has_company_full_access
 from datetime import datetime
 import json
 import logging
+import re
+from services.email_service import email_service
+from services.whatsapp_service import whatsapp_service
 
 logger = logging.getLogger(__name__)
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
@@ -85,6 +88,377 @@ def get_meeting_or_404(meeting_id):
         return None, ({"success": False, "message": "Reunião não encontrada para a empresa informada."}, 404)
 
     return meeting, None
+
+
+def _safe_json_loads(value, fallback):
+    if value in (None, '', []):
+        return fallback
+    try:
+        parsed = json.loads(value) if isinstance(value, str) else value
+    except Exception:
+        return fallback
+    return fallback if parsed is None else parsed
+
+
+def _normalize_people_bucket(raw_value):
+    if isinstance(raw_value, dict):
+        internal = raw_value.get('internal')
+        external = raw_value.get('external')
+        return {
+            "internal": internal if isinstance(internal, list) else [],
+            "external": external if isinstance(external, list) else [],
+        }
+    if isinstance(raw_value, list):
+        return {"internal": raw_value, "external": []}
+    return {"internal": [], "external": []}
+
+
+def _clean_text(value):
+    return str(value or '').strip()
+
+
+def _normalize_phone(value):
+    return ''.join(ch for ch in str(value or '') if ch.isdigit())
+
+
+def _normalize_name_key(value):
+    return re.sub(r'\s+', ' ', _clean_text(value).lower())
+
+
+def _build_summary_recipient_key(recipient):
+    employee_id = _parse_optional_int(recipient.get('employee_id') or recipient.get('id'))
+    if employee_id:
+        return f"employee:{employee_id}"
+
+    email = _clean_text(recipient.get('email')).lower()
+    if email:
+        return f"email:{email}"
+
+    whatsapp = _normalize_phone(recipient.get('whatsapp') or recipient.get('phone'))
+    if whatsapp:
+        return f"whatsapp:{whatsapp}"
+
+    name_key = _normalize_name_key(recipient.get('name'))
+    return f"name:{name_key or 'sem-nome'}"
+
+
+def _meeting_status_label(status):
+    mapping = {
+        'draft': 'Rascunho',
+        'in_progress': 'Em andamento',
+        'completed': 'Concluída',
+    }
+    normalized = _clean_text(status).lower()
+    return mapping.get(normalized, status or 'Sem status')
+
+
+def _format_summary_date(value):
+    raw = _clean_text(value)
+    if not raw:
+        return ''
+    try:
+        return datetime.fromisoformat(raw).strftime('%d/%m/%Y')
+    except Exception:
+        return raw
+
+
+def _truncate_text(value, limit=260):
+    text = _clean_text(value)
+    if len(text) <= limit:
+        return text
+    return text[: max(limit - 1, 0)].rstrip() + '…'
+
+
+def _build_company_employees_maps(company_id):
+    employees = Employee.query.filter_by(company_id=company_id, status='active').all()
+    employees_by_id = {}
+    employees_by_name = {}
+
+    for employee in employees:
+        employee_id = _parse_optional_int(getattr(employee, 'id', None))
+        if employee_id is not None:
+            employees_by_id[employee_id] = employee
+
+        normalized_name = _normalize_name_key(getattr(employee, 'name', None))
+        if normalized_name:
+            employees_by_name.setdefault(normalized_name, []).append(employee)
+
+    return employees_by_id, employees_by_name
+
+
+def _resolve_internal_employee(person, employees_by_id, employees_by_name):
+    employee_id = _parse_optional_int(person.get('employee_id') or person.get('id'))
+    if employee_id is not None and employee_id in employees_by_id:
+        return employee_id, employees_by_id[employee_id]
+
+    normalized_name = _normalize_name_key(person.get('name'))
+    if normalized_name:
+        matches = employees_by_name.get(normalized_name) or []
+        if len(matches) == 1:
+            employee = matches[0]
+            return _parse_optional_int(getattr(employee, 'id', None)), employee
+
+    return employee_id, None
+
+
+def _merge_meeting_recipient(recipient_store, recipient_data):
+    key = recipient_data['key']
+    existing = recipient_store.get(key)
+    if not existing:
+        recipient_store[key] = {
+            "key": key,
+            "name": recipient_data.get('name') or 'Destinatário',
+            "email": recipient_data.get('email') or '',
+            "whatsapp": recipient_data.get('whatsapp') or '',
+            "employee_id": recipient_data.get('employee_id'),
+            "origins": list(recipient_data.get('origins') or []),
+        }
+        return
+
+    if not existing.get('name') and recipient_data.get('name'):
+        existing['name'] = recipient_data['name']
+    if not existing.get('email') and recipient_data.get('email'):
+        existing['email'] = recipient_data['email']
+    if not existing.get('whatsapp') and recipient_data.get('whatsapp'):
+        existing['whatsapp'] = recipient_data['whatsapp']
+    if not existing.get('employee_id') and recipient_data.get('employee_id'):
+        existing['employee_id'] = recipient_data['employee_id']
+
+    for origin in recipient_data.get('origins') or []:
+        if origin not in existing['origins']:
+            existing['origins'].append(origin)
+
+
+def _serialize_meeting_recipient(recipient):
+    email = _clean_text(recipient.get('email'))
+    whatsapp = _normalize_phone(recipient.get('whatsapp'))
+    origins = recipient.get('origins') or []
+    return {
+        "key": recipient['key'],
+        "name": recipient.get('name') or 'Destinatário',
+        "email": email or None,
+        "whatsapp": whatsapp or None,
+        "employee_id": recipient.get('employee_id'),
+        "origins": origins,
+        "has_email": bool(email),
+        "has_whatsapp": bool(whatsapp),
+        "is_guest": 'convidado' in origins,
+        "is_participant": 'participante' in origins,
+    }
+
+
+def _build_meeting_recipients_catalog(meeting):
+    guests_bucket = _normalize_people_bucket(_safe_json_loads(meeting.guests_json, {}))
+    participants_bucket = _normalize_people_bucket(_safe_json_loads(meeting.participants_json, {}))
+    employees_by_id, employees_by_name = _build_company_employees_maps(meeting.company_id)
+    recipient_store = {}
+
+    external_guest_contacts = {}
+    for guest in guests_bucket['external']:
+        if not isinstance(guest, dict):
+            continue
+        normalized_name = _normalize_name_key(guest.get('name'))
+        if normalized_name and normalized_name not in external_guest_contacts:
+            external_guest_contacts[normalized_name] = {
+                "email": _clean_text(guest.get('email')),
+                "whatsapp": _normalize_phone(guest.get('whatsapp')),
+            }
+
+    for guest in guests_bucket['internal']:
+        if not isinstance(guest, dict):
+            continue
+        employee_id, employee = _resolve_internal_employee(guest, employees_by_id, employees_by_name)
+        payload = {
+            "employee_id": employee_id,
+            "name": _clean_text(guest.get('name')) or _clean_text(getattr(employee, 'name', None)),
+            "email": _clean_text(guest.get('email')) or _clean_text(getattr(employee, 'email', None)),
+            "whatsapp": _normalize_phone(guest.get('whatsapp')) or _normalize_phone(getattr(employee, 'whatsapp', None)) or _normalize_phone(getattr(employee, 'phone', None)),
+            "origins": ['convidado'],
+        }
+        payload['key'] = _build_summary_recipient_key(payload)
+        _merge_meeting_recipient(recipient_store, payload)
+
+    for participant in participants_bucket['internal']:
+        if not isinstance(participant, dict):
+            continue
+        employee_id, employee = _resolve_internal_employee(participant, employees_by_id, employees_by_name)
+        payload = {
+            "employee_id": employee_id,
+            "name": _clean_text(participant.get('name')) or _clean_text(getattr(employee, 'name', None)),
+            "email": _clean_text(participant.get('email')) or _clean_text(getattr(employee, 'email', None)),
+            "whatsapp": _normalize_phone(participant.get('whatsapp')) or _normalize_phone(getattr(employee, 'whatsapp', None)) or _normalize_phone(getattr(employee, 'phone', None)),
+            "origins": ['participante'],
+        }
+        payload['key'] = _build_summary_recipient_key(payload)
+        _merge_meeting_recipient(recipient_store, payload)
+
+    for guest in guests_bucket['external']:
+        if not isinstance(guest, dict):
+            continue
+        payload = {
+            "employee_id": None,
+            "name": _clean_text(guest.get('name')),
+            "email": _clean_text(guest.get('email')),
+            "whatsapp": _normalize_phone(guest.get('whatsapp')),
+            "origins": ['convidado'],
+        }
+        payload['key'] = _build_summary_recipient_key(payload)
+        _merge_meeting_recipient(recipient_store, payload)
+
+    for participant in participants_bucket['external']:
+        if not isinstance(participant, dict):
+            continue
+        normalized_name = _normalize_name_key(participant.get('name'))
+        guest_fallback = external_guest_contacts.get(normalized_name, {})
+        payload = {
+            "employee_id": None,
+            "name": _clean_text(participant.get('name')),
+            "email": _clean_text(participant.get('email')) or _clean_text(guest_fallback.get('email')),
+            "whatsapp": _normalize_phone(participant.get('whatsapp')) or _normalize_phone(guest_fallback.get('whatsapp')),
+            "origins": ['participante'],
+        }
+        payload['key'] = _build_summary_recipient_key(payload)
+        _merge_meeting_recipient(recipient_store, payload)
+
+    recipients = [_serialize_meeting_recipient(item) for item in recipient_store.values()]
+    recipients.sort(key=lambda item: (not (item['has_email'] or item['has_whatsapp']), item['name'].lower()))
+    return recipients
+
+
+def _build_projects_by_id(company_id):
+    return {str(project.id): project for project in Project.query.filter_by(company_id=company_id).all()}
+
+
+def _enrich_meeting_activity_projects(meeting_data, projects_by_id):
+    activities = meeting_data.get('activities') or []
+    if not isinstance(activities, list):
+        return []
+
+    enriched = []
+    for activity in activities:
+        if not isinstance(activity, dict):
+            enriched.append(activity)
+            continue
+
+        activity_data = dict(activity)
+        activity_project_id = activity_data.get('project_id') or activity_data.get('projectId')
+        project = projects_by_id.get(str(activity_project_id)) if activity_project_id is not None else None
+
+        if project:
+            activity_data.setdefault('project_title', project.name)
+            activity_data.setdefault('project_code', getattr(project, 'code', None))
+        elif (
+            activity_project_id is not None
+            and meeting_data.get('project_id') is not None
+            and str(activity_project_id) == str(meeting_data.get('project_id'))
+        ):
+            activity_data.setdefault('project_title', meeting_data.get('project_title'))
+            activity_data.setdefault('project_code', meeting_data.get('project_code'))
+
+        enriched.append(activity_data)
+
+    return enriched
+
+
+def _build_meeting_summary_payload(meeting, company):
+    company_name = _clean_text(getattr(company, 'name', None))
+    report_url = f"{request.host_url.rstrip('/')}/meetings/company/{meeting.company_id}/meeting/{meeting.id}/report"
+    meeting_data = meeting.to_dict() if hasattr(meeting, 'to_dict') else {}
+    projects_by_id = _build_projects_by_id(meeting.company_id)
+    meeting_data['activities'] = _enrich_meeting_activity_projects(meeting_data, projects_by_id)
+
+    agenda_items = meeting_data.get('agenda') or []
+    discussions = meeting_data.get('discussions') or []
+    activities = meeting_data.get('activities') or []
+    notes = _clean_text(meeting_data.get('meeting_notes'))
+
+    date_label = _format_summary_date(meeting_data.get('actual_date') or meeting_data.get('scheduled_date')) or 'Não informada'
+    time_label = _clean_text(meeting_data.get('actual_time') or meeting_data.get('scheduled_time')) or 'Não informado'
+    project_title = _clean_text(meeting_data.get('project_title'))
+    project_code = _clean_text(meeting_data.get('project_code'))
+    project_label = ''
+    if project_title:
+        project_label = f"{project_code} - {project_title}" if project_code else project_title
+
+    body_lines = [
+        "Resumo da reunião",
+        "",
+        f"Empresa: {company_name or 'Não informada'}",
+        f"Reunião: {_clean_text(meeting.title) or 'Sem título'}",
+        f"Status: {_meeting_status_label(meeting_data.get('status'))}",
+        f"Data: {date_label}",
+        f"Horário: {time_label}",
+    ]
+
+    if project_label:
+        body_lines.append(f"Projeto: {project_label}")
+
+    if agenda_items:
+        body_lines.extend(["", "Pauta:"])
+        for item in agenda_items[:8]:
+            if not isinstance(item, dict):
+                continue
+            body_lines.append(f"- {_truncate_text(item.get('title'), 160) or 'Item de pauta'}")
+
+    if discussions:
+        body_lines.extend(["", "Pontos discutidos:"])
+        for discussion in discussions[:8]:
+            if not isinstance(discussion, dict):
+                continue
+            title = _truncate_text(discussion.get('title'), 160) or 'Tópico'
+            detail = _truncate_text(discussion.get('discussion') or discussion.get('decision'), 220)
+            body_lines.append(f"- {title}{': ' + detail if detail else ''}")
+
+    if activities:
+        body_lines.extend(["", "Plano de ação:"])
+        for activity in activities[:10]:
+            if not isinstance(activity, dict):
+                continue
+            activity_title = _truncate_text(activity.get('title'), 150) or 'Atividade'
+            activity_project = _clean_text(activity.get('project_title') or activity.get('project_name') or project_title) or 'Sem projeto vinculado'
+            responsible = _clean_text(activity.get('responsible')) or 'A definir'
+            deadline = _format_summary_date(activity.get('deadline')) or 'A definir'
+            body_lines.append(
+                f"- {activity_title} | Projeto: {activity_project} | Responsável: {responsible} | Prazo: {deadline}"
+            )
+
+    if notes:
+        body_lines.extend(["", "Conclusões:"])
+        body_lines.append(_truncate_text(notes, 700))
+
+    body_lines.extend(["", f"Ata completa: {report_url}"])
+    body = "\n".join(body_lines).strip()
+
+    subject = f"Resumo da Reunião: {_clean_text(meeting.title) or f'#{meeting.id}'}"
+    html_body = email_service.build_transactional_email_html(
+        subject=subject,
+        body=body,
+        title="Resumo da Reunião",
+        preheader=_truncate_text(f"{company_name} • {meeting.title} • {date_label}", 140),
+        footer_note="Resumo enviado a partir do módulo de Gestão de Reuniões.",
+    )
+
+    whatsapp_message = f"📋 *RESUMO DA REUNIÃO*\n\n{body}"
+    return {
+        "subject": subject,
+        "body": body,
+        "html_body": html_body,
+        "whatsapp_message": whatsapp_message,
+        "report_url": report_url,
+    }
+
+
+def _normalize_requested_channels(raw_channels):
+    if isinstance(raw_channels, str):
+        raw_channels = [raw_channels]
+    if not isinstance(raw_channels, list):
+        return []
+    valid = []
+    for channel in raw_channels:
+        normalized = _clean_text(channel).lower()
+        if normalized in {'email', 'whatsapp'} and normalized not in valid:
+            valid.append(normalized)
+    return valid
 
 class MeetingListResource(Resource):
     @login_required
@@ -312,6 +686,156 @@ class MeetingFinishResource(Resource):
             }
         except Exception as e:
             db.session.rollback()
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MeetingSummaryRecipientsResource(Resource):
+    @login_required
+    def get(self, meeting_id):
+        """Load normalized recipients for meeting summary sharing."""
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
+
+        try:
+            company = Company.query.get(meeting.company_id)
+            recipients = _build_meeting_recipients_catalog(meeting)
+            summary_payload = _build_meeting_summary_payload(meeting, company)
+
+            email_available = sum(1 for item in recipients if item['has_email'])
+            whatsapp_available = sum(1 for item in recipients if item['has_whatsapp'])
+            default_channels = ['email'] if email_available else (['whatsapp'] if whatsapp_available else [])
+
+            return {
+                "success": True,
+                "meeting_id": meeting.id,
+                "meeting_title": meeting.title,
+                "meeting_status": meeting.status,
+                "report_url": summary_payload['report_url'],
+                "summary_subject": summary_payload['subject'],
+                "default_channels": default_channels,
+                "email_available_count": email_available,
+                "whatsapp_available_count": whatsapp_available,
+                "recipients": recipients,
+            }
+        except Exception as exc:
+            logger.exception("Erro ao montar catálogo de destinatários da reunião %s: %s", meeting_id, exc)
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MeetingShareSummaryResource(Resource):
+    @login_required
+    def post(self, meeting_id):
+        """Send meeting summary through selected channels to selected meeting recipients."""
+        meeting, error_response = get_meeting_or_404(meeting_id)
+        if error_response:
+            return error_response
+
+        data = request.get_json() or {}
+        requested_channels = _normalize_requested_channels(data.get('channels'))
+        requested_keys = data.get('recipient_keys')
+
+        if not requested_channels:
+            return {"success": False, "message": "Selecione pelo menos um canal de envio."}, 400
+        if not isinstance(requested_keys, list) or not requested_keys:
+            return {"success": False, "message": "Selecione pelo menos um destinatário."}, 400
+
+        try:
+            recipients_catalog = _build_meeting_recipients_catalog(meeting)
+            catalog_by_key = {item['key']: item for item in recipients_catalog}
+            selected_keys = []
+            for key in requested_keys:
+                normalized_key = _clean_text(key)
+                if normalized_key and normalized_key not in selected_keys:
+                    selected_keys.append(normalized_key)
+
+            selected_recipients = [catalog_by_key[key] for key in selected_keys if key in catalog_by_key]
+            if not selected_recipients:
+                return {"success": False, "message": "Nenhum destinatário válido foi encontrado para esta reunião."}, 400
+
+            company = Company.query.get(meeting.company_id)
+            summary_payload = _build_meeting_summary_payload(meeting, company)
+
+            sent_email = 0
+            sent_whatsapp = 0
+            skipped = []
+            failures = []
+
+            for recipient in selected_recipients:
+                recipient_name = recipient.get('name') or 'Destinatário'
+
+                if 'email' in requested_channels:
+                    recipient_email = recipient.get('email')
+                    if recipient_email:
+                        ok = email_service.send_email(
+                            to_emails=[recipient_email],
+                            subject=summary_payload['subject'],
+                            body=summary_payload['body'],
+                            html_body=summary_payload['html_body'],
+                        )
+                        if ok:
+                            sent_email += 1
+                        else:
+                            failures.append({
+                                "name": recipient_name,
+                                "channel": "email",
+                                "target": recipient_email,
+                            })
+                    else:
+                        skipped.append({
+                            "name": recipient_name,
+                            "channel": "email",
+                            "reason": "Sem e-mail cadastrado.",
+                        })
+
+                if 'whatsapp' in requested_channels:
+                    recipient_whatsapp = recipient.get('whatsapp')
+                    if recipient_whatsapp:
+                        ok = whatsapp_service.send_message(
+                            recipient_whatsapp,
+                            summary_payload['whatsapp_message'],
+                        )
+                        if ok:
+                            sent_whatsapp += 1
+                        else:
+                            failures.append({
+                                "name": recipient_name,
+                                "channel": "whatsapp",
+                                "target": recipient_whatsapp,
+                            })
+                    else:
+                        skipped.append({
+                            "name": recipient_name,
+                            "channel": "whatsapp",
+                            "reason": "Sem WhatsApp cadastrado.",
+                        })
+
+            if sent_email == 0 and sent_whatsapp == 0:
+                return {
+                    "success": False,
+                    "message": "Nenhuma mensagem foi enviada. Verifique os canais e contatos selecionados.",
+                    "sent_email": sent_email,
+                    "sent_whatsapp": sent_whatsapp,
+                    "selected_count": len(selected_recipients),
+                    "skipped_count": len(skipped),
+                    "failed_count": len(failures),
+                    "skipped": skipped,
+                    "failures": failures,
+                }, 400
+
+            return {
+                "success": True,
+                "message": "Resumo da reunião enviado com sucesso.",
+                "sent_email": sent_email,
+                "sent_whatsapp": sent_whatsapp,
+                "selected_count": len(selected_recipients),
+                "skipped_count": len(skipped),
+                "failed_count": len(failures),
+                "skipped": skipped,
+                "failures": failures,
+            }
+        except Exception as exc:
+            logger.exception("Erro ao enviar resumo da reunião %s: %s", meeting_id, exc)
             return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingAgendaUseResource(Resource):
