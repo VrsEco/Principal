@@ -69,3 +69,8 @@ app31/
 **/test_output.txt
 **/uwsgi_dump.txt
 **/scripts/_tmp_check.py
+**/github_actions_deploy_key*.txt
+**/deploy_key_SECRETA.txt
+**/pip_error.log
+**/request_debug.log
+**/uwsgi_app.log
