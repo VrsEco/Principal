@@ -5,7 +5,6 @@ from flask_login import current_user
 
 from models import Company, FinancialEntry
 from services.financial_import_service import FinancialImportService
-from services.financial_budget_import_service import FinancialBudgetImportService
 from utils.permissions import get_default_company_id, has_permission, permission_required
 
 
@@ -122,17 +121,6 @@ def _get_entry_with_access(entry_id: int) -> FinancialEntry:
 
 
 @financial_bp.route("/financial")
-@financial_bp.route("/financial/dashboard")
-@permission_required("financial", "view")
-def financial_dashboard_page():
-    company = get_active_company()
-    return render_template(
-        "modules/financial/dashboard.html",
-        company=company,
-        company_id=company.id if company else None,
-    )
-
-
 @financial_bp.route("/financial/entries")
 @permission_required("financial", "view")
 def financial_entries_page():
@@ -152,7 +140,28 @@ def financial_direct_entry_page():
         "modules/financial/entry_direct.html",
         company=company,
         company_id=company.id if company else None,
-        initial_entry_type=(request.args.get("entry_type") or "").strip().lower(),
+    )
+
+
+@financial_bp.route("/financial/bank-transfers")
+@permission_required("financial", "create")
+def financial_bank_transfers_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/bank_transfers.html",
+        company=company,
+        company_id=company.id if company else None,
+    )
+
+
+@financial_bp.route("/financial/non-financial-entries")
+@permission_required("financial", "create")
+def financial_non_financial_launches_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/non_financial_launches.html",
+        company=company,
+        company_id=company.id if company else None,
     )
 
 
@@ -194,30 +203,6 @@ def financial_import_template_download():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True,
         download_name="app32_modelo_importacao_financeira.xlsx",
-    )
-
-
-@financial_bp.route("/financial/budget-template")
-@permission_required("financial", "view")
-def financial_budget_template_download():
-    company = get_active_company()
-    company_id = company.id if company else None
-    version_id = request.args.get("version_id", type=int)
-    if not company_id or not version_id:
-        abort(400, description="Informe company_id e version_id para gerar o modelo de orçamento.")
-
-    content, error = FinancialBudgetImportService.build_template(
-        company_id=company_id,
-        version_id=version_id,
-    )
-    if error:
-        abort(400, description=error)
-
-    return send_file(
-        io.BytesIO(content),
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        as_attachment=True,
-        download_name=f"app32_modelo_orcamento_{version_id}.xlsx",
     )
 
 
@@ -321,27 +306,37 @@ def financial_ingestions_page():
 
 
 @financial_bp.route("/financial/schedules")
-@permission_required("financial", "view")
-def financial_schedules_page():
-    company = get_active_company()
-    return render_template(
-        "modules/financial/schedules_list.html",
-        company=company,
-        company_id=company.id if company else None,
-    )
-
-
-@financial_bp.route("/financial/schedules/new")
 @financial_bp.route("/financial/schedules/<int:schedule_id>")
 @permission_required("financial", "view")
-def financial_schedule_form_page(schedule_id: int | None = None):
+def financial_schedules_page(schedule_id: int | None = None):
     company = get_active_company()
     return render_template(
         "modules/financial/schedules.html",
         company=company,
         company_id=company.id if company else None,
         schedule_id=schedule_id,
-        initial_entry_type=(request.args.get("entry_type") or "").strip().lower(),
+    )
+
+
+@financial_bp.route("/financial/budget")
+@permission_required("financial", "view")
+def financial_budget_planning_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/budget_matrix.html",
+        company=company,
+        company_id=company.id if company else None,
+    )
+
+
+@financial_bp.route("/financial/budget/execution")
+@permission_required("financial", "view")
+def financial_budget_execution_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/budget_execution.html",
+        company=company,
+        company_id=company.id if company else None,
     )
 
 
@@ -389,12 +384,12 @@ def financial_reports_page():
     )
 
 
-@financial_bp.route("/financial/budget")
+@financial_bp.route("/financial/dashboard")
 @permission_required("financial", "view")
-def financial_budget_page():
+def financial_dashboard_page():
     company = get_active_company()
     return render_template(
-        "modules/financial/budget_matrix.html",
+        "modules/financial/dashboard.html",
         company=company,
         company_id=company.id if company else None,
     )

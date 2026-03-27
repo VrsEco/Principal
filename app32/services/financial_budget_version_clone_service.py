@@ -87,6 +87,7 @@ class FinancialBudgetVersionCloneService:
                 line_order=source_line.line_order,
                 budget_view=source_line.budget_view,
                 movement_nature=source_line.movement_nature,
+                planned_amount=source_line.planned_amount,
                 chart_account_id=source_line.chart_account_id,
                 cost_center_id=source_line.cost_center_id,
                 activity_id=source_line.activity_id,

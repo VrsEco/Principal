@@ -265,6 +265,8 @@ class FinancialBudgetService:
 
             for key, value in row.model_dump(exclude={"amounts"}).items():
                 setattr(line, key, value)
+            if row.amounts:
+                line.planned_amount = sum((amount_input.budget_amount for amount_input in row.amounts), Decimal("0"))
             db.session.flush()
             FinancialBudgetService._sync_amounts(line, row.amounts, version)
             persisted_lines.append(line.id)

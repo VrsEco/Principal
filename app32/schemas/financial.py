@@ -781,6 +781,7 @@ class FinancialScheduleCreateInput(BaseModel):
     counterparty_id: Optional[int] = None
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_document_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
@@ -832,6 +833,7 @@ class FinancialScheduleUpdateInput(BaseModel):
     counterparty_id: Optional[int] = None
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_document_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
@@ -1187,3 +1189,67 @@ class FinancialDirectEntryCreateInput(BaseModel):
     created_by_user_id: Optional[int] = None
     created_by_employee_id: Optional[int] = None
     created_by_agent: Optional[str] = Field(None, max_length=50)
+
+
+class FinancialBankTransferCreateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    description: str = Field(..., min_length=3, max_length=255)
+    document_number: Optional[str] = Field(None, max_length=80)
+    competence_date: Optional[date] = None
+    transfer_date: date
+    amount: Decimal = Field(..., gt=0)
+    origin_bank_account_id: int
+    destination_bank_account_id: int
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+    created_by_user_id: Optional[int] = None
+    created_by_employee_id: Optional[int] = None
+    created_by_agent: Optional[str] = Field(None, max_length=50)
+
+    @model_validator(mode="after")
+    def validate_accounts(self):
+        if self.origin_bank_account_id == self.destination_bank_account_id:
+            raise ValueError("Conta de origem e destino devem ser diferentes.")
+        if self.competence_date is None:
+            self.competence_date = self.transfer_date
+        return self
+
+
+class FinancialNonFinancialLaunchInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    description: str = Field(..., min_length=3, max_length=255)
+    counterparty_id: int
+    launch_date: date
+    amount: Decimal = Field(..., gt=0)
+    title_number: Optional[str] = Field(None, max_length=80)
+    installment_number: Optional[str] = Field(None, max_length=30)
+    debit_chart_account_id: int
+    debit_cost_center_id: int
+    debit_domain_type: Optional[str] = Field(None, pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
+    debit_domain_source_id: Optional[int] = None
+    credit_chart_account_id: int
+    credit_cost_center_id: int
+    credit_domain_type: Optional[str] = Field(None, pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
+    credit_domain_source_id: Optional[int] = None
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+    created_by_user_id: Optional[int] = None
+    created_by_employee_id: Optional[int] = None
+    created_by_agent: Optional[str] = Field(None, max_length=50)
+
+    @field_validator("description", "title_number", "installment_number", "notes", mode="before")
+    @classmethod
+    def normalize_text_fields(cls, value):
+        return _normalize_text(value)
+
+    @model_validator(mode="after")
+    def validate_domains(self):
+        if bool(self.debit_domain_type) != bool(self.debit_domain_source_id):
+            raise ValueError("Selecione o projeto/processo completo no lado débito.")
+        if bool(self.credit_domain_type) != bool(self.credit_domain_source_id):
+            raise ValueError("Selecione o projeto/processo completo no lado crédito.")
+        return self

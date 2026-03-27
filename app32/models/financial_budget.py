@@ -11,6 +11,9 @@ from .financial import MOVEMENT_NATURE_VALUES
 BUDGET_VERSION_STATUS_VALUES = ("draft", "active", "archived")
 BUDGET_VERSION_SCENARIO_VALUES = ("original", "forecast", "reforecast")
 BUDGET_LINE_VIEW_VALUES = ("competence", "due", "cash")
+BUDGET_CONTRACT_STATUS_VALUES = ("draft", "active", "closed", "cancelled")
+BUDGET_DOCUMENT_STATUS_VALUES = ("draft", "registered", "scheduled", "partially_scheduled", "fully_scheduled", "cancelled")
+BUDGET_DOCUMENT_TYPE_VALUES = ("invoice", "equivalent")
 
 
 class FinancialBudgetVersion(db.Model):
@@ -90,6 +93,10 @@ class FinancialBudgetLine(db.Model):
             f"movement_nature IN {MOVEMENT_NATURE_VALUES}",
             name="ck_financial_budget_lines_movement_nature",
         ),
+        db.CheckConstraint(
+            "planned_amount >= 0",
+            name="ck_financial_budget_lines_planned_amount_nonneg",
+        ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -100,11 +107,12 @@ class FinancialBudgetLine(db.Model):
         nullable=False,
         index=True,
     )
-    line_code = db.Column(db.String(50), nullable=False)
+    line_code = db.Column(db.String(60), nullable=False)
     line_name = db.Column(db.String(160), nullable=False)
     line_order = db.Column(db.Integer, nullable=False, default=100, index=True)
     budget_view = db.Column(db.String(20), nullable=False, default="competence", index=True)
     movement_nature = db.Column(db.String(10), nullable=False, default="debit", index=True)
+    planned_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     chart_account_id = db.Column(db.Integer, db.ForeignKey("financial_chart_accounts.id"), index=True)
     cost_center_id = db.Column(db.Integer, db.ForeignKey("financial_cost_centers.id"), index=True)
     activity_id = db.Column(db.Integer, db.ForeignKey("process_routines.id"), index=True)
@@ -128,6 +136,12 @@ class FinancialBudgetLine(db.Model):
         lazy="dynamic",
         cascade="all, delete-orphan",
     )
+    contracts = db.relationship(
+        "FinancialBudgetContract",
+        backref="budget_line",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
 
     def to_dict(self):
         return {
@@ -139,6 +153,7 @@ class FinancialBudgetLine(db.Model):
             "line_order": self.line_order,
             "budget_view": self.budget_view,
             "movement_nature": self.movement_nature,
+            "planned_amount": float(self.planned_amount or 0),
             "chart_account_id": self.chart_account_id,
             "cost_center_id": self.cost_center_id,
             "activity_id": self.activity_id,
@@ -188,6 +203,143 @@ class FinancialBudgetAmount(db.Model):
             "budget_amount": float(self.budget_amount or 0),
             "notes": self.notes,
             "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialBudgetContract(db.Model):
+    __tablename__ = "financial_budget_contracts"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "contract_code", name="uq_financial_budget_contracts_company_code"),
+        db.CheckConstraint(
+            f"status IN {BUDGET_CONTRACT_STATUS_VALUES}",
+            name="ck_financial_budget_contracts_status",
+        ),
+        db.CheckConstraint(
+            "contract_amount >= 0",
+            name="ck_financial_budget_contracts_amount_nonneg",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    budget_line_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_budget_lines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    contract_code = db.Column(db.String(60), nullable=False)
+    name = db.Column(db.String(160), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="draft", index=True)
+    contract_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    counterparty_id = db.Column(db.Integer, db.ForeignKey("financial_counterparties.id"), index=True)
+    signed_at = db.Column(db.Date)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    counterparty = db.relationship("FinancialCounterparty", foreign_keys=[counterparty_id])
+    documents = db.relationship(
+        "FinancialBudgetDocument",
+        backref="budget_contract",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "budget_line_id": self.budget_line_id,
+            "contract_code": self.contract_code,
+            "name": self.name,
+            "status": self.status,
+            "contract_amount": float(self.contract_amount or 0),
+            "counterparty_id": self.counterparty_id,
+            "signed_at": self.signed_at.isoformat() if self.signed_at else None,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
+            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "notes": self.notes,
+            "metadata_json": self.metadata_json or {},
+            "created_by_user_id": self.created_by_user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialBudgetDocument(db.Model):
+    __tablename__ = "financial_budget_documents"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "document_code", name="uq_financial_budget_documents_company_code"),
+        db.CheckConstraint(
+            f"status IN {BUDGET_DOCUMENT_STATUS_VALUES}",
+            name="ck_financial_budget_documents_status",
+        ),
+        db.CheckConstraint(
+            f"document_type IN {BUDGET_DOCUMENT_TYPE_VALUES}",
+            name="ck_financial_budget_documents_type",
+        ),
+        db.CheckConstraint(
+            "document_amount >= 0",
+            name="ck_financial_budget_documents_amount_nonneg",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    budget_contract_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_budget_contracts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    document_code = db.Column(db.String(60), nullable=False)
+    title = db.Column(db.String(160), nullable=False)
+    document_type = db.Column(db.String(20), nullable=False, default="invoice", index=True)
+    status = db.Column(db.String(30), nullable=False, default="registered", index=True)
+    document_number = db.Column(db.String(80))
+    document_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    issue_date = db.Column(db.Date)
+    competence_date = db.Column(db.Date)
+    counterparty_id = db.Column(db.Integer, db.ForeignKey("financial_counterparties.id"), index=True)
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    counterparty = db.relationship("FinancialCounterparty", foreign_keys=[counterparty_id])
+    schedules = db.relationship(
+        "FinancialSchedule",
+        backref="budget_document",
+        lazy="dynamic",
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "budget_contract_id": self.budget_contract_id,
+            "document_code": self.document_code,
+            "title": self.title,
+            "document_type": self.document_type,
+            "status": self.status,
+            "document_number": self.document_number,
+            "document_amount": float(self.document_amount or 0),
+            "issue_date": self.issue_date.isoformat() if self.issue_date else None,
+            "competence_date": self.competence_date.isoformat() if self.competence_date else None,
+            "counterparty_id": self.counterparty_id,
+            "notes": self.notes,
+            "metadata_json": self.metadata_json or {},
+            "created_by_user_id": self.created_by_user_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

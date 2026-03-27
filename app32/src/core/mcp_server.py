@@ -395,6 +395,109 @@ def run_mcp_server():
         return {"success": True, **result}
 
     @mcp.tool()
+    def get_financial_budget_planning_workspace(company_id: int, version_id: Optional[int] = None) -> dict:
+        """
+        Retorna o workspace de planejamento do Orçamento Matricial: orçamento + verbas orçamentárias + resumo executivo.
+        """
+        from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialBudgetWorkspaceService.get_planning_workspace,
+            company_id=company_id,
+            version_id=version_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **(result or {})}
+
+    @mcp.tool()
+    def get_financial_budget_execution_workspace(
+        company_id: int,
+        version_id: Optional[int] = None,
+        line_id: Optional[int] = None,
+        contract_id: Optional[int] = None,
+        document_id: Optional[int] = None,
+    ) -> dict:
+        """
+        Retorna o workspace de execução do Orçamento Matricial: verbas, contratos, NF/equivalentes e agendamentos.
+        """
+        from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialBudgetWorkspaceService.get_execution_workspace,
+            company_id=company_id,
+            version_id=version_id,
+            line_id=line_id,
+            contract_id=contract_id,
+            document_id=document_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **(result or {})}
+
+    @mcp.tool()
+    def create_financial_budget_line(payload: dict) -> dict:
+        """
+        Cria uma verba orçamentária dentro de um orçamento matricial.
+        """
+        from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialBudgetWorkspaceService.create_line,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def create_financial_budget_contract(payload: dict) -> dict:
+        """
+        Cria um contrato vinculado a uma verba orçamentária.
+        """
+        from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialBudgetWorkspaceService.create_contract,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def create_financial_budget_document(payload: dict) -> dict:
+        """
+        Cria uma NF/equivalente vinculada a um contrato do orçamento matricial.
+        """
+        from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialBudgetWorkspaceService.create_document,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def create_financial_budget_document_schedules(company_id: int, document_id: int, payload: dict) -> dict:
+        """
+        Gera agendamentos financeiros para uma NF/equivalente do orçamento matricial.
+        """
+        from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialBudgetWorkspaceService.create_document_schedules,
+            company_id=company_id,
+            document_id=document_id,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **(result or {})}
+
+    @mcp.tool()
     def list_financial_automation_rules(company_id: int) -> dict:
         """
         Lista regras de automação financeira por processo/instância.
@@ -554,6 +657,105 @@ def run_mcp_server():
 
         result, error = _run_financial_action(
             FinancialDirectEntryService.create_direct_entry,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def list_financial_bank_transfers(
+        company_id: int,
+        query: Optional[str] = None,
+        bank_account_id: Optional[int] = None,
+    ) -> dict:
+        """
+        Lista transferências bancárias internas entre contas da empresa.
+        """
+        from services.financial_bank_transfer_service import FinancialBankTransferService
+
+        result, error = _run_financial_action(
+            FinancialBankTransferService.list_transfers,
+            company_id=company_id,
+            query=query,
+            bank_account_id=bank_account_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "items": result, "count": len(result)}
+
+    @mcp.tool()
+    def get_financial_bank_transfer(company_id: int, transfer_id: int) -> dict:
+        """
+        Retorna o detalhe de uma transferência bancária com seus dois lançamentos gerados.
+        """
+        from services.financial_bank_transfer_service import FinancialBankTransferService
+
+        result, error = _run_financial_action(
+            FinancialBankTransferService.get_transfer,
+            company_id=company_id,
+            transfer_id=transfer_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def create_financial_bank_transfer(payload: dict) -> dict:
+        """
+        Cria uma transferência bancária interna e registra os dois lançamentos espelhados.
+        """
+        from services.financial_bank_transfer_service import FinancialBankTransferService
+
+        result, error = _run_financial_action(
+            FinancialBankTransferService.create_transfer,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def list_financial_non_financial_launches(company_id: int, query: Optional[str] = None) -> dict:
+        """
+        Lista lançamentos não financeiros/gerenciais com débito e crédito espelhados no ledger.
+        """
+        from services.financial_non_financial_launch_service import FinancialNonFinancialLaunchService
+
+        result, error = _run_financial_action(
+            FinancialNonFinancialLaunchService.list_launches,
+            company_id=company_id,
+            query=query,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "items": result, "count": len(result)}
+
+    @mcp.tool()
+    def get_financial_non_financial_launch(company_id: int, launch_id: int) -> dict:
+        """
+        Retorna o detalhe de um lançamento não financeiro com os dois lançamentos gerados.
+        """
+        from services.financial_non_financial_launch_service import FinancialNonFinancialLaunchService
+
+        result, error = _run_financial_action(
+            FinancialNonFinancialLaunchService.get_launch,
+            company_id=company_id,
+            launch_id=launch_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def create_financial_non_financial_launch(payload: dict) -> dict:
+        """
+        Cria um lançamento não financeiro/gerencial com débito e crédito espelhados.
+        """
+        from services.financial_non_financial_launch_service import FinancialNonFinancialLaunchService
+
+        result, error = _run_financial_action(
+            FinancialNonFinancialLaunchService.create_launch,
             payload=payload,
         )
         if error:
@@ -1021,108 +1223,6 @@ def run_mcp_server():
             company_id=company_id,
             period_start=period_start,
             period_end=period_end,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, **result}
-
-    @mcp.tool()
-    def list_financial_budget_versions(company_id: int) -> dict:
-        """
-        Lista versões do orçamento matricial financeiro da empresa.
-        """
-        from services.financial_budget_service import FinancialBudgetService
-
-        result, error = _run_financial_action(
-            FinancialBudgetService.list_versions,
-            company_id=company_id,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
-
-    @mcp.tool()
-    def create_financial_budget_version(payload: dict) -> dict:
-        """
-        Cria uma nova versão de orçamento matricial financeiro.
-        """
-        from services.financial_budget_service import FinancialBudgetService
-
-        result, error = _run_financial_action(
-            FinancialBudgetService.create_version,
-            payload=payload,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, "item": result}
-
-    @mcp.tool()
-    def duplicate_financial_budget_version(company_id: int, version_id: int, payload: Optional[dict] = None) -> dict:
-        """
-        Duplica uma versão existente do orçamento matricial financeiro.
-        """
-        from services.financial_budget_version_clone_service import FinancialBudgetVersionCloneService
-
-        result, error = _run_financial_action(
-            FinancialBudgetVersionCloneService.duplicate_version,
-            company_id=company_id,
-            source_version_id=version_id,
-            payload=payload or {},
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, "item": result}
-
-    @mcp.tool()
-    def get_financial_budget_matrix(company_id: int, version_id: int) -> dict:
-        """
-        Retorna a matriz orçamentária de uma versão financeira.
-        """
-        from services.financial_budget_service import FinancialBudgetService
-
-        result, error = _run_financial_action(
-            FinancialBudgetService.get_matrix,
-            company_id=company_id,
-            version_id=version_id,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, **result}
-
-    @mcp.tool()
-    def upsert_financial_budget_matrix(payload: dict) -> dict:
-        """
-        Atualiza ou cria linhas e valores da matriz orçamentária financeira.
-        """
-        from services.financial_budget_service import FinancialBudgetService
-
-        result, error = _run_financial_action(
-            FinancialBudgetService.upsert_matrix,
-            payload=payload,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, **result}
-
-    @mcp.tool()
-    def import_financial_budget_matrix(company_id: int, version_id: int, file_name: str, file_base64: str) -> dict:
-        """
-        Importa uma planilha XLSX da matriz orçamentária financeira.
-        """
-        import base64
-        from services.financial_budget_import_service import FinancialBudgetImportService
-
-        try:
-            file_bytes = base64.b64decode(file_base64)
-        except Exception:
-            return {"success": False, "error": "file_base64 inválido para importação da matriz orçamentária."}
-
-        result, error = _run_financial_action(
-            FinancialBudgetImportService.import_matrix_file,
-            company_id=company_id,
-            version_id=version_id,
-            file_name=file_name,
-            file_bytes=file_bytes,
         )
         if error:
             return {"success": False, "error": error}

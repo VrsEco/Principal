@@ -214,6 +214,7 @@ class FinancialBudgetImportService:
                     "line_name": line_name,
                     "budget_view": budget_view,
                     "movement_nature": movement_nature,
+                    "planned_amount": float(sum((Decimal(str(item["budget_amount"])) for item in amounts), Decimal("0"))),
                     "chart_account_id": chart_account_id,
                     "cost_center_id": cost_center_id,
                     "notes": FinancialBudgetImportService._clean_text(normalized.get("observações") or normalized.get("observacoes") or normalized.get("notes")),

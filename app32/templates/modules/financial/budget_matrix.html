@@ -11,373 +11,346 @@
 {% endblock %}
 
 {% block workspace_content %}
-{% set versions = budget_versions | default([], true) %}
-{% set months = budget_months | default([], true) %}
-{% set lines = budget_lines | default([], true) %}
-{% set active_version = selected_budget_version | default(None, true) %}
-
-<div class="budget-page fade-in" data-company-id="{{ company_id or '' }}">
-    {% include "modules/financial/partials/_budget_matrix_header.html" %}
-    {% include "modules/financial/partials/_budget_matrix_filters.html" %}
-
-    <section class="budget-summary-grid">
-        <article class="budget-kpi">
-            <span>Versão ativa</span>
-            <strong>{{ active_version.name if active_version else 'Sem versão selecionada' }}</strong>
-            <small>{{ active_version.status if active_version else 'Selecione uma versão para iniciar a análise.' }}</small>
-        </article>
-        <article class="budget-kpi">
-            <span>Período</span>
-            <strong>
-                {% if months %}
-                    {{ months|first }} → {{ months|last }}
-                {% else %}
-                    Sem período definido
-                {% endif %}
-            </strong>
-            <small>Controle mensal por competência, vencimento e cenários futuros.</small>
-        </article>
-        <article class="budget-kpi">
-            <span>Linhas matriciais</span>
-            <strong>{{ lines|length }}</strong>
-            <small>Contas, centros de custo, processos e versões.</small>
-        </article>
-        <article class="budget-kpi">
-            <span>Status de importação</span>
-            <strong>Importação ativa</strong>
-            <small>Baixe o modelo XLSX da versão e reimporte para popular a matriz.</small>
-        </article>
+<div class="budget-page" data-company-id="{{ company_id or '' }}">
+    <section class="budget-header-card">
+        <div>
+            <p class="budget-eyebrow">Planejamento</p>
+            <h1>Orçamento Matricial</h1>
+            <p class="budget-muted">Cadastre o orçamento e suas verbas orçamentárias. Contratos, NF/equivalentes e agendamentos ficam na tela separada.</p>
+        </div>
+        <a class="budget-btn budget-btn--ghost" id="execution-link" href="/financial/budget/execution{% if company_id %}?company_id={{ company_id }}{% endif %}">Ir para Contratos / NF</a>
     </section>
 
-    <div class="budget-grid">
-        <section class="budget-panel budget-panel--matrix">
-            {% include "modules/financial/partials/_budget_matrix_actions.html" %}
-            {% include "modules/financial/partials/_budget_matrix_table.html" %}
-        </section>
+    <section class="budget-grid budget-grid--summary">
+        <article class="budget-kpi"><span>Planejado</span><strong id="sum-planned">R$ 0,00</strong></article>
+        <article class="budget-kpi"><span>Contratado</span><strong id="sum-contracted">R$ 0,00</strong></article>
+        <article class="budget-kpi"><span>Executado</span><strong id="sum-executed">R$ 0,00</strong></article>
+        <article class="budget-kpi"><span>Agendado</span><strong id="sum-scheduled">R$ 0,00</strong></article>
+    </section>
 
-        <aside class="budget-panel budget-panel--side">
-            {% include "modules/financial/partials/_budget_matrix_side.html" %}
-        </aside>
-    </div>
+    <section class="budget-grid budget-grid--main">
+        <article class="budget-card">
+            <div class="budget-card__header">
+                <div>
+                    <p class="budget-eyebrow">Cadastro do Orçamento</p>
+                    <h2>Orçamento</h2>
+                </div>
+                <button class="budget-btn budget-btn--secondary" id="btn-new-version" type="button">Novo orçamento</button>
+            </div>
+            <div class="budget-card__body budget-stack">
+                <label class="budget-field">
+                    <span>Orçamento selecionado</span>
+                    <select id="version-select"></select>
+                </label>
+
+                <div class="budget-form-grid">
+                    <label class="budget-field"><span>Código</span><input id="version-code" maxlength="50" placeholder="CAPEX-2026"></label>
+                    <label class="budget-field"><span>Nome</span><input id="version-name" maxlength="160" placeholder="Capex 2026"></label>
+                    <label class="budget-field"><span>Cenário</span>
+                        <select id="version-scenario">
+                            <option value="original">Original</option>
+                            <option value="forecast">Forecast</option>
+                            <option value="reforecast">Reforecast</option>
+                        </select>
+                    </label>
+                    <label class="budget-field"><span>Status</span>
+                        <select id="version-status">
+                            <option value="draft">Rascunho</option>
+                            <option value="active">Ativo</option>
+                            <option value="archived">Arquivado</option>
+                        </select>
+                    </label>
+                    <label class="budget-field"><span>Início</span><input id="version-start" type="date"></label>
+                    <label class="budget-field"><span>Fim</span><input id="version-end" type="date"></label>
+                </div>
+
+                <label class="budget-field">
+                    <span>Observações</span>
+                    <textarea id="version-notes" rows="3" placeholder="Observações do orçamento."></textarea>
+                </label>
+
+                <div class="budget-actions">
+                    <button class="budget-btn budget-btn--primary" id="btn-save-version" type="button">Salvar orçamento</button>
+                    <button class="budget-btn budget-btn--secondary" id="btn-activate-version" type="button">Ativar orçamento</button>
+                </div>
+            </div>
+        </article>
+
+        <article class="budget-card">
+            <div class="budget-card__header">
+                <div>
+                    <p class="budget-eyebrow">Verbas Orçamentárias</p>
+                    <h2>Verba orçamentária</h2>
+                </div>
+                <button class="budget-btn budget-btn--secondary" id="btn-new-line" type="button">Nova verba</button>
+            </div>
+            <div class="budget-card__body budget-stack">
+                <div class="budget-form-grid">
+                    <label class="budget-field"><span>Código</span><input id="line-code" maxlength="60" placeholder="VB-0001"></label>
+                    <label class="budget-field"><span>Nome</span><input id="line-name" maxlength="160" placeholder="Execução da Fundação do Prédio"></label>
+                    <label class="budget-field"><span>Valor planejado</span><input id="line-planned" type="number" min="0" step="0.01"></label>
+                    <label class="budget-field"><span>Ordem</span><input id="line-order" type="number" min="0" step="1" value="100"></label>
+                    <label class="budget-field"><span>Natureza</span>
+                        <select id="line-nature">
+                            <option value="debit">Pagamento</option>
+                            <option value="credit">Recebimento</option>
+                        </select>
+                    </label>
+                    <label class="budget-field"><span>Visão</span>
+                        <select id="line-view">
+                            <option value="competence">Competência</option>
+                            <option value="due">Vencimento</option>
+                            <option value="cash">Caixa</option>
+                        </select>
+                    </label>
+                    <label class="budget-field"><span>Plano de contas</span><select id="line-chart-account"></select></label>
+                    <label class="budget-field"><span>Centro de resultado</span><select id="line-cost-center"></select></label>
+                </div>
+                <label class="budget-field">
+                    <span>Observações</span>
+                    <textarea id="line-notes" rows="3" placeholder="Observações da verba orçamentária."></textarea>
+                </label>
+                <div class="budget-actions">
+                    <button class="budget-btn budget-btn--primary" id="btn-save-line" type="button">Salvar verba</button>
+                    <button class="budget-btn budget-btn--ghost" id="btn-cancel-line" type="button">Limpar</button>
+                </div>
+                <div class="budget-table-wrap">
+                    <table class="budget-table">
+                        <thead>
+                            <tr>
+                                <th>Verba</th>
+                                <th>Planejado</th>
+                                <th>Contratado</th>
+                                <th>Executado</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lines-table-body">
+                            <tr><td colspan="5" class="budget-empty">Carregando verbas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </article>
+    </section>
 </div>
 
 <style>
-    .budget-page { padding: 0 2rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
-    .budget-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow-sm); overflow: hidden; }
-    .budget-panel__header { padding: 1.1rem 1.2rem 0; }
-    .budget-panel__body { padding: 1.1rem 1.2rem 1.2rem; }
-    .budget-eyebrow { margin: 0 0 .35rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--primary); font-weight: 700; }
-    .budget-title-row { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
-    .budget-title-row h1,
-    .budget-title-row h2 { margin: 0; }
-    .budget-subtitle,
-    .budget-muted { color: var(--text-secondary); }
-    .budget-actions-row,
-    .budget-filters-grid,
-    .budget-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; }
-    .budget-summary-grid { margin-top: .25rem; }
-    .budget-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; box-shadow: var(--shadow-sm); }
-    .budget-kpi span { display: block; color: var(--text-secondary); font-size: .8rem; }
-    .budget-kpi strong { display: block; margin-top: .3rem; font-size: 1.05rem; }
-    .budget-kpi small { display: block; margin-top: .2rem; color: var(--text-secondary); }
-    .budget-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, .8fr); gap: 1rem; }
-    .budget-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
-    .budget-btn { border: none; border-radius: 12px; padding: .82rem 1rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .45rem; text-decoration: none; }
-    .budget-btn--primary { background: var(--primary); color: #fff; }
-    .budget-btn--secondary { background: var(--surface-secondary); border: 1px solid var(--border); color: var(--text-primary); }
-    .budget-btn--ghost { background: transparent; border: 1px dashed var(--border); color: var(--text-secondary); }
-    .budget-filters-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .budget-field { display: flex; flex-direction: column; gap: .35rem; color: var(--text-secondary); font-size: .92rem; }
-    .budget-field input,
-    .budget-field select { background: var(--surface-secondary); border: 1px solid var(--border); border-radius: 12px; padding: .78rem .88rem; color: var(--text-primary); }
-    .budget-table-wrap { overflow-x: auto; }
-    .budget-table { width: 100%; border-collapse: collapse; min-width: 920px; }
-    .budget-table th,
-    .budget-table td { padding: .82rem .72rem; border-bottom: 1px solid var(--border); text-align: right; vertical-align: top; }
-    .budget-table th:first-child,
-    .budget-table td:first-child { text-align: left; }
-    .budget-table th { color: var(--text-secondary); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
-    .budget-line-meta { display: flex; flex-direction: column; gap: .2rem; }
-    .budget-line-meta strong { font-size: .98rem; }
-    .budget-line-meta small { color: var(--text-secondary); }
-    .budget-cell { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
-    .budget-cell__planned { font-weight: 700; }
-    .budget-cell__actual { font-size: .78rem; color: var(--text-secondary); }
-    .budget-cell__variance { font-size: .75rem; font-weight: 700; }
-    .budget-cell--positive .budget-cell__variance { color: #15803d; }
-    .budget-cell--negative .budget-cell__variance { color: #b91c1c; }
-    .budget-empty { color: var(--text-tertiary); text-align: center; padding: 1.2rem; }
-    .budget-side-stack { display: flex; flex-direction: column; gap: 1rem; }
-    .budget-action-list { display: flex; flex-direction: column; gap: .65rem; }
-    .budget-action-card { border: 1px solid var(--border); border-radius: 14px; padding: .95rem; background: var(--surface-secondary); text-decoration: none; color: inherit; display: flex; justify-content: space-between; gap: .8rem; align-items: start; }
-    .budget-action-card strong { display: block; }
-    .budget-upload-box,
-    .budget-notes-box { border: 1px solid var(--border); border-radius: 14px; padding: 1rem; background: var(--surface-secondary); }
-    .budget-upload-box form { display: flex; flex-direction: column; gap: .75rem; }
-    .budget-upload-box input[type="file"] { width: 100%; }
-    .budget-upload-box .budget-muted { font-size: .9rem; }
-    .budget-legend { display: grid; gap: .55rem; }
-    .budget-legend-item { display: flex; gap: .55rem; align-items: center; color: var(--text-secondary); }
-    .budget-dot { width: .7rem; height: .7rem; border-radius: 999px; display: inline-block; }
-    .budget-dot--planned { background: var(--primary); }
-    .budget-dot--actual { background: #6b7280; }
-    .budget-dot--variance { background: #f59e0b; }
-    @media (max-width: 1100px) {
-        .budget-actions-row,
-        .budget-filters-grid,
-        .budget-summary-grid,
-        .budget-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 768px) {
-        .budget-page { padding: 0 1rem 1.5rem; }
-        .budget-title-row,
-        .budget-actions { flex-direction: column; align-items: stretch; }
-        .budget-btn { width: 100%; }
-    }
+.budget-page{display:flex;flex-direction:column;gap:1rem;padding:0 2rem 2rem}
+.budget-header-card,.budget-card,.budget-kpi{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-sm)}
+.budget-header-card,.budget-card__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}
+.budget-header-card{padding:1.25rem 1.5rem}
+.budget-card__header{padding:1.1rem 1.2rem 0}
+.budget-card__body{padding:1.1rem 1.2rem 1.2rem}
+.budget-stack{display:flex;flex-direction:column;gap:1rem}
+.budget-grid{display:grid;gap:1rem}
+.budget-grid--summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+.budget-grid--main{grid-template-columns:minmax(320px,.9fr) minmax(0,1.4fr)}
+.budget-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}
+.budget-actions{display:flex;flex-wrap:wrap;gap:.75rem}
+.budget-eyebrow{margin:0 0 .35rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);font-weight:700}
+.budget-muted{margin:.3rem 0 0;color:var(--text-secondary)}
+.budget-kpi{padding:1rem}
+.budget-kpi span{display:block;color:var(--text-secondary);font-size:.8rem}
+.budget-kpi strong{display:block;margin-top:.35rem;font-size:1.1rem}
+.budget-field{display:flex;flex-direction:column;gap:.35rem}
+.budget-field span{font-size:.9rem;color:var(--text-secondary)}
+.budget-field input,.budget-field select,.budget-field textarea{background:var(--surface-secondary);border:1px solid var(--border);border-radius:12px;padding:.78rem .88rem;color:var(--text-primary)}
+.budget-btn{border:none;border-radius:12px;padding:.82rem 1rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.budget-btn--primary{background:var(--primary);color:#fff}
+.budget-btn--secondary{background:var(--surface-secondary);border:1px solid var(--border);color:var(--text-primary)}
+.budget-btn--ghost{background:transparent;border:1px dashed var(--border);color:var(--text-secondary)}
+.budget-table-wrap{overflow:auto}
+.budget-table{width:100%;border-collapse:collapse;min-width:760px}
+.budget-table th,.budget-table td{padding:.82rem .72rem;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.budget-table th{font-size:.76rem;text-transform:uppercase;color:var(--text-secondary)}
+.budget-empty{text-align:center;color:var(--text-tertiary)}
+.budget-row-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+@media (max-width:1100px){.budget-grid--summary,.budget-grid--main,.budget-form-grid{grid-template-columns:1fr}}
+@media (max-width:768px){.budget-page{padding:0 1rem 1.5rem}.budget-header-card,.budget-card__header,.budget-actions{flex-direction:column}.budget-btn{width:100%}}
 </style>
 
 <script>
-    const budgetRoot = document.querySelector('.budget-page');
-    const companyId = Number(budgetRoot?.dataset.companyId || 0);
+const budgetRoot = document.querySelector('.budget-page');
+const companyId = Number(budgetRoot?.dataset.companyId || 0);
+const state = { workspace: null, options: null, editingLineId: null, creatingVersion: false };
 
-    function formatCurrency(value) {
-        return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const byId = (id) => document.getElementById(id);
+const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const slugify = (value) => String(value || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/(^-|-$)/g, '').toUpperCase();
+async function api(url, options = {}) { const r = await fetch(url, options); const p = await r.json(); if (!r.ok) throw new Error(p.error || (p.errors || []).map(item => item.msg).join(' | ') || 'Falha na operação.'); return p; }
+
+function fillSelect(select, items, labelBuilder, placeholder = 'Selecione') {
+    select.innerHTML = `<option value=\"\">${placeholder}</option>` + items.map(item => `<option value=\"${item.id}\">${labelBuilder(item)}</option>`).join('');
+}
+
+function renderSummary() {
+    const summary = state.workspace?.summary || {};
+    byId('sum-planned').textContent = formatCurrency(summary.planned_total);
+    byId('sum-contracted').textContent = formatCurrency(summary.contracted_total);
+    byId('sum-executed').textContent = formatCurrency(summary.executed_total);
+    byId('sum-scheduled').textContent = formatCurrency(summary.scheduled_total);
+}
+
+function renderVersions() {
+    const select = byId('version-select');
+    const versions = state.workspace?.versions || [];
+    select.innerHTML = `<option value=\"\">Selecione</option>` + versions.map(item => `<option value=\"${item.id}\" ${String(item.id) === String(state.workspace?.selected_version_id) ? 'selected' : ''}>${item.name} (${item.status})</option>`).join('');
+    const version = state.workspace?.version;
+    const executionLink = byId('execution-link');
+    executionLink.href = `/financial/budget/execution?company_id=${companyId}${version?.id ? `&version_id=${version.id}` : ''}`;
+    state.creatingVersion = !version;
+    byId('version-code').value = version?.code || '';
+    byId('version-name').value = version?.name || '';
+    byId('version-scenario').value = version?.scenario_type || 'original';
+    byId('version-status').value = version?.status || 'draft';
+    byId('version-start').value = version?.period_start || '';
+    byId('version-end').value = version?.period_end || '';
+    byId('version-notes').value = version?.notes || '';
+}
+
+function renderLines() {
+    const tbody = byId('lines-table-body');
+    const items = state.workspace?.lines || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan=\"5\" class=\"budget-empty\">Nenhuma verba cadastrada para este orçamento.</td></tr>';
+        return;
     }
+    tbody.innerHTML = items.map(item => `
+        <tr>
+            <td><strong>${item.line_name}</strong><br><small>${item.line_code} · ${item.chart_account_name || 'Sem conta'} · ${item.cost_center_name || 'Sem centro'}</small></td>
+            <td>${formatCurrency(item.summary?.planned_total)}</td>
+            <td>${formatCurrency(item.summary?.contracted_total)}</td>
+            <td>${formatCurrency(item.summary?.executed_total)}</td>
+            <td>
+                <div class=\"budget-row-actions\">
+                    <button class=\"budget-btn budget-btn--secondary\" type=\"button\" onclick=\"editLine(${item.id})\">Editar</button>
+                    <button class=\"budget-btn budget-btn--ghost\" type=\"button\" onclick=\"removeLine(${item.id})\">Excluir</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
 
-    function varianceClass(value) {
-        const number = Number(value || 0);
-        if (number > 0) return 'budget-cell--positive';
-        if (number < 0) return 'budget-cell--negative';
-        return '';
+function renderOptions() {
+    const options = state.options || {};
+    fillSelect(byId('line-chart-account'), options.chart_accounts || [], item => `${item.code || ''} - ${item.name}`);
+    fillSelect(byId('line-cost-center'), options.cost_centers || [], item => `${item.code || ''} - ${item.name}`);
+}
+
+function clearLineForm() {
+    state.editingLineId = null;
+    byId('line-code').value = '';
+    byId('line-name').value = '';
+    byId('line-planned').value = '';
+    byId('line-order').value = '100';
+    byId('line-nature').value = 'debit';
+    byId('line-view').value = 'competence';
+    byId('line-chart-account').value = '';
+    byId('line-cost-center').value = '';
+    byId('line-notes').value = '';
+}
+
+function editLine(lineId) {
+    const line = (state.workspace?.lines || []).find(item => item.id === lineId);
+    if (!line) return;
+    state.editingLineId = line.id;
+    byId('line-code').value = line.line_code || '';
+    byId('line-name').value = line.line_name || '';
+    byId('line-planned').value = line.planned_amount || 0;
+    byId('line-order').value = line.line_order || 100;
+    byId('line-nature').value = line.movement_nature || 'debit';
+    byId('line-view').value = line.budget_view || 'competence';
+    byId('line-chart-account').value = line.chart_account_id || '';
+    byId('line-cost-center').value = line.cost_center_id || '';
+    byId('line-notes').value = line.notes || '';
+}
+
+async function loadWorkspace(versionId = '') {
+    const query = new URLSearchParams({ company_id: companyId });
+    if (versionId) query.set('version_id', versionId);
+    state.workspace = await api(`/api/financial/budget/workspace?${query.toString()}`);
+    renderVersions();
+    renderSummary();
+    renderLines();
+    if (!(state.workspace?.lines || []).some(item => item.id === state.editingLineId)) clearLineForm();
+}
+
+async function loadOptions() {
+    state.options = await api(`/api/financial/budget/options?company_id=${companyId}`);
+    renderOptions();
+}
+
+async function saveVersion() {
+    const payload = {
+        code: byId('version-code').value.trim() || slugify(byId('version-name').value) || `ORC-${Date.now()}`,
+        name: byId('version-name').value.trim(),
+        scenario_type: byId('version-scenario').value,
+        status: byId('version-status').value,
+        period_start: byId('version-start').value,
+        period_end: byId('version-end').value,
+        notes: byId('version-notes').value.trim() || null,
+    };
+    const currentId = state.workspace?.selected_version_id;
+    const url = currentId && !state.creatingVersion ? `/api/financial/budget/versions/${currentId}?company_id=${companyId}` : `/api/financial/budget/versions?company_id=${companyId}`;
+    const method = currentId && !state.creatingVersion ? 'PUT' : 'POST';
+    const result = await api(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    await loadWorkspace(result.id || currentId || '');
+    state.creatingVersion = false;
+}
+
+async function activateVersion() {
+    const versionId = byId('version-select').value;
+    if (!versionId) throw new Error('Selecione um orçamento.');
+    await api(`/api/financial/budget/versions/${versionId}?company_id=${companyId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'active' }) });
+    await loadWorkspace(versionId);
+}
+
+async function saveLine() {
+    const versionId = state.workspace?.selected_version_id;
+    if (!versionId) throw new Error('Salve ou selecione um orçamento antes de cadastrar a verba.');
+    const payload = {
+        line_code: byId('line-code').value.trim() || slugify(byId('line-name').value) || `VB-${Date.now()}`,
+        line_name: byId('line-name').value.trim(),
+        planned_amount: Number(byId('line-planned').value || 0),
+        line_order: Number(byId('line-order').value || 100),
+        movement_nature: byId('line-nature').value,
+        budget_view: byId('line-view').value,
+        chart_account_id: Number(byId('line-chart-account').value || 0) || null,
+        cost_center_id: Number(byId('line-cost-center').value || 0) || null,
+        notes: byId('line-notes').value.trim() || null,
+    };
+    const url = state.editingLineId
+        ? `/api/financial/budget/lines/${state.editingLineId}?company_id=${companyId}`
+        : `/api/financial/budget/versions/${versionId}/lines?company_id=${companyId}`;
+    const method = state.editingLineId ? 'PUT' : 'POST';
+    await api(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    clearLineForm();
+    await loadWorkspace(versionId);
+}
+
+async function removeLine(lineId) {
+    if (!window.confirm('Excluir esta verba orçamentária?')) return;
+    await api(`/api/financial/budget/lines/${lineId}?company_id=${companyId}`, { method: 'DELETE' });
+    clearLineForm();
+    await loadWorkspace(state.workspace?.selected_version_id || '');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    byId('btn-new-version').addEventListener('click', () => { state.creatingVersion = true; byId('version-code').value=''; byId('version-name').value=''; byId('version-scenario').value='original'; byId('version-status').value='draft'; byId('version-start').value=''; byId('version-end').value=''; byId('version-notes').value=''; byId('version-select').value=''; });
+    byId('btn-save-version').addEventListener('click', () => saveVersion().catch(err => alert(err.message)));
+    byId('btn-activate-version').addEventListener('click', () => activateVersion().catch(err => alert(err.message)));
+    byId('version-select').addEventListener('change', (event) => { state.creatingVersion = false; loadWorkspace(event.target.value).catch(err => alert(err.message)); });
+    byId('btn-new-line').addEventListener('click', clearLineForm);
+    byId('btn-cancel-line').addEventListener('click', clearLineForm);
+    byId('btn-save-line').addEventListener('click', () => saveLine().catch(err => alert(err.message)));
+    try {
+        await loadOptions();
+        await loadWorkspace();
+        clearLineForm();
+    } catch (error) {
+        alert(error.message);
     }
-
-    function renderFutureReadyHint() {
-        const box = document.getElementById('budget-future-ready');
-        if (!box) return;
-        box.innerHTML = `
-            <div class="budget-notes-box">
-                <strong>Importação habilitada</strong>
-                <p class="budget-muted" style="margin:.4rem 0 0;">O modelo XLSX da versão selecionada pode ser baixado e reimportado para popular a matriz do orçamento matricial.</p>
-            </div>
-        `;
-    }
-
-    function renderVersionOptions(items = []) {
-        const select = document.querySelector('select[name="budget_version_id"]');
-        if (!select) return;
-        const current = select.value;
-        select.innerHTML = `<option value="">Selecione</option>` + items.map(item => `
-            <option value="${item.id}" ${String(item.id) === String(current) ? 'selected' : ''}>${item.name} (${item.scenario_type})</option>
-        `).join('');
-        if (!select.value && items.length) {
-            const active = items.find(item => item.status === 'active') || items[0];
-            select.value = String(active.id);
-        }
-    }
-
-    function renderSummary(matrix = {}) {
-        const version = matrix.version || {};
-        const lines = matrix.lines || [];
-        const months = matrix.months || [];
-        const cards = document.querySelectorAll('.budget-kpi');
-        if (cards.length < 4) return;
-        cards[0].querySelector('strong').textContent = version.name || 'Sem versão selecionada';
-        cards[0].querySelector('small').textContent = version.status || 'Selecione uma versão para iniciar a análise.';
-        cards[1].querySelector('strong').textContent = months.length ? `${months[0]} → ${months[months.length - 1]}` : 'Sem período definido';
-        cards[2].querySelector('strong').textContent = String(lines.length);
-    }
-
-    function renderMatrixTable(matrix = {}) {
-        const months = matrix.months || [];
-        const lines = matrix.lines || [];
-        const wrapper = document.querySelector('.budget-panel--matrix .budget-panel__body:last-child');
-        if (!wrapper) return;
-        if (!months.length || !lines.length) {
-            wrapper.innerHTML = `<div class="budget-empty">Sem dados matriciais carregados ainda. Crie uma versão e adicione linhas para iniciar.</div>`;
-            return;
-        }
-        wrapper.innerHTML = `
-            <div class="budget-table-wrap">
-                <table class="budget-table">
-                    <thead>
-                        <tr>
-                            <th>Linha matricial</th>
-                            ${months.map(month => `<th>${month}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${lines.map(line => `
-                            <tr>
-                                <td>
-                                    <div class="budget-line-meta">
-                                        <strong>${line.line_name}</strong>
-                                        <small>${line.chart_account_name || line.cost_center_name || line.budget_view || 'Dimensão matricial'}</small>
-                                    </div>
-                                </td>
-                                ${(line.amounts || []).map(cell => {
-                                    const planned = Number(cell.budget_amount || 0);
-                                    const actual = Number(cell.actual_amount || 0);
-                                    const variance = actual - planned;
-                                    return `
-                                        <td>
-                                            <div class="budget-cell ${varianceClass(variance)}">
-                                                <span class="budget-cell__planned">${formatCurrency(planned)}</span>
-                                                <small class="budget-cell__actual">Realizado: ${formatCurrency(actual)}</small>
-                                                <small class="budget-cell__variance">Desvio: ${formatCurrency(variance)}</small>
-                                            </div>
-                                        </td>
-                                    `;
-                                }).join('')}
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-
-    async function loadVersions() {
-        const response = await fetch(`/api/financial/budget/versions?company_id=${companyId}`);
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || 'Erro ao carregar versões orçamentárias.');
-        renderVersionOptions(payload);
-        return payload;
-    }
-
-    async function loadMatrix() {
-        const select = document.querySelector('select[name="budget_version_id"]');
-        const versionId = select?.value;
-        if (!versionId) {
-            renderMatrixTable({});
-            return;
-        }
-        const response = await fetch(`/api/financial/budget/versions/${versionId}/matrix?company_id=${companyId}`);
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || 'Erro ao carregar matriz orçamentária.');
-        renderSummary(payload);
-        renderMatrixTable(payload);
-    }
-
-    async function createVersion() {
-        const name = window.prompt('Nome da versão orçamentária:');
-        if (!name) return;
-        const today = new Date();
-        const year = today.getFullYear();
-        const payload = {
-            code: `BUD-${year}-${Date.now().toString().slice(-4)}`,
-            name,
-            scenario_type: document.querySelector('select[name="scenario_type"]')?.value || 'original',
-            status: 'draft',
-            period_start: `${year}-01-01`,
-            period_end: `${year}-12-31`,
-        };
-        const response = await fetch(`/api/financial/budget/versions?company_id=${companyId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Erro ao criar versão.');
-        await loadVersions();
-        document.querySelector('select[name="budget_version_id"]').value = String(result.id);
-        await loadMatrix();
-    }
-
-    async function activateVersion() {
-        const versionId = document.querySelector('select[name="budget_version_id"]')?.value;
-        if (!versionId) return;
-        const response = await fetch(`/api/financial/budget/versions/${versionId}?company_id=${companyId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'active' }),
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Erro ao ativar versão.');
-        await loadVersions();
-        document.querySelector('select[name="budget_version_id"]').value = String(result.id);
-        await loadMatrix();
-    }
-
-    async function downloadTemplate() {
-        const versionId = document.querySelector('select[name="budget_version_id"]')?.value;
-        if (!versionId) {
-            alert('Selecione uma versão antes de baixar o modelo.');
-            return;
-        }
-        window.location.href = `/financial/budget-template?company_id=${companyId}&version_id=${versionId}`;
-    }
-
-    async function importBudgetFile(event) {
-        event.preventDefault();
-        const versionId = document.querySelector('select[name="budget_version_id"]')?.value;
-        const fileInput = document.getElementById('budget-import-file');
-        const file = fileInput?.files?.[0];
-        if (!versionId) {
-            alert('Selecione uma versão antes de importar.');
-            return;
-        }
-        if (!file) {
-            alert('Selecione um arquivo XLSX para importar.');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch(`/api/financial/budget/versions/${versionId}/import?company_id=${companyId}`, {
-            method: 'POST',
-            body: formData,
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-            throw new Error(payload.error || 'Erro ao importar a planilha do orçamento.');
-        }
-        await loadMatrix();
-        alert(`Importação concluída: ${payload.import_summary?.lines_imported || 0} linhas processadas.`);
-        if (fileInput) fileInput.value = '';
-    }
-
-    async function duplicateVersion() {
-        const select = document.querySelector('select[name="budget_version_id"]');
-        const versionId = select?.value;
-        if (!versionId) {
-            alert('Selecione uma versão para duplicar.');
-            return;
-        }
-        const selectedLabel = select.options[select.selectedIndex]?.text || 'Versão selecionada';
-        const name = window.prompt('Nome da nova cópia:', `${selectedLabel} - Cópia`);
-        if (!name) return;
-        const response = await fetch(`/api/financial/budget/versions/${versionId}/duplicate?company_id=${companyId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, status: 'draft' }),
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-            throw new Error(payload.error || 'Erro ao duplicar a versão orçamentária.');
-        }
-        const versions = await loadVersions();
-        const duplicated = versions.find(item => String(item.id) === String(payload.id)) || payload;
-        if (select && duplicated?.id) {
-            select.value = String(duplicated.id);
-        }
-        await loadMatrix();
-        alert('Versão duplicada com sucesso.');
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-        renderFutureReadyHint();
-        document.querySelector('select[name="budget_version_id"]')?.addEventListener('change', loadMatrix);
-        document.getElementById('budget-create-version')?.addEventListener('click', () => createVersion().catch(error => alert(error.message)));
-        document.getElementById('budget-activate-version')?.addEventListener('click', () => activateVersion().catch(error => alert(error.message)));
-        document.getElementById('budget-duplicate-version')?.addEventListener('click', () => duplicateVersion().catch(error => alert(error.message)));
-        document.getElementById('budget-import-sheet')?.addEventListener('click', () => document.getElementById('budget-import-file')?.click());
-        document.getElementById('budget-download-template')?.addEventListener('click', downloadTemplate);
-        document.getElementById('budget-import-form')?.addEventListener('submit', (event) => importBudgetFile(event).catch(error => alert(error.message)));
-        try {
-            await loadVersions();
-            await loadMatrix();
-        } catch (error) {
-            alert(error.message);
-        }
-    });
+});
 </script>
 {% endblock %}

@@ -420,6 +420,11 @@ class FinancialDashboardAnalytics:
         for row in rows:
             row_name = FinancialDashboardAnalytics.chart_account_name(company_id, row.chart_account_id)
             sign = Decimal("1") if row.movement_nature == "credit" else Decimal("-1")
+            line_total = Decimal(str(row.planned_amount or 0))
+            if line_total > 0:
+                totals.setdefault(row_name, Decimal("0"))
+                totals[row_name] += line_total * sign
+                continue
             for amount in row.amounts.filter(FinancialBudgetAmount.deleted_at.is_(None)).all():
                 if period_start <= amount.period_month <= period_end:
                     totals.setdefault(row_name, Decimal("0"))

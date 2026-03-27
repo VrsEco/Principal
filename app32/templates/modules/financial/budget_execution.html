@@ -1,0 +1,193 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Contratos e NF do Orçamento Matricial{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<a href="/financial/budget">Orçamento Matricial</a>
+<span class="sep">/</span>
+<span class="current">Contratos / NF</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="budget-page" data-company-id="{{ company_id or '' }}">
+    <section class="budget-header-card">
+        <div>
+            <p class="budget-eyebrow">Execução</p>
+            <h1>Contratos / NF / Agendamentos</h1>
+            <p class="budget-muted">Acompanhe a execução da verba orçamentária em contratos, notas fiscais/equivalentes e parcelas financeiras.</p>
+        </div>
+        <a class="budget-btn budget-btn--ghost" href="/financial/budget{% if company_id %}?company_id={{ company_id }}{% endif %}">Voltar ao Planejamento</a>
+    </section>
+
+    <section class="budget-grid budget-grid--summary">
+        <article class="budget-kpi"><span>Planejado</span><strong id="sum-planned">R$ 0,00</strong></article>
+        <article class="budget-kpi"><span>Contratado</span><strong id="sum-contracted">R$ 0,00</strong></article>
+        <article class="budget-kpi"><span>Executado</span><strong id="sum-executed">R$ 0,00</strong></article>
+        <article class="budget-kpi"><span>Agendado</span><strong id="sum-scheduled">R$ 0,00</strong></article>
+    </section>
+
+    <section class="budget-card">
+        <div class="budget-card__body budget-form-grid budget-form-grid--filters">
+            <label class="budget-field"><span>Orçamento</span><select id="version-select"></select></label>
+            <label class="budget-field"><span>Verba orçamentária</span><select id="line-select"></select></label>
+            <label class="budget-field"><span>Contrato</span><select id="contract-select"></select></label>
+            <label class="budget-field"><span>NF / Equivalente</span><select id="document-select"></select></label>
+        </div>
+    </section>
+
+    <section class="budget-grid budget-grid--main">
+        <article class="budget-card">
+            <div class="budget-card__header">
+                <div><p class="budget-eyebrow">Contrato</p><h2>Cadastro do contrato</h2></div>
+                <button class="budget-btn budget-btn--secondary" id="btn-new-contract" type="button">Novo contrato</button>
+            </div>
+            <div class="budget-card__body budget-stack">
+                <div class="budget-form-grid">
+                    <label class="budget-field"><span>Código</span><input id="contract-code" maxlength="60" placeholder="CTR-0001"></label>
+                    <label class="budget-field"><span>Nome</span><input id="contract-name" maxlength="160" placeholder="Concretagem"></label>
+                    <label class="budget-field"><span>Valor contratado</span><input id="contract-amount" type="number" min="0" step="0.01"></label>
+                    <label class="budget-field"><span>Status</span>
+                        <select id="contract-status">
+                            <option value="draft">Rascunho</option>
+                            <option value="active">Ativo</option>
+                            <option value="closed">Encerrado</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                    </label>
+                    <label class="budget-field"><span>Favorecido</span><select id="contract-counterparty"></select></label>
+                    <label class="budget-field"><span>Assinado em</span><input id="contract-signed-at" type="date"></label>
+                    <label class="budget-field"><span>Início</span><input id="contract-start-date" type="date"></label>
+                    <label class="budget-field"><span>Fim</span><input id="contract-end-date" type="date"></label>
+                </div>
+                <label class="budget-field"><span>Observações</span><textarea id="contract-notes" rows="3"></textarea></label>
+                <div class="budget-actions">
+                    <button class="budget-btn budget-btn--primary" id="btn-save-contract" type="button">Salvar contrato</button>
+                    <button class="budget-btn budget-btn--ghost" id="btn-delete-contract" type="button">Excluir contrato</button>
+                </div>
+                <div class="budget-note-box" id="selected-line-summary">Selecione uma verba orçamentária para vincular contratos.</div>
+            </div>
+        </article>
+
+        <article class="budget-card">
+            <div class="budget-card__header">
+                <div><p class="budget-eyebrow">NF / Equivalente</p><h2>Execução do contrato</h2></div>
+                <button class="budget-btn budget-btn--secondary" id="btn-new-document" type="button">Nova NF</button>
+            </div>
+            <div class="budget-card__body budget-stack">
+                <div class="budget-form-grid">
+                    <label class="budget-field"><span>Código</span><input id="document-code" maxlength="60" placeholder="NF-0001"></label>
+                    <label class="budget-field"><span>Título</span><input id="document-title" maxlength="160" placeholder="Concretagem Fase 01"></label>
+                    <label class="budget-field"><span>Tipo</span>
+                        <select id="document-type"><option value="invoice">Nota fiscal</option><option value="equivalent">Equivalente</option></select>
+                    </label>
+                    <label class="budget-field"><span>Número</span><input id="document-number" maxlength="80" placeholder="000123"></label>
+                    <label class="budget-field"><span>Valor executado</span><input id="document-amount" type="number" min="0" step="0.01"></label>
+                    <label class="budget-field"><span>Favorecido</span><select id="document-counterparty"></select></label>
+                    <label class="budget-field"><span>Emissão</span><input id="document-issue-date" type="date"></label>
+                    <label class="budget-field"><span>Competência</span><input id="document-competence-date" type="date"></label>
+                </div>
+                <label class="budget-field"><span>Observações</span><textarea id="document-notes" rows="3"></textarea></label>
+                <div class="budget-actions">
+                    <button class="budget-btn budget-btn--primary" id="btn-save-document" type="button">Salvar NF</button>
+                    <button class="budget-btn budget-btn--ghost" id="btn-delete-document" type="button">Excluir NF</button>
+                </div>
+                <div class="budget-note-box" id="selected-contract-summary">Selecione um contrato para cadastrar a execução.</div>
+            </div>
+        </article>
+
+        <article class="budget-card">
+            <div class="budget-card__header">
+                <div><p class="budget-eyebrow">Agendamentos Financeiros</p><h2>Parcelas do documento</h2></div>
+            </div>
+            <div class="budget-card__body budget-stack">
+                <div class="budget-form-grid">
+                    <label class="budget-field"><span>Rótulo</span><input id="installment-label" maxlength="80" placeholder="Parcela 1/2"></label>
+                    <label class="budget-field"><span>Vencimento</span><input id="installment-due-date" type="date"></label>
+                    <label class="budget-field"><span>Valor</span><input id="installment-amount" type="number" min="0" step="0.01"></label>
+                    <label class="budget-field"><span>&nbsp;</span><button class="budget-btn budget-btn--secondary" id="btn-add-installment" type="button">Adicionar parcela</button></label>
+                </div>
+                <div id="draft-installments" class="budget-draft-list"></div>
+                <div class="budget-actions">
+                    <button class="budget-btn budget-btn--primary" id="btn-generate-schedules" type="button">Gerar agendamentos</button>
+                </div>
+                <div class="budget-table-wrap">
+                    <table class="budget-table">
+                        <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Ações</th></tr></thead>
+                        <tbody id="schedules-table-body"><tr><td colspan="4" class="budget-empty">Selecione uma NF para ver as parcelas.</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </article>
+    </section>
+</div>
+
+<style>
+.budget-page{display:flex;flex-direction:column;gap:1rem;padding:0 2rem 2rem}.budget-header-card,.budget-card,.budget-kpi{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-sm)}.budget-header-card,.budget-card__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}.budget-header-card{padding:1.25rem 1.5rem}.budget-card__header{padding:1.1rem 1.2rem 0}.budget-card__body{padding:1.1rem 1.2rem 1.2rem}.budget-stack{display:flex;flex-direction:column;gap:1rem}.budget-grid{display:grid;gap:1rem}.budget-grid--summary{grid-template-columns:repeat(4,minmax(0,1fr))}.budget-grid--main{grid-template-columns:repeat(3,minmax(0,1fr))}.budget-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}.budget-form-grid--filters{grid-template-columns:repeat(4,minmax(0,1fr))}.budget-actions{display:flex;flex-wrap:wrap;gap:.75rem}.budget-eyebrow{margin:0 0 .35rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);font-weight:700}.budget-muted{margin:.3rem 0 0;color:var(--text-secondary)}.budget-kpi{padding:1rem}.budget-kpi span{display:block;color:var(--text-secondary);font-size:.8rem}.budget-kpi strong{display:block;margin-top:.35rem;font-size:1.1rem}.budget-field{display:flex;flex-direction:column;gap:.35rem}.budget-field span{font-size:.9rem;color:var(--text-secondary)}.budget-field input,.budget-field select,.budget-field textarea{background:var(--surface-secondary);border:1px solid var(--border);border-radius:12px;padding:.78rem .88rem;color:var(--text-primary)}.budget-btn{border:none;border-radius:12px;padding:.82rem 1rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.budget-btn--primary{background:var(--primary);color:#fff}.budget-btn--secondary{background:var(--surface-secondary);border:1px solid var(--border);color:var(--text-primary)}.budget-btn--ghost{background:transparent;border:1px dashed var(--border);color:var(--text-secondary)}.budget-note-box,.budget-draft-item{background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.9rem}.budget-draft-list{display:flex;flex-direction:column;gap:.65rem}.budget-table-wrap{overflow:auto}.budget-table{width:100%;border-collapse:collapse;min-width:520px}.budget-table th,.budget-table td{padding:.82rem .72rem;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.budget-table th{font-size:.76rem;text-transform:uppercase;color:var(--text-secondary)}.budget-empty{text-align:center;color:var(--text-tertiary)}.budget-row-actions{display:flex;gap:.5rem;flex-wrap:wrap}@media (max-width:1200px){.budget-grid--summary,.budget-grid--main,.budget-form-grid,.budget-form-grid--filters{grid-template-columns:1fr}}@media (max-width:768px){.budget-page{padding:0 1rem 1.5rem}.budget-header-card,.budget-card__header,.budget-actions{flex-direction:column}.budget-btn{width:100%}}
+</style>
+
+<script>
+const budgetRoot = document.querySelector('.budget-page');
+const companyId = Number(budgetRoot?.dataset.companyId || 0);
+const state = { workspace: null, options: null, editingContractId: null, editingDocumentId: null, installments: [] };
+const byId = (id) => document.getElementById(id);
+const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const slugify = (value) => String(value || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/(^-|-$)/g, '').toUpperCase();
+async function api(url, options = {}) { const r = await fetch(url, options); const p = await r.json(); if (!r.ok) throw new Error(p.error || (p.errors || []).map(item => item.msg).join(' | ') || 'Falha na operação.'); return p; }
+function fillSelect(select, items, labelBuilder, selectedValue = '', placeholder = 'Selecione') { select.innerHTML = `<option value=\"\">${placeholder}</option>` + items.map(item => `<option value=\"${item.id}\" ${String(item.id)===String(selectedValue)?'selected':''}>${labelBuilder(item)}</option>`).join(''); }
+
+function renderSummary() { const s = state.workspace?.summary || {}; byId('sum-planned').textContent = formatCurrency(s.planned_total); byId('sum-contracted').textContent = formatCurrency(s.contracted_total); byId('sum-executed').textContent = formatCurrency(s.executed_total); byId('sum-scheduled').textContent = formatCurrency(s.scheduled_total); }
+function renderSelectors() {
+    fillSelect(byId('version-select'), state.workspace?.versions || [], item => `${item.name} (${item.status})`, state.workspace?.selected_version_id || '');
+    fillSelect(byId('line-select'), state.workspace?.lines || [], item => `${item.line_name} · ${formatCurrency(item.summary?.planned_total)}`, state.workspace?.selected_line_id || '');
+    fillSelect(byId('contract-select'), state.workspace?.contracts || [], item => `${item.name} · ${formatCurrency(item.summary?.contract_amount)}`, state.workspace?.selected_contract_id || '');
+    fillSelect(byId('document-select'), state.workspace?.documents || [], item => `${item.title} · ${formatCurrency(item.summary?.document_amount)}`, state.workspace?.selected_document_id || '');
+}
+function renderOptions() { const counterparties = state.options?.counterparties || []; fillSelect(byId('contract-counterparty'), counterparties, item => `${item.code || ''} - ${item.name}`, ''); fillSelect(byId('document-counterparty'), counterparties, item => `${item.code || ''} - ${item.name}`, ''); }
+function renderLineSummary() {
+    const line = state.workspace?.selected_line;
+    byId('selected-line-summary').innerHTML = line ? `<strong>${line.line_name}</strong><br>Planejado: ${formatCurrency(line.summary?.planned_total)} · Contratado: ${formatCurrency(line.summary?.contracted_total)} · Executado: ${formatCurrency(line.summary?.executed_total)}` : 'Selecione uma verba orçamentária para vincular contratos.';
+}
+function renderContractSummary() {
+    const contract = state.workspace?.selected_contract;
+    byId('selected-contract-summary').innerHTML = contract ? `<strong>${contract.name}</strong><br>Contratado: ${formatCurrency(contract.summary?.contract_amount)} · Executado: ${formatCurrency(contract.summary?.executed_total)} · Agendado: ${formatCurrency(contract.summary?.scheduled_total)}` : 'Selecione um contrato para cadastrar a execução.';
+}
+function clearContractForm() { state.editingContractId = null; byId('contract-code').value=''; byId('contract-name').value=''; byId('contract-amount').value=''; byId('contract-status').value='draft'; byId('contract-counterparty').value=''; byId('contract-signed-at').value=''; byId('contract-start-date').value=''; byId('contract-end-date').value=''; byId('contract-notes').value=''; }
+function clearDocumentForm() { state.editingDocumentId = null; byId('document-code').value=''; byId('document-title').value=''; byId('document-type').value='invoice'; byId('document-number').value=''; byId('document-amount').value=''; byId('document-counterparty').value=''; byId('document-issue-date').value=''; byId('document-competence-date').value=''; byId('document-notes').value=''; }
+function populateContractForm() { const item = state.workspace?.selected_contract; if (!item) { clearContractForm(); return; } state.editingContractId = item.id; byId('contract-code').value=item.contract_code||''; byId('contract-name').value=item.name||''; byId('contract-amount').value=item.contract_amount||0; byId('contract-status').value=item.status||'draft'; byId('contract-counterparty').value=item.counterparty_id||''; byId('contract-signed-at').value=item.signed_at||''; byId('contract-start-date').value=item.start_date||''; byId('contract-end-date').value=item.end_date||''; byId('contract-notes').value=item.notes||''; }
+function populateDocumentForm() { const item = state.workspace?.selected_document; if (!item) { clearDocumentForm(); return; } state.editingDocumentId = item.id; byId('document-code').value=item.document_code||''; byId('document-title').value=item.title||''; byId('document-type').value=item.document_type||'invoice'; byId('document-number').value=item.document_number||''; byId('document-amount').value=item.document_amount||0; byId('document-counterparty').value=item.counterparty_id||''; byId('document-issue-date').value=item.issue_date||''; byId('document-competence-date').value=item.competence_date||''; byId('document-notes').value=item.notes||''; }
+function renderDraftInstallments() { const root = byId('draft-installments'); if (!state.installments.length) { root.innerHTML = '<div class=\"budget-note-box\">Nenhuma parcela em preparação.</div>'; return; } root.innerHTML = state.installments.map((item, index) => `<div class=\"budget-draft-item\"><strong>${item.label || `Parcela ${index+1}`}</strong><br>${item.due_date} · ${formatCurrency(item.amount)}<div class=\"budget-row-actions\" style=\"margin-top:.5rem\"><button class=\"budget-btn budget-btn--ghost\" type=\"button\" onclick=\"removeDraftInstallment(${index})\">Remover</button></div></div>`).join(''); }
+function renderSchedules() { const tbody = byId('schedules-table-body'); const items = state.workspace?.schedules || []; if (!state.workspace?.selected_document_id) { tbody.innerHTML = '<tr><td colspan=\"4\" class=\"budget-empty\">Selecione uma NF para ver as parcelas.</td></tr>'; return; } if (!items.length) { tbody.innerHTML = '<tr><td colspan=\"4\" class=\"budget-empty\">Nenhum agendamento gerado para esta NF.</td></tr>'; return; } tbody.innerHTML = items.map(item => `<tr><td><strong>${item.name}</strong><br><small>${item.status}</small></td><td>${item.first_due_date || '-'}</td><td>${formatCurrency(item.template_amount)}</td><td><button class=\"budget-btn budget-btn--ghost\" type=\"button\" onclick=\"removeSchedule(${item.id})\">Excluir</button></td></tr>`).join(''); }
+async function loadOptions() { state.options = await api(`/api/financial/budget/options?company_id=${companyId}`); renderOptions(); }
+async function loadWorkspace(params = {}) { const previousDocumentId = state.workspace?.selected_document_id; const q = new URLSearchParams({ company_id: companyId }); Object.entries(params).forEach(([k, v]) => { if (v) q.set(k, v); }); state.workspace = await api(`/api/financial/budget/execution-workspace?${q.toString()}`); if (previousDocumentId !== state.workspace?.selected_document_id) state.installments = []; renderSummary(); renderSelectors(); renderLineSummary(); renderContractSummary(); populateContractForm(); populateDocumentForm(); renderSchedules(); renderDraftInstallments(); }
+function currentParams(extra = {}) { return { version_id: byId('version-select').value || state.workspace?.selected_version_id || '', line_id: byId('line-select').value || state.workspace?.selected_line_id || '', contract_id: byId('contract-select').value || state.workspace?.selected_contract_id || '', document_id: byId('document-select').value || state.workspace?.selected_document_id || '', ...extra }; }
+async function saveContract() { const lineId = byId('line-select').value || state.workspace?.selected_line_id; if (!lineId) throw new Error('Selecione uma verba orçamentária.'); const payload = { contract_code: byId('contract-code').value.trim() || slugify(byId('contract-name').value) || `CTR-${Date.now()}`, name: byId('contract-name').value.trim(), contract_amount: Number(byId('contract-amount').value || 0), status: byId('contract-status').value, counterparty_id: Number(byId('contract-counterparty').value || 0) || null, signed_at: byId('contract-signed-at').value || null, start_date: byId('contract-start-date').value || null, end_date: byId('contract-end-date').value || null, notes: byId('contract-notes').value.trim() || null }; const url = state.editingContractId ? `/api/financial/budget/contracts/${state.editingContractId}?company_id=${companyId}` : `/api/financial/budget/lines/${lineId}/contracts?company_id=${companyId}`; const method = state.editingContractId ? 'PUT' : 'POST'; const result = await api(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await loadWorkspace(currentParams({ contract_id: result.id || state.editingContractId || '' })); }
+async function deleteContract() { if (!state.workspace?.selected_contract_id) throw new Error('Selecione um contrato.'); if (!window.confirm('Excluir este contrato?')) return; await api(`/api/financial/budget/contracts/${state.workspace.selected_contract_id}?company_id=${companyId}`, { method: 'DELETE' }); clearContractForm(); clearDocumentForm(); await loadWorkspace(currentParams({ contract_id: '', document_id: '' })); }
+async function saveDocument() { const contractId = byId('contract-select').value || state.workspace?.selected_contract_id; if (!contractId) throw new Error('Selecione um contrato.'); const payload = { document_code: byId('document-code').value.trim() || slugify(byId('document-title').value) || `NF-${Date.now()}`, title: byId('document-title').value.trim(), document_type: byId('document-type').value, document_number: byId('document-number').value.trim() || null, document_amount: Number(byId('document-amount').value || 0), counterparty_id: Number(byId('document-counterparty').value || 0) || null, issue_date: byId('document-issue-date').value || null, competence_date: byId('document-competence-date').value || null, notes: byId('document-notes').value.trim() || null }; const url = state.editingDocumentId ? `/api/financial/budget/documents/${state.editingDocumentId}?company_id=${companyId}` : `/api/financial/budget/contracts/${contractId}/documents?company_id=${companyId}`; const method = state.editingDocumentId ? 'PUT' : 'POST'; const result = await api(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); await loadWorkspace(currentParams({ document_id: result.id || state.editingDocumentId || '' })); }
+async function deleteDocument() { if (!state.workspace?.selected_document_id) throw new Error('Selecione uma NF/equivalente.'); if (!window.confirm('Excluir esta NF/equivalente?')) return; await api(`/api/financial/budget/documents/${state.workspace.selected_document_id}?company_id=${companyId}`, { method: 'DELETE' }); state.installments = []; renderDraftInstallments(); clearDocumentForm(); await loadWorkspace(currentParams({ document_id: '' })); }
+function addDraftInstallment() { const label = byId('installment-label').value.trim(); const due_date = byId('installment-due-date').value; const amount = Number(byId('installment-amount').value || 0); if (!due_date || amount <= 0) { alert('Informe vencimento e valor da parcela.'); return; } state.installments.push({ label, due_date, amount }); byId('installment-label').value=''; byId('installment-due-date').value=''; byId('installment-amount').value=''; renderDraftInstallments(); }
+function removeDraftInstallment(index) { state.installments.splice(index, 1); renderDraftInstallments(); }
+async function generateSchedules() { const documentId = state.workspace?.selected_document_id; if (!documentId) throw new Error('Selecione uma NF/equivalente.'); if (!state.installments.length) throw new Error('Adicione ao menos uma parcela.'); await api(`/api/financial/budget/documents/${documentId}/schedules?company_id=${companyId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ installments: state.installments }) }); state.installments = []; renderDraftInstallments(); await loadWorkspace(currentParams({ document_id: documentId })); }
+async function removeSchedule(scheduleId) { if (!state.workspace?.selected_document_id) return; if (!window.confirm('Excluir este agendamento?')) return; await api(`/api/financial/budget/documents/${state.workspace.selected_document_id}/schedules/${scheduleId}?company_id=${companyId}`, { method: 'DELETE' }); await loadWorkspace(currentParams({ document_id: state.workspace.selected_document_id })); }
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const initialQuery = new URLSearchParams(window.location.search);
+    byId('version-select').addEventListener('change', (e) => loadWorkspace({ version_id: e.target.value }).catch(err => alert(err.message)));
+    byId('line-select').addEventListener('change', (e) => loadWorkspace({ version_id: byId('version-select').value, line_id: e.target.value }).catch(err => alert(err.message)));
+    byId('contract-select').addEventListener('change', (e) => loadWorkspace({ version_id: byId('version-select').value, line_id: byId('line-select').value, contract_id: e.target.value }).catch(err => alert(err.message)));
+    byId('document-select').addEventListener('change', (e) => loadWorkspace({ version_id: byId('version-select').value, line_id: byId('line-select').value, contract_id: byId('contract-select').value, document_id: e.target.value }).catch(err => alert(err.message)));
+    byId('btn-new-contract').addEventListener('click', clearContractForm);
+    byId('btn-save-contract').addEventListener('click', () => saveContract().catch(err => alert(err.message)));
+    byId('btn-delete-contract').addEventListener('click', () => deleteContract().catch(err => alert(err.message)));
+    byId('btn-new-document').addEventListener('click', clearDocumentForm);
+    byId('btn-save-document').addEventListener('click', () => saveDocument().catch(err => alert(err.message)));
+    byId('btn-delete-document').addEventListener('click', () => deleteDocument().catch(err => alert(err.message)));
+    byId('btn-add-installment').addEventListener('click', addDraftInstallment);
+    byId('btn-generate-schedules').addEventListener('click', () => generateSchedules().catch(err => alert(err.message)));
+    try { await loadOptions(); await loadWorkspace({ version_id: initialQuery.get('version_id') || '' }); renderDraftInstallments(); } catch (error) { alert(error.message); }
+});
+</script>
+{% endblock %}

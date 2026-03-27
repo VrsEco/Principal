@@ -78,6 +78,8 @@ SCHEDULE_FREQUENCY_VALUES = ("one_time", "weekly", "monthly", "yearly")
 SCHEDULE_STATUS_VALUES = ("draft", "active", "paused", "completed", "cancelled")
 AUTOMATION_TRIGGER_STATUS_VALUES = ("pending", "in_progress", "completed", "overdue", "any")
 AUTOMATION_EXECUTION_STATUS_VALUES = ("success", "skipped", "error")
+BANK_TRANSFER_STATUS_VALUES = ("posted", "cancelled")
+NON_FINANCIAL_LAUNCH_STATUS_VALUES = ("posted", "cancelled")
 DOMAIN_ENABLEMENT_TYPE_VALUES = ("project", "process")
 INGESTION_SOURCE_VALUES = (
     "manual",
@@ -152,6 +154,155 @@ class FinancialBankAccount(db.Model):
             "pix_key": self.pix_key,
             "currency_code": self.currency_code,
             "is_active": self.is_active,
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialBankTransfer(db.Model):
+    __tablename__ = "financial_bank_transfers"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "transfer_code", name="uq_financial_bank_transfers_company_code"),
+        db.CheckConstraint(
+            f"transfer_status IN {BANK_TRANSFER_STATUS_VALUES}",
+            name="ck_financial_bank_transfers_status",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    transfer_code = db.Column(db.String(30), nullable=False)
+    transfer_status = db.Column(db.String(20), nullable=False, default="posted", index=True)
+    description = db.Column(db.String(255), nullable=False)
+    document_number = db.Column(db.String(80))
+    competence_date = db.Column(db.Date, nullable=False, index=True)
+    transfer_date = db.Column(db.Date, nullable=False, index=True)
+    amount = db.Column(db.Numeric(14, 2), nullable=False)
+    origin_bank_account_id = db.Column(db.Integer, db.ForeignKey("financial_bank_accounts.id"), nullable=False, index=True)
+    destination_bank_account_id = db.Column(db.Integer, db.ForeignKey("financial_bank_accounts.id"), nullable=False, index=True)
+    origin_entry_id = db.Column(db.Integer, db.ForeignKey("financial_entries.id"), index=True)
+    destination_entry_id = db.Column(db.Integer, db.ForeignKey("financial_entries.id"), index=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
+    created_by_employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), index=True)
+    created_by_agent = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    origin_bank_account = db.relationship("FinancialBankAccount", foreign_keys=[origin_bank_account_id])
+    destination_bank_account = db.relationship("FinancialBankAccount", foreign_keys=[destination_bank_account_id])
+    origin_entry = db.relationship("FinancialEntry", foreign_keys=[origin_entry_id])
+    destination_entry = db.relationship("FinancialEntry", foreign_keys=[destination_entry_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "transfer_code": self.transfer_code,
+            "transfer_status": self.transfer_status,
+            "description": self.description,
+            "document_number": self.document_number,
+            "competence_date": self.competence_date.isoformat() if self.competence_date else None,
+            "transfer_date": self.transfer_date.isoformat() if self.transfer_date else None,
+            "amount": float(self.amount) if self.amount is not None else None,
+            "origin_bank_account_id": self.origin_bank_account_id,
+            "destination_bank_account_id": self.destination_bank_account_id,
+            "origin_entry_id": self.origin_entry_id,
+            "destination_entry_id": self.destination_entry_id,
+            "created_by_user_id": self.created_by_user_id,
+            "created_by_employee_id": self.created_by_employee_id,
+            "created_by_agent": self.created_by_agent,
+            "notes": self.notes,
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialNonFinancialLaunch(db.Model):
+    __tablename__ = "financial_non_financial_launches"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "launch_code", name="uq_financial_non_financial_launches_company_code"),
+        db.CheckConstraint(
+            f"launch_status IN {NON_FINANCIAL_LAUNCH_STATUS_VALUES}",
+            name="ck_financial_non_financial_launches_status",
+        ),
+        db.CheckConstraint(
+            "(debit_domain_type IS NULL) OR (debit_domain_type IN ('project', 'process'))",
+            name="ck_financial_non_financial_launches_debit_domain_type",
+        ),
+        db.CheckConstraint(
+            "(credit_domain_type IS NULL) OR (credit_domain_type IN ('project', 'process'))",
+            name="ck_financial_non_financial_launches_credit_domain_type",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    launch_code = db.Column(db.String(30), nullable=False)
+    launch_status = db.Column(db.String(20), nullable=False, default="posted", index=True)
+    description = db.Column(db.String(255), nullable=False)
+    title_number = db.Column(db.String(80))
+    installment_number = db.Column(db.String(30))
+    launch_date = db.Column(db.Date, nullable=False, index=True)
+    amount = db.Column(db.Numeric(14, 2), nullable=False)
+    counterparty_id = db.Column(db.Integer, db.ForeignKey("financial_counterparties.id"), nullable=False, index=True)
+    debit_chart_account_id = db.Column(db.Integer, db.ForeignKey("financial_chart_accounts.id"), nullable=False, index=True)
+    debit_cost_center_id = db.Column(db.Integer, db.ForeignKey("financial_cost_centers.id"), nullable=False, index=True)
+    debit_domain_type = db.Column(db.String(20), index=True)
+    debit_domain_source_id = db.Column(db.Integer, index=True)
+    credit_chart_account_id = db.Column(db.Integer, db.ForeignKey("financial_chart_accounts.id"), nullable=False, index=True)
+    credit_cost_center_id = db.Column(db.Integer, db.ForeignKey("financial_cost_centers.id"), nullable=False, index=True)
+    credit_domain_type = db.Column(db.String(20), index=True)
+    credit_domain_source_id = db.Column(db.Integer, index=True)
+    debit_entry_id = db.Column(db.Integer, db.ForeignKey("financial_entries.id"), index=True)
+    credit_entry_id = db.Column(db.Integer, db.ForeignKey("financial_entries.id"), index=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
+    created_by_employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), index=True)
+    created_by_agent = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    counterparty = db.relationship("FinancialCounterparty", foreign_keys=[counterparty_id])
+    debit_chart_account = db.relationship("FinancialChartAccount", foreign_keys=[debit_chart_account_id])
+    debit_cost_center = db.relationship("FinancialCostCenter", foreign_keys=[debit_cost_center_id])
+    credit_chart_account = db.relationship("FinancialChartAccount", foreign_keys=[credit_chart_account_id])
+    credit_cost_center = db.relationship("FinancialCostCenter", foreign_keys=[credit_cost_center_id])
+    debit_entry = db.relationship("FinancialEntry", foreign_keys=[debit_entry_id])
+    credit_entry = db.relationship("FinancialEntry", foreign_keys=[credit_entry_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "launch_code": self.launch_code,
+            "launch_status": self.launch_status,
+            "description": self.description,
+            "title_number": self.title_number,
+            "installment_number": self.installment_number,
+            "launch_date": self.launch_date.isoformat() if self.launch_date else None,
+            "amount": float(self.amount) if self.amount is not None else None,
+            "counterparty_id": self.counterparty_id,
+            "debit_chart_account_id": self.debit_chart_account_id,
+            "debit_cost_center_id": self.debit_cost_center_id,
+            "debit_domain_type": self.debit_domain_type,
+            "debit_domain_source_id": self.debit_domain_source_id,
+            "credit_chart_account_id": self.credit_chart_account_id,
+            "credit_cost_center_id": self.credit_cost_center_id,
+            "credit_domain_type": self.credit_domain_type,
+            "credit_domain_source_id": self.credit_domain_source_id,
+            "debit_entry_id": self.debit_entry_id,
+            "credit_entry_id": self.credit_entry_id,
+            "created_by_user_id": self.created_by_user_id,
+            "created_by_employee_id": self.created_by_employee_id,
+            "created_by_agent": self.created_by_agent,
+            "notes": self.notes,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
@@ -606,6 +757,7 @@ class FinancialSchedule(db.Model):
     counterparty_id = db.Column(db.Integer, index=True)
     chart_account_id = db.Column(db.Integer, index=True)
     cost_center_id = db.Column(db.Integer, index=True)
+    budget_document_id = db.Column(db.Integer, db.ForeignKey("financial_budget_documents.id"), index=True)
     activity_id = db.Column(db.Integer, db.ForeignKey("process_routines.id"), index=True)
     process_instance_id = db.Column(db.Integer, db.ForeignKey("process_instances.id"), index=True)
     routine_id = db.Column(db.Integer, db.ForeignKey("routines.id"), index=True)
@@ -654,6 +806,7 @@ class FinancialSchedule(db.Model):
             "counterparty_id": self.counterparty_id,
             "chart_account_id": self.chart_account_id,
             "cost_center_id": self.cost_center_id,
+            "budget_document_id": self.budget_document_id,
             "activity_id": self.activity_id,
             "process_instance_id": self.process_instance_id,
             "routine_id": self.routine_id,
