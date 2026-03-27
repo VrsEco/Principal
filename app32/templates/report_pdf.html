@@ -31,7 +31,7 @@
       }
 
       @bottom-left {
-        content: "{{ company.name }} | Ata de Reunião";
+        content: "Versus Gestão Corporativa - Todos os direitos reservados.";
         font-family: 'Inter', sans-serif;
         font-size: 8pt;
         color: var(--text-muted);
@@ -102,7 +102,7 @@
     }
 
     .logo-container {
-      margin-bottom: 40px;
+      margin-bottom: 22px;
       z-index: 1;
     }
 
@@ -138,8 +138,8 @@
     }
 
     .cover-meta {
-      margin-top: 60px;
-      padding-top: 30px;
+      margin-top: 34px;
+      padding-top: 18px;
       border-top: 1px solid var(--border);
       width: 100%;
       max-width: 400px;
@@ -162,23 +162,24 @@
     }
 
     .section {
-      margin-bottom: 40px;
-      padding-bottom: 20px;
+      margin-bottom: 18px;
+      padding-bottom: 6px;
     }
 
     .section-header {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 20px;
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 8px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(57, 242, 174, 0.28);
+      padding-bottom: 4px;
     }
 
     .section-header h2 {
       font-size: 16pt;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      color: var(--accent);
     }
 
     .section-header .line {
@@ -193,7 +194,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
-      margin-bottom: 30px;
+      margin-bottom: 12px;
     }
 
     .info-card {
@@ -223,7 +224,7 @@
       color: var(--text-main);
       white-space: pre-wrap;
       background: #fff;
-      padding: 20px;
+      padding: 14px 16px;
       border-radius: 8px;
       border-left: 4px solid var(--accent);
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -233,7 +234,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
       background: #fff;
     }
 
@@ -281,7 +282,7 @@
 
     /* --- DISCUSSÕES --- */
     .discussion-block {
-      margin-bottom: 24px;
+      margin-bottom: 12px;
       page-break-inside: avoid;
     }
 
@@ -309,34 +310,6 @@
       margin-left: 3px;
     }
 
-    /* --- ASSINATURAS --- */
-    .signatures {
-      margin-top: 60px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40mm;
-      page-break-inside: avoid;
-    }
-
-    .sig-block {
-      text-align: center;
-    }
-
-    .sig-line {
-      border-top: 1px solid var(--text-main);
-      margin-bottom: 8px;
-      width: 100%;
-    }
-
-    .sig-name {
-      font-weight: 700;
-      font-size: 10pt;
-    }
-
-    .sig-role {
-      font-size: 8pt;
-      color: var(--text-muted);
-    }
   </style>
 </head>
 
@@ -348,8 +321,6 @@
     <div class="logo-container">
       {% if company.logo_primary %}
       <img src="{{ company.logo_primary }}" alt="Logo" style="max-height: 80px;">
-      {% else %}
-      <div class="logo-placeholder">VERSUS<span>.</span></div>
       {% endif %}
     </div>
 
@@ -363,7 +334,6 @@
       {% if meeting.project_title %}
       <div class="meta-item">Projeto: <strong>{{ meeting.project_title }}</strong></div>
       {% endif %}
-      <div class="meta-item" style="margin-top: 20px;">Relatório gerado em: {{ generated_at }}</div>
     </div>
   </section>
 
@@ -481,7 +451,8 @@
       <table>
         <thead>
           <tr>
-            <th style="width: 40%;">Atividade</th>
+            <th style="width: 34%;">Atividade</th>
+            <th style="width: 28%;">Projeto</th>
             <th>Responsável</th>
             <th>Prazo</th>
           </tr>
@@ -496,13 +467,27 @@
               <div style="font-size: 8pt; color: var(--text-muted); margin-top: 4px;">{{ act.how }}</div>
               {% endif %}
             </td>
+            <td>
+              {% set activity_project_title = act.project_title or act.project_name or meeting.project_title %}
+              {% set activity_project_code = act.project_code or meeting.project_code %}
+              {% if activity_project_title %}
+              <strong>{{ activity_project_title }}</strong>
+              {% if activity_project_code %}
+              <div style="font-size: 8pt; color: var(--text-muted); margin-top: 4px;">{{ activity_project_code }}</div>
+              {% endif %}
+              {% elif act.project_id %}
+              <span style="color: var(--text-muted);">Projeto #{{ act.project_id }}</span>
+              {% else %}
+              <span style="color: var(--text-muted);">Sem projeto vinculado</span>
+              {% endif %}
+            </td>
             <td>{{ act.responsible }}</td>
             <td>{{ act.deadline if act.deadline else 'A definir' }}</td>
           </tr>
           {% endfor %}
           {% else %}
           <tr>
-            <td colspan="3" style="text-align: center; color: var(--text-muted);">Nenhuma atividade registrada.</td>
+            <td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma atividade registrada.</td>
           </tr>
           {% endif %}
         </tbody>
@@ -518,20 +503,6 @@
       <div class="rich-text">{{ meeting.meeting_notes }}</div>
     </section>
     {% endif %}
-
-    <!-- ASSINATURAS -->
-    <section class="signatures">
-      <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-name">Representante {{ company.name }}</div>
-        <div class="sig-role">Gestor de Reunião</div>
-      </div>
-      <div class="sig-block">
-        <div class="sig-line"></div>
-        <div class="sig-name">Versus Gestão Corporativa</div>
-        <div class="sig-role">Consultoria Responsável</div>
-      </div>
-    </section>
 
   </div>
 

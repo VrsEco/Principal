@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, abort
+from utils.indicator_ranges import normalize_performance_ranges
 from utils.permissions import permission_required
 from models import db, Company, Indicator, IndicatorTree, IndicatorGoal, IndicatorData, Employee, Team, Routine
 import json
@@ -566,7 +567,7 @@ def indicator_dashboard():
                 performance_pct = round((realized / goal_val) * 100, 1)
                 
                 # Ranges de performance (com defaults)
-                ranges = goal.performance_ranges or {}
+                ranges = normalize_performance_ranges(goal.performance_ranges)
                 red_max = ranges.get('red', 80)
                 yellow_max = ranges.get('yellow', 90)
                 green_max = ranges.get('green', 110)

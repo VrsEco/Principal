@@ -124,9 +124,41 @@ def meeting_report(company_id, meeting_id):
         abort(403)
     meeting = Meeting.query.filter_by(id=meeting_id, company_id=company_id).first_or_404()
     company = Company.query.get_or_404(company_id)
+    meeting_data = meeting.to_dict()
+
+    activities = meeting_data.get('activities') or []
+    if isinstance(activities, list) and activities:
+        company_projects = Project.query.filter_by(company_id=company_id).all()
+        projects_by_id = {str(project.id): project for project in company_projects}
+        enriched_activities = []
+
+        for activity in activities:
+            if not isinstance(activity, dict):
+                enriched_activities.append(activity)
+                continue
+
+            activity_data = dict(activity)
+            activity_project_id = activity_data.get('project_id') or activity_data.get('projectId')
+            project = projects_by_id.get(str(activity_project_id)) if activity_project_id is not None else None
+
+            if project:
+                activity_data.setdefault('project_title', project.name)
+                activity_data.setdefault('project_code', getattr(project, 'code', None))
+            elif (
+                activity_project_id is not None
+                and meeting_data.get('project_id') is not None
+                and str(activity_project_id) == str(meeting_data.get('project_id'))
+            ):
+                activity_data.setdefault('project_title', meeting_data.get('project_title'))
+                activity_data.setdefault('project_code', meeting_data.get('project_code'))
+
+            enriched_activities.append(activity_data)
+
+        meeting_data['activities'] = enriched_activities
+
     return render_template(
-        'report_pdf.html', 
-        meeting=meeting.to_dict(), 
+        'report_pdf.html',
+        meeting=meeting_data,
         company=company.to_dict(),
         generated_at=datetime.now().strftime("%d/%m/%Y %H:%M")
     )

@@ -39,7 +39,18 @@ def resolve_private_key_path() -> Path:
 
 
 def load_private_key():
-    key_text = resolve_private_key_path().read_text(encoding="utf-8").strip()
+    key_bytes = resolve_private_key_path().read_bytes()
+    key_text = None
+    for encoding in ("utf-8", "utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", "cp1252"):
+        try:
+            candidate = key_bytes.decode(encoding).strip()
+        except UnicodeDecodeError:
+            continue
+        if candidate:
+            key_text = candidate
+            break
+    if not key_text:
+        raise ValueError("Não foi possível decodificar a chave privada de deploy.")
     loaders = (
         paramiko.Ed25519Key.from_private_key,
         paramiko.RSAKey.from_private_key,

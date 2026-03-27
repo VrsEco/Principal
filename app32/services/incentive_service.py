@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import List, Dict, Any, Optional
 import sqlalchemy as sa
 from sqlalchemy import func
+from utils.indicator_ranges import normalize_performance_ranges
 from models import (
     db, Indicator, IncentiveRuleSet, IncentiveRule,
     IndicatorData, IndicatorGoal, IncentiveCalculation,
@@ -316,7 +317,7 @@ class IncentiveService:
 
                 # RANGE BASED CALCULATION
                 if rule.calculation_mode == 'ranges' and goal and goal.performance_ranges:
-                    ranges = goal.performance_ranges
+                    ranges = normalize_performance_ranges(goal.performance_ranges)
                     red = Decimal(str(ranges.get('red', 80))) / 100
                     yellow = Decimal(str(ranges.get('yellow', 90))) / 100
                     green = Decimal(str(ranges.get('green', 110))) / 100

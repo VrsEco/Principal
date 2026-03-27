@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from types import SimpleNamespace
 
 from flask import Flask
@@ -40,8 +41,9 @@ class _FakeCompanyQuery:
 
 
 class _FakeEmployeeQuery:
-    def __init__(self, employee=None):
+    def __init__(self, employee=None, employees=None):
         self.employee = employee
+        self.employees = employees or []
         self.last_filter_kwargs = None
 
     def filter_by(self, **kwargs):
@@ -50,6 +52,9 @@ class _FakeEmployeeQuery:
 
     def first(self):
         return self.employee
+
+    def all(self):
+        return self.employees
 
 
 class _FakeSession:
@@ -66,6 +71,19 @@ class _FakeSession:
 
     def rollback(self):
         self.rolled_back = True
+
+
+class _FakeListQuery:
+    def __init__(self, items=None):
+        self.items = items or []
+        self.last_filter_kwargs = None
+
+    def filter_by(self, **kwargs):
+        self.last_filter_kwargs = kwargs
+        return self
+
+    def all(self):
+        return self.items
 
 
 def _build_app():
@@ -177,6 +195,29 @@ def test_meetings_template_has_activity_edit_delete_save_cancel_flow():
     assert 'getPersistableActivities()' in content
 
 
+def test_meetings_template_has_summary_share_actions():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'meetings_manage.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'btn-enviar-resumo-editor' in content
+    assert 'meeting-share-summary-modal' in content
+    assert 'function carregarDestinatariosResumoReuniao(meetingId)' in content
+    assert '/summary-recipients?company_id=${meetingsCompanyId}' in content
+    assert '/share-summary?company_id=${meetingsCompanyId}' in content
+
+
+def test_meetings_template_shows_discussion_and_activity_counts_on_cards():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'meetings_manage.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert '{% set discussions_count = meeting.discussions | length if meeting.discussions else 0 %}' in content
+    assert '{% set activities_count = meeting.activities | length if meeting.activities else 0 %}' in content
+    assert '<strong>Discussões / Decisões:</strong>' in content
+    assert '<strong>Atividades:</strong>' in content
+
+
 def test_get_meeting_or_404_returns_403_when_company_not_accessible(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='collaborator'))
@@ -190,3 +231,153 @@ def test_get_meeting_or_404_returns_403_when_company_not_accessible(monkeypatch)
     assert meeting is None
     assert error[1] == 403
     assert 'não tem acesso' in error[0]['message']
+
+
+def test_meeting_summary_recipients_merge_invited_and_participant_contacts(monkeypatch):
+    app = _build_app()
+
+    meeting_payload = SimpleNamespace(
+        id=5,
+        company_id=12,
+        title='Reunião Semanal',
+        status='completed',
+        guests_json=json.dumps({
+            'internal': [{'id': 7, 'name': 'Ana'}],
+            'external': [{'name': 'Cliente XP', 'email': 'cliente@xp.com', 'whatsapp': '71999990000'}],
+        }),
+        participants_json=json.dumps({
+            'internal': [{'id': 7, 'name': 'Ana'}],
+            'external': [{'name': 'Cliente XP'}],
+        }),
+        agenda_json='[]',
+        discussions_json='[]',
+        activities_json='[]',
+        to_dict=lambda: {
+            'id': 5,
+            'company_id': 12,
+            'title': 'Reunião Semanal',
+            'status': 'completed',
+            'agenda': [],
+            'discussions': [],
+            'activities': [],
+            'meeting_notes': '',
+        },
+    )
+
+    monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='admin'))
+    monkeypatch.setattr(meeting_resource, 'Meeting', SimpleNamespace(query=_FakeMeetingQuery(meeting_payload)))
+    monkeypatch.setattr(meeting_resource, 'Company', SimpleNamespace(query=_FakeCompanyQuery(SimpleNamespace(id=12, is_active=True, name='Empresa Teste'))))
+    monkeypatch.setattr(meeting_resource, 'Project', SimpleNamespace(query=_FakeListQuery([])))
+    monkeypatch.setattr(
+        meeting_resource,
+        'Employee',
+        SimpleNamespace(
+            query=_FakeEmployeeQuery(
+                employee=None,
+                employees=[SimpleNamespace(id=7, company_id=12, name='Ana', email='ana@empresa.com', whatsapp='71911112222', phone='7133334444')],
+            )
+        ),
+    )
+
+    with app.test_request_context('/meetings/api/meeting/5/summary-recipients?company_id=12'):
+        response = meeting_resource.MeetingSummaryRecipientsResource().get.__wrapped__(meeting_resource.MeetingSummaryRecipientsResource(), 5)
+
+    assert response['success'] is True
+    recipients = {item['key']: item for item in response['recipients']}
+
+    assert recipients['employee:7']['email'] == 'ana@empresa.com'
+    assert recipients['employee:7']['whatsapp'] == '71911112222'
+    assert recipients['employee:7']['is_guest'] is True
+    assert recipients['employee:7']['is_participant'] is True
+
+    assert recipients['email:cliente@xp.com']['email'] == 'cliente@xp.com'
+    assert recipients['email:cliente@xp.com']['whatsapp'] == '71999990000'
+    assert recipients['email:cliente@xp.com']['is_guest'] is True
+    assert recipients['email:cliente@xp.com']['is_participant'] is True
+
+
+def test_meeting_share_summary_sends_selected_channels(monkeypatch):
+    app = _build_app()
+    sent_emails = []
+    sent_whatsapps = []
+
+    meeting_payload = SimpleNamespace(
+        id=5,
+        company_id=12,
+        title='Reunião Estratégica',
+        status='completed',
+        guests_json=json.dumps({
+            'internal': [{'id': 7, 'name': 'Ana'}],
+            'external': [{'name': 'Cliente XP', 'email': 'cliente@xp.com', 'whatsapp': '71999990000'}],
+        }),
+        participants_json=json.dumps({'internal': [], 'external': []}),
+        agenda_json=json.dumps([{'title': 'Financeiro'}]),
+        discussions_json=json.dumps([{'title': 'Receita', 'discussion': 'Revisar metas do trimestre.'}]),
+        activities_json=json.dumps([{'title': 'Atualizar forecast', 'responsible': 'Ana', 'deadline': '2026-03-31'}]),
+        to_dict=lambda: {
+            'id': 5,
+            'company_id': 12,
+            'title': 'Reunião Estratégica',
+            'status': 'completed',
+            'project_id': None,
+            'project_title': None,
+            'project_code': None,
+            'agenda': [{'title': 'Financeiro'}],
+            'discussions': [{'title': 'Receita', 'discussion': 'Revisar metas do trimestre.'}],
+            'activities': [{'title': 'Atualizar forecast', 'responsible': 'Ana', 'deadline': '2026-03-31'}],
+            'meeting_notes': 'Definir próximos passos.',
+            'actual_date': '2026-03-27',
+            'actual_time': '09:00',
+            'scheduled_date': '2026-03-27',
+            'scheduled_time': '09:00',
+        },
+    )
+
+    class _FakeEmailService:
+        def build_transactional_email_html(self, subject, body, **kwargs):
+            return f'<html><body><h1>{subject}</h1><pre>{body}</pre></body></html>'
+
+        def send_email(self, to_emails, subject, body, html_body=None, attachments=None):
+            sent_emails.append({'to_emails': to_emails, 'subject': subject, 'body': body, 'html_body': html_body})
+            return True
+
+    class _FakeWhatsAppService:
+        def send_message(self, phone_number, message, media_url=None):
+            sent_whatsapps.append({'phone_number': phone_number, 'message': message, 'media_url': media_url})
+            return True
+
+    monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='admin'))
+    monkeypatch.setattr(meeting_resource, 'Meeting', SimpleNamespace(query=_FakeMeetingQuery(meeting_payload)))
+    monkeypatch.setattr(meeting_resource, 'Company', SimpleNamespace(query=_FakeCompanyQuery(SimpleNamespace(id=12, is_active=True, name='Empresa Teste'))))
+    monkeypatch.setattr(meeting_resource, 'Project', SimpleNamespace(query=_FakeListQuery([])))
+    monkeypatch.setattr(
+        meeting_resource,
+        'Employee',
+        SimpleNamespace(
+            query=_FakeEmployeeQuery(
+                employee=None,
+                employees=[SimpleNamespace(id=7, company_id=12, name='Ana', email='ana@empresa.com', whatsapp='71911112222', phone='7133334444')],
+            )
+        ),
+    )
+    monkeypatch.setattr(meeting_resource, 'email_service', _FakeEmailService())
+    monkeypatch.setattr(meeting_resource, 'whatsapp_service', _FakeWhatsAppService())
+
+    with app.test_request_context(
+        '/meetings/api/meeting/5/share-summary?company_id=12',
+        method='POST',
+        json={
+            'channels': ['email', 'whatsapp'],
+            'recipient_keys': ['employee:7', 'email:cliente@xp.com'],
+        },
+    ):
+        response = meeting_resource.MeetingShareSummaryResource().post.__wrapped__(meeting_resource.MeetingShareSummaryResource(), 5)
+
+    assert response['success'] is True
+    assert response['sent_email'] == 2
+    assert response['sent_whatsapp'] == 2
+    assert len(sent_emails) == 2
+    assert len(sent_whatsapps) == 2
+    assert sent_emails[0]['subject'].startswith('Resumo da Reunião:')
+    assert 'Ata completa:' in sent_emails[0]['body']
+    assert sent_whatsapps[0]['message'].startswith('📋 *RESUMO DA REUNIÃO*')

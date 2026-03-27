@@ -405,6 +405,256 @@
         background: #92400e;
     }
 
+    .meeting-share-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 25000;
+        padding: 28px 20px;
+        background: rgba(15, 23, 42, 0.58);
+        overflow-y: auto;
+    }
+
+    .meeting-share-card {
+        width: min(960px, 100%);
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 20px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+        padding: 28px;
+    }
+
+    .meeting-share-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .meeting-share-header h3 {
+        margin: 0;
+        font-size: 1.4rem;
+        color: var(--text-main);
+    }
+
+    .meeting-share-header p {
+        margin: 6px 0 0;
+        color: var(--text-muted);
+    }
+
+    .meeting-share-close {
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .meeting-share-close:hover {
+        color: var(--text-main);
+        background: rgba(15, 23, 42, 0.06);
+    }
+
+    .meeting-share-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(320px, 0.75fr);
+        gap: 20px;
+        align-items: start;
+    }
+
+    .meeting-share-panel {
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        background: #fff;
+        padding: 18px;
+    }
+
+    .meeting-share-panel-muted {
+        background: #f8fafc;
+    }
+
+    .meeting-share-section-title {
+        margin: 0 0 12px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .meeting-share-channels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .meeting-share-channel {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+        background: #fff;
+        cursor: pointer;
+        color: var(--text-main);
+        font-weight: 600;
+    }
+
+    .meeting-share-channel input {
+        accent-color: #2563eb;
+    }
+
+    .meeting-share-quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .meeting-share-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .meeting-share-chip.guest {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .meeting-share-chip.participant {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .meeting-share-chip.contact {
+        background: #f8fafc;
+        color: #475569;
+    }
+
+    .meeting-share-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .meeting-share-stat-card {
+        flex: 1 1 160px;
+        min-width: 0;
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(59, 130, 246, 0.12);
+        background: rgba(59, 130, 246, 0.04);
+    }
+
+    .meeting-share-stat-card strong {
+        display: block;
+        font-size: 1rem;
+        color: var(--text-main);
+    }
+
+    .meeting-share-stat-card span {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+    }
+
+    .meeting-share-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 420px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .meeting-share-recipient {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+        background: #fff;
+    }
+
+    .meeting-share-recipient.is-disabled {
+        background: #f8fafc;
+        opacity: 0.66;
+    }
+
+    .meeting-share-recipient input[type="checkbox"] {
+        margin-top: 4px;
+        accent-color: #2563eb;
+    }
+
+    .meeting-share-recipient-main {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .meeting-share-recipient-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .meeting-share-recipient-name {
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .meeting-share-recipient-line {
+        font-size: 0.84rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+        word-break: break-word;
+    }
+
+    .meeting-share-empty {
+        padding: 24px;
+        border-radius: 14px;
+        border: 1px dashed rgba(148, 163, 184, 0.5);
+        color: var(--text-muted);
+        text-align: center;
+        background: rgba(248, 250, 252, 0.7);
+    }
+
+    .meeting-share-hint {
+        font-size: 0.84rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    .meeting-share-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .meeting-share-footer-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
     @media (max-width: 1100px) {
         .meeting-save-bar {
             position: static;
@@ -415,42 +665,540 @@
         .meeting-live-grid {
             grid-template-columns: 1fr;
         }
+
+        .meeting-share-grid {
+            grid-template-columns: 1fr;
+        }
     }
+
+
+    .meeting-management {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .meeting-management .surface-card-meeting {
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .meeting-page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .meeting-page-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .meeting-header-copy {
+        max-width: 760px;
+    }
+
+    .meeting-header-copy h1 {
+        margin: 0;
+    }
+
+    .meeting-header-copy p {
+        margin: 0.35rem 0 0;
+    }
+
+    .meeting-page-actions .button {
+        min-width: 0;
+    }
+
+    .meeting-list-shell {
+        margin-top: 1rem;
+    }
+
+    #meetings-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+
+    .meeting-card {
+        background: var(--surface-primary, #ffffff);
+        border: 1px solid var(--border, rgba(15, 23, 42, 0.08));
+        border-radius: 12px;
+        padding: 0.875rem 1rem;
+        box-shadow: none;
+        transform: none !important;
+    }
+
+    .meeting-card::before {
+        display: none;
+    }
+
+    .meeting-card:hover {
+        border-color: var(--primary, #2563eb) !important;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .meeting-card-header-row,
+    .meeting-card-footer-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .meeting-card-footer-row {
+        margin-top: 0.5rem;
+        align-items: center;
+    }
+
+    .meeting-title-group {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .meeting-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary, var(--text-main));
+        margin: 0;
+        line-height: 1.25;
+    }
+
+    .meeting-project-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        max-width: 100%;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        background: var(--surface-secondary, #f8fafc);
+        color: var(--text-secondary, var(--text-muted));
+        font-size: 0.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .meeting-chips {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-left: auto;
+    }
+
+    .meeting-chip {
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .meeting-chip.status-draft {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .meeting-chip.status-in_progress {
+        background: var(--primary-light, #dbeafe);
+        color: var(--primary, #2563eb);
+    }
+
+    .meeting-chip.status-completed {
+        background: var(--success-light, #dcfce7);
+        color: var(--success, #166534);
+    }
+
+    .meeting-chip.chip-meta {
+        background: var(--surface-secondary, #f8fafc);
+        color: var(--text-secondary, #475569);
+    }
+
+    .meeting-chip.chip-success {
+        background: var(--success-light, #dcfce7);
+        color: var(--success, #166534);
+    }
+
+    .meeting-meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary, var(--text-muted));
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .meeting-meta strong {
+        color: var(--text-tertiary, #475569);
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        margin-right: 2px;
+    }
+
+    .meeting-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-left: auto;
+        flex-wrap: wrap;
+    }
+
+    .btn-meeting-action {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        border: 1px solid transparent;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--surface-secondary, #f8fafc);
+        color: var(--text-primary, #0f172a);
+        white-space: nowrap;
+    }
+
+    .btn-meeting-action:hover {
+        background: var(--surface, #ffffff);
+        border-color: var(--border, #e2e8f0);
+    }
+
+    .btn-meeting-action.action-delete {
+        background: var(--danger-light, #fee2e2);
+        color: var(--danger, #dc2626);
+    }
+
+    .meeting-empty-state {
+        text-align: center;
+        padding: 4rem 1.5rem;
+        border: 1px dashed var(--border, #e2e8f0);
+        border-radius: 16px;
+        background: var(--surface-primary, #ffffff);
+        margin-top: 1rem;
+    }
+
+    .meeting-editor-section {
+        background: var(--surface-primary, #ffffff);
+        border: 1px solid var(--border, rgba(15, 23, 42, 0.08));
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .meeting-filters-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .meeting-filter-count {
+        font-size: 0.85rem;
+        color: var(--text-secondary, var(--text-muted));
+        text-align: center;
+    }
+
+    .form-select-custom {
+        width: 100%;
+        padding: 0.875rem 2.5rem 0.875rem 1.25rem;
+        background: var(--surface, #ffffff);
+        border: 1.5px solid var(--border, #e2e8f0);
+        border-radius: var(--btn-radius, 12px);
+        color: var(--text-primary, #0f172a);
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: var(--transition);
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 16px;
+    }
+
+    .form-select-custom:hover {
+        border-color: var(--primary, #2563eb);
+    }
+
+    .form-select-custom:focus {
+        outline: none;
+        border-color: var(--primary, #2563eb);
+        box-shadow: 0 0 0 4px var(--primary-light, rgba(37, 99, 235, 0.12));
+    }
+
+    .meeting-editor-header,
+    .meeting-editor-toolbar,
+    .meeting-tabs,
+    .meeting-form-grid-3,
+    .meeting-guest-inline,
+    .meeting-guest-grid,
+    .meeting-agenda-inline,
+    .meeting-form-actions,
+    .meeting-status-panel,
+    .meeting-participants-entry-grid,
+    .meeting-participant-entry,
+    .meeting-project-header,
+    .meeting-inline-actions,
+    .meeting-modal-actions,
+    .discussion-item-row,
+    .activity-edit-grid-primary,
+    .activity-edit-grid-secondary,
+    .activity-edit-actions,
+    .activity-summary-row,
+    .activity-summary-actions {
+        min-width: 0;
+    }
+
+    .discussion-item,
+    .activity-item,
+    .participant-item,
+    .guest-item,
+    .agenda-item {
+        min-width: 0;
+    }
+
+    .discussion-item input,
+    .discussion-item textarea,
+    .activity-item input,
+    .activity-item textarea,
+    .activity-item select,
+    .participant-item > div,
+    .guest-item > div,
+    .agenda-item > span {
+        min-width: 0;
+    }
+
+    @media (max-width: 960px) {
+        .meeting-page-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 1rem;
+        }
+
+        .meeting-header-copy {
+            width: 100%;
+            max-width: none;
+        }
+
+        .meeting-page-actions {
+            width: 100%;
+        }
+
+        .meeting-page-actions .button {
+            justify-content: center;
+        }
+
+        .meeting-editor-header,
+        .meeting-status-panel,
+        .meeting-project-header,
+        .activity-summary-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+
+        .meeting-editor-toolbar,
+        .meeting-form-actions,
+        .meeting-inline-actions,
+        .meeting-modal-actions,
+        .activity-edit-actions,
+        .activity-summary-actions {
+            flex-wrap: wrap;
+        }
+
+        .meeting-tabs {
+            flex-wrap: wrap;
+        }
+
+        .meeting-tabs .tab-btn {
+            flex: 1 1 calc(50% - 8px);
+            margin-right: 0;
+            text-align: center;
+        }
+
+        .meeting-form-grid-3,
+        .meeting-guest-grid,
+        .meeting-participants-entry-grid,
+        .activity-edit-grid-primary,
+        .activity-edit-grid-secondary,
+        #participants-list,
+        .participants-list {
+            grid-template-columns: 1fr !important;
+        }
+
+        .meeting-guest-inline,
+        .meeting-agenda-inline,
+        .meeting-participant-entry,
+        .discussion-item-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+
+        .meeting-project-modal-card {
+            margin: 8vh 16px !important;
+            max-width: calc(100vw - 32px) !important;
+            padding: 24px !important;
+        }
+
+        .meeting-share-header,
+        .meeting-share-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .meeting-share-footer-actions {
+            width: 100%;
+        }
+
+        .meeting-share-footer-actions .button {
+            flex: 1 1 220px;
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .meeting-page-actions .button {
+            width: 100%;
+        }
+
+        .meeting-card-header-row,
+        .meeting-card-footer-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .meeting-chips,
+        .meeting-actions {
+            margin-left: 0;
+        }
+
+        .meeting-actions {
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .meeting-save-meta {
+            width: 100%;
+        }
+
+        .meeting-editor-toolbar,
+        .meeting-form-actions,
+        .meeting-inline-actions,
+        .meeting-modal-actions,
+        .activity-edit-actions,
+        .activity-summary-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+
+        .meeting-editor-toolbar .button,
+        .meeting-form-actions .button,
+        .meeting-inline-actions .button,
+        .meeting-modal-actions .button,
+        .activity-edit-actions .button,
+        .activity-summary-actions .button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .meeting-tabs .tab-btn {
+            flex: 1 1 100%;
+            width: 100%;
+        }
+
+        .meeting-project-label {
+            white-space: normal;
+        }
+
+        .guest-item,
+        .agenda-item,
+        .participant-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .guest-item button,
+        .agenda-item button,
+        .participant-item button {
+            align-self: flex-end;
+        }
+
+        .meeting-share-modal {
+            padding: 14px 10px;
+        }
+
+        .meeting-share-card {
+            padding: 18px 14px;
+            border-radius: 16px;
+        }
+
+        .meeting-share-channels,
+        .meeting-share-quick-actions,
+        .meeting-share-stats,
+        .meeting-share-footer-actions {
+            flex-direction: column;
+        }
+
+        .meeting-share-channel,
+        .meeting-share-footer-actions .button {
+            width: 100%;
+        }
+    }
+
 </style>
 {% endblock %}
 
 {% block sidebar_right %}
-<div class="sidebar-header-ws">
-    <h3 class="text-h3">ðŸ” Filtros</h3>
-</div>
-<div class="sidebar-content-ws" style="display: flex; flex-direction: column; gap: 16px;">
-    <div>
-        <label class="form-label">TÃ­tulo</label>
-        <input type="text" id="filter-title" class="form-input" placeholder="Filtrar por tÃ­tulo..."
-            oninput="filtrarReuniãoes()">
+<div class="sidebar-section-ws" id="sectionFilters">
+    <div class="sidebar-header-ws collapsible-header" onclick="toggleCollapsible('sectionFilters')">
+        <h3 class="text-h3">Filtros</h3>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
     </div>
-    <div>
-        <label class="form-label">Data Agendamento</label>
-        <input type="date" id="filter-scheduled-date" class="form-input" onchange="filtrarReuniãoes()">
-    </div>
-    <div>
-        <label class="form-label">Data RealizaÃ§Ã£o</label>
-        <input type="date" id="filter-actual-date" class="form-input" onchange="filtrarReuniãoes()">
-    </div>
-    <div>
-        <label class="form-label">Participantes</label>
-        <input type="text" id="filter-participants" class="form-input" placeholder="Nome..."
-            oninput="filtrarReuniãoes()">
-    </div>
-    <div>
-        <label class="form-label">Busca Livre</label>
-        <input type="text" id="filter-free" class="form-input" placeholder="Palavra-chave..."
-            oninput="filtrarReuniãoes()">
-    </div>
-    <button class="button button-outline" onclick="limparFiltros()" style="width: 100%;">Limpar Filtros</button>
-    <div id="filter-results-count"
-        style="font-size: 0.85rem; color: var(--text-muted); text-align: center; display: none;">
-        Mostrando <span id="visible-count">0</span> de {{ meetings|length }}
+    <div class="sidebar-content-ws collapsible-content meeting-filters-panel">
+        <div class="form-group">
+            <label class="form-label">Título</label>
+            <input type="text" id="filter-title" class="form-select-custom" placeholder="Título da reunião..."
+                oninput="filtrarReuniãoes()" style="background-image: none;">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Data prevista</label>
+            <input type="date" id="filter-scheduled-date" class="form-select-custom" onchange="filtrarReuniãoes()"
+                style="background-image: none;">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Data realizada</label>
+            <input type="date" id="filter-actual-date" class="form-select-custom" onchange="filtrarReuniãoes()"
+                style="background-image: none;">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Participantes</label>
+            <input type="text" id="filter-participants" class="form-select-custom" placeholder="Nome do participante..."
+                oninput="filtrarReuniãoes()" style="background-image: none;">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Busca livre</label>
+            <input type="text" id="filter-free" class="form-select-custom" placeholder="Palavra-chave, pauta, notas..."
+                oninput="filtrarReuniãoes()" style="background-image: none;">
+        </div>
+        <button class="btn btn-secondary w-100" onclick="limparFiltros()">Limpar Filtros</button>
+        <div id="filter-results-count" class="meeting-filter-count" style="display: none;">
+            Mostrando <span id="visible-count">0</span> de {{ meetings|length }}
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -459,169 +1207,134 @@
 <div class="fade-in">
     <section class="meeting-management" data-company-id="{{ company.id }}">
         <div class="surface-card-meeting">
-            <div class="card-header"
-                style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom: 24px;">
-                <div>
-                    <span class="section-eyebrow">Acompanhamento Corporativo</span>
-                    <h1 class="text-h1" style="margin: 0;">Gestão de Reuniões</h1>
-                    <p class="text-secondary" style="margin-top:8px;max-width:640px; font-size: 1rem;">
-                        Organize e acompanhe as decisões da sua equipe com um sistema inteligente de atas e atividades.
+            <div class="workspace-header meeting-page-header">
+                <div class="meeting-header-copy">
+                    <h1 class="text-h1">🗓️ Reuniões Corporativas</h1>
+                    <p class="text-secondary">
+                        Acompanhe agendamentos, execução, atas e atividades geradas a partir das reuniões da empresa.
                     </p>
                 </div>
-                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <div class="meeting-page-actions">
                     <button type="button" class="button button-primary" onclick="novaReuniao()" data-ref="01">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Nova Reunião</button>
+                        Nova Reunião
+                    </button>
                 </div>
             </div>
 
-            <!-- Filtros movidos para Sidebar -->
-            <div id="meetings-list-section">
+            <div id="meetings-list-section" class="meeting-list-shell">
+                <div id="meetings-grid" class="meetings-grid">
+                    {% for meeting in meetings %}
+                    {% set p_data = meeting.participants or {} %}
+                    {% set p_internal = (p_data.get('internal', []) if p_data is mapping else []) %}
+                    {% set p_external = (p_data.get('external', []) if p_data is mapping else p_data if p_data is iterable else []) %}
+                    {% set g_data = meeting.guests or {} %}
+                    {% set g_internal = (g_data.get('internal', []) if g_data is mapping else []) %}
+                    {% set g_external = (g_data.get('external', []) if g_data is mapping else g_data if g_data is iterable else []) %}
+                    {% set participants_list = (p_internal|map(attribute='name')|list + p_external|map(attribute='name')|list + g_internal|map(attribute='name')|list + g_external|map(attribute='name')|list) %}
+                    {% set participants_str = participants_list | join(', ') %}
+                    {% set participants_count = participants_list | length %}
+                    {% set agenda_count = meeting.agenda | length if meeting.agenda else 0 %}
+                    {% set discussions_count = meeting.discussions | length if meeting.discussions else 0 %}
+                    {% set activities_count = meeting.activities | length if meeting.activities else 0 %}
+                    {% set agenda_str = (meeting.agenda|map(attribute='title')|list if meeting.agenda else []) | join(' ') %}
+                    {% set project_label = ((meeting.project_code ~ ' - ') if meeting.project_code else '') ~ (meeting.project_title or 'Sem projeto vinculado') %}
+                    {% set search_text = (meeting.title ~ ' ' ~ (meeting.meeting_notes or '') ~ ' ' ~ (meeting.invite_notes or '') ~ ' ' ~ participants_str ~ ' ' ~ agenda_str)|lower %}
 
-                <!-- Lista de Reuniões -->
-                <div style="margin-top: 12px;">
-                    <div id="meetings-grid" class="meetings-grid"
-                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
-                        {% for meeting in meetings %}
-                        {% set p_data = meeting.participants or {} %}
-                        {% set p_internal = (p_data.get('internal', []) if p_data is mapping else []) %}
-                        {% set p_external = (p_data.get('external', []) if p_data is mapping else p_data if p_data is
-                        iterable else []) %}
-
-                        {% set g_data = meeting.guests or {} %}
-                        {% set g_internal = (g_data.get('internal', []) if g_data is mapping else []) %}
-                        {% set g_external = (g_data.get('external', []) if g_data is mapping else g_data if g_data is
-                        iterable else []) %}
-
-                        {% set participants_list = (p_internal|map(attribute='name')|list +
-                        p_external|map(attribute='name')|list + g_internal|map(attribute='name')|list +
-                        g_external|map(attribute='name')|list) %}
-                        {% set participants_str = participants_list | join(', ') %}
-
-                        {# Build broad search text including agenda and notes #}
-                        {% set agenda_str = (meeting.agenda|map(attribute='title')|list if meeting.agenda else []) |
-                        join(' ') %}
-                        {% set search_text = (meeting.title ~ ' ' ~ (meeting.meeting_notes or '') ~ ' ' ~
-                        (meeting.invite_notes or '') ~ ' ' ~ participants_str ~ ' ' ~ agenda_str)|lower %}
-
-                        <div class="meeting-card" data-status="{{ meeting.status or 'draft' }}"
-                            data-title="{{ meeting.title|lower|e }}" data-sch-date="{{ meeting.scheduled_date or '' }}"
-                            data-act-date="{{ meeting.actual_date or '' }}"
-                            data-participants="{{ participants_str|lower|e }}" data-search-free="{{ search_text|e }}"
-                            onclick="editarReuniao({{ meeting.id }})" role="button" tabindex="0"
-                            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); editarReuniao({{ meeting.id }}); }">
-                            <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px;">
-                                <div style="flex: 1;">
-                                    <h4
-                                        style="margin: 0 0 10px 0; font-size: 1.125rem; font-weight: 600; color: var(--text-main);">
-                                        {{
-                                        meeting.title }}</h4>
-                                    <div
-                                        style="color: var(--text-muted); font-size: 0.875rem; display: flex; gap: 16px; align-items: center; margin-bottom: 12px;">
-                                        <span style="display: flex; align-items: center; gap: 6px;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" stroke-linejoin="round">
-                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                                <line x1="3" y1="10" x2="21" y2="10"></line>
-                                            </svg>
-                                            {{ meeting.scheduled_date or 'Sem data' }}
-                                        </span>
-                                        {% if meeting.scheduled_time %}
-                                        <span style="display: flex; align-items: center; gap: 6px;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <polyline points="12 6 12 12 16 14"></polyline>
-                                            </svg>
-                                            {{ meeting.scheduled_time }}
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                    <div style="margin-top: 8px; display:flex; flex-wrap:wrap; gap:8px;">
-                                        {% if meeting.status %}
-                                            {% if meeting.status == 'draft' %}
-                                            <span class="status-badge status-draft">Rascunho</span>
-                                            {% elif meeting.status == 'in_progress' %}
-                                            <span class="status-badge status-in_progress">Em Andamento</span>
-                                            {% elif meeting.status == 'completed' %}
-                                            <span class="status-badge status-completed">Concluída</span>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if meeting.planned_duration_minutes %}
-                                        <span class="status-badge" style="background:#dbeafe; color:#1d4ed8;">Prevista: {{ meeting.planned_duration_minutes }} min</span>
-                                        {% endif %}
-                                        {% if meeting.actual_duration_minutes %}
-                                        <span class="status-badge" style="background:#dcfce7; color:#166534;">Real: {{ meeting.actual_duration_minutes }} min</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <button type="button" class="button button-sm button-outline"
-                                        onclick="event.stopPropagation(); gerarRelatorioReuniao({{ meeting.id }})"
-                                        title="Gerar relatrio desta reuniao">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                            <polyline points="14 2 14 8 20 8"></polyline>
-                                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                                            <polyline points="10 9 9 9 8 9"></polyline>
-                                        </svg>
-                                        Relatório
-                                    </button>
-                                    <button type="button" class="button button-sm button-ghost"
-                                        onclick="event.stopPropagation(); excluirReuniao({{ meeting.id }}, {{ meeting.title|tojson|safe }});"
-                                        title="Excluir reunião"
-                                        aria-label="Excluir reunião {{ meeting.title }}"
-                                        style="color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.18); background: rgba(220, 38, 38, 0.08);">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-                                            <path d="M10 11v6"></path>
-                                            <path d="M14 11v6"></path>
-                                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
-                                        </svg>
-                                    </button>
-                                </div>
+                    <div class="meeting-card" data-status="{{ meeting.status or 'draft' }}"
+                        data-title="{{ meeting.title|lower|e }}" data-sch-date="{{ meeting.scheduled_date or '' }}"
+                        data-act-date="{{ meeting.actual_date or '' }}" data-participants="{{ participants_str|lower|e }}"
+                        data-search-free="{{ search_text|e }}" onclick="editarReuniao({{ meeting.id }})" role="button"
+                        tabindex="0"
+                        onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); editarReuniao({{ meeting.id }}); }">
+                        <div class="meeting-card-header-row">
+                            <div class="meeting-title-group">
+                                <h3 class="meeting-title">{{ meeting.title }}</h3>
+                                <span class="meeting-project-label" title="{{ project_label }}">{{ project_label }}</span>
+                            </div>
+                            <div class="meeting-chips">
+                                {% if meeting.status == 'draft' %}
+                                <span class="meeting-chip status-draft">Rascunho</span>
+                                {% elif meeting.status == 'in_progress' %}
+                                <span class="meeting-chip status-in_progress">Em andamento</span>
+                                {% elif meeting.status == 'completed' %}
+                                <span class="meeting-chip status-completed">Concluída</span>
+                                {% else %}
+                                <span class="meeting-chip chip-meta">{{ meeting.status or 'Sem status' }}</span>
+                                {% endif %}
+                                {% if meeting.planned_duration_minutes %}
+                                <span class="meeting-chip chip-meta">Prev {{ meeting.planned_duration_minutes }} min</span>
+                                {% endif %}
+                                {% if meeting.actual_duration_minutes %}
+                                <span class="meeting-chip chip-success">Real {{ meeting.actual_duration_minutes }} min</span>
+                                {% endif %}
                             </div>
                         </div>
-                        {% endfor %}
+                        <div class="meeting-card-footer-row">
+                            <div class="meeting-meta">
+                                <span>
+                                    <strong>Prevista:</strong>
+                                    {{ meeting.scheduled_date or 'Não definida' }}{% if meeting.scheduled_time %} às {{ meeting.scheduled_time }}{% endif %}
+                                </span>
+                                <span>
+                                    <strong>Real:</strong>
+                                    {% if meeting.actual_date %}
+                                    {{ meeting.actual_date }}{% if meeting.actual_time %} às {{ meeting.actual_time }}{% endif %}
+                                    {% else %}
+                                    Não registrada
+                                    {% endif %}
+                                </span>
+                                <span><strong>Participantes:</strong> {{ participants_count }}</span>
+                                <span><strong>Pauta:</strong> {{ agenda_count }} itens</span>
+                                <span><strong>Discussões / Decisões:</strong> {{ discussions_count }}</span>
+                                <span><strong>Atividades:</strong> {{ activities_count }}</span>
+                            </div>
+                            <div class="meeting-actions">
+                                <button type="button" class="btn-meeting-action"
+                                    onclick="event.stopPropagation(); editarReuniao({{ meeting.id }})"
+                                    title="Abrir reunião">
+                                    Abrir
+                                </button>
+                                <button type="button" class="btn-meeting-action"
+                                    onclick="event.stopPropagation(); gerarRelatorioReuniao({{ meeting.id }})"
+                                    title="Gerar ata da reunião">
+                                    Relatório
+                                </button>
+                                <button type="button" class="btn-meeting-action"
+                                    onclick="event.stopPropagation(); abrirEnvioResumoReuniao({{ meeting.id }})"
+                                    title="Enviar resumo da reunião">
+                                    Enviar Resumo
+                                </button>
+                                <button type="button" class="btn-meeting-action action-delete"
+                                    onclick="event.stopPropagation(); excluirReuniao({{ meeting.id }}, {{ meeting.title|tojson|safe }});"
+                                    title="Excluir reunião" aria-label="Excluir reunião {{ meeting.title }}">
+                                    Excluir
+                                </button>
+                            </div>
+                        </div>
                     </div>
-
-                    {% if not meetings %}
-                    <div class="empty-state"
-                        style="text-align: center; padding: 60px 24px; background: rgba(248, 250, 252, 0.4); border-radius: 16px; border: 2px dashed rgba(37, 99, 235, 0.1);">
-                        <div style="font-size: 64px; margin-bottom: 20px; filter: grayscale(1); opacity: 0.5;">??</div>
-                        <h4 style="margin: 0 0 10px 0; color: var(--text-main); font-size: 1.25rem;">Nenhuma reuniao
-                            agendada</h4>
-                        <p style="color: var(--text-muted); margin: 0 0 28px 0;">Organize sua primeira reuniao para
-                            comear um acompanhamento eficiente.</p>
-                        <button onclick="novaReuniao()" class="button button-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Agendar Primeira Reunião
-                        </button>
-                    </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
+
+                {% if not meetings %}
+                <div class="meeting-empty-state">
+                    <div class="empty-state-icon">🗓️</div>
+                    <h3 class="text-h3">Nenhuma reunião cadastrada</h3>
+                    <p class="text-secondary">Crie a primeira reunião da empresa para registrar decisões, atas e atividades.</p>
+                    <button onclick="novaReuniao()" class="button button-primary" style="margin-top: 1rem;">
+                        Agendar Primeira Reunião
+                    </button>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Editor de Reunião (3 Abas) -->
             <div class="meeting-editor-section" id="meeting-editor-section" style="display: none; margin-top: 24px;">
-                <div
+                <div class="meeting-editor-header"
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
                     <div>
                         <span class="section-eyebrow">Acompanhamento</span>
@@ -629,7 +1342,7 @@
                             style="margin: 4px 0 0 0; font-weight: 700; color: var(--text-main); font-size: 1.5rem;">
                             Nova Reunião</h3>
                     </div>
-                    <div style="display: flex; gap: 12px;">
+                    <div class="meeting-editor-toolbar" style="display: flex; gap: 12px;">
                         <button type="button" onclick="excluirReuniaoAtual()"
                             id="btn-excluir-reuniao-editor" class="button button-outline"
                             style="border-color: #dc2626; color: #dc2626; display: none;">
@@ -656,6 +1369,17 @@
                             </svg>
                             Gerar Ata
                         </button>
+                        <button type="button" onclick="abrirEnvioResumoReuniao(currentMeetingId)"
+                            id="btn-enviar-resumo-editor" class="button button-outline"
+                            style="border-color: #2563eb; color: #2563eb; display: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M22 2 11 13"></path>
+                                <path d="m22 2-7 20-4-9-9-4Z"></path>
+                            </svg>
+                            Enviar Resumo
+                        </button>
                         <button type="button" onclick="fecharEditor()" class="button button-outline" data-ref="04">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -672,7 +1396,7 @@
 
                 <!-- Tabs -->
                 <div class="tabs-container" style="border-bottom: 2px solid var(--border-color); margin-bottom: 24px;">
-                    <div class="tabs" style="display: flex; gap: 8px;">
+                    <div class="tabs meeting-tabs" style="display: flex; gap: 8px;">
                         <button class="tab-btn active" onclick="trocarAba('agendamento')" id="tab-agendamento"
                             type="button">
                             a) Agendamento
@@ -695,7 +1419,7 @@
                                 placeholder="Ex: Planejamento Estratgico Q4">
                         </div>
 
-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div class="form-row meeting-form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                             <div class="form-group">
                                 <label class="form-label">Data Prevista</label>
                                 <input type="date" id="meeting-scheduled-date" class="form-input">
@@ -713,7 +1437,7 @@
                         <!-- Convidados da Organização -->
                         <div class="form-group">
                             <label class="form-label">Convidados da Organização</label>
-                            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                            <div class="meeting-guest-inline" style="display: flex; gap: 12px; margin-bottom: 12px;">
                                 <select id="employee-select" class="form-input" style="flex: 1;">
                                     <option value="">Selecione um colaborador...</option>
                                     {% for employee in employees %}
@@ -733,7 +1457,7 @@
                         <!-- Convidados Externos -->
                         <div class="form-group">
                             <label class="form-label">Convidados Externos</label>
-                            <div
+                            <div class="meeting-guest-grid"
                                 style="display: grid; grid-template-columns: 2fr 2fr 2fr auto; gap: 12px; margin-bottom: 12px;">
                                 <input type="text" id="external-name" class="form-input" placeholder="Nome">
                                 <input type="email" id="external-email" class="form-input" placeholder="E-mail">
@@ -747,7 +1471,7 @@
                         <!-- Pauta -->
                         <div class="form-group">
                             <label class="form-label">Pauta da Reunião</label>
-                            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                            <div class="meeting-agenda-inline" style="display: flex; gap: 12px; margin-bottom: 12px;">
                                 <input type="text" id="agenda-item-input" class="form-input"
                                     placeholder="Digite um tópico da pauta" style="flex: 1;">
                                 <button type="button" class="button button-primary" onclick="adicionarPauta()">+
@@ -790,7 +1514,7 @@
                         </div>
 
                         <!-- Botes -->
-                        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                        <div class="meeting-form-actions" style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
                             <button type="button" class="button button-outline"
                                 onclick="fecharEditor()">Cancelar</button>
                             <button type="button" class="button button-outline"
@@ -806,7 +1530,7 @@
                 <!-- SESSO B: Realização -->
                 <div class="tab-content" id="content-realizacação" style="display: none;">
                     <div class="form-section">
-                        <div
+                        <div class="meeting-status-panel"
                             style="background: #eff6ff; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #dbeafe; display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <p style="margin: 0; color: #1e40af; font-weight: 600;">
@@ -820,7 +1544,7 @@
                             </button>
                         </div>
 
-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <div class="form-row meeting-form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                             <div class="form-group">
                                 <label class="form-label">Data da Realização</label>
                                 <input type="date" id="meeting-actual-date" class="form-input">
@@ -841,15 +1565,15 @@
                             <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 8px;">
                                 Arraste dos convidados ou adicione novos colaboradores/externos
                             </p>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                                <div style="display: flex; gap: 8px;">
+                            <div class="meeting-participants-entry-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                <div class="meeting-participant-entry" style="display: flex; gap: 8px;">
                                     <select id="participant-internal-select" class="form-select" style="flex: 1;">
                                         <option value="">Colaborador...</option>
                                     </select>
                                     <button type="button" class="button button-primary"
                                         onclick="adicionarParticipanteEfetivo('internal')">+</button>
                                 </div>
-                                <div style="display: flex; gap: 8px;">
+                                <div class="meeting-participant-entry" style="display: flex; gap: 8px;">
                                     <input type="text" id="participant-external-input" class="form-input"
                                         placeholder="Convidado Externo..." style="flex: 1;">
                                     <button type="button" class="button button-primary"
@@ -876,7 +1600,7 @@
                         </div>
 
                         <!-- Botes de Ao da Realização -->
-                        <div
+                        <div class="meeting-form-actions"
                             style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color);">
                             <button type="button" class="button button-outline"
                                 onclick="salvarExecucao({ advance: false })">?? Salvar
@@ -889,7 +1613,7 @@
                 <div class="tab-content" id="content-atividades" style="display: none;">
                     <div class="form-section">
                         <!-- Projeto Vinculado -->
-                        <div
+                        <div class="meeting-project-header"
                             style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <p style="margin: 0; color: var(--text-main);">
@@ -910,7 +1634,7 @@
                                 Defina as atividades, responsveis e prazos acordados durante a reuniao.
                             </p>
                             <div id="activities-list" class="activities-list"></div>
-                            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                            <div class="meeting-inline-actions" style="display: flex; gap: 12px; margin-top: 16px;">
                                 <button type="button" class="button button-primary" onclick="adicionarAtividade()">+
                                     Nova Atividade</button>
                                 <button type="button" class="button button-outline"
@@ -931,7 +1655,7 @@
                 <!-- Modal de Seleção de Projeto ação Iniciar -->
                 <div id="project-selection-modal" class="modal"
                     style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
-                    <div class="surface-card-meeting" style="max-width: 500px; margin: 10% auto; padding: 32px;">
+                    <div class="surface-card-meeting meeting-project-modal-card" style="max-width: 500px; margin: 10% auto; padding: 32px;">
                         <h3 class="text-h1" style="font-size: 1.5rem; margin-bottom: 12px;">Vincular Projeto</h3>
                         <p class="text-secondary" style="margin-bottom: 24px; font-size: 0.95rem;">Como você deseja
                             vincular esta reuniao a um projeto?</p>
@@ -980,7 +1704,7 @@
                             </select>
                         </div>
 
-                        <div
+                        <div class="meeting-modal-actions"
                             style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border-color);">
                             <button type="button" class="button button-outline"
                                 onclick="fecharModalProjeto()">Cancelar</button>
@@ -993,6 +1717,85 @@
             </div>
         </div>
     </section>
+</div>
+
+<div id="meeting-share-summary-modal" class="meeting-share-modal" aria-hidden="true">
+    <div class="meeting-share-card" role="dialog" aria-modal="true" aria-labelledby="meeting-share-title">
+        <div class="meeting-share-header">
+            <div>
+                <span class="section-eyebrow">Compartilhamento</span>
+                <h3 id="meeting-share-title">Enviar resumo da reunião</h3>
+                <p id="meeting-share-subtitle">Selecione os canais e quem deve receber este resumo.</p>
+            </div>
+            <button type="button" class="meeting-share-close" onclick="fecharEnvioResumoReuniao()" aria-label="Fechar modal de envio">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="meeting-share-grid">
+            <div class="meeting-share-panel">
+                <h4 class="meeting-share-section-title">Destinatários</h4>
+                <div class="meeting-share-quick-actions">
+                    <button type="button" class="button button-outline" onclick="selecionarDestinatariosResumo('all')">Selecionar aptos</button>
+                    <button type="button" class="button button-outline" onclick="selecionarDestinatariosResumo('guests')">Somente convidados</button>
+                    <button type="button" class="button button-outline" onclick="selecionarDestinatariosResumo('participants')">Somente participantes</button>
+                    <button type="button" class="button button-ghost" onclick="selecionarDestinatariosResumo('clear')">Limpar</button>
+                </div>
+                <div id="meeting-share-recipient-list" class="meeting-share-list">
+                    <div class="meeting-share-empty">Carregando destinatários...</div>
+                </div>
+            </div>
+
+            <div class="meeting-share-panel meeting-share-panel-muted">
+                <h4 class="meeting-share-section-title">Configuração do envio</h4>
+                <div class="meeting-share-channels">
+                    <label class="meeting-share-channel">
+                        <input type="checkbox" id="meeting-share-channel-email" onchange="atualizarModalEnvioResumo()">
+                        <span>E-mail</span>
+                    </label>
+                    <label class="meeting-share-channel">
+                        <input type="checkbox" id="meeting-share-channel-whatsapp" onchange="atualizarModalEnvioResumo()">
+                        <span>WhatsApp</span>
+                    </label>
+                </div>
+
+                <div class="meeting-share-stats">
+                    <div class="meeting-share-stat-card">
+                        <strong id="meeting-share-selected-count">0 selecionados</strong>
+                        <span id="meeting-share-selected-hint">Escolha quem deve receber o resumo.</span>
+                    </div>
+                    <div class="meeting-share-stat-card">
+                        <strong id="meeting-share-channel-counts">0 e-mails • 0 WhatsApps</strong>
+                        <span>Destinatários com canal disponível nesta reunião.</span>
+                    </div>
+                </div>
+
+                <p class="meeting-share-hint" id="meeting-share-summary-hint">
+                    O sistema envia o resumo com link para a ata completa. Participantes sem contato compatível com o canal escolhido serão ignorados.
+                </p>
+                <p class="meeting-share-hint" id="meeting-share-report-link-wrap" style="margin-top: 10px; display: none;">
+                    <a id="meeting-share-report-link" href="#" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none;">Abrir ata completa</a>
+                </p>
+            </div>
+        </div>
+
+        <div class="meeting-share-footer">
+            <div class="meeting-share-hint">
+                Esta ação usa apenas convidados e participantes ligados a esta reunião.
+            </div>
+            <div class="meeting-share-footer-actions">
+                <button type="button" class="button button-outline" onclick="fecharEnvioResumoReuniao()">Cancelar</button>
+                <button type="button" class="button button-primary" id="btn-confirmar-envio-resumo"
+                    onclick="confirmarEnvioResumoReuniao()">
+                    Enviar resumo
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -1026,7 +1829,21 @@
     let currentMeetingServerUpdatedAt = null;
     let localDraftPersistTimer = null;
     let saveToastTimer = null;
+    let meetingShareRecipients = [];
+    let meetingShareMeetingId = null;
+    let meetingShareMeetingTitle = '';
+    let meetingShareReportUrl = '';
+    let meetingShareIsSubmitting = false;
     const APP_DISPLAY_TIMEZONE = 'America/Bahia';
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     function getExecutionTabKey() {
         const executionTab = document.querySelector('[id^="tab-realiz"]');
@@ -1078,8 +1895,10 @@
         const display = currentMeetingId ? 'flex' : 'none';
         const reportButton = document.getElementById('btn-gerar-ata-editor');
         const deleteButton = document.getElementById('btn-excluir-reuniao-editor');
+        const shareButton = document.getElementById('btn-enviar-resumo-editor');
         if (reportButton) reportButton.style.display = display;
         if (deleteButton) deleteButton.style.display = display;
+        if (shareButton) shareButton.style.display = display;
         const hiddenInput = document.getElementById('current-meeting-id');
         if (hiddenInput) hiddenInput.value = currentMeetingId || '';
     }
@@ -1731,6 +2550,274 @@
         window.open(url, '_blank');
     }
 
+    function getSelectedSummaryChannels() {
+        const channels = [];
+        if (document.getElementById('meeting-share-channel-email')?.checked) channels.push('email');
+        if (document.getElementById('meeting-share-channel-whatsapp')?.checked) channels.push('whatsapp');
+        return channels;
+    }
+
+    function recipientIsEligibleForSelectedChannels(recipient, channels = getSelectedSummaryChannels()) {
+        if (!recipient) return false;
+        if (!channels.length) return false;
+        return channels.some((channel) => {
+            if (channel === 'email') return Boolean(recipient.has_email);
+            if (channel === 'whatsapp') return Boolean(recipient.has_whatsapp);
+            return false;
+        });
+    }
+
+    function setMeetingShareSubmittingState(isSubmitting) {
+        meetingShareIsSubmitting = isSubmitting;
+        const button = document.getElementById('btn-confirmar-envio-resumo');
+        if (!button) return;
+        button.disabled = isSubmitting;
+        button.textContent = isSubmitting ? 'Enviando...' : 'Enviar resumo';
+    }
+
+    function renderMeetingShareRecipients() {
+        const container = document.getElementById('meeting-share-recipient-list');
+        if (!container) return;
+
+        const channels = getSelectedSummaryChannels();
+        if (!meetingShareRecipients.length) {
+            container.innerHTML = '<div class="meeting-share-empty">Nenhum destinatário disponível nesta reunião.</div>';
+            return;
+        }
+
+        container.innerHTML = meetingShareRecipients.map((recipient) => {
+            const eligible = recipientIsEligibleForSelectedChannels(recipient, channels);
+            const chips = [];
+            if (recipient.is_guest) chips.push('<span class="meeting-share-chip guest">Convidado</span>');
+            if (recipient.is_participant) chips.push('<span class="meeting-share-chip participant">Participante</span>');
+            if (recipient.has_email) chips.push('<span class="meeting-share-chip contact">E-mail</span>');
+            if (recipient.has_whatsapp) chips.push('<span class="meeting-share-chip contact">WhatsApp</span>');
+
+            const emailLine = recipient.email ? `E-mail: ${escapeHtml(recipient.email)}` : 'Sem e-mail cadastrado';
+            const whatsappLine = recipient.whatsapp ? `WhatsApp: ${escapeHtml(recipient.whatsapp)}` : 'Sem WhatsApp cadastrado';
+
+            return `
+                <label class="meeting-share-recipient ${eligible ? '' : 'is-disabled'}">
+                    <input type="checkbox"
+                        data-recipient-key="${encodeURIComponent(recipient.key)}"
+                        ${recipient.selected ? 'checked' : ''}
+                        ${eligible ? '' : 'disabled'}
+                        onchange="alternarDestinatarioResumo(decodeURIComponent(this.dataset.recipientKey))">
+                    <div class="meeting-share-recipient-main">
+                        <div class="meeting-share-recipient-head">
+                            <span class="meeting-share-recipient-name">${escapeHtml(recipient.name || 'Destinatário')}</span>
+                            ${chips.join('')}
+                        </div>
+                        <div class="meeting-share-recipient-line">${emailLine}</div>
+                        <div class="meeting-share-recipient-line">${whatsappLine}</div>
+                        ${eligible ? '' : '<div class="meeting-share-recipient-line">Sem canal compatível com a seleção atual.</div>'}
+                    </div>
+                </label>
+            `;
+        }).join('');
+    }
+
+    function atualizarResumoSelecaoEnvio() {
+        const selectedCountEl = document.getElementById('meeting-share-selected-count');
+        const selectedHintEl = document.getElementById('meeting-share-selected-hint');
+        const channelCountEl = document.getElementById('meeting-share-channel-counts');
+        const reportLinkWrap = document.getElementById('meeting-share-report-link-wrap');
+        const reportLink = document.getElementById('meeting-share-report-link');
+
+        const channels = getSelectedSummaryChannels();
+        const eligibleCount = meetingShareRecipients.filter((recipient) => recipientIsEligibleForSelectedChannels(recipient, channels)).length;
+        const selectedCount = meetingShareRecipients.filter((recipient) => recipient.selected && recipientIsEligibleForSelectedChannels(recipient, channels)).length;
+        const emailCount = meetingShareRecipients.filter((recipient) => recipient.has_email).length;
+        const whatsappCount = meetingShareRecipients.filter((recipient) => recipient.has_whatsapp).length;
+
+        if (selectedCountEl) selectedCountEl.textContent = `${selectedCount} selecionado(s)`;
+        if (selectedHintEl) {
+            selectedHintEl.textContent = channels.length
+                ? `${eligibleCount} destinatário(s) apto(s) para os canais marcados.`
+                : 'Selecione ao menos um canal para habilitar os destinatários.';
+        }
+        if (channelCountEl) channelCountEl.textContent = `${emailCount} e-mails • ${whatsappCount} WhatsApps`;
+
+        if (reportLinkWrap && reportLink) {
+            if (meetingShareReportUrl) {
+                reportLinkWrap.style.display = 'block';
+                reportLink.href = meetingShareReportUrl;
+            } else {
+                reportLinkWrap.style.display = 'none';
+                reportLink.removeAttribute('href');
+            }
+        }
+    }
+
+    function atualizarModalEnvioResumo() {
+        const channels = getSelectedSummaryChannels();
+        meetingShareRecipients = meetingShareRecipients.map((recipient) => ({
+            ...recipient,
+            selected: recipient.selected && recipientIsEligibleForSelectedChannels(recipient, channels),
+        }));
+        renderMeetingShareRecipients();
+        atualizarResumoSelecaoEnvio();
+    }
+
+    window.alternarDestinatarioResumo = function (recipientKey) {
+        const channels = getSelectedSummaryChannels();
+        meetingShareRecipients = meetingShareRecipients.map((recipient) => {
+            if (recipient.key !== recipientKey) return recipient;
+            if (!recipientIsEligibleForSelectedChannels(recipient, channels)) return { ...recipient, selected: false };
+            return { ...recipient, selected: !recipient.selected };
+        });
+        renderMeetingShareRecipients();
+        atualizarResumoSelecaoEnvio();
+    }
+
+    window.selecionarDestinatariosResumo = function (mode) {
+        const channels = getSelectedSummaryChannels();
+        meetingShareRecipients = meetingShareRecipients.map((recipient) => {
+            const eligible = recipientIsEligibleForSelectedChannels(recipient, channels);
+            const shouldSelect = mode === 'all'
+                ? eligible
+                : mode === 'guests'
+                    ? eligible && recipient.is_guest
+                    : mode === 'participants'
+                        ? eligible && recipient.is_participant
+                        : false;
+            return { ...recipient, selected: shouldSelect };
+        });
+        renderMeetingShareRecipients();
+        atualizarResumoSelecaoEnvio();
+    }
+
+    window.fecharEnvioResumoReuniao = function () {
+        const modal = document.getElementById('meeting-share-summary-modal');
+        if (!modal || meetingShareIsSubmitting) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    async function carregarDestinatariosResumoReuniao(meetingId) {
+        const response = await fetch(`/meetings/api/meeting/${meetingId}/summary-recipients?company_id=${meetingsCompanyId}`);
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Não foi possível carregar os destinatários da reunião.');
+        }
+        return data;
+    }
+
+    window.abrirEnvioResumoReuniao = async function (meetingId) {
+        if (!meetingId) {
+            alert('Salve a reunião antes de tentar enviar o resumo.');
+            return;
+        }
+
+        if (currentMeetingId === meetingId && hasUnsavedChanges) {
+            const saved = await salvarReuniaoCompleta({ showToast: false });
+            if (!saved) {
+                alert('Não foi possível salvar a reunião antes do envio do resumo.');
+                return;
+            }
+        }
+
+        const modal = document.getElementById('meeting-share-summary-modal');
+        const subtitle = document.getElementById('meeting-share-subtitle');
+        const emailCheckbox = document.getElementById('meeting-share-channel-email');
+        const whatsappCheckbox = document.getElementById('meeting-share-channel-whatsapp');
+        const recipientList = document.getElementById('meeting-share-recipient-list');
+
+        if (!modal || !subtitle || !emailCheckbox || !whatsappCheckbox || !recipientList) return;
+
+        try {
+            setMeetingShareSubmittingState(false);
+            subtitle.textContent = 'Carregando destinatários e canais disponíveis...';
+            recipientList.innerHTML = '<div class="meeting-share-empty">Carregando destinatários...</div>';
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+
+            const data = await carregarDestinatariosResumoReuniao(meetingId);
+            meetingShareMeetingId = meetingId;
+            meetingShareMeetingTitle = data.meeting_title || `Reunião #${meetingId}`;
+            meetingShareReportUrl = data.report_url || '';
+            subtitle.textContent = `Reunião: ${meetingShareMeetingTitle}`;
+
+            const defaultChannels = Array.isArray(data.default_channels) ? data.default_channels : [];
+            emailCheckbox.checked = defaultChannels.includes('email');
+            whatsappCheckbox.checked = defaultChannels.includes('whatsapp');
+
+            meetingShareRecipients = (data.recipients || []).map((recipient) => ({
+                ...recipient,
+                selected: false,
+            }));
+
+            if (!emailCheckbox.checked && !whatsappCheckbox.checked) {
+                emailCheckbox.checked = Boolean(data.email_available_count);
+                whatsappCheckbox.checked = !emailCheckbox.checked && Boolean(data.whatsapp_available_count);
+            }
+
+            selecionarDestinatariosResumo('all');
+            atualizarModalEnvioResumo();
+        } catch (error) {
+            console.error('Erro ao preparar envio do resumo da reunião:', error);
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+            alert(error.message || 'Não foi possível abrir o envio do resumo.');
+        }
+    }
+
+    function montarMensagemEnvioResumo(resultado) {
+        const linhas = [
+            resultado.message || 'Resumo da reunião processado.',
+            `E-mails enviados: ${resultado.sent_email || 0}`,
+            `WhatsApps enviados: ${resultado.sent_whatsapp || 0}`,
+        ];
+        if (resultado.skipped_count) linhas.push(`Sem contato compatível: ${resultado.skipped_count}`);
+        if (resultado.failed_count) linhas.push(`Falhas no provedor: ${resultado.failed_count}`);
+        return linhas.join('\n');
+    }
+
+    window.confirmarEnvioResumoReuniao = async function () {
+        if (!meetingShareMeetingId || meetingShareIsSubmitting) return;
+
+        const channels = getSelectedSummaryChannels();
+        if (!channels.length) {
+            alert('Selecione pelo menos um canal de envio.');
+            return;
+        }
+
+        const recipientKeys = meetingShareRecipients
+            .filter((recipient) => recipient.selected && recipientIsEligibleForSelectedChannels(recipient, channels))
+            .map((recipient) => recipient.key);
+
+        if (!recipientKeys.length) {
+            alert('Selecione pelo menos um destinatário apto para os canais marcados.');
+            return;
+        }
+
+        try {
+            setMeetingShareSubmittingState(true);
+            const response = await fetch(`/meetings/api/meeting/${meetingShareMeetingId}/share-summary?company_id=${meetingsCompanyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    channels,
+                    recipient_keys: recipientKeys,
+                })
+            });
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(montarMensagemEnvioResumo(result));
+            }
+
+            fecharEnvioResumoReuniao();
+            showSaveToast('Resumo da reunião enviado.', result.skipped_count || result.failed_count ? 'warning' : 'success');
+            alert(montarMensagemEnvioResumo(result));
+        } catch (error) {
+            console.error('Erro ao enviar resumo da reunião:', error);
+            alert(error.message || 'Não foi possível enviar o resumo da reunião.');
+        } finally {
+            setMeetingShareSubmittingState(false);
+        }
+    }
+
     function trocarAba(aba) {
         const executionTabKey = getExecutionTabKey();
         if (aba === 'atividades') {
@@ -2087,7 +3174,7 @@
         const container = document.getElementById('discussions-list');
         container.innerHTML = discussions.map((disc, index) => `
         <div class="discussion-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
-            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+            <div class="discussion-item-row" style="display: flex; gap: 12px; margin-bottom: 12px;">
                 <input type="text" class="form-input" placeholder="Tpico / Título" 
                        value="${disc.title || ''}" onchange="discussions[${index}].title = this.value" style="flex: 1;">
                 <button type="button" class="button button-sm button-outline" onclick="criarAtividadeDaDiscussao(${index})" title="Criar atividade de projeto a partir desta discussão">+ Atividade</button>
@@ -2197,7 +3284,7 @@
                     <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
                         ${discussionSourceLabel}
                     </div>` : ''}
-                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div class="activity-edit-grid-primary" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <input type="text" class="form-input" placeholder="O que da atividade" value="${act.title || ''}" onchange="activities[${index}].title = this.value">
                         <select class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.options[this.selectedIndex].text">
                             <option value="">Responsvel...</option>
@@ -2205,14 +3292,14 @@
                         </select>
                         <input type="date" class="form-input" value="${act.deadline || ''}" onchange="activities[${index}].deadline = this.value">
                     </div>
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div class="activity-edit-grid-secondary" style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <textarea class="form-textarea" rows="2" placeholder="Como do projeto / detalhes da execução..." onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
                         <select class="form-select" onchange="activities[${index}].project_id = this.value">
                             <option value="">Projeto Padro</option>
                             {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}
                         </select>
                     </div>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <div class="activity-edit-actions" style="display: flex; justify-content: flex-end; gap: 8px;">
                         <button type="button" class="button button-outline" onclick="cancelarEdicaoAtividade(${index})">Cancelar</button>
                         <button type="button" class="button button-primary" onclick="salvarAtividade(${index})">Salvar</button>
                     </div>
@@ -2226,7 +3313,7 @@
                 <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
                     ${discussionSourceLabel}
                 </div>` : ''}
-                <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;">
+                <div class="activity-summary-row" style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;">
                     <div style="flex: 1;">
                         <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">${act.title || 'Atividade sem título'}</div>
                         <div style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 4px;">
@@ -2234,7 +3321,7 @@
                         </div>
                         <div style="font-size: 0.86rem; color: var(--text-main); white-space: pre-wrap;">${act.how || 'Sem detalhamento do como.'}</div>
                     </div>
-                    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                    <div class="activity-summary-actions" style="display: flex; gap: 8px; flex-shrink: 0;">
                         <button type="button" class="button button-sm button-outline" onclick="iniciarEdicaoAtividade(${index})">Editar</button>
                         <button type="button" class="button button-sm button-ghost" onclick="removerAtividadeComConfirmacação(${index})" style="color: #ef4444;">Excluir</button>
                     </div>
@@ -2649,6 +3736,21 @@
             console.error('Error parsing employeesData:', e);
             employeesData = [];
         }
+
+        const shareModal = document.getElementById('meeting-share-summary-modal');
+        if (shareModal) {
+            shareModal.addEventListener('click', (event) => {
+                if (event.target === shareModal) {
+                    fecharEnvioResumoReuniao();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                fecharEnvioResumoReuniao();
+            }
+        });
 
         setupMeetingEditorEnhancements();
         updateSaveStatusUi();

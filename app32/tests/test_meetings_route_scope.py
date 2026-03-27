@@ -83,6 +83,20 @@ class _FakeListQuery:
         return []
 
 
+class _FakeProjectQuery:
+    def __init__(self, projects=None):
+        self.projects = projects or []
+        self.last_filter_kwargs = None
+
+    def filter_by(self, **kwargs):
+        self.last_filter_kwargs = kwargs
+        return self
+
+    def all(self):
+        company_id = self.last_filter_kwargs.get('company_id')
+        return [project for project in self.projects if getattr(project, 'company_id', None) == company_id]
+
+
 class _FakeColumn:
     def asc(self):
         return self
@@ -136,3 +150,73 @@ def test_meeting_report_blocks_cross_company_access(monkeypatch):
             assert getattr(exc, 'code', None) == 403
         else:
             raise AssertionError('expected 403')
+
+
+def test_meeting_report_enriches_activity_project_titles(monkeypatch):
+    app = _build_app()
+    captured = {}
+
+    company_obj = SimpleNamespace(id=1, is_active=True, to_dict=lambda: {'id': 1, 'name': 'Empresa Teste'})
+    meeting_payload = {
+        'id': 5,
+        'company_id': 1,
+        'project_id': 11,
+        'project_title': 'Projeto Base',
+        'project_code': 'PB.1',
+        'activities': [
+            {'title': 'Atividade A', 'project_id': 22},
+            {'title': 'Atividade B', 'project_id': 11},
+            {'title': 'Atividade C'},
+        ],
+    }
+
+    class _SingleMeetingQuery:
+        def __init__(self, meeting_obj):
+            self.meeting_obj = meeting_obj
+            self.filter_kwargs = None
+
+        def filter_by(self, **kwargs):
+            self.filter_kwargs = kwargs
+            return self
+
+        def first_or_404(self):
+            return self.meeting_obj
+
+    def _fake_render(template_name, **context):
+        captured['template_name'] = template_name
+        captured['context'] = context
+        return context
+
+    monkeypatch.setattr(meetings_route, 'current_user', SimpleNamespace(id=1, is_authenticated=True, role='admin'))
+    monkeypatch.setattr(meetings_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery({1: company_obj})))
+    monkeypatch.setattr(meetings_route, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery({})))
+    monkeypatch.setattr(
+        meetings_route,
+        'Meeting',
+        SimpleNamespace(query=_SingleMeetingQuery(SimpleNamespace(to_dict=lambda: meeting_payload))),
+    )
+    monkeypatch.setattr(
+        meetings_route,
+        'Project',
+        SimpleNamespace(
+            query=_FakeProjectQuery(
+                [
+                    SimpleNamespace(id=22, company_id=1, name='Projeto Comercial', code='PC.22'),
+                    SimpleNamespace(id=11, company_id=1, name='Projeto Base', code='PB.1'),
+                    SimpleNamespace(id=99, company_id=2, name='Projeto Externo', code='PE.99'),
+                ]
+            )
+        ),
+    )
+    monkeypatch.setattr(meetings_route, 'render_template', _fake_render)
+
+    with app.test_request_context('/meetings/company/1/meeting/5/report'):
+        result = meetings_route.meeting_report.__wrapped__(1, 5)
+
+    assert result == captured['context']
+    assert captured['template_name'] == 'report_pdf.html'
+    assert captured['context']['meeting']['activities'][0]['project_title'] == 'Projeto Comercial'
+    assert captured['context']['meeting']['activities'][0]['project_code'] == 'PC.22'
+    assert captured['context']['meeting']['activities'][1]['project_title'] == 'Projeto Base'
+    assert captured['context']['meeting']['activities'][1]['project_code'] == 'PB.1'
+    assert 'project_title' not in captured['context']['meeting']['activities'][2]
