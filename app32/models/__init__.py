@@ -25,8 +25,6 @@ from .financial import (
     FinancialAccountCategory,
     FinancialAssetAccount,
     FinancialBankAccount,
-    FinancialBankTransfer,
-    FinancialNonFinancialLaunch,
     FinancialChartAccount,
     FinancialClosing,
     FinancialCorrectionIndex,
@@ -74,6 +72,7 @@ from .user_log import UserLog
 from .ai_agent import AIAgent
 from .agent_message import AgentMessage
 from .agent_action import AgentAction
+from .agent_action_backlog_link import AgentActionBacklogLink
 from .agent_menu import AgentMenuOption, AgentMenuSession
 from .workflow_gap import WorkflowGapCandidate
 from .workflow_usage import WorkflowExecutionLog
@@ -93,13 +92,13 @@ __all__ = [
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator',
     'Routine', 'RoutineCollaborator',
-    'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialBankTransfer', 'FinancialNonFinancialLaunch', 'FinancialChartAccount', 'FinancialClosing', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialPaymentTerm', 'FinancialSchedule',
+    'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialClosing', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialPaymentTerm', 'FinancialSchedule',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',
     'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
     'UiCatalog', 'UserLog',
-    'AIAgent', 'AgentMessage', 'AgentAction', 'AgentMenuOption', 'AgentMenuSession',
+    'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog',
     'IncentiveRuleSet', 'IncentiveRule',
     'IncentiveGovernabilityMatrix', 'IncentiveCalculation',
