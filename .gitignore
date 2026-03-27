@@ -50,3 +50,22 @@ desktop.ini
 # Ignore nested repos causing CI warnings
 app31/
 .agent/skills/
+
+# Configr / produção - artefatos temporários e de restart
+**/restart.txt
+**/debug_dashboard.txt
+**/debug_import.py
+**/debug_inc_redirect.txt
+**/error_trace.txt
+**/passenger_wsgi.py.bak
+**/pip_force_log.txt
+**/pip_install_log.txt
+**/pip_install_log2.txt
+**/pip_install_log3.txt
+**/pip_list.txt
+**/remote_test_app.py
+**/test_client_prod.py
+**/test_timeout.py
+**/test_output.txt
+**/uwsgi_dump.txt
+**/scripts/_tmp_check.py
