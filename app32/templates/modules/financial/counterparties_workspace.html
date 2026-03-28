@@ -90,8 +90,18 @@
                             <h3>Defaults financeiros</h3>
                         </div>
                         <div class="form-grid">
-                            <label><span>Conta padrão</span><input name="default_chart_account_id" type="number" min="1"></label>
-                            <label><span>Centro padrão</span><input name="default_cost_center_id" type="number" min="1"></label>
+                            <label>
+                                <span>Conta padrão</span>
+                                <select name="default_chart_account_id">
+                                    <option value="">Selecione uma conta analítica</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Centro padrão</span>
+                                <select name="default_cost_center_id">
+                                    <option value="">Selecione um centro de resultados</option>
+                                </select>
+                            </label>
                         </div>
                     </section>
 
@@ -500,6 +510,10 @@
     let editingId = null;
     let selectedListId = null;
     let allItems = [];
+    const auxiliaryData = {
+        chart_accounts: [],
+        cost_centers: [],
+    };
 
     function digitsOnly(value) {
         return String(value || '').replace(/\D/g, '');
@@ -570,12 +584,60 @@
         return value;
     }
 
+    function buildOptionLabel(item) {
+        return `${item.code || '-'} - ${item.name || '-'}`;
+    }
+
+    function hydrateDefaultSelects(currentItem = null) {
+        const form = document.getElementById('cp-form');
+        if (!form) return;
+
+        const chartSelect = form.querySelector('[name="default_chart_account_id"]');
+        const costCenterSelect = form.querySelector('[name="default_cost_center_id"]');
+        const selectedChartId = currentItem?.default_chart_account_id ? String(currentItem.default_chart_account_id) : '';
+        const selectedCostCenterId = currentItem?.default_cost_center_id ? String(currentItem.default_cost_center_id) : '';
+
+        if (chartSelect) {
+            const chartOptions = auxiliaryData.chart_accounts
+                .filter(item => item.accepts_posting === true && (item.is_active !== false || String(item.id) === selectedChartId))
+                .map(item => `<option value="${item.id}">${buildOptionLabel(item)}</option>`)
+                .join('');
+            chartSelect.innerHTML = `<option value="">Selecione uma conta analítica</option>${chartOptions}`;
+            chartSelect.value = selectedChartId;
+        }
+
+        if (costCenterSelect) {
+            const costCenterOptions = auxiliaryData.cost_centers
+                .filter(item => item.is_active !== false || String(item.id) === selectedCostCenterId)
+                .map(item => `<option value="${item.id}">${buildOptionLabel(item)}</option>`)
+                .join('');
+            costCenterSelect.innerHTML = `<option value="">Selecione um centro de resultados</option>${costCenterOptions}`;
+            costCenterSelect.value = selectedCostCenterId;
+        }
+    }
+
+    async function loadAuxiliaryData() {
+        const [chartResponse, costCenterResponse] = await Promise.all([
+            fetch(`/api/financial/catalogs/chart_accounts?company_id=${companyId}`),
+            fetch(`/api/financial/catalogs/cost_centers?company_id=${companyId}`),
+        ]);
+        const [chartResult, costCenterResult] = await Promise.all([
+            chartResponse.json(),
+            costCenterResponse.json(),
+        ]);
+
+        auxiliaryData.chart_accounts = Array.isArray(chartResult) ? chartResult : [];
+        auxiliaryData.cost_centers = Array.isArray(costCenterResult) ? costCenterResult : [];
+        hydrateDefaultSelects();
+    }
+
     function resetCounterpartyForm() {
         editingId = null;
         selectedListId = null;
         document.getElementById('cp-form').reset();
         document.querySelector('#cp-form [name="id"]').value = '';
         document.querySelector('#cp-form [name="code"]').value = '';
+        hydrateDefaultSelects();
         updateStatusDisplay(true);
         updateDocumentTypeLabel('');
         activateSection('main');
@@ -597,6 +659,7 @@
             const field = form.querySelector(`[name="${key}"]`);
             if (field) field.value = value ?? '';
         });
+        hydrateDefaultSelects(item);
         handleDocumentInput(form.querySelector('[name="document_number"]'));
         updateStatusDisplay(item.is_active !== false);
         activateSection('main');
@@ -720,7 +783,7 @@
         renderSectionNav();
         document.getElementById('cp-form').addEventListener('submit', saveCounterparty);
         document.getElementById('cp-search-input').addEventListener('input', filterItems);
-        loadItems();
+        loadAuxiliaryData().then(loadItems);
     });
 </script>
 {% endblock %}
