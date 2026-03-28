@@ -72,10 +72,12 @@ CLASSIFICATION_SUGGESTION_STATUS_VALUES = ("suggested", "confirmed", "rejected",
 IMPORT_SOURCE_VALUES = ("csv", "csc", "xlsx", "ofx", "api", "mcp")
 IMPORT_BATCH_STATUS_VALUES = ("uploaded", "parsed", "processed", "processed_with_errors", "cancelled")
 IMPORT_ROW_STATUS_VALUES = ("staged", "validated", "rejected", "imported")
-CHART_ACCOUNT_KIND_VALUES = ("asset", "liability", "equity", "revenue", "expense", "result")
 CLOSING_STATUS_VALUES = ("draft", "closed", "reopened")
 SCHEDULE_FREQUENCY_VALUES = ("one_time", "weekly", "monthly", "yearly")
 SCHEDULE_STATUS_VALUES = ("draft", "active", "paused", "completed", "cancelled")
+BORDERO_TYPE_VALUES = ("payable", "receivable")
+BORDERO_STATUS_VALUES = ("draft", "open", "partially_settled", "settled", "cancelled")
+BORDERO_SETTLEMENT_STATUS_VALUES = ("posted", "cancelled")
 AUTOMATION_TRIGGER_STATUS_VALUES = ("pending", "in_progress", "completed", "overdue", "any")
 AUTOMATION_EXECUTION_STATUS_VALUES = ("success", "skipped", "error")
 DOMAIN_ENABLEMENT_TYPE_VALUES = ("project", "process")
@@ -162,10 +164,6 @@ class FinancialChartAccount(db.Model):
     __tablename__ = "financial_chart_accounts"
     __table_args__ = (
         db.UniqueConstraint("company_id", "code", name="uq_financial_chart_accounts_company_code"),
-        db.CheckConstraint(
-            f"account_kind IN {CHART_ACCOUNT_KIND_VALUES}",
-            name="ck_financial_chart_accounts_kind",
-        ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -173,7 +171,6 @@ class FinancialChartAccount(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey("financial_chart_accounts.id"), index=True)
     code = db.Column(db.String(30), nullable=False)
     name = db.Column(db.String(120), nullable=False)
-    account_kind = db.Column(db.String(20), nullable=False, default="expense", index=True)
     movement_nature = db.Column(db.String(10), index=True)
     accepts_posting = db.Column(db.Boolean, nullable=False, default=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
@@ -191,7 +188,6 @@ class FinancialChartAccount(db.Model):
             "parent_id": self.parent_id,
             "code": self.code,
             "name": self.name,
-            "account_kind": self.account_kind,
             "movement_nature": self.movement_nature,
             "accepts_posting": self.accepts_posting,
             "is_active": self.is_active,
@@ -215,6 +211,7 @@ class FinancialCostCenter(db.Model):
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_default_suggestion = db.Column(db.Boolean, nullable=False, default=False, index=True)
     metadata_json = db.Column(JSONB, nullable=False, default=dict)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -232,6 +229,7 @@ class FinancialCostCenter(db.Model):
             "name": self.name,
             "description": self.description,
             "is_active": self.is_active,
+            "is_default_suggestion": self.is_default_suggestion,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
@@ -492,6 +490,7 @@ class FinancialDomainEnablement(db.Model):
     domain_type = db.Column(db.String(20), nullable=False, index=True)
     source_id = db.Column(db.Integer, nullable=False, index=True)
     is_enabled = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_default_suggestion = db.Column(db.Boolean, nullable=False, default=False, index=True)
     notes = db.Column(db.Text)
     metadata_json = db.Column(JSONB, nullable=False, default=dict)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -505,6 +504,7 @@ class FinancialDomainEnablement(db.Model):
             "domain_type": self.domain_type,
             "source_id": self.source_id,
             "is_enabled": self.is_enabled,
+            "is_default_suggestion": self.is_default_suggestion,
             "notes": self.notes,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -606,6 +606,8 @@ class FinancialSchedule(db.Model):
     counterparty_id = db.Column(db.Integer, index=True)
     chart_account_id = db.Column(db.Integer, index=True)
     cost_center_id = db.Column(db.Integer, index=True)
+    budget_line_id = db.Column(db.Integer, db.ForeignKey("financial_budget_lines.id"), index=True)
+    budget_contract_id = db.Column(db.Integer, db.ForeignKey("financial_budget_contracts.id"), index=True)
     budget_document_id = db.Column(db.Integer, db.ForeignKey("financial_budget_documents.id"), index=True)
     activity_id = db.Column(db.Integer, db.ForeignKey("process_routines.id"), index=True)
     process_instance_id = db.Column(db.Integer, db.ForeignKey("process_instances.id"), index=True)
@@ -655,6 +657,8 @@ class FinancialSchedule(db.Model):
             "counterparty_id": self.counterparty_id,
             "chart_account_id": self.chart_account_id,
             "cost_center_id": self.cost_center_id,
+            "budget_line_id": self.budget_line_id,
+            "budget_contract_id": self.budget_contract_id,
             "budget_document_id": self.budget_document_id,
             "activity_id": self.activity_id,
             "process_instance_id": self.process_instance_id,
@@ -666,6 +670,199 @@ class FinancialSchedule(db.Model):
             "metadata_json": self.metadata_json or {},
             "last_generated_at": self.last_generated_at.isoformat() if self.last_generated_at else None,
             "last_generated_entry_id": self.last_generated_entry_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialBordero(db.Model):
+    __tablename__ = "financial_borderos"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "bordero_code", name="uq_financial_borderos_company_code"),
+        db.CheckConstraint(
+            f"bordero_type IN {BORDERO_TYPE_VALUES}",
+            name="ck_financial_borderos_type",
+        ),
+        db.CheckConstraint(
+            f"status IN {BORDERO_STATUS_VALUES}",
+            name="ck_financial_borderos_status",
+        ),
+        db.CheckConstraint("total_amount >= 0", name="ck_financial_borderos_total_nonneg"),
+        db.CheckConstraint("settled_amount >= 0", name="ck_financial_borderos_settled_nonneg"),
+        db.CheckConstraint("open_amount >= 0", name="ck_financial_borderos_open_nonneg"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    bordero_code = db.Column(db.String(50), nullable=False)
+    bordero_type = db.Column(db.String(20), nullable=False, index=True)
+    status = db.Column(db.String(30), nullable=False, default="draft", index=True)
+    description = db.Column(db.String(255), nullable=False)
+    bank_account_id = db.Column(db.Integer, index=True)
+    total_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    settled_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    open_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_by_employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"))
+    created_by_agent = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    items = db.relationship(
+        "FinancialBorderoItem",
+        backref="bordero",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    settlements = db.relationship(
+        "FinancialBorderoSettlement",
+        backref="bordero",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "bordero_code": self.bordero_code,
+            "bordero_type": self.bordero_type,
+            "status": self.status,
+            "description": self.description,
+            "bank_account_id": self.bank_account_id,
+            "total_amount": float(self.total_amount or 0),
+            "settled_amount": float(self.settled_amount or 0),
+            "open_amount": float(self.open_amount or 0),
+            "created_by_user_id": self.created_by_user_id,
+            "created_by_employee_id": self.created_by_employee_id,
+            "created_by_agent": self.created_by_agent,
+            "notes": self.notes,
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialBorderoItem(db.Model):
+    __tablename__ = "financial_bordero_items"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "company_id",
+            "bordero_id",
+            "financial_schedule_id",
+            name="uq_financial_bordero_items_schedule",
+        ),
+        db.CheckConstraint("selected_amount >= 0", name="ck_financial_bordero_items_selected_nonneg"),
+        db.CheckConstraint("settled_amount >= 0", name="ck_financial_bordero_items_settled_nonneg"),
+        db.CheckConstraint("open_amount >= 0", name="ck_financial_bordero_items_open_nonneg"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    bordero_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_borderos.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    financial_schedule_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_schedules.id"),
+        nullable=False,
+        index=True,
+    )
+    item_code = db.Column(db.String(50), nullable=False)
+    selected_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    settled_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    open_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    snapshot_json = db.Column(JSONB, nullable=False, default=dict)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    schedule = db.relationship("FinancialSchedule", foreign_keys=[financial_schedule_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "bordero_id": self.bordero_id,
+            "financial_schedule_id": self.financial_schedule_id,
+            "item_code": self.item_code,
+            "selected_amount": float(self.selected_amount or 0),
+            "settled_amount": float(self.settled_amount or 0),
+            "open_amount": float(self.open_amount or 0),
+            "display_order": self.display_order,
+            "snapshot_json": self.snapshot_json or {},
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialBorderoSettlement(db.Model):
+    __tablename__ = "financial_bordero_settlements"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "company_id",
+            "settlement_code",
+            name="uq_financial_bordero_settlements_company_code",
+        ),
+        db.CheckConstraint(
+            f"settlement_status IN {BORDERO_SETTLEMENT_STATUS_VALUES}",
+            name="ck_financial_bordero_settlements_status",
+        ),
+        db.CheckConstraint("gross_amount >= 0", name="ck_financial_bordero_settlements_gross_nonneg"),
+        db.CheckConstraint("allocated_amount >= 0", name="ck_financial_bordero_settlements_allocated_nonneg"),
+        db.CheckConstraint("variance_amount >= 0", name="ck_financial_bordero_settlements_variance_nonneg"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    bordero_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_borderos.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    settlement_code = db.Column(db.String(50), nullable=False)
+    settlement_status = db.Column(db.String(30), nullable=False, default="posted", index=True)
+    settlement_date = db.Column(db.Date, nullable=False, index=True)
+    bank_account_id = db.Column(db.Integer, index=True)
+    gross_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    allocated_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    variance_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    created_by_employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"))
+    created_by_agent = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "bordero_id": self.bordero_id,
+            "settlement_code": self.settlement_code,
+            "settlement_status": self.settlement_status,
+            "settlement_date": self.settlement_date.isoformat() if self.settlement_date else None,
+            "bank_account_id": self.bank_account_id,
+            "gross_amount": float(self.gross_amount or 0),
+            "allocated_amount": float(self.allocated_amount or 0),
+            "variance_amount": float(self.variance_amount or 0),
+            "notes": self.notes,
+            "metadata_json": self.metadata_json or {},
+            "created_by_user_id": self.created_by_user_id,
+            "created_by_employee_id": self.created_by_employee_id,
+            "created_by_agent": self.created_by_agent,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -889,6 +1086,9 @@ class FinancialEntry(db.Model):
     counterparty_id = db.Column(db.Integer, index=True)
     chart_account_id = db.Column(db.Integer, index=True)
     cost_center_id = db.Column(db.Integer, index=True)
+    budget_line_id = db.Column(db.Integer, db.ForeignKey("financial_budget_lines.id"), index=True)
+    budget_contract_id = db.Column(db.Integer, db.ForeignKey("financial_budget_contracts.id"), index=True)
+    budget_document_id = db.Column(db.Integer, db.ForeignKey("financial_budget_documents.id"), index=True)
 
     activity_id = db.Column(db.Integer, db.ForeignKey("process_routines.id"), index=True)
     process_instance_id = db.Column(db.Integer, db.ForeignKey("process_instances.id"), index=True)
@@ -948,6 +1148,8 @@ class FinancialEntry(db.Model):
             "counterparty_id": self.counterparty_id,
             "chart_account_id": self.chart_account_id,
             "cost_center_id": self.cost_center_id,
+            "budget_line_id": self.budget_line_id,
+            "budget_contract_id": self.budget_contract_id,
             "budget_document_id": self.budget_document_id,
             "activity_id": self.activity_id,
             "process_instance_id": self.process_instance_id,

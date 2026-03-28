@@ -64,6 +64,7 @@
     }
     .cw-shell { display:grid; grid-template-columns:320px minmax(0,1fr) 250px; gap:1rem; align-items:start; }
     .cw-shell.single-page { grid-template-columns:320px minmax(0,1fr); }
+    .cw-shell.chart-accounts-layout.single-page { grid-template-columns:minmax(460px, 560px) minmax(0,1fr); }
     .cw-shell.single-page .cw-tabs-rail { display:none; }
     .cw-list-rail,
     .cw-tabs-rail {
@@ -122,13 +123,13 @@
     .cw-list {
         display:flex;
         flex-direction:column;
-        gap:.75rem;
+        gap:.4rem;
         max-height:calc(100vh - 320px);
         overflow:auto;
         padding-right:.2rem;
     }
     .cw-list.compact-tree {
-        gap:.35rem;
+        gap:.2rem;
     }
     .cw-list-item {
         border:1px solid transparent;
@@ -185,39 +186,52 @@
         font-size:.72rem;
         border-radius:8px;
     }
+    .btn-accent {
+        background:#dcfce7;
+        color:#166534;
+        border:1px solid #bbf7d0;
+    }
     .cw-tree {
         display:flex;
         flex-direction:column;
-        gap:.25rem;
+        gap:.15rem;
     }
     .cw-tree-node {
         display:flex;
         flex-direction:column;
-        gap:.2rem;
+        gap:.15rem;
     }
     .cw-tree-children {
         display:flex;
         flex-direction:column;
-        gap:.25rem;
-        margin-left:.5rem;
-        padding-left:.6rem;
+        gap:.2rem;
+        margin-left:1rem;
+        padding-left:1rem;
         border-left:1px dashed var(--border);
     }
     .cw-tree-children.collapsed {
         display:none;
     }
     .cw-tree-toggle {
-        width:1.2rem;
-        height:1.2rem;
-        border:none;
-        border-radius:6px;
-        background:transparent;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        width:1.55rem;
+        height:1.55rem;
+        border:1px solid var(--border);
+        border-radius:8px;
+        background:var(--surface-secondary);
         color:var(--text-secondary);
         font-weight:700;
         cursor:pointer;
         flex-shrink:0;
-        font-size:.8rem;
-        margin-top:.05rem;
+        font-size:.9rem;
+        padding:0;
+        margin-top:.08rem;
+    }
+    .cw-tree-toggle:hover {
+        color:var(--text-primary);
+        border-color:rgba(37, 99, 235, 0.22);
     }
     .cw-tree-toggle.placeholder {
         visibility:hidden;
@@ -225,30 +239,72 @@
     .cw-tree-title-wrap {
         display:flex;
         align-items:flex-start;
-        gap:.35rem;
+        gap:.55rem;
         min-width:0;
+        flex:1;
     }
     .cw-tree-title-content {
         min-width:0;
         display:flex;
-        flex-direction:column;
-        gap:.08rem;
-    }
-    .cw-tree-title-content strong,
-    .cw-tree-title-content span {
-        overflow:hidden;
-        text-overflow:ellipsis;
-        white-space:nowrap;
+        align-items:baseline;
+        gap:.35rem;
+        flex-wrap:wrap;
     }
     .cw-tree-title-content strong {
-        font-size:.82rem;
+        font-size:.96rem;
         line-height:1.2;
-        font-weight:700;
+        font-weight:800;
+        color:var(--text-primary);
     }
     .cw-tree-title-content span {
-        color:var(--text-secondary);
-        font-size:.72rem;
-        line-height:1.15;
+        color:var(--text-primary);
+        font-size:.92rem;
+        line-height:1.25;
+    }
+    .cw-tree-title-content .cw-tree-separator {
+        color:var(--text-tertiary);
+        font-weight:600;
+    }
+    .cw-tree-node .cw-list-item {
+        border:1px solid #e6ebf3;
+        background:#fff;
+        border-radius:14px;
+        padding:.7rem .8rem;
+    }
+    .cw-tree-node .cw-list-item:hover,
+    .cw-tree-node .cw-list-item.active {
+        border-color:rgba(37, 99, 235, 0.18);
+        background:#f8fbff;
+    }
+    .cw-tree-node.is-parent > .cw-list-item {
+        background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+    .cw-tree-node .cw-list-item-line {
+        align-items:flex-start;
+        gap:.6rem;
+    }
+    .cw-tree-node .cw-list-item-status {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:.2rem .5rem;
+        border-radius:999px;
+        background:#eef2ff;
+        color:#4338ca;
+        font-size:.7rem;
+        line-height:1;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+    }
+    .cw-tree-node .cw-list-item-actions {
+        margin-top:.5rem;
+        margin-left:2.15rem;
+        gap:.4rem;
+    }
+    .cw-tree-node .cw-list-item-actions .btn {
+        padding:.3rem .55rem;
+        font-size:.7rem;
+        border-radius:999px;
     }
     .cw-panel { overflow:hidden; }
     .cw-form { padding:1.1rem; display:grid; gap:1rem; }
@@ -338,7 +394,6 @@
     .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
     .btn-danger { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
     .empty-state { text-align:center; color:var(--text-tertiary); padding:1.5rem 1rem; }
-
     @media (max-width: 1180px) {
         .cw-shell { grid-template-columns:280px minmax(0,1fr) 230px; }
     }
@@ -607,7 +662,6 @@
                 { name: 'parent_id', label: 'Conta pai', section: 'main', type: 'dynamic-select', optionSource: 'hierarchy_parent', placeholderOption: 'Sem conta pai' },
                 { name: 'code_suffix', label: 'Código da conta', section: 'main', inputmode: 'numeric', maxlength: 10, oninput: 'handleCodeSuffixInput(this)', hintId: 'cw-code-preview', hint: 'Código completo: -' },
                 { name: 'name', label: 'Nome', section: 'main', required: true },
-                { name: 'account_kind', label: 'Tipo', section: 'main', type: 'select', options: [['asset', 'Ativo'], ['liability', 'Passivo'], ['equity', 'Patrimônio Líquido'], ['revenue', 'Receita'], ['result', 'Custo'], ['expense', 'Despesa']] },
                 { name: 'account_level_type', label: 'Estrutura', section: 'main', type: 'select', options: [['analytic', 'Analítica'], ['synthetic', 'Sintética']] },
                 { name: 'reduced_code', label: 'Código reduzido', section: 'main', maxlength: 3, hint: 'Até 3 caracteres alfanuméricos' },
                 { name: 'external_code', label: 'Plano de contas externo', section: 'main', maxlength: 120, hint: 'Campo livre para código do sistema externo' },
@@ -628,6 +682,7 @@
                 { name: 'reduced_code', label: 'Código reduzido', section: 'main', maxlength: 3, hint: 'Até 3 caracteres alfanuméricos' },
                 { name: 'external_code', label: 'Centro de resultados externo', section: 'main', maxlength: 120, hint: 'Campo livre para código do sistema externo' },
                 { name: 'manager_employee_id', label: 'Gestor', section: 'main', type: 'number' },
+                { name: 'is_default_suggestion', label: 'Registro padrão', section: 'main', type: 'select', options: [['false', 'Não'], ['true', 'Sim']], hint: 'Quando marcado, o Financeiro sugere este centro automaticamente.' },
                 { name: 'description', label: 'Outros dados / observações', section: 'main', type: 'textarea', colSpan: 2 },
             ],
         },
@@ -719,6 +774,7 @@
     let selectedListId = null;
     let allItems = [];
     const collapsedTreeNodes = new Set();
+    const treeNodesStorageKey = `financialCatalogCollapsedNodes:${companyId}:${activeCatalog}`;
     const deletableCatalogs = new Set(['chart_accounts', 'cost_centers', 'account_categories', 'payment_terms', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods']);
     const auxiliaryData = { chart_accounts: [], account_categories: [], bank_accounts: [] };
 
@@ -747,6 +803,41 @@
         document.querySelectorAll('.cw-form-section').forEach(section => {
             section.classList.toggle('active', section.dataset.section === sectionKey);
         });
+    }
+
+    function persistCollapsedTreeNodes() {
+        window.localStorage.setItem(treeNodesStorageKey, JSON.stringify(Array.from(collapsedTreeNodes)));
+    }
+
+    function initializeCollapsedTreeNodes(items) {
+        if (!['chart_accounts', 'cost_centers'].includes(activeCatalog)) return;
+        const treeMap = buildTreeMap(items);
+        const ids = new Set(items.map(item => item.id));
+        const savedRaw = window.localStorage.getItem(treeNodesStorageKey);
+        collapsedTreeNodes.clear();
+
+        if (savedRaw) {
+            try {
+                const saved = JSON.parse(savedRaw);
+                if (Array.isArray(saved)) {
+                    saved
+                        .map(value => Number(value))
+                        .filter(value => Number.isFinite(value) && ids.has(value))
+                        .forEach(value => collapsedTreeNodes.add(value));
+                    return;
+                }
+            } catch (error) {
+                console.warn('Falha ao restaurar estado da árvore financeira.', error);
+            }
+        }
+
+        items.forEach(item => {
+            const children = treeMap.get(item.id) || [];
+            if (children.length) {
+                collapsedTreeNodes.add(item.id);
+            }
+        });
+        persistCollapsedTreeNodes();
     }
 
     function fieldHtml(field) {
@@ -1033,6 +1124,38 @@
         updateGeneratedCode();
     }
 
+    function getChildrenOfItem(parentId) {
+        return allItems.filter(item => String(item.parent_id || '') === String(parentId || ''));
+    }
+
+    function getHierarchicalCodeSuffix(item) {
+        const metadataSuffix = item?.metadata_json?.code_suffix;
+        if (metadataSuffix) {
+            return normalizeHierarchicalSuffixInput(metadataSuffix);
+        }
+        const code = String(item?.code || '').trim();
+        if (!code) return '';
+        return normalizeHierarchicalSuffixInput(code.split('.').pop() || '');
+    }
+
+    function getNextChildCodeSuffix(parentItem) {
+        const children = getChildrenOfItem(parentItem?.id);
+        let maxNumber = 0;
+        let maxWidth = 0;
+        children.forEach(child => {
+            const suffix = getHierarchicalCodeSuffix(child);
+            if (!suffix) return;
+            maxNumber = Math.max(maxNumber, Number(suffix) || 0);
+            maxWidth = Math.max(maxWidth, suffix.length);
+        });
+        const inheritedWidth = Math.max(
+            maxWidth,
+            normalizeHierarchicalSuffixInput(String(parentItem?.code || '').split('.').pop() || '').length,
+            2,
+        );
+        return String(maxNumber + 1).padStart(inheritedWidth, '0');
+    }
+
     function applyDefaultValues() {
         const form = document.getElementById('cw-form');
         if (activeCatalog === 'chart_accounts') {
@@ -1072,6 +1195,7 @@
 
     function normalizeValue(field, value) {
         if (value === '') return null;
+        if (field === 'is_default_suggestion') return String(value) === 'true';
         if (['parent_id', 'manager_employee_id', 'installment_count', 'interval_days', 'settlement_days', 'chart_account_id', 'category_id', 'due_in_days'].includes(field)) return Number(value);
         if (field === 'value') return Number(value);
         if (['interest_rate', 'penalty_rate', 'penalty_limit_rate', 'manual_value'].includes(field)) return Number(value);
@@ -1092,6 +1216,42 @@
     function startNewItem() {
         resetForm();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function startChildItem(parentId) {
+        if (activeCatalog !== 'chart_accounts') return;
+        const parentItem = allItems.find(item => item.id === parentId);
+        if (!parentItem) return;
+        if (parentItem.accepts_posting === true) {
+            alert('Só é possível adicionar conta filha em contas sintéticas.');
+            return;
+        }
+
+        resetForm();
+        selectedListId = parentItem.id;
+
+        const form = document.getElementById('cw-form');
+        if (!form) return;
+
+        const parentField = form.querySelector('[name="parent_id"]');
+        const suffixField = form.querySelector('[name="code_suffix"]');
+        const levelField = form.querySelector('[name="account_level_type"]');
+        const nameField = form.querySelector('[name="name"]');
+
+        if (parentField) {
+            parentField.value = String(parentItem.id);
+        }
+        if (suffixField) {
+            suffixField.value = getNextChildCodeSuffix(parentItem);
+        }
+        if (levelField) {
+            levelField.value = 'analytic';
+        }
+
+        updateGeneratedCode();
+        renderList(allItems);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        nameField?.focus();
     }
 
     function fillForm(item) {
@@ -1212,12 +1372,13 @@
                 <div class="cw-list-item-line">
                     <div class="cw-list-item-title">
                         <strong>${item.code || '-'}</strong>
-                        <span>${item[def.titleField] || '-'}</span>
+                        <span>${item[def.titleField] || '-'}${item.is_default_suggestion ? ' · padrão' : ''}</span>
                     </div>
                     <span class="cw-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
                 </div>
                 <div class="cw-list-item-actions" onclick="event.stopPropagation()">
                     <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
+                    ${activeCatalog === 'chart_accounts' && item.accepts_posting !== true ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                     <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                     ${deletableCatalogs.has(activeCatalog) ? `<button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>` : ''}
                 </div>
@@ -1250,18 +1411,20 @@
                 const children = treeMap.get(item.id) || [];
                 const hasChildren = children.length > 0;
                 const collapsed = collapsedTreeNodes.has(item.id);
+                const toggleLabel = collapsed ? '▸' : '▾';
                 return `
-                    <div class="cw-tree-node">
+                    <div class="cw-tree-node ${hasChildren ? 'is-parent' : 'is-leaf'}">
                         <article class="cw-list-item ${selectedListId === item.id ? 'active' : ''}" onclick="selectItemById(${item.id})">
                             <div class="cw-list-item-line">
                                 <div class="cw-tree-title-wrap">
                                     <button
                                         type="button"
                                         class="cw-tree-toggle ${hasChildren ? '' : 'placeholder'}"
-                                        ${hasChildren ? `onclick="event.stopPropagation(); toggleTreeNode(${item.id})"` : 'tabindex="-1"'}
-                                    >${hasChildren ? (collapsed ? '+' : '–') : '·'}</button>
+                                        ${hasChildren ? `onclick="event.stopPropagation(); toggleTreeNode(${item.id})" aria-expanded="${collapsed ? 'false' : 'true'}" title="${collapsed ? 'Expandir' : 'Recolher'} nível ${item.name || item.code || ''}"` : 'tabindex="-1"'}
+                                    >${hasChildren ? toggleLabel : ''}</button>
                                     <div class="cw-tree-title-content">
                                         <strong>${item.code || '-'}</strong>
+                                        <span class="cw-tree-separator">-</span>
                                         <span>${item.name || '-'}</span>
                                     </div>
                                 </div>
@@ -1269,6 +1432,7 @@
                             </div>
                             <div class="cw-list-item-actions" onclick="event.stopPropagation()">
                                 <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
+                                ${activeCatalog === 'chart_accounts' && item.accepts_posting !== true ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                                 <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                                 <button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>
                             </div>
@@ -1289,6 +1453,7 @@
         } else {
             collapsedTreeNodes.add(itemId);
         }
+        persistCollapsedTreeNodes();
         renderList(allItems);
     }
 
@@ -1316,6 +1481,7 @@
         const response = await fetch(`/api/financial/catalogs/${activeCatalog}?company_id=${companyId}`);
         const result = await response.json();
         allItems = Array.isArray(result) ? result : [];
+        initializeCollapsedTreeNodes(allItems);
         renderList(allItems);
         hydrateDynamicSelects();
         updateGeneratedCode();
@@ -1492,10 +1658,15 @@
     window.handleAssetConfigModeChange = handleAssetConfigModeChange;
     window.deleteItem = deleteItem;
     window.toggleTreeNode = toggleTreeNode;
+    window.startChildItem = startChildItem;
 
     document.addEventListener('DOMContentLoaded', () => {
+        const shell = document.querySelector('.cw-shell');
         if (getCatalogDef().singlePage) {
-            document.querySelector('.cw-shell')?.classList.add('single-page');
+            shell?.classList.add('single-page');
+        }
+        if (activeCatalog === 'chart_accounts') {
+            shell?.classList.add('chart-accounts-layout');
         }
         renderSectionNav();
         renderForm();

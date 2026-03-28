@@ -11,7 +11,9 @@ from models import FinancialEntry, FinancialEntryAllocation, FinancialSettlement
 from models.financial import (
     ALLOCATION_TYPE_VALUES,
     AUTOMATION_TRIGGER_STATUS_VALUES,
-    CHART_ACCOUNT_KIND_VALUES,
+    BORDERO_SETTLEMENT_STATUS_VALUES,
+    BORDERO_STATUS_VALUES,
+    BORDERO_TYPE_VALUES,
     DOMAIN_ENABLEMENT_TYPE_VALUES,
     ENTRY_ORIGIN_VALUES,
     ENTRY_STATUS_VALUES,
@@ -313,7 +315,6 @@ class FinancialChartAccountInput(BaseModel):
     reduced_code: Optional[str] = Field(None, max_length=3)
     external_code: Optional[str] = Field(None, max_length=120)
     name: str = Field(..., min_length=2, max_length=120)
-    account_kind: str = Field(..., pattern=_choices_pattern(CHART_ACCOUNT_KIND_VALUES))
     movement_nature: Optional[str] = Field(None, pattern=_choices_pattern(MOVEMENT_NATURE_VALUES))
     accepts_posting: bool = True
     account_level_type: Optional[str] = Field(None, pattern="^(analytic|synthetic)$")
@@ -358,7 +359,6 @@ class FinancialChartAccountUpdateInput(BaseModel):
     reduced_code: Optional[str] = Field(None, max_length=3)
     external_code: Optional[str] = Field(None, max_length=120)
     name: Optional[str] = Field(None, min_length=2, max_length=120)
-    account_kind: Optional[str] = Field(None, pattern=_choices_pattern(CHART_ACCOUNT_KIND_VALUES))
     movement_nature: Optional[str] = Field(None, pattern=_choices_pattern(MOVEMENT_NATURE_VALUES))
     accepts_posting: Optional[bool] = None
     account_level_type: Optional[str] = Field(None, pattern="^(analytic|synthetic)$")
@@ -407,6 +407,7 @@ class FinancialCostCenterInput(BaseModel):
     name: str = Field(..., min_length=2, max_length=120)
     description: Optional[str] = None
     is_active: bool = True
+    is_default_suggestion: bool = False
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("code", mode="before")
@@ -450,6 +451,7 @@ class FinancialCostCenterUpdateInput(BaseModel):
     name: Optional[str] = Field(None, min_length=2, max_length=120)
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    is_default_suggestion: Optional[bool] = None
     metadata_json: Optional[Dict[str, Any]] = None
 
     @field_validator("code", mode="before")
@@ -651,6 +653,7 @@ class FinancialDomainEnablementInput(BaseModel):
     domain_type: str = Field(..., pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
     source_id: int = Field(..., ge=1)
     is_enabled: bool = True
+    is_default_suggestion: bool = False
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
@@ -664,6 +667,7 @@ class FinancialDomainEnablementUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     is_enabled: Optional[bool] = None
+    is_default_suggestion: Optional[bool] = None
     notes: Optional[str] = None
     metadata_json: Optional[Dict[str, Any]] = None
 
@@ -781,6 +785,8 @@ class FinancialScheduleCreateInput(BaseModel):
     counterparty_id: Optional[int] = None
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_line_id: Optional[int] = None
+    budget_contract_id: Optional[int] = None
     budget_document_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
@@ -833,6 +839,8 @@ class FinancialScheduleUpdateInput(BaseModel):
     counterparty_id: Optional[int] = None
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_line_id: Optional[int] = None
+    budget_contract_id: Optional[int] = None
     budget_document_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
@@ -1016,6 +1024,9 @@ class FinancialEntryCreateInput(BaseModel):
     counterparty_id: Optional[int] = None
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_line_id: Optional[int] = None
+    budget_contract_id: Optional[int] = None
+    budget_document_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
@@ -1059,12 +1070,18 @@ class FinancialEntryUpdateInput(BaseModel):
     counterparty_id: Optional[int] = None
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_line_id: Optional[int] = None
+    budget_contract_id: Optional[int] = None
+    budget_document_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
     approved_by_user_id: Optional[int] = None
     notes: Optional[str] = None
     metadata_json: Optional[Dict[str, Any]] = None
+    reconciled: Optional[bool] = None
+    unlock_reconciliation: Optional[bool] = None
+    reconciliation_unlock_reason: Optional[str] = Field(None, max_length=255)
 
 
 class FinancialAllocationInput(BaseModel):
@@ -1135,6 +1152,45 @@ class FinancialSettlementInput(BaseModel):
         return self
 
 
+class FinancialBorderoItemInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    financial_schedule_id: int
+    selected_amount: Optional[Decimal] = Field(None, ge=0)
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FinancialBorderoCreateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    bordero_type: str = Field(..., pattern=_choices_pattern(BORDERO_TYPE_VALUES))
+    description: str = Field(..., min_length=3, max_length=255)
+    bank_account_id: Optional[int] = None
+    items: List[FinancialBorderoItemInput] = Field(default_factory=list, min_length=1)
+    created_by_user_id: Optional[int] = None
+    created_by_employee_id: Optional[int] = None
+    created_by_agent: Optional[str] = Field(None, max_length=50)
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FinancialBorderoSettlementInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    settlement_date: date
+    gross_amount: Decimal = Field(..., gt=0)
+    settlement_status: str = Field("posted", pattern=_choices_pattern(BORDERO_SETTLEMENT_STATUS_VALUES))
+    bank_account_id: Optional[int] = None
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+    created_by_user_id: Optional[int] = None
+    created_by_employee_id: Optional[int] = None
+    created_by_agent: Optional[str] = Field(None, max_length=50)
+
+
 class FinancialAllocationBatchInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1148,6 +1204,10 @@ class FinancialDirectEntryAllocationInput(BaseModel):
 
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_version_id: Optional[int] = None
+    budget_line_id: Optional[int] = None
+    budget_contract_id: Optional[int] = None
+    budget_document_id: Optional[int] = None
     domain_type: Optional[str] = Field(None, pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
     domain_source_id: Optional[int] = None
     domain_label: Optional[str] = Field(None, max_length=255)
@@ -1184,6 +1244,9 @@ class FinancialDirectEntryCreateInput(BaseModel):
     discount_rule_id: Optional[int] = None
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    budget_line_id: Optional[int] = None
+    budget_contract_id: Optional[int] = None
+    budget_document_id: Optional[int] = None
     allocations: List[FinancialDirectEntryAllocationInput] = Field(default_factory=list)
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
     created_by_user_id: Optional[int] = None
