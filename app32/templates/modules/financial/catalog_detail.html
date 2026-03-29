@@ -186,6 +186,20 @@
         font-size:.72rem;
         border-radius:8px;
     }
+    .cw-list-item-actions .btn.btn-badge {
+        cursor:default;
+        pointer-events:none;
+    }
+    .cw-list-item-actions .btn.btn-badge.btn-receivable {
+        background:#ecfeff;
+        border-color:#a5f3fc;
+        color:#0f766e;
+    }
+    .cw-list-item-actions .btn.btn-badge.btn-payable {
+        background:#eef2ff;
+        border-color:#c7d2fe;
+        color:#4338ca;
+    }
     .btn-accent {
         background:#dcfce7;
         color:#166534;
@@ -264,16 +278,17 @@
     .cw-tree-badge {
         display:inline-flex;
         align-items:center;
-        gap:.25rem;
-        padding:.14rem .45rem;
-        border-radius:999px;
-        font-size:.68rem;
-        font-weight:800;
-        text-transform:uppercase;
-        letter-spacing:.02em;
-        background:#ecfdf5;
-        color:#047857;
-        border:1px solid #a7f3d0;
+        justify-content:center;
+        padding:.16rem .45rem;
+        border-radius:8px;
+        font-size:.65rem;
+        line-height:1;
+        font-weight:700;
+        border:1px solid #bbf7d0;
+        background:#dcfce7;
+        color:#166534;
+        text-transform:none;
+        letter-spacing:0;
     }
     .cw-tree-title-content .cw-tree-separator {
         color:var(--text-tertiary);
@@ -1404,6 +1419,17 @@
             renderHierarchicalTree(items, list);
             return;
         }
+        const renderCorrectionIndexDefaultBadges = (item) => {
+            if (activeCatalog !== 'correction_indexes') return '';
+            const badges = [];
+            if (item?.metadata_json?.is_default_receivable) {
+                badges.push('<span class="btn btn-badge btn-receivable">Padr. Rec.</span>');
+            }
+            if (item?.metadata_json?.is_default_payable) {
+                badges.push('<span class="btn btn-badge btn-payable">Padr. Pag.</span>');
+            }
+            return badges.join('');
+        };
         list.innerHTML = items.map(item => `
             <article class="cw-list-item ${selectedListId === item.id ? 'active' : ''}" onclick="selectItemById(${item.id})">
                 <div class="cw-list-item-line">
@@ -1414,6 +1440,7 @@
                     <span class="cw-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
                 </div>
                 <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                    ${renderCorrectionIndexDefaultBadges(item)}
                     <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
                     ${((['chart_accounts', 'cost_centers'].includes(activeCatalog)) && item.accepts_posting !== true) ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                     <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
@@ -1463,12 +1490,12 @@
                                         <strong>${item.code || '-'}</strong>
                                         <span class="cw-tree-separator">-</span>
                                         <span>${item.name || '-'}</span>
-                                        ${(activeCatalog === 'cost_centers' && item.is_default_suggestion) ? '<span class="cw-tree-badge">Padrão</span>' : ''}
                                     </div>
                                 </div>
                                 <span class="cw-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
                             </div>
                             <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                                ${(activeCatalog === 'cost_centers' && item.is_default_suggestion) ? '<span class="cw-tree-badge">Padrão</span>' : ''}
                                 <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
                                 ${((['chart_accounts', 'cost_centers'].includes(activeCatalog)) && item.accepts_posting !== true) ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                                 <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
