@@ -406,6 +406,8 @@ class FinancialCostCenterInput(BaseModel):
     external_code: Optional[str] = Field(None, max_length=120)
     name: str = Field(..., min_length=2, max_length=120)
     description: Optional[str] = None
+    accepts_posting: bool = True
+    account_level_type: Optional[str] = Field(None, pattern="^(analytic|synthetic)$")
     is_active: bool = True
     is_default_suggestion: bool = False
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
@@ -450,6 +452,8 @@ class FinancialCostCenterUpdateInput(BaseModel):
     external_code: Optional[str] = Field(None, max_length=120)
     name: Optional[str] = Field(None, min_length=2, max_length=120)
     description: Optional[str] = None
+    accepts_posting: Optional[bool] = None
+    account_level_type: Optional[str] = Field(None, pattern="^(analytic|synthetic)$")
     is_active: Optional[bool] = None
     is_default_suggestion: Optional[bool] = None
     metadata_json: Optional[Dict[str, Any]] = None

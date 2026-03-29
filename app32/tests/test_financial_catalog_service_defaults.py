@@ -73,3 +73,43 @@ def test_create_cost_center_preserves_default_suggestion(monkeypatch):
     assert result is not None
     assert result["is_default_suggestion"] is True
     assert captured["clear_kwargs"]["exclude_item_id"] == 77
+
+
+def test_prepare_cost_center_payload_maps_account_level_type():
+    payload = FinancialCatalogService._prepare_catalog_payload(
+        catalog_type="cost_centers",
+        company_id=9,
+        data={
+            "company_id": 9,
+            "code": "1.01",
+            "name": "Administrativo",
+            "account_level_type": "synthetic",
+            "metadata_json": {"external_code": "ERP-01"},
+        },
+    )
+
+    assert payload["accepts_posting"] is False
+    assert payload["metadata_json"]["account_level_type"] == "synthetic"
+    assert payload["metadata_json"]["external_code"] == "ERP-01"
+
+
+def test_validate_related_scope_rejects_analytic_cost_center_parent(monkeypatch):
+    class _AnalyticParent:
+        id = 55
+        accepts_posting = True
+
+    class _FakeCostCenter:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(_AnalyticParent())
+
+    monkeypatch.setattr(catalog_module, "FinancialCostCenter", _FakeCostCenter)
+
+    error = FinancialCatalogService._validate_related_scope(
+        catalog_type="cost_centers",
+        company_id=9,
+        data={"parent_id": 55},
+    )
+
+    assert error == "Centro analítico não pode ser usado como centro pai."

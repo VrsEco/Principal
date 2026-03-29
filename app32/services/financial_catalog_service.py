@@ -285,7 +285,7 @@ class FinancialCatalogService:
             if has_external_code:
                 metadata["external_code"] = external_code
 
-        if catalog_type == "chart_accounts":
+        if catalog_type in {"chart_accounts", "cost_centers"}:
             has_level_type = "account_level_type" in prepared
             account_level_type = prepared.pop("account_level_type", None)
             if account_level_type:
@@ -372,6 +372,8 @@ class FinancialCatalogService:
             ).first()
             if not parent:
                 return "Centro pai fora do escopo da empresa."
+            if parent.accepts_posting:
+                return "Centro analítico não pode ser usado como centro pai."
             if FinancialCatalogService._would_create_cycle(
                 model=FinancialCostCenter,
                 company_id=company_id,

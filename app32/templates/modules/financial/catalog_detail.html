@@ -683,6 +683,7 @@
                 { name: 'parent_id', label: 'Centro pai', section: 'main', type: 'dynamic-select', optionSource: 'hierarchy_parent', placeholderOption: 'Sem centro pai' },
                 { name: 'code_suffix', label: 'Código do centro', section: 'main', inputmode: 'numeric', maxlength: 10, oninput: 'handleCodeSuffixInput(this)', hintId: 'cw-code-preview', hint: 'Código completo: -' },
                 { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'account_level_type', label: 'Estrutura', section: 'main', type: 'select', options: [['analytic', 'Analítico'], ['synthetic', 'Sintético']] },
                 { name: 'reduced_code', label: 'Código reduzido', section: 'main', maxlength: 3, hint: 'Até 3 caracteres alfanuméricos' },
                 { name: 'external_code', label: 'Centro de resultados externo', section: 'main', maxlength: 120, hint: 'Campo livre para código do sistema externo' },
                 { name: 'manager_employee_id', label: 'Gestor', section: 'main', type: 'number' },
@@ -1023,7 +1024,7 @@
         return allItems
             .filter(item => {
                 if (blockedIds.has(item.id)) return false;
-                if (activeCatalog === 'chart_accounts') {
+                if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
                     if (item.accepts_posting === true) return false;
                 }
                 return true;
@@ -1155,6 +1156,10 @@
             if (kindField && !kindField.value) kindField.value = 'expense';
             if (levelField && !levelField.value) levelField.value = 'analytic';
         }
+        if (activeCatalog === 'cost_centers') {
+            const levelField = form.querySelector('[name="account_level_type"]');
+            if (levelField && !levelField.value) levelField.value = 'analytic';
+        }
         if (activeCatalog === 'asset_accounts') {
             form.querySelector('[name="patrimonial_type"][value="asset"]')?.setAttribute('checked', 'checked');
             form.querySelector('[name="account_class"][value="current"]')?.setAttribute('checked', 'checked');
@@ -1215,8 +1220,10 @@
         if (!['chart_accounts', 'cost_centers'].includes(activeCatalog)) return;
         const parentItem = allItems.find(item => item.id === parentId);
         if (!parentItem) return;
-        if (activeCatalog === 'chart_accounts' && parentItem.accepts_posting === true) {
-            alert('Só é possível adicionar conta filha em contas sintéticas.');
+        if (['chart_accounts', 'cost_centers'].includes(activeCatalog) && parentItem.accepts_posting === true) {
+            alert(activeCatalog === 'chart_accounts'
+                ? 'Só é possível adicionar conta filha em contas sintéticas.'
+                : 'Só é possível adicionar centro filho em centros sintéticos.');
             return;
         }
 
@@ -1281,7 +1288,7 @@
             if (notesField) {
                 notesField.value = item?.metadata_json?.notes || '';
             }
-            if (activeCatalog === 'chart_accounts') {
+            if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
                 const levelField = form.querySelector('[name="account_level_type"]');
                 if (levelField) {
                     levelField.value = item?.metadata_json?.account_level_type || (item.accepts_posting ? 'analytic' : 'synthetic');
@@ -1369,7 +1376,7 @@
                 </div>
                 <div class="cw-list-item-actions" onclick="event.stopPropagation()">
                     <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
-                    ${((activeCatalog === 'chart_accounts' && item.accepts_posting !== true) || activeCatalog === 'cost_centers') ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
+                    ${((['chart_accounts', 'cost_centers'].includes(activeCatalog)) && item.accepts_posting !== true) ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                     <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                     ${deletableCatalogs.has(activeCatalog) ? `<button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>` : ''}
                 </div>
@@ -1423,7 +1430,7 @@
                             </div>
                             <div class="cw-list-item-actions" onclick="event.stopPropagation()">
                                 <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
-                                ${((activeCatalog === 'chart_accounts' && item.accepts_posting !== true) || activeCatalog === 'cost_centers') ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
+                                ${((['chart_accounts', 'cost_centers'].includes(activeCatalog)) && item.accepts_posting !== true) ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                                 <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                                 <button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>
                             </div>
