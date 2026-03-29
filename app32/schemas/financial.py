@@ -590,6 +590,8 @@ class FinancialDiscountRuleInput(_SimpleFinancialCatalogBase):
     name: str = Field(..., min_length=2, max_length=120)
     external_code: Optional[str] = Field(None, max_length=120)
     chart_account_id: Optional[int] = None
+    is_default_receivable: bool = False
+    is_default_payable: bool = False
     discount_type: Optional[str] = Field(None, pattern="^(percentage|fixed)$")
     value: Optional[Decimal] = Field(None, ge=0)
     description: Optional[str] = None
@@ -602,6 +604,8 @@ class FinancialDiscountRuleUpdateInput(_SimpleFinancialCatalogBase):
     name: Optional[str] = Field(None, min_length=2, max_length=120)
     external_code: Optional[str] = Field(None, max_length=120)
     chart_account_id: Optional[int] = None
+    is_default_receivable: Optional[bool] = None
+    is_default_payable: Optional[bool] = None
     discount_type: Optional[str] = Field(None, pattern="^(percentage|fixed)$")
     value: Optional[Decimal] = Field(None, ge=0)
     description: Optional[str] = None

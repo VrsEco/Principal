@@ -774,6 +774,8 @@
                 { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
                 { name: 'name', label: 'Nome', section: 'main', required: true },
                 { name: 'chart_account_id', label: 'Plano de contas', section: 'main', type: 'dynamic-select', optionSource: 'chart_accounts', placeholderOption: 'Selecione uma conta analítica', hint: 'Conta usada no lançamento secundário do desconto' },
+                { name: 'is_default_receivable', label: 'Padrão para recebimentos', section: 'main', type: 'select', options: [['false', 'Não'], ['true', 'Sim']] },
+                { name: 'is_default_payable', label: 'Padrão para pagamentos', section: 'main', type: 'select', options: [['false', 'Não'], ['true', 'Sim']] },
                 { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
             ],
         },
@@ -1413,8 +1415,8 @@
             renderHierarchicalTree(items, list);
             return;
         }
-        const renderCorrectionIndexDefaultBadges = (item) => {
-            if (activeCatalog !== 'correction_indexes') return '';
+        const renderFinancialDefaultBadges = (item) => {
+            if (!['correction_indexes', 'discount_rules'].includes(activeCatalog)) return '';
             const badges = [];
             if (item?.metadata_json?.is_default_receivable) {
                 badges.push('<span class="btn btn-badge btn-receivable">Padr. Rec.</span>');
@@ -1434,7 +1436,7 @@
                     <span class="cw-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
                 </div>
                 <div class="cw-list-item-actions" onclick="event.stopPropagation()">
-                    ${renderCorrectionIndexDefaultBadges(item)}
+                    ${renderFinancialDefaultBadges(item)}
                     <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
                     ${((['chart_accounts', 'cost_centers'].includes(activeCatalog)) && item.accepts_posting !== true) ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                     <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
@@ -1637,6 +1639,8 @@
             }
             if (activeCatalog === 'discount_rules') {
                 payload.metadata_json.chart_account_id = normalizeValue('chart_account_id', formData.get('chart_account_id') || '');
+                payload.metadata_json.is_default_receivable = normalizeValue('is_default_receivable', formData.get('is_default_receivable') || 'false');
+                payload.metadata_json.is_default_payable = normalizeValue('is_default_payable', formData.get('is_default_payable') || 'false');
                 payload.metadata_json.discount_type = formData.get('discount_type') || null;
                 payload.metadata_json.value = normalizeValue('value', formData.get('value') || '');
             }

@@ -292,6 +292,36 @@ class FinancialCatalogService:
                 item.metadata_json = FinancialCatalogService._sanitize_metadata_json(metadata)
 
     @staticmethod
+    def _clear_default_discount_rule_flags(
+        *,
+        company_id: int,
+        exclude_item_id: Optional[int] = None,
+        clear_receivable: bool = False,
+        clear_payable: bool = False,
+    ) -> None:
+        if not clear_receivable and not clear_payable:
+            return
+
+        query = FinancialDiscountRule.query.filter(
+            FinancialDiscountRule.company_id == company_id,
+            FinancialDiscountRule.deleted_at.is_(None),
+        )
+        if exclude_item_id:
+            query = query.filter(FinancialDiscountRule.id != exclude_item_id)
+
+        for item in query.all():
+            metadata = dict(item.metadata_json or {})
+            changed = False
+            if clear_receivable and bool(metadata.get("is_default_receivable")):
+                metadata["is_default_receivable"] = False
+                changed = True
+            if clear_payable and bool(metadata.get("is_default_payable")):
+                metadata["is_default_payable"] = False
+                changed = True
+            if changed:
+                item.metadata_json = FinancialCatalogService._sanitize_metadata_json(metadata)
+
+    @staticmethod
     def _prepare_catalog_payload(
         *,
         catalog_type: str,
@@ -747,6 +777,15 @@ class FinancialCatalogService:
                     clear_receivable=bool(metadata.get("is_default_receivable")),
                     clear_payable=bool(metadata.get("is_default_payable")),
                 )
+            if catalog_type == "discount_rules":
+                db.session.flush()
+                metadata = dict(item.metadata_json or {})
+                FinancialCatalogService._clear_default_discount_rule_flags(
+                    company_id=data["company_id"],
+                    exclude_item_id=item.id,
+                    clear_receivable=bool(metadata.get("is_default_receivable")),
+                    clear_payable=bool(metadata.get("is_default_payable")),
+                )
             db.session.commit()
             return item.to_dict(), None
         except IntegrityError:
@@ -849,6 +888,14 @@ class FinancialCatalogService:
                     clear_receivable=bool(metadata.get("is_default_receivable")),
                     clear_payable=bool(metadata.get("is_default_payable")),
                 )
+            if catalog_type == "discount_rules":
+                metadata = dict(item.metadata_json or {})
+                FinancialCatalogService._clear_default_discount_rule_flags(
+                    company_id=company_id,
+                    exclude_item_id=item.id,
+                    clear_receivable=bool(metadata.get("is_default_receivable")),
+                    clear_payable=bool(metadata.get("is_default_payable")),
+                )
             db.session.commit()
             return item.to_dict(), None
         except IntegrityError:
@@ -893,6 +940,11 @@ class FinancialCatalogService:
             if not item.is_active and catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):
                 item.is_default_suggestion = False
             if not item.is_active and catalog_type == "correction_indexes":
+                metadata = dict(item.metadata_json or {})
+                metadata["is_default_receivable"] = False
+                metadata["is_default_payable"] = False
+                item.metadata_json = FinancialCatalogService._sanitize_metadata_json(metadata)
+            if not item.is_active and catalog_type == "discount_rules":
                 metadata = dict(item.metadata_json or {})
                 metadata["is_default_receivable"] = False
                 metadata["is_default_payable"] = False
