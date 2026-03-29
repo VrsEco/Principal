@@ -261,6 +261,9 @@
     const updatedAmount = round2(amount + correctionAmount - discountAmount);
     const liquidatedAmount = calculateLiquidatedAmount();
     const openBalance = round2(updatedAmount - liquidatedAmount);
+    if ($('field-correction-amount')) $('field-correction-amount').value = correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if ($('field-discount-amount')) $('field-discount-amount').value = discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if ($('field-liquidated-amount')) $('field-liquidated-amount').value = liquidatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if ($('field-updated-amount')) $('field-updated-amount').value = updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if ($('field-open-balance')) $('field-open-balance').value = openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
