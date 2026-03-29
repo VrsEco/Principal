@@ -556,6 +556,8 @@ class FinancialCorrectionIndexInput(_SimpleFinancialCatalogBase):
     code: Optional[str] = Field(None, max_length=30)
     name: str = Field(..., min_length=2, max_length=120)
     chart_account_id: Optional[int] = None
+    is_default_receivable: bool = False
+    is_default_payable: bool = False
     interest_rate: Optional[Decimal] = Field(None, ge=0, le=100)
     interest_period: Optional[str] = Field("daily", pattern="^(daily|monthly)$")
     penalty_rate: Optional[Decimal] = Field(None, ge=0, le=100)
@@ -570,6 +572,8 @@ class FinancialCorrectionIndexUpdateInput(_SimpleFinancialCatalogBase):
     code: Optional[str] = Field(None, min_length=1, max_length=30)
     name: Optional[str] = Field(None, min_length=2, max_length=120)
     chart_account_id: Optional[int] = None
+    is_default_receivable: Optional[bool] = None
+    is_default_payable: Optional[bool] = None
     interest_rate: Optional[Decimal] = Field(None, ge=0, le=100)
     interest_period: Optional[str] = Field(None, pattern="^(daily|monthly)$")
     penalty_rate: Optional[Decimal] = Field(None, ge=0, le=100)

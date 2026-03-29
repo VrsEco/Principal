@@ -254,6 +254,44 @@ class FinancialCatalogService:
             item.is_default_suggestion = False
 
     @staticmethod
+    def _validate_cost_center_default_rule(data: Dict) -> Optional[str]:
+        if not bool(data.get("is_default_suggestion")):
+            return None
+        if data.get("accepts_posting") is False:
+            return "Somente centros de custo analíticos podem ser definidos como padrão."
+        return None
+
+    @staticmethod
+    def _clear_default_correction_index_flags(
+        *,
+        company_id: int,
+        exclude_item_id: Optional[int] = None,
+        clear_receivable: bool = False,
+        clear_payable: bool = False,
+    ) -> None:
+        if not clear_receivable and not clear_payable:
+            return
+
+        query = FinancialCorrectionIndex.query.filter(
+            FinancialCorrectionIndex.company_id == company_id,
+            FinancialCorrectionIndex.deleted_at.is_(None),
+        )
+        if exclude_item_id:
+            query = query.filter(FinancialCorrectionIndex.id != exclude_item_id)
+
+        for item in query.all():
+            metadata = dict(item.metadata_json or {})
+            changed = False
+            if clear_receivable and bool(metadata.get("is_default_receivable")):
+                metadata["is_default_receivable"] = False
+                changed = True
+            if clear_payable and bool(metadata.get("is_default_payable")):
+                metadata["is_default_payable"] = False
+                changed = True
+            if changed:
+                item.metadata_json = FinancialCatalogService._sanitize_metadata_json(metadata)
+
+    @staticmethod
     def _prepare_catalog_payload(
         *,
         catalog_type: str,
@@ -321,6 +359,8 @@ class FinancialCatalogService:
                 "bank_account_ids",
                 "manual_value",
                 "chart_account_id",
+                "is_default_receivable",
+                "is_default_payable",
                 "interest_rate",
                 "interest_period",
                 "penalty_rate",
@@ -662,6 +702,11 @@ class FinancialCatalogService:
         if related_error:
             return None, related_error
 
+        if catalog_type == "cost_centers":
+            default_rule_error = FinancialCatalogService._validate_cost_center_default_rule(data)
+            if default_rule_error:
+                return None, default_rule_error
+
         model = config["model"]
         existing = model.query.filter(
             model.company_id == data["company_id"],
@@ -679,6 +724,15 @@ class FinancialCatalogService:
                 FinancialCatalogService._clear_default_cost_center_suggestions(
                     company_id=data["company_id"],
                     exclude_item_id=item.id,
+                )
+            if catalog_type == "correction_indexes":
+                db.session.flush()
+                metadata = dict(item.metadata_json or {})
+                FinancialCatalogService._clear_default_correction_index_flags(
+                    company_id=data["company_id"],
+                    exclude_item_id=item.id,
+                    clear_receivable=bool(metadata.get("is_default_receivable")),
+                    clear_payable=bool(metadata.get("is_default_payable")),
                 )
             db.session.commit()
             return item.to_dict(), None
@@ -753,6 +807,15 @@ class FinancialCatalogService:
             if duplicate:
                 return None, "Já existe outro cadastro financeiro com este código na empresa."
 
+        if catalog_type == "cost_centers":
+            validation_data = {
+                "is_default_suggestion": data.get("is_default_suggestion", getattr(item, "is_default_suggestion", False)),
+                "accepts_posting": data.get("accepts_posting", getattr(item, "accepts_posting", True)),
+            }
+            default_rule_error = FinancialCatalogService._validate_cost_center_default_rule(validation_data)
+            if default_rule_error:
+                return None, default_rule_error
+
         try:
             for key, value in data.items():
                 setattr(item, key, value)
@@ -760,6 +823,14 @@ class FinancialCatalogService:
                 FinancialCatalogService._clear_default_cost_center_suggestions(
                     company_id=company_id,
                     exclude_item_id=item.id,
+                )
+            if catalog_type == "correction_indexes":
+                metadata = dict(item.metadata_json or {})
+                FinancialCatalogService._clear_default_correction_index_flags(
+                    company_id=company_id,
+                    exclude_item_id=item.id,
+                    clear_receivable=bool(metadata.get("is_default_receivable")),
+                    clear_payable=bool(metadata.get("is_default_payable")),
                 )
             db.session.commit()
             return item.to_dict(), None
@@ -804,6 +875,11 @@ class FinancialCatalogService:
             item.is_active = bool(is_active)
             if not item.is_active and catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):
                 item.is_default_suggestion = False
+            if not item.is_active and catalog_type == "correction_indexes":
+                metadata = dict(item.metadata_json or {})
+                metadata["is_default_receivable"] = False
+                metadata["is_default_payable"] = False
+                item.metadata_json = FinancialCatalogService._sanitize_metadata_json(metadata)
             db.session.commit()
             return item.to_dict(), None
         except Exception as exc:

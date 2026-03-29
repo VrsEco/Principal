@@ -261,6 +261,20 @@
         font-size:.8rem;
         line-height:1.15;
     }
+    .cw-tree-badge {
+        display:inline-flex;
+        align-items:center;
+        gap:.25rem;
+        padding:.14rem .45rem;
+        border-radius:999px;
+        font-size:.68rem;
+        font-weight:800;
+        text-transform:uppercase;
+        letter-spacing:.02em;
+        background:#ecfdf5;
+        color:#047857;
+        border:1px solid #a7f3d0;
+    }
     .cw-tree-title-content .cw-tree-separator {
         color:var(--text-tertiary);
         font-weight:600;
@@ -683,7 +697,7 @@
                 { name: 'parent_id', label: 'Centro pai', section: 'main', type: 'dynamic-select', optionSource: 'hierarchy_parent', placeholderOption: 'Sem centro pai' },
                 { name: 'code_suffix', label: 'Código do centro', section: 'main', inputmode: 'numeric', maxlength: 10, oninput: 'handleCodeSuffixInput(this)', hintId: 'cw-code-preview', hint: 'Código completo: -' },
                 { name: 'name', label: 'Nome', section: 'main', required: true },
-                { name: 'account_level_type', label: 'Estrutura', section: 'main', type: 'select', options: [['analytic', 'Analítico'], ['synthetic', 'Sintético']] },
+                { name: 'account_level_type', label: 'Estrutura', section: 'main', type: 'select', options: [['analytic', 'Analítico'], ['synthetic', 'Sintético']], onchange: 'updateCostCenterDefaultFieldState()' },
                 { name: 'reduced_code', label: 'Código reduzido', section: 'main', maxlength: 3, hint: 'Até 3 caracteres alfanuméricos' },
                 { name: 'external_code', label: 'Centro de resultados externo', section: 'main', maxlength: 120, hint: 'Campo livre para código do sistema externo' },
                 { name: 'manager_employee_id', label: 'Gestor', section: 'main', type: 'number' },
@@ -727,6 +741,8 @@
                 { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
                 { name: 'name', label: 'Nome', section: 'main', required: true },
                 { name: 'chart_account_id', label: 'Plano de contas', section: 'main', type: 'dynamic-select', optionSource: 'chart_accounts', placeholderOption: 'Selecione uma conta analítica' },
+                { name: 'is_default_receivable', label: 'Padrão para recebimentos', section: 'main', type: 'select', options: [['false', 'Não'], ['true', 'Sim']] },
+                { name: 'is_default_payable', label: 'Padrão para pagamentos', section: 'main', type: 'select', options: [['false', 'Não'], ['true', 'Sim']] },
                 { name: 'interest_rate', label: 'Alíquota Juros (%)', section: 'main', type: 'number', step: '0.0001', min: '0', max: '100' },
                 { name: 'interest_period', label: 'Período Juros', section: 'main', type: 'select', options: [['daily', 'Diário'], ['monthly', 'Mensal']] },
                 { name: 'penalty_rate', label: 'Alíquota Multa (%)', section: 'main', type: 'number', step: '0.0001', min: '0', max: '100' },
@@ -1170,6 +1186,22 @@
         hydrateDynamicSelects();
         updateGeneratedCode();
         updateAssetAccountConfigVisibility();
+        updateCostCenterDefaultFieldState();
+    }
+
+    function updateCostCenterDefaultFieldState() {
+        if (activeCatalog !== 'cost_centers') return;
+        const form = document.getElementById('cw-form');
+        if (!form) return;
+        const levelField = form.querySelector('[name="account_level_type"]');
+        const defaultField = form.querySelector('[name="is_default_suggestion"]');
+        if (!levelField || !defaultField) return;
+
+        const isAnalytic = levelField.value !== 'synthetic';
+        defaultField.disabled = !isAnalytic;
+        if (!isAnalytic) {
+            defaultField.value = 'false';
+        }
     }
 
     function updateAssetAccountConfigVisibility() {
@@ -1194,6 +1226,7 @@
     function normalizeValue(field, value) {
         if (value === '') return null;
         if (field === 'is_default_suggestion') return String(value) === 'true';
+        if (['is_default_receivable', 'is_default_payable'].includes(field)) return String(value) === 'true';
         if (['parent_id', 'manager_employee_id', 'installment_count', 'interval_days', 'settlement_days', 'chart_account_id', 'category_id', 'due_in_days'].includes(field)) return Number(value);
         if (field === 'value') return Number(value);
         if (['interest_rate', 'penalty_rate', 'penalty_limit_rate', 'manual_value'].includes(field)) return Number(value);
@@ -1253,6 +1286,7 @@
         }
 
         updateGeneratedCode();
+        updateCostCenterDefaultFieldState();
         renderList(allItems);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         nameField?.focus();
@@ -1296,6 +1330,7 @@
             }
             if (parentField && item.parent_id) parentField.value = String(item.parent_id);
             updateGeneratedCode();
+            updateCostCenterDefaultFieldState();
         }
         if (['account_categories', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods'].includes(activeCatalog)) {
             const externalCodeField = form.querySelector('[name="external_code"]');
@@ -1324,6 +1359,10 @@
             }
             const correctionChartAccountField = form.querySelector('[name="chart_account_id"]');
             if (correctionChartAccountField) correctionChartAccountField.value = item?.metadata_json?.chart_account_id ? String(item.metadata_json.chart_account_id) : '';
+            const defaultReceivableField = form.querySelector('[name="is_default_receivable"]');
+            if (defaultReceivableField) defaultReceivableField.value = item?.metadata_json?.is_default_receivable ? 'true' : 'false';
+            const defaultPayableField = form.querySelector('[name="is_default_payable"]');
+            if (defaultPayableField) defaultPayableField.value = item?.metadata_json?.is_default_payable ? 'true' : 'false';
             const interestRateField = form.querySelector('[name="interest_rate"]');
             if (interestRateField) interestRateField.value = item?.metadata_json?.interest_rate ?? '';
             const interestPeriodField = form.querySelector('[name="interest_period"]');
@@ -1424,6 +1463,7 @@
                                         <strong>${item.code || '-'}</strong>
                                         <span class="cw-tree-separator">-</span>
                                         <span>${item.name || '-'}</span>
+                                        ${(activeCatalog === 'cost_centers' && item.is_default_suggestion) ? '<span class="cw-tree-badge">Padrão</span>' : ''}
                                     </div>
                                 </div>
                                 <span class="cw-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
@@ -1567,6 +1607,8 @@
             }
             if (activeCatalog === 'correction_indexes') {
                 payload.metadata_json.chart_account_id = normalizeValue('chart_account_id', formData.get('chart_account_id') || '');
+                payload.metadata_json.is_default_receivable = normalizeValue('is_default_receivable', formData.get('is_default_receivable') || 'false');
+                payload.metadata_json.is_default_payable = normalizeValue('is_default_payable', formData.get('is_default_payable') || 'false');
                 payload.metadata_json.interest_rate = normalizeValue('value', formData.get('interest_rate') || '');
                 payload.metadata_json.interest_period = formData.get('interest_period') || 'daily';
                 payload.metadata_json.penalty_rate = normalizeValue('value', formData.get('penalty_rate') || '');
@@ -1648,6 +1690,7 @@
     window.handleCodeSuffixInput = handleCodeSuffixInput;
     window.updateGeneratedCode = updateGeneratedCode;
     window.handleAssetConfigModeChange = handleAssetConfigModeChange;
+    window.updateCostCenterDefaultFieldState = updateCostCenterDefaultFieldState;
     window.deleteItem = deleteItem;
     window.toggleTreeNode = toggleTreeNode;
     window.startChildItem = startChildItem;
