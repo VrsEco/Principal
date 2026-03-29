@@ -258,6 +258,35 @@ def test_build_entry_payload_propagates_budget_links():
     assert payload["metadata_json"]["budget_document_id"] == 30
 
 
+def test_create_schedule_returns_friendly_date_validation_message():
+    result, error = FinancialScheduleService.create_schedule(
+        payload={
+            "company_id": 9,
+            "schedule_code": "SCH-002",
+            "name": "Pagamento inválido",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "origin_type": "manual",
+            "status": "draft",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": date(2026, 3, 29),
+            "first_due_date": date(2026, 3, 28),
+            "description": "Teste data inválida",
+            "template_amount": Decimal("100.00"),
+            "currency_code": "BRL",
+            "metadata_json": {},
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == (
+        "Payload inválido para criação do agendamento: "
+        "o vencimento não pode ser anterior à competência."
+    )
+
+
 def test_derive_budget_links_from_allocations_returns_unique_chain_only():
     unique_links = FinancialScheduleService._derive_budget_links_from_allocations(
         metadata_json={

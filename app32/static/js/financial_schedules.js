@@ -84,6 +84,10 @@
     const [year, month, day] = String(value).split('-');
     return year && month && day ? `${day}/${month}/${year}` : value;
   };
+  const compareIsoDates = (left, right) => {
+    if (!left || !right) return 0;
+    return left.localeCompare(right);
+  };
 
   const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const signedAmount = (value, movementNature) => {
@@ -533,6 +537,9 @@
     if (!description) throw new Error('Informe o histórico do agendamento.');
     if (!counterpartyId) throw new Error('Selecione um favorecido.');
     if (!competenceIso || !dueIso) throw new Error('Informe datas válidas para competência e vencimento.');
+    if (compareIsoDates(dueIso, competenceIso) < 0) {
+      throw new Error('O vencimento não pode ser anterior à competência.');
+    }
     if (!amount || amount <= 0) throw new Error('Informe um valor válido.');
     validateAllocationSummary();
     const frequency = $('field-repeat-toggle').value === 'true' ? $('field-frequency').value : 'one_time';
@@ -805,11 +812,35 @@
 
   $('field-competence').addEventListener('input', (event) => {
     event.target.value = normalizeDateInput(event.target.value);
+    $('field-due-date').setCustomValidity('');
   });
 
   $('field-due-date').addEventListener('input', (event) => {
     event.target.value = normalizeDateInput(event.target.value);
+    event.target.setCustomValidity('');
     updateFinancialTotals();
+  });
+
+  $('field-competence').addEventListener('blur', () => {
+    const competenceIso = parseDateToIso($('field-competence').value);
+    const dueIso = parseDateToIso($('field-due-date').value);
+    if (competenceIso && dueIso && compareIsoDates(dueIso, competenceIso) < 0) {
+      $('field-due-date').setCustomValidity('O vencimento não pode ser anterior à competência.');
+      $('field-due-date').reportValidity();
+      return;
+    }
+    $('field-due-date').setCustomValidity('');
+  });
+
+  $('field-due-date').addEventListener('blur', () => {
+    const competenceIso = parseDateToIso($('field-competence').value);
+    const dueIso = parseDateToIso($('field-due-date').value);
+    if (competenceIso && dueIso && compareIsoDates(dueIso, competenceIso) < 0) {
+      $('field-due-date').setCustomValidity('O vencimento não pode ser anterior à competência.');
+      $('field-due-date').reportValidity();
+      return;
+    }
+    $('field-due-date').setCustomValidity('');
   });
 
   $('field-correction-index').addEventListener('change', () => {

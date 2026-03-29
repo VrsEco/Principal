@@ -48,6 +48,26 @@ class FinancialScheduleService:
         return value
 
     @staticmethod
+    def _format_schedule_payload_error(exc: Exception, *, operation: str) -> str:
+        message = str(exc)
+        if "first_due_date não pode ser menor que start_date" in message:
+            return (
+                f"Payload inválido para {operation} do agendamento: "
+                "o vencimento não pode ser anterior à competência."
+            )
+        if "next_due_date não pode ser menor que first_due_date" in message:
+            return (
+                f"Payload inválido para {operation} do agendamento: "
+                "a próxima data de vencimento não pode ser anterior ao primeiro vencimento."
+            )
+        if "end_date não pode ser menor que start_date" in message:
+            return (
+                f"Payload inválido para {operation} do agendamento: "
+                "a data final não pode ser anterior à competência."
+            )
+        return f"Payload inválido para {operation} do agendamento: {exc}"
+
+    @staticmethod
     def list_schedules(
         *,
         company_id: int,
@@ -103,7 +123,7 @@ class FinancialScheduleService:
         try:
             data = FinancialScheduleCreateInput(**normalized_payload)
         except Exception as exc:
-            return None, f"Payload inválido para agendamento financeiro: {exc}"
+            return None, FinancialScheduleService._format_schedule_payload_error(exc, operation="criação")
 
         scope_error = FinancialService._ensure_company_scope(data.company_id, allowed_company_ids)
         if scope_error:
@@ -185,7 +205,7 @@ class FinancialScheduleService:
         try:
             data = FinancialScheduleUpdateInput(**payload)
         except Exception as exc:
-            return None, f"Payload inválido para atualização do agendamento: {exc}"
+            return None, FinancialScheduleService._format_schedule_payload_error(exc, operation="atualização")
 
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
