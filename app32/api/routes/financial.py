@@ -460,7 +460,6 @@ def financial_closings_page():
 
 
 @financial_bp.route("/financial/budgets")
-@financial_bp.route("/financial/budget")
 @permission_required("financial", "view")
 def financial_budget_planning_page():
     company = get_active_company()
@@ -471,14 +470,35 @@ def financial_budget_planning_page():
     )
 
 
+@financial_bp.route("/financial/budget")
+@permission_required("financial", "view")
+def financial_budget_matrix_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/budget_matrix.html",
+        company=company,
+        company_id=company.id if company else None,
+    )
+
+
 @financial_bp.route("/financial/budgets/workspace")
 @financial_bp.route("/financial/budget/workspace")
+@permission_required("financial", "view")
+def financial_budget_workspace_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/budget_workspace.html",
+        company=company,
+        company_id=company.id if company else None,
+    )
+
+
 @financial_bp.route("/financial/budget/execution")
 @permission_required("financial", "view")
 def financial_budget_execution_page():
     company = get_active_company()
     return render_template(
-        "modules/financial/budget_workspace.html",
+        "modules/financial/budget_execution.html",
         company=company,
         company_id=company.id if company else None,
     )

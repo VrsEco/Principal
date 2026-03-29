@@ -402,7 +402,9 @@ function renderBudgetDetail() {
             <span>Atualizado em <strong>${budget.updated_at || budget.created_at || '-'}</strong></span>
         </div>
         <div class="budget-item-actions">
-            <a class="budget-btn budget-btn--secondary" href="/financial/budgets/workspace?company_id=${companyId}&version_id=${budget.id}">Abrir workspace</a>
+            <a class="budget-btn budget-btn--primary" href="/financial/budget?company_id=${companyId}&version_id=${budget.id}">Planejamento</a>
+            <a class="budget-btn budget-btn--secondary" href="/financial/budget/execution?company_id=${companyId}&version_id=${budget.id}">Execução</a>
+            <a class="budget-btn budget-btn--ghost" href="/financial/budgets/workspace?company_id=${companyId}&version_id=${budget.id}">Workspace</a>
             <button class="budget-btn budget-btn--ghost" type="button" onclick="startEditBudget(${budget.id})">Editar</button>
         </div>
     `;
@@ -466,7 +468,8 @@ function renderList() {
                     </div>
                 </div>
                 <div class="budget-item-actions">
-                    <a class="budget-btn budget-btn--secondary" href="/financial/budgets/workspace?company_id=${companyId}&version_id=${item.id}" onclick="event.stopPropagation()">Workspace</a>
+                    <a class="budget-btn budget-btn--primary" href="/financial/budget?company_id=${companyId}&version_id=${item.id}" onclick="event.stopPropagation()">Planejamento</a>
+                    <a class="budget-btn budget-btn--secondary" href="/financial/budget/execution?company_id=${companyId}&version_id=${item.id}" onclick="event.stopPropagation()">Execução</a>
                 </div>
             </div>
         `;
