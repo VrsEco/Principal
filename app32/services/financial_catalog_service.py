@@ -380,6 +380,15 @@ class FinancialCatalogService:
         return prepared
 
     @staticmethod
+    def _normalize_legacy_payload(*, catalog_type: str, payload: Dict) -> Dict:
+        normalized = dict(payload or {})
+
+        if catalog_type == "chart_accounts":
+            normalized.pop("account_kind", None)
+
+        return normalized
+
+    @staticmethod
     def _validate_related_scope(
         *,
         catalog_type: str,
@@ -660,6 +669,10 @@ class FinancialCatalogService:
             return None, "Tipo de cadastro financeiro inválido."
 
         schema_cls: Type = config["create_schema"]
+        payload = FinancialCatalogService._normalize_legacy_payload(
+            catalog_type=catalog_type,
+            payload=payload,
+        )
         try:
             data = schema_cls(**payload).model_dump()
         except Exception as exc:
@@ -765,6 +778,10 @@ class FinancialCatalogService:
             return None, "Tipo de cadastro financeiro inválido."
 
         schema_cls: Type = config["update_schema"]
+        payload = FinancialCatalogService._normalize_legacy_payload(
+            catalog_type=catalog_type,
+            payload=payload,
+        )
         try:
             data = schema_cls(**payload).model_dump(exclude_unset=True)
         except Exception as exc:

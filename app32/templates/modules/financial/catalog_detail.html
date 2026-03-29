@@ -1182,9 +1182,7 @@
     function applyDefaultValues() {
         const form = document.getElementById('cw-form');
         if (activeCatalog === 'chart_accounts') {
-            const kindField = form.querySelector('[name="account_kind"]');
             const levelField = form.querySelector('[name="account_level_type"]');
-            if (kindField && !kindField.value) kindField.value = 'expense';
             if (levelField && !levelField.value) levelField.value = 'analytic';
         }
         if (activeCatalog === 'cost_centers') {
@@ -1283,7 +1281,6 @@
 
         const parentField = form.querySelector('[name="parent_id"]');
         const suffixField = form.querySelector('[name="code_suffix"]');
-        const kindField = form.querySelector('[name="account_kind"]');
         const levelField = form.querySelector('[name="account_level_type"]');
         const nameField = form.querySelector('[name="name"]');
 
@@ -1292,9 +1289,6 @@
         }
         if (suffixField) {
             suffixField.value = getNextChildCodeSuffix(parentItem);
-        }
-        if (kindField && activeCatalog === 'chart_accounts') {
-            kindField.value = parentItem.account_kind || 'expense';
         }
         if (levelField) {
             levelField.value = 'analytic';
@@ -1592,7 +1586,6 @@
         }
         if (activeCatalog === 'chart_accounts') {
             const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
-            payload.account_kind = payload.account_kind || formData.get('account_kind') || currentItem?.account_kind || 'expense';
             payload.metadata_json = {
                 ...(currentItem?.metadata_json || {}),
                 external_code: formData.get('external_code') || null,
