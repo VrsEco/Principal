@@ -178,3 +178,65 @@ def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monk
         assert removed["id"] == attachment["id"]
         assert settlement.metadata_json["attachments"] == []
         assert not saved_path.exists()
+
+
+def test_create_settlement_rejects_zero_principal_amount(monkeypatch):
+    class _FakeEntry:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+
+        def __init__(self):
+            self.original_amount = Decimal("500.00")
+            self.status = "posted"
+
+    class _FakeSettlement:
+        company_id = _Column()
+        settlement_code = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        principal_amount = _Column()
+        financial_entry_id = _Column()
+        settlement_status = _Column()
+        query = _SequenceQueryStub([None])
+
+    entry = _FakeEntry()
+    entry_query = _QueryStub(entry)
+
+    monkeypatch.setattr(financial_module, "FinancialEntry", type("FinancialEntryStub", (), {
+        "id": _Column(),
+        "company_id": _Column(),
+        "deleted_at": _Column(),
+        "query": entry_query,
+    }))
+    monkeypatch.setattr(financial_module, "FinancialSettlement", _FakeSettlement)
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialCatalogService, "validate_reference_ids", lambda **kwargs: None)
+    monkeypatch.setattr(
+        financial_module.db.session,
+        "query",
+        lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("0")})(),
+    )
+    monkeypatch.setattr(financial_module.db.session, "add", lambda obj: (_ for _ in ()).throw(AssertionError("não deveria persistir")))
+    monkeypatch.setattr(financial_module.db.session, "commit", lambda: (_ for _ in ()).throw(AssertionError("não deveria commitar")))
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_entry", lambda **kwargs: None)
+
+    settlement, error = FinancialService.create_settlement(
+        payload={
+            "company_id": 7,
+            "financial_entry_id": 99,
+            "settlement_type": "manual",
+            "settlement_date": date(2026, 3, 29),
+            "bank_account_id": 3,
+            "principal_amount": Decimal("0"),
+            "notes": "Baixa zerada inválida",
+            "metadata_json": {
+                "history": "Baixa zerada inválida",
+            },
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert settlement is None
+    assert error == "Baixa inválida: o valor principal deve ser maior que zero."
+    assert entry.status == "posted"

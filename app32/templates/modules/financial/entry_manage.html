@@ -156,6 +156,12 @@
     .settlement-item-header {
         display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.6rem;
     }
+    .settlement-item-header-main {
+        display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; width:100%;
+    }
+    .settlement-item-header-actions {
+        display:flex; align-items:center; gap:.75rem; flex-shrink:0;
+    }
     .settlement-item-title { margin:0; font-size:1rem; }
     .settlement-item-meta, .attachments-list { color:var(--text-secondary); font-size:.92rem; }
     .attachments-list { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.7rem; }
@@ -163,6 +169,16 @@
         display:inline-flex; align-items:center; gap:.35rem; text-decoration:none;
         border:1px solid var(--border); border-radius:999px; padding:.35rem .7rem;
         background:var(--surface); color:var(--text-primary);
+    }
+    .btn-danger {
+        background:#fee2e2;
+        color:#b91c1c;
+        border:1px solid #fecaca;
+    }
+    .btn-small {
+        padding:.55rem .8rem;
+        border-radius:10px;
+        font-size:.85rem;
     }
     .empty-state {
         border:1px dashed var(--border);
@@ -271,13 +287,24 @@
             return `
                 <article class="settlement-item">
                     <div class="settlement-item-header">
-                        <div>
-                            <h3 class="settlement-item-title">${history}</h3>
-                            <div class="settlement-item-meta">
-                                Data: ${item.settlement_date || '-'} · Forma financeira: ${paymentMethodLabel} · Conta bancária: ${bankLabel}
+                        <div class="settlement-item-header-main">
+                            <div>
+                                <h3 class="settlement-item-title">${history}</h3>
+                                <div class="settlement-item-meta">
+                                    Data: ${item.settlement_date || '-'} · Forma financeira: ${paymentMethodLabel} · Conta bancária: ${bankLabel}
+                                </div>
+                            </div>
+                            <div class="settlement-item-header-actions">
+                                <strong>${formatCurrency(item.principal_amount)}</strong>
+                                <button
+                                    type="button"
+                                    class="btn btn-danger btn-small"
+                                    onclick="deleteSettlement(${Number(item.id)})"
+                                >
+                                    Excluir baixa
+                                </button>
                             </div>
                         </div>
-                        <strong>${formatCurrency(item.principal_amount)}</strong>
                     </div>
                     ${attachments.length ? `
                         <div class="attachments-list">
@@ -321,6 +348,24 @@
         document.getElementById('settlement-date').value = todayIso();
         refreshAvailableAmount(currentEntry);
         renderSettlements(currentEntry);
+    }
+
+    async function deleteSettlement(settlementId) {
+        if (!settlementId) return;
+        const confirmed = window.confirm('Deseja realmente excluir esta baixa? Esta ação remove a liquidação deste lançamento.');
+        if (!confirmed) return;
+
+        const response = await fetch(`/api/financial/settlements/${settlementId}?company_id=${companyId}`, {
+            method: 'DELETE',
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            alert(payload.error || payload.message || 'Falha ao excluir baixa.');
+            return;
+        }
+
+        alert(payload.message || 'Baixa excluída com sucesso.');
+        await loadEntry();
     }
 
     async function uploadAttachments(settlementId, files) {
