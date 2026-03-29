@@ -475,7 +475,7 @@ def financial_budget_planning_page():
 def financial_budget_matrix_page():
     company = get_active_company()
     return render_template(
-        "modules/financial/budget_matrix.html",
+        "modules/financial/budget_workspace.html",
         company=company,
         company_id=company.id if company else None,
     )
@@ -498,7 +498,7 @@ def financial_budget_workspace_page():
 def financial_budget_execution_page():
     company = get_active_company()
     return render_template(
-        "modules/financial/budget_execution.html",
+        "modules/financial/budget_workspace.html",
         company=company,
         company_id=company.id if company else None,
     )

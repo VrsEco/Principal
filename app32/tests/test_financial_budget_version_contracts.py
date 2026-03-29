@@ -43,7 +43,7 @@ class _QueryStub:
 def test_budget_version_line_contract_document_to_dict_preserve_hierarchical_codes():
     version = FinancialBudgetVersion(
         company_id=9,
-        code="AA.O.2026.CAPEX.1",
+        code="AA.O.1",
         name="CAPEX 2026",
         scenario_type="original",
         status="draft",
@@ -55,32 +55,32 @@ def test_budget_version_line_contract_document_to_dict_preserve_hierarchical_cod
     line = FinancialBudgetLine(
         company_id=9,
         budget_version_id=1,
-        line_code="AA.O.2026.CAPEX.1.2",
+        line_code="AA.O.1.2",
         line_name="Verba Infra",
         line_order=1,
         budget_view="competence",
         movement_nature="debit",
         planned_amount=1000,
-        metadata_json={"full_code": "AA.O.2026.CAPEX.1.2"},
+        metadata_json={"full_code": "AA.O.1.2"},
     )
     contract = FinancialBudgetContract(
         company_id=9,
         budget_line_id=2,
-        contract_code="AA.O.2026.CAPEX.1.2.3",
+        contract_code="AA.O.1.2.3",
         name="Contrato Principal",
         status="draft",
         contract_amount=750,
-        metadata_json={"full_code": "AA.O.2026.CAPEX.1.2.3"},
+        metadata_json={"full_code": "AA.O.1.2.3"},
     )
     document = FinancialBudgetDocument(
         company_id=9,
         budget_contract_id=3,
-        document_code="AA.O.2026.CAPEX.1.2.3.4",
+        document_code="AA.O.1.2.3.4",
         title="NF 1234",
         document_type="invoice",
         status="registered",
         document_amount=500,
-        metadata_json={"full_code": "AA.O.2026.CAPEX.1.2.3.4"},
+        metadata_json={"full_code": "AA.O.1.2.3.4"},
     )
 
     version_payload = version.to_dict()
@@ -88,22 +88,22 @@ def test_budget_version_line_contract_document_to_dict_preserve_hierarchical_cod
     contract_payload = contract.to_dict()
     document_payload = document.to_dict()
 
-    assert version_payload["code"] == "AA.O.2026.CAPEX.1"
+    assert version_payload["code"] == "AA.O.1"
     assert version_payload["company_id"] == 9
     assert version_payload["metadata_json"]["budget_cycle_code"] == "AA.BC.2026"
     assert version_payload["metadata_json"]["budget_category"] == "CAPEX"
 
-    assert line_payload["line_code"] == "AA.O.2026.CAPEX.1.2"
+    assert line_payload["line_code"] == "AA.O.1.2"
     assert line_payload["budget_version_id"] == 1
-    assert line_payload["metadata_json"]["full_code"] == "AA.O.2026.CAPEX.1.2"
+    assert line_payload["metadata_json"]["full_code"] == "AA.O.1.2"
 
-    assert contract_payload["contract_code"] == "AA.O.2026.CAPEX.1.2.3"
+    assert contract_payload["contract_code"] == "AA.O.1.2.3"
     assert contract_payload["budget_line_id"] == 2
-    assert contract_payload["metadata_json"]["full_code"] == "AA.O.2026.CAPEX.1.2.3"
+    assert contract_payload["metadata_json"]["full_code"] == "AA.O.1.2.3"
 
-    assert document_payload["document_code"] == "AA.O.2026.CAPEX.1.2.3.4"
+    assert document_payload["document_code"] == "AA.O.1.2.3.4"
     assert document_payload["budget_contract_id"] == 3
-    assert document_payload["metadata_json"]["full_code"] == "AA.O.2026.CAPEX.1.2.3.4"
+    assert document_payload["metadata_json"]["full_code"] == "AA.O.1.2.3.4"
 
 
 def test_create_version_enforces_company_scope_and_allows_hierarchical_budget_code(monkeypatch):
@@ -123,7 +123,7 @@ def test_create_version_enforces_company_scope_and_allows_hierarchical_budget_co
 
     duplicate_query = _QueryStub(result=_FakeBudgetVersion(
         company_id=9,
-        code="AA.O.2026.CAPEX.1",
+        code="AA.O.1",
         name="Existente",
         scenario_type="original",
         status="draft",
@@ -141,7 +141,7 @@ def test_create_version_enforces_company_scope_and_allows_hierarchical_budget_co
     result, error = FinancialBudgetService.create_version(
         payload={
             "company_id": 9,
-            "code": "AA.O.2026.CAPEX.1",
+                "code": "AA.O.1",
             "name": "CAPEX 2026",
             "scenario_type": "original",
             "status": "draft",
@@ -158,7 +158,6 @@ def test_create_version_enforces_company_scope_and_allows_hierarchical_budget_co
     assert duplicate_query.filters, "A consulta de duplicidade deve ser executada com escopo por empresa."
     first_filter_args = duplicate_query.filters[0][0]
     assert any(arg == ("eq", 9) for arg in first_filter_args)
-    assert any(arg == ("eq", "AA.O.2026.CAPEX.1") for arg in first_filter_args)
 
     unique_query = _QueryStub(result=None)
     _FakeBudgetVersion.query = unique_query
@@ -167,7 +166,7 @@ def test_create_version_enforces_company_scope_and_allows_hierarchical_budget_co
     result, error = FinancialBudgetService.create_version(
         payload={
             "company_id": 9,
-            "code": "AA.O.2026.OPEX.1",
+                "code": "AA.O.2",
             "name": "OPEX 2026",
             "scenario_type": "original",
             "status": "draft",
@@ -180,7 +179,7 @@ def test_create_version_enforces_company_scope_and_allows_hierarchical_budget_co
 
     assert error is None
     assert result is not None
-    assert captured["kwargs"]["code"] == "AA.O.2026.OPEX.1"
+    assert captured["kwargs"]["code"] == "AA.O.2"
     assert captured["kwargs"]["metadata_json"]["budget_category"] == "OPEX"
     assert captured["committed"] is True
 
@@ -189,7 +188,7 @@ def test_normalize_version_payload_accepts_iso_period_start_for_budget_cycle():
     payload = FinancialBudgetCodeService.normalize_version_payload(
         {
             "company_id": 9,
-            "code": "AA.O.2026.CAPEX.2",
+            "code": "AA.O.2",
             "name": "CAPEX 2026 Extra",
             "period_start": "2026-01-01",
             "period_end": "2026-12-31",

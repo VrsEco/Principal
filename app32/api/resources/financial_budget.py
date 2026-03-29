@@ -258,6 +258,7 @@ class FinancialBudgetExecutionWorkspaceResource(Resource):
             line_id=request.args.get("line_id", type=int),
             contract_id=request.args.get("contract_id", type=int),
             document_id=request.args.get("document_id", type=int),
+            schedule_id=request.args.get("schedule_id", type=int),
             budget_cycle=request.args.get("budget_cycle"),
             budget_category=request.args.get("budget_category"),
             budget_group=request.args.get("budget_group"),

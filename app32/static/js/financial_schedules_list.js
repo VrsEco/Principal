@@ -1,13 +1,18 @@
 (function () {
   async function init() {
-    const page = document.querySelector('.sched-list-page');
+    const page = document.querySelector('.sched-page');
     if (!page) return;
 
     const companyId = Number(page.dataset.companyId || 0);
-    const tbody = document.getElementById('schedule-table-body');
+    const list = document.getElementById('schedule-list-results');
     const kpis = Array.from(document.querySelectorAll('#schedule-kpis .sched-kpi'));
     const filtersCount = document.getElementById('schedule-filters-count');
+    const resultsPill = document.getElementById('schedule-results-pill');
     const clearFiltersButton = document.getElementById('schedule-clear-filters');
+    const sidebarClearFiltersButton = document.getElementById('schedule-sidebar-clear-filters');
+    const actionSettle = document.getElementById('schedule-action-settle');
+    const actionEdit = document.getElementById('schedule-action-edit');
+    const actionDelete = document.getElementById('schedule-action-delete');
     const filters = {
       search: document.getElementById('schedule-filter-search'),
       type: document.getElementById('schedule-filter-type'),
@@ -20,56 +25,51 @@
       titleAmount: document.getElementById('schedule-filter-title-amount'),
     };
 
-    if (!tbody || !filters.search) return;
+    if (!list || !filters.search) return;
 
-    let schedules = [];
+    const state = {
+      schedules: [],
+      selectedId: null,
+    };
 
+    const byId = (id) => document.getElementById(id);
     const formatDate = (value) => {
       if (!value) return '-';
       const [year, month, day] = String(value).split('-');
       return year && month && day ? `${day}/${month}/${year}` : value;
     };
-
     const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const amountClass = (value) => Number(value || 0) < 0 ? 'sched-amount sched-amount--negative' : 'sched-amount sched-amount--positive';
     const typeLabel = (entryType) => entryType === 'payable' ? 'Pagamento' : 'Recebimento';
     const typeClass = (entryType) => entryType === 'payable' ? 'sched-pill--payable' : 'sched-pill--receivable';
-    const settlementLabel = (state) => ({ open: 'Em aberto', partial: 'Liquidado parcial', settled: 'Liquidado' }[state] || 'Em aberto');
-    const settlementClass = (state) => ({ open: 'sched-pill--open', partial: 'sched-pill--partial', settled: 'sched-pill--settled' }[state] || 'sched-pill--open');
-    const numberMatches = (filterValue, targetValue) => {
+    const settlementLabel = (value) => ({ open: 'Em aberto', partial: 'Liquidado parcial', settled: 'Liquidado' }[value] || 'Em aberto');
+    const settlementClass = (value) => ({ open: 'sched-pill--open', partial: 'sched-pill--partial', settled: 'sched-pill--settled' }[value] || 'sched-pill--open');
+
+    async function fetchJson(url, options) {
+      const response = await fetch(url, options);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Falha ao carregar agendamentos.');
+      return payload;
+    }
+
+    function numberMatches(filterValue, targetValue) {
       if (filterValue === '' || filterValue == null) return true;
       const normalizedFilter = Number(filterValue);
       const normalizedTarget = Number(targetValue || 0);
       if (!Number.isFinite(normalizedFilter)) return true;
       return Math.abs(normalizedTarget - normalizedFilter) < 0.01;
-    };
+    }
 
-    const dateGte = (filterValue, targetValue) => {
+    function dateGte(filterValue, targetValue) {
       if (!filterValue) return true;
       if (!targetValue) return false;
       return String(targetValue) >= String(filterValue);
-    };
+    }
 
-    const dateLte = (filterValue, targetValue) => {
+    function dateLte(filterValue, targetValue) {
       if (!filterValue) return true;
       if (!targetValue) return false;
       return String(targetValue) <= String(filterValue);
-    };
-
-    function updateFiltersCount() {
-      const activeCount = Object.values(filters).reduce((count, input) => {
-        if (!input) return count;
-        return String(input.value || '').trim() ? count + 1 : count;
-      }, 0);
-
-      if (filtersCount) filtersCount.textContent = String(activeCount);
-    }
-
-    async function fetchJson(url, options) {
-      const response = await fetch(url, options);
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'Falha ao carregar agendamentos.');
-      return payload;
     }
 
     function getFilteredItems() {
@@ -83,7 +83,7 @@
       const competenceDateTo = String(filters.competenceDateTo.value || '').trim();
       const titleAmount = String(filters.titleAmount.value || '').trim();
 
-      return schedules.filter((item) => {
+      return state.schedules.filter((item) => {
         const summary = item.summary || {};
         const itemCounterparty = String(summary.counterparty_name || item.metadata_json?.counterparty_name || '').trim().toLowerCase();
         const itemCompetence = item.start_date || item.first_due_date || '';
@@ -102,6 +102,14 @@
       });
     }
 
+    function updateFiltersCount() {
+      const activeCount = Object.values(filters).reduce((count, input) => {
+        if (!input) return count;
+        return String(input.value || '').trim() ? count + 1 : count;
+      }, 0);
+      if (filtersCount) filtersCount.textContent = String(activeCount);
+    }
+
     function renderKpis(items) {
       const receivableTotal = items
         .filter((item) => item.entry_type === 'receivable')
@@ -111,7 +119,7 @@
         .reduce((acc, item) => acc + Number(item.summary?.signed_open_total ?? item.signed_template_amount ?? 0), 0);
       const openCount = items.filter((item) => (item.summary?.settlement_state || 'open') !== 'settled').length;
 
-      if (kpis[0]) { kpis[0].querySelector('strong').textContent = String(items.length); }
+      if (kpis[0]) kpis[0].querySelector('strong').textContent = String(items.length);
       if (kpis[1]) {
         const target = kpis[1].querySelector('strong');
         target.textContent = money(receivableTotal);
@@ -122,52 +130,143 @@
         target.textContent = money(payableTotal);
         target.className = amountClass(payableTotal);
       }
-      if (kpis[3]) { kpis[3].querySelector('strong').textContent = String(openCount); }
+      if (kpis[3]) kpis[3].querySelector('strong').textContent = String(openCount);
+      if (resultsPill) resultsPill.textContent = `${items.length} registros`;
     }
 
-    function renderTable() {
-      const items = getFilteredItems();
-      renderKpis(items);
+    function ensureSelection(items) {
       if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhum agendamento encontrado para os filtros informados.</td></tr>';
+        state.selectedId = null;
+        return;
+      }
+      const hasSelected = items.some((item) => Number(item.id) === Number(state.selectedId));
+      if (!hasSelected) {
+        state.selectedId = Number(items[0].id);
+      }
+    }
+
+    function renderList(items) {
+      ensureSelection(items);
+      if (!items.length) {
+        list.innerHTML = '<div class="sched-empty">Nenhum agendamento encontrado para os filtros informados.</div>';
+        renderDetail(null);
         return;
       }
 
-      tbody.innerHTML = items.map((item) => {
+      list.innerHTML = items.map((item) => {
         const summary = item.summary || {};
         const settlementState = summary.settlement_state || 'open';
-        const hasOpenBalance = Number(summary.open_total || 0) > 0;
-        const borderoCode = item.bordero?.code || summary.bordero_code || '';
-        const isBorderoLocked = Boolean(item.is_bordero_locked || summary.is_bordero_locked);
+        const isSelected = Number(item.id) === Number(state.selectedId);
+        const counterparty = summary.counterparty_name || item.metadata_json?.counterparty_name || '-';
+        const signedTitle = item.signed_template_amount ?? item.template_amount ?? 0;
+        const signedOpen = summary.signed_open_total ?? signedTitle;
         return `
-        <tr>
-          <td><span class="sched-pill ${settlementClass(settlementState)}">${settlementLabel(settlementState)}</span></td>
-          <td>${item.id}</td>
-          <td class="sched-history">
-            <strong>${item.description || item.name || 'Sem histórico'}</strong>
-            <small>${item.schedule_code || '-'} · ${item.status || '-'}${borderoCode ? ` · ${borderoCode}` : ''}</small>
-          </td>
-          <td><span class="sched-pill ${typeClass(item.entry_type)}">${typeLabel(item.entry_type)}</span></td>
-          <td><span class="${amountClass(item.signed_template_amount ?? 0)}">${money(item.signed_template_amount ?? item.template_amount ?? 0)}</span></td>
-          <td><span class="${amountClass(summary.signed_open_total ?? item.signed_template_amount ?? 0)}">${money(summary.signed_open_total ?? item.signed_template_amount ?? item.template_amount ?? 0)}</span></td>
-          <td>${summary.counterparty_name || item.metadata_json?.counterparty_name || '-'}</td>
-          <td>${formatDate(item.start_date || item.first_due_date)}</td>
-          <td>${formatDate(item.next_due_date || item.first_due_date)}</td>
-          <td>
-            <div class="sched-row-actions">
-              <button type="button" class="btn btn-secondary" data-action="settle" data-id="${item.id}" ${(hasOpenBalance && !isBorderoLocked) ? '' : 'disabled'}>${isBorderoLocked ? 'No borderô' : 'Liquidar'}</button>
-              <a class="btn btn-secondary" href="/financial/schedules/${item.id}">${isBorderoLocked ? 'Consultar' : 'Editar'}</a>
-              <button type="button" class="btn btn-danger" data-action="delete" data-id="${item.id}" ${isBorderoLocked ? 'disabled' : ''}>Excluir</button>
+          <article class="sched-item sched-item--${item.entry_type || 'receivable'} ${isSelected ? 'is-selected' : ''}" data-id="${item.id}">
+            <div class="sched-item-head">
+              <div>
+                <div class="sched-item-code">${item.schedule_code || `AG.${item.id}`}</div>
+                <div class="sched-item-title">${item.description || item.name || 'Sem histórico'}</div>
+                <div class="sched-item-subtitle">${counterparty}</div>
+              </div>
+              <div class="sched-item-meta">
+                <span class="sched-pill ${typeClass(item.entry_type)}">${typeLabel(item.entry_type)}</span>
+                <span class="sched-pill ${settlementClass(settlementState)}">${settlementLabel(settlementState)}</span>
+              </div>
             </div>
-          </td>
-        </tr>
-      `;
+            <div class="sched-item-metrics">
+              <div class="sched-metric"><span>Valor título</span><strong class="${amountClass(signedTitle)}">${money(signedTitle)}</strong></div>
+              <div class="sched-metric"><span>Saldo</span><strong class="${amountClass(signedOpen)}">${money(signedOpen)}</strong></div>
+              <div class="sched-metric"><span>Competência</span><strong>${formatDate(item.start_date || item.first_due_date)}</strong></div>
+              <div class="sched-metric"><span>Vencimento</span><strong>${formatDate(item.next_due_date || item.first_due_date)}</strong></div>
+            </div>
+            <div class="sched-item-foot">
+              <span class="sched-muted">${item.status || '-'}${item.budget_document_id ? ` · NF/Equiv. #${item.budget_document_id}` : ''}</span>
+              <strong>${item.id}</strong>
+            </div>
+          </article>
+        `;
       }).join('');
+
+      const selected = items.find((item) => Number(item.id) === Number(state.selectedId)) || items[0];
+      renderDetail(selected);
+    }
+
+    function renderDetail(item) {
+      if (!item) {
+        byId('schedule-detail-title').textContent = 'Selecione um agendamento';
+        byId('schedule-detail-subtitle').textContent = 'Os dados consolidados do registro aparecerão aqui.';
+        byId('schedule-detail-state').textContent = 'Sem seleção';
+        byId('schedule-detail-context').innerHTML = '';
+        byId('schedule-detail-summary').textContent = 'Escolha um registro na fila operacional para visualizar detalhes.';
+        byId('detail-code').textContent = '-';
+        byId('detail-type').textContent = '-';
+        byId('detail-counterparty').textContent = '-';
+        byId('detail-status').textContent = '-';
+        byId('detail-competence').textContent = '-';
+        byId('detail-due-date').textContent = '-';
+        byId('detail-title-amount').textContent = money(0);
+        byId('detail-open-amount').textContent = money(0);
+        byId('detail-description').textContent = '-';
+        byId('detail-links').textContent = '-';
+        actionSettle.disabled = true;
+        actionDelete.disabled = true;
+        actionEdit.href = '/financial/schedules/new';
+        return;
+      }
+
+      const summary = item.summary || {};
+      const settlementState = summary.settlement_state || 'open';
+      const counterparty = summary.counterparty_name || item.metadata_json?.counterparty_name || '-';
+      const signedTitle = item.signed_template_amount ?? item.template_amount ?? 0;
+      const signedOpen = summary.signed_open_total ?? signedTitle;
+      const isBorderoLocked = Boolean(item.is_bordero_locked || summary.is_bordero_locked);
+      const borderoCode = item.bordero?.code || summary.bordero_code || '';
+      const context = [
+        `<span class="sched-context-chip"><b>Tipo:</b> ${typeLabel(item.entry_type)}</span>`,
+        `<span class="sched-context-chip"><b>Liquidação:</b> ${settlementLabel(settlementState)}</span>`,
+        `<span class="sched-context-chip"><b>ID:</b> ${item.id}</span>`,
+      ];
+      if (borderoCode) context.push(`<span class="sched-context-chip"><b>Borderô:</b> ${borderoCode}</span>`);
+      if (item.budget_document_id) context.push(`<span class="sched-context-chip"><b>NF/Equiv.:</b> #${item.budget_document_id}</span>`);
+
+      byId('schedule-detail-title').textContent = item.description || item.name || 'Sem histórico';
+      byId('schedule-detail-subtitle').textContent = `${item.schedule_code || `AG.${item.id}`} · ${counterparty}`;
+      byId('schedule-detail-state').textContent = settlementLabel(settlementState);
+      byId('schedule-detail-context').innerHTML = context.join('');
+      byId('schedule-detail-summary').innerHTML = `<strong>${item.schedule_code || `AG.${item.id}`}</strong><br>${counterparty}<br>Valor título: ${money(signedTitle)} · Saldo aberto: ${money(signedOpen)} · Vencimento: ${formatDate(item.next_due_date || item.first_due_date)}`;
+      byId('detail-code').textContent = item.schedule_code || `AG.${item.id}`;
+      byId('detail-type').textContent = typeLabel(item.entry_type);
+      byId('detail-counterparty').textContent = counterparty;
+      byId('detail-status').textContent = item.status || '-';
+      byId('detail-competence').textContent = formatDate(item.start_date || item.first_due_date);
+      byId('detail-due-date').textContent = formatDate(item.next_due_date || item.first_due_date);
+      byId('detail-title-amount').textContent = money(signedTitle);
+      byId('detail-open-amount').textContent = money(signedOpen);
+      byId('detail-description').textContent = item.description || item.name || '-';
+      byId('detail-links').textContent = [
+        item.budget_document_id ? `NF/Equiv. #${item.budget_document_id}` : null,
+        borderoCode ? `Borderô ${borderoCode}` : null,
+        item.document_number_prefix ? `Doc. ${item.document_number_prefix}` : null,
+      ].filter(Boolean).join(' · ') || '-';
+
+      actionSettle.disabled = !(Number(summary.open_total || 0) > 0) || isBorderoLocked;
+      actionDelete.disabled = isBorderoLocked;
+      actionSettle.dataset.id = String(item.id);
+      actionDelete.dataset.id = String(item.id);
+      actionEdit.href = `/financial/schedules/${item.id}`;
+      actionEdit.textContent = isBorderoLocked ? 'Consultar' : 'Editar';
+      actionSettle.textContent = isBorderoLocked ? 'No borderô' : 'Liquidar';
+    }
+
+    function render() {
+      const items = getFilteredItems();
+      renderKpis(items);
+      renderList(items);
     }
 
     async function loadSchedules() {
-      schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}`);
-      renderTable();
+      state.schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}`);
+      render();
     }
 
     async function liquidateSchedule(scheduleId) {
@@ -181,29 +280,46 @@
       await loadSchedules();
     }
 
-    Object.values(filters).forEach((input) => input?.addEventListener('input', renderTable));
-    Object.values(filters).forEach((input) => input?.addEventListener('change', renderTable));
-    Object.values(filters).forEach((input) => input?.addEventListener('input', updateFiltersCount));
-    Object.values(filters).forEach((input) => input?.addEventListener('change', updateFiltersCount));
-
-    clearFiltersButton?.addEventListener('click', () => {
+    function clearFilters() {
       Object.values(filters).forEach((input) => {
         if (input) input.value = '';
       });
       updateFiltersCount();
-      renderTable();
+      render();
+    }
+
+    Object.values(filters).forEach((input) => input?.addEventListener('input', () => {
+      updateFiltersCount();
+      render();
+    }));
+    Object.values(filters).forEach((input) => input?.addEventListener('change', () => {
+      updateFiltersCount();
+      render();
+    }));
+
+    clearFiltersButton?.addEventListener('click', clearFilters);
+    sidebarClearFiltersButton?.addEventListener('click', clearFilters);
+
+    list.addEventListener('click', (event) => {
+      const card = event.target.closest('.sched-item[data-id]');
+      if (!card) return;
+      state.selectedId = Number(card.dataset.id);
+      render();
     });
 
-    tbody.addEventListener('click', async (event) => {
-      const button = event.target.closest('button[data-action]');
-      if (!button) return;
+    actionSettle?.addEventListener('click', async () => {
       try {
-        if (button.dataset.action === 'settle') {
-          await liquidateSchedule(Number(button.dataset.id));
-        }
-        if (button.dataset.action === 'delete') {
-          await deleteSchedule(Number(button.dataset.id));
-        }
+        const scheduleId = Number(actionSettle.dataset.id || 0);
+        if (scheduleId) await liquidateSchedule(scheduleId);
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    actionDelete?.addEventListener('click', async () => {
+      try {
+        const scheduleId = Number(actionDelete.dataset.id || 0);
+        if (scheduleId) await deleteSchedule(scheduleId);
       } catch (error) {
         alert(error.message);
       }
@@ -213,7 +329,8 @@
       updateFiltersCount();
       await loadSchedules();
     } catch (error) {
-      tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${error.message}</td></tr>`;
+      list.innerHTML = `<div class="sched-empty">${error.message}</div>`;
+      renderDetail(null);
     }
   }
 

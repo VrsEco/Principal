@@ -180,19 +180,24 @@ class FinancialBudgetCodeService:
         budget_category: Optional[str] = None,
         existing_code: Optional[str] = None,
     ) -> str:
-        company = Company.query.filter(Company.id == company_id).first()
-        company_code = (company.client_code if company and company.client_code else None) or (
-            company.name[:2].upper() if company and company.name else "CP"
-        )
-        year = period_start.year if period_start else date.today().year
-        category = FinancialBudgetCodeService.normalize_budget_category(budget_category) or "GENERAL"
-        base = f"{company_code}.O.{year}.{category}"
-
         if existing_code:
             return existing_code
 
-        sequence = FinancialBudgetCodeService._next_version_sequence(company_id=company_id, prefix=base)
-        return f"{base}.{sequence}"
+        company_code = FinancialBudgetCodeService.get_company_code(company_id)
+        prefix = f"{company_code}.{FinancialBudgetCodeService.VERSION_CODE_PREFIX}"
+        sequence = FinancialBudgetCodeService._next_version_sequence(company_id=company_id, prefix=prefix)
+        return f"{prefix}.{sequence}"
+
+    @staticmethod
+    def get_company_code(company_id: int) -> str:
+        try:
+            company = Company.query.filter(Company.id == company_id).first()
+        except Exception:
+            company = None
+        company_code = (company.client_code if company and company.client_code else None) or (
+            company.name[:2].upper() if company and company.name else "CP"
+        )
+        return str(company_code).strip().upper()
 
     @staticmethod
     def enrich_version_payload(version: FinancialBudgetVersion | Dict[str, Any]) -> Dict[str, Any]:

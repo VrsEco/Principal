@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import (
+    Company,
     FinancialBankAccount,
     FinancialBudgetContract,
     FinancialBudgetDocument,
@@ -141,6 +142,7 @@ class FinancialBudgetWorkspaceService:
         line_id: Optional[int] = None,
         contract_id: Optional[int] = None,
         document_id: Optional[int] = None,
+        schedule_id: Optional[int] = None,
         budget_cycle: Optional[str] = None,
         budget_category: Optional[str] = None,
         budget_group: Optional[str] = None,
@@ -196,6 +198,7 @@ class FinancialBudgetWorkspaceService:
                 "selected_line_id": None,
                 "selected_contract_id": None,
                 "selected_document_id": None,
+                "selected_schedule_id": None,
                 "contracts": [],
                 "documents": [],
                 "schedules": [],
@@ -254,6 +257,12 @@ class FinancialBudgetWorkspaceService:
             if selected_document
             else []
         )
+        selected_schedule = FinancialBudgetWorkspaceService._resolve_selected_schedule(
+            schedules=schedules,
+            schedule_id=schedule_id,
+        )
+        if schedule_id and not selected_schedule:
+            return None, "Agendamento não encontrado para a NF/equivalente selecionada."
         operational_queue = (
             FinancialBudgetWorkspaceService._list_operational_queue(
                 company_id=company_id,
@@ -283,6 +292,8 @@ class FinancialBudgetWorkspaceService:
             "selected_document_id": selected_document.id if selected_document else None,
             "selected_document": FinancialBudgetWorkspaceService._serialize_document(selected_document) if selected_document else None,
             "schedules": [FinancialBudgetWorkspaceService._serialize_schedule(schedule) for schedule in schedules],
+            "selected_schedule_id": selected_schedule.id if selected_schedule else None,
+            "selected_schedule": FinancialBudgetWorkspaceService._serialize_schedule(selected_schedule) if selected_schedule else None,
             "operational_queue": operational_queue,
             "cycle_groups": versions_result.get("cycles") if isinstance(versions_result, dict) else [],
             "category_groups": versions_result.get("groups") if isinstance(versions_result, dict) else [],
@@ -447,7 +458,12 @@ class FinancialBudgetWorkspaceService:
         if duplicate:
             return None, f"Já existe verba orçamentária com código {data.line_code} neste orçamento."
 
-        item = FinancialBudgetLine(**data.model_dump())
+        normalized = FinancialBudgetWorkspaceService._apply_line_code_defaults(
+            company_id=data.company_id,
+            version=version,
+            payload=data.model_dump(),
+        )
+        item = FinancialBudgetLine(**normalized)
         db.session.add(item)
         try:
             db.session.commit()
@@ -494,6 +510,11 @@ class FinancialBudgetWorkspaceService:
             if duplicate:
                 return None, f"Já existe verba orçamentária com código {new_code} neste orçamento."
 
+        requested_amount = Decimal(str(merged.get("planned_amount", item.planned_amount or 0)))
+        contracted_total = FinancialBudgetWorkspaceService._sum_line_contracts(item)
+        if requested_amount + _DECIMAL_TOLERANCE < contracted_total:
+            return None, "O valor da verba não pode ser menor que o total já contratado."
+
         try:
             for key, value in merged.items():
                 setattr(item, key, value)
@@ -518,6 +539,10 @@ class FinancialBudgetWorkspaceService:
         if not item:
             return None, "Verba orçamentária não encontrada no escopo da empresa."
 
+        has_contracts = item.contracts.filter(FinancialBudgetContract.deleted_at.is_(None)).first()
+        if has_contracts:
+            return None, "Esta verba possui contratos vinculados e não pode ser excluída."
+
         schedule_ids = FinancialBudgetWorkspaceService._collect_line_schedule_ids(item)
         if FinancialBudgetWorkspaceService._has_generated_entries(company_id=company_id, schedule_ids=schedule_ids):
             return None, "Existem agendamentos já convertidos em lançamentos. Exclua/cancele os lançamentos vinculados antes de remover a verba."
@@ -525,15 +550,6 @@ class FinancialBudgetWorkspaceService:
         now = datetime.utcnow()
         try:
             item.deleted_at = now
-            for contract in item.contracts.filter(FinancialBudgetContract.deleted_at.is_(None)).all():
-                contract.deleted_at = now
-                for document in contract.documents.filter(FinancialBudgetDocument.deleted_at.is_(None)).all():
-                    document.deleted_at = now
-                    for schedule in FinancialBudgetWorkspaceService._list_schedules_for_document(
-                        company_id=company_id,
-                        document_id=document.id,
-                    ):
-                        schedule.deleted_at = now
             for amount in item.amounts.filter_by(deleted_at=None).all():
                 amount.deleted_at = now
             db.session.commit()
@@ -572,7 +588,12 @@ class FinancialBudgetWorkspaceService:
         if duplicate:
             return None, f"Já existe contrato com código {data.contract_code} para esta empresa."
 
-        item = FinancialBudgetContract(**data.model_dump())
+        normalized = FinancialBudgetWorkspaceService._apply_contract_code_defaults(
+            company_id=data.company_id,
+            line=line,
+            payload=data.model_dump(),
+        )
+        item = FinancialBudgetContract(**normalized)
         db.session.add(item)
         try:
             db.session.commit()
@@ -622,6 +643,11 @@ class FinancialBudgetWorkspaceService:
             if duplicate:
                 return None, f"Já existe contrato com código {new_code} para esta empresa."
 
+        requested_amount = Decimal(str(merged.get("contract_amount", item.contract_amount or 0)))
+        executed_total = FinancialBudgetWorkspaceService._sum_contract_documents(item)
+        if requested_amount + _DECIMAL_TOLERANCE < executed_total:
+            return None, "O valor do contrato não pode ser menor que o total já executado em NF/equivalentes."
+
         try:
             for key, value in merged.items():
                 setattr(item, key, value)
@@ -646,6 +672,10 @@ class FinancialBudgetWorkspaceService:
         if not item:
             return None, "Contrato não encontrado no escopo da empresa."
 
+        has_documents = item.documents.filter(FinancialBudgetDocument.deleted_at.is_(None)).first()
+        if has_documents:
+            return None, "Este contrato possui NF/equivalentes vinculados e não pode ser excluído."
+
         schedule_ids = FinancialBudgetWorkspaceService._collect_contract_schedule_ids(item)
         if FinancialBudgetWorkspaceService._has_generated_entries(company_id=company_id, schedule_ids=schedule_ids):
             return None, "Existem agendamentos deste contrato já convertidos em lançamentos. Faça o saneamento antes de remover o contrato."
@@ -653,13 +683,6 @@ class FinancialBudgetWorkspaceService:
         now = datetime.utcnow()
         try:
             item.deleted_at = now
-            for document in item.documents.filter(FinancialBudgetDocument.deleted_at.is_(None)).all():
-                document.deleted_at = now
-                for schedule in FinancialBudgetWorkspaceService._list_schedules_for_document(
-                    company_id=company_id,
-                    document_id=document.id,
-                ):
-                    schedule.deleted_at = now
             db.session.commit()
             return {"message": "Contrato removido com sucesso.", "id": contract_id}, None
         except Exception as exc:
@@ -702,6 +725,11 @@ class FinancialBudgetWorkspaceService:
 
         normalized = data.model_dump()
         normalized["counterparty_id"] = counterparty_id
+        normalized = FinancialBudgetWorkspaceService._apply_document_code_defaults(
+            company_id=data.company_id,
+            contract=contract,
+            payload=normalized,
+        )
         item = FinancialBudgetDocument(**normalized)
         db.session.add(item)
         try:
@@ -797,6 +825,8 @@ class FinancialBudgetWorkspaceService:
                 document_id=item.id,
             )
         ]
+        if schedule_ids:
+            return None, "Esta NF/equivalente possui agendamentos vinculados e não pode ser excluída."
         if FinancialBudgetWorkspaceService._has_generated_entries(company_id=company_id, schedule_ids=schedule_ids):
             return None, "Existem agendamentos desta NF já convertidos em lançamentos. Faça o saneamento antes de remover a NF."
 
@@ -805,11 +835,6 @@ class FinancialBudgetWorkspaceService:
             if item.is_default_suggestion:
                 item.is_default_suggestion = False
             item.deleted_at = now
-            for schedule in FinancialBudgetWorkspaceService._list_schedules_for_document(
-                company_id=company_id,
-                document_id=item.id,
-            ):
-                schedule.deleted_at = now
             db.session.commit()
             return {"message": "NF/equivalente removida com sucesso.", "id": document_id}, None
         except Exception as exc:
@@ -1159,6 +1184,127 @@ class FinancialBudgetWorkspaceService:
         if document_id is None:
             return documents[0]
         return next((item for item in documents if item.id == document_id), None)
+
+    @staticmethod
+    def _resolve_selected_schedule(
+        *,
+        schedules: List[FinancialSchedule],
+        schedule_id: Optional[int],
+    ) -> Optional[FinancialSchedule]:
+        if not schedules:
+            return None
+        if schedule_id is None:
+            return schedules[0]
+        return next((item for item in schedules if item.id == schedule_id), None)
+
+    @staticmethod
+    def _apply_line_code_defaults(
+        *,
+        company_id: int,
+        version: FinancialBudgetVersion,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        normalized = dict(payload)
+        company_code = FinancialBudgetCodeService.get_company_code(company_id)
+        line_seq = normalized.get("line_seq") or FinancialBudgetWorkspaceService._next_line_sequence(
+            company_id=company_id,
+            version_id=version.id,
+        )
+        code = f"{company_code}.O.{version.budget_seq or FinancialBudgetWorkspaceService._extract_last_sequence(version.code)}.{line_seq}"
+        normalized["line_seq"] = line_seq
+        normalized["line_code"] = code
+        normalized["full_code"] = code
+        normalized["company_code_snapshot"] = company_code
+        return normalized
+
+    @staticmethod
+    def _apply_contract_code_defaults(
+        *,
+        company_id: int,
+        line: FinancialBudgetLine,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        normalized = dict(payload)
+        contract_seq = normalized.get("contract_seq") or FinancialBudgetWorkspaceService._next_contract_sequence(
+            company_id=company_id,
+            line_id=line.id,
+        )
+        code = f"{line.line_code}.{contract_seq}"
+        normalized["contract_seq"] = contract_seq
+        normalized["contract_code"] = code
+        normalized["full_code"] = code
+        normalized["company_code_snapshot"] = FinancialBudgetCodeService.get_company_code(company_id)
+        return normalized
+
+    @staticmethod
+    def _apply_document_code_defaults(
+        *,
+        company_id: int,
+        contract: FinancialBudgetContract,
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        normalized = dict(payload)
+        document_seq = normalized.get("document_seq") or FinancialBudgetWorkspaceService._next_document_sequence(
+            company_id=company_id,
+            contract_id=contract.id,
+        )
+        code = f"{contract.contract_code}.{document_seq}"
+        normalized["document_seq"] = document_seq
+        normalized["document_code"] = code
+        normalized["full_code"] = code
+        normalized["company_code_snapshot"] = FinancialBudgetCodeService.get_company_code(company_id)
+        return normalized
+
+    @staticmethod
+    def _next_line_sequence(*, company_id: int, version_id: int) -> int:
+        items = FinancialBudgetLine.query.filter(
+            FinancialBudgetLine.company_id == company_id,
+            FinancialBudgetLine.budget_version_id == version_id,
+            FinancialBudgetLine.deleted_at.is_(None),
+        ).all()
+        highest = max((int(item.line_seq or 0) for item in items), default=0)
+        return highest + 1
+
+    @staticmethod
+    def _next_contract_sequence(*, company_id: int, line_id: int) -> int:
+        items = FinancialBudgetContract.query.filter(
+            FinancialBudgetContract.company_id == company_id,
+            FinancialBudgetContract.budget_line_id == line_id,
+            FinancialBudgetContract.deleted_at.is_(None),
+        ).all()
+        highest = max((int(item.contract_seq or 0) for item in items), default=0)
+        return highest + 1
+
+    @staticmethod
+    def _next_document_sequence(*, company_id: int, contract_id: int) -> int:
+        items = FinancialBudgetDocument.query.filter(
+            FinancialBudgetDocument.company_id == company_id,
+            FinancialBudgetDocument.budget_contract_id == contract_id,
+            FinancialBudgetDocument.deleted_at.is_(None),
+        ).all()
+        highest = max((int(item.document_seq or 0) for item in items), default=0)
+        return highest + 1
+
+    @staticmethod
+    def _extract_last_sequence(code: Optional[str]) -> int:
+        try:
+            return int(str(code or "").rsplit(".", 1)[-1])
+        except Exception:
+            return 0
+
+    @staticmethod
+    def _sum_line_contracts(line: FinancialBudgetLine) -> Decimal:
+        return sum(
+            (Decimal(str(item.contract_amount or 0)) for item in line.contracts.filter(FinancialBudgetContract.deleted_at.is_(None)).all()),
+            _DECIMAL_ZERO,
+        )
+
+    @staticmethod
+    def _sum_contract_documents(contract: FinancialBudgetContract) -> Decimal:
+        return sum(
+            (Decimal(str(item.document_amount or 0)) for item in contract.documents.filter(FinancialBudgetDocument.deleted_at.is_(None)).all()),
+            _DECIMAL_ZERO,
+        )
 
     @staticmethod
     def _serialize_line(line: Optional[FinancialBudgetLine]) -> Optional[Dict[str, Any]]:

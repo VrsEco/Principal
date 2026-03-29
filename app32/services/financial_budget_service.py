@@ -129,6 +129,19 @@ class FinancialBudgetService:
     @staticmethod
     def create_version(*, payload: Dict, allowed_company_ids: Optional[Sequence[int]] = None) -> Tuple[Optional[Dict], Optional[str]]:
         normalized_payload = FinancialBudgetCodeService.normalize_version_payload(payload, company_id=payload.get("company_id"))
+        company_id = normalized_payload.get("company_id")
+        if company_id:
+            requested_code = str(normalized_payload.get("code") or "").strip()
+            budget_seq = normalized_payload.get("budget_seq")
+            if not budget_seq and (not requested_code or requested_code.upper() == "AUTO"):
+                budget_seq = FinancialBudgetService._next_budget_sequence(int(company_id))
+            budget_seq = budget_seq or FinancialBudgetService._next_budget_sequence(int(company_id))
+            company_code = FinancialBudgetCodeService.get_company_code(int(company_id))
+            normalized_payload["budget_seq"] = budget_seq
+            generated_code = f"{company_code}.O.{budget_seq}"
+            normalized_payload["code"] = generated_code if not requested_code or requested_code.upper() == "AUTO" else requested_code
+            normalized_payload["full_code"] = normalized_payload.get("full_code") or normalized_payload["code"]
+            normalized_payload["company_code_snapshot"] = company_code
         data = FinancialBudgetVersionInput.model_validate(normalized_payload)
         scope_error = FinancialService._ensure_company_scope(data.company_id, allowed_company_ids)
         if scope_error:
@@ -198,6 +211,8 @@ class FinancialBudgetService:
             company_id=company_id,
             existing_metadata_json=version.metadata_json or {},
         )
+        if normalized_payload.get("company_id") is None:
+            normalized_payload["company_id"] = company_id
         data = FinancialBudgetVersionUpdateInput.model_validate(normalized_payload)
         merged = data.model_dump(exclude_unset=True)
         period_start = merged.get("period_start", version.period_start)
@@ -229,6 +244,19 @@ class FinancialBudgetService:
             return None, "Não foi possível atualizar a versão orçamentária."
 
     @staticmethod
+    def _next_budget_sequence(company_id: int) -> int:
+        items = FinancialBudgetVersion.query.filter(
+            FinancialBudgetVersion.company_id == company_id,
+            FinancialBudgetVersion.deleted_at.is_(None),
+        ).all()
+        if items is None:
+            items = []
+        elif not isinstance(items, (list, tuple)):
+            items = [items]
+        highest = max((int(getattr(item, "budget_seq", 0) or 0) for item in items), default=0)
+        return highest + 1
+
+    @staticmethod
     def delete_version(
         *,
         company_id: int,
@@ -247,12 +275,12 @@ class FinancialBudgetService:
         if not version:
             return None, "Versão orçamentária não encontrada no escopo da empresa."
 
+        has_lines = version.lines.filter(FinancialBudgetLine.deleted_at.is_(None)).first()
+        if has_lines:
+            return None, "Este orçamento possui verbas vinculadas e não pode ser excluído."
+
         now = datetime.utcnow()
         version.deleted_at = now
-        for line in version.lines.filter(FinancialBudgetLine.deleted_at.is_(None)).all():
-            line.deleted_at = now
-            for amount in line.amounts.filter(FinancialBudgetAmount.deleted_at.is_(None)).all():
-                amount.deleted_at = now
         try:
             db.session.commit()
             return {"message": "Versão orçamentária removida com sucesso."}, None
