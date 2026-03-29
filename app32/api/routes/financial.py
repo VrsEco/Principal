@@ -1,6 +1,6 @@
 import io
 
-from flask import Blueprint, abort, render_template, request, send_file, session
+from flask import Blueprint, abort, redirect, render_template, request, send_file, session
 from flask_login import current_user
 
 from models import Company, FinancialEntry, FinancialSchedule
@@ -463,11 +463,9 @@ def financial_closings_page():
 @permission_required("financial", "view")
 def financial_budget_planning_page():
     company = get_active_company()
-    return render_template(
-        "modules/financial/budget_cycles_list.html",
-        company=company,
-        company_id=company.id if company else None,
-    )
+    company_id = request.args.get("company_id") or (company.id if company else None)
+    query = f"?company_id={company_id}" if company_id else ""
+    return redirect(f"/financial/budget{query}")
 
 
 @financial_bp.route("/financial/budget")
