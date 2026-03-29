@@ -7,7 +7,13 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from flask import current_app
 from models import db
-from models.financial import FinancialEntry, FinancialEntryAllocation, FinancialSettlement
+from models.financial import (
+    FinancialBankAccount,
+    FinancialCounterparty,
+    FinancialEntry,
+    FinancialEntryAllocation,
+    FinancialSettlement,
+)
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine
 from models.process import ProcessInstance, ProcessRoutine
 from models.routine import Routine
@@ -115,6 +121,112 @@ class FinancialService:
             .all()
         ]
         return payload
+
+    @staticmethod
+    def serialize_entry_list(entries: Sequence[FinancialEntry]) -> List[Dict[str, Any]]:
+        serialized_items = [FinancialService.enrich_amount_payload(entry.to_dict()) for entry in entries]
+        if not serialized_items:
+            return []
+
+        entry_ids = [int(item["id"]) for item in serialized_items]
+        company_ids = {int(item["company_id"]) for item in serialized_items if item.get("company_id") is not None}
+
+        settlements = (
+            FinancialSettlement.query.filter(
+                FinancialSettlement.company_id.in_(company_ids),
+                FinancialSettlement.financial_entry_id.in_(entry_ids),
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            )
+            .order_by(
+                FinancialSettlement.financial_entry_id.asc(),
+                FinancialSettlement.settlement_date.desc(),
+                FinancialSettlement.id.desc(),
+            )
+            .all()
+        )
+
+        settlement_summary_by_entry: Dict[int, Dict[str, Any]] = {}
+        related_bank_account_ids = {
+            int(item["bank_account_id"])
+            for item in serialized_items
+            if item.get("bank_account_id") is not None
+        }
+        related_counterparty_ids = {
+            int(item["counterparty_id"])
+            for item in serialized_items
+            if item.get("counterparty_id") is not None
+        }
+
+        for settlement in settlements:
+            if settlement.bank_account_id is not None:
+                related_bank_account_ids.add(int(settlement.bank_account_id))
+            summary = settlement_summary_by_entry.setdefault(
+                int(settlement.financial_entry_id),
+                {
+                    "settled_principal_amount": 0.0,
+                    "settled_net_amount": 0.0,
+                    "settlement_count": 0,
+                    "latest_settlement_date": settlement.settlement_date.isoformat() if settlement.settlement_date else None,
+                    "latest_settlement_bank_account_id": settlement.bank_account_id,
+                },
+            )
+            summary["settled_principal_amount"] += float(settlement.principal_amount or 0)
+            summary["settled_net_amount"] += float(settlement.net_amount or 0)
+            summary["settlement_count"] += 1
+
+        bank_accounts = {
+            item.id: item
+            for item in FinancialBankAccount.query.filter(
+                FinancialBankAccount.company_id.in_(company_ids),
+                FinancialBankAccount.id.in_(related_bank_account_ids or {-1}),
+                FinancialBankAccount.deleted_at.is_(None),
+            ).all()
+        }
+        counterparties = {
+            item.id: item
+            for item in FinancialCounterparty.query.filter(
+                FinancialCounterparty.company_id.in_(company_ids),
+                FinancialCounterparty.id.in_(related_counterparty_ids or {-1}),
+                FinancialCounterparty.deleted_at.is_(None),
+            ).all()
+        }
+
+        for item in serialized_items:
+            entry_id = int(item["id"])
+            counterparty = counterparties.get(item.get("counterparty_id"))
+            entry_bank_account = bank_accounts.get(item.get("bank_account_id"))
+            settlement_summary = settlement_summary_by_entry.get(entry_id, {})
+            settlement_bank_account = bank_accounts.get(settlement_summary.get("latest_settlement_bank_account_id"))
+            external_reference = str(item.get("external_reference") or "")
+            schedule_id = None
+            if external_reference.startswith("financial_schedule:"):
+                raw_schedule_id = external_reference.split(":", 1)[1].strip()
+                if raw_schedule_id.isdigit():
+                    schedule_id = int(raw_schedule_id)
+
+            item["display_code"] = str(entry_id)
+            item["schedule_id"] = schedule_id
+            item["schedule_url"] = f"/financial/schedules/{schedule_id}" if schedule_id else None
+            item["counterparty_name"] = counterparty.name if counterparty else None
+            item["entry_bank_account_name"] = entry_bank_account.name if entry_bank_account else None
+            item["settlement_bank_account_name"] = (
+                settlement_bank_account.name if settlement_bank_account else None
+            )
+            item["bank_account_name"] = (
+                item["settlement_bank_account_name"]
+                or item["entry_bank_account_name"]
+            )
+            item["settled_principal_amount"] = float(settlement_summary.get("settled_principal_amount", 0) or 0)
+            item["settled_amount"] = float(settlement_summary.get("settled_net_amount", 0) or 0)
+            item["settled_signed_amount"] = FinancialService.get_signed_amount(
+                item["settled_amount"],
+                item.get("movement_nature"),
+            )
+            item["latest_settlement_date"] = settlement_summary.get("latest_settlement_date")
+            item["settlement_count"] = int(settlement_summary.get("settlement_count", 0) or 0)
+
+        return serialized_items
 
     @staticmethod
     def list_entries(

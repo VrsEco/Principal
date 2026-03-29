@@ -42,16 +42,16 @@
             <strong id="stat-total">0</strong>
         </article>
         <article class="stat-card">
-            <span class="stat-label">A Receber</span>
-            <strong id="stat-receivable">R$ 0,00</strong>
+            <span class="stat-label">Recebido</span>
+            <strong id="stat-received" class="stat-value stat-value--positive">R$ 0,00</strong>
         </article>
         <article class="stat-card">
-            <span class="stat-label">A Pagar</span>
-            <strong id="stat-payable">R$ 0,00</strong>
+            <span class="stat-label">Pago</span>
+            <strong id="stat-paid" class="stat-value stat-value--negative">R$ 0,00</strong>
         </article>
         <article class="stat-card">
-            <span class="stat-label">Em aberto</span>
-            <strong id="stat-open">0</strong>
+            <span class="stat-label">Total</span>
+            <strong id="stat-balance" class="stat-value">R$ 0,00</strong>
         </article>
     </section>
 
@@ -68,11 +68,11 @@
                     <tr>
                         <th>Código</th>
                         <th>Histórico</th>
-                        <th>Tipo</th>
-                        <th>Status</th>
-                        <th>Competência</th>
-                        <th>Vencimento</th>
+                        <th>Favorecido</th>
+                        <th>Conta Bancária</th>
+                        <th>Liquidação</th>
                         <th>Valor do Título</th>
+                        <th>Valor do Pagamento</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -96,6 +96,9 @@
     .stat-card { padding:1.25rem; display:flex; flex-direction:column; gap:.5rem; }
     .stat-label { color:var(--text-tertiary); text-transform:uppercase; font-size:.75rem; font-weight:700; }
     .stat-card strong { font-size:2rem; color:var(--text-primary); }
+    .stat-value--positive { color:#2563eb !important; }
+    .stat-value--negative { color:#dc2626 !important; }
+    .stat-value--neutral { color:var(--text-primary) !important; }
     .panel { margin-bottom:1.5rem; }
     .panel-header { padding:1.25rem 1.25rem 0; display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
     .panel-header h2 { margin:0; }
@@ -123,8 +126,10 @@
     .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
     .btn-primary { background:var(--primary); color:#fff; }
     .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .btn-sm { padding:.62rem .85rem; font-size:.84rem; }
+    .actions-stack { display:flex; gap:.5rem; flex-wrap:wrap; }
     .table-wrap { padding:1.25rem; overflow:auto; }
-    .data-table { width:100%; border-collapse:collapse; min-width:980px; }
+    .data-table { width:100%; border-collapse:collapse; min-width:1240px; }
     .data-table th, .data-table td { padding:.9rem .75rem; border-bottom:1px solid var(--border); text-align:left; }
     .data-table th { color:var(--text-tertiary); font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; }
     .empty-cell { text-align:center; color:var(--text-tertiary); padding:2rem 1rem; }
@@ -136,6 +141,12 @@
     .amount-pill { display:inline-flex; align-items:center; justify-content:flex-end; min-width:7.5rem; font-weight:800; font-variant-numeric:tabular-nums; }
     .amount-pill--negative { color:#dc2626; }
     .amount-pill--positive { color:#2563eb; }
+    .entry-code-pill {
+        display:inline-flex; align-items:center; justify-content:center; min-width:3rem;
+        padding:.35rem .65rem; border-radius:999px; background:var(--surface-secondary);
+        border:1px solid var(--border); font-weight:800; font-variant-numeric:tabular-nums;
+    }
+    .cell-muted { color:var(--text-tertiary); font-size:.84rem; }
 
     @media (max-width: 960px) {
         .stat-grid { grid-template-columns:1fr; }
@@ -178,10 +189,6 @@
                 : 'amount-pill amount-pill--positive';
         }
 
-        function statusBadge(status) {
-            return `<span class="badge badge--${status || 'draft'}">${status || 'draft'}</span>`;
-        }
-
         async function loadEntries() {
             tableBody.innerHTML = '<tr><td colspan="8" class="empty-cell">Carregando lançamentos...</td></tr>';
             const params = new URLSearchParams({ company_id: companyId });
@@ -197,9 +204,22 @@
 
         function renderEntries(items) {
             document.getElementById('stat-total').textContent = items.length;
-            document.getElementById('stat-receivable').textContent = formatCurrency(items.filter(item => item.entry_type === 'receivable').reduce((acc, item) => acc + Number(item.original_amount || 0), 0));
-            document.getElementById('stat-payable').textContent = formatCurrency(items.filter(item => item.entry_type === 'payable').reduce((acc, item) => acc + Number(item.original_amount || 0), 0));
-            document.getElementById('stat-open').textContent = items.filter(item => !['settled', 'cancelled'].includes(item.status)).length;
+            const received = items
+                .filter(item => Number(item.settled_amount || 0) > 0 && item.movement_nature === 'credit')
+                .reduce((acc, item) => acc + Number(item.settled_amount || 0), 0);
+            const paid = items
+                .filter(item => Number(item.settled_amount || 0) > 0 && item.movement_nature === 'debit')
+                .reduce((acc, item) => acc + Math.abs(Number(item.settled_signed_amount || 0)), 0);
+            const total = items.reduce((acc, item) => acc + Number(item.settled_signed_amount || 0), 0);
+
+            document.getElementById('stat-received').textContent = formatCurrency(received);
+            document.getElementById('stat-paid').textContent = formatCurrency(-paid);
+            const statBalance = document.getElementById('stat-balance');
+            statBalance.textContent = formatCurrency(total);
+            statBalance.classList.remove('stat-value--positive', 'stat-value--negative', 'stat-value--neutral');
+            statBalance.classList.add(
+                total > 0 ? 'stat-value--positive' : total < 0 ? 'stat-value--negative' : 'stat-value--neutral'
+            );
 
             if (!items.length) {
                 tableBody.innerHTML = '<tr><td colspan="8" class="empty-cell">Nenhum lançamento encontrado.</td></tr>';
@@ -208,17 +228,26 @@
 
             tableBody.innerHTML = items.map(item => `
                 <tr>
-                    <td>${item.entry_code || '-'}</td>
+                    <td><span class="entry-code-pill">${item.display_code || item.id || '-'}</span></td>
                     <td>
                         <strong>${item.description || '-'}</strong><br>
                         <small style="color:var(--text-tertiary)">atividade ${item.activity_id || '-'} · instância ${item.process_instance_id || '-'}</small>
                     </td>
-                    <td>${item.entry_type || '-'}</td>
-                    <td>${statusBadge(item.status)}</td>
-                    <td>${item.competence_date || '-'}</td>
-                    <td>${item.due_date || '-'}</td>
-                    <td><span class="${amountClass(item)}">${formatCurrency(item.signed_amount ?? item.original_amount)}</span></td>
-                    <td><a href="/financial/entries/${item.id}" class="btn btn-secondary" style="text-decoration:none;">Abrir</a></td>
+                    <td>${item.counterparty_name || '<span class="cell-muted">Não informado</span>'}</td>
+                    <td>${item.bank_account_name || '<span class="cell-muted">Não informada</span>'}</td>
+                    <td>${item.latest_settlement_date || '<span class="cell-muted">Pendente</span>'}</td>
+                    <td><span class="${amountClass({ signed_amount: item.signed_amount ?? item.original_amount, display_variant: item.display_variant })}">${formatCurrency(item.original_amount)}</span></td>
+                    <td>${Number(item.settled_amount || 0) > 0
+                        ? `<span class="${amountClass({ signed_amount: item.settled_signed_amount ?? item.settled_amount, display_variant: item.display_variant })}">${formatCurrency(item.settled_signed_amount ?? item.settled_amount)}</span>`
+                        : '<span class="cell-muted">-</span>'}</td>
+                    <td>
+                        <div class="actions-stack">
+                            <a href="/financial/entries/${item.id}" class="btn btn-secondary btn-sm" style="text-decoration:none;">Abrir</a>
+                            ${item.schedule_url
+                                ? `<a href="${item.schedule_url}" class="btn btn-primary btn-sm" style="text-decoration:none;">Agendamento</a>`
+                                : ''}
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         }

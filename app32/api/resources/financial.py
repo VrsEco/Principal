@@ -125,7 +125,7 @@ class FinancialEntryListResource(Resource):
             query = query.filter(FinancialEntry.competence_date <= competence_date_to)
 
         entries = query.order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc()).all()
-        return [FinancialService.serialize_entry(entry, include_children=False) for entry in entries], 200
+        return FinancialService.serialize_entry_list(entries), 200
 
     @permission_required("financial", "create")
     def post(self):
