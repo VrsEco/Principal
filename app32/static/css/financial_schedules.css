@@ -368,6 +368,25 @@
   white-space: nowrap;
 }
 
+.rateio-row--adjustment {
+  background: color-mix(in srgb, var(--form-tint-strong) 18%, transparent);
+}
+
+.rateio-adjustment-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--form-tint-strong) 70%, #fff);
+  color: var(--form-tint-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .rateio-table th,
 .settlement-table th {
   font-size: 0.76rem;

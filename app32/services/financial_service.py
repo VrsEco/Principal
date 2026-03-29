@@ -638,6 +638,11 @@ class FinancialService:
             if item.allocation_type == "percentage":
                 percentage_total += item.percentage or Decimal("0")
             else:
+                adjustment_kind = str((item.metadata_json or {}).get("adjustment_kind") or "").strip().lower()
+                if adjustment_kind == "discount" and (item.allocated_amount or Decimal("0")) > 0:
+                    return None, "Rateio de desconto deve possuir valor negativo."
+                if adjustment_kind != "discount" and (item.allocated_amount or Decimal("0")) < 0:
+                    return None, "Somente rateios de desconto podem possuir valor negativo."
                 amount_total += item.allocated_amount or Decimal("0")
 
         if allocation_mode == "percentage" and percentage_total != Decimal("100"):

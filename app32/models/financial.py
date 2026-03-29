@@ -1149,7 +1149,7 @@ class FinancialEntryAllocation(db.Model):
             name="ck_financial_entry_allocations_type",
         ),
         db.CheckConstraint(
-            "(percentage IS NULL OR percentage >= 0) AND (allocated_amount IS NULL OR allocated_amount >= 0)",
+            "(percentage IS NULL OR percentage >= 0)",
             name="ck_financial_entry_allocations_nonneg",
         ),
     )

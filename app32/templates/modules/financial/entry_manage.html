@@ -221,21 +221,29 @@
         return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
     }
 
-    function getSettledPrincipal(entry) {
+    function getSettledNetAmount(entry) {
         return (entry?.settlements || [])
             .filter(item => item.settlement_status !== 'cancelled')
-            .reduce((acc, item) => acc + Number(item.principal_amount || 0), 0);
+            .reduce((acc, item) => (
+                acc
+                + Number(item.principal_amount || 0)
+                + Number(item.interest_amount || 0)
+                + Number(item.penalty_amount || 0)
+                + Number(item.fee_amount || 0)
+                + Number(item.other_adjustments_amount || 0)
+                - Number(item.discount_amount || 0)
+            ), 0);
     }
 
     function getAvailableAmount(entry) {
-        return Math.max(Number(entry?.original_amount || 0) - getSettledPrincipal(entry), 0);
+        return Math.max(Number(entry?.original_amount || 0) - getSettledNetAmount(entry), 0);
     }
 
     function refreshAvailableAmount(entry) {
         const available = getAvailableAmount(entry);
         document.getElementById('available-amount-card').textContent = formatCurrency(available);
         document.getElementById('available-amount-hint').textContent =
-            `Saldo disponível: ${formatCurrency(available)} (${formatCurrency(Number(entry?.original_amount || 0))} - liquidações já feitas).`;
+            `Saldo disponível: ${formatCurrency(available)} (${formatCurrency(Number(entry?.original_amount || 0))} - baixas líquidas já feitas).`;
         document.getElementById('principal-amount').value = available.toFixed(2).replace('.', ',');
     }
 

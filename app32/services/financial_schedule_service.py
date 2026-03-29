@@ -17,6 +17,7 @@ from models.financial import (
     FinancialChartAccount,
     FinancialCorrectionIndex,
     FinancialCostCenter,
+    FinancialDiscountRule,
     FinancialDomainEnablement,
     FinancialEntry,
     FinancialSchedule,
@@ -149,6 +150,7 @@ class FinancialScheduleService:
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
             company_id=data.company_id,
             template_amount=data.template_amount,
+            due_date=data.next_due_date or data.first_due_date,
             metadata_json=data.metadata_json,
         )
         if allocation_error:
@@ -247,6 +249,7 @@ class FinancialScheduleService:
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
             company_id=company_id,
             template_amount=merged.get("template_amount", schedule.template_amount),
+            due_date=merged.get("next_due_date", merged.get("first_due_date", schedule.next_due_date or schedule.first_due_date)),
             metadata_json=merged.get("metadata_json", schedule.metadata_json),
         )
         if allocation_error:
@@ -410,6 +413,24 @@ class FinancialScheduleService:
             FinancialEntry.entry_code == entry_code,
         ).first()
         if existing:
+            entry_payload = FinancialScheduleService._build_entry_payload(
+                schedule=schedule,
+                entry_code=entry_code,
+                force_posted=True,
+                occurrence_date=due_date,
+            )
+            existing.original_amount = entry_payload["original_amount"]
+            existing.chart_account_id = entry_payload["chart_account_id"]
+            existing.cost_center_id = entry_payload["cost_center_id"]
+            existing.metadata_json = entry_payload["metadata_json"]
+            allocation_error = FinancialScheduleService._apply_schedule_allocations(
+                schedule=schedule,
+                entry_id=existing.id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if allocation_error:
+                return None, allocation_error
+            db.session.commit()
             return {"entry": FinancialService.serialize_entry(existing), "created": False}, None
 
         entry_payload = FinancialScheduleService._build_entry_payload(
@@ -655,6 +676,12 @@ class FinancialScheduleService:
         occurrence_date: Optional[date] = None,
     ) -> Dict[str, Any]:
         due_date = occurrence_date or schedule.next_due_date or schedule.first_due_date
+        adjustment_totals = FinancialScheduleService._calculate_schedule_adjustments(
+            company_id=schedule.company_id,
+            template_amount=schedule.template_amount,
+            metadata_json=schedule.metadata_json,
+            due_date=due_date,
+        )
         budget_links = {
             "budget_line_id": getattr(schedule, "budget_line_id", None),
             "budget_contract_id": getattr(schedule, "budget_contract_id", None),
@@ -689,7 +716,7 @@ class FinancialScheduleService:
             "competence_date": FinancialScheduleService._resolve_competence_date(schedule, due_date),
             "due_date": due_date,
             "occurred_on": due_date if (schedule.auto_post or force_posted) else None,
-            "original_amount": Decimal(schedule.template_amount or 0),
+            "original_amount": Decimal(str(adjustment_totals.get("updated_amount") or schedule.template_amount or 0)),
             "currency_code": schedule.currency_code,
             "bank_account_id": schedule.bank_account_id,
             "counterparty_id": schedule.counterparty_id,
@@ -709,6 +736,10 @@ class FinancialScheduleService:
                 **metadata,
                 "financial_schedule_id": schedule.id,
                 "generated_from_schedule": True,
+                "schedule_template_amount": adjustment_totals.get("template_amount"),
+                "schedule_correction_amount": adjustment_totals.get("correction_amount"),
+                "schedule_discount_amount": adjustment_totals.get("discount_amount"),
+                "schedule_updated_amount": adjustment_totals.get("updated_amount"),
                 "schedule_due_date": due_date.isoformat() if due_date else None,
             },
         }
@@ -731,6 +762,7 @@ class FinancialScheduleService:
             "allocations": [],
         }
         for item in raw_allocations:
+            row_metadata = dict(item.get("metadata_json") or {})
             payload["allocations"].append(
                 {
                     "company_id": schedule.company_id,
@@ -742,6 +774,7 @@ class FinancialScheduleService:
                     "allocated_amount": item.get("allocated_amount"),
                     "notes": item.get("notes"),
                     "metadata_json": {
+                        **row_metadata,
                         "domain_type": item.get("domain_type"),
                         "domain_source_id": item.get("domain_source_id"),
                         "domain_label": item.get("domain_label"),
@@ -797,13 +830,20 @@ class FinancialScheduleService:
         *,
         company_id: int,
         template_amount: Any,
+        due_date: Optional[date],
         metadata_json: Optional[Dict[str, Any]],
     ) -> Optional[str]:
         allocations = list((metadata_json or {}).get("allocations") or [])
         if not allocations:
             return "Informe ao menos uma linha de rateio para o agendamento."
 
-        amount_total = Decimal(str(template_amount or 0))
+        totals = FinancialScheduleService._calculate_schedule_adjustments(
+            company_id=company_id,
+            template_amount=template_amount,
+            metadata_json=metadata_json,
+            due_date=due_date,
+        )
+        amount_total = Decimal(str(totals.get("updated_amount") or 0))
         percentage_total = Decimal("0")
         allocated_total = Decimal("0")
         allocation_mode: Optional[str] = None
@@ -869,14 +909,20 @@ class FinancialScheduleService:
             elif allocation_mode != current_mode:
                 return "Não é permitido misturar rateio por percentual e por valor no mesmo agendamento."
 
+            adjustment_kind = str((item.get("metadata_json") or {}).get("adjustment_kind") or "").strip().lower()
+
             if current_mode == "percentage" and percentage <= 0:
                 return f"Informe um percentual maior que zero na linha {index} do rateio."
-            if current_mode == "amount" and allocated_amount <= 0:
+            if current_mode == "amount" and allocated_amount == 0:
+                return f"Informe um valor diferente de zero na linha {index} do rateio."
+            if current_mode == "amount" and adjustment_kind not in {"discount"} and allocated_amount < 0:
+                return f"O valor da linha {index} do rateio não pode ser negativo."
+            if current_mode == "amount" and adjustment_kind == "discount" and allocated_amount > 0:
+                return f"O rateio de desconto deve ser informado com valor negativo na linha {index}."
+            if current_mode == "amount" and adjustment_kind != "discount" and allocated_amount <= 0:
                 return f"Informe um valor maior que zero na linha {index} do rateio."
             if current_mode not in {"percentage", "amount"}:
                 return f"Tipo de rateio inválido na linha {index} do agendamento."
-            if allocated_amount < 0:
-                return f"O valor da linha {index} do rateio não pode ser negativo."
 
             percentage_total += percentage
             allocated_total += allocated_amount
@@ -885,7 +931,7 @@ class FinancialScheduleService:
             return "A soma dos percentuais do rateio deve ser exatamente 100%."
 
         if allocation_mode == "amount" and abs(allocated_total - amount_total) > Decimal("0.01"):
-            return "A soma dos valores do rateio deve ser igual ao valor do agendamento."
+            return "A soma dos valores do rateio deve ser igual ao valor atualizado do agendamento."
 
         return None
 
@@ -974,6 +1020,74 @@ class FinancialScheduleService:
     @staticmethod
     def _expected_movement_nature(entry_type: str) -> str:
         return "credit" if entry_type == "receivable" else "debit"
+
+    @staticmethod
+    def _calculate_schedule_adjustments(
+        *,
+        company_id: int,
+        template_amount: Any,
+        metadata_json: Optional[Dict[str, Any]],
+        due_date: Optional[date],
+    ) -> Dict[str, float]:
+        template_decimal = Decimal(str(template_amount or 0))
+        metadata = dict(metadata_json or {})
+        correction_amount = Decimal("0")
+        discount_amount = Decimal("0")
+
+        correction_index_id = metadata.get("correction_index_id")
+        if correction_index_id and due_date:
+            correction = FinancialCorrectionIndex.query.filter(
+                FinancialCorrectionIndex.id == int(correction_index_id),
+                FinancialCorrectionIndex.company_id == company_id,
+                FinancialCorrectionIndex.deleted_at.is_(None),
+                FinancialCorrectionIndex.is_active.is_(True),
+            ).first()
+            if correction:
+                correction_metadata = dict(correction.metadata_json or {})
+                overdue_days = max((date.today() - due_date).days, 0)
+                if overdue_days > 0:
+                    interest_rate = Decimal(str(correction_metadata.get("interest_rate") or 0))
+                    penalty_rate = Decimal(str(correction_metadata.get("penalty_rate") or 0))
+                    penalty_limit_rate = Decimal(str(correction_metadata.get("penalty_limit_rate") or 0))
+                    interest_period = str(correction_metadata.get("interest_period") or "daily").strip().lower()
+                    periods = Decimal(str(overdue_days / 30)) if interest_period == "monthly" else Decimal(overdue_days)
+                    interest_amount = (template_decimal * (interest_rate / Decimal("100")) * periods) if interest_rate > 0 else Decimal("0")
+                    effective_penalty_rate = penalty_rate
+                    if penalty_limit_rate > 0:
+                        effective_penalty_rate = min(effective_penalty_rate, penalty_limit_rate)
+                    penalty_amount = (template_decimal * (effective_penalty_rate / Decimal("100"))) if effective_penalty_rate > 0 else Decimal("0")
+                    correction_amount = interest_amount + penalty_amount
+
+        discount_override = Decimal(str(metadata.get("discount_amount_override") or 0))
+        if discount_override > 0:
+            discount_amount = discount_override
+        else:
+            discount_rule_id = metadata.get("discount_rule_id")
+            if discount_rule_id:
+                discount_rule = FinancialDiscountRule.query.filter(
+                    FinancialDiscountRule.id == int(discount_rule_id),
+                    FinancialDiscountRule.company_id == company_id,
+                    FinancialDiscountRule.deleted_at.is_(None),
+                    FinancialDiscountRule.is_active.is_(True),
+                ).first()
+                if discount_rule:
+                    discount_metadata = dict(discount_rule.metadata_json or {})
+                    discount_type = str(discount_metadata.get("discount_type") or "").strip().lower()
+                    discount_value = Decimal(str(discount_metadata.get("value") or 0))
+                    if discount_value > 0:
+                        discount_amount = (
+                            template_decimal * (discount_value / Decimal("100"))
+                            if discount_type == "percentage"
+                            else discount_value
+                        )
+
+        updated_amount = template_decimal + correction_amount - discount_amount
+        return {
+            "template_amount": float(template_decimal),
+            "correction_amount": float(correction_amount.quantize(Decimal("0.01"))),
+            "discount_amount": float(discount_amount.quantize(Decimal("0.01"))),
+            "updated_amount": float(updated_amount.quantize(Decimal("0.01"))),
+        }
 
     @staticmethod
     def _build_schedule_summary(schedule: FinancialSchedule) -> Dict[str, Any]:

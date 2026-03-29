@@ -179,6 +179,31 @@
 
   const defaultSuggestions = () => optionsCache.default_suggestions || {};
   const asOptionValue = (value) => (value == null || value === '' ? '' : String(value));
+  const getBaseAllocationRows = () => allocationRows.filter((row) => !row.adjustment_kind);
+  const getAdjustmentAllocationRows = () => allocationRows.filter((row) => !!row.adjustment_kind);
+  const getLastBaseAllocationIndex = () => {
+    let lastIndex = -1;
+    allocationRows.forEach((row, index) => {
+      if (!row.adjustment_kind) lastIndex = index;
+    });
+    return lastIndex;
+  };
+  const getConfiguredDiscountAmount = () => round2(parseCurrency($('field-discount-amount')?.value || ''));
+  const setDiscountAmountField = (value, { manual = false } = {}) => {
+    const field = $('field-discount-amount');
+    if (!field) return;
+    field.value = formatSignedCurrency(value || 0);
+    field.dataset.manualOverride = manual ? '1' : '0';
+  };
+  const formatSignedCurrency = (value) => {
+    const numeric = round2(value);
+    const absolute = Math.abs(numeric).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return numeric < 0 ? `-${absolute}` : absolute;
+  };
+  const sanitizeAllocationAmount = (value) => {
+    const numeric = round2(Number(value || 0));
+    return Math.abs(numeric) < 0.005 ? 0 : numeric;
+  };
   const getDefaultCorrectionIndexIdByEntryType = (entryType) => {
     const suggestions = defaultSuggestions();
     if (entryType === 'receivable') return asOptionValue(suggestions.receivable_correction_index_id || '');
@@ -195,6 +220,7 @@
 
   const getSelectedCorrectionIndex = () => (optionsCache.correction_indexes || []).find((item) => String(item.id) === String($('field-correction-index')?.value || ''));
   const getSelectedDiscountRule = () => (optionsCache.discount_rules || []).find((item) => String(item.id) === String($('field-discount-rule')?.value || ''));
+  const getAdjustmentChartAccountId = (item) => asOptionValue(item?.metadata_json?.chart_account_id || '');
 
   function getDaysOverdue() {
     const dueIso = parseDateToIso($('field-due-date')?.value || '');
@@ -227,6 +253,11 @@
   }
 
   function calculateDiscountAmount() {
+    const discountField = $('field-discount-amount');
+    const discountFieldRawValue = String(discountField?.value || '').trim();
+    if (discountField?.dataset.manualOverride === '1') {
+      return getConfiguredDiscountAmount();
+    }
     const amount = getTopAmount();
     const discountRule = getSelectedDiscountRule();
     if (!amount || !discountRule) return 0;
@@ -236,6 +267,20 @@
     if (value <= 0) return 0;
     if (discountType === 'percentage') return round2(amount * (value / 100));
     return round2(value);
+  }
+
+  function refreshSuggestedDiscountAmountField() {
+    const field = $('field-discount-amount');
+    if (!field || field.dataset.manualOverride === '1') return;
+    const selectedRule = getSelectedDiscountRule();
+    if (!selectedRule) return setDiscountAmountField(0, { manual: false });
+    const amount = getTopAmount();
+    const metadata = selectedRule.metadata_json || {};
+    const discountType = String(metadata.discount_type || '').toLowerCase();
+    const value = Number(metadata.value || 0);
+    if (value <= 0) return setDiscountAmountField(0, { manual: false });
+    const suggestedValue = discountType === 'percentage' ? round2(amount * (value / 100)) : round2(value);
+    setDiscountAmountField(suggestedValue, { manual: false });
   }
 
   function calculateLiquidatedAmount() {
@@ -262,10 +307,13 @@
     const liquidatedAmount = calculateLiquidatedAmount();
     const openBalance = round2(updatedAmount - liquidatedAmount);
     if ($('field-correction-amount')) $('field-correction-amount').value = correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if ($('field-discount-amount')) $('field-discount-amount').value = discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if ($('field-liquidated-amount')) $('field-liquidated-amount').value = liquidatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if ($('field-updated-amount')) $('field-updated-amount').value = updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     if ($('field-open-balance')) $('field-open-balance').value = openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function getEffectiveScheduleAmount() {
+    return round2(getTopAmount() + calculateCorrectionAmount() - calculateDiscountAmount());
   }
 
   function getTopAmount() {
@@ -292,12 +340,83 @@
   }
 
   function recalculateAllRowsFromPercentages() {
-    allocationRows.forEach((_, index) => recalculateRowFromPercentage(index));
+    allocationRows.forEach((row, index) => {
+      if (!row.adjustment_kind) recalculateRowFromPercentage(index);
+    });
+  }
+
+  function updateAdjustmentAllocationRow(kind, config = {}) {
+    const existingIndex = allocationRows.findIndex((row) => row.adjustment_kind === kind);
+    const nextAmount = sanitizeAllocationAmount(config.allocated_amount);
+    if (!nextAmount) {
+      if (existingIndex >= 0) allocationRows.splice(existingIndex, 1);
+      return;
+    }
+
+    const suggestions = defaultSuggestions();
+    const domainType = config.domain_type || suggestions.domain_type || null;
+    const domainSourceId = config.domain_source_id || suggestions.domain_source_id || null;
+    const defaults = {
+      chart_account_id: asOptionValue(config.chart_account_id || ''),
+      cost_center_id: asOptionValue(config.cost_center_id || suggestions.cost_center_id || ''),
+      budget_version_id: '',
+      budget_version_code: null,
+      budget_line_id: '',
+      budget_line_code: null,
+      budget_contract_id: '',
+      budget_contract_code: null,
+      budget_document_id: '',
+      budget_document_code: null,
+      domain_type: domainType,
+      domain_source_id: domainSourceId,
+      domain_label: config.domain_label || suggestions.domain_label || null,
+      domain_value: domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '',
+      adjustment_kind: kind,
+      adjustment_label: config.adjustment_label || null,
+      notes: config.notes || null,
+      percentage: '',
+      allocated_amount: nextAmount,
+      allocated_amount_display: formatSignedCurrency(nextAmount),
+    };
+
+    if (existingIndex >= 0) {
+      const current = allocationRows[existingIndex];
+      allocationRows[existingIndex] = {
+        ...current,
+        ...defaults,
+        chart_account_id: current.chart_account_id || defaults.chart_account_id,
+        cost_center_id: current.cost_center_id || defaults.cost_center_id,
+        domain_type: current.domain_type || defaults.domain_type,
+        domain_source_id: current.domain_source_id || defaults.domain_source_id,
+        domain_label: current.domain_label || defaults.domain_label,
+        domain_value: current.domain_value || defaults.domain_value,
+      };
+      return;
+    }
+
+    allocationRows.push(createAllocationRow(defaults));
+  }
+
+  function syncAdjustmentAllocationRows() {
+    const correction = getSelectedCorrectionIndex();
+    const discountRule = getSelectedDiscountRule();
+    updateAdjustmentAllocationRow('correction', {
+      adjustment_label: 'Correção Financeira',
+      chart_account_id: getAdjustmentChartAccountId(correction),
+      allocated_amount: calculateCorrectionAmount(),
+      notes: correction ? `Correção Financeira: ${correction.display_label || correction.name || correction.code || correction.id}` : 'Correção Financeira',
+    });
+    updateAdjustmentAllocationRow('discount', {
+      adjustment_label: 'Desconto',
+      chart_account_id: getAdjustmentChartAccountId(discountRule),
+      allocated_amount: calculateDiscountAmount() * -1,
+      notes: discountRule ? `Desconto: ${discountRule.display_label || discountRule.name || discountRule.code || discountRule.id}` : 'Desconto',
+    });
   }
 
   function summarizeAllocations() {
-    const totalAmount = getTopAmount();
-    const totalPercentage = round4(allocationRows.reduce((acc, row) => acc + parseDecimal(row.percentage), 0));
+    const totalAmount = getEffectiveScheduleAmount();
+    const totalPercentage = round4(getBaseAllocationRows().reduce((acc, row) => acc + parseDecimal(row.percentage), 0));
     const totalAllocated = round2(allocationRows.reduce((acc, row) => acc + round2(row.allocated_amount), 0));
     const remainingPercentage = round4(100 - totalPercentage);
     const remainingValue = round2(totalAmount - totalAllocated);
@@ -318,7 +437,7 @@
   }
 
   function ensureRemainingRow(indexChanged) {
-    if (indexChanged !== allocationRows.length - 1) return false;
+    if (indexChanged !== getLastBaseAllocationIndex()) return false;
     const summary = summarizeAllocations();
     if (summary.remainingPercentage <= 0.01 || summary.remainingPercentage >= 100) return false;
     allocationRows.push({
@@ -328,6 +447,9 @@
       domain_source_id: null,
       domain_label: null,
       domain_value: '',
+      adjustment_kind: null,
+      adjustment_label: null,
+      notes: null,
       percentage: formatPercent(summary.remainingPercentage),
       allocated_amount: round2(summary.remainingValue),
       allocated_amount_display: summary.remainingValue ? summary.remainingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
@@ -356,14 +478,14 @@
     const budgetDocumentOptions = buildOptions(optionsCache.budget_documents, 'Selecione...', buildBudgetLabel);
 
     body.innerHTML = allocationRows.map((row, index) => `
-      <tr>
+      <tr class="${row.adjustment_kind ? 'rateio-row--adjustment' : ''}">
         <td class="rateio-cell rateio-cell--chart-account"><select data-index="${index}" data-field="chart_account_id" aria-label="Plano de conta da linha ${index + 1}">${chartOptions}</select></td>
         <td class="rateio-cell rateio-cell--cost-center"><select data-index="${index}" data-field="cost_center_id" aria-label="Centro de resultado da linha ${index + 1}">${costCenterOptions}</select></td>
         <td class="rateio-cell rateio-cell--budget-document"><select data-index="${index}" data-field="budget_document_id" aria-label="NF ou assemelhado da linha ${index + 1}">${budgetDocumentOptions}</select></td>
         <td class="rateio-cell rateio-cell--domain"><select data-index="${index}" data-field="domain_value" aria-label="Projeto ou processo da linha ${index + 1}">${buildDomainOptions(row.domain_value || '')}</select></td>
-        <td class="rateio-cell rateio-cell--percentage"><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal" placeholder="0,0000" aria-label="Percentual da linha ${index + 1}"></td>
-        <td class="rateio-cell rateio-cell--amount"><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric" placeholder="0,00" aria-label="Valor da linha ${index + 1}"></td>
-        <td class="rateio-cell rateio-cell--actions"><div class="rateio-actions"><button type="button" class="btn btn-secondary btn-icon" data-action="duplicate" data-index="${index}" aria-label="Duplicar linha ${index + 1}">+</button><button type="button" class="btn btn-secondary btn-icon" data-action="remove" data-index="${index}" aria-label="Remover linha ${index + 1}">×</button></div></td>
+        <td class="rateio-cell rateio-cell--percentage"><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal" placeholder="0,0000" aria-label="Percentual da linha ${index + 1}" ${row.adjustment_kind ? 'readonly tabindex="-1"' : ''}></td>
+        <td class="rateio-cell rateio-cell--amount"><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric" placeholder="0,00" aria-label="Valor da linha ${index + 1}" ${row.adjustment_kind ? 'readonly tabindex="-1"' : ''}></td>
+        <td class="rateio-cell rateio-cell--actions"><div class="rateio-actions">${row.adjustment_kind ? `<span class="rateio-adjustment-tag">${row.adjustment_label || 'Ajuste'}</span>` : `<button type="button" class="btn btn-secondary btn-icon" data-action="duplicate" data-index="${index}" aria-label="Duplicar linha ${index + 1}">+</button><button type="button" class="btn btn-secondary btn-icon" data-action="remove" data-index="${index}" aria-label="Remover linha ${index + 1}">×</button>`}</div></td>
       </tr>`).join('');
 
     allocationRows.forEach((row, index) => {
@@ -394,9 +516,12 @@
       domain_source_id: domainSourceId,
       domain_label: defaults.domain_label || suggestions.domain_label || null,
       domain_value: domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '',
+      adjustment_kind: defaults.adjustment_kind || null,
+      adjustment_label: defaults.adjustment_label || null,
       percentage: defaults.percentage ?? '100',
       allocated_amount: defaults.allocated_amount ?? null,
       allocated_amount_display: defaults.allocated_amount_display || '',
+      notes: defaults.notes || null,
     };
   }
 
@@ -471,14 +596,18 @@
       domain_type: item.domain_type || null,
       domain_source_id: item.domain_source_id || null,
       domain_label: item.domain_label || null,
+      adjustment_kind: item.metadata_json?.adjustment_kind || null,
+      adjustment_label: item.metadata_json?.adjustment_label || null,
+      notes: item.notes || null,
       percentage: item.percentage != null ? formatPercent(item.percentage) : '',
       allocated_amount: item.allocated_amount != null ? round2(item.allocated_amount) : null,
-      allocated_amount_display: item.allocated_amount ? Number(item.allocated_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+      allocated_amount_display: item.allocated_amount != null ? formatSignedCurrency(item.allocated_amount) : '',
     }));
     if (!allocationRows.length) {
       allocationRows = [createAllocationRow({ percentage: '100' })];
     }
     recalculateAllRowsFromPercentages();
+    syncAdjustmentAllocationRows();
     renderAllocations();
   }
 
@@ -496,6 +625,11 @@
     $('field-due-date').value = formatIso(schedule.first_due_date || schedule.next_due_date);
     $('field-correction-index').value = schedule.correction_index_id || '';
     $('field-discount-rule').value = schedule.discount_rule_id || '';
+    if (Number(schedule.metadata_json?.discount_amount_override || 0) > 0) {
+      setDiscountAmountField(schedule.metadata_json?.discount_amount_override || 0, { manual: true });
+    } else {
+      setDiscountAmountField(0, { manual: false });
+    }
     $('field-repeat-toggle').value = (schedule.frequency || 'one_time') === 'one_time' ? 'false' : 'true';
     $('field-frequency').value = schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly';
     $('field-interval-value').value = schedule.interval_value || 1;
@@ -519,13 +653,16 @@
       entryTypeBanner.textContent = `Agendamento bloqueado pelo ${code}. Consulta liberada; edição e baixa direta indisponíveis.`;
     }
     window.toggleRepeatFields();
+    refreshSuggestedDiscountAmountField();
+    syncAdjustmentAllocationRows();
+    renderAllocations();
     updateFinancialTotals();
   }
 
   function validateAllocationSummary() {
     const summary = summarizeAllocations();
     if (!summary.percentagesOk) throw new Error('A soma dos percentuais do rateio deve ser exatamente 100%.');
-    if (!summary.valuesOk) throw new Error('A soma dos valores do rateio deve ser igual ao valor informado no agendamento.');
+    if (!summary.valuesOk) throw new Error('A soma dos valores do rateio deve ser igual ao valor atualizado do agendamento.');
   }
 
   function buildPayload() {
@@ -544,8 +681,10 @@
       throw new Error('O vencimento não pode ser anterior à competência.');
     }
     if (!amount || amount <= 0) throw new Error('Informe um valor válido.');
+    syncAdjustmentAllocationRows();
     validateAllocationSummary();
     const frequency = $('field-repeat-toggle').value === 'true' ? $('field-frequency').value : 'one_time';
+    const primaryAllocation = getBaseAllocationRows()[0] || allocationRows[0] || {};
     return {
       schedule_code: form.schedule_code.value || undefined,
       name: description.slice(0, 120),
@@ -565,8 +704,8 @@
       weekday: frequency === 'weekly' ? new Date(`${dueIso}T00:00:00`).getDay() : null,
       template_amount: amount,
       counterparty_id: counterpartyId,
-      chart_account_id: Number(allocationRows[0]?.chart_account_id || 0) || null,
-      cost_center_id: Number(allocationRows[0]?.cost_center_id || 0) || null,
+      chart_account_id: Number(primaryAllocation.chart_account_id || 0) || null,
+      cost_center_id: Number(primaryAllocation.cost_center_id || 0) || null,
       document_number_prefix: null,
       generate_advance_days: 0,
       auto_post: false,
@@ -576,6 +715,7 @@
         document_number: $('field-document-number').value.trim() || null,
         correction_index_id: Number($('field-correction-index').value || 0) || null,
         discount_rule_id: Number($('field-discount-rule').value || 0) || null,
+        discount_amount_override: $('field-discount-amount')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
         competence_mode: $('field-competence-mode').value,
         repeat_count: Number($('field-repeat-count').value || 1),
         attachments: selectedSchedule?.attachments || [],
@@ -594,9 +734,14 @@
           domain_type: row.domain_type || null,
           domain_source_id: row.domain_source_id || null,
           domain_label: row.domain_label || null,
-          allocation_type: row.allocated_amount ? 'amount' : 'percentage',
+          allocation_type: 'amount',
           percentage: row.percentage !== '' ? round4(parseDecimal(row.percentage)) : null,
           allocated_amount: row.allocated_amount != null ? round2(row.allocated_amount) : null,
+          notes: row.notes || null,
+          metadata_json: {
+            adjustment_kind: row.adjustment_kind || null,
+            adjustment_label: row.adjustment_label || null,
+          },
         })),
       },
     };
@@ -617,8 +762,10 @@
     if (!selectedSchedule) {
       suggestDefaultCorrectionIndex(form.entry_type.value || initialEntryType, { force: true });
     }
+    refreshSuggestedDiscountAmountField();
     if (allocationRows.length) {
       allocationRows = allocationRows.map((row) => createAllocationRow(row));
+      syncAdjustmentAllocationRows();
       renderAllocations();
     }
   }
@@ -658,7 +805,10 @@
     renderBaixas([]);
     $('baixas-tab-button').classList.add('hidden');
     $('field-frequency').value = 'weekly';
+    setDiscountAmountField(0, { manual: false });
     window.toggleRepeatFields();
+    syncAdjustmentAllocationRows();
+    renderAllocations();
     updateFinancialTotals();
     switchTab('agendamento');
     renderList();
@@ -808,7 +958,9 @@
 
   $('field-amount').addEventListener('input', (event) => {
     event.target.value = formatCurrencyFromDigits(event.target.value);
+    refreshSuggestedDiscountAmountField();
     recalculateAllRowsFromPercentages();
+    syncAdjustmentAllocationRows();
     renderAllocations();
     updateFinancialTotals();
   });
@@ -821,6 +973,9 @@
   $('field-due-date').addEventListener('input', (event) => {
     event.target.value = normalizeDateInput(event.target.value);
     event.target.setCustomValidity('');
+    refreshSuggestedDiscountAmountField();
+    syncAdjustmentAllocationRows();
+    renderAllocations();
     updateFinancialTotals();
   });
 
@@ -847,10 +1002,37 @@
   });
 
   $('field-correction-index').addEventListener('change', () => {
+    syncAdjustmentAllocationRows();
+    renderAllocations();
     updateFinancialTotals();
   });
 
   $('field-discount-rule').addEventListener('change', () => {
+    const selectedRule = getSelectedDiscountRule();
+    if (selectedRule) {
+      const metadata = selectedRule.metadata_json || {};
+      const suggestedValue = (() => {
+        const amount = getTopAmount();
+        const discountType = String(metadata.discount_type || '').toLowerCase();
+        const value = Number(metadata.value || 0);
+        if (value <= 0) return 0;
+        if (discountType === 'percentage') return round2(amount * (value / 100));
+        return round2(value);
+      })();
+      setDiscountAmountField(suggestedValue, { manual: false });
+    } else {
+      setDiscountAmountField(0, { manual: false });
+    }
+    syncAdjustmentAllocationRows();
+    renderAllocations();
+    updateFinancialTotals();
+  });
+
+  $('field-discount-amount').addEventListener('input', (event) => {
+    event.target.value = formatCurrencyFromDigits(event.target.value);
+    event.target.dataset.manualOverride = '1';
+    syncAdjustmentAllocationRows();
+    renderAllocations();
     updateFinancialTotals();
   });
 
@@ -865,6 +1047,7 @@
     const field = event.target.dataset.field;
     const index = Number(event.target.dataset.index || -1);
     if (index < 0 || !field || !allocationRows[index]) return;
+    if (allocationRows[index].adjustment_kind) return;
 
     if (field === 'percentage') {
       allocationRows[index].percentage = event.target.value;
@@ -893,6 +1076,7 @@
     const field = event.target.dataset.field;
     const index = Number(event.target.dataset.index || -1);
     if (index < 0 || !field || !allocationRows[index]) return;
+    if (allocationRows[index].adjustment_kind && ['percentage', 'allocated_amount_display'].includes(field)) return;
     if (field === 'budget_document_id') {
       const value = event.target.value;
       const item = (optionsCache.budget_documents || []).find((candidate) => String(candidate.id) === String(value));
@@ -943,6 +1127,7 @@
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     const index = Number(button.dataset.index || -1);
+    if (allocationRows[index]?.adjustment_kind) return;
     if (button.dataset.action === 'duplicate' && allocationRows[index]) {
       allocationRows.splice(index + 1, 0, createAllocationRow({ ...allocationRows[index] }));
       renderAllocations();

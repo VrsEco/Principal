@@ -1088,7 +1088,7 @@ class FinancialAllocationInput(BaseModel):
     routine_id: Optional[int] = None
     allocation_type: str = Field(..., pattern=_choices_pattern(ALLOCATION_TYPE_VALUES))
     percentage: Optional[Decimal] = Field(None, ge=0)
-    allocated_amount: Optional[Decimal] = Field(None, ge=0)
+    allocated_amount: Optional[Decimal] = None
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
@@ -1205,7 +1205,7 @@ class FinancialDirectEntryAllocationInput(BaseModel):
     domain_label: Optional[str] = Field(None, max_length=255)
     allocation_type: str = Field(..., pattern=_choices_pattern(ALLOCATION_TYPE_VALUES))
     percentage: Optional[Decimal] = Field(None, ge=0)
-    allocated_amount: Optional[Decimal] = Field(None, ge=0)
+    allocated_amount: Optional[Decimal] = None
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
