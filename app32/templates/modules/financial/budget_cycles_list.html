@@ -187,6 +187,7 @@
 </div>
 {% endblock %}
 
+{% block head %}
 <style>
 .budget-hub{display:flex;flex-direction:column;gap:1.25rem;width:min(100%,1680px);margin:0 auto;padding:0 0 2rem}
 .budget-hero,.budget-card,.budget-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);box-shadow:var(--shadow-md)}
@@ -262,7 +263,9 @@
 @media (max-width:1280px){.budget-kpis,.budget-item-summary,.budget-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.budget-layout,.budget-form-grid{grid-template-columns:1fr}.budget-card--detail{position:static}}
 @media (max-width:768px){.budget-hub{padding:0 0 1.5rem}.budget-hero,.budget-card__head,.budget-hero__actions{flex-direction:column}.budget-btn{width:100%}.budget-item-summary,.budget-kpis,.budget-detail-grid{grid-template-columns:1fr}.budget-list-item{flex-direction:column}.budget-item-actions{justify-content:flex-start}}
 </style>
+{% endblock %}
 
+{% block scripts %}
 <script>
 const budgetHub = document.querySelector('.budget-hub');
 const companyId = Number(budgetHub?.dataset.companyId || 0);
@@ -622,3 +625,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 </script>
+{% endblock %}
