@@ -508,6 +508,7 @@ def register_api_resources(api):
         FinancialScheduleToggleResource,
         FinancialScheduleGenerateResource,
         FinancialScheduleCreateEntryResource,
+        FinancialScheduleSettlementResource,
         FinancialScheduleAttachmentListResource,
         FinancialScheduleAttachmentResource,
         FinancialBorderoListResource,
@@ -683,6 +684,7 @@ def register_api_resources(api):
     api.add_resource(FinancialScheduleToggleResource, '/api/financial/schedules/<int:schedule_id>/toggle')
     api.add_resource(FinancialScheduleGenerateResource, '/api/financial/schedules/generate-due')
     api.add_resource(FinancialScheduleCreateEntryResource, '/api/financial/schedules/<int:schedule_id>/create-entry')
+    api.add_resource(FinancialScheduleSettlementResource, '/api/financial/schedules/<int:schedule_id>/settlements')
     api.add_resource(FinancialScheduleAttachmentListResource, '/api/financial/schedules/<int:schedule_id>/attachments')
     api.add_resource(FinancialScheduleAttachmentResource, '/api/financial/schedules/<int:schedule_id>/attachments/<string:attachment_id>')
     api.add_resource(FinancialBorderoListResource, '/api/financial/borderos')

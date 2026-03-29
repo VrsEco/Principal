@@ -668,6 +668,22 @@ class FinancialScheduleCreateEntryResource(Resource):
         return result, 200
 
 
+class FinancialScheduleSettlementResource(Resource):
+    @permission_required("financial", "edit")
+    def post(self, schedule_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialScheduleService.create_settlement_from_schedule(
+            schedule_id=schedule_id,
+            company_id=company_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
 class FinancialScheduleAttachmentListResource(Resource):
     @permission_required("financial", "edit")
     def post(self, schedule_id: int):

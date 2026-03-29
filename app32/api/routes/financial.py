@@ -3,7 +3,7 @@ import io
 from flask import Blueprint, abort, render_template, request, send_file, session
 from flask_login import current_user
 
-from models import Company, FinancialEntry
+from models import Company, FinancialEntry, FinancialSchedule
 from services.financial_import_service import FinancialImportService
 from services.financial_budget_import_service import FinancialBudgetImportService
 from utils.permissions import get_default_company_id, has_permission, permission_required
@@ -136,6 +136,20 @@ def _get_entry_with_access(entry_id: int) -> FinancialEntry:
     return entry
 
 
+def _get_schedule_with_access(schedule_id: int) -> FinancialSchedule:
+    schedule = FinancialSchedule.query.get_or_404(schedule_id)
+    if not current_user.is_authenticated:
+        abort(403, description="Usuário não autenticado.")
+
+    if session.get("active_company_id") != schedule.company_id:
+        session["active_company_id"] = schedule.company_id
+
+    if not has_permission(schedule.company_id, "financial", "view"):
+        abort(403, description="Acesso negado ao agendamento financeiro solicitado.")
+
+    return schedule
+
+
 @financial_bp.route("/financial")
 @financial_bp.route("/financial/dashboard")
 @permission_required("financial", "view")
@@ -182,6 +196,22 @@ def financial_entry_manage(entry_id: int):
         company_id=entry.company_id,
         entry_id=entry.id,
         entry=entry,
+    )
+
+
+@financial_bp.route("/financial/schedules/<int:schedule_id>/settle")
+@permission_required("financial", "view")
+def financial_schedule_settle(schedule_id: int):
+    schedule = _get_schedule_with_access(schedule_id)
+    company = Company.query.get(schedule.company_id)
+    return render_template(
+        "modules/financial/entry_manage.html",
+        company=company,
+        company_id=schedule.company_id,
+        entry_id=None,
+        entry=None,
+        schedule_id=schedule.id,
+        schedule=schedule,
     )
 
 

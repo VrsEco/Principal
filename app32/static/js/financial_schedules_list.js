@@ -171,12 +171,7 @@
     }
 
     async function liquidateSchedule(scheduleId) {
-      const result = await fetchJson(`/api/financial/schedules/${scheduleId}/create-entry?company_id=${companyId}`, { method: 'POST' });
-      if (result.entry?.id) {
-        window.location.href = `/financial/entries/${result.entry.id}`;
-        return;
-      }
-      await loadSchedules();
+      window.location.href = `/financial/schedules/${scheduleId}/settle?company_id=${companyId}`;
     }
 
     async function deleteSchedule(scheduleId) {

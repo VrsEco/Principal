@@ -22,8 +22,9 @@ class _Column:
 
 
 class _QueryStub:
-    def __init__(self, result):
+    def __init__(self, result=None, all_result=None):
         self._result = result
+        self._all_result = list(all_result or [])
 
     def filter(self, *args, **kwargs):
         return self
@@ -33,6 +34,9 @@ class _QueryStub:
 
     def first(self):
         return self._result
+
+    def all(self):
+        return list(self._all_result)
 
 
 def test_sanitize_json_converts_decimal_date_datetime_and_sequences():
@@ -369,6 +373,14 @@ def test_list_default_suggestions_returns_cost_center_domain_and_budget_chain(mo
         id = _Column()
         query = _QueryStub(version)
 
+    class _FakeCorrectionIndex:
+        company_id = _Column()
+        deleted_at = _Column()
+        is_active = _Column()
+        updated_at = _Column()
+        id = _Column()
+        query = _QueryStub(all_result=[])
+
     monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
     monkeypatch.setattr(schedule_module, "FinancialCostCenter", _FakeCostCenter)
     monkeypatch.setattr(schedule_module, "FinancialDomainEnablement", _FakeEnablement)
@@ -376,6 +388,7 @@ def test_list_default_suggestions_returns_cost_center_domain_and_budget_chain(mo
     monkeypatch.setattr(schedule_module, "FinancialBudgetContract", _FakeBudgetContract)
     monkeypatch.setattr(schedule_module, "FinancialBudgetLine", _FakeBudgetLine)
     monkeypatch.setattr(schedule_module, "FinancialBudgetVersion", _FakeBudgetVersion)
+    monkeypatch.setattr(schedule_module, "FinancialCorrectionIndex", _FakeCorrectionIndex)
     monkeypatch.setattr(
         schedule_module.FinancialDomainEnablementService,
         "list_items",
@@ -444,6 +457,7 @@ def test_validate_schedule_allocations_accepts_amount_mode_total_match(monkeypat
     error = FinancialScheduleService._validate_schedule_allocations(
         company_id=9,
         template_amount=Decimal("1500.00"),
+        due_date=None,
         metadata_json={
             "allocations": [
                 {

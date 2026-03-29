@@ -207,6 +207,7 @@ class FinancialDirectEntryService:
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
             company_id=data.company_id,
             template_amount=data.original_amount,
+            due_date=data.due_date or data.occurred_on,
             metadata_json={
                 "allocations": [
                     {
