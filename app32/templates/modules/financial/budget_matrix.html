@@ -36,6 +36,21 @@
 .budget-btn--primary{background:var(--primary);color:#fff}
 .budget-btn--secondary{background:var(--surface-secondary);border:1px solid var(--border);color:var(--text-primary)}
 .budget-btn--ghost{background:transparent;border:1px dashed var(--border);color:var(--text-secondary)}
+.budget-selection-panel{display:flex;flex-direction:column;gap:.9rem}
+.budget-selection-hint,.budget-line-hint{padding:.9rem 1rem;border:1px dashed var(--border);border-radius:14px;background:rgba(219,234,254,.45);color:var(--text-secondary)}
+.budget-selection-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.budget-selection-item{border:1px solid var(--border);border-radius:14px;background:var(--surface-secondary);padding:.9rem 1rem;cursor:pointer;transition:var(--transition);display:flex;flex-direction:column;gap:.35rem}
+.budget-selection-item:hover{border-color:var(--primary);transform:translateY(-1px)}
+.budget-selection-item.is-selected{border-color:var(--primary);box-shadow:0 0 0 2px rgba(37,99,235,.12);background:#fff}
+.budget-selection-item__top{display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start}
+.budget-selection-code{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary)}
+.budget-selection-name{font-size:.98rem;font-weight:700;color:var(--text-primary)}
+.budget-selection-meta{display:flex;flex-wrap:wrap;gap:.5rem;color:var(--text-secondary);font-size:.8rem}
+.budget-badge{display:inline-flex;align-items:center;padding:.28rem .55rem;border-radius:999px;background:#fff;border:1px solid var(--border);font-size:.72rem;font-weight:700}
+.budget-badge--selected{background:var(--primary-light);color:var(--primary);border-color:rgba(37,99,235,.2)}
+.budget-line-section.is-disabled{opacity:.72}
+.budget-line-form{border:0;padding:0;margin:0;min-width:0}
+.budget-line-form[disabled]{opacity:.82}
 .budget-table-wrap{overflow:auto}
 .budget-table{width:100%;border-collapse:collapse;min-width:760px}
 .budget-table th,.budget-table td{padding:.82rem .72rem;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
@@ -43,7 +58,7 @@
 .budget-empty{text-align:center;color:var(--text-tertiary)}
 .budget-row-actions{display:flex;gap:.5rem;flex-wrap:wrap}
 @media (max-width:1100px){.budget-grid--summary,.budget-grid--main,.budget-form-grid{grid-template-columns:1fr}}
-@media (max-width:768px){.budget-page{padding:0 1rem 1.5rem}.budget-header-card,.budget-card__header,.budget-actions{flex-direction:column}.budget-btn{width:100%}}
+@media (max-width:768px){.budget-page{padding:0 1rem 1.5rem}.budget-header-card,.budget-card__header,.budget-actions{flex-direction:column}.budget-btn{width:100%}.budget-selection-list{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 
@@ -79,6 +94,10 @@
                     <span>Orçamento selecionado</span>
                     <select id="version-select"></select>
                 </label>
+                <div class="budget-selection-panel">
+                    <div id="selected-version-hint" class="budget-selection-hint">Selecione um orçamento existente ou cadastre um novo orçamento para começar.</div>
+                    <div id="version-selection-list" class="budget-selection-list"></div>
+                </div>
 
                 <div class="budget-form-grid">
                     <label class="budget-field"><span>Código</span><input id="version-code" maxlength="50" placeholder="CAPEX-2026"></label>
@@ -113,7 +132,7 @@
             </div>
         </article>
 
-        <article class="budget-card">
+        <article class="budget-card budget-line-section" id="budget-line-section">
             <div class="budget-card__header">
                 <div>
                     <p class="budget-eyebrow">Verbas Orçamentárias</p>
@@ -122,6 +141,8 @@
                 <button class="budget-btn budget-btn--secondary" id="btn-new-line" type="button">Nova verba</button>
             </div>
             <div class="budget-card__body budget-stack">
+                <div id="line-section-hint" class="budget-line-hint">Selecione um orçamento acima para habilitar o cadastro de verbas.</div>
+                <fieldset id="line-form-fieldset" class="budget-line-form">
                 <div class="budget-form-grid">
                     <label class="budget-field"><span>Código</span><input id="line-code" maxlength="60" placeholder="VB-0001"></label>
                     <label class="budget-field"><span>Nome</span><input id="line-name" maxlength="160" placeholder="Execução da Fundação do Prédio"></label>
@@ -151,6 +172,7 @@
                     <button class="budget-btn budget-btn--primary" id="btn-save-line" type="button">Salvar verba</button>
                     <button class="budget-btn budget-btn--ghost" id="btn-cancel-line" type="button">Limpar</button>
                 </div>
+                </fieldset>
                 <div class="budget-table-wrap">
                     <table class="budget-table">
                         <thead>
@@ -217,9 +239,59 @@ function renderVersions() {
     byId('version-notes').value = version?.notes || '';
 }
 
+function renderVersionSelectionPanel() {
+    const root = byId('version-selection-list');
+    const hint = byId('selected-version-hint');
+    const versions = state.workspace?.versions || [];
+    const selectedId = String(state.workspace?.selected_version_id || '');
+    const version = state.workspace?.version;
+    if (!versions.length) {
+        root.innerHTML = '';
+        hint.textContent = 'Nenhum orçamento cadastrado ainda. Preencha os dados ao lado e clique em "Salvar orçamento".';
+        return;
+    }
+    hint.innerHTML = version
+        ? `Orçamento ativo para lançar verbas: <strong>${version.code || 'SEM CÓDIGO'} · ${version.name || 'Sem nome'}</strong>.`
+        : 'Selecione abaixo qual orçamento deseja usar para cadastrar verbas.';
+    root.innerHTML = versions.map((item) => `
+        <button type="button" class="budget-selection-item ${String(item.id) === selectedId ? 'is-selected' : ''}" onclick="selectBudgetVersion(${item.id})">
+            <div class="budget-selection-item__top">
+                <div>
+                    <div class="budget-selection-code">${item.code || 'SEM CÓDIGO'}</div>
+                    <div class="budget-selection-name">${item.name || 'Orçamento sem nome'}</div>
+                </div>
+                <span class="budget-badge ${String(item.id) === selectedId ? 'budget-badge--selected' : ''}">${String(item.id) === selectedId ? 'Selecionado' : (item.status || 'draft')}</span>
+            </div>
+            <div class="budget-selection-meta">
+                <span>${item.period_start || '-'} → ${item.period_end || '-'}</span>
+                <span>${item.scenario_type || 'original'}</span>
+            </div>
+        </button>
+    `).join('');
+}
+
+function updateLineSectionState() {
+    const hasVersion = Boolean(state.workspace?.selected_version_id);
+    const fieldset = byId('line-form-fieldset');
+    const hint = byId('line-section-hint');
+    const section = byId('budget-line-section');
+    fieldset.disabled = !hasVersion;
+    section.classList.toggle('is-disabled', !hasVersion);
+    hint.style.display = hasVersion ? 'none' : 'block';
+}
+
+function selectBudgetVersion(versionId) {
+    state.creatingVersion = false;
+    loadWorkspace(String(versionId)).catch(err => alert(err.message));
+}
+
 function renderLines() {
     const tbody = byId('lines-table-body');
     const items = state.workspace?.lines || [];
+    if (!state.workspace?.selected_version_id) {
+        tbody.innerHTML = '<tr><td colspan=\"5\" class=\"budget-empty\">Selecione um orçamento para visualizar e cadastrar verbas.</td></tr>';
+        return;
+    }
     if (!items.length) {
         tbody.innerHTML = '<tr><td colspan=\"5\" class=\"budget-empty\">Nenhuma verba cadastrada para este orçamento.</td></tr>';
         return;
@@ -279,9 +351,14 @@ async function loadWorkspace(versionId = '') {
     if (versionId) query.set('version_id', versionId);
     state.workspace = await api(`/api/financial/budget/workspace?${query.toString()}`);
     renderVersions();
+    renderVersionSelectionPanel();
+    updateLineSectionState();
     renderSummary();
     renderLines();
     if (!(state.workspace?.lines || []).some(item => item.id === state.editingLineId)) clearLineForm();
+    if (state.workspace?.selected_version_id) {
+        history.replaceState({}, '', `/financial/budget?company_id=${companyId}&version_id=${state.workspace.selected_version_id}`);
+    }
 }
 
 async function loadOptions() {
