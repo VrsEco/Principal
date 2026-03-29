@@ -15,6 +15,7 @@ from werkzeug.utils import secure_filename
 from models import db
 from models.financial import (
     FinancialChartAccount,
+    FinancialCorrectionIndex,
     FinancialCostCenter,
     FinancialDomainEnablement,
     FinancialEntry,
@@ -1174,6 +1175,37 @@ class FinancialScheduleService:
                     "budget_document_label": default_document.title,
                 }
             )
+
+        correction_indexes = (
+            FinancialCorrectionIndex.query.filter(
+                FinancialCorrectionIndex.company_id == company_id,
+                FinancialCorrectionIndex.deleted_at.is_(None),
+                FinancialCorrectionIndex.is_active.is_(True),
+            )
+            .order_by(FinancialCorrectionIndex.updated_at.desc(), FinancialCorrectionIndex.id.desc())
+            .all()
+        )
+        default_receivable_correction = next(
+            (
+                item for item in correction_indexes
+                if bool((item.metadata_json or {}).get("is_default_receivable"))
+            ),
+            None,
+        )
+        if default_receivable_correction:
+            result["receivable_correction_index_id"] = default_receivable_correction.id
+            result["receivable_correction_index_label"] = default_receivable_correction.name
+
+        default_payable_correction = next(
+            (
+                item for item in correction_indexes
+                if bool((item.metadata_json or {}).get("is_default_payable"))
+            ),
+            None,
+        )
+        if default_payable_correction:
+            result["payable_correction_index_id"] = default_payable_correction.id
+            result["payable_correction_index_label"] = default_payable_correction.name
 
         return result, None
 

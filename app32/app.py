@@ -522,6 +522,8 @@ def register_api_resources(api):
         FinancialEntryAllocationListResource,
         FinancialEntrySettlementListResource,
         FinancialSettlementResource,
+        FinancialSettlementAttachmentListResource,
+        FinancialSettlementAttachmentResource,
         FinancialImportBatchListResource,
         FinancialImportBatchResource,
         FinancialImportBatchProcessResource,
@@ -695,6 +697,8 @@ def register_api_resources(api):
     api.add_resource(FinancialEntryAllocationListResource, '/api/financial/entries/<int:entry_id>/allocations')
     api.add_resource(FinancialEntrySettlementListResource, '/api/financial/entries/<int:entry_id>/settlements')
     api.add_resource(FinancialSettlementResource, '/api/financial/settlements/<int:settlement_id>')
+    api.add_resource(FinancialSettlementAttachmentListResource, '/api/financial/settlements/<int:settlement_id>/attachments')
+    api.add_resource(FinancialSettlementAttachmentResource, '/api/financial/settlements/<int:settlement_id>/attachments/<string:attachment_id>')
     api.add_resource(FinancialImportBatchListResource, '/api/financial/imports')
     api.add_resource(FinancialImportBatchResource, '/api/financial/imports/<int:batch_id>')
     api.add_resource(FinancialImportBatchProcessResource, '/api/financial/imports/<int:batch_id>/process')

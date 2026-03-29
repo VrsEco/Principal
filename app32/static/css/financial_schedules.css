@@ -260,6 +260,13 @@
   flex: 1;
 }
 
+.sched-page .field-summary input[readonly] {
+  background: color-mix(in srgb, var(--form-tint-strong) 55%, var(--surface));
+  color: var(--form-tint-text);
+  font-weight: 700;
+  cursor: default;
+}
+
 .sched-page .field-span-1 { grid-column: span 1; }
 .sched-page .field-span-2 { grid-column: span 2; }
 .sched-page .field-span-3 { grid-column: span 3; }

@@ -1,12 +1,18 @@
 import logging
+import os
+import uuid
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from flask import current_app
 from models import db
 from models.financial import FinancialEntry, FinancialEntryAllocation, FinancialSettlement
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine
 from models.process import ProcessInstance, ProcessRoutine
 from models.routine import Routine
+from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
 from schemas.financial import (
     FinancialAllocationBatchInput,
     FinancialAllocationInput,
@@ -556,8 +562,13 @@ class FinancialService:
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[FinancialSettlement], Optional[str]]:
+        normalized_payload = dict(payload or {})
+        company_id = normalized_payload.get("company_id")
+        if company_id and not normalized_payload.get("settlement_code"):
+            normalized_payload["settlement_code"] = FinancialService._generate_settlement_code(int(company_id))
+
         try:
-            data = FinancialSettlementInput(**payload)
+            data = FinancialSettlementInput(**normalized_payload)
         except Exception as exc:
             return None, f"Payload inválido para liquidação: {str(exc)}"
 
@@ -625,3 +636,123 @@ class FinancialService:
             db.session.rollback()
             logger.exception("Erro ao criar liquidação para lançamento %s", data.financial_entry_id)
             return None, f"Erro ao criar liquidação: {str(exc)}"
+
+    @staticmethod
+    def _generate_settlement_code(company_id: int) -> str:
+        prefix = "LIQ"
+        last = (
+            FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_code.like(f"{prefix}-%"),
+            )
+            .order_by(FinancialSettlement.id.desc())
+            .first()
+        )
+        next_number = 1
+        if last and getattr(last, "settlement_code", None):
+            try:
+                next_number = int(str(last.settlement_code).split("-")[-1]) + 1
+            except Exception:
+                next_number = int(getattr(last, "id", 0) or 0) + 1 or 1
+        return f"{prefix}-{next_number:06d}"
+
+    @staticmethod
+    def upload_settlement_attachment(
+        *,
+        settlement_id: int,
+        company_id: int,
+        file: FileStorage,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        settlement = FinancialSettlement.query.filter(
+            FinancialSettlement.id == settlement_id,
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.deleted_at.is_(None),
+        ).first()
+        if not settlement:
+            return None, "Liquidação financeira não encontrada no escopo da empresa."
+
+        if not file or not file.filename:
+            return None, "Nenhum arquivo informado."
+
+        original_name = secure_filename(file.filename) or "anexo"
+        attachment_id = uuid.uuid4().hex
+        stored_name = f"{attachment_id}_{original_name}"
+        relative_dir = os.path.join("financial_settlements", str(company_id), str(settlement.id))
+        absolute_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], relative_dir)
+        os.makedirs(absolute_dir, exist_ok=True)
+        absolute_path = os.path.join(absolute_dir, stored_name)
+        file.save(absolute_path)
+
+        metadata = dict(settlement.metadata_json or {})
+        attachments = list(metadata.get("attachments") or [])
+        attachment = {
+            "id": attachment_id,
+            "name": original_name,
+            "stored_name": stored_name,
+            "content_type": file.mimetype,
+            "size": os.path.getsize(absolute_path),
+            "uploaded_at": datetime.utcnow().isoformat(),
+            "url": f"/uploads/{relative_dir.replace(os.sep, '/')}/{stored_name}",
+        }
+        attachments.append(attachment)
+        metadata["attachments"] = attachments
+        settlement.metadata_json = metadata
+        db.session.commit()
+        return attachment, None
+
+    @staticmethod
+    def delete_settlement_attachment(
+        *,
+        settlement_id: int,
+        company_id: int,
+        attachment_id: str,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        settlement = FinancialSettlement.query.filter(
+            FinancialSettlement.id == settlement_id,
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.deleted_at.is_(None),
+        ).first()
+        if not settlement:
+            return None, "Liquidação financeira não encontrada no escopo da empresa."
+
+        metadata = dict(settlement.metadata_json or {})
+        attachments = list(metadata.get("attachments") or [])
+        remaining: List[Dict[str, Any]] = []
+        removed: Optional[Dict[str, Any]] = None
+        for item in attachments:
+            if str(item.get("id")) == str(attachment_id):
+                removed = item
+            else:
+                remaining.append(item)
+
+        if not removed:
+            return None, "Anexo não encontrado para a liquidação."
+
+        metadata["attachments"] = remaining
+        settlement.metadata_json = metadata
+        db.session.commit()
+
+        stored_name = removed.get("stored_name")
+        if stored_name:
+            absolute_path = os.path.join(
+                current_app.config["UPLOAD_FOLDER"],
+                "financial_settlements",
+                str(company_id),
+                str(settlement.id),
+                stored_name,
+            )
+            if os.path.exists(absolute_path):
+                os.remove(absolute_path)
+
+        return removed, None

@@ -10,6 +10,19 @@
 <span class="current">Ciclos e Orçamentos</span>
 {% endblock %}
 
+{% block navbar_actions %}
+<div style="display:flex;align-items:center;gap:.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="budget-filter-count" id="budget-filters-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
 {% block workspace_content %}
 <div class="budget-hub" data-company-id="{{ company_id or '' }}">
     <section class="budget-hero">
@@ -22,6 +35,8 @@
         </div>
         <div class="budget-hero__actions">
             <a class="budget-btn budget-btn--ghost" href="/financial/budgets/workspace{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir workspace</a>
+            <button class="budget-btn budget-btn--secondary" id="btn-consolidate" type="button">Consolidar selecionados</button>
+            <button class="budget-btn budget-btn--ghost" id="btn-clear-selection" type="button">Limpar seleção</button>
             <button class="budget-btn budget-btn--primary" id="btn-new-budget" type="button">Novo orçamento</button>
         </div>
     </section>
@@ -47,35 +62,6 @@
             <strong id="kpi-balance">R$ 0,00</strong>
             <small>Previsto menos executado</small>
         </article>
-    </section>
-
-    <section class="budget-toolbar">
-        <label class="budget-field budget-field--grow">
-            <span>Buscar</span>
-            <input id="budget-search" type="search" placeholder="Código, nome, CAPEX, OPEX, cenário...">
-        </label>
-        <label class="budget-field">
-            <span>Status</span>
-            <select id="budget-status-filter">
-                <option value="">Todos</option>
-                <option value="draft">Rascunho</option>
-                <option value="active">Ativo</option>
-                <option value="archived">Arquivado</option>
-            </select>
-        </label>
-        <label class="budget-field">
-            <span>Cenário</span>
-            <select id="budget-scenario-filter">
-                <option value="">Todos</option>
-                <option value="original">Original</option>
-                <option value="forecast">Forecast</option>
-                <option value="reforecast">Reforecast</option>
-            </select>
-        </label>
-        <div class="budget-toolbar__actions">
-            <button class="budget-btn budget-btn--secondary" id="btn-consolidate" type="button">Consolidar selecionados</button>
-            <button class="budget-btn budget-btn--ghost" id="btn-clear-selection" type="button">Limpar seleção</button>
-        </div>
     </section>
 
     <section class="budget-layout">
@@ -159,6 +145,47 @@
         </aside>
     </section>
 </div>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <p class="budget-eyebrow">Filtros</p>
+    <h3 class="text-h3">Refinar lista</h3>
+    <p class="budget-sidebar-subtitle">Padrão da workspace: filtros acessados pelo botão superior direito.</p>
+</div>
+
+<div class="budget-sidebar-filters">
+    <div class="filter-group">
+        <label class="filter-label" for="budget-search">Buscar</label>
+        <input id="budget-search" class="filter-input" type="search" placeholder="Código, nome, CAPEX, OPEX, cenário...">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="budget-status-filter">Status</label>
+        <select id="budget-status-filter" class="filter-select">
+            <option value="">Todos</option>
+            <option value="draft">Rascunho</option>
+            <option value="active">Ativo</option>
+            <option value="archived">Arquivado</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="budget-scenario-filter">Cenário</label>
+        <select id="budget-scenario-filter" class="filter-select">
+            <option value="">Todos</option>
+            <option value="original">Original</option>
+            <option value="forecast">Forecast</option>
+            <option value="reforecast">Reforecast</option>
+        </select>
+    </div>
+
+    <div class="budget-sidebar-actions">
+        <button class="budget-btn budget-btn--primary w-100" type="button" onclick="closeAllSidebars()">Aplicar filtros</button>
+        <button class="budget-btn budget-btn--secondary w-100 mt-2" id="btn-clear-filters" type="button">Limpar filtros</button>
+    </div>
+</div>
+{% endblock %}
 
 <style>
 .budget-hub{display:flex;flex-direction:column;gap:1rem;padding:0 2rem 2rem}
@@ -173,8 +200,7 @@
 .budget-kpi span{display:block;color:var(--text-secondary);font-size:.8rem}
 .budget-kpi strong{display:block;margin-top:.35rem;font-size:1.15rem}
 .budget-kpi small{display:block;margin-top:.2rem;color:var(--text-tertiary)}
-.budget-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 220px 220px auto;gap:.85rem;align-items:end}
-.budget-toolbar__actions{display:flex;gap:.75rem;align-items:end;justify-content:flex-end;flex-wrap:wrap}
+.budget-filter-count{min-width:1.35rem;height:1.35rem;padding:0 .35rem;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(59,130,246,.14);color:#1d4ed8;font-size:.75rem;font-weight:700}
 .budget-card{overflow:hidden}
 .budget-card__head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:1.1rem 1.2rem 0}
 .budget-card__body{padding:1.1rem 1.2rem 1.2rem}
@@ -219,8 +245,16 @@
 .budget-status--active{color:#0f766e}
 .budget-status--archived{color:#7c3aed}
 .budget-category{display:inline-flex;align-items:center;padding:.3rem .55rem;border-radius:999px;background:rgba(59,130,246,.08);color:var(--primary);font-weight:700;font-size:.72rem}
-@media (max-width:1280px){.budget-kpis,.budget-item-summary,.budget-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.budget-toolbar,.budget-layout,.budget-form-grid{grid-template-columns:1fr}}
-@media (max-width:768px){.budget-hub{padding:0 1rem 1.5rem}.budget-hero,.budget-card__head,.budget-toolbar__actions{flex-direction:column}.budget-btn{width:100%}.budget-item-summary,.budget-kpis,.budget-detail-grid{grid-template-columns:1fr}.budget-list-item{flex-direction:column}.budget-item-actions{justify-content:flex-start}}
+.budget-sidebar-subtitle{margin:.35rem 0 0;color:var(--text-secondary)}
+.budget-sidebar-filters{padding:1rem}
+.budget-sidebar-filters .filter-group{margin-bottom:1.25rem}
+.budget-sidebar-filters .filter-label{font-size:.72rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:.5rem;display:block;letter-spacing:.05em}
+.budget-sidebar-filters .filter-select,.budget-sidebar-filters .filter-input{width:100%;padding:.78rem .88rem;border-radius:12px;border:1px solid var(--border);background:var(--surface-secondary);color:var(--text-primary)}
+.budget-sidebar-actions{margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem}
+.w-100{width:100%;justify-content:center}
+.mt-2{margin-top:.5rem}
+@media (max-width:1280px){.budget-kpis,.budget-item-summary,.budget-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.budget-layout,.budget-form-grid{grid-template-columns:1fr}}
+@media (max-width:768px){.budget-hub{padding:0 1rem 1.5rem}.budget-hero,.budget-card__head,.budget-hero__actions{flex-direction:column}.budget-btn{width:100%}.budget-item-summary,.budget-kpis,.budget-detail-grid{grid-template-columns:1fr}.budget-list-item{flex-direction:column}.budget-item-actions{justify-content:flex-start}}
 </style>
 
 <script>
@@ -279,6 +313,28 @@ function renderKpis(summary) {
     byId('kpi-executed').textContent = formatCurrency(summary?.executed_total || 0);
     byId('kpi-balance').textContent = formatCurrency((summary?.planned_total || 0) - (summary?.executed_total || 0));
     byId('kpi-selected-count').textContent = String(state.selection.size || 0);
+    updateFiltersBadge();
+}
+
+function getActiveFiltersCount() {
+    let count = 0;
+    if ((byId('budget-search')?.value || '').trim()) count += 1;
+    if (byId('budget-status-filter')?.value) count += 1;
+    if (byId('budget-scenario-filter')?.value) count += 1;
+    return count;
+}
+
+function updateFiltersBadge() {
+    const badge = byId('budget-filters-count');
+    if (!badge) return;
+    badge.textContent = String(getActiveFiltersCount());
+}
+
+function clearFilters() {
+    byId('budget-search').value = '';
+    byId('budget-status-filter').value = '';
+    byId('budget-scenario-filter').value = '';
+    renderList();
 }
 
 function inferCategory(item) {
@@ -349,6 +405,7 @@ function renderList() {
     const search = (byId('budget-search').value || '').trim().toLowerCase();
     const statusFilter = byId('budget-status-filter').value;
     const scenarioFilter = byId('budget-scenario-filter').value;
+    updateFiltersBadge();
 
     const filtered = state.versions.filter((item) => {
         const haystack = `${item.code || ''} ${item.name || ''} ${item.status || ''} ${item.scenario_type || ''}`.toLowerCase();
@@ -545,6 +602,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     byId('btn-save-budget').addEventListener('click', () => saveBudgetVersion().catch((error) => alert(error.message)));
     byId('btn-reset-budget').addEventListener('click', startNewBudget);
     byId('btn-clear-selection').addEventListener('click', clearSelection);
+    byId('btn-clear-filters').addEventListener('click', clearFilters);
     byId('btn-consolidate').addEventListener('click', () => consolidateSelected().catch((error) => alert(error.message)));
 
     const initialQuery = new URLSearchParams(window.location.search);
@@ -558,4 +616,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 </script>
-{% endblock %}

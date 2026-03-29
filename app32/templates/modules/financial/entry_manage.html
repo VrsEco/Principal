@@ -1,9 +1,7 @@
 {% extends "layouts/workspace.html" %}
-{% set signed_amount = (-(entry.original_amount or 0)) if entry.movement_nature == 'debit' else (entry.original_amount or 0) %}
-{% set amount_variant = 'negative' if signed_amount < 0 else 'positive' %}
-{% set is_reconciled = entry.metadata_json.reconciled if entry.metadata_json and entry.metadata_json.reconciled is not none else false %}
+{% set is_payable = entry.movement_nature == 'debit' %}
 
-{% block title %}Financeiro - Gestão do Lançamento{% endblock %}
+{% block title %}Financeiro - Baixa do Lançamento{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
@@ -14,558 +12,367 @@
 {% endblock %}
 
 {% block workspace_content %}
-<div class="entry-page fade-in" data-company-id="{{ company_id }}" data-entry-id="{{ entry_id }}">
-    <header class="entry-header">
+<div class="settlement-page" data-company-id="{{ company_id }}" data-entry-id="{{ entry_id }}" data-entry-description="{{ entry.description or '' }}">
+    <header class="settlement-header">
         <div>
-            <h1>{{ entry.entry_code }} · {{ entry.description }}</h1>
-            <p class="entry-header-subtitle">Gestão operacional do lançamento com padrão visual e nomenclaturas alinhados ao financeiro.</p>
+            <h1>Baixa do Lançamento</h1>
+            <p class="settlement-header-subtitle">{{ entry.entry_code }} · {{ entry.description }}</p>
         </div>
+        <a href="/financial/entries" class="btn btn-secondary">Voltar</a>
     </header>
 
-    <section class="page-actions" style="display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem;">
-        <a href="/financial/entries" class="btn btn-secondary" style="text-decoration:none;">Voltar</a>
-    </section>
-
-    {% if is_reconciled %}
-    <section class="panel reconciliation-lock-panel">
-        <div class="reconciliation-lock-header">
-            <div>
-                <h2>Lançamento conciliado</h2>
-                <p>Este registro está protegido. Para editar, é obrigatório desmarcar a conciliação antes de salvar. A hierarquia de senhas será validada no backend.</p>
-            </div>
-            <span class="reconciliation-badge">Conciliado</span>
-        </div>
-        <label class="unlock-toggle">
-            <input type="checkbox" id="unlock-reconciliation-toggle" name="unlock_reconciliation">
-            <span>Desmarcar conciliação para permitir alteração</span>
-        </label>
-        <label>
-            <span>Motivo do desbloqueio</span>
-            <textarea id="unlock-reconciliation-reason" rows="2" placeholder="Informe o motivo da demarcação antes de salvar." disabled></textarea>
-        </label>
-    </section>
-    {% endif %}
-
-    <section class="entry-summary-cards">
-        <article class="entry-summary-card">
-            <span class="entry-summary-label">Natureza</span>
-            <strong>{{ 'Débito / Saída' if entry.movement_nature == 'debit' else 'Crédito / Entrada' }}</strong>
+    <section class="settlement-summary">
+        <article class="summary-card">
+            <span class="summary-label">Tipo</span>
+            <strong>{{ 'Conta a Pagar' if is_payable else 'Conta a Receber' }}</strong>
         </article>
-        <article class="entry-summary-card">
-            <span class="entry-summary-label">Valor exibido</span>
-            <strong id="entry-signed-amount" class="amount-pill amount-pill--{{ amount_variant }}">
-                {{ "R$ {:,.2f}".format(signed_amount)|replace(",", "X")|replace(".", ",")|replace("X", ".") }}
-            </strong>
+        <article class="summary-card">
+            <span class="summary-label">Valor original</span>
+            <strong>{{ "R$ {:,.2f}".format(entry.original_amount or 0)|replace(",", "X")|replace(".", ",")|replace("X", ".") }}</strong>
+        </article>
+        <article class="summary-card">
+            <span class="summary-label">Saldo disponível</span>
+            <strong id="available-amount-card">R$ 0,00</strong>
         </article>
     </section>
 
     <section class="panel">
         <div class="panel-header">
             <div>
-                <h2>Dados do lançamento</h2>
-                <p>O lançamento é a origem. Rateio e liquidação permanecem desacoplados.</p>
+                <h2>Nova baixa</h2>
+                <p>Fluxo simplificado: somente os dados operacionais necessários para liquidar o lançamento.</p>
             </div>
         </div>
-        <form id="entry-edit-form" class="form-grid">
-            <label class="col-span-2"><span>Histórico</span><input name="description" value="{{ entry.description or '' }}" required></label>
-            <label><span>Status</span>
-                <select name="status">
-                    <option value="draft" {{ 'selected' if entry.status == 'draft' else '' }}>Rascunho</option>
-                    <option value="posted" {{ 'selected' if entry.status == 'posted' else '' }}>Postado</option>
-                    <option value="partially_settled" {{ 'selected' if entry.status == 'partially_settled' else '' }}>Parcial</option>
-                    <option value="settled" {{ 'selected' if entry.status == 'settled' else '' }}>Liquidado</option>
-                    <option value="cancelled" {{ 'selected' if entry.status == 'cancelled' else '' }}>Cancelado</option>
-                </select>
-            </label>
-            <label><span>Número do documento</span><input name="document_number" value="{{ entry.document_number or '' }}"></label>
-            <label><span>Favorecido</span><input value="{{ entry.metadata_json.counterparty_name if entry.metadata_json and entry.metadata_json.counterparty_name else '-' }}" disabled></label>
-            <label><span>Valor do Título</span><input type="number" step="0.01" min="0" name="original_amount" value="{{ entry.original_amount or 0 }}"></label>
-            <label><span>Competência</span><input type="date" name="competence_date" value="{{ entry.competence_date.isoformat() if entry.competence_date else '' }}"></label>
-            <label><span>Vencimento</span><input type="date" name="due_date" value="{{ entry.due_date.isoformat() if entry.due_date else '' }}"></label>
-            <label><span>Data do lançamento</span><input type="date" name="occurred_on" value="{{ entry.occurred_on.isoformat() if entry.occurred_on else '' }}"></label>
-            <label><span>Conta bancária</span><input value="{{ entry.bank_account_id or '' }}" disabled></label>
-            <label><span>Natureza</span>
-                <input value="{{ 'Débito / Saída' if entry.movement_nature == 'debit' else 'Crédito / Entrada' }}" disabled>
-            </label>
-            <label><span>Atividade associada</span><input type="number" min="1" name="activity_id" value="{{ entry.activity_id or '' }}"></label>
-            <label><span>Instância associada</span><input type="number" min="1" name="process_instance_id" value="{{ entry.process_instance_id or '' }}"></label>
-            <label class="col-span-2"><span>Observações</span><textarea rows="3" name="notes">{{ entry.notes or '' }}</textarea></label>
-            <div class="col-span-2 form-actions">
-                <button type="submit" class="btn btn-primary">Salvar lançamento</button>
+
+        <form id="settlement-form" class="settlement-form">
+            <div class="form-grid">
+                <label class="field field-span-2">
+                    <span>Histórico da baixa</span>
+                    <input id="settlement-history" name="history" maxlength="255" required>
+                </label>
+
+                <label class="field">
+                    <span>Data da baixa</span>
+                    <input id="settlement-date" name="settlement_date" type="date" required>
+                </label>
+
+                <label class="field">
+                    <span>Forma financeira</span>
+                    <select id="payment-method-id" name="payment_method_id">
+                        <option value="">Selecione...</option>
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span>Conta bancária</span>
+                    <select id="bank-account-id" name="bank_account_id" required>
+                        <option value="">Selecione...</option>
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span>Valor a {{ 'pagar' if is_payable else 'receber' }}</span>
+                    <input id="principal-amount" name="principal_amount" inputmode="decimal" placeholder="0,00" required>
+                    <small id="available-amount-hint" class="field-hint"></small>
+                </label>
+
+                <label class="field field-span-2">
+                    <span>Anexos</span>
+                    <input id="settlement-files" name="files" type="file" multiple>
+                    <small class="field-hint">Aceita PDF, PNG, JPG e outros documentos vinculados à baixa.</small>
+                    <div id="selected-files" class="file-chip-list"></div>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Salvar baixa</button>
             </div>
         </form>
     </section>
 
-    <section class="grid-two">
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <h2>Rateio</h2>
-                    <p>Distribuição gerencial independente da liquidação.</p>
-                </div>
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Histórico de baixas</h2>
+                <p>Lista das liquidações já registradas neste lançamento.</p>
             </div>
-            <div class="panel-body">
-                <div id="allocations-list" class="list-stack"></div>
-                <form id="allocations-form" class="stack-form">
-                    <div class="form-grid compact">
-                        <label><span>Tipo</span>
-                            <select name="allocation_type">
-                                <option value="percentage">Percentual</option>
-                                <option value="amount">Valor</option>
-                            </select>
-                        </label>
-                        <label><span>%</span><input type="number" step="0.0001" min="0" name="percentage"></label>
-                        <label><span>Valor</span><input type="number" step="0.01" min="0" name="allocated_amount"></label>
-                        <label><span>Conta gerencial</span><input type="number" min="1" name="chart_account_id"></label>
-                        <label><span>Centro</span><input type="number" min="1" name="cost_center_id"></label>
-                        <label><span>Atividade</span><input type="number" min="1" name="activity_id"></label>
-                        <label><span>Instância</span><input type="number" min="1" name="process_instance_id"></label>
-                    </div>
-                    <div class="inline-actions">
-                        <button type="button" class="btn btn-secondary" onclick="addAllocationDraft()">Adicionar linha</button>
-                        <button type="submit" class="btn btn-primary">Salvar rateio</button>
-                    </div>
-                </form>
-            </div>
-        </article>
-
-        <article class="panel">
-            <div class="panel-header">
-                <div>
-                    <h2>Liquidações</h2>
-                    <p>Baixas reais com juros, multas, descontos e demais efeitos financeiros.</p>
-                </div>
-            </div>
-            <div class="panel-body">
-                <div id="settlements-list" class="list-stack"></div>
-                <form id="settlement-form" class="stack-form">
-                    <div class="form-grid compact">
-                        <label><span>Código</span><input name="settlement_code" required></label>
-                        <label><span>Data</span><input type="date" name="settlement_date" required></label>
-                        <label><span>Principal</span><input type="number" step="0.01" min="0" name="principal_amount" required></label>
-                        <label><span>Juros</span><input type="number" step="0.01" min="0" name="interest_amount" value="0"></label>
-                        <label><span>Multa</span><input type="number" step="0.01" min="0" name="penalty_amount" value="0"></label>
-                        <label><span>Desconto</span><input type="number" step="0.01" min="0" name="discount_amount" value="0"></label>
-                        <label><span>Tarifa</span><input type="number" step="0.01" min="0" name="fee_amount" value="0"></label>
-                        <label><span>Outros ajustes</span><input type="number" step="0.01" min="0" name="other_adjustments_amount" value="0"></label>
-                    </div>
-                    <div class="inline-actions">
-                        <button type="submit" class="btn btn-primary">Lançar liquidação</button>
-                    </div>
-                </form>
-            </div>
-        </article>
+        </div>
+        <div id="settlements-list" class="settlements-list"></div>
     </section>
 </div>
 
 <style>
-    .entry-page { padding:0 2rem 2rem; }
-    .entry-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1.5rem; }
-    .entry-header-subtitle { margin:.35rem 0 0; color:var(--text-secondary); }
-    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
-    .subtitle { color:var(--text-secondary); }
-    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); margin-bottom:1.5rem; }
+    .settlement-page { padding: 0 2rem 2rem; }
+    .settlement-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1.25rem; }
+    .settlement-header-subtitle { margin:.35rem 0 0; color:var(--text-secondary); }
+    .settlement-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
+    .summary-card, .panel {
+        background:var(--surface);
+        border:1px solid var(--border);
+        border-radius:18px;
+        box-shadow:var(--shadow-sm);
+    }
+    .summary-card { padding:1rem 1.25rem; }
+    .summary-label { display:block; margin-bottom:.35rem; color:var(--text-tertiary); text-transform:uppercase; font-size:.75rem; font-weight:700; }
+    .panel { margin-bottom:1.25rem; }
     .panel-header { padding:1.25rem 1.25rem 0; }
     .panel-header h2 { margin:0; }
-    .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); }
-    .panel-body { padding:1.25rem; }
-    .reconciliation-lock-panel { margin-bottom:1rem; border:1px solid rgba(245, 158, 11, 0.35); background:rgba(245, 158, 11, 0.08); }
-    .reconciliation-lock-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.75rem; }
-    .reconciliation-badge { display:inline-flex; align-items:center; padding:.35rem .75rem; border-radius:999px; background:#92400e; color:#fff; font-size:.78rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
-    .unlock-toggle { display:flex; align-items:center; gap:.65rem; margin-bottom:.75rem; font-weight:700; }
-    .entry-summary-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
-    .entry-summary-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem 1.25rem; }
-    .entry-summary-label { display:block; margin-bottom:.35rem; color:var(--text-tertiary); text-transform:uppercase; font-size:.75rem; font-weight:700; }
-    .amount-pill { font-weight:800; font-variant-numeric:tabular-nums; }
-    .amount-pill--negative { color:#dc2626; }
-    .amount-pill--positive { color:#2563eb; }
-    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; padding:1.25rem; }
-    .form-grid.compact { padding:0; }
-    .form-grid label { display:flex; flex-direction:column; gap:.45rem; font-weight:600; color:var(--text-secondary); }
-    .form-grid input, .form-grid select, .form-grid textarea {
-        background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; color:var(--text-primary);
+    .panel-header p { margin:.3rem 0 0; color:var(--text-secondary); }
+    .settlement-form { padding:1.25rem; }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .field { display:flex; flex-direction:column; gap:.45rem; font-weight:600; color:var(--text-secondary); }
+    .field-span-2 { grid-column:span 2; }
+    .field input, .field select {
+        background:var(--surface-secondary);
+        border:1px solid var(--border);
+        border-radius:12px;
+        padding:.85rem .95rem;
+        color:var(--text-primary);
     }
-    .grid-two { display:grid; grid-template-columns:1.05fr .95fr; gap:1.5rem; }
-    .list-stack { display:flex; flex-direction:column; gap:.75rem; margin-bottom:1rem; }
-    .list-item { border:1px solid var(--border); background:var(--surface-secondary); border-radius:14px; padding:.9rem 1rem; }
-    .list-item strong { display:block; margin-bottom:.25rem; }
-    .stack-form { display:flex; flex-direction:column; gap:1rem; }
-    .inline-actions, .form-actions { display:flex; justify-content:flex-end; gap:.75rem; }
-    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
+    .field-hint { color:var(--text-tertiary); font-size:.82rem; }
+    .file-chip-list { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.35rem; }
+    .file-chip {
+        border:1px solid var(--border);
+        background:var(--surface-secondary);
+        border-radius:999px;
+        padding:.35rem .7rem;
+        font-size:.82rem;
+    }
+    .form-actions { display:flex; justify-content:flex-end; margin-top:1rem; }
+    .btn {
+        display:inline-flex; align-items:center; justify-content:center;
+        border:none; border-radius:12px; padding:.85rem 1rem; font-weight:700;
+        cursor:pointer; text-decoration:none;
+    }
     .btn-primary { background:var(--primary); color:#fff; }
     .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
-    .col-span-2 { grid-column:span 2; }
-    @media (max-width: 1080px) {
-        .grid-two, .form-grid, .entry-summary-cards { grid-template-columns:1fr; }
-        .col-span-2 { grid-column:auto; }
-        .entry-page { padding:0 1rem 1.5rem; }
+    .settlements-list { display:flex; flex-direction:column; gap:.9rem; padding:1.25rem; }
+    .settlement-item {
+        border:1px solid var(--border);
+        background:var(--surface-secondary);
+        border-radius:16px;
+        padding:1rem;
     }
-
-    /* Responsive hardening shared across Gestão Financeira */
+    .settlement-item-header {
+        display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.6rem;
+    }
+    .settlement-item-title { margin:0; font-size:1rem; }
+    .settlement-item-meta, .attachments-list { color:var(--text-secondary); font-size:.92rem; }
+    .attachments-list { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.7rem; }
+    .attachment-link {
+        display:inline-flex; align-items:center; gap:.35rem; text-decoration:none;
+        border:1px solid var(--border); border-radius:999px; padding:.35rem .7rem;
+        background:var(--surface); color:var(--text-primary);
+    }
+    .empty-state {
+        border:1px dashed var(--border);
+        border-radius:16px;
+        padding:1rem;
+        color:var(--text-secondary);
+        text-align:center;
+    }
     @media (max-width: 960px) {
-        .finance-page,
-        .cw-page,
-        .cp-page,
-        .catalog-hub-page,
-        .dash-page,
-        .memories-page,
-        .queue-page,
-        .rules-page,
-        .closings-page,
-        .fin-dash-page,
-        .entry-page,
-        .batch-page,
-        .reports-page {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        .table-wrap {
-            padding: .9rem !important;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        .table-wrap table {
-            min-width: 720px;
-        }
-        .panel-header,
-        .panel-body,
-        .filters-grid,
-        .summary-grid {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
+        .settlement-page { padding:0 1rem 1.5rem; }
+        .settlement-summary, .form-grid { grid-template-columns:1fr; }
+        .field-span-2 { grid-column:auto; }
     }
-    @media (max-width: 768px) {
-        .finance-header,
-        .cw-header,
-        .cp-header,
-        .batch-header {
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: .85rem;
-        }
-        .finance-header .btn,
-        .finance-header a.btn,
-        .cw-header .btn,
-        .cp-header .btn,
-        .page-actions .btn,
-        .inline-actions .btn,
-        .form-actions .btn,
-        .actions .btn,
-        .modal-actions .btn,
-        .filters-actions .btn {
-            width: 100%;
-            justify-content: center;
-            text-align: center;
-        }
-        .page-actions,
-        .inline-actions,
-        .form-actions,
-        .actions,
-        .modal-actions,
-        .filters-actions {
-            flex-direction: column !important;
-            align-items: stretch !important;
-        }
-        .stat-grid,
-        .stats-grid,
-        .summary-grid,
-        .form-grid,
-        .filters-grid,
-        .memory-grid,
-        .grid-two,
-        .grid-2,
-        .panels-grid,
-        .summary-table {
-            grid-template-columns: 1fr !important;
-        }
-    }
-    @media (max-width: 520px) {
-        .finance-page,
-        .cw-page,
-        .cp-page,
-        .catalog-hub-page,
-        .dash-page,
-        .memories-page,
-        .queue-page,
-        .rules-page,
-        .closings-page,
-        .fin-dash-page,
-        .entry-page,
-        .batch-page,
-        .reports-page {
-            padding-left: .75rem !important;
-            padding-right: .75rem !important;
-        }
-        .panel-header,
-        .panel-body,
-        .table-wrap,
-        .filters-grid,
-        .summary-grid {
-            padding-left: .85rem !important;
-            padding-right: .85rem !important;
-        }
-        .cw-list-item-actions,
-        .cp-list-item-actions {
-            flex-direction: column;
-        }
-        .cw-list-item-actions .btn,
-        .cp-list-item-actions .btn {
-            width: 100%;
-        }
-    }
-
-
-    /* Responsive polish pass */
-    @media (max-width: 768px) {
-        .entry-header,
-        .fin-dash-header,
-        .dash-header,
-        .reports-header,
-        .rules-header,
-        .queue-header,
-        .memories-header,
-        .closings-header {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: .85rem;
-        }
-        .entry-header h1,
-        .fin-dash-header h1,
-        .dash-header h1,
-        .reports-header h1,
-        .rules-header h1,
-        .queue-header h1,
-        .memories-header h1,
-        .closings-header h1,
-        .batch-header h1,
-        .finance-header h1,
-        .cw-header h1,
-        .cp-header h1 {
-            font-size: 1.45rem !important;
-            line-height: 1.2;
-        }
-        .match-card__top,
-        .cw-list-item-line,
-        .cp-list-item-line {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: .35rem;
-        }
-        .stat-card,
-        .summary-card,
-        .line-item,
-        .list-item,
-        .match-card,
-        .cw-list-item,
-        .cp-list-item {
-            padding: .85rem !important;
-        }
-        .data-table th,
-        .data-table td {
-            padding: .7rem .6rem;
-        }
-    }
-    @media (max-width: 520px) {
-        .btn,
-        .cw-list-item-actions .btn,
-        .cp-list-item-actions .btn {
-            padding: .72rem .85rem !important;
-            font-size: .9rem;
-        }
-        .panel,
-        .cw-sidebar-card,
-        .cw-panel,
-        .cp-sidebar-card,
-        .cp-panel,
-        .stat-card,
-        .summary-card,
-        .match-card,
-        .line-item {
-            border-radius: 14px;
-        }
-        .cw-search input,
-        .form-grid input,
-        .form-grid select,
-        .form-grid textarea,
-        .filters input,
-        .filters select,
-        .filters-grid input,
-        .filters-grid select,
-        .import-form input,
-        .import-form select {
-            padding: .72rem .82rem;
-        }
-    }
-
 </style>
 
 <script>
-    const companyId = Number(document.querySelector('.entry-page')?.dataset.companyId);
-    const entryId = Number(document.querySelector('.entry-page')?.dataset.entryId);
-    const allocationDrafts = [];
+    const companyId = Number(document.querySelector('.settlement-page')?.dataset.companyId);
+    const entryId = Number(document.querySelector('.settlement-page')?.dataset.entryId);
+    const initialHistory = document.querySelector('.settlement-page')?.dataset.entryDescription || '';
+    let currentEntry = null;
+    let paymentMethods = [];
+    let bankAccounts = [];
 
-    function brl(value) {
-        return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(Number(value || 0));
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
     }
 
-    function signedAmount(value, movementNature) {
-        const normalized = Math.abs(Number(value || 0));
-        return movementNature === 'debit' ? normalized * -1 : normalized;
+    function parseCurrencyInput(value) {
+        const normalized = String(value || '')
+            .replace(/\./g, '')
+            .replace(',', '.')
+            .replace(/[^\d.-]/g, '');
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
     }
 
-    function syncSignedAmount(payload) {
-        const target = document.getElementById('entry-signed-amount');
-        if (!target) return;
-        const signed = signedAmount(payload?.original_amount, payload?.movement_nature);
-        target.textContent = brl(signed);
-        target.classList.toggle('amount-pill--negative', signed < 0);
-        target.classList.toggle('amount-pill--positive', signed >= 0);
+    function todayIso() {
+        const now = new Date();
+        const tzOffset = now.getTimezoneOffset() * 60000;
+        return new Date(now.getTime() - tzOffset).toISOString().slice(0, 10);
     }
 
-    async function fetchEntry() {
-        const response = await fetch(`/api/financial/entries/${entryId}?company_id=${companyId}`);
-        const payload = await response.json();
-        syncSignedAmount(payload);
-        renderAllocations(payload.allocations || []);
-        renderSettlements(payload.settlements || []);
+    function getSettledPrincipal(entry) {
+        return (entry?.settlements || [])
+            .filter(item => item.settlement_status !== 'cancelled')
+            .reduce((acc, item) => acc + Number(item.principal_amount || 0), 0);
     }
 
-    function renderAllocations(items) {
-        const container = document.getElementById('allocations-list');
-        const source = allocationDrafts.length ? allocationDrafts : items;
-        if (!source.length) {
-            container.innerHTML = '<div class="list-item">Nenhum rateio cadastrado.</div>';
-            return;
+    function getAvailableAmount(entry) {
+        return Math.max(Number(entry?.original_amount || 0) - getSettledPrincipal(entry), 0);
+    }
+
+    function refreshAvailableAmount(entry) {
+        const available = getAvailableAmount(entry);
+        document.getElementById('available-amount-card').textContent = formatCurrency(available);
+        document.getElementById('available-amount-hint').textContent =
+            `Saldo disponível: ${formatCurrency(available)} (${formatCurrency(Number(entry?.original_amount || 0))} - liquidações já feitas).`;
+        document.getElementById('principal-amount').value = available.toFixed(2).replace('.', ',');
+    }
+
+    function renderSelectedFiles() {
+        const container = document.getElementById('selected-files');
+        const files = Array.from(document.getElementById('settlement-files').files || []);
+        container.innerHTML = files.map(file => `<span class="file-chip">${file.name}</span>`).join('');
+    }
+
+    function renderSelectOptions(selectId, items, options = {}) {
+        const select = document.getElementById(selectId);
+        const includeBlank = options.includeBlank !== false;
+        const selectedValue = String(options.selectedValue || '');
+        const blankLabel = options.blankLabel || 'Selecione...';
+        const html = [];
+        if (includeBlank) {
+            html.push(`<option value="">${blankLabel}</option>`);
         }
-        container.innerHTML = source.map((item, index) => `
-            <div class="list-item">
-                <strong>${item.allocation_type === 'percentage' ? `${item.percentage || 0}%` : brl(item.allocated_amount)}</strong>
-                <div>Conta ${item.chart_account_id || '-'} · Centro ${item.cost_center_id || '-'} · Atividade ${item.activity_id || '-'} · Instância ${item.process_instance_id || '-'}</div>
-                ${allocationDrafts.length ? `<div style="margin-top:.5rem;"><button type="button" class="btn btn-secondary" onclick="removeAllocationDraft(${index})">Remover</button></div>` : ''}
-            </div>
-        `).join('');
+        html.push(...items.map(item => {
+            const value = String(item.id);
+            const label = item.code ? `${item.code} - ${item.name}` : item.name;
+            const selected = value === selectedValue ? 'selected' : '';
+            return `<option value="${value}" ${selected}>${label}</option>`;
+        }));
+        select.innerHTML = html.join('');
     }
 
-    function renderSettlements(items) {
+    function getDefaultPaymentMethodId() {
+        const explicitDefault = paymentMethods.find(item => item.is_default_suggestion);
+        return explicitDefault ? explicitDefault.id : '';
+    }
+
+    function renderSettlements(entry) {
         const container = document.getElementById('settlements-list');
+        const items = entry?.settlements || [];
         if (!items.length) {
-            container.innerHTML = '<div class="list-item">Nenhuma liquidação registrada.</div>';
+            container.innerHTML = '<div class="empty-state">Nenhuma baixa registrada.</div>';
             return;
         }
-        container.innerHTML = items.map(item => `
-            <div class="list-item">
-                <strong>${item.settlement_code} · ${item.settlement_date}</strong>
-                <div>Principal ${brl(item.principal_amount)} · Juros ${brl(item.interest_amount)} · Multa ${brl(item.penalty_amount)} · Desconto ${brl(item.discount_amount)} · Líquido ${brl(item.net_amount)}</div>
-            </div>
-        `).join('');
+
+        container.innerHTML = items.map(item => {
+            const metadata = item.metadata_json || {};
+            const attachments = Array.isArray(metadata.attachments) ? metadata.attachments : [];
+            const paymentMethodLabel = metadata.payment_method_label || '-';
+            const history = metadata.history || item.notes || '-';
+            const bankAccount = bankAccounts.find(account => Number(account.id) === Number(item.bank_account_id));
+            const bankLabel = bankAccount ? (bankAccount.code ? `${bankAccount.code} - ${bankAccount.name}` : bankAccount.name) : '-';
+
+            return `
+                <article class="settlement-item">
+                    <div class="settlement-item-header">
+                        <div>
+                            <h3 class="settlement-item-title">${history}</h3>
+                            <div class="settlement-item-meta">
+                                Data: ${item.settlement_date || '-'} · Forma financeira: ${paymentMethodLabel} · Conta bancária: ${bankLabel}
+                            </div>
+                        </div>
+                        <strong>${formatCurrency(item.principal_amount)}</strong>
+                    </div>
+                    ${attachments.length ? `
+                        <div class="attachments-list">
+                            ${attachments.map(attachment => `
+                                <a class="attachment-link" href="${attachment.url}" target="_blank" rel="noopener noreferrer">${attachment.name}</a>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </article>
+            `;
+        }).join('');
     }
 
-    document.getElementById('entry-edit-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const payload = Object.fromEntries(formData.entries());
-        payload.original_amount = payload.original_amount ? Number(payload.original_amount) : 0;
-        payload.activity_id = payload.activity_id ? Number(payload.activity_id) : null;
-        payload.process_instance_id = payload.process_instance_id ? Number(payload.process_instance_id) : null;
-        const unlockToggle = document.getElementById('unlock-reconciliation-toggle');
-        const unlockReason = document.getElementById('unlock-reconciliation-reason');
-        if (unlockToggle) {
-            payload.unlock_reconciliation = unlockToggle.checked;
-            payload.reconciled = !unlockToggle.checked;
-            payload.reconciliation_unlock_reason = unlockReason ? unlockReason.value.trim() : '';
-            if (unlockToggle.checked && !payload.reconciliation_unlock_reason) {
-                alert('Informe o motivo para desmarcar a conciliação.');
-                return;
+    async function fetchJson(url) {
+        const response = await fetch(url);
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.error || 'Falha ao carregar dados.');
+        }
+        return payload;
+    }
+
+    async function loadOptions() {
+        const [paymentMethodPayload, bankAccountPayload] = await Promise.all([
+            fetchJson(`/api/financial/catalogs/payment_methods?company_id=${companyId}`),
+            fetchJson(`/api/financial/catalogs/bank_accounts?company_id=${companyId}`),
+        ]);
+        paymentMethods = paymentMethodPayload || [];
+        bankAccounts = bankAccountPayload || [];
+    }
+
+    async function loadEntry() {
+        currentEntry = await fetchJson(`/api/financial/entries/${entryId}?company_id=${companyId}`);
+        renderSelectOptions('payment-method-id', paymentMethods, {
+            selectedValue: getDefaultPaymentMethodId(),
+        });
+        renderSelectOptions('bank-account-id', bankAccounts, {
+            selectedValue: currentEntry.bank_account_id || '',
+        });
+        document.getElementById('settlement-history').value = initialHistory;
+        document.getElementById('settlement-date').value = todayIso();
+        refreshAvailableAmount(currentEntry);
+        renderSettlements(currentEntry);
+    }
+
+    async function uploadAttachments(settlementId, files) {
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch(`/api/financial/settlements/${settlementId}/attachments?company_id=${companyId}`, {
+                method: 'POST',
+                body: formData,
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || `Falha ao anexar ${file.name}.`);
             }
         }
-
-        const response = await fetch(`/api/financial/entries/${entryId}?company_id=${companyId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            alert(result.error || 'Falha ao salvar lançamento.');
-            return;
-        }
-        syncSignedAmount(result);
-        alert('Lançamento atualizado com sucesso.');
-        fetchEntry();
-    });
-
-    const unlockToggle = document.getElementById('unlock-reconciliation-toggle');
-    const unlockReason = document.getElementById('unlock-reconciliation-reason');
-    if (unlockToggle && unlockReason) {
-        unlockToggle.addEventListener('change', () => {
-            unlockReason.disabled = !unlockToggle.checked;
-            if (!unlockToggle.checked) {
-                unlockReason.value = '';
-            }
-        });
     }
 
-    function addAllocationDraft() {
-        const formData = new FormData(document.getElementById('allocations-form'));
-        allocationDrafts.push({
-            allocation_type: formData.get('allocation_type'),
-            percentage: formData.get('percentage') ? Number(formData.get('percentage')) : null,
-            allocated_amount: formData.get('allocated_amount') ? Number(formData.get('allocated_amount')) : null,
-            chart_account_id: formData.get('chart_account_id') ? Number(formData.get('chart_account_id')) : null,
-            cost_center_id: formData.get('cost_center_id') ? Number(formData.get('cost_center_id')) : null,
-            activity_id: formData.get('activity_id') ? Number(formData.get('activity_id')) : null,
-            process_instance_id: formData.get('process_instance_id') ? Number(formData.get('process_instance_id')) : null,
-        });
-        renderAllocations([]);
-    }
-
-    function removeAllocationDraft(index) {
-        allocationDrafts.splice(index, 1);
-        renderAllocations([]);
-    }
-
-    document.getElementById('allocations-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (!allocationDrafts.length) {
-            alert('Adicione ao menos uma linha de rateio.');
-            return;
-        }
-
-        const payload = {
-            company_id: companyId,
-            financial_entry_id: entryId,
-            allocations: allocationDrafts,
-        };
-
-        const response = await fetch(`/api/financial/entries/${entryId}/allocations?company_id=${companyId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            alert(result.error || 'Falha ao salvar rateio.');
-            return;
-        }
-        allocationDrafts.length = 0;
-        document.getElementById('allocations-form').reset();
-        renderAllocations(result || []);
-        alert('Rateio salvo com sucesso.');
-    });
+    document.getElementById('settlement-files').addEventListener('change', renderSelectedFiles);
 
     document.getElementById('settlement-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const payload = Object.fromEntries(formData.entries());
-        payload.principal_amount = Number(payload.principal_amount || 0);
-        payload.interest_amount = Number(payload.interest_amount || 0);
-        payload.penalty_amount = Number(payload.penalty_amount || 0);
-        payload.discount_amount = Number(payload.discount_amount || 0);
-        payload.fee_amount = Number(payload.fee_amount || 0);
-        payload.other_adjustments_amount = Number(payload.other_adjustments_amount || 0);
-        payload.settlement_type = 'manual';
+        if (!currentEntry) return;
+
+        const available = getAvailableAmount(currentEntry);
+        const principalAmount = parseCurrencyInput(document.getElementById('principal-amount').value);
+        if (principalAmount <= 0) {
+            alert('Informe um valor válido para a baixa.');
+            return;
+        }
+        if (principalAmount > available) {
+            alert('O valor da baixa não pode ser maior que o saldo disponível.');
+            return;
+        }
+
+        const paymentMethodId = document.getElementById('payment-method-id').value || null;
+        const paymentMethod = paymentMethods.find(item => Number(item.id) === Number(paymentMethodId));
+        const bankAccountId = document.getElementById('bank-account-id').value;
+        const history = document.getElementById('settlement-history').value.trim();
+        const files = Array.from(document.getElementById('settlement-files').files || []);
+
+        const payload = {
+            settlement_date: document.getElementById('settlement-date').value,
+            bank_account_id: bankAccountId ? Number(bankAccountId) : null,
+            principal_amount: principalAmount,
+            settlement_type: 'manual',
+            notes: history,
+            metadata_json: {
+                history,
+                payment_method_id: paymentMethodId ? Number(paymentMethodId) : null,
+                payment_method_label: paymentMethod ? (paymentMethod.code ? `${paymentMethod.code} - ${paymentMethod.name}` : paymentMethod.name) : null,
+            },
+        };
 
         const response = await fetch(`/api/financial/entries/${entryId}/settlements?company_id=${companyId}`, {
             method: 'POST',
@@ -574,14 +381,31 @@
         });
         const result = await response.json();
         if (!response.ok) {
-            alert(result.error || 'Falha ao registrar liquidação.');
+            alert(result.error || 'Falha ao salvar baixa.');
             return;
         }
-        event.currentTarget.reset();
-        fetchEntry();
-        alert('Liquidação registrada com sucesso.');
+
+        try {
+            if (files.length) {
+                await uploadAttachments(result.id, files);
+            }
+            alert('Baixa registrada com sucesso.');
+        } catch (error) {
+            alert(`Baixa registrada, mas houve falha no upload dos anexos: ${error.message}`);
+        }
+
+        document.getElementById('settlement-form').reset();
+        document.getElementById('selected-files').innerHTML = '';
+        await loadEntry();
     });
 
-    document.addEventListener('DOMContentLoaded', fetchEntry);
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await loadOptions();
+            await loadEntry();
+        } catch (error) {
+            alert(error.message || 'Falha ao inicializar a tela de baixa.');
+        }
+    });
 </script>
 {% endblock %}

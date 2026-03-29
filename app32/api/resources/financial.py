@@ -1000,6 +1000,40 @@ class FinancialSettlementResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
+class FinancialSettlementAttachmentListResource(Resource):
+    @permission_required("financial", "create")
+    def post(self, settlement_id: int):
+        company_id = get_request_company_id()
+        upload = request.files.get("file")
+        if not upload:
+            return {"error": "Arquivo não informado."}, 400
+
+        attachment, error = FinancialService.upload_settlement_attachment(
+            settlement_id=settlement_id,
+            company_id=company_id,
+            file=upload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return attachment, 201
+
+
+class FinancialSettlementAttachmentResource(Resource):
+    @permission_required("financial", "delete")
+    def delete(self, settlement_id: int, attachment_id: str):
+        company_id = get_request_company_id()
+        removed, error = FinancialService.delete_settlement_attachment(
+            settlement_id=settlement_id,
+            company_id=company_id,
+            attachment_id=attachment_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return removed, 200
+
+
 class FinancialImportBatchListResource(Resource):
     @permission_required("financial", "view")
     def get(self):

@@ -130,6 +130,7 @@
       chip.disabled = entryTypeLocked;
     });
     updateEntryTypePresentation(entryType);
+    if (!selectedSchedule) suggestDefaultCorrectionIndex(entryType);
   }
 
   window.setEntryType = (entryType) => applyEntryType(entryType, { locked: entryTypeLocked });
@@ -174,6 +175,91 @@
 
   const defaultSuggestions = () => optionsCache.default_suggestions || {};
   const asOptionValue = (value) => (value == null || value === '' ? '' : String(value));
+  const getDefaultCorrectionIndexIdByEntryType = (entryType) => {
+    const suggestions = defaultSuggestions();
+    if (entryType === 'receivable') return asOptionValue(suggestions.receivable_correction_index_id || '');
+    if (entryType === 'payable') return asOptionValue(suggestions.payable_correction_index_id || '');
+    return '';
+  };
+
+  function suggestDefaultCorrectionIndex(entryType, { force = false } = {}) {
+    const field = $('field-correction-index');
+    if (!field) return;
+    if (!force && field.value) return;
+    field.value = getDefaultCorrectionIndexIdByEntryType(entryType);
+  }
+
+  const getSelectedCorrectionIndex = () => (optionsCache.correction_indexes || []).find((item) => String(item.id) === String($('field-correction-index')?.value || ''));
+  const getSelectedDiscountRule = () => (optionsCache.discount_rules || []).find((item) => String(item.id) === String($('field-discount-rule')?.value || ''));
+
+  function getDaysOverdue() {
+    const dueIso = parseDateToIso($('field-due-date')?.value || '');
+    if (!dueIso) return 0;
+    const dueDate = new Date(`${dueIso}T00:00:00`);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffMs = today.getTime() - dueDate.getTime();
+    return diffMs > 0 ? Math.floor(diffMs / 86400000) : 0;
+  }
+
+  function calculateCorrectionAmount() {
+    const amount = getTopAmount();
+    const correction = getSelectedCorrectionIndex();
+    if (!amount || !correction) return 0;
+    const metadata = correction.metadata_json || {};
+    const overdueDays = getDaysOverdue();
+    if (!overdueDays) return 0;
+
+    const interestRate = Number(metadata.interest_rate || 0);
+    const penaltyRate = Number(metadata.penalty_rate || 0);
+    const penaltyLimitRate = Number(metadata.penalty_limit_rate || 0);
+    const interestPeriod = String(metadata.interest_period || 'daily').toLowerCase();
+    const periods = interestPeriod === 'monthly' ? (overdueDays / 30) : overdueDays;
+    const interestAmount = interestRate > 0 ? amount * (interestRate / 100) * periods : 0;
+    let effectivePenaltyRate = penaltyRate;
+    if (penaltyLimitRate > 0) effectivePenaltyRate = Math.min(effectivePenaltyRate, penaltyLimitRate);
+    const penaltyAmount = effectivePenaltyRate > 0 ? amount * (effectivePenaltyRate / 100) : 0;
+    return round2(interestAmount + penaltyAmount);
+  }
+
+  function calculateDiscountAmount() {
+    const amount = getTopAmount();
+    const discountRule = getSelectedDiscountRule();
+    if (!amount || !discountRule) return 0;
+    const metadata = discountRule.metadata_json || {};
+    const discountType = String(metadata.discount_type || '').toLowerCase();
+    const value = Number(metadata.value || 0);
+    if (value <= 0) return 0;
+    if (discountType === 'percentage') return round2(amount * (value / 100));
+    return round2(value);
+  }
+
+  function calculateLiquidatedAmount() {
+    return round2(
+      (selectedSchedule?.related_entries || []).reduce((entryAcc, entry) => (
+        entryAcc + (entry.settlements || []).reduce((settAcc, settlement) => (
+          settAcc
+          + Number(settlement.principal_amount || 0)
+          + Number(settlement.interest_amount || 0)
+          + Number(settlement.penalty_amount || 0)
+          + Number(settlement.fee_amount || 0)
+          + Number(settlement.other_adjustments_amount || 0)
+          - Number(settlement.discount_amount || 0)
+        ), 0)
+      ), 0)
+    );
+  }
+
+  function updateFinancialTotals() {
+    const amount = getTopAmount();
+    const correctionAmount = calculateCorrectionAmount();
+    const discountAmount = calculateDiscountAmount();
+    const updatedAmount = round2(amount + correctionAmount - discountAmount);
+    const liquidatedAmount = calculateLiquidatedAmount();
+    const openBalance = round2(updatedAmount - liquidatedAmount);
+    if ($('field-updated-amount')) $('field-updated-amount').value = updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if ($('field-open-balance')) $('field-open-balance').value = openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
   function getTopAmount() {
     return round2(parseCurrency($('field-amount').value));
@@ -426,6 +512,7 @@
       entryTypeBanner.textContent = `Agendamento bloqueado pelo ${code}. Consulta liberada; edição e baixa direta indisponíveis.`;
     }
     window.toggleRepeatFields();
+    updateFinancialTotals();
   }
 
   function validateAllocationSummary() {
@@ -517,6 +604,9 @@
     $('field-counterparty').innerHTML = buildOptions(optionsCache.counterparties, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('field-correction-index').innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('field-discount-rule').innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    if (!selectedSchedule) {
+      suggestDefaultCorrectionIndex(form.entry_type.value || initialEntryType, { force: true });
+    }
     if (allocationRows.length) {
       allocationRows = allocationRows.map((row) => createAllocationRow(row));
       renderAllocations();
@@ -559,6 +649,7 @@
     $('baixas-tab-button').classList.add('hidden');
     $('field-frequency').value = 'weekly';
     window.toggleRepeatFields();
+    updateFinancialTotals();
     switchTab('agendamento');
     renderList();
   };
@@ -709,6 +800,7 @@
     event.target.value = formatCurrencyFromDigits(event.target.value);
     recalculateAllRowsFromPercentages();
     renderAllocations();
+    updateFinancialTotals();
   });
 
   $('field-competence').addEventListener('input', (event) => {
@@ -717,6 +809,15 @@
 
   $('field-due-date').addEventListener('input', (event) => {
     event.target.value = normalizeDateInput(event.target.value);
+    updateFinancialTotals();
+  });
+
+  $('field-correction-index').addEventListener('change', () => {
+    updateFinancialTotals();
+  });
+
+  $('field-discount-rule').addEventListener('change', () => {
+    updateFinancialTotals();
   });
 
   $('counterparty-document').addEventListener('input', (event) => {
@@ -859,6 +960,7 @@
         await loadSchedules();
       }
       window.toggleRepeatFields();
+      updateFinancialTotals();
     } catch (error) {
       alert(error.message);
     }

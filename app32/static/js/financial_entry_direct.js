@@ -113,9 +113,22 @@
   const cloneAllocationRows = () => allocationRows.map((row) => ({ ...row }));
   const defaultSuggestions = () => optionsCache.default_suggestions || {};
   const asOptionValue = (value) => (value == null || value === '' ? '' : String(value));
+  const getDefaultCorrectionIndexIdByEntryType = (entryType) => {
+    const suggestions = defaultSuggestions();
+    if (entryType === 'receivable') return asOptionValue(suggestions.receivable_correction_index_id || '');
+    if (entryType === 'payable') return asOptionValue(suggestions.payable_correction_index_id || '');
+    return '';
+  };
   const lockedEntryType = ['payable', 'receivable'].includes(String(page.dataset.initialEntryType || '').trim().toLowerCase())
     ? String(page.dataset.initialEntryType || '').trim().toLowerCase()
     : '';
+
+  function suggestDefaultCorrectionIndex(entryType, { force = false } = {}) {
+    const field = $('direct-correction-index');
+    if (!field) return;
+    if (!force && field.value) return;
+    field.value = getDefaultCorrectionIndexIdByEntryType(entryType);
+  }
 
   function getTopAmount() {
     return round2(parseCurrency($('direct-amount').value));
@@ -269,6 +282,7 @@
     form.querySelector('input[name="entry_type"]').value = entryType;
     document.querySelectorAll('.type-chip').forEach((chip) => chip.classList.toggle('active', chip.dataset.entryType === entryType));
     updateEntryTypePresentation(entryType);
+    suggestDefaultCorrectionIndex(entryType);
   };
 
   function validateAllocationSummary() {
@@ -407,6 +421,7 @@
     $('direct-bank-account').innerHTML = buildOptions(optionsCache.bank_accounts, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('direct-correction-index').innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('direct-discount-rule').innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    suggestDefaultCorrectionIndex(form.querySelector('input[name="entry_type"]').value || lockedEntryType || 'payable', { force: true });
     if (allocationRows.length) {
       allocationRows = allocationRows.map((row) => createAllocationRow(row));
     }

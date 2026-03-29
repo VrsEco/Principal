@@ -59,10 +59,6 @@
                                 <input id="field-amount" name="template_amount_display" inputmode="numeric" autocomplete="off" placeholder="0,00" required>
                             </label>
                             <label class="field field-span-2">
-                                <span>Correção Financeira</span>
-                                <select id="field-correction-index" name="correction_index_id"></select>
-                            </label>
-                            <label class="field field-span-2">
                                 <span>Competência</span>
                                 <input id="field-competence" name="competence_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
                             </label>
@@ -71,8 +67,20 @@
                                 <input id="field-due-date" name="due_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
                             </label>
                             <label class="field field-span-2">
+                                <span>Correção Financeira</span>
+                                <select id="field-correction-index" name="correction_index_id"></select>
+                            </label>
+                            <label class="field field-span-2">
                                 <span>Desconto</span>
                                 <select id="field-discount-rule" name="discount_rule_id"></select>
+                            </label>
+                            <label class="field field-span-2 field-summary">
+                                <span>Valor Atualizado</span>
+                                <input id="field-updated-amount" name="updated_amount_display" value="0,00" readonly tabindex="-1">
+                            </label>
+                            <label class="field field-span-2 field-summary">
+                                <span>Saldo</span>
+                                <input id="field-open-balance" name="open_balance_display" value="0,00" readonly tabindex="-1">
                             </label>
                         </div>
 
