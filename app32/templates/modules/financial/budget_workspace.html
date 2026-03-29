@@ -62,10 +62,10 @@
     </section>
 
     <section class="bw-kpis">
-        <article class="bw-kpi"><span>Previsto</span><strong id="kpi-planned">R$ 0,00</strong></article>
-        <article class="bw-kpi"><span>Realizado</span><strong id="kpi-contracted">R$ 0,00</strong></article>
-        <article class="bw-kpi"><span>Agendado</span><strong id="kpi-executed">R$ 0,00</strong></article>
-        <article class="bw-kpi"><span>Saldo</span><strong id="kpi-balance">R$ 0,00</strong></article>
+        <article class="bw-kpi"><span>Orçado</span><strong id="kpi-planned">R$ 0,00</strong></article>
+        <article class="bw-kpi"><span>Contratados</span><strong id="kpi-contracted">R$ 0,00</strong></article>
+        <article class="bw-kpi"><span>Executados</span><strong id="kpi-executed">R$ 0,00</strong></article>
+        <article class="bw-kpi"><span>Agendados</span><strong id="kpi-balance">R$ 0,00</strong></article>
     </section>
 
     <section class="bw-layout">
@@ -149,7 +149,7 @@ function metricValuesByType(type, item) {
     const balance = planned - realized;
     return { planned, realized, balance, extra: realized };
 }
-function renderKPIs() { const summary = state.workspace?.summary || {}; const planned = Number(summary.planned_total || 0); const realized = Number(summary.contracted_total || 0); const scheduled = Number(summary.executed_total || 0); byId('kpi-planned').textContent = fmt(planned); byId('kpi-contracted').textContent = fmt(realized); byId('kpi-executed').textContent = fmt(scheduled); byId('kpi-balance').textContent = fmt(planned - realized); }
+function renderKPIs() { const summary = state.workspace?.summary || {}; const planned = Number(summary.planned_total || 0); const contracted = Number(summary.contracted_total || 0); const executed = Number(summary.executed_total || 0); const scheduled = Number(summary.scheduled_total || 0); byId('kpi-planned').textContent = fmt(planned); byId('kpi-contracted').textContent = fmt(contracted); byId('kpi-executed').textContent = fmt(executed); byId('kpi-balance').textContent = fmt(scheduled); }
   function renderSummaryBox(item) { if (!item) { byId('detail-summary').innerHTML = state.creating && state.activeType === 'version' ? 'Preencha os dados do novo orçamento raiz e clique em <strong>Salvar</strong>.' : 'Clique em um registro da árvore para visualizar seus dados.'; return; } const metrics = metricValuesByType(state.activeType, item); byId('detail-summary').innerHTML = `<strong>${codeFor(item)}</strong><br>${nameFor(item)}<br>${TYPE_META[state.activeType]?.label || 'Registro'} · ${entryExit(item.movement_nature)} · Previsto: ${fmt(metrics.planned)} · Realizado: ${fmt(metrics.realized)} · Saldo: ${fmt(metrics.balance)}`; }
 function renderContext() { const trail = []; if (state.workspace?.version) trail.push({ label: 'Orçamento', value: `${codeFor(state.workspace.version)} · ${nameFor(state.workspace.version)}` }); if (state.workspace?.selected_line) trail.push({ label: 'Verba', value: `${codeFor(state.workspace.selected_line)} · ${nameFor(state.workspace.selected_line)}` }); if (state.workspace?.selected_contract) trail.push({ label: 'Contrato', value: `${codeFor(state.workspace.selected_contract)} · ${nameFor(state.workspace.selected_contract)}` }); if (state.workspace?.selected_document) trail.push({ label: 'NF/Equivalente', value: `${codeFor(state.workspace.selected_document)} · ${nameFor(state.workspace.selected_document)}` }); if (state.workspace?.selected_schedule) trail.push({ label: 'Agendamento', value: `${codeFor(state.workspace.selected_schedule)} · ${nameFor(state.workspace.selected_schedule)}` }); byId('detail-context').innerHTML = trail.map((item) => `<span class="bw-context-chip"><b>${item.label}:</b> ${item.value}</span>`).join(''); }
 function metricValues(item, type) { return metricValuesByType(type, item); }
