@@ -906,6 +906,38 @@ class FinancialBudgetWorkspaceService:
 
         entry_type = "receivable" if line.movement_nature == "credit" else "payable"
         counterparty = document.counterparty or contract.counterparty
+        default_suggestions, _ = FinancialScheduleService.list_default_suggestions(
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        default_suggestions = default_suggestions or {}
+        line_metadata = dict(line.metadata_json or {})
+        contract_metadata = dict(contract.metadata_json or {})
+        document_metadata = dict(document.metadata_json or {})
+        domain_type = (
+            line_metadata.get("domain_type")
+            or contract_metadata.get("domain_type")
+            or document_metadata.get("domain_type")
+            or default_suggestions.get("domain_type")
+        )
+        domain_source_id = (
+            line_metadata.get("domain_source_id")
+            or contract_metadata.get("domain_source_id")
+            or document_metadata.get("domain_source_id")
+            or default_suggestions.get("domain_source_id")
+        )
+        domain_label = (
+            line_metadata.get("domain_label")
+            or contract_metadata.get("domain_label")
+            or document_metadata.get("domain_label")
+            or default_suggestions.get("domain_label")
+            or document.title
+        )
+        default_correction_index_id = (
+            default_suggestions.get("receivable_correction_index_id")
+            if entry_type == "receivable"
+            else default_suggestions.get("payable_correction_index_id")
+        )
         created_items: List[Dict[str, Any]] = []
         total_installments = len(data.installments)
 
@@ -913,8 +945,24 @@ class FinancialBudgetWorkspaceService:
             for index, installment in enumerate(data.installments, start=1):
                 label = installment.label or f"Parcela {index}/{total_installments}"
                 amount = Decimal(str(installment.amount))
+                competence_date = installment.competence_date or installment.due_date
+                allocation_metadata = {
+                    "domain_type": domain_type,
+                    "domain_source_id": domain_source_id,
+                    "domain_label": domain_label,
+                    "budget_version_id": line.budget_version_id,
+                    "budget_version_code": getattr(line.version, "code", None),
+                    "budget_line_id": line.id,
+                    "budget_line_code": line.line_code,
+                    "budget_contract_id": contract.id,
+                    "budget_contract_code": contract.contract_code,
+                    "budget_document_id": document.id,
+                    "budget_document_code": document.document_code,
+                }
                 schedule_payload = {
                     "company_id": company_id,
+                    "budget_line_id": line.id,
+                    "budget_contract_id": contract.id,
                     "budget_document_id": document.id,
                     "name": f"{label} - {document.title}",
                     "entry_type": entry_type,
@@ -923,7 +971,7 @@ class FinancialBudgetWorkspaceService:
                     "status": "active",
                     "frequency": "one_time",
                     "interval_value": 1,
-                    "start_date": installment.due_date,
+                    "start_date": competence_date,
                     "first_due_date": installment.due_date,
                     "next_due_date": installment.due_date,
                     "description": f"{label} | {document.title}",
@@ -939,15 +987,27 @@ class FinancialBudgetWorkspaceService:
                     "notes": data.notes or label,
                     "auto_post": data.auto_post,
                     "metadata_json": {
+                        **default_suggestions,
+                        **line_metadata,
+                        **contract_metadata,
+                        **document_metadata,
                         "document_number": document.document_number or document.document_code,
                         "competence_mode": "same_as_due",
+                        "correction_index_id": default_correction_index_id,
                         "counterparty_name": counterparty.name if counterparty else None,
                         "budget_version_id": line.budget_version_id,
+                        "budget_version_code": getattr(line.version, "code", None),
                         "budget_line_id": line.id,
+                        "budget_line_code": line.line_code,
                         "budget_contract_id": contract.id,
+                        "budget_contract_code": contract.contract_code,
                         "budget_document_id": document.id,
+                        "budget_document_code": document.document_code,
                         "budget_document_title": document.title,
                         "contract_name": contract.name,
+                        "domain_type": domain_type,
+                        "domain_source_id": domain_source_id,
+                        "domain_label": domain_label,
                         "allocations": [
                             {
                                 "chart_account_id": line.chart_account_id,
@@ -955,9 +1015,7 @@ class FinancialBudgetWorkspaceService:
                                 "allocation_type": "percentage",
                                 "percentage": 100,
                                 "allocated_amount": float(amount),
-                                "domain_type": "financial_budget_document",
-                                "domain_source_id": document.id,
-                                "domain_label": document.title,
+                                **allocation_metadata,
                             }
                         ],
                     },
