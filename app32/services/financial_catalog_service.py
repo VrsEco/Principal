@@ -18,7 +18,6 @@ from models.financial import (
     FinancialCounterparty,
     FinancialDiscountRule,
     FinancialPaymentMethod,
-    FinancialPaymentTerm,
 )
 from schemas.financial import (
     FinancialAccountCategoryInput,
@@ -39,8 +38,6 @@ from schemas.financial import (
     FinancialDiscountRuleUpdateInput,
     FinancialPaymentMethodInput,
     FinancialPaymentMethodUpdateInput,
-    FinancialPaymentTermInput,
-    FinancialPaymentTermUpdateInput,
 )
 
 
@@ -81,13 +78,6 @@ class FinancialCatalogService:
             "model": FinancialAccountCategory,
             "create_schema": FinancialAccountCategoryInput,
             "update_schema": FinancialAccountCategoryUpdateInput,
-            "code_field": "code",
-            "company_fk_fields": [],
-        },
-        "payment_terms": {
-            "model": FinancialPaymentTerm,
-            "create_schema": FinancialPaymentTermInput,
-            "update_schema": FinancialPaymentTermUpdateInput,
             "code_field": "code",
             "company_fk_fields": [],
         },
@@ -252,6 +242,18 @@ class FinancialCatalogService:
         return value
 
     @staticmethod
+    def _clear_default_cost_center_suggestions(*, company_id: int, exclude_item_id: Optional[int] = None) -> None:
+        query = FinancialCostCenter.query.filter(
+            FinancialCostCenter.company_id == company_id,
+            FinancialCostCenter.deleted_at.is_(None),
+            FinancialCostCenter.is_default_suggestion.is_(True),
+        )
+        if exclude_item_id:
+            query = query.filter(FinancialCostCenter.id != exclude_item_id)
+        for item in query.all():
+            item.is_default_suggestion = False
+
+    @staticmethod
     def _prepare_catalog_payload(
         *,
         catalog_type: str,
@@ -300,7 +302,6 @@ class FinancialCatalogService:
 
         if catalog_type in {
             "account_categories",
-            "payment_terms",
             "asset_accounts",
             "correction_indexes",
             "discount_rules",
@@ -633,7 +634,6 @@ class FinancialCatalogService:
         if catalog_type == "bank_accounts" and not data.get("code"):
             data["code"] = FinancialCatalogService._generate_bank_account_code(data["company_id"])
         if catalog_type in {
-            "payment_terms",
             "correction_indexes",
             "discount_rules",
             "payment_methods",
@@ -672,6 +672,12 @@ class FinancialCatalogService:
         try:
             item = model(**data)
             db.session.add(item)
+            if catalog_type == "cost_centers" and bool(data.get("is_default_suggestion")):
+                db.session.flush()
+                FinancialCatalogService._clear_default_cost_center_suggestions(
+                    company_id=data["company_id"],
+                    exclude_item_id=item.id,
+                )
             db.session.commit()
             return item.to_dict(), None
         except IntegrityError:
@@ -748,6 +754,11 @@ class FinancialCatalogService:
         try:
             for key, value in data.items():
                 setattr(item, key, value)
+            if catalog_type == "cost_centers" and bool(getattr(item, "is_default_suggestion", False)):
+                FinancialCatalogService._clear_default_cost_center_suggestions(
+                    company_id=company_id,
+                    exclude_item_id=item.id,
+                )
             db.session.commit()
             return item.to_dict(), None
         except IntegrityError:
@@ -789,6 +800,8 @@ class FinancialCatalogService:
 
         try:
             item.is_active = bool(is_active)
+            if not item.is_active and catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):
+                item.is_default_suggestion = False
             db.session.commit()
             return item.to_dict(), None
         except Exception as exc:
@@ -843,6 +856,8 @@ class FinancialCatalogService:
                 return None, "Não é possível excluir um centro que possui centros filhos."
 
         try:
+            if catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):
+                item.is_default_suggestion = False
             item.deleted_at = datetime.utcnow()
             db.session.commit()
             return {"id": item_id, "deleted": True}, None

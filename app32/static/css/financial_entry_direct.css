@@ -171,8 +171,17 @@
 .rateio-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;
+  min-width: 1120px;
+  table-layout: fixed;
 }
+
+.rateio-col--chart-account { width: 190px; }
+.rateio-col--cost-center { width: 230px; }
+.rateio-col--budget-document { width: 260px; }
+.rateio-col--domain { width: 200px; }
+.rateio-col--percentage { width: 150px; }
+.rateio-col--amount { width: 150px; }
+.rateio-col--actions { width: 120px; }
 
 .rateio-table th,
 .rateio-table td {
@@ -193,6 +202,7 @@
 .rateio-table td input,
 .rateio-table td select {
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--form-border);
   border-radius: 10px;
   padding: 0.55rem 0.65rem;
@@ -258,6 +268,12 @@
 
 .direct-entry-form {
   padding-top: 0.25rem;
+}
+
+@media (max-width: 900px) {
+  .rateio-table {
+    min-width: 980px;
+  }
 }
 
 .modal-shell.hidden { display: none !important; }

@@ -8,7 +8,20 @@
   const banner = document.getElementById('direct-entry-banner');
   const rateioSummary = document.getElementById('direct-rateio-summary');
   const entryTypeSwitch = document.getElementById('direct-entry-type-switch');
-  let optionsCache = { counterparties: [], bank_accounts: [], chart_accounts: [], cost_centers: [], correction_indexes: [], discount_rules: [], enabled_domains: [] };
+  let optionsCache = {
+    counterparties: [],
+    bank_accounts: [],
+    chart_accounts: [],
+    cost_centers: [],
+    correction_indexes: [],
+    discount_rules: [],
+    enabled_domains: [],
+    default_suggestions: {},
+    budget_versions: [],
+    budget_lines: [],
+    budget_contracts: [],
+    budget_documents: [],
+  };
   let allocationRows = [];
 
   const $ = (id) => document.getElementById(id);
@@ -92,7 +105,14 @@
 
   const buildChartAccountLabel = (item) => item.code ? `${item.code} - ${item.name}` : (item.name || item.id);
   const buildCostCenterLabel = (item) => item.code ? `${item.code} - ${item.name}` : (item.name || item.id);
+  const buildBudgetLabel = (item) => {
+    const code = item.code || '';
+    const name = item.name || '';
+    return code && name ? `${code} - ${name}` : (code || name || item.id);
+  };
   const cloneAllocationRows = () => allocationRows.map((row) => ({ ...row }));
+  const defaultSuggestions = () => optionsCache.default_suggestions || {};
+  const asOptionValue = (value) => (value == null || value === '' ? '' : String(value));
   const lockedEntryType = ['payable', 'receivable'].includes(String(page.dataset.initialEntryType || '').trim().toLowerCase())
     ? String(page.dataset.initialEntryType || '').trim().toLowerCase()
     : '';
@@ -173,13 +193,20 @@
   }
 
   function createAllocationRow(defaults = {}) {
+    const suggestions = defaultSuggestions();
+    const domainType = defaults.domain_type || suggestions.domain_type || null;
+    const domainSourceId = defaults.domain_source_id || suggestions.domain_source_id || null;
     return {
       chart_account_id: defaults.chart_account_id || '',
-      cost_center_id: defaults.cost_center_id || '',
-      domain_type: defaults.domain_type || null,
-      domain_source_id: defaults.domain_source_id || null,
-      domain_label: defaults.domain_label || null,
-      domain_value: defaults.domain_type && defaults.domain_source_id ? `${defaults.domain_type}:${defaults.domain_source_id}` : '',
+      cost_center_id: asOptionValue(defaults.cost_center_id || suggestions.cost_center_id || ''),
+      budget_version_id: asOptionValue(defaults.budget_version_id || suggestions.budget_version_id || ''),
+      budget_line_id: asOptionValue(defaults.budget_line_id || suggestions.budget_line_id || ''),
+      budget_contract_id: asOptionValue(defaults.budget_contract_id || suggestions.budget_contract_id || ''),
+      budget_document_id: asOptionValue(defaults.budget_document_id || suggestions.budget_document_id || ''),
+      domain_type: domainType,
+      domain_source_id: domainSourceId,
+      domain_label: defaults.domain_label || suggestions.domain_label || null,
+      domain_value: domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '',
       percentage: defaults.percentage ?? '100',
       allocated_amount: defaults.allocated_amount ?? null,
       allocated_amount_display: defaults.allocated_amount_display || '',
@@ -208,21 +235,25 @@
   function renderAllocations() {
     const chartOptions = buildOptions(analyticChartAccounts(), 'Selecione...', buildChartAccountLabel);
     const costCenterOptions = buildOptions(finalCostCenters(), 'Selecione...', buildCostCenterLabel);
+    const budgetDocumentOptions = buildOptions(optionsCache.budget_documents, 'Selecione...', buildBudgetLabel);
     body.innerHTML = allocationRows.length ? allocationRows.map((row, index) => `
       <tr>
         <td><select data-index="${index}" data-field="chart_account_id">${chartOptions}</select></td>
         <td><select data-index="${index}" data-field="cost_center_id">${costCenterOptions}</select></td>
+        <td><select data-index="${index}" data-field="budget_document_id">${budgetDocumentOptions}</select></td>
         <td><select data-index="${index}" data-field="domain_value">${buildDomainOptions(row.domain_value || '')}</select></td>
         <td><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal"></td>
         <td><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric"></td>
         <td><div class="rateio-actions"><button type="button" class="btn btn-secondary" data-action="duplicate" data-index="${index}">+</button><button type="button" class="btn btn-secondary" data-action="remove" data-index="${index}">×</button></div></td>
-      </tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhum rateio informado.</td></tr>';
+      </tr>`).join('') : '<tr><td colspan="7" class="empty-state">Nenhum rateio informado.</td></tr>';
 
     allocationRows.forEach((row, index) => {
       const chartSelect = body.querySelector(`select[data-field="chart_account_id"][data-index="${index}"]`);
       const centerSelect = body.querySelector(`select[data-field="cost_center_id"][data-index="${index}"]`);
+      const budgetDocumentSelect = body.querySelector(`select[data-field="budget_document_id"][data-index="${index}"]`);
       if (chartSelect) chartSelect.value = row.chart_account_id || '';
       if (centerSelect) centerSelect.value = row.cost_center_id || '';
+      if (budgetDocumentSelect) budgetDocumentSelect.value = row.budget_document_id || '';
     });
 
     renderAllocationSummary();
@@ -330,6 +361,10 @@
       allocations: allocationRows.map((row) => ({
         chart_account_id: Number(row.chart_account_id || 0) || null,
         cost_center_id: Number(row.cost_center_id || 0) || null,
+        budget_version_id: Number(row.budget_version_id || 0) || null,
+        budget_line_id: Number(row.budget_line_id || 0) || null,
+        budget_contract_id: Number(row.budget_contract_id || 0) || null,
+        budget_document_id: Number(row.budget_document_id || 0) || null,
         domain_type: row.domain_type || null,
         domain_source_id: row.domain_source_id || null,
         domain_label: row.domain_label || null,
@@ -372,6 +407,9 @@
     $('direct-bank-account').innerHTML = buildOptions(optionsCache.bank_accounts, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('direct-correction-index').innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('direct-discount-rule').innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    if (allocationRows.length) {
+      allocationRows = allocationRows.map((row) => createAllocationRow(row));
+    }
     renderAllocations();
   }
 
@@ -460,6 +498,25 @@
     const field = event.target.dataset.field;
     const index = Number(event.target.dataset.index || -1);
     if (index < 0 || !field || !allocationRows[index]) return;
+    if (field === 'budget_document_id') {
+      const value = event.target.value;
+      const item = (optionsCache.budget_documents || []).find((candidate) => String(candidate.id) === String(value));
+      if (!value || !item) {
+        allocationRows[index].budget_version_id = '';
+        allocationRows[index].budget_line_id = '';
+        allocationRows[index].budget_contract_id = '';
+        allocationRows[index].budget_document_id = '';
+        return;
+      }
+      const contract = (optionsCache.budget_contracts || []).find((candidate) => String(candidate.id) === String(item.budget_contract_id || ''));
+      const line = (optionsCache.budget_lines || []).find((candidate) => String(candidate.id) === String(contract?.budget_line_id || ''));
+      const version = (optionsCache.budget_versions || []).find((candidate) => String(candidate.id) === String(line?.budget_version_id || ''));
+      allocationRows[index].budget_document_id = String(item.id);
+      allocationRows[index].budget_contract_id = contract ? String(contract.id) : '';
+      allocationRows[index].budget_line_id = line ? String(line.id) : '';
+      allocationRows[index].budget_version_id = version ? String(version.id) : '';
+      return;
+    }
     if (field === 'domain_value') {
       const value = event.target.value;
       allocationRows[index].domain_value = value;

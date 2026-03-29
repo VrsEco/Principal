@@ -7,7 +7,17 @@ from flask import request
 from flask_restful import Resource
 from flask_login import current_user
 
-from models import db, FinancialEntry, FinancialEntryAllocation, FinancialSchedule, FinancialSettlement
+from models import (
+    db,
+    FinancialBudgetContract,
+    FinancialBudgetDocument,
+    FinancialBudgetLine,
+    FinancialBudgetVersion,
+    FinancialEntry,
+    FinancialEntryAllocation,
+    FinancialSchedule,
+    FinancialSettlement,
+)
 from schemas.financial import (
     financial_entry_allocation_schema,
     financial_entry_allocations_schema,
@@ -31,6 +41,8 @@ from services.financial_executive_dashboard_service import FinancialExecutiveDas
 from services.financial_ai_classification_service import FinancialAIClassificationService
 from services.financial_classification_question_service import FinancialClassificationQuestionService
 from services.financial_reconciliation_service import FinancialReconciliationService
+from services.financial_reconciliation_workspace_service import FinancialReconciliationWorkspaceService
+from services.financial_bordero_service import FinancialBorderoService
 from utils.company_access import get_accessible_company_ids
 from utils.permissions import permission_required
 
@@ -469,6 +481,47 @@ class FinancialScheduleOptionsResource(Resource):
         if error:
             return {"error": error}, 400
 
+        default_suggestions, error = FinancialScheduleService.list_default_suggestions(
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if error:
+            return {"error": error}, 400
+
+        budget_versions = (
+            FinancialBudgetVersion.query.filter(
+                FinancialBudgetVersion.company_id == company_id,
+                FinancialBudgetVersion.deleted_at.is_(None),
+            )
+            .order_by(FinancialBudgetVersion.period_start.desc(), FinancialBudgetVersion.id.desc())
+            .all()
+        )
+        budget_lines = (
+            FinancialBudgetLine.query.filter(
+                FinancialBudgetLine.company_id == company_id,
+                FinancialBudgetLine.deleted_at.is_(None),
+                FinancialBudgetLine.is_active.is_(True),
+            )
+            .order_by(FinancialBudgetLine.line_order.asc(), FinancialBudgetLine.id.asc())
+            .all()
+        )
+        budget_contracts = (
+            FinancialBudgetContract.query.filter(
+                FinancialBudgetContract.company_id == company_id,
+                FinancialBudgetContract.deleted_at.is_(None),
+            )
+            .order_by(FinancialBudgetContract.name.asc(), FinancialBudgetContract.id.asc())
+            .all()
+        )
+        budget_documents = (
+            FinancialBudgetDocument.query.filter(
+                FinancialBudgetDocument.company_id == company_id,
+                FinancialBudgetDocument.deleted_at.is_(None),
+            )
+            .order_by(FinancialBudgetDocument.title.asc(), FinancialBudgetDocument.id.asc())
+            .all()
+        )
+
         return {
             "counterparties": counterparties,
             "chart_accounts": chart_accounts,
@@ -476,6 +529,46 @@ class FinancialScheduleOptionsResource(Resource):
             "correction_indexes": correction_indexes,
             "discount_rules": discount_rules,
             "enabled_domains": enabled_domains,
+            "default_suggestions": default_suggestions or {},
+            "budget_versions": [
+                {
+                    "id": item.id,
+                    "code": item.full_code or item.code,
+                    "name": item.name,
+                    "status": item.status,
+                    "budget_category": getattr(item, "budget_category", None),
+                    "is_default_suggestion": False,
+                }
+                for item in budget_versions
+            ],
+            "budget_lines": [
+                {
+                    "id": item.id,
+                    "budget_version_id": item.budget_version_id,
+                    "code": getattr(item, "full_code", None) or item.line_code,
+                    "name": item.line_name,
+                }
+                for item in budget_lines
+            ],
+            "budget_contracts": [
+                {
+                    "id": item.id,
+                    "budget_line_id": item.budget_line_id,
+                    "code": getattr(item, "full_code", None) or item.contract_code,
+                    "name": item.name,
+                }
+                for item in budget_contracts
+            ],
+            "budget_documents": [
+                {
+                    "id": item.id,
+                    "budget_contract_id": item.budget_contract_id,
+                    "code": getattr(item, "full_code", None) or item.document_code,
+                    "name": item.title,
+                    "is_default_suggestion": bool(getattr(item, "is_default_suggestion", False)),
+                }
+                for item in budget_documents
+            ],
         }, 200
 
 
@@ -604,6 +697,64 @@ class FinancialScheduleAttachmentResource(Resource):
         if error:
             return {"error": error}, 400
         return result, 200
+
+
+class FinancialBorderoListResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialBorderoService.list_borderos(
+            company_id=company_id,
+            bordero_type=request.args.get("bordero_type"),
+            status=request.args.get("status"),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "create")
+    def post(self):
+        payload = request.get_json(silent=True) or {}
+        payload["company_id"] = get_request_company_id()
+        payload.setdefault("created_by_user_id", getattr(current_user, "id", None))
+        result, error = FinancialBorderoService.create_bordero(
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
+class FinancialBorderoResource(Resource):
+    @permission_required("financial", "view")
+    def get(self, bordero_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialBorderoService.get_bordero_detail(
+            bordero_id=bordero_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 404
+        return result, 200
+
+
+class FinancialBorderoSettlementListResource(Resource):
+    @permission_required("financial", "create")
+    def post(self, bordero_id: int):
+        payload = request.get_json(silent=True) or {}
+        payload["company_id"] = get_request_company_id()
+        payload.setdefault("created_by_user_id", getattr(current_user, "id", None))
+        result, error = FinancialBorderoService.create_settlement(
+            bordero_id=bordero_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
 
 
 class FinancialAutomationRuleListResource(Resource):
@@ -867,6 +1018,8 @@ class FinancialImportBatchListResource(Resource):
         upload = request.files.get("file")
         if not upload:
             return {"error": "Arquivo de importação não informado."}, 400
+        reconciliation_mode_raw = str(request.form.get("reconciliation_mode") or "").strip().lower()
+        reconciliation_mode = reconciliation_mode_raw in {"1", "true", "yes", "on", "sim"}
 
         payload = {
             "company_id": company_id,
@@ -877,7 +1030,11 @@ class FinancialImportBatchListResource(Resource):
             "uploaded_by_employee_id": request.form.get("uploaded_by_employee_id", type=int),
             "created_by_agent": request.form.get("created_by_agent"),
             "notes": request.form.get("notes"),
-            "metadata_json": {},
+            "metadata_json": {
+                "bank_account_id": request.form.get("bank_account_id", type=int),
+                "integration_channel": request.form.get("integration_channel"),
+                "reconciliation_mode": reconciliation_mode,
+            },
         }
 
         result, error = FinancialImportService.create_import_batch(
@@ -887,6 +1044,16 @@ class FinancialImportBatchListResource(Resource):
         )
         if error:
             return {"error": error}, 400
+        if reconciliation_mode and result.get("batch", {}).get("id"):
+            reconciliation_result, reconciliation_error = FinancialReconciliationService.auto_match_batch(
+                batch_id=result["batch"]["id"],
+                company_id=company_id,
+                allowed_company_ids=get_accessible_company_ids(),
+            )
+            if reconciliation_error:
+                result["reconciliation_warning"] = reconciliation_error
+            else:
+                result["reconciliation"] = reconciliation_result
         return result, 201
 
 
@@ -941,11 +1108,106 @@ class FinancialReconciliationMatchReviewResource(Resource):
             match_id=match_id,
             company_id=company_id,
             decision=str(payload.get("decision") or "").strip().lower(),
+            selected_entry_id=payload.get("selected_entry_id"),
+            adjustments={
+                "principal_amount": payload.get("principal_amount"),
+                "interest_amount": payload.get("interest_amount"),
+                "penalty_amount": payload.get("penalty_amount"),
+                "discount_amount": payload.get("discount_amount"),
+                "fee_amount": payload.get("fee_amount"),
+                "other_adjustments_amount": payload.get("other_adjustments_amount"),
+            },
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:
             return {"error": error}, 400
         return result, 200
+
+
+class FinancialBankReconciliationOverviewResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialReconciliationWorkspaceService.get_overview(
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
+class FinancialBankReconciliationWorkspaceResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        bank_account_id = request.args.get("bank_account_id", type=int)
+        if not bank_account_id:
+            return {"error": "Conta bancária é obrigatória para abrir a conciliação."}, 400
+        result, error = FinancialReconciliationWorkspaceService.get_workspace(
+            company_id=company_id,
+            bank_account_id=bank_account_id,
+            batch_id=request.args.get("batch_id", type=int),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
+class FinancialBankReconciliationRowCandidatesResource(Resource):
+    @permission_required("financial", "view")
+    def get(self, row_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialReconciliationWorkspaceService.list_row_candidates(
+            company_id=company_id,
+            row_id=row_id,
+            limit=request.args.get("limit", type=int) or 8,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return {"items": result, "count": len(result)}, 200
+
+
+class FinancialBankReconciliationRowMatchResource(Resource):
+    @permission_required("financial", "edit")
+    def post(self, row_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialReconciliationService.manually_match_row(
+            company_id=company_id,
+            row_id=row_id,
+            financial_entry_id=int(payload.get("financial_entry_id") or 0),
+            adjustments={
+                "principal_amount": payload.get("principal_amount"),
+                "interest_amount": payload.get("interest_amount"),
+                "penalty_amount": payload.get("penalty_amount"),
+                "discount_amount": payload.get("discount_amount"),
+                "fee_amount": payload.get("fee_amount"),
+                "other_adjustments_amount": payload.get("other_adjustments_amount"),
+            },
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
+class FinancialBankReconciliationCreateEntryResource(Resource):
+    @permission_required("financial", "create")
+    def post(self, row_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialReconciliationWorkspaceService.create_entry_from_row(
+            company_id=company_id,
+            row_id=row_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
 
 
 class FinancialClassificationRuleListResource(Resource):

@@ -194,19 +194,19 @@
     .cw-tree {
         display:flex;
         flex-direction:column;
-        gap:.15rem;
+        gap:.1rem;
     }
     .cw-tree-node {
         display:flex;
         flex-direction:column;
-        gap:.15rem;
+        gap:.12rem;
     }
     .cw-tree-children {
         display:flex;
         flex-direction:column;
-        gap:.2rem;
-        margin-left:1rem;
-        padding-left:1rem;
+        gap:.12rem;
+        margin-left:.7rem;
+        padding-left:.75rem;
         border-left:1px dashed var(--border);
     }
     .cw-tree-children.collapsed {
@@ -216,18 +216,18 @@
         display:inline-flex;
         align-items:center;
         justify-content:center;
-        width:1.55rem;
-        height:1.55rem;
+        width:1.3rem;
+        height:1.3rem;
         border:1px solid var(--border);
-        border-radius:8px;
+        border-radius:6px;
         background:var(--surface-secondary);
         color:var(--text-secondary);
         font-weight:700;
         cursor:pointer;
         flex-shrink:0;
-        font-size:.9rem;
+        font-size:.78rem;
         padding:0;
-        margin-top:.08rem;
+        margin-top:.06rem;
     }
     .cw-tree-toggle:hover {
         color:var(--text-primary);
@@ -239,7 +239,7 @@
     .cw-tree-title-wrap {
         display:flex;
         align-items:flex-start;
-        gap:.55rem;
+        gap:.4rem;
         min-width:0;
         flex:1;
     }
@@ -247,19 +247,19 @@
         min-width:0;
         display:flex;
         align-items:baseline;
-        gap:.35rem;
+        gap:.25rem;
         flex-wrap:wrap;
     }
     .cw-tree-title-content strong {
-        font-size:.96rem;
-        line-height:1.2;
+        font-size:.82rem;
+        line-height:1.15;
         font-weight:800;
         color:var(--text-primary);
     }
     .cw-tree-title-content span {
         color:var(--text-primary);
-        font-size:.92rem;
-        line-height:1.25;
+        font-size:.8rem;
+        line-height:1.15;
     }
     .cw-tree-title-content .cw-tree-separator {
         color:var(--text-tertiary);
@@ -268,8 +268,8 @@
     .cw-tree-node .cw-list-item {
         border:1px solid #e6ebf3;
         background:#fff;
-        border-radius:14px;
-        padding:.7rem .8rem;
+        border-radius:10px;
+        padding:.42rem .55rem;
     }
     .cw-tree-node .cw-list-item:hover,
     .cw-tree-node .cw-list-item.active {
@@ -279,31 +279,35 @@
     .cw-tree-node.is-parent > .cw-list-item {
         background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     }
+    .cw-tree-node.is-analytic > .cw-list-item {
+        background:#fcfcfd;
+        border-color:#edf1f6;
+    }
     .cw-tree-node .cw-list-item-line {
         align-items:flex-start;
-        gap:.6rem;
+        gap:.4rem;
     }
     .cw-tree-node .cw-list-item-status {
         display:inline-flex;
         align-items:center;
         justify-content:center;
-        padding:.2rem .5rem;
+        padding:.12rem .36rem;
         border-radius:999px;
-        background:#eef2ff;
-        color:#4338ca;
-        font-size:.7rem;
+        background:#f3f4f6;
+        color:#6b7280;
+        font-size:.58rem;
         line-height:1;
         text-transform:uppercase;
         letter-spacing:.04em;
     }
     .cw-tree-node .cw-list-item-actions {
-        margin-top:.5rem;
-        margin-left:2.15rem;
-        gap:.4rem;
+        margin-top:.28rem;
+        margin-left:1.7rem;
+        gap:.25rem;
     }
     .cw-tree-node .cw-list-item-actions .btn {
-        padding:.3rem .55rem;
-        font-size:.7rem;
+        padding:.18rem .42rem;
+        font-size:.62rem;
         border-radius:999px;
     }
     .cw-panel { overflow:hidden; }
@@ -696,19 +700,6 @@
                 { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
             ],
         },
-        payment_terms: {
-            singlePage: true,
-            titleField: 'name',
-            sections: [{ key: 'main', label: 'Dados principais' }],
-            fields: [
-                { name: 'code', label: 'Código', section: 'main', readonly: true, placeholder: 'Gerado automaticamente' },
-                { name: 'name', label: 'Nome', section: 'main', required: true },
-                { name: 'installment_count', label: 'Quantidade de parcelas', section: 'main', type: 'number', min: 1, max: 360, hint: 'Use 1 para condição à vista' },
-                { name: 'interval_days', label: 'Intervalo entre parcelas (dias)', section: 'main', type: 'number', min: 0, max: 3650, hint: 'Ex.: 30 para mensal' },
-                { name: 'external_code', label: 'Condição de pagamento externa', section: 'main', maxlength: 120, hint: 'Campo livre para integração com ERP ou sistema parceiro' },
-                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
-            ],
-        },
         asset_accounts: {
             singlePage: true,
             titleField: 'name',
@@ -724,7 +715,6 @@
                 { name: 'due_scope', label: 'Por datas de Vcto', section: 'main', type: 'select', options: [['overdue', 'Vencidas'], ['all_future', 'Todas a Vencer'], ['due_in_days', 'A Vencer em dias']], visibilityMode: 'due_dates', onchange: 'updateAssetAccountConfigVisibility()' },
                 { name: 'due_in_days', label: 'A Vencer em dias', section: 'main', type: 'number', min: 0, max: 3650, visibilityMode: 'due_dates', visibilityDueScope: 'due_in_days' },
                 { name: 'bank_account_ids', label: 'Por Saldo das Contas Bancárias', section: 'main', type: 'multi-dynamic-select', optionSource: 'bank_accounts', placeholderOption: 'Selecione as contas bancárias', colSpan: 2, visibilityMode: 'bank_balances' },
-                { name: 'manual_value', label: 'Por Valor Digitado', section: 'main', type: 'number', min: 0, step: '0.01', visibilityMode: 'manual_value' },
                 { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
             ],
         },
@@ -775,7 +765,7 @@
     let allItems = [];
     const collapsedTreeNodes = new Set();
     const treeNodesStorageKey = `financialCatalogCollapsedNodes:${companyId}:${activeCatalog}`;
-    const deletableCatalogs = new Set(['chart_accounts', 'cost_centers', 'account_categories', 'payment_terms', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods']);
+    const deletableCatalogs = new Set(['chart_accounts', 'cost_centers', 'account_categories', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods']);
     const auxiliaryData = { chart_accounts: [], account_categories: [], bank_accounts: [] };
 
     function getCatalogDef() {
@@ -1140,26 +1130,29 @@
 
     function getNextChildCodeSuffix(parentItem) {
         const children = getChildrenOfItem(parentItem?.id);
-        let maxNumber = 0;
-        let maxWidth = 0;
+        let referenceNumber = 0;
+        let referenceWidth = 0;
         children.forEach(child => {
             const suffix = getHierarchicalCodeSuffix(child);
             if (!suffix) return;
-            maxNumber = Math.max(maxNumber, Number(suffix) || 0);
-            maxWidth = Math.max(maxWidth, suffix.length);
+            const numericValue = Number(suffix) || 0;
+            if (numericValue >= referenceNumber) {
+                referenceNumber = numericValue;
+                referenceWidth = suffix.length;
+            }
         });
-        const inheritedWidth = Math.max(
-            maxWidth,
-            normalizeHierarchicalSuffixInput(String(parentItem?.code || '').split('.').pop() || '').length,
-            2,
-        );
-        return String(maxNumber + 1).padStart(inheritedWidth, '0');
+        const nextNumber = referenceNumber + 1;
+        return referenceWidth > 0
+            ? String(nextNumber).padStart(referenceWidth, '0')
+            : String(nextNumber);
     }
 
     function applyDefaultValues() {
         const form = document.getElementById('cw-form');
         if (activeCatalog === 'chart_accounts') {
+            const kindField = form.querySelector('[name="account_kind"]');
             const levelField = form.querySelector('[name="account_level_type"]');
+            if (kindField && !kindField.value) kindField.value = 'expense';
             if (levelField && !levelField.value) levelField.value = 'analytic';
         }
         if (activeCatalog === 'asset_accounts') {
@@ -1219,10 +1212,10 @@
     }
 
     function startChildItem(parentId) {
-        if (activeCatalog !== 'chart_accounts') return;
+        if (!['chart_accounts', 'cost_centers'].includes(activeCatalog)) return;
         const parentItem = allItems.find(item => item.id === parentId);
         if (!parentItem) return;
-        if (parentItem.accepts_posting === true) {
+        if (activeCatalog === 'chart_accounts' && parentItem.accepts_posting === true) {
             alert('Só é possível adicionar conta filha em contas sintéticas.');
             return;
         }
@@ -1235,6 +1228,7 @@
 
         const parentField = form.querySelector('[name="parent_id"]');
         const suffixField = form.querySelector('[name="code_suffix"]');
+        const kindField = form.querySelector('[name="account_kind"]');
         const levelField = form.querySelector('[name="account_level_type"]');
         const nameField = form.querySelector('[name="name"]');
 
@@ -1243,6 +1237,9 @@
         }
         if (suffixField) {
             suffixField.value = getNextChildCodeSuffix(parentItem);
+        }
+        if (kindField && activeCatalog === 'chart_accounts') {
+            kindField.value = parentItem.account_kind || 'expense';
         }
         if (levelField) {
             levelField.value = 'analytic';
@@ -1293,13 +1290,9 @@
             if (parentField && item.parent_id) parentField.value = String(item.parent_id);
             updateGeneratedCode();
         }
-        if (['account_categories', 'payment_terms', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods'].includes(activeCatalog)) {
+        if (['account_categories', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods'].includes(activeCatalog)) {
             const externalCodeField = form.querySelector('[name="external_code"]');
             if (externalCodeField) externalCodeField.value = item?.metadata_json?.external_code || '';
-            const installmentCountField = form.querySelector('[name="installment_count"]');
-            if (installmentCountField) installmentCountField.value = item?.metadata_json?.installment_count ?? 1;
-            const intervalDaysField = form.querySelector('[name="interval_days"]');
-            if (intervalDaysField) intervalDaysField.value = item?.metadata_json?.interval_days ?? 30;
             const patrimonialTypeField = form.querySelector(`[name="patrimonial_type"][value="${item?.metadata_json?.patrimonial_type || 'asset'}"]`);
             if (patrimonialTypeField) patrimonialTypeField.checked = true;
             const accountClassField = form.querySelector(`[name="account_class"][value="${item?.metadata_json?.account_class || 'current'}"]`);
@@ -1322,8 +1315,6 @@
                 const selectedBankIds = new Set((item?.metadata_json?.bank_account_ids || []).map(String));
                 Array.from(bankAccountIdsField.options).forEach(option => option.selected = selectedBankIds.has(option.value));
             }
-            const manualValueField = form.querySelector('[name="manual_value"]');
-            if (manualValueField) manualValueField.value = item?.metadata_json?.manual_value ?? '';
             const correctionChartAccountField = form.querySelector('[name="chart_account_id"]');
             if (correctionChartAccountField) correctionChartAccountField.value = item?.metadata_json?.chart_account_id ? String(item.metadata_json.chart_account_id) : '';
             const interestRateField = form.querySelector('[name="interest_rate"]');
@@ -1378,7 +1369,7 @@
                 </div>
                 <div class="cw-list-item-actions" onclick="event.stopPropagation()">
                     <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
-                    ${activeCatalog === 'chart_accounts' && item.accepts_posting !== true ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
+                    ${((activeCatalog === 'chart_accounts' && item.accepts_posting !== true) || activeCatalog === 'cost_centers') ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                     <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                     ${deletableCatalogs.has(activeCatalog) ? `<button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>` : ''}
                 </div>
@@ -1413,7 +1404,7 @@
                 const collapsed = collapsedTreeNodes.has(item.id);
                 const toggleLabel = collapsed ? '▸' : '▾';
                 return `
-                    <div class="cw-tree-node ${hasChildren ? 'is-parent' : 'is-leaf'}">
+                    <div class="cw-tree-node ${hasChildren ? 'is-parent' : 'is-leaf'} ${item.accepts_posting === true ? 'is-analytic' : 'is-synthetic'}">
                         <article class="cw-list-item ${selectedListId === item.id ? 'active' : ''}" onclick="selectItemById(${item.id})">
                             <div class="cw-list-item-line">
                                 <div class="cw-tree-title-wrap">
@@ -1432,7 +1423,7 @@
                             </div>
                             <div class="cw-list-item-actions" onclick="event.stopPropagation()">
                                 <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
-                                ${activeCatalog === 'chart_accounts' && item.accepts_posting !== true ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
+                                ${((activeCatalog === 'chart_accounts' && item.accepts_posting !== true) || activeCatalog === 'cost_centers') ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                                 <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                                 <button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>
                             </div>
@@ -1527,6 +1518,7 @@
         }
         if (activeCatalog === 'chart_accounts') {
             const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
+            payload.account_kind = payload.account_kind || formData.get('account_kind') || currentItem?.account_kind || 'expense';
             payload.metadata_json = {
                 ...(currentItem?.metadata_json || {}),
                 external_code: formData.get('external_code') || null,
@@ -1540,16 +1532,12 @@
                 external_code: formData.get('external_code') || null,
             };
         }
-        if (['account_categories', 'payment_terms', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods'].includes(activeCatalog)) {
+        if (['account_categories', 'asset_accounts', 'correction_indexes', 'discount_rules', 'payment_methods'].includes(activeCatalog)) {
             const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
             payload.metadata_json = {
                 ...(currentItem?.metadata_json || {}),
                 external_code: formData.get('external_code') || null,
             };
-            if (activeCatalog === 'payment_terms') {
-                payload.metadata_json.installment_count = normalizeValue('installment_count', formData.get('installment_count') || '1');
-                payload.metadata_json.interval_days = normalizeValue('interval_days', formData.get('interval_days') || '30');
-            }
             if (activeCatalog === 'asset_accounts') {
                 const chartAccountSelect = event.currentTarget.querySelector('[name="chart_account_ids"]');
                 const bankAccountSelect = event.currentTarget.querySelector('[name="bank_account_ids"]');
@@ -1561,8 +1549,6 @@
                 payload.due_scope = formData.get('due_scope') || 'overdue';
                 payload.due_in_days = normalizeValue('due_in_days', formData.get('due_in_days') || '');
                 payload.bank_account_ids = Array.from(bankAccountSelect?.selectedOptions || []).map(option => Number(option.value));
-                payload.manual_value = normalizeValue('manual_value', formData.get('manual_value') || '');
-
                 payload.metadata_json.patrimonial_type = payload.patrimonial_type;
                 payload.metadata_json.account_class = payload.account_class;
                 payload.metadata_json.category_id = payload.category_id;
@@ -1571,7 +1557,6 @@
                 payload.metadata_json.due_scope = payload.due_scope;
                 payload.metadata_json.due_in_days = payload.due_in_days;
                 payload.metadata_json.bank_account_ids = payload.bank_account_ids;
-                payload.metadata_json.manual_value = payload.manual_value;
             }
             if (activeCatalog === 'correction_indexes') {
                 payload.metadata_json.chart_account_id = normalizeValue('chart_account_id', formData.get('chart_account_id') || '');

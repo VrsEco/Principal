@@ -1,0 +1,359 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Conciliação Bancária{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Gestão Financeira</a>
+<span class="sep">/</span>
+<span class="current">Conciliação Bancária</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="recon-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="recon-header">
+        <div>
+            <p class="recon-eyebrow">Gestão Financeira · Operação</p>
+            <h1>Conciliação Bancária</h1>
+            <p class="recon-subtitle">Ledger do sistema à esquerda, extrato bancário importado à direita, com sugestões determinísticas, criação assistida de lançamento e estrutura pronta para futura integração via API.</p>
+        </div>
+    </header>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Contas bancárias e situação</h2>
+                <p>Selecione uma conta para abrir a workspace operacional da conciliação.</p>
+            </div>
+        </div>
+        <div id="accounts-grid" class="accounts-grid"></div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header row-between">
+            <div>
+                <h2>Upload do extrato</h2>
+                <p>OFX, XLSX ou CSV. O acoplamento via API já fica preparado no fluxo e no metadata.</p>
+            </div>
+        </div>
+        <form id="upload-form" class="upload-grid">
+            <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
+            <label><span>Fonte</span>
+                <select name="source_type">
+                    <option value="ofx">OFX</option>
+                    <option value="xlsx">XLSX</option>
+                    <option value="csv">CSV</option>
+                </select>
+            </label>
+            <label><span>Código do lote</span><input name="batch_code" placeholder="REC-20260328-001" required></label>
+            <label><span>Arquivo</span><input type="file" name="file" accept=".ofx,.xlsx,.csv" required></label>
+            <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato de fevereiro/2026"></label>
+            <div class="col-span-2 actions-right">
+                <button type="submit" class="btn btn-primary">Enviar extrato</button>
+            </div>
+        </form>
+    </section>
+
+    <section id="workspace-panel" class="panel hidden">
+        <div class="panel-header row-between">
+            <div>
+                <h2 id="workspace-title">Workspace</h2>
+                <p id="workspace-subtitle">Selecione uma conta bancária.</p>
+            </div>
+            <div class="workspace-toolbar">
+                <label><span>Lote</span><select id="batch-select"></select></label>
+                <button type="button" class="btn btn-secondary" onclick="refreshWorkspace()">Atualizar</button>
+            </div>
+        </div>
+        <div id="workspace-summary" class="summary-grid"></div>
+        <div id="workspace-rows" class="rows-stack"></div>
+    </section>
+ </div>
+
+<dialog id="candidate-modal" class="recon-modal">
+    <div class="modal-head">
+        <div>
+            <h3>Selecionar lançamento do sistema</h3>
+            <p id="candidate-modal-subtitle">Escolha um lançamento e confirme a conciliação.</p>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="closeCandidateModal()">Fechar</button>
+    </div>
+    <div class="adjust-grid">
+        <label><span>Desconto</span><input type="number" step="0.01" min="0" id="adjust-discount" value="0"></label>
+        <label><span>Correção</span><input type="number" step="0.01" min="0" id="adjust-other" value="0"></label>
+        <label><span>Juros</span><input type="number" step="0.01" min="0" id="adjust-interest" value="0"></label>
+        <label><span>Tarifa</span><input type="number" step="0.01" min="0" id="adjust-fee" value="0"></label>
+    </div>
+    <div id="candidate-list" class="rows-stack"></div>
+</dialog>
+
+<dialog id="create-entry-modal" class="recon-modal">
+    <div class="modal-head">
+        <div>
+            <h3>Criar lançamento já conciliado</h3>
+            <p id="create-entry-subtitle">Os campos-base vêm sugeridos pelo extrato.</p>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="closeCreateEntryModal()">Fechar</button>
+    </div>
+    <form id="create-entry-form" class="upload-grid">
+        <label><span>Histórico</span><input name="description" required></label>
+        <label><span>Tipo</span>
+            <select name="entry_type">
+                <option value="bank_movement">Movimento bancário</option>
+                <option value="payable">Conta a pagar</option>
+                <option value="receivable">Conta a receber</option>
+            </select>
+        </label>
+        <label><span>Data do pagamento/recebimento</span><input type="date" name="occurred_on" required></label>
+        <label><span>Vencimento</span><input type="date" name="due_date" required></label>
+        <label><span>Competência</span><input type="date" name="competence_date" required></label>
+        <label><span>Valor</span><input type="number" step="0.01" min="0" name="original_amount" required></label>
+        <label><span>Conta bancária</span><select name="bank_account_id" id="create-entry-bank-account" required></select></label>
+        <label><span>Nº documento</span><input name="document_number"></label>
+        <label><span>Favorecido ID</span><input type="number" min="1" name="counterparty_id"></label>
+        <label><span>Conta gerencial ID</span><input type="number" min="1" name="chart_account_id"></label>
+        <label><span>Centro de resultado ID</span><input type="number" min="1" name="cost_center_id"></label>
+        <label class="col-span-2"><span>Observações</span><input name="notes"></label>
+        <div class="col-span-2 actions-right">
+            <button type="submit" class="btn btn-primary">Criar e conciliar</button>
+        </div>
+    </form>
+</dialog>
+
+<style>
+    .recon-page{padding:0 2rem 2rem}.recon-header{margin-bottom:1.5rem}.recon-eyebrow{margin:0 0 .35rem;color:var(--primary);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.recon-subtitle{color:var(--text-secondary)}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-sm);margin-bottom:1.5rem}.panel-header{padding:1.25rem 1.25rem 0}.panel-header h2{margin:0}.panel-header p{margin:.25rem 0 0;color:var(--text-secondary)}
+    .row-between,.actions-right,.workspace-toolbar{display:flex;justify-content:space-between;gap:1rem;align-items:end;flex-wrap:wrap}
+    .accounts-grid,.summary-grid,.upload-grid{display:grid;gap:1rem;padding:1.25rem}.accounts-grid{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}.summary-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .account-card,.summary-card,.row-card,.candidate-card{border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary);padding:1rem}.account-card.is-selected{border-color:var(--primary);box-shadow:0 0 0 1px rgba(59,130,246,.14)}
+    .account-card h3,.summary-card strong,.row-card h3,.candidate-card h3{margin:0 0 .25rem}.account-card p,.row-meta,.candidate-meta{margin:.15rem 0;color:var(--text-secondary)}
+    .upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.upload-grid label,.workspace-toolbar label,.adjust-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
+    .upload-grid input,.upload-grid select,.workspace-toolbar select,.adjust-grid input{background:var(--surface-secondary);border:1px solid var(--border);border-radius:12px;padding:.8rem .9rem;color:var(--text-primary)}
+    .rows-stack{display:flex;flex-direction:column;gap:.85rem;padding:1.25rem}.row-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.row-side{border:1px dashed var(--border);border-radius:14px;padding:.85rem}
+    .badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem}.badge{display:inline-flex;border-radius:999px;padding:.25rem .65rem;font-size:.74rem;font-weight:700}.badge--ok{background:#dcfce7;color:#166534}.badge--warn{background:#fef3c7;color:#92400e}.badge--info{background:#dbeafe;color:#1d4ed8}.badge--mute{background:#e2e8f0;color:#475569}
+    .btn{border:none;border-radius:12px;padding:.8rem 1rem;font-weight:700;cursor:pointer}.btn-primary{background:var(--primary);color:#fff}.btn-secondary{background:var(--surface-secondary);color:var(--text-primary);border:1px solid var(--border)}
+    .inline-actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.85rem}.hidden{display:none}.col-span-2{grid-column:span 2}
+    .recon-modal{width:min(980px,92vw);border:none;border-radius:18px;padding:0;background:var(--surface);color:var(--text-primary)}.recon-modal::backdrop{background:rgba(15,23,42,.55)}
+    .modal-head{display:flex;justify-content:space-between;gap:1rem;align-items:start;padding:1.25rem 1.25rem 0}.adjust-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;padding:1.25rem}
+    @media (max-width:960px){.recon-page{padding:0 1rem 1.5rem}.summary-grid,.row-grid,.upload-grid,.adjust-grid{grid-template-columns:1fr 1fr}}
+    @media (max-width:768px){.summary-grid,.row-grid,.upload-grid,.adjust-grid{grid-template-columns:1fr}.workspace-toolbar,.inline-actions,.actions-right,.modal-head{flex-direction:column;align-items:stretch}.btn{width:100%}.col-span-2{grid-column:auto}}
+</style>
+
+<script>
+const companyId = Number(document.querySelector('.recon-page')?.dataset.companyId);
+const state = { accounts: [], selectedBankAccountId: null, selectedBatchId: null, workspace: null, activeRowId: null };
+
+function brl(value){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value||0)); }
+function badge(label, kind='mute'){ return `<span class="badge badge--${kind}">${label}</span>`; }
+async function api(url, options={}){ const r = await fetch(url, options); const p = await r.json(); if(!r.ok) throw new Error(p.error || 'Falha na operação.'); return p; }
+
+function renderAccounts(){
+    const grid = document.getElementById('accounts-grid');
+    const uploadSelect = document.getElementById('upload-bank-account');
+    const createSelect = document.getElementById('create-entry-bank-account');
+    if(!state.accounts.length){
+        grid.innerHTML = '<div class="account-card"><p>Nenhuma conta bancária ativa encontrada.</p></div>';
+        return;
+    }
+    uploadSelect.innerHTML = '<option value="">Selecione</option>' + state.accounts.map(item => `<option value="${item.bank_account.id}">${item.bank_account.name}</option>`).join('');
+    createSelect.innerHTML = uploadSelect.innerHTML;
+    grid.innerHTML = state.accounts.map(item => `
+        <article class="account-card ${String(item.bank_account.id)===String(state.selectedBankAccountId)?'is-selected':''}">
+            <h3>${item.bank_account.name}</h3>
+            <p>${item.bank_account.bank_name || '-'} · ${item.bank_account.account_number || 'sem conta informada'}</p>
+            <p>${item.status_message}</p>
+            <div class="badges">
+                ${badge(`Pendentes ${item.pending_count || 0}`, item.pending_count ? 'warn' : 'ok')}
+                ${item.last_reconciled_date ? badge(`Até ${item.last_reconciled_date}`, 'ok') : badge('Sem histórico', 'mute')}
+                ${badge('API preparada', 'info')}
+            </div>
+            <div class="inline-actions">
+                <button type="button" class="btn btn-primary" onclick="openWorkspace(${item.bank_account.id})">Abrir workspace</button>
+            </div>
+        </article>
+    `).join('');
+}
+
+function renderWorkspace(){
+    const panel = document.getElementById('workspace-panel');
+    if(!state.workspace){
+        panel.classList.add('hidden');
+        return;
+    }
+    panel.classList.remove('hidden');
+    const workspace = state.workspace;
+    document.getElementById('workspace-title').textContent = `Workspace · ${workspace.bank_account.name}`;
+    document.getElementById('workspace-subtitle').textContent = workspace.selected_batch ? `Lote ${workspace.selected_batch.batch_code} · fonte ${workspace.selected_batch.source_type}` : 'Nenhum lote vinculado a esta conta.';
+    const batchSelect = document.getElementById('batch-select');
+    batchSelect.innerHTML = (workspace.available_batches || []).map(item => `<option value="${item.id}" ${String(item.id)===String(workspace.selected_batch?.id)?'selected':''}>${item.batch_code} · ${item.source_type}</option>`).join('');
+    document.getElementById('workspace-summary').innerHTML = `
+        <div class="summary-card"><span>Total</span><strong>${workspace.summary.total_rows || 0}</strong></div>
+        <div class="summary-card"><span>Pendentes</span><strong>${workspace.summary.pending_rows || 0}</strong></div>
+        <div class="summary-card"><span>Matches confirmados</span><strong>${workspace.summary.confirmed_matches || 0}</strong></div>
+        <div class="summary-card"><span>Sugestões</span><strong>${workspace.summary.suggested_matches || 0}</strong></div>
+    `;
+    const container = document.getElementById('workspace-rows');
+    if(!(workspace.rows || []).length){
+        container.innerHTML = '<div class="row-card"><p>Nenhuma linha localizada para esta conta/lote.</p></div>';
+        return;
+    }
+    container.innerHTML = workspace.rows.map(row => `
+        <article class="row-card">
+            <div class="row-between">
+                <div>
+                    <h3>Linha ${row.row_number} · ${row.description || '-'}</h3>
+                    <p class="row-meta">Data ${row.occurred_on || row.due_date || '-'} · Valor ${brl(row.amount)} · Ref. ${row.bank_reference || '-'}</p>
+                </div>
+                <div class="badges">
+                    ${badge(row.processing_status || 'staged', row.processing_status === 'imported' ? 'ok' : 'info')}
+                    ${row.match ? badge(`Match ${row.match.match_status}`, row.match.match_status === 'confirmed' ? 'ok' : 'warn') : badge('Sem match', 'mute')}
+                </div>
+            </div>
+            <div class="row-grid">
+                <section class="row-side">
+                    <strong>Sistema</strong>
+                    ${row.match ? `<p class="row-meta">Entry ${row.match.financial_entry_id} · Confiança ${(Number(row.match.confidence_score || 0) * 100).toFixed(1)}%</p><p class="row-meta">${row.match.match_reason || '-'}</p>` : '<p class="row-meta">Nenhum lançamento vinculado.</p>'}
+                    ${row.created_entry ? `<p class="row-meta">Criado no sistema: ${row.created_entry.entry_code} · ${row.created_entry.description}</p>` : ''}
+                </section>
+                <section class="row-side">
+                    <strong>Extrato do banco</strong>
+                    <p class="row-meta">${row.counterparty_name || '-'} · Documento ${row.document_number || '-'}</p>
+                    <p class="row-meta">${row.error_message || 'Linha pronta para tratamento.'}</p>
+                </section>
+            </div>
+            <div class="inline-actions">
+                ${row.match && row.match.match_status !== 'confirmed' ? `<button type="button" class="btn btn-primary" onclick="confirmSuggestedMatch(${row.match.id})">Ok sugestão</button>` : ''}
+                ${row.needs_manual_action ? `<button type="button" class="btn btn-secondary" onclick="openCandidateModal(${row.id})">Buscar lançamento</button>` : ''}
+                ${row.can_create_entry ? `<button type="button" class="btn btn-secondary" onclick="openCreateEntryModal(${row.id})">Criar lançamento</button>` : ''}
+                ${row.match && row.match.financial_entry_id ? `<a class="btn btn-secondary" href="/financial/entries/${row.match.financial_entry_id}?company_id=${companyId}" style="text-decoration:none;">Abrir lançamento</a>` : ''}
+            </div>
+        </article>
+    `).join('');
+}
+
+async function loadOverview(){
+    state.accounts = (await api(`/api/financial/reconciliation/overview?company_id=${companyId}`)).items || [];
+    renderAccounts();
+}
+
+async function openWorkspace(bankAccountId, batchId=null){
+    state.selectedBankAccountId = bankAccountId;
+    state.selectedBatchId = batchId;
+    renderAccounts();
+    const params = new URLSearchParams({ company_id: companyId, bank_account_id: bankAccountId });
+    if(batchId) params.set('batch_id', batchId);
+    state.workspace = await api(`/api/financial/reconciliation/workspace?${params.toString()}`);
+    renderWorkspace();
+}
+
+async function refreshWorkspace(){
+    if(!state.selectedBankAccountId) return;
+    const batchId = document.getElementById('batch-select')?.value || null;
+    await openWorkspace(state.selectedBankAccountId, batchId);
+}
+
+async function confirmSuggestedMatch(matchId){
+    await api(`/api/financial/reconciliation-matches/${matchId}/review?company_id=${companyId}`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ decision:'confirmed' })
+    });
+    await loadOverview(); await refreshWorkspace();
+}
+
+function buildAdjustments(){
+    return {
+        discount_amount: Number(document.getElementById('adjust-discount').value || 0),
+        other_adjustments_amount: Number(document.getElementById('adjust-other').value || 0),
+        interest_amount: Number(document.getElementById('adjust-interest').value || 0),
+        fee_amount: Number(document.getElementById('adjust-fee').value || 0),
+    };
+}
+
+async function openCandidateModal(rowId){
+    state.activeRowId = rowId;
+    const modal = document.getElementById('candidate-modal');
+    const payload = await api(`/api/financial/reconciliation/rows/${rowId}/candidates?company_id=${companyId}`);
+    document.getElementById('candidate-list').innerHTML = (payload.items || []).map(item => `
+        <article class="candidate-card">
+            <h3>${item.entry.entry_code} · ${item.entry.description}</h3>
+            <p class="candidate-meta">Score ${(Number(item.score || 0)*100).toFixed(1)}% · ${item.reason}</p>
+            <p class="candidate-meta">Valor ${brl(item.entry.original_amount)} · Data ${item.entry.occurred_on || item.entry.due_date || item.entry.competence_date || '-'}</p>
+            <div class="inline-actions">
+                <button type="button" class="btn btn-primary" onclick="confirmManualMatch(${item.entry.id})">Confirmar este lançamento</button>
+            </div>
+        </article>
+    `).join('') || '<div class="candidate-card"><p>Nenhum candidato encontrado.</p></div>';
+    modal.showModal();
+}
+
+function closeCandidateModal(){ document.getElementById('candidate-modal').close(); }
+
+async function confirmManualMatch(entryId){
+    await api(`/api/financial/reconciliation/rows/${state.activeRowId}/match?company_id=${companyId}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ financial_entry_id: entryId, ...buildAdjustments() }),
+    });
+    closeCandidateModal();
+    await loadOverview(); await refreshWorkspace();
+}
+
+function findWorkspaceRow(rowId){ return (state.workspace?.rows || []).find(item => String(item.id) === String(rowId)); }
+
+function openCreateEntryModal(rowId){
+    state.activeRowId = rowId;
+    const row = findWorkspaceRow(rowId);
+    const form = document.getElementById('create-entry-form');
+    form.reset();
+    form.description.value = row?.description || '';
+    form.occurred_on.value = row?.occurred_on || row?.due_date || '';
+    form.due_date.value = row?.due_date || row?.occurred_on || '';
+    form.competence_date.value = row?.occurred_on || row?.due_date || '';
+    form.original_amount.value = Number(row?.amount || 0);
+    form.document_number.value = row?.document_number || '';
+    form.bank_account_id.value = String(state.selectedBankAccountId || '');
+    document.getElementById('create-entry-modal').showModal();
+}
+
+function closeCreateEntryModal(){ document.getElementById('create-entry-modal').close(); }
+
+document.getElementById('upload-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    formData.append('integration_channel', 'file');
+    formData.append('reconciliation_mode', '1');
+    const payload = await api(`/api/financial/imports?company_id=${companyId}`, { method:'POST', body: formData });
+    const reconciliationSummary = payload.reconciliation
+        ? ` Sugestões automáticas: ${payload.reconciliation.suggested_count || 0}. Sem match: ${payload.reconciliation.unmatched_count || 0}.`
+        : '';
+    const reconciliationWarning = payload.reconciliation_warning
+        ? ` Atenção: ${payload.reconciliation_warning}.`
+        : '';
+    alert(`Extrato enviado com sucesso. Lote ${payload.batch.batch_code}.${reconciliationSummary}${reconciliationWarning}`);
+    event.currentTarget.reset();
+    await loadOverview();
+    const bankAccountId = Number(formData.get('bank_account_id'));
+    if (bankAccountId) await openWorkspace(bankAccountId, payload.batch.id);
+});
+
+document.getElementById('batch-select').addEventListener('change', async (event) => {
+    await openWorkspace(state.selectedBankAccountId, Number(event.target.value));
+});
+
+document.getElementById('create-entry-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+    payload.original_amount = Number(payload.original_amount || 0);
+    ['counterparty_id','chart_account_id','cost_center_id','bank_account_id'].forEach((field) => {
+        payload[field] = payload[field] ? Number(payload[field]) : null;
+    });
+    await api(`/api/financial/reconciliation/rows/${state.activeRowId}/create-entry?company_id=${companyId}`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    closeCreateEntryModal();
+    await loadOverview(); await refreshWorkspace();
+});
+
+document.addEventListener('DOMContentLoaded', loadOverview);
+</script>
+{% endblock %}

@@ -46,6 +46,7 @@ class FinancialReconciliationService:
         row: FinancialImportRow,
         entry: FinancialEntry,
         match: FinancialReconciliationMatch,
+        adjustments: Optional[Dict] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
         existing = FinancialSettlement.query.filter(
             FinancialSettlement.company_id == company_id,
@@ -56,8 +57,25 @@ class FinancialReconciliationService:
         if existing:
             return existing.to_dict(), None
 
+        adjustments = adjustments or {}
         remaining_principal = FinancialReconciliationService._get_remaining_principal(entry)
-        principal_amount = Decimal(row.amount or 0)
+        row_amount = Decimal(row.amount or 0)
+        interest_amount = Decimal(str(adjustments.get("interest_amount") or 0))
+        penalty_amount = Decimal(str(adjustments.get("penalty_amount") or 0))
+        discount_amount = Decimal(str(adjustments.get("discount_amount") or 0))
+        fee_amount = Decimal(str(adjustments.get("fee_amount") or 0))
+        other_adjustments_amount = Decimal(str(adjustments.get("other_adjustments_amount") or 0))
+        principal_amount = adjustments.get("principal_amount")
+        if principal_amount is None:
+            principal_amount = (
+                row_amount
+                - interest_amount
+                - penalty_amount
+                - fee_amount
+                - other_adjustments_amount
+                + discount_amount
+            )
+        principal_amount = Decimal(str(principal_amount or 0))
         if principal_amount <= 0:
             return None, "Linha conciliada sem valor elegível para liquidação automática."
         if remaining_principal <= 0:
@@ -73,11 +91,11 @@ class FinancialReconciliationService:
             "settlement_status": "posted",
             "settlement_date": row.occurred_on or row.due_date or entry.due_date or entry.competence_date,
             "principal_amount": principal_amount,
-            "interest_amount": Decimal("0"),
-            "penalty_amount": Decimal("0"),
-            "discount_amount": Decimal("0"),
-            "fee_amount": Decimal("0"),
-            "other_adjustments_amount": Decimal("0"),
+            "interest_amount": interest_amount,
+            "penalty_amount": penalty_amount,
+            "discount_amount": discount_amount,
+            "fee_amount": fee_amount,
+            "other_adjustments_amount": other_adjustments_amount,
             "external_reference": f"reconciliation-match:{match.id}",
             "reconciliation_status": "reconciled",
             "notes": f"Liquidação automática gerada pela confirmação do match {match.id}.",
@@ -86,11 +104,17 @@ class FinancialReconciliationService:
                 "import_row_id": row.id,
                 "reconciliation_match_id": match.id,
                 "mode": "auto_settlement_from_reconciliation",
+                "row_amount": float(row_amount),
             },
         }
         settlement, error = FinancialService.create_settlement(payload=settlement_payload)
         if error:
             return None, error
+        FinancialService.set_entry_reconciliation_state(
+            entry=entry,
+            reconciled=True,
+            actor_reason=f"Match {match.id} confirmado via conciliação bancária.",
+        )
         return settlement.to_dict(), None
 
     @staticmethod
@@ -347,6 +371,8 @@ class FinancialReconciliationService:
         match_id: int,
         company_id: int,
         decision: str,
+        selected_entry_id: Optional[int] = None,
+        adjustments: Optional[Dict] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
@@ -376,6 +402,16 @@ class FinancialReconciliationService:
                 FinancialEntry.company_id == company_id,
                 FinancialEntry.deleted_at.is_(None),
             ).first()
+            if selected_entry_id:
+                selected_entry = FinancialEntry.query.filter(
+                    FinancialEntry.id == selected_entry_id,
+                    FinancialEntry.company_id == company_id,
+                    FinancialEntry.deleted_at.is_(None),
+                ).first()
+                if not selected_entry:
+                    return None, "Lançamento selecionado para conciliação não encontrado no escopo da empresa."
+                match.financial_entry_id = selected_entry.id
+                entry = selected_entry
 
             if row and entry:
                 if decision == "confirmed":
@@ -403,6 +439,13 @@ class FinancialReconciliationService:
                     row=row,
                     entry=entry,
                     match=match,
+                    adjustments=adjustments,
+                )
+            elif decision == "rejected" and entry:
+                FinancialService.set_entry_reconciliation_state(
+                    entry=entry,
+                    reconciled=False,
+                    actor_reason=f"Match {match.id} rejeitado na conciliação bancária.",
                 )
 
             db.session.commit()
@@ -422,3 +465,72 @@ class FinancialReconciliationService:
             db.session.rollback()
             logger.exception("Erro ao revisar match financeiro %s", match_id)
             return None, f"Erro ao revisar match de conciliação: {str(exc)}"
+
+    @staticmethod
+    def manually_match_row(
+        *,
+        row_id: int,
+        financial_entry_id: int,
+        company_id: int,
+        adjustments: Optional[Dict] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        row = FinancialImportRow.query.filter(
+            FinancialImportRow.id == row_id,
+            FinancialImportRow.company_id == company_id,
+            FinancialImportRow.deleted_at.is_(None),
+        ).first()
+        if not row:
+            return None, "Linha de extrato não encontrada no escopo da empresa."
+
+        match = FinancialReconciliationMatch.query.filter(
+            FinancialReconciliationMatch.company_id == company_id,
+            FinancialReconciliationMatch.import_row_id == row.id,
+            FinancialReconciliationMatch.financial_entry_id == financial_entry_id,
+            FinancialReconciliationMatch.deleted_at.is_(None),
+        ).first()
+        if not match:
+            batch = FinancialImportBatch.query.filter(
+                FinancialImportBatch.id == row.import_batch_id,
+                FinancialImportBatch.company_id == company_id,
+                FinancialImportBatch.deleted_at.is_(None),
+            ).first()
+            entry = FinancialEntry.query.filter(
+                FinancialEntry.id == financial_entry_id,
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            ).first()
+            if not batch or not entry:
+                return None, "Não foi possível preparar o match manual para a linha selecionada."
+            score, reason = FinancialReconciliationService._score_match(
+                row,
+                entry,
+                row_context=FinancialReconciliationService._resolve_row_context(company_id, row),
+            )
+            match = FinancialReconciliationMatch(
+                company_id=company_id,
+                import_batch_id=batch.id,
+                import_row_id=row.id,
+                financial_entry_id=entry.id,
+                match_status="suggested",
+                confidence_score=score,
+                match_reason=f"match manual: {reason}",
+                matched_amount=row.amount,
+                matched_date=row.occurred_on or row.due_date,
+                metadata_json={"manual_selection": True},
+            )
+            db.session.add(match)
+            db.session.flush()
+
+        return FinancialReconciliationService.review_match(
+            match_id=match.id,
+            company_id=company_id,
+            decision="confirmed",
+            selected_entry_id=financial_entry_id,
+            adjustments=adjustments,
+            allowed_company_ids=allowed_company_ids,
+        )

@@ -6,6 +6,7 @@ from models import db
 from models.financial import FinancialDomainEnablement
 from models.process import Process
 from models.project import Project
+from models.portfolio import Portfolio
 from schemas.financial import FinancialDomainEnablementInput, FinancialDomainEnablementUpdateInput
 
 
@@ -45,6 +46,38 @@ class FinancialDomainEnablementService:
         name = getattr(source, "name", None) or getattr(source, "title", None)
         status = getattr(source, "status", None) or getattr(source, "kanban_stage", None)
         is_source_active = getattr(source, "is_active", True)
+        metadata_json: Dict = dict(enablement.metadata_json or {}) if enablement else {}
+
+        if domain_type == "project":
+            portfolio = None
+            portfolio_id = getattr(source, "portfolio_id", None)
+            if portfolio_id:
+                portfolio = Portfolio.query.filter(
+                    Portfolio.id == portfolio_id,
+                    Portfolio.company_id == getattr(source, "company_id", None),
+                ).first()
+            metadata_json.update(
+                {
+                    "portfolio_id": portfolio.id if portfolio else None,
+                    "portfolio_code": getattr(portfolio, "code", None) if portfolio else None,
+                    "portfolio_name": getattr(portfolio, "name", None) if portfolio else None,
+                }
+            )
+
+        if domain_type == "process":
+            macro = getattr(source, "macro", None)
+            area = getattr(macro, "area", None) if macro else None
+            metadata_json.update(
+                {
+                    "macro_id": getattr(macro, "id", None) if macro else None,
+                    "macro_code": getattr(macro, "code", None) if macro else None,
+                    "macro_name": getattr(macro, "name", None) if macro else None,
+                    "area_id": getattr(area, "id", None) if area else None,
+                    "area_code": getattr(area, "code", None) if area else None,
+                    "area_name": getattr(area, "name", None) if area else None,
+                }
+            )
+
         return {
             "id": enablement.id if enablement else None,
             "domain_type": domain_type,
@@ -55,10 +88,23 @@ class FinancialDomainEnablementService:
             "source_is_active": bool(is_source_active if is_source_active is not None else True),
             "display_label": f"{code + ' - ' if code else ''}{name}",
             "is_enabled": bool(enablement.is_enabled) if enablement else False,
+            "is_default_suggestion": bool(enablement.is_default_suggestion) if enablement else False,
             "notes": enablement.notes if enablement else None,
-            "metadata_json": enablement.metadata_json if enablement else {},
+            "metadata_json": metadata_json,
             "updated_at": enablement.updated_at.isoformat() if enablement and enablement.updated_at else None,
         }
+
+    @staticmethod
+    def _clear_default_suggestions(*, company_id: int, exclude_item_id: Optional[int] = None) -> None:
+        query = FinancialDomainEnablement.query.filter(
+            FinancialDomainEnablement.company_id == company_id,
+            FinancialDomainEnablement.deleted_at.is_(None),
+            FinancialDomainEnablement.is_default_suggestion.is_(True),
+        )
+        if exclude_item_id:
+            query = query.filter(FinancialDomainEnablement.id != exclude_item_id)
+        for item in query.all():
+            item.is_default_suggestion = False
 
     @staticmethod
     def list_items(
@@ -147,9 +193,16 @@ class FinancialDomainEnablementService:
             db.session.add(item)
 
         item.is_enabled = data["is_enabled"]
+        item.is_default_suggestion = bool(data.get("is_default_suggestion")) and bool(data["is_enabled"])
         item.notes = data.get("notes")
         item.metadata_json = data.get("metadata_json") or {}
         item.deleted_at = None
+        if item.is_default_suggestion:
+            db.session.flush()
+            FinancialDomainEnablementService._clear_default_suggestions(
+                company_id=company_id,
+                exclude_item_id=item.id,
+            )
 
         db.session.commit()
         db.session.refresh(item)
@@ -204,10 +257,19 @@ class FinancialDomainEnablementService:
 
         if "is_enabled" in data:
             item.is_enabled = bool(data["is_enabled"])
+            if not item.is_enabled:
+                item.is_default_suggestion = False
+        if "is_default_suggestion" in data:
+            item.is_default_suggestion = bool(data["is_default_suggestion"]) and bool(item.is_enabled)
         if "notes" in data:
             item.notes = data.get("notes")
         if "metadata_json" in data and data["metadata_json"] is not None:
             item.metadata_json = data["metadata_json"]
+        if item.is_default_suggestion:
+            FinancialDomainEnablementService._clear_default_suggestions(
+                company_id=company_id,
+                exclude_item_id=item.id,
+            )
 
         db.session.commit()
         db.session.refresh(item)

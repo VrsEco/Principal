@@ -1,0 +1,173 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Borderô{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<a href="/financial/borderos">Borderôs</a>
+<span class="sep">/</span>
+<span class="current">{{ 'Novo Borderô' if not bordero_id else 'Detalhe do Borderô' }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="bordero-page" data-company-id="{{ company_id or '' }}" data-bordero-id="{{ bordero_id or '' }}" data-initial-bordero-type="{{ initial_bordero_type or '' }}">
+    <header class="bordero-header">
+        <div>
+            <h1 id="bordero-title">{{ 'Novo Borderô' if not bordero_id else 'Borderô' }}</h1>
+            <p class="bordero-header-subtitle">Operação centralizada para baixa única de títulos agrupados. Títulos participantes ficam congelados enquanto o borderô estiver ativo.</p>
+        </div>
+        <div class="bordero-header-actions">
+            <a class="btn btn-secondary" href="/financial/borderos">Voltar para lista</a>
+        </div>
+    </header>
+
+    <section class="bordero-shell">
+        <div class="bordero-main">
+            <section class="bordero-card">
+                <div id="bordero-banner" class="bordero-banner">Selecione o tipo do borderô e os agendamentos elegíveis.</div>
+
+                <div class="bordero-grid bordero-grid-top">
+                    <label class="field">
+                        <span>Tipo</span>
+                        <div class="bordero-type-switch">
+                            <button type="button" class="btn btn-secondary bordero-type-chip" data-type="receivable">Recebimento</button>
+                            <button type="button" class="btn btn-secondary bordero-type-chip" data-type="payable">Pagamento</button>
+                        </div>
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Descrição</span>
+                        <input id="bordero-description" maxlength="255" placeholder="Ex.: Borderô semanal fornecedores escritório" {{ 'disabled' if bordero_id else '' }}>
+                    </label>
+                    <label class="field">
+                        <span>Conta bancária</span>
+                        <select id="bordero-bank-account" {{ 'disabled' if bordero_id else '' }}></select>
+                    </label>
+                    <label class="field field-span-3">
+                        <span>Observações</span>
+                        <textarea id="bordero-notes" rows="2" placeholder="Observações operacionais" {{ 'disabled' if bordero_id else '' }}></textarea>
+                    </label>
+                </div>
+
+                <section id="bordero-create-section">
+                    <div class="bordero-section-head">
+                        <div>
+                            <h2>Agendamentos elegíveis</h2>
+                            <p>Somente títulos com saldo aberto e sem borderô ativo podem ser selecionados.</p>
+                        </div>
+                    </div>
+                    <div class="bordero-selection-toolbar">
+                        <input id="bordero-schedule-search" type="search" placeholder="Buscar por histórico, código ou favorecido">
+                        <button type="button" class="btn btn-secondary" id="bordero-refresh-schedules">Atualizar lista</button>
+                    </div>
+                    <div class="bordero-table-wrap">
+                        <table class="bordero-table">
+                            <thead>
+                                <tr>
+                                    <th>Selecionar</th>
+                                    <th>Agendamento</th>
+                                    <th>Favorecido</th>
+                                    <th>Vencimento</th>
+                                    <th>Saldo aberto</th>
+                                    <th>Valor no borderô</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bordero-schedule-body">
+                                <tr><td colspan="6" class="empty-state">Selecione um tipo para carregar os agendamentos.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bordero-create-footer">
+                        <div id="bordero-create-summary" class="bordero-summary-pills"></div>
+                        <button type="button" class="btn btn-primary" id="bordero-create-button">Criar borderô</button>
+                    </div>
+                </section>
+
+                <section id="bordero-detail-section" class="hidden">
+                    <div class="bordero-detail-grid">
+                        <article class="bordero-metric"><span>Código</span><strong id="detail-code">-</strong></article>
+                        <article class="bordero-metric"><span>Status</span><strong id="detail-status">-</strong></article>
+                        <article class="bordero-metric"><span>Total</span><strong id="detail-total">R$ 0,00</strong></article>
+                        <article class="bordero-metric"><span>Em aberto</span><strong id="detail-open">R$ 0,00</strong></article>
+                    </div>
+
+                    <div class="bordero-section-head">
+                        <div>
+                            <h2>Itens do borderô</h2>
+                            <p>Snapshot congelado dos agendamentos participantes.</p>
+                        </div>
+                    </div>
+                    <div class="bordero-table-wrap">
+                        <table class="bordero-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Agendamento</th>
+                                    <th>Favorecido</th>
+                                    <th>Selecionado</th>
+                                    <th>Liquidado</th>
+                                    <th>Em aberto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bordero-items-body">
+                                <tr><td colspan="6" class="empty-state">Carregando itens...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bordero-section-head">
+                        <div>
+                            <h2>Baixas do borderô</h2>
+                            <p>Baixas registradas no nível do borderô para posterior conciliação bancária pelo valor total.</p>
+                        </div>
+                    </div>
+                    <div class="bordero-settlement-form">
+                        <label class="field">
+                            <span>Data da baixa</span>
+                            <input id="settlement-date" type="date">
+                        </label>
+                        <label class="field">
+                            <span>Valor da baixa</span>
+                            <input id="settlement-amount" inputmode="numeric" placeholder="0,00">
+                        </label>
+                        <label class="field">
+                            <span>Conta bancária</span>
+                            <select id="settlement-bank-account"></select>
+                        </label>
+                        <label class="field field-span-2">
+                            <span>Observações</span>
+                            <input id="settlement-notes" maxlength="255" placeholder="Ex.: arquivo CNAB retorno / TED consolidada">
+                        </label>
+                        <div class="field bordero-settlement-action">
+                            <span>&nbsp;</span>
+                            <button type="button" class="btn btn-success" id="bordero-settlement-button">Registrar baixa</button>
+                        </div>
+                    </div>
+                    <div class="bordero-table-wrap">
+                        <table class="bordero-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Data</th>
+                                    <th>Valor bruto</th>
+                                    <th>Alocado</th>
+                                    <th>Variação</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bordero-settlements-body">
+                                <tr><td colspan="6" class="empty-state">Nenhuma baixa registrada.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+        </div>
+    </section>
+</div>
+
+<link rel="stylesheet" href="/static/css/financial_borderos.css">
+<script src="/static/js/financial_borderos.js"></script>
+{% endblock %}

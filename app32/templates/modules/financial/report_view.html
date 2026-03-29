@@ -1,0 +1,126 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - {{ report.title }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<a href="/financial/reports/{{ report.report_slug }}">{{ report.title }}</a>
+<span class="sep">/</span>
+<span class="current">Visualização</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fin-report-view fade-in">
+    <section class="rv-panel rv-header">
+        <div>
+            <p class="rv-eyebrow">Relatório gerencial</p>
+            <h1>{{ report.title }}</h1>
+            <p class="rv-subtitle">{{ report.subtitle }}</p>
+        </div>
+        <div class="rv-actions no-print">
+            <a href="/financial/reports/{{ report.report_slug }}{% if request.query_string %}?{{ request.query_string.decode('utf-8') }}{% elif company_id %}?company_id={{ company_id }}{% endif %}" class="rv-btn rv-btn--secondary">Filtros</a>
+            <a href="/financial/reports/{{ report.report_slug }}/export.pdf?{{ request.query_string.decode('utf-8') }}" class="rv-btn rv-btn--secondary">Exportar PDF</a>
+            <a href="/financial/reports/{{ report.report_slug }}/export.xlsx?{{ request.query_string.decode('utf-8') }}" class="rv-btn rv-btn--secondary">Exportar XLSX</a>
+            <button type="button" onclick="window.print()" class="rv-btn rv-btn--primary">Imprimir</button>
+        </div>
+    </section>
+
+    <section class="rv-card-grid">
+        {% for item in report.summary_cards %}
+        <article class="rv-card">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+        </article>
+        {% endfor %}
+    </section>
+
+    <section class="rv-grid">
+        <article class="rv-panel">
+            <h2>Filtros aplicados</h2>
+            <div class="rv-list">
+                {% for item in report.filters %}
+                <div><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+                {% endfor %}
+            </div>
+        </article>
+        <article class="rv-panel">
+            <h2>Informações gerais</h2>
+            <div class="rv-list">
+                <div><span>Gerado em</span><strong>{{ report.generated_at }}</strong></div>
+                {% for item in report.general_info %}
+                <div><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+
+    <section class="rv-panel">
+        <h2>Dados</h2>
+        {% if report.rows %}
+        <div class="rv-table-wrap">
+            <table class="rv-table">
+                <thead>
+                    <tr>
+                        {% for column in report.columns %}
+                        <th>{{ column.label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report.rows %}
+                    <tr>
+                        {% for column in report.columns %}
+                        <td>{{ row[column.key] }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="rv-empty">Nenhum dado encontrado para os filtros informados.</div>
+        {% endif %}
+    </section>
+</div>
+
+<style>
+    .fin-report-view { padding:0 2rem 2rem; display:flex; flex-direction:column; gap:1rem; }
+    .rv-panel, .rv-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+    .rv-panel { padding:1.25rem; }
+    .rv-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+    .rv-eyebrow { margin:0 0 .4rem; font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .rv-subtitle { color:var(--text-secondary); max-width:860px; }
+    .rv-actions { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:flex-end; }
+    .rv-btn { border:none; border-radius:12px; padding:.82rem 1rem; font-weight:700; text-decoration:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+    .rv-btn--primary { background:var(--primary); color:#fff; }
+    .rv-btn--secondary { background:var(--surface-secondary); border:1px solid var(--border); color:var(--text-primary); }
+    .rv-card-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; }
+    .rv-card { padding:1rem; }
+    .rv-card span { display:block; color:var(--text-secondary); font-size:.82rem; }
+    .rv-card strong { display:block; margin-top:.35rem; font-size:1.1rem; }
+    .rv-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .rv-list { display:grid; gap:.75rem; }
+    .rv-list div { display:flex; justify-content:space-between; gap:1rem; padding:.75rem .85rem; background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; }
+    .rv-list span { color:var(--text-secondary); }
+    .rv-table-wrap { overflow:auto; }
+    .rv-table { width:100%; min-width:900px; border-collapse:collapse; }
+    .rv-table th, .rv-table td { padding:.82rem .75rem; border-bottom:1px solid var(--border); text-align:left; }
+    .rv-table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); }
+    .rv-empty { padding:1rem; color:var(--text-secondary); text-align:center; }
+    @media (max-width: 960px) {
+        .fin-report-view { padding:0 1rem 1.5rem; }
+        .rv-header, .rv-grid, .rv-card-grid { grid-template-columns:1fr; display:grid; }
+        .rv-actions { justify-content:stretch; }
+        .rv-actions .rv-btn, .rv-actions button { width:100%; }
+    }
+    @media print {
+        .no-print, .sidebar, header, nav { display:none !important; }
+        .fin-report-view { padding:0; }
+        .rv-panel, .rv-card { box-shadow:none; break-inside:avoid; }
+        .rv-table { min-width:auto; }
+    }
+</style>
+{% endblock %}

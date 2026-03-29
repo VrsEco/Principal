@@ -396,6 +396,71 @@ def run_mcp_server():
 
 
     @mcp.tool()
+    def list_financial_borderos(company_id: int, bordero_type: Optional[str] = None, status: Optional[str] = None) -> dict:
+        """
+        Lista borderôs financeiros da empresa por tipo e status.
+        """
+        from services.financial_bordero_service import FinancialBorderoService
+
+        result, error = _run_financial_action(
+            FinancialBorderoService.list_borderos,
+            company_id=company_id,
+            bordero_type=bordero_type,
+            status=status,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "items": result, "count": len(result)}
+
+    @mcp.tool()
+    def get_financial_bordero(company_id: int, bordero_id: int) -> dict:
+        """
+        Retorna o detalhe de um borderô financeiro com itens e baixas.
+        """
+        from services.financial_bordero_service import FinancialBorderoService
+
+        result, error = _run_financial_action(
+            FinancialBorderoService.get_bordero_detail,
+            company_id=company_id,
+            bordero_id=bordero_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def create_financial_bordero(payload: dict) -> dict:
+        """
+        Cria um borderô financeiro de pagamento ou recebimento a partir de agendamentos.
+        """
+        from services.financial_bordero_service import FinancialBorderoService
+
+        result, error = _run_financial_action(
+            FinancialBorderoService.create_bordero,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def create_financial_bordero_settlement(bordero_id: int, payload: dict) -> dict:
+        """
+        Registra uma baixa total ou parcial em um borderô financeiro.
+        """
+        from services.financial_bordero_service import FinancialBorderoService
+
+        result, error = _run_financial_action(
+            FinancialBorderoService.create_settlement,
+            bordero_id=bordero_id,
+            payload=payload,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+
+    @mcp.tool()
     def get_financial_budget_planning_workspace(company_id: int, version_id: Optional[int] = None) -> dict:
         """
         Retorna o workspace de planejamento do Orçamento Matricial: orçamento + verbas orçamentárias + resumo executivo.
@@ -786,7 +851,13 @@ def run_mcp_server():
         return {"success": True, **result}
 
     @mcp.tool()
-    def review_financial_reconciliation_match(company_id: int, match_id: int, decision: str) -> dict:
+    def review_financial_reconciliation_match(
+        company_id: int,
+        match_id: int,
+        decision: str,
+        selected_entry_id: Optional[int] = None,
+        adjustments: Optional[dict] = None,
+    ) -> dict:
         """
         Confirma ou rejeita manualmente uma sugestão de conciliação.
         decision: confirmed | rejected
@@ -798,6 +869,109 @@ def run_mcp_server():
             match_id=match_id,
             company_id=company_id,
             decision=decision,
+            selected_entry_id=selected_entry_id,
+            adjustments=adjustments,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def get_financial_bank_reconciliation_overview(company_id: int) -> dict:
+        """
+        Retorna o painel por conta bancária com situação atual da conciliação e preparação para integração automática.
+        """
+        from services.financial_reconciliation_workspace_service import FinancialReconciliationWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialReconciliationWorkspaceService.get_overview,
+            company_id=company_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def get_financial_bank_reconciliation_workspace(
+        company_id: int,
+        bank_account_id: int,
+        batch_id: Optional[int] = None,
+    ) -> dict:
+        """
+        Retorna o workspace operacional da conciliação bancária para uma conta e, opcionalmente, um lote específico.
+        """
+        from services.financial_reconciliation_workspace_service import FinancialReconciliationWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialReconciliationWorkspaceService.get_workspace,
+            company_id=company_id,
+            bank_account_id=bank_account_id,
+            batch_id=batch_id,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def list_financial_bank_reconciliation_candidates(
+        company_id: int,
+        row_id: int,
+        limit: int = 8,
+    ) -> dict:
+        """
+        Lista candidatos ranqueados do ledger para uma linha do extrato bancário importado.
+        """
+        from services.financial_reconciliation_workspace_service import FinancialReconciliationWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialReconciliationWorkspaceService.list_row_candidates,
+            company_id=company_id,
+            row_id=row_id,
+            limit=limit,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, **result}
+
+    @mcp.tool()
+    def match_financial_bank_reconciliation_row(
+        company_id: int,
+        row_id: int,
+        financial_entry_id: int,
+        adjustments: Optional[dict] = None,
+    ) -> dict:
+        """
+        Confirma manualmente a conciliação de uma linha do extrato contra um lançamento financeiro, com ajustes opcionais.
+        """
+        from services.financial_reconciliation_service import FinancialReconciliationService
+
+        result, error = _run_financial_action(
+            FinancialReconciliationService.manually_match_row,
+            row_id=row_id,
+            financial_entry_id=financial_entry_id,
+            company_id=company_id,
+            adjustments=adjustments,
+        )
+        if error:
+            return {"success": False, "error": error}
+        return {"success": True, "item": result}
+
+    @mcp.tool()
+    def create_financial_entry_from_bank_reconciliation_row(
+        company_id: int,
+        row_id: int,
+        payload: dict,
+    ) -> dict:
+        """
+        Cria um novo lançamento financeiro a partir de uma linha do extrato e já o devolve conciliado no workspace.
+        """
+        from services.financial_reconciliation_workspace_service import FinancialReconciliationWorkspaceService
+
+        result, error = _run_financial_action(
+            FinancialReconciliationWorkspaceService.create_entry_from_row,
+            company_id=company_id,
+            row_id=row_id,
+            payload=payload,
         )
         if error:
             return {"success": False, "error": error}

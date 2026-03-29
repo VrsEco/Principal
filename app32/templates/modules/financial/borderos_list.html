@@ -1,0 +1,75 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Borderôs{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Borderôs</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="bordero-list-page" data-company-id="{{ company_id or '' }}">
+    <header class="bordero-list-header">
+        <div>
+            <h1>Borderôs</h1>
+            <p class="bordero-list-subtitle">Agrupe agendamentos a pagar ou a receber, congele os títulos participantes e faça a baixa centralizada com rateio automático.</p>
+        </div>
+        <div class="bordero-list-actions">
+            <a class="btn btn-secondary" href="/financial/borderos/new?bordero_type=receivable">Novo borderô de recebimento</a>
+            <a class="btn btn-primary" href="/financial/borderos/new?bordero_type=payable">Novo borderô de pagamento</a>
+        </div>
+    </header>
+
+    <section class="bordero-kpis" id="bordero-kpis">
+        <article class="bordero-kpi"><span>Total</span><strong>0</strong><small>Borderôs filtrados</small></article>
+        <article class="bordero-kpi"><span>Aberto</span><strong>R$ 0,00</strong><small>Saldo total em aberto</small></article>
+        <article class="bordero-kpi"><span>Liquidado</span><strong>R$ 0,00</strong><small>Montante já baixado</small></article>
+        <article class="bordero-kpi"><span>Itens</span><strong>0</strong><small>Títulos agrupados</small></article>
+    </section>
+
+    <section class="bordero-list-card">
+        <div class="bordero-filters">
+            <input id="bordero-filter-search" type="search" placeholder="Buscar por código ou descrição">
+            <select id="bordero-filter-type">
+                <option value="">Todos os tipos</option>
+                <option value="payable">Pagamentos</option>
+                <option value="receivable">Recebimentos</option>
+            </select>
+            <select id="bordero-filter-status">
+                <option value="">Todos os status</option>
+                <option value="open">Aberto</option>
+                <option value="partially_settled">Parcialmente liquidado</option>
+                <option value="settled">Liquidado</option>
+                <option value="cancelled">Cancelado</option>
+            </select>
+        </div>
+
+        <div class="bordero-table-wrap">
+            <table class="bordero-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Código</th>
+                        <th>Descrição</th>
+                        <th>Tipo</th>
+                        <th>Itens</th>
+                        <th>Total</th>
+                        <th>Liquidado</th>
+                        <th>Em aberto</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="bordero-table-body">
+                    <tr><td colspan="9" class="empty-state">Carregando borderôs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<link rel="stylesheet" href="/static/css/financial_borderos.css">
+<script src="/static/js/financial_borderos_list.js"></script>
+{% endblock %}

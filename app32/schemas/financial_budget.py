@@ -8,6 +8,7 @@ from marshmallow import fields
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from models import (
+    FinancialBudgetCycle,
     FinancialBudgetAmount,
     FinancialBudgetContract,
     FinancialBudgetDocument,
@@ -16,6 +17,8 @@ from models import (
 )
 from models.financial import MOVEMENT_NATURE_VALUES
 from models.financial_budget import (
+    BUDGET_CATEGORY_VALUES,
+    BUDGET_CYCLE_STATUS_VALUES,
     BUDGET_CONTRACT_STATUS_VALUES,
     BUDGET_DOCUMENT_STATUS_VALUES,
     BUDGET_DOCUMENT_TYPE_VALUES,
@@ -40,6 +43,16 @@ def _strip_text(value: Optional[str]) -> Optional[str]:
 class FinancialBudgetVersionSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = FinancialBudgetVersion
+        load_instance = True
+        include_fk = True
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+
+
+class FinancialBudgetCycleSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = FinancialBudgetCycle
         load_instance = True
         include_fk = True
 
@@ -93,6 +106,8 @@ class FinancialBudgetDocumentSchema(ma.SQLAlchemyAutoSchema):
 
 financial_budget_version_schema = FinancialBudgetVersionSchema()
 financial_budget_versions_schema = FinancialBudgetVersionSchema(many=True)
+financial_budget_cycle_schema = FinancialBudgetCycleSchema()
+financial_budget_cycles_schema = FinancialBudgetCycleSchema(many=True)
 financial_budget_line_schema = FinancialBudgetLineSchema()
 financial_budget_lines_schema = FinancialBudgetLineSchema(many=True)
 financial_budget_amount_schema = FinancialBudgetAmountSchema()
@@ -103,12 +118,54 @@ financial_budget_document_schema = FinancialBudgetDocumentSchema()
 financial_budget_documents_schema = FinancialBudgetDocumentSchema(many=True)
 
 
+class FinancialBudgetCycleInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    code: str = Field(..., min_length=2, max_length=50)
+    name: str = Field(..., min_length=3, max_length=160)
+    year: int = Field(..., ge=2000, le=2100)
+    status: str = Field("draft", pattern=_choices_pattern(BUDGET_CYCLE_STATUS_VALUES))
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
+    created_by_user_id: Optional[int] = None
+
+    @field_validator("code", "name", "notes", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        return _strip_text(value)
+
+
+class FinancialBudgetCycleUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: Optional[str] = Field(None, min_length=2, max_length=50)
+    name: Optional[str] = Field(None, min_length=3, max_length=160)
+    year: Optional[int] = Field(None, ge=2000, le=2100)
+    status: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_CYCLE_STATUS_VALUES))
+    notes: Optional[str] = None
+    metadata_json: Optional[Dict[str, Any]] = None
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
+    approved_by_user_id: Optional[int] = None
+
+    @field_validator("code", "name", "notes", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        return _strip_text(value)
+
+
 class FinancialBudgetVersionInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     company_id: int
     code: str = Field(..., min_length=2, max_length=50)
     name: str = Field(..., min_length=3, max_length=160)
+    budget_cycle_id: Optional[int] = None
+    budget_category: str = Field("general", pattern=_choices_pattern(BUDGET_CATEGORY_VALUES))
+    budget_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     scenario_type: str = Field("original", pattern=_choices_pattern(BUDGET_VERSION_SCENARIO_VALUES))
     status: str = Field("draft", pattern=_choices_pattern(BUDGET_VERSION_STATUS_VALUES))
     period_start: date
@@ -134,6 +191,11 @@ class FinancialBudgetVersionUpdateInput(BaseModel):
 
     code: Optional[str] = Field(None, min_length=2, max_length=50)
     name: Optional[str] = Field(None, min_length=3, max_length=160)
+    budget_cycle_id: Optional[int] = None
+    budget_category: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_CATEGORY_VALUES))
+    budget_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     scenario_type: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_VERSION_SCENARIO_VALUES))
     status: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_VERSION_STATUS_VALUES))
     period_start: Optional[date] = None
@@ -154,6 +216,11 @@ class FinancialBudgetVersionDuplicateInput(BaseModel):
     company_id: int
     code: Optional[str] = Field(None, min_length=2, max_length=50)
     name: Optional[str] = Field(None, min_length=3, max_length=160)
+    budget_cycle_id: Optional[int] = None
+    budget_category: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_CATEGORY_VALUES))
+    budget_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     scenario_type: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_VERSION_SCENARIO_VALUES))
     status: str = Field("draft", pattern=_choices_pattern(BUDGET_VERSION_STATUS_VALUES))
     notes: Optional[str] = None
@@ -185,6 +252,9 @@ class FinancialBudgetMatrixLineInput(BaseModel):
     id: Optional[int] = None
     line_code: str = Field(..., min_length=1, max_length=60)
     line_name: str = Field(..., min_length=2, max_length=160)
+    line_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     budget_view: str = Field("competence", pattern=_choices_pattern(BUDGET_LINE_VIEW_VALUES))
     movement_nature: str = Field("debit", pattern=_choices_pattern(MOVEMENT_NATURE_VALUES))
     line_order: int = Field(100, ge=0)
@@ -228,6 +298,9 @@ class FinancialBudgetLineCreate(BaseModel):
     budget_version_id: int
     line_code: str = Field(..., min_length=1, max_length=60)
     line_name: str = Field(..., min_length=2, max_length=160)
+    line_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     budget_view: str = Field("competence", pattern=_choices_pattern(BUDGET_LINE_VIEW_VALUES))
     movement_nature: str = Field("debit", pattern=_choices_pattern(MOVEMENT_NATURE_VALUES))
     line_order: int = Field(100, ge=0)
@@ -252,6 +325,9 @@ class FinancialBudgetLineUpdate(BaseModel):
 
     line_code: Optional[str] = Field(None, min_length=1, max_length=60)
     line_name: Optional[str] = Field(None, min_length=2, max_length=160)
+    line_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     budget_view: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_LINE_VIEW_VALUES))
     movement_nature: Optional[str] = Field(None, pattern=_choices_pattern(MOVEMENT_NATURE_VALUES))
     line_order: Optional[int] = Field(None, ge=0)
@@ -294,6 +370,9 @@ class FinancialBudgetContractCreateInput(BaseModel):
     budget_line_id: int
     contract_code: str = Field(..., min_length=2, max_length=60)
     name: str = Field(..., min_length=3, max_length=160)
+    contract_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     status: str = Field("draft", pattern=_choices_pattern(BUDGET_CONTRACT_STATUS_VALUES))
     contract_amount: Decimal = Field(..., ge=0)
     counterparty_id: Optional[int] = None
@@ -315,6 +394,9 @@ class FinancialBudgetContractUpdateInput(BaseModel):
 
     contract_code: Optional[str] = Field(None, min_length=2, max_length=60)
     name: Optional[str] = Field(None, min_length=3, max_length=160)
+    contract_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     status: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_CONTRACT_STATUS_VALUES))
     contract_amount: Optional[Decimal] = Field(None, ge=0)
     counterparty_id: Optional[int] = None
@@ -337,6 +419,9 @@ class FinancialBudgetDocumentCreateInput(BaseModel):
     budget_contract_id: int
     document_code: str = Field(..., min_length=2, max_length=60)
     title: str = Field(..., min_length=3, max_length=160)
+    document_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     document_type: str = Field("invoice", pattern=_choices_pattern(BUDGET_DOCUMENT_TYPE_VALUES))
     status: str = Field("registered", pattern=_choices_pattern(BUDGET_DOCUMENT_STATUS_VALUES))
     document_number: Optional[str] = Field(None, max_length=80)
@@ -344,6 +429,7 @@ class FinancialBudgetDocumentCreateInput(BaseModel):
     issue_date: Optional[date] = None
     competence_date: Optional[date] = None
     counterparty_id: Optional[int] = None
+    is_default_suggestion: bool = False
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
     created_by_user_id: Optional[int] = None
@@ -359,6 +445,9 @@ class FinancialBudgetDocumentUpdateInput(BaseModel):
 
     document_code: Optional[str] = Field(None, min_length=2, max_length=60)
     title: Optional[str] = Field(None, min_length=3, max_length=160)
+    document_seq: Optional[int] = Field(None, ge=1)
+    full_code: Optional[str] = Field(None, min_length=3, max_length=200)
+    company_code_snapshot: Optional[str] = Field(None, min_length=2, max_length=20)
     document_type: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_DOCUMENT_TYPE_VALUES))
     status: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_DOCUMENT_STATUS_VALUES))
     document_number: Optional[str] = Field(None, max_length=80)
@@ -366,6 +455,7 @@ class FinancialBudgetDocumentUpdateInput(BaseModel):
     issue_date: Optional[date] = None
     competence_date: Optional[date] = None
     counterparty_id: Optional[int] = None
+    is_default_suggestion: Optional[bool] = None
     notes: Optional[str] = None
     metadata_json: Optional[Dict[str, Any]] = None
 

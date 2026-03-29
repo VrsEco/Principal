@@ -48,13 +48,6 @@ FINANCIAL_CATALOG_PAGES = {
         "eyebrow": "Classificação auxiliar",
         "description": "Classifique contas e lançamentos com categorias auxiliares do financeiro.",
     },
-    "payment-terms": {
-        "api_type": "payment_terms",
-        "title": "Condições de Pagamento",
-        "new_label": "Nova condição",
-        "eyebrow": "Parâmetros comerciais",
-        "description": "Defina parcelamento, intervalo e padrões para previsões e títulos.",
-    },
     "asset-accounts": {
         "api_type": "asset_accounts",
         "title": "Contas Patrimoniais",
@@ -179,6 +172,17 @@ def financial_import_batch_manage(batch_id: int):
         company=company,
         company_id=company.id if company else None,
         batch_id=batch_id,
+    )
+
+
+@financial_bp.route("/financial/reconciliation")
+@permission_required("financial", "view")
+def financial_bank_reconciliation_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/bank_reconciliation.html",
+        company=company,
+        company_id=company.id if company else None,
     )
 
 
@@ -345,6 +349,31 @@ def financial_schedule_form_page(schedule_id: int | None = None):
     )
 
 
+@financial_bp.route("/financial/borderos")
+@permission_required("financial", "view")
+def financial_borderos_page():
+    company = get_active_company()
+    return render_template(
+        "modules/financial/borderos_list.html",
+        company=company,
+        company_id=company.id if company else None,
+    )
+
+
+@financial_bp.route("/financial/borderos/new")
+@financial_bp.route("/financial/borderos/<int:bordero_id>")
+@permission_required("financial", "view")
+def financial_bordero_workspace_page(bordero_id: int | None = None):
+    company = get_active_company()
+    return render_template(
+        "modules/financial/borderos.html",
+        company=company,
+        company_id=company.id if company else None,
+        bordero_id=bordero_id,
+        initial_bordero_type=(request.args.get("bordero_type") or "").strip().lower(),
+    )
+
+
 @financial_bp.route("/financial/automation-rules")
 @permission_required("financial", "view")
 def financial_automation_rules_page():
@@ -378,34 +407,26 @@ def financial_closings_page():
     )
 
 
-@financial_bp.route("/financial/reports")
-@permission_required("financial", "view")
-def financial_reports_page():
-    company = get_active_company()
-    return render_template(
-        "modules/financial/reports.html",
-        company=company,
-        company_id=company.id if company else None,
-    )
-
-
+@financial_bp.route("/financial/budgets")
 @financial_bp.route("/financial/budget")
 @permission_required("financial", "view")
 def financial_budget_planning_page():
     company = get_active_company()
     return render_template(
-        "modules/financial/budget_matrix.html",
+        "modules/financial/budget_cycles_list.html",
         company=company,
         company_id=company.id if company else None,
     )
 
 
+@financial_bp.route("/financial/budgets/workspace")
+@financial_bp.route("/financial/budget/workspace")
 @financial_bp.route("/financial/budget/execution")
 @permission_required("financial", "view")
 def financial_budget_execution_page():
     company = get_active_company()
     return render_template(
-        "modules/financial/budget_execution.html",
+        "modules/financial/budget_workspace.html",
         company=company,
         company_id=company.id if company else None,
     )

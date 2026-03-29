@@ -252,11 +252,15 @@ class FinancialImportService:
     @staticmethod
     def _parse_source_rows(source_type: str, file_bytes: bytes) -> List[Dict[str, Any]]:
         source = (source_type or "").lower()
+        if source == "csv":
+            return FinancialImportService._parse_csv_bytes(file_bytes, delimiter=",")
+        if source == "csc":
+            return FinancialImportService._parse_csv_bytes(file_bytes, delimiter=";")
         if source == "xlsx":
             return FinancialImportService._parse_xlsx_bytes(file_bytes)
         if source == "ofx":
             return FinancialImportService._parse_ofx_bytes(file_bytes)
-        raise ValueError("Fonte de importação não suportada. Utilize apenas OFX ou XLSX.")
+        raise ValueError("Fonte de importação não suportada. Utilize CSV, XLSX ou OFX.")
 
     @staticmethod
     def build_import_template() -> Tuple[Optional[bytes], Optional[str]]:
@@ -433,6 +437,14 @@ class FinancialImportService:
                 db.session.add(row)
                 staged_rows.append(row)
                 FinancialImportService._enrich_row_catalogs(data.company_id, row)
+                fallback_bank_account_id = (data.metadata_json or {}).get("bank_account_id")
+                if fallback_bank_account_id and not (row.normalized_payload or {}).get("bank_account_id"):
+                    row.normalized_payload = {
+                        **(row.normalized_payload or {}),
+                        "bank_account_id": int(fallback_bank_account_id),
+                    }
+                    if row.processing_status == "staged":
+                        row.processing_status = "validated"
                 if row.processing_status == "rejected":
                     error_rows += 1
                 else:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from models import (
@@ -19,13 +20,25 @@ from schemas.financial_budget import (
     FinancialBudgetVersionInput,
     FinancialBudgetVersionUpdateInput,
 )
+from services.financial_budget_code_service import FinancialBudgetCodeService
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_service import FinancialService
 
 
 class FinancialBudgetService:
     @staticmethod
-    def list_versions(*, company_id: int, allowed_company_ids: Optional[Sequence[int]] = None) -> Tuple[Optional[List[Dict]], Optional[str]]:
+    def list_versions(
+        *,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+        budget_cycle: Optional[str] = None,
+        budget_category: Optional[str] = None,
+        budget_group: Optional[str] = None,
+        consolidated: bool = False,
+        group_by_cycle: bool = False,
+        group_by_category: bool = False,
+        include_summary: bool = False,
+    ) -> Tuple[Optional[List[Dict] | Dict[str, object]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
@@ -38,11 +51,85 @@ class FinancialBudgetService:
             .order_by(FinancialBudgetVersion.period_start.desc(), FinancialBudgetVersion.id.desc())
             .all()
         )
-        return [item.to_dict() for item in items], None
+        payloads = [FinancialBudgetCodeService.enrich_version_payload(item) for item in items]
+        filtered_payloads = [
+            item
+            for item in payloads
+            if FinancialBudgetCodeService.matches_filters(
+                item,
+                budget_cycle=budget_cycle,
+                budget_category=budget_category,
+                budget_group=budget_group,
+            )
+        ]
+
+        advanced_view = any(
+            [
+                budget_cycle is not None,
+                budget_category is not None,
+                budget_group is not None,
+                consolidated,
+                group_by_cycle,
+                group_by_category,
+                include_summary,
+            ]
+        )
+        if not advanced_view:
+            return filtered_payloads, None
+
+        summaries_by_id = {}
+        if (
+            include_summary
+            or consolidated
+            or group_by_cycle
+            or group_by_category
+            or budget_cycle is not None
+            or budget_category is not None
+            or budget_group is not None
+        ):
+            summaries_by_id = FinancialBudgetService._build_version_summaries(
+                filtered_payloads,
+                company_id=company_id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            for payload in filtered_payloads:
+                payload["summary"] = summaries_by_id.get(int(payload["id"]))
+
+        result = {
+            "items": filtered_payloads,
+            "filters": {
+                "budget_cycle": budget_cycle,
+                "budget_category": budget_category,
+                "budget_group": budget_group,
+                "consolidated": consolidated,
+                "group_by_cycle": group_by_cycle,
+                "group_by_category": group_by_category,
+                "include_summary": include_summary,
+            },
+            "summary": FinancialBudgetCodeService.summarize_version_payloads(filtered_payloads),
+        }
+        if summaries_by_id:
+            result["summary_by_version_id"] = summaries_by_id
+        if group_by_cycle or consolidated or budget_cycle is not None:
+            result["cycles"] = FinancialBudgetCodeService.group_version_payloads(
+                filtered_payloads,
+                summaries_by_id=summaries_by_id,
+                group_by_cycle=True,
+                group_by_category=group_by_category or consolidated,
+            )
+        elif group_by_category:
+            result["groups"] = FinancialBudgetCodeService.group_version_payloads(
+                filtered_payloads,
+                summaries_by_id=summaries_by_id,
+                group_by_cycle=False,
+                group_by_category=True,
+            )
+        return result, None
 
     @staticmethod
     def create_version(*, payload: Dict, allowed_company_ids: Optional[Sequence[int]] = None) -> Tuple[Optional[Dict], Optional[str]]:
-        data = FinancialBudgetVersionInput.model_validate(payload)
+        normalized_payload = FinancialBudgetCodeService.normalize_version_payload(payload, company_id=payload.get("company_id"))
+        data = FinancialBudgetVersionInput.model_validate(normalized_payload)
         scope_error = FinancialService._ensure_company_scope(data.company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
@@ -61,7 +148,7 @@ class FinancialBudgetService:
             FinancialBudgetService._deactivate_other_versions(item.company_id, exclude_version_id=None)
         try:
             db.session.commit()
-            return item.to_dict(), None
+            return FinancialBudgetCodeService.enrich_version_payload(item), None
         except Exception:
             db.session.rollback()
             return None, "Não foi possível criar a versão orçamentária."
@@ -84,7 +171,7 @@ class FinancialBudgetService:
         ).first()
         if not version:
             return None, "Versão orçamentária não encontrada no escopo da empresa."
-        return version.to_dict(), None
+        return FinancialBudgetCodeService.enrich_version_payload(version), None
 
     @staticmethod
     def update_version(
@@ -106,7 +193,12 @@ class FinancialBudgetService:
         if not version:
             return None, "Versão orçamentária não encontrada no escopo da empresa."
 
-        data = FinancialBudgetVersionUpdateInput.model_validate(payload)
+        normalized_payload = FinancialBudgetCodeService.normalize_version_payload(
+            payload,
+            company_id=company_id,
+            existing_metadata_json=version.metadata_json or {},
+        )
+        data = FinancialBudgetVersionUpdateInput.model_validate(normalized_payload)
         merged = data.model_dump(exclude_unset=True)
         period_start = merged.get("period_start", version.period_start)
         period_end = merged.get("period_end", version.period_end)
@@ -131,7 +223,7 @@ class FinancialBudgetService:
             FinancialBudgetService._deactivate_other_versions(company_id, exclude_version_id=version.id)
         try:
             db.session.commit()
-            return version.to_dict(), None
+            return FinancialBudgetCodeService.enrich_version_payload(version), None
         except Exception:
             db.session.rollback()
             return None, "Não foi possível atualizar a versão orçamentária."
@@ -228,7 +320,7 @@ class FinancialBudgetService:
             )
 
         return {
-            "version": version.to_dict(),
+            "version": FinancialBudgetCodeService.enrich_version_payload(version),
             "months": [month.isoformat() for month in months],
             "lines": payload_lines,
         }, None
@@ -392,6 +484,37 @@ class FinancialBudgetService:
             query = query.filter(FinancialBudgetVersion.id != exclude_version_id)
         for item in query.all():
             item.status = "draft"
+
+    @staticmethod
+    def _build_version_summaries(
+        version_payloads: List[Dict],
+        *,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Dict[int, Dict[str, float]]:
+        summaries: Dict[int, Dict[str, float]] = {}
+        if not version_payloads:
+            return summaries
+
+        from services.financial_budget_workspace_service import FinancialBudgetWorkspaceService
+
+        for payload in version_payloads:
+            version_id = payload.get("id")
+            if version_id is None:
+                continue
+            version = FinancialBudgetVersion.query.filter(
+                FinancialBudgetVersion.id == int(version_id),
+                FinancialBudgetVersion.company_id == company_id,
+                FinancialBudgetVersion.deleted_at.is_(None),
+            ).first()
+            if not version:
+                continue
+            lines = FinancialBudgetWorkspaceService._list_lines_for_version(
+                company_id=company_id,
+                version_id=version.id,
+            )
+            summaries[int(version_id)] = FinancialBudgetWorkspaceService._build_version_summary(lines)
+        return summaries
 
     @staticmethod
     def _calculate_actuals_for_line(*, company_id: int, line: FinancialBudgetLine, months: List[date]) -> Dict[str, float]:

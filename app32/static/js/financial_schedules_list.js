@@ -137,13 +137,15 @@
         const summary = item.summary || {};
         const settlementState = summary.settlement_state || 'open';
         const hasOpenBalance = Number(summary.open_total || 0) > 0;
+        const borderoCode = item.bordero?.code || summary.bordero_code || '';
+        const isBorderoLocked = Boolean(item.is_bordero_locked || summary.is_bordero_locked);
         return `
         <tr>
           <td><span class="sched-pill ${settlementClass(settlementState)}">${settlementLabel(settlementState)}</span></td>
           <td>${item.id}</td>
           <td class="sched-history">
             <strong>${item.description || item.name || 'Sem histórico'}</strong>
-            <small>${item.schedule_code || '-'} · ${item.status || '-'}</small>
+            <small>${item.schedule_code || '-'} · ${item.status || '-'}${borderoCode ? ` · ${borderoCode}` : ''}</small>
           </td>
           <td><span class="sched-pill ${typeClass(item.entry_type)}">${typeLabel(item.entry_type)}</span></td>
           <td><span class="${amountClass(item.signed_template_amount ?? 0)}">${money(item.signed_template_amount ?? item.template_amount ?? 0)}</span></td>
@@ -153,9 +155,9 @@
           <td>${formatDate(item.next_due_date || item.first_due_date)}</td>
           <td>
             <div class="sched-row-actions">
-              <button type="button" class="btn btn-secondary" data-action="settle" data-id="${item.id}" ${hasOpenBalance ? '' : 'disabled'}>Liquidar</button>
-              <a class="btn btn-secondary" href="/financial/schedules/${item.id}">Editar</a>
-              <button type="button" class="btn btn-danger" data-action="delete" data-id="${item.id}">Excluir</button>
+              <button type="button" class="btn btn-secondary" data-action="settle" data-id="${item.id}" ${(hasOpenBalance && !isBorderoLocked) ? '' : 'disabled'}>${isBorderoLocked ? 'No borderô' : 'Liquidar'}</button>
+              <a class="btn btn-secondary" href="/financial/schedules/${item.id}">${isBorderoLocked ? 'Consultar' : 'Editar'}</a>
+              <button type="button" class="btn btn-danger" data-action="delete" data-id="${item.id}" ${isBorderoLocked ? 'disabled' : ''}>Excluir</button>
             </div>
           </td>
         </tr>

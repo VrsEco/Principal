@@ -20,6 +20,7 @@ from models.financial_budget import (
     BUDGET_DOCUMENT_STATUS_VALUES,
     BUDGET_DOCUMENT_TYPE_VALUES,
 )
+from services.financial_budget_code_service import FinancialBudgetCodeService
 from schemas.financial_budget import (
     FinancialBudgetContractCreateInput,
     FinancialBudgetContractUpdateInput,
@@ -45,47 +46,91 @@ class FinancialBudgetWorkspaceService:
         *,
         company_id: int,
         version_id: Optional[int] = None,
+        budget_cycle: Optional[str] = None,
+        budget_category: Optional[str] = None,
+        budget_group: Optional[str] = None,
+        consolidated: bool = False,
+        group_by_cycle: bool = False,
+        group_by_category: bool = False,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
 
-        versions, error = FinancialBudgetService.list_versions(
+        versions_result, error = FinancialBudgetService.list_versions(
             company_id=company_id,
             allowed_company_ids=allowed_company_ids,
+            budget_cycle=budget_cycle,
+            budget_category=budget_category,
+            budget_group=budget_group,
+            consolidated=consolidated,
+            group_by_cycle=group_by_cycle,
+            group_by_category=group_by_category,
+            include_summary=True,
         )
         if error:
             return None, error
 
-        version = FinancialBudgetWorkspaceService._resolve_version(
-            company_id=company_id,
-            version_id=version_id,
-        )
-        if version_id and not version:
+        version_payloads = FinancialBudgetWorkspaceService._extract_version_payloads(versions_result)
+        if version_id:
+            selected_version_payload = FinancialBudgetWorkspaceService._resolve_selected_version_payload(
+                version_payloads=version_payloads,
+                version_id=version_id,
+            )
+        else:
+            selected_version_payload = FinancialBudgetWorkspaceService._resolve_selected_version_payload(
+                version_payloads=version_payloads,
+                version_id=None,
+            )
+
+        if version_id and not selected_version_payload:
             return None, "Orçamento não encontrado no escopo da empresa."
 
-        if not version:
+        if not selected_version_payload:
             return {
-                "versions": versions or [],
+                "versions": version_payloads,
+                "budgets": version_payloads,
                 "selected_version_id": None,
                 "version": None,
                 "summary": FinancialBudgetWorkspaceService._empty_summary(),
+                "consolidated_summary": FinancialBudgetWorkspaceService._empty_summary(),
                 "lines": [],
+                "cycle_groups": versions_result.get("cycles") if isinstance(versions_result, dict) else [],
+                "filters": versions_result.get("filters") if isinstance(versions_result, dict) else {},
             }, None
+
+        version = FinancialBudgetWorkspaceService._get_version(
+            company_id=company_id,
+            version_id=int(selected_version_payload["id"]),
+        )
+        if not version:
+            return None, "Versão orçamentária não encontrada no escopo da empresa."
 
         lines = FinancialBudgetWorkspaceService._list_lines_for_version(
             company_id=company_id,
             version_id=version.id,
         )
         payload_lines = [FinancialBudgetWorkspaceService._serialize_line(line) for line in lines]
+        consolidated_summary = (
+            FinancialBudgetCodeService.summarize_version_payloads(version_payloads)
+            if version_payloads
+            else FinancialBudgetWorkspaceService._empty_summary()
+        )
+        cycle_groups = versions_result.get("cycles") if isinstance(versions_result, dict) else []
+        category_groups = versions_result.get("groups") if isinstance(versions_result, dict) else []
 
         return {
-            "versions": versions or [],
+            "versions": version_payloads,
+            "budgets": version_payloads,
             "selected_version_id": version.id,
-            "version": version.to_dict(),
+            "version": FinancialBudgetCodeService.enrich_version_payload(version),
             "summary": FinancialBudgetWorkspaceService._build_version_summary(lines),
+            "consolidated_summary": consolidated_summary,
             "lines": payload_lines,
+            "cycle_groups": cycle_groups,
+            "category_groups": category_groups,
+            "filters": versions_result.get("filters") if isinstance(versions_result, dict) else {},
         }, None
 
     @staticmethod
@@ -96,32 +141,57 @@ class FinancialBudgetWorkspaceService:
         line_id: Optional[int] = None,
         contract_id: Optional[int] = None,
         document_id: Optional[int] = None,
+        budget_cycle: Optional[str] = None,
+        budget_category: Optional[str] = None,
+        budget_group: Optional[str] = None,
+        consolidated: bool = False,
+        group_by_cycle: bool = False,
+        group_by_category: bool = False,
+        include_operational_queue: bool = False,
+        queue_limit: int = 50,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
 
-        versions, error = FinancialBudgetService.list_versions(
+        versions_result, error = FinancialBudgetService.list_versions(
             company_id=company_id,
             allowed_company_ids=allowed_company_ids,
+            budget_cycle=budget_cycle,
+            budget_category=budget_category,
+            budget_group=budget_group,
+            consolidated=consolidated,
+            group_by_cycle=group_by_cycle,
+            group_by_category=group_by_category,
+            include_summary=True,
         )
         if error:
             return None, error
 
-        version = FinancialBudgetWorkspaceService._resolve_version(
-            company_id=company_id,
-            version_id=version_id,
-        )
-        if version_id and not version:
+        version_payloads = FinancialBudgetWorkspaceService._extract_version_payloads(versions_result)
+        if version_id:
+            selected_version_payload = FinancialBudgetWorkspaceService._resolve_selected_version_payload(
+                version_payloads=version_payloads,
+                version_id=version_id,
+            )
+        else:
+            selected_version_payload = FinancialBudgetWorkspaceService._resolve_selected_version_payload(
+                version_payloads=version_payloads,
+                version_id=None,
+            )
+
+        if version_id and not selected_version_payload:
             return None, "Orçamento não encontrado no escopo da empresa."
 
-        if not version:
+        if not selected_version_payload:
             return {
-                "versions": versions or [],
+                "versions": version_payloads,
+                "budgets": version_payloads,
                 "selected_version_id": None,
                 "version": None,
                 "summary": FinancialBudgetWorkspaceService._empty_summary(),
+                "consolidated_summary": FinancialBudgetWorkspaceService._empty_summary(),
                 "lines": [],
                 "selected_line_id": None,
                 "selected_contract_id": None,
@@ -129,7 +199,17 @@ class FinancialBudgetWorkspaceService:
                 "contracts": [],
                 "documents": [],
                 "schedules": [],
+                "cycle_groups": versions_result.get("cycles") if isinstance(versions_result, dict) else [],
+                "category_groups": versions_result.get("groups") if isinstance(versions_result, dict) else [],
+                "filters": versions_result.get("filters") if isinstance(versions_result, dict) else {},
             }, None
+
+        version = FinancialBudgetWorkspaceService._get_version(
+            company_id=company_id,
+            version_id=int(selected_version_payload["id"]),
+        )
+        if not version:
+            return None, "Versão orçamentária não encontrada no escopo da empresa."
 
         lines = FinancialBudgetWorkspaceService._list_lines_for_version(
             company_id=company_id,
@@ -174,12 +254,25 @@ class FinancialBudgetWorkspaceService:
             if selected_document
             else []
         )
+        operational_queue = (
+            FinancialBudgetWorkspaceService._list_operational_queue(
+                company_id=company_id,
+                budget_cycle=budget_cycle,
+                budget_category=budget_category,
+                budget_group=budget_group,
+                limit=queue_limit,
+            )
+            if include_operational_queue
+            else []
+        )
 
         return {
-            "versions": versions or [],
+            "versions": version_payloads,
+            "budgets": version_payloads,
             "selected_version_id": version.id,
-            "version": version.to_dict(),
+            "version": FinancialBudgetCodeService.enrich_version_payload(version),
             "summary": FinancialBudgetWorkspaceService._build_version_summary(lines),
+            "consolidated_summary": FinancialBudgetCodeService.summarize_version_payloads(version_payloads),
             "lines": [FinancialBudgetWorkspaceService._serialize_line(line) for line in lines],
             "selected_line_id": selected_line.id if selected_line else None,
             "selected_line": FinancialBudgetWorkspaceService._serialize_line(selected_line) if selected_line else None,
@@ -190,6 +283,10 @@ class FinancialBudgetWorkspaceService:
             "selected_document_id": selected_document.id if selected_document else None,
             "selected_document": FinancialBudgetWorkspaceService._serialize_document(selected_document) if selected_document else None,
             "schedules": [FinancialBudgetWorkspaceService._serialize_schedule(schedule) for schedule in schedules],
+            "operational_queue": operational_queue,
+            "cycle_groups": versions_result.get("cycles") if isinstance(versions_result, dict) else [],
+            "category_groups": versions_result.get("groups") if isinstance(versions_result, dict) else [],
+            "filters": versions_result.get("filters") if isinstance(versions_result, dict) else {},
         }, None
 
     @staticmethod
@@ -230,6 +327,17 @@ class FinancialBudgetWorkspaceService:
 
         return {
             **(base_options or {}),
+            "budget_categories": [
+                {"code": "CAPEX", "label": "CAPEX"},
+                {"code": "OPEX", "label": "OPEX"},
+                {"code": "CAPEX_EXTRA", "label": "CAPEX Extra"},
+                {"code": "GENERAL", "label": "Geral"},
+            ],
+            "budget_cycle_modes": [
+                {"code": "annual", "label": "Anual"},
+                {"code": "quarterly", "label": "Trimestral"},
+                {"code": "monthly", "label": "Mensal"},
+            ],
             "counterparties": [
                 {
                     "id": item.id,
@@ -253,7 +361,56 @@ class FinancialBudgetWorkspaceService:
             "contract_statuses": list(BUDGET_CONTRACT_STATUS_VALUES),
             "document_statuses": list(BUDGET_DOCUMENT_STATUS_VALUES),
             "document_types": list(BUDGET_DOCUMENT_TYPE_VALUES),
+            "default_suggestions": FinancialBudgetWorkspaceService._build_default_suggestions(company_id=company_id),
         }, None
+
+    @staticmethod
+    def _build_default_suggestions(*, company_id: int) -> Dict[str, Any]:
+        default_document = (
+            FinancialBudgetDocument.query.filter(
+                FinancialBudgetDocument.company_id == company_id,
+                FinancialBudgetDocument.deleted_at.is_(None),
+                FinancialBudgetDocument.is_default_suggestion.is_(True),
+            )
+            .order_by(FinancialBudgetDocument.updated_at.desc(), FinancialBudgetDocument.id.desc())
+            .first()
+        )
+        if not default_document:
+            return {}
+
+        contract = FinancialBudgetWorkspaceService._get_contract(
+            company_id=company_id,
+            contract_id=default_document.budget_contract_id,
+        )
+        line = (
+            FinancialBudgetWorkspaceService._get_line(company_id=company_id, line_id=contract.budget_line_id)
+            if contract
+            else None
+        )
+        version = (
+            FinancialBudgetWorkspaceService._get_version(company_id=company_id, version_id=line.budget_version_id)
+            if line
+            else None
+        )
+        return {
+            "budget_version_id": version.id if version else None,
+            "budget_line_id": line.id if line else None,
+            "budget_contract_id": contract.id if contract else None,
+            "budget_document_id": default_document.id,
+            "budget_document_label": default_document.title,
+        }
+
+    @staticmethod
+    def _clear_default_document_suggestions(*, company_id: int, exclude_document_id: Optional[int] = None) -> None:
+        query = FinancialBudgetDocument.query.filter(
+            FinancialBudgetDocument.company_id == company_id,
+            FinancialBudgetDocument.deleted_at.is_(None),
+            FinancialBudgetDocument.is_default_suggestion.is_(True),
+        )
+        if exclude_document_id:
+            query = query.filter(FinancialBudgetDocument.id != exclude_document_id)
+        for item in query.all():
+            item.is_default_suggestion = False
 
     @staticmethod
     def create_line(
@@ -548,6 +705,12 @@ class FinancialBudgetWorkspaceService:
         item = FinancialBudgetDocument(**normalized)
         db.session.add(item)
         try:
+            if item.is_default_suggestion:
+                db.session.flush()
+                FinancialBudgetWorkspaceService._clear_default_document_suggestions(
+                    company_id=data.company_id,
+                    exclude_document_id=item.id,
+                )
             db.session.commit()
             return FinancialBudgetWorkspaceService._serialize_document(item), None
         except Exception as exc:
@@ -600,6 +763,11 @@ class FinancialBudgetWorkspaceService:
         try:
             for key, value in merged.items():
                 setattr(item, key, value)
+            if item.is_default_suggestion:
+                FinancialBudgetWorkspaceService._clear_default_document_suggestions(
+                    company_id=company_id,
+                    exclude_document_id=item.id,
+                )
             FinancialBudgetWorkspaceService._refresh_document_status(item)
             db.session.commit()
             return FinancialBudgetWorkspaceService._serialize_document(item), None
@@ -634,6 +802,8 @@ class FinancialBudgetWorkspaceService:
 
         now = datetime.utcnow()
         try:
+            if item.is_default_suggestion:
+                item.is_default_suggestion = False
             item.deleted_at = now
             for schedule in FinancialBudgetWorkspaceService._list_schedules_for_document(
                 company_id=company_id,
@@ -857,6 +1027,24 @@ class FinancialBudgetWorkspaceService:
         )
 
     @staticmethod
+    def _extract_version_payloads(versions_result: Any) -> List[Dict[str, Any]]:
+        if isinstance(versions_result, dict):
+            return list(versions_result.get("items") or [])
+        return list(versions_result or [])
+
+    @staticmethod
+    def _resolve_selected_version_payload(
+        *,
+        version_payloads: List[Dict[str, Any]],
+        version_id: Optional[int],
+    ) -> Optional[Dict[str, Any]]:
+        if not version_payloads:
+            return None
+        if version_id is None:
+            return version_payloads[0]
+        return next((item for item in version_payloads if int(item.get("id")) == int(version_id)), None)
+
+    @staticmethod
     def _get_version(*, company_id: int, version_id: int) -> Optional[FinancialBudgetVersion]:
         return FinancialBudgetVersion.query.filter(
             FinancialBudgetVersion.id == version_id,
@@ -976,6 +1164,7 @@ class FinancialBudgetWorkspaceService:
     def _serialize_line(line: Optional[FinancialBudgetLine]) -> Optional[Dict[str, Any]]:
         if not line:
             return None
+        version_context = FinancialBudgetCodeService.enrich_version_payload(line.version) if getattr(line, "version", None) else None
         contracts = FinancialBudgetWorkspaceService._list_contracts_for_line(company_id=line.company_id, line_id=line.id)
         contracted_total = sum((Decimal(str(item.contract_amount or 0)) for item in contracts), _DECIMAL_ZERO)
         documents = [
@@ -1002,6 +1191,10 @@ class FinancialBudgetWorkspaceService:
             {
                 "chart_account_name": line.chart_account.name if line.chart_account else None,
                 "cost_center_name": line.cost_center.name if line.cost_center else None,
+                "budget_version_code": version_context.get("code") if version_context else None,
+                "budget_cycle": version_context.get("budget_cycle") if version_context else None,
+                "budget_category": version_context.get("budget_category") if version_context else None,
+                "budget_group": version_context.get("budget_group") if version_context else None,
                 "summary": {
                     "planned_total": float(Decimal(str(line.planned_amount or 0))),
                     "contracted_total": float(contracted_total),
@@ -1020,6 +1213,7 @@ class FinancialBudgetWorkspaceService:
     def _serialize_contract(contract: Optional[FinancialBudgetContract]) -> Optional[Dict[str, Any]]:
         if not contract:
             return None
+        version_context = FinancialBudgetCodeService.enrich_version_payload(contract.budget_line.version) if getattr(contract, "budget_line", None) and getattr(contract.budget_line, "version", None) else None
         documents = FinancialBudgetWorkspaceService._list_documents_for_contract(
             company_id=contract.company_id,
             contract_id=contract.id,
@@ -1038,6 +1232,10 @@ class FinancialBudgetWorkspaceService:
         payload.update(
             {
                 "counterparty_name": contract.counterparty.name if contract.counterparty else None,
+                "budget_version_code": version_context.get("code") if version_context else None,
+                "budget_cycle": version_context.get("budget_cycle") if version_context else None,
+                "budget_category": version_context.get("budget_category") if version_context else None,
+                "budget_group": version_context.get("budget_group") if version_context else None,
                 "summary": {
                     "contract_amount": float(Decimal(str(contract.contract_amount or 0))),
                     "executed_total": float(executed_total),
@@ -1054,6 +1252,7 @@ class FinancialBudgetWorkspaceService:
     def _serialize_document(document: Optional[FinancialBudgetDocument]) -> Optional[Dict[str, Any]]:
         if not document:
             return None
+        version_context = FinancialBudgetCodeService.enrich_version_payload(document.budget_contract.budget_line.version) if getattr(document, "budget_contract", None) and getattr(document.budget_contract, "budget_line", None) and getattr(document.budget_contract.budget_line, "version", None) else None
         schedules = FinancialBudgetWorkspaceService._list_schedules_for_document(
             company_id=document.company_id,
             document_id=document.id,
@@ -1063,6 +1262,11 @@ class FinancialBudgetWorkspaceService:
         payload.update(
             {
                 "counterparty_name": document.counterparty.name if document.counterparty else None,
+                "is_default_suggestion": bool(getattr(document, "is_default_suggestion", False)),
+                "budget_version_code": version_context.get("code") if version_context else None,
+                "budget_cycle": version_context.get("budget_cycle") if version_context else None,
+                "budget_category": version_context.get("budget_category") if version_context else None,
+                "budget_group": version_context.get("budget_group") if version_context else None,
                 "summary": {
                     "document_amount": float(Decimal(str(document.document_amount or 0))),
                     "scheduled_total": float(scheduled_total),
@@ -1076,12 +1280,78 @@ class FinancialBudgetWorkspaceService:
     @staticmethod
     def _serialize_schedule(schedule: FinancialSchedule) -> Dict[str, Any]:
         payload = schedule.to_dict()
+        version_context = FinancialBudgetWorkspaceService._resolve_schedule_budget_context(schedule)
         payload["signed_template_amount"] = FinancialService.get_signed_amount(
             payload.get("template_amount"),
             schedule.movement_nature,
         )
         payload["display_variant"] = "negative" if payload["signed_template_amount"] < 0 else "positive"
+        payload["budget_version_code"] = version_context.get("code") if version_context else None
+        payload["budget_cycle"] = version_context.get("budget_cycle") if version_context else None
+        payload["budget_category"] = version_context.get("budget_category") if version_context else None
+        payload["budget_group"] = version_context.get("budget_group") if version_context else None
         return payload
+
+    @staticmethod
+    def _resolve_schedule_budget_context(schedule: FinancialSchedule) -> Optional[Dict[str, Any]]:
+        budget_document = getattr(schedule, "budget_document", None)
+        budget_contract = getattr(budget_document, "budget_contract", None) if budget_document else None
+        budget_line = getattr(budget_contract, "budget_line", None) if budget_contract else None
+        budget_version = getattr(budget_line, "version", None) if budget_line else None
+        if not budget_version:
+            return None
+        return FinancialBudgetCodeService.enrich_version_payload(budget_version)
+
+    @staticmethod
+    def _list_operational_queue(
+        *,
+        company_id: int,
+        budget_cycle: Optional[str] = None,
+        budget_category: Optional[str] = None,
+        budget_group: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        limit = max(1, min(int(limit or 50), 200))
+        schedules = (
+            FinancialSchedule.query.filter(
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            )
+            .order_by(
+                FinancialSchedule.next_due_date.asc(),
+                FinancialSchedule.id.asc(),
+            )
+            .limit(limit)
+            .all()
+        )
+        payloads: List[Dict[str, Any]] = []
+        for schedule in schedules:
+            version_context = FinancialBudgetWorkspaceService._resolve_schedule_budget_context(schedule)
+            if budget_cycle is not None:
+                if not version_context:
+                    continue
+                if not FinancialBudgetCodeService.matches_filters(
+                    version_context,
+                    budget_cycle=budget_cycle,
+                    budget_category=budget_category,
+                    budget_group=budget_group,
+                ):
+                    continue
+            elif budget_category is not None or budget_group is not None:
+                if not version_context:
+                    continue
+                if not FinancialBudgetCodeService.matches_filters(
+                    version_context,
+                    budget_cycle=None,
+                    budget_category=budget_category,
+                    budget_group=budget_group,
+                ):
+                    continue
+            else:
+                # sem filtro orçamentário: mostrar tudo, inclusive agendamentos fora do orçamento
+                pass
+            payloads.append(FinancialBudgetWorkspaceService._serialize_schedule(schedule))
+        return payloads
 
     @staticmethod
     def _build_version_summary(lines: List[FinancialBudgetLine]) -> Dict[str, Any]:

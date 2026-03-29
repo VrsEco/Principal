@@ -54,6 +54,14 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.sched-main,
+.sched-shell--form > .sched-main,
+.sched-shell--form .sched-card,
+.sched-form {
+  width: 100%;
+  min-width: 0;
+}
+
 .sched-rail {
   position: sticky;
   top: 1rem;
@@ -234,7 +242,7 @@
   align-items: end;
 }
 
-.field {
+.sched-page .field {
   display: flex;
   flex-direction: column;
   gap: 0.42rem;
@@ -242,20 +250,20 @@
   font-weight: 600;
 }
 
-.field-inline {
+.sched-page .field-inline {
   display: flex;
   gap: 0.6rem;
   align-items: center;
 }
 
-.field-inline select {
+.sched-page .field-inline select {
   flex: 1;
 }
 
-.field-span-1 { grid-column: span 1; }
-.field-span-2 { grid-column: span 2; }
-.field-span-3 { grid-column: span 3; }
-.field-span-4 { grid-column: span 4; }
+.sched-page .field-span-1 { grid-column: span 1; }
+.sched-page .field-span-2 { grid-column: span 2; }
+.sched-page .field-span-3 { grid-column: span 3; }
+.sched-page .field-span-4 { grid-column: span 4; }
 
 .section-head {
   display: flex;
@@ -278,8 +286,17 @@
 .rateio-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;
+  min-width: 1100px;
+  table-layout: fixed;
 }
+
+.rateio-col--chart-account { width: 170px; }
+.rateio-col--cost-center { width: 210px; }
+.rateio-col--budget-document { width: 260px; }
+.rateio-col--domain { width: 190px; }
+.rateio-col--percentage { width: 130px; }
+.rateio-col--amount { width: 130px; }
+.rateio-col--actions { width: 110px; }
 
 .rateio-table th,
 .rateio-table td,
@@ -289,6 +306,15 @@
   border-bottom: 1px solid var(--border);
   vertical-align: top;
   text-align: left;
+}
+
+.rateio-table td > select,
+.rateio-table td > input {
+  min-width: 0;
+}
+
+.rateio-cell--actions {
+  white-space: nowrap;
 }
 
 .rateio-table th,
@@ -339,7 +365,8 @@
   border-color: rgba(239, 68, 68, 0.22);
 }
 
-.btn {
+.sched-page .btn,
+.modal-card .btn {
   border: none;
   border-radius: 12px;
   padding: 0.8rem 1rem;
@@ -351,12 +378,18 @@
   gap: 0.35rem;
 }
 
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-secondary { background: var(--surface-secondary); color: var(--text-primary); border: 1px solid var(--border); }
-.btn-success { background: #16a34a; color: #fff; }
-.btn-ghost { background: transparent; color: var(--text-secondary); padding: 0.55rem 0.75rem; border: 1px solid var(--border); }
-.btn-inline { white-space: nowrap; }
-.btn-icon { width: 34px; height: 34px; padding: 0; border-radius: 10px; }
+.sched-page .btn-primary,
+.modal-card .btn-primary { background: var(--primary); color: #fff; }
+.sched-page .btn-secondary,
+.modal-card .btn-secondary { background: var(--surface-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+.sched-page .btn-success,
+.modal-card .btn-success { background: #16a34a; color: #fff; }
+.sched-page .btn-ghost,
+.modal-card .btn-ghost { background: transparent; color: var(--text-secondary); padding: 0.55rem 0.75rem; border: 1px solid var(--border); }
+.sched-page .btn-inline,
+.modal-card .btn-inline { white-space: nowrap; }
+.sched-page .btn-icon,
+.modal-card .btn-icon { width: 34px; height: 34px; padding: 0; border-radius: 10px; }
 
 .empty-state {
   text-align: center;
@@ -545,7 +578,7 @@
   .field-span-2,
   .field-span-1 { grid-column: auto; }
   .sched-tab { flex: 1 1 calc(50% - 0.4rem); text-align: center; }
-  .rateio-table { min-width: 820px; }
+  .rateio-table { min-width: 1040px; }
   .btn-inline,
   .sched-header-actions .btn,
   .sched-footer-actions .btn,
@@ -570,7 +603,7 @@
   .schedule-item-meta { flex-direction: column; align-items: flex-start; }
   .attachment-item,
   .baixa-card { padding: 0.8rem 0.85rem; }
-  .rateio-table { min-width: 760px; }
+  .rateio-table { min-width: 980px; }
   .rateio-table th,
   .rateio-table td,
   .settlement-table th,

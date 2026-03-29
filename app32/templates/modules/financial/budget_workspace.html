@@ -1,0 +1,525 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Workspace Orçamentário{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<a href="/financial/budgets">Ciclos e Orçamentos</a>
+<span class="sep">/</span>
+<span class="current">Workspace Orçamentário</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="budget-workspace" data-company-id="{{ company_id or '' }}">
+    <section class="budget-hero">
+        <div class="budget-hero__copy">
+            <p class="budget-eyebrow">Navegação hierárquica</p>
+            <h1>Workspace Orçamentário</h1>
+            <p class="budget-hero__text">
+                Acesse Orçamento → Verba → Contrato → NF / Assemelhado → Agendamentos com drill-down contínuo.
+            </p>
+        </div>
+        <div class="budget-hero__actions">
+            <a class="budget-btn budget-btn--ghost" href="/financial/budgets{% if company_id %}?company_id={{ company_id }}{% endif %}">Voltar à lista</a>
+            <a class="budget-btn budget-btn--secondary" href="/financial/schedules{% if company_id %}?company_id={{ company_id }}{% endif %}">Agendamentos do dia a dia</a>
+        </div>
+    </section>
+
+    <section class="budget-kpis" id="budget-kpis">
+        <article class="budget-kpi">
+            <span>Previsto</span>
+            <strong id="kpi-planned">R$ 0,00</strong>
+            <small>Planejamento do orçamento</small>
+        </article>
+        <article class="budget-kpi">
+            <span>Contratado</span>
+            <strong id="kpi-contracted">R$ 0,00</strong>
+            <small>Compromissos firmados</small>
+        </article>
+        <article class="budget-kpi">
+            <span>Executado</span>
+            <strong id="kpi-executed">R$ 0,00</strong>
+            <small>Lançamentos e baixas</small>
+        </article>
+        <article class="budget-kpi">
+            <span>Agendado</span>
+            <strong id="kpi-scheduled">R$ 0,00</strong>
+            <small>Previsões operacionais</small>
+        </article>
+    </section>
+
+    <section class="budget-workspace-layout">
+        <aside class="budget-card budget-sidebar">
+            <div class="budget-card__head">
+                <div>
+                    <p class="budget-eyebrow">Orçamentos</p>
+                    <h2>Lista raiz</h2>
+                </div>
+                <span class="budget-pill" id="workspace-version-count">0 itens</span>
+            </div>
+            <div class="budget-card__body">
+                <div id="workspace-version-list" class="budget-sidebar-list">
+                    <div class="budget-empty-state">Carregando orçamentos...</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="budget-main">
+            <article class="budget-card budget-context-card">
+                <div class="budget-card__head">
+                    <div>
+                        <p class="budget-eyebrow">Contexto atual</p>
+                        <h2 id="workspace-title">Selecione um orçamento</h2>
+                    </div>
+                    <div class="budget-context-actions">
+                        <a class="budget-btn budget-btn--secondary" id="workspace-open-root" href="/financial/budgets{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir lista</a>
+                    </div>
+                </div>
+                <div class="budget-card__body">
+                    <div id="workspace-summary" class="budget-context-empty">
+                        Escolha um orçamento na lateral para visualizar a hierarquia, os vínculos e os detalhes de execução.
+                    </div>
+                    <div class="budget-divider"></div>
+                    <div class="budget-breadcrumbs" id="workspace-breadcrumbs">
+                        <span>Orçamento</span>
+                        <span>→</span>
+                        <span>Verba</span>
+                        <span>→</span>
+                        <span>Contrato</span>
+                        <span>→</span>
+                        <span>NF / Assemelhado</span>
+                        <span>→</span>
+                        <span>Agendamentos</span>
+                    </div>
+                </div>
+            </article>
+
+            <section class="budget-grid-columns">
+                <article class="budget-card budget-column">
+                    <div class="budget-card__head">
+                        <div>
+                            <p class="budget-eyebrow">Nível 1</p>
+                            <h2>Verbas</h2>
+                        </div>
+                        <span class="budget-pill" id="lines-count">0</span>
+                    </div>
+                    <div class="budget-card__body">
+                        <div id="lines-list" class="budget-node-list">
+                            <div class="budget-empty-state">Selecione um orçamento.</div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="budget-card budget-column">
+                    <div class="budget-card__head">
+                        <div>
+                            <p class="budget-eyebrow">Nível 2</p>
+                            <h2>Contratos</h2>
+                        </div>
+                        <span class="budget-pill" id="contracts-count">0</span>
+                    </div>
+                    <div class="budget-card__body">
+                        <div id="contracts-list" class="budget-node-list">
+                            <div class="budget-empty-state">Selecione uma verba.</div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="budget-card budget-column">
+                    <div class="budget-card__head">
+                        <div>
+                            <p class="budget-eyebrow">Nível 3</p>
+                            <h2>NF / Assemelhados</h2>
+                        </div>
+                        <span class="budget-pill" id="documents-count">0</span>
+                    </div>
+                    <div class="budget-card__body">
+                        <div id="documents-list" class="budget-node-list">
+                            <div class="budget-empty-state">Selecione um contrato.</div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="budget-card budget-column">
+                    <div class="budget-card__head">
+                        <div>
+                            <p class="budget-eyebrow">Nível 4</p>
+                            <h2>Agendamentos</h2>
+                        </div>
+                        <span class="budget-pill" id="schedules-count">0</span>
+                    </div>
+                    <div class="budget-card__body">
+                        <div id="schedules-list" class="budget-node-list">
+                            <div class="budget-empty-state">Selecione uma NF / Assemelhado.</div>
+                        </div>
+                    </div>
+                </article>
+            </section>
+        </main>
+    </section>
+</div>
+
+<style>
+.budget-workspace{display:flex;flex-direction:column;gap:1rem;padding:0 2rem 2rem}
+.budget-hero,.budget-card,.budget-kpi{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-sm)}
+.budget-hero{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:1.25rem 1.5rem}
+.budget-hero__copy{max-width:64ch}
+.budget-hero__text{margin:.35rem 0 0;color:var(--text-secondary)}
+.budget-hero__actions{display:flex;flex-wrap:wrap;gap:.75rem}
+.budget-eyebrow{margin:0 0 .35rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);font-weight:700}
+.budget-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+.budget-kpi{padding:1rem}
+.budget-kpi span{display:block;color:var(--text-secondary);font-size:.8rem}
+.budget-kpi strong{display:block;margin-top:.35rem;font-size:1.15rem}
+.budget-kpi small{display:block;margin-top:.2rem;color:var(--text-tertiary)}
+.budget-workspace-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:1rem;align-items:start}
+.budget-card{overflow:hidden}
+.budget-card__head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:1.1rem 1.2rem 0}
+.budget-card__body{padding:1.1rem 1.2rem 1.2rem}
+.budget-sidebar{position:sticky;top:1rem}
+.budget-sidebar-list,.budget-node-list{display:flex;flex-direction:column;gap:.75rem}
+.budget-sidebar-item,.budget-node-item{border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary);padding:.9rem 1rem;cursor:pointer;transition:all .15s ease}
+.budget-sidebar-item:hover,.budget-node-item:hover{transform:translateY(-1px);border-color:var(--primary)}
+.budget-sidebar-item.is-selected,.budget-node-item.is-selected{border-color:var(--primary);box-shadow:0 0 0 1px rgba(59,130,246,.08)}
+.budget-sidebar-item__head,.budget-node-item__head{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap}
+.budget-code{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary)}
+.budget-title{margin:.15rem 0 0;font-size:1rem;font-weight:800;color:var(--text-primary)}
+.budget-meta{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.35rem;color:var(--text-secondary);font-size:.82rem}
+.budget-status,.budget-category,.budget-pill{display:inline-flex;align-items:center;padding:.3rem .55rem;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:.72rem;font-weight:700}
+.budget-status--draft{color:#64748b}.budget-status--active{color:#0f766e}.budget-status--archived{color:#7c3aed}
+.budget-category{background:rgba(59,130,246,.08);color:var(--primary)}
+.budget-pill{background:var(--surface-secondary);color:var(--text-secondary)}
+.budget-context-card .budget-card__body{display:flex;flex-direction:column;gap:.75rem}
+.budget-context-empty{padding:1rem;border:1px dashed var(--border);border-radius:14px;color:var(--text-secondary);background:var(--surface-secondary)}
+.budget-divider{height:1px;background:var(--border)}
+.budget-breadcrumbs{display:flex;flex-wrap:wrap;gap:.4rem;color:var(--text-secondary);font-size:.85rem}
+.budget-grid-columns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;align-items:start}
+.budget-node-item__body{display:flex;flex-direction:column;gap:.35rem;margin-top:.35rem}
+.budget-node-item__metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
+.budget-node-metric{padding:.5rem .6rem;border-radius:12px;border:1px solid var(--border);background:#fff}
+.budget-node-metric span{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)}
+.budget-node-metric strong{display:block;margin-top:.15rem;font-size:.82rem}
+.budget-node-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.2rem}
+.budget-node-btn{border:none;border-radius:10px;padding:.65rem .8rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);color:var(--text-primary)}
+.budget-node-btn--primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.budget-empty-state{padding:1rem;border:1px dashed var(--border);border-radius:14px;color:var(--text-secondary);text-align:center}
+@media (max-width:1400px){.budget-grid-columns{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1024px){.budget-workspace-layout,.budget-grid-columns,.budget-kpis{grid-template-columns:1fr}.budget-sidebar{position:static}}
+@media (max-width:768px){.budget-workspace{padding:0 1rem 1.5rem}.budget-hero,.budget-card__head{flex-direction:column}.budget-btn,.budget-node-btn{width:100%}.budget-node-item__metrics{grid-template-columns:1fr}}
+</style>
+
+<script>
+const budgetWorkspace = document.querySelector('.budget-workspace');
+const companyId = Number(budgetWorkspace?.dataset.companyId || 0);
+const state = {
+    workspace: null,
+    selectedVersionId: '',
+    selectedLineId: '',
+    selectedContractId: '',
+    selectedDocumentId: '',
+};
+
+const byId = (id) => document.getElementById(id);
+const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+async function api(url, options = {}) {
+    const response = await fetch(url, options);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const message = payload.error || payload.message || (payload.errors || []).map(item => item.msg).join(' | ') || 'Falha na operação.';
+        throw new Error(message);
+    }
+    return payload;
+}
+
+function workspaceUrl(params = {}) {
+    const query = new URLSearchParams({ company_id: companyId });
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+            query.set(key, value);
+        }
+    });
+    return `/api/financial/budget/execution-workspace?${query.toString()}`;
+}
+
+function renderKPIs(summary) {
+    byId('kpi-planned').textContent = formatCurrency(summary?.planned_total || 0);
+    byId('kpi-contracted').textContent = formatCurrency(summary?.contracted_total || 0);
+    byId('kpi-executed').textContent = formatCurrency(summary?.executed_total || 0);
+    byId('kpi-scheduled').textContent = formatCurrency(summary?.scheduled_total || 0);
+}
+
+function renderWorkspaceHeader() {
+    const version = state.workspace?.version;
+    const title = byId('workspace-title');
+    const summary = byId('workspace-summary');
+    const breadcrumbs = byId('workspace-breadcrumbs');
+    const openRoot = byId('workspace-open-root');
+
+    openRoot.href = `/financial/budgets?company_id=${companyId}${version?.id ? `&version_id=${version.id}` : ''}`;
+
+    if (!version) {
+        title.textContent = 'Selecione um orçamento';
+        summary.className = 'budget-context-empty';
+        summary.textContent = 'Escolha um orçamento na lateral para visualizar a hierarquia, os vínculos e os detalhes de execução.';
+        breadcrumbs.innerHTML = `
+            <span>Orçamento</span><span>→</span><span>Verba</span><span>→</span><span>Contrato</span><span>→</span><span>NF / Assemelhado</span><span>→</span><span>Agendamentos</span>
+        `;
+        renderKPIs({});
+        return;
+    }
+
+    title.textContent = `${version.code || 'Orçamento'} · ${version.name || 'Sem nome'}`;
+    const summaryData = state.workspace?.summary || {};
+    summary.className = 'budget-context-empty';
+    summary.innerHTML = `
+        <strong>${version.name || 'Orçamento sem nome'}</strong><br>
+        Código: ${version.code || '-'} · Status: ${version.status || '-'} · Scenario: ${version.scenario_type || 'original'}<br>
+        Período: ${version.period_start || '-'} → ${version.period_end || '-'}<br>
+        Verbas: ${(state.workspace?.lines || []).length} · Contratos: ${(state.workspace?.contracts || []).length} · Documentos: ${(state.workspace?.documents || []).length} · Agendamentos: ${(state.workspace?.schedules || []).length}<br>
+        Previsto: ${formatCurrency(summaryData.planned_total)} · Executado: ${formatCurrency(summaryData.executed_total)}
+    `;
+    breadcrumbs.innerHTML = `
+        <span>Orçamento</span><span>→</span>
+        <span>${version.code || 'Sem código'}</span><span>→</span>
+        <span>${state.selectedLineId ? 'Verba selecionada' : 'Verbas'}</span><span>→</span>
+        <span>${state.selectedContractId ? 'Contrato selecionado' : 'Contratos'}</span><span>→</span>
+        <span>${state.selectedDocumentId ? 'NF selecionada' : 'NF / Assemelhados'}</span><span>→</span>
+        <span>Agendamentos</span>
+    `;
+    renderKPIs(summaryData);
+}
+
+function renderVersionsSidebar() {
+    const root = byId('workspace-version-list');
+    const versions = state.workspace?.versions || [];
+    byId('workspace-version-count').textContent = `${versions.length} itens`;
+
+    if (!versions.length) {
+        root.innerHTML = '<div class="budget-empty-state">Nenhum orçamento disponível.</div>';
+        return;
+    }
+
+    root.innerHTML = versions.map((item) => `
+        <div class="budget-sidebar-item ${String(item.id) === String(state.selectedVersionId) ? 'is-selected' : ''}" onclick="openVersion(${item.id})">
+            <div class="budget-sidebar-item__head">
+                <div>
+                    <div class="budget-code">${item.code || 'SEM CÓDIGO'}</div>
+                    <div class="budget-title">${item.name || 'Orçamento sem nome'}</div>
+                </div>
+                <div style="display:flex;gap:.35rem;flex-wrap:wrap">
+                    <span class="budget-category">${(item.name || item.code || '').toUpperCase().includes('CAPEX') ? 'CAPEX' : (item.name || item.code || '').toUpperCase().includes('OPEX') ? 'OPEX' : 'ORÇAMENTO'}</span>
+                    <span class="budget-status budget-status--${item.status || 'draft'}">${item.status || 'draft'}</span>
+                </div>
+            </div>
+            <div class="budget-meta">
+                <span>${item.period_start || '-'} → ${item.period_end || '-'}</span>
+                <span>${item.scenario_type || 'original'}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function nodeMetricsLine(item) {
+    const summary = item.summary || {};
+    const principalValue = summary.planned_total ?? item.planned_amount ?? item.contract_amount ?? item.document_amount ?? 0;
+    const executedValue = summary.executed_total ?? item.executed_total ?? 0;
+    return `
+        <div class="budget-node-item__metrics">
+            <article class="budget-node-metric"><span>Previsto</span><strong>${formatCurrency(principalValue)}</strong></article>
+            <article class="budget-node-metric"><span>Executado</span><strong>${formatCurrency(executedValue)}</strong></article>
+        </div>
+    `;
+}
+
+function renderLines() {
+    const root = byId('lines-list');
+    const items = state.workspace?.lines || [];
+    byId('lines-count').textContent = String(items.length);
+    if (!state.selectedVersionId) {
+        root.innerHTML = '<div class="budget-empty-state">Selecione um orçamento.</div>';
+        return;
+    }
+    if (!items.length) {
+        root.innerHTML = '<div class="budget-empty-state">Nenhuma verba cadastrada para este orçamento.</div>';
+        return;
+    }
+    root.innerHTML = items.map((item) => `
+        <div class="budget-node-item ${String(item.id) === String(state.selectedLineId) ? 'is-selected' : ''}" onclick="openLine(${item.id})">
+            <div class="budget-node-item__head">
+                <div>
+                    <div class="budget-code">${item.line_code || 'SEM CÓDIGO'}</div>
+                    <div class="budget-title">${item.line_name || 'Verba sem nome'}</div>
+                </div>
+                <span class="budget-category">${item.budget_view || 'competence'}</span>
+            </div>
+            <div class="budget-meta">
+                <span>Natureza: <strong>${item.movement_nature || '-'}</strong></span>
+                <span>Ordem: <strong>${item.line_order ?? '-'}</strong></span>
+            </div>
+            ${nodeMetricsLine(item)}
+        </div>
+    `).join('');
+}
+
+function renderContracts() {
+    const root = byId('contracts-list');
+    const items = state.workspace?.contracts || [];
+    byId('contracts-count').textContent = String(items.length);
+    if (!state.selectedLineId) {
+        root.innerHTML = '<div class="budget-empty-state">Selecione uma verba.</div>';
+        return;
+    }
+    if (!items.length) {
+        root.innerHTML = '<div class="budget-empty-state">Nenhum contrato encontrado para a verba selecionada.</div>';
+        return;
+    }
+    root.innerHTML = items.map((item) => `
+        <div class="budget-node-item ${String(item.id) === String(state.selectedContractId) ? 'is-selected' : ''}" onclick="openContract(${item.id})">
+            <div class="budget-node-item__head">
+                <div>
+                    <div class="budget-code">${item.contract_code || 'SEM CÓDIGO'}</div>
+                    <div class="budget-title">${item.name || 'Contrato sem nome'}</div>
+                </div>
+                <span class="budget-status budget-status--${item.status || 'draft'}">${item.status || 'draft'}</span>
+            </div>
+            <div class="budget-meta">
+                <span>Favorecido: <strong>${item.counterparty_name || item.counterparty_id || '-'}</strong></span>
+                <span>Valor: <strong>${formatCurrency(item.contract_amount)}</strong></span>
+            </div>
+            ${nodeMetricsLine(item)}
+        </div>
+    `).join('');
+}
+
+function renderDocuments() {
+    const root = byId('documents-list');
+    const items = state.workspace?.documents || [];
+    byId('documents-count').textContent = String(items.length);
+    if (!state.selectedContractId) {
+        root.innerHTML = '<div class="budget-empty-state">Selecione um contrato.</div>';
+        return;
+    }
+    if (!items.length) {
+        root.innerHTML = '<div class="budget-empty-state">Nenhuma NF / Assemelhado encontrado para o contrato selecionado.</div>';
+        return;
+    }
+    root.innerHTML = items.map((item) => `
+        <div class="budget-node-item ${String(item.id) === String(state.selectedDocumentId) ? 'is-selected' : ''}" onclick="openDocument(${item.id})">
+            <div class="budget-node-item__head">
+                <div>
+                    <div class="budget-code">${item.document_code || 'SEM CÓDIGO'}</div>
+                    <div class="budget-title">${item.title || 'Documento sem título'}</div>
+                </div>
+                <span class="budget-category">${item.document_type || 'invoice'}</span>
+            </div>
+            <div class="budget-meta">
+                <span>Número: <strong>${item.document_number || '-'}</strong></span>
+                <span>Favorecido: <strong>${item.counterparty_name || item.counterparty_id || '-'}</strong></span>
+                <span>Valor: <strong>${formatCurrency(item.document_amount)}</strong></span>
+            </div>
+            ${nodeMetricsLine(item)}
+        </div>
+    `).join('');
+}
+
+function renderSchedules() {
+    const root = byId('schedules-list');
+    const items = state.workspace?.schedules || [];
+    byId('schedules-count').textContent = String(items.length);
+    if (!state.selectedDocumentId) {
+        root.innerHTML = '<div class="budget-empty-state">Selecione uma NF / Assemelhado.</div>';
+        return;
+    }
+    if (!items.length) {
+        root.innerHTML = '<div class="budget-empty-state">Nenhum agendamento encontrado para o documento selecionado.</div>';
+        return;
+    }
+    root.innerHTML = items.map((item) => `
+        <div class="budget-node-item">
+            <div class="budget-node-item__head">
+                <div>
+                    <div class="budget-code">${item.code || item.name || 'AGND'}</div>
+                    <div class="budget-title">${item.name || item.description || 'Agendamento'}</div>
+                </div>
+                <span class="budget-status budget-status--${item.status || 'draft'}">${item.status || 'draft'}</span>
+            </div>
+            <div class="budget-meta">
+                <span>Vencimento: <strong>${item.first_due_date || item.due_date || '-'}</strong></span>
+                <span>Valor: <strong>${formatCurrency(item.template_amount || item.amount || 0)}</strong></span>
+            </div>
+            <div class="budget-node-actions">
+                <a class="budget-node-btn budget-node-btn--primary" href="/financial/schedules{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir agenda</a>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadWorkspace(params = {}) {
+    const data = await api(workspaceUrl(params));
+    state.workspace = data;
+    state.selectedVersionId = String(data.selected_version_id || params.version_id || '');
+    state.selectedLineId = String(data.selected_line_id || params.line_id || '');
+    state.selectedContractId = String(data.selected_contract_id || params.contract_id || '');
+    state.selectedDocumentId = String(data.selected_document_id || params.document_id || '');
+    renderWorkspaceHeader();
+    renderVersionsSidebar();
+    renderLines();
+    renderContracts();
+    renderDocuments();
+    renderSchedules();
+}
+
+async function openVersion(versionId) {
+    const params = { version_id: versionId };
+    state.selectedLineId = '';
+    state.selectedContractId = '';
+    state.selectedDocumentId = '';
+    await loadWorkspace(params);
+    history.replaceState({}, '', `/financial/budgets/workspace?company_id=${companyId}&version_id=${versionId}`);
+}
+
+async function openLine(lineId) {
+    const params = { version_id: state.selectedVersionId, line_id: lineId };
+    state.selectedContractId = '';
+    state.selectedDocumentId = '';
+    await loadWorkspace(params);
+    history.replaceState({}, '', `/financial/budgets/workspace?company_id=${companyId}&version_id=${state.selectedVersionId}&line_id=${lineId}`);
+}
+
+async function openContract(contractId) {
+    const params = { version_id: state.selectedVersionId, line_id: state.selectedLineId, contract_id: contractId };
+    state.selectedDocumentId = '';
+    await loadWorkspace(params);
+    history.replaceState({}, '', `/financial/budgets/workspace?company_id=${companyId}&version_id=${state.selectedVersionId}&line_id=${state.selectedLineId}&contract_id=${contractId}`);
+}
+
+async function openDocument(documentId) {
+    const params = {
+        version_id: state.selectedVersionId,
+        line_id: state.selectedLineId,
+        contract_id: state.selectedContractId,
+        document_id: documentId,
+    };
+    await loadWorkspace(params);
+    history.replaceState({}, '', `/financial/budgets/workspace?company_id=${companyId}&version_id=${state.selectedVersionId}&line_id=${state.selectedLineId}&contract_id=${state.selectedContractId}&document_id=${documentId}`);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const query = new URLSearchParams(window.location.search);
+    try {
+        await loadWorkspace({
+            version_id: query.get('version_id') || '',
+            line_id: query.get('line_id') || '',
+            contract_id: query.get('contract_id') || '',
+            document_id: query.get('document_id') || '',
+        });
+    } catch (error) {
+        alert(error.message);
+    }
+});
+</script>
+{% endblock %}

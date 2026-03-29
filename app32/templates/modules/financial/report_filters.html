@@ -1,0 +1,587 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - {{ report_definition.label }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">{{ report_definition.label }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+{% set filters = current_filters or {} %}
+{% set is_dre = report_definition.code == 'income_statement' %}
+{% set is_cash_flow = report_definition.code == 'cash_flow' %}
+{% set is_ledger = report_definition.code == 'ledger' %}
+{% set is_working_capital = report_definition.code == 'working_capital' %}
+{% set competence_start = (filters.get('competence_start', [default_period_start]) | first) %}
+{% set competence_end = (filters.get('competence_end', [default_period_end]) | first) %}
+{% set due_start = (filters.get('due_start', ['']) | first) %}
+{% set due_end = (filters.get('due_end', ['']) | first) %}
+{% set settlement_start = (filters.get('settlement_start', ['']) | first) %}
+{% set settlement_end = (filters.get('settlement_end', ['']) | first) %}
+{% set cash_period_start = (filters.get('period_start', [default_period_start]) | first) %}
+{% set cash_period_end = (filters.get('period_end', [default_period_end]) | first) %}
+{% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
+{% set selected_cost_centers = filters.get('cost_center_ids', []) %}
+{% set selected_projects = filters.get('project_ids', []) %}
+{% set selected_bank_accounts = filters.get('bank_account_ids', []) %}
+{% set selected_working_capital_accounts = filters.get('working_capital_accounts', []) %}
+{% set selected_order_by = (filters.get('order_by', ['code']) | first) %}
+{% set selected_order_direction = (filters.get('order_direction', ['asc']) | first) %}
+{% set selected_orientation = (filters.get('orientation', ['landscape']) | first) %}
+{% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
+{% set selected_reference_date = (filters.get('reference_date', [default_period_end]) | first) %}
+<div class="fin-report-page fade-in">
+    <section class="report-hero">
+        <div>
+            <p class="report-eyebrow">Gestão Financeira · Gestão</p>
+            <h1>{{ report_definition.label }}</h1>
+            <p class="report-subtitle">{{ report_definition.description }}</p>
+        </div>
+    </section>
+
+    <section class="report-panel">
+        <form method="get"
+              action="/financial/reports/{{ report_definition.slug }}/view"
+              class="report-filter-grid{% if is_dre %} report-filter-grid--dre{% endif %}{% if is_cash_flow %} report-filter-grid--cash-flow{% endif %}{% if is_ledger %} report-filter-grid--ledger{% endif %}{% if is_working_capital %} report-filter-grid--working-capital{% endif %}"
+              data-view-action="/financial/reports/{{ report_definition.slug }}/view"
+              data-pdf-action="/financial/reports/{{ report_definition.slug }}/export.pdf">
+            {% if is_dre %}
+            <div class="dre-dates-grid">
+                <div class="date-card">
+                    <h3>Data Competência</h3>
+                    <div class="date-field-row">
+                        <label>
+                            <span>De</span>
+                            <input type="date" name="competence_start" value="{{ competence_start }}" required>
+                        </label>
+                        <label>
+                            <span>Até</span>
+                            <input type="date" name="competence_end" value="{{ competence_end }}" required>
+                        </label>
+                    </div>
+                </div>
+                <div class="date-card">
+                    <h3>Data Vencimento</h3>
+                    <div class="date-field-row">
+                        <label>
+                            <span>De</span>
+                            <input type="date" name="due_start" value="{{ due_start }}">
+                        </label>
+                        <label>
+                            <span>Até</span>
+                            <input type="date" name="due_end" value="{{ due_end }}">
+                        </label>
+                    </div>
+                </div>
+                <div class="date-card">
+                    <h3>Data Baixa</h3>
+                    <div class="date-field-row">
+                        <label>
+                            <span>De</span>
+                            <input type="date" name="settlement_start" value="{{ settlement_start }}">
+                        </label>
+                        <label>
+                            <span>Até</span>
+                            <input type="date" name="settlement_end" value="{{ settlement_end }}">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <label class="report-block-field">
+                <span>Planos de Conta</span>
+                <select name="chart_account_ids" multiple size="6">
+                    {% for item in options.chart_accounts %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+                <small>Segure Ctrl para múltipla seleção.</small>
+            </label>
+
+            <label class="report-block-field">
+                <span>Centros de Resultado</span>
+                <select name="cost_center_ids" multiple size="5">
+                    {% for item in options.cost_centers %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+                <small>Opcional.</small>
+            </label>
+
+            <label class="report-block-field">
+                <span>Projetos</span>
+                <select name="project_ids" multiple size="5">
+                    {% for item in options.projects %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+                <small>Aplicado quando o lançamento possui vínculo de projeto no metadado.</small>
+            </label>
+
+            <div class="dre-config-grid">
+                <fieldset>
+                    <legend>Status</legend>
+                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Liquidado</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_open" value="true" {% if 'include_open' not in filters or (filters.get('include_open', []) | first) == 'true' %}checked{% endif %}><span>Aberto</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Tipo</legend>
+                    <label class="check-field"><input type="checkbox" name="include_receivable" value="true" {% if 'include_receivable' not in filters or (filters.get('include_receivable', []) | first) == 'true' %}checked{% endif %}><span>Recebimento</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_payable" value="true" {% if 'include_payable' not in filters or (filters.get('include_payable', []) | first) == 'true' %}checked{% endif %}><span>Pagamento</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_budget_vs_actual" value="true" {% if (filters.get('include_budget_vs_actual', ['false']) | first) == 'true' %}checked{% endif %}><span>Orçado x Realizado</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Exibir</legend>
+                    <label class="check-field"><input type="checkbox" name="show_code" value="true" {% if 'show_code' not in filters or (filters.get('show_code', []) | first) == 'true' %}checked{% endif %}><span>Código</span></label>
+                    <label class="check-field"><input type="checkbox" name="show_description" value="true" {% if 'show_description' not in filters or (filters.get('show_description', []) | first) == 'true' %}checked{% endif %}><span>Descrição</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Ordenar por</legend>
+                    <label class="radio-field"><input type="radio" name="order_by" value="code" {% if selected_order_by == 'code' %}checked{% endif %}><span>Código</span></label>
+                    <label class="radio-field"><input type="radio" name="order_by" value="description" {% if selected_order_by == 'description' %}checked{% endif %}><span>Descrição</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Ordenação</legend>
+                    <label class="radio-field"><input type="radio" name="order_direction" value="asc" {% if selected_order_direction == 'asc' %}checked{% endif %}><span>Ascendente</span></label>
+                    <label class="radio-field"><input type="radio" name="order_direction" value="desc" {% if selected_order_direction == 'desc' %}checked{% endif %}><span>Descendente</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Orientação</legend>
+                    <label class="radio-field"><input type="radio" name="orientation" value="portrait" {% if selected_orientation == 'portrait' %}checked{% endif %}><span>Retrato</span></label>
+                    <label class="radio-field"><input type="radio" name="orientation" value="landscape" {% if selected_orientation == 'landscape' %}checked{% endif %}><span>Paisagem</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Imprimir</legend>
+                    <label class="radio-field"><input type="radio" name="output_mode" value="pdf" {% if selected_output_mode == 'pdf' %}checked{% endif %}><span>PDF</span></label>
+                    <label class="radio-field"><input type="radio" name="output_mode" value="screen" {% if selected_output_mode == 'screen' %}checked{% endif %}><span>Na Tela</span></label>
+                </fieldset>
+            </div>
+            {% elif is_cash_flow %}
+            <div class="cash-flow-layout">
+                <div class="cash-flow-sidebar">
+                    <label class="report-block-field">
+                        <span>Contas Correntes</span>
+                        <div class="checkbox-list">
+                            {% for item in options.bank_accounts %}
+                            {% set option_id = item.id|string %}
+                            <label class="check-field">
+                                <input type="checkbox" name="bank_account_ids" value="{{ item.id }}" {% if option_id in selected_bank_accounts %}checked{% endif %}>
+                                <span>{{ item.label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </label>
+
+                    <label>
+                        <span>Data Inicial</span>
+                        <input type="date" name="period_start" value="{{ cash_period_start }}" required>
+                    </label>
+
+                    <label>
+                        <span>Data Final</span>
+                        <input type="date" name="period_end" value="{{ cash_period_end }}" required>
+                    </label>
+
+                    <fieldset class="cash-flow-fieldset">
+                        <legend>Periodicidade</legend>
+                        {% set selected_frequency = (filters.get('frequency', ['daily']) | first) %}
+                        <label class="radio-field"><input type="radio" name="frequency" value="daily" {% if selected_frequency == 'daily' %}checked{% endif %}><span>Diário</span></label>
+                        <label class="radio-field"><input type="radio" name="frequency" value="weekly" {% if selected_frequency == 'weekly' %}checked{% endif %}><span>Semanal</span></label>
+                        <label class="radio-field"><input type="radio" name="frequency" value="monthly" {% if selected_frequency == 'monthly' %}checked{% endif %}><span>Mensal</span></label>
+                    </fieldset>
+                </div>
+
+                <div class="cash-flow-main">
+                    <div class="cash-flow-banner">
+                        <label class="check-field">
+                            <input type="checkbox" name="include_projected" value="true" {% if 'include_projected' not in filters or (filters.get('include_projected', []) | first) == 'true' %}checked{% endif %}>
+                            <span>Incluir Agendamentos</span>
+                        </label>
+                    </div>
+
+                    <details class="cash-flow-filters-panel">
+                        <summary>Filtros adicionais</summary>
+                        <div class="cash-flow-extra-grid">
+                            <label>
+                                <span>Centro de resultados</span>
+                                <select name="cost_center_id">
+                                    <option value="">Todos</option>
+                                    {% for item in options.cost_centers %}
+                                    <option value="{{ item.id }}" {% if (filters.get('cost_center_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Orientação</span>
+                                <select name="orientation">
+                                    <option value="landscape" {% if selected_orientation == 'landscape' %}selected{% endif %}>Paisagem</option>
+                                    <option value="portrait" {% if selected_orientation == 'portrait' %}selected{% endif %}>Retrato</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Imprimir</span>
+                                <select name="output_mode">
+                                    <option value="screen" {% if selected_output_mode == 'screen' %}selected{% endif %}>Na Tela</option>
+                                    <option value="pdf" {% if selected_output_mode == 'pdf' %}selected{% endif %}>PDF</option>
+                                </select>
+                            </label>
+                        </div>
+                    </details>
+
+                    <div class="cash-flow-preview">
+                        <div class="cash-flow-preview__head">
+                            <span>Histórico</span>
+                            <span>Tipo</span>
+                            <span>Valor Título</span>
+                            <span>Saldo</span>
+                            <span>Favorecido</span>
+                            <span>Número/Parc</span>
+                            <span>Competência</span>
+                            <span>Vencimento</span>
+                        </div>
+                        <div class="cash-flow-preview__empty">
+                            A visualização detalhada será exibida após gerar o relatório.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% elif is_ledger %}
+            <div class="dre-dates-grid">
+                <div class="date-card">
+                    <h3>Data Competência</h3>
+                    <div class="date-field-row">
+                        <label>
+                            <span>De</span>
+                            <input type="date" name="competence_start" value="{{ competence_start }}" required>
+                        </label>
+                        <label>
+                            <span>Até</span>
+                            <input type="date" name="competence_end" value="{{ competence_end }}" required>
+                        </label>
+                    </div>
+                </div>
+                <div class="date-card">
+                    <h3>Data Vencimento</h3>
+                    <div class="date-field-row">
+                        <label>
+                            <span>De</span>
+                            <input type="date" name="due_start" value="{{ due_start }}">
+                        </label>
+                        <label>
+                            <span>Até</span>
+                            <input type="date" name="due_end" value="{{ due_end }}">
+                        </label>
+                    </div>
+                </div>
+                <div class="date-card">
+                    <h3>Data Baixa</h3>
+                    <div class="date-field-row">
+                        <label>
+                            <span>De</span>
+                            <input type="date" name="settlement_start" value="{{ settlement_start }}">
+                        </label>
+                        <label>
+                            <span>Até</span>
+                            <input type="date" name="settlement_end" value="{{ settlement_end }}">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ledger-config-grid">
+                <fieldset>
+                    <legend>Status</legend>
+                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Liquidado</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_budget_vs_actual" value="true" {% if 'include_budget_vs_actual' not in filters or (filters.get('include_budget_vs_actual', []) | first) == 'true' %}checked{% endif %}><span>Liquidado Parcial</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_open" value="true" {% if 'include_open' not in filters or (filters.get('include_open', []) | first) == 'true' %}checked{% endif %}><span>Aberto</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Orientação</legend>
+                    <label class="radio-field"><input type="radio" name="orientation" value="portrait" {% if selected_orientation == 'portrait' %}checked{% endif %}><span>Retrato</span></label>
+                    <label class="radio-field"><input type="radio" name="orientation" value="landscape" {% if selected_orientation == 'landscape' %}checked{% endif %}><span>Paisagem</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Ordenar por</legend>
+                    <label class="radio-field"><input type="radio" name="order_by" value="code" {% if selected_order_by == 'code' %}checked{% endif %}><span>Plano de Conta</span></label>
+                    <label class="radio-field"><input type="radio" name="order_by" value="description" {% if selected_order_by == 'description' %}checked{% endif %}><span>Centro de Resultado</span></label>
+                    <label class="radio-field"><input type="radio" name="order_by" value="project" {% if selected_order_by == 'project' %}checked{% endif %}><span>Projeto</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Ordenação</legend>
+                    <label class="radio-field"><input type="radio" name="order_direction" value="asc" {% if selected_order_direction == 'asc' %}checked{% endif %}><span>Ascendente</span></label>
+                    <label class="radio-field"><input type="radio" name="order_direction" value="desc" {% if selected_order_direction == 'desc' %}checked{% endif %}><span>Descendente</span></label>
+                </fieldset>
+                <fieldset>
+                    <legend>Imprimir</legend>
+                    <label class="radio-field"><input type="radio" name="output_mode" value="pdf" {% if selected_output_mode == 'pdf' %}checked{% endif %}><span>PDF</span></label>
+                    <label class="radio-field"><input type="radio" name="output_mode" value="screen" {% if selected_output_mode == 'screen' %}checked{% endif %}><span>Na Tela</span></label>
+                </fieldset>
+            </div>
+            {% elif is_working_capital %}
+            <div class="working-capital-layout">
+                <div class="working-capital-banner">Contas Patrimônias Programadas</div>
+                <div class="working-capital-reference">
+                    <label>
+                        <span>Data Referência</span>
+                        <input type="date" name="reference_date" value="{{ selected_reference_date }}" required>
+                    </label>
+                    <label class="check-field">
+                        <input type="checkbox" name="include_overdraft" value="true" {% if 'include_overdraft' not in filters or (filters.get('include_overdraft', []) | first) == 'true' %}checked{% endif %}>
+                        <span>Considerar limites financeiros</span>
+                    </label>
+                </div>
+
+                <div class="working-capital-table">
+                    <div class="working-capital-table__head">
+                        <span></span>
+                        <span>ID</span>
+                        <span>Descrição</span>
+                        <span>Tipo</span>
+                        <span>Classe</span>
+                        <span>Categoria</span>
+                        <span>Valor/Data</span>
+                    </div>
+                    {% for item in options.working_capital_accounts %}
+                    {% set option_id = item.id|string %}
+                    <label class="working-capital-table__row">
+                        <span><input type="checkbox" name="working_capital_accounts" value="{{ item.id }}" {% if not selected_working_capital_accounts or option_id in selected_working_capital_accounts %}checked{% endif %}></span>
+                        <span>{{ item.id }}</span>
+                        <span>{{ item.description }}</span>
+                        <span><strong>{{ item.type }}</strong></span>
+                        <span>{{ item.class_name }}</span>
+                        <span>{{ item.category }}</span>
+                        <span>{{ item.value_label if item.value_label is defined else ('Saldo Conta Corrente' if item.rule == 'bank_balance' else 'Vencidas' if 'overdue' in item.rule else 'À vencer em 180 dias' if 'due_180' in item.rule else 'Todas à vencer') }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {% set manual_accounts = options.working_capital_accounts | selectattr('requires_manual_value') | list %}
+                {% if manual_accounts %}
+                <div class="working-capital-reference">
+                    {% for item in manual_accounts %}
+                    <label>
+                        <span>{{ item.description }}</span>
+                        <input type="number"
+                               name="manual_value_{{ item.id }}"
+                               value="{{ (filters.get('manual_value_' ~ item.id, ['']) | first) }}"
+                               min="0"
+                               step="0.01"
+                               placeholder="Digite o valor para esta emissão">
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+                {% if "period" in report_definition.filters %}
+                <label>
+                    <span>Período inicial</span>
+                    <input type="date" name="period_start" value="{{ (filters.get('period_start', [default_period_start]) | first) }}" required>
+                </label>
+                <label>
+                    <span>Período final</span>
+                    <input type="date" name="period_end" value="{{ (filters.get('period_end', [default_period_end]) | first) }}" required>
+                </label>
+                {% endif %}
+
+                {% if "bank_account" in report_definition.filters %}
+                <label>
+                    <span>Conta bancária</span>
+                    <select name="bank_account_id">
+                        <option value="">Todas</option>
+                        {% for item in options.bank_accounts %}
+                        <option value="{{ item.id }}" {% if (filters.get('bank_account_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+
+                {% if "chart_account" in report_definition.filters %}
+                <label>
+                    <span>Conta contábil</span>
+                    <select name="chart_account_id">
+                        <option value="">Todas</option>
+                        {% for item in options.chart_accounts %}
+                        <option value="{{ item.id }}" {% if (filters.get('chart_account_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+
+                {% if "cost_center" in report_definition.filters %}
+                <label>
+                    <span>Centro de resultados</span>
+                    <select name="cost_center_id">
+                        <option value="">Todos</option>
+                        {% for item in options.cost_centers %}
+                        <option value="{{ item.id }}" {% if (filters.get('cost_center_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+
+                {% if "counterparty" in report_definition.filters %}
+                <label>
+                    <span>Favorecido</span>
+                    <select name="counterparty_id">
+                        <option value="">Todos</option>
+                        {% for item in options.counterparties %}
+                        <option value="{{ item.id }}" {% if (filters.get('counterparty_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+
+                {% if "movement_nature" in report_definition.filters %}
+                <label>
+                    <span>Movimento</span>
+                    <select name="movement_nature">
+                        <option value="">Todos</option>
+                        {% for item in options.movement_natures %}
+                        <option value="{{ item.id }}" {% if (filters.get('movement_nature', ['']) | first) == item.id %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+
+                {% if "schedule_status" in report_definition.filters %}
+                <label>
+                    <span>Status do agendamento</span>
+                    <select name="schedule_status">
+                        <option value="">Todos</option>
+                        {% for item in options.schedule_statuses %}
+                        <option value="{{ item.id }}" {% if (filters.get('schedule_status', ['']) | first) == item.id %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+
+                {% if "frequency" in report_definition.filters %}
+                <label>
+                    <span>Frequência</span>
+                    <select name="frequency">
+                        <option value="">Todas</option>
+                        {% for item in options.frequencies %}
+                        <option value="{{ item.id }}" {% if (filters.get('frequency', ['']) | first) == item.id %}selected{% endif %}>{{ item.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                {% endif %}
+
+                {% if "include_projected" in report_definition.filters %}
+                <label class="check-field">
+                    <input type="checkbox" name="include_projected" value="true" {% if 'include_projected' not in filters or (filters.get('include_projected', []) | first) == 'true' %}checked{% endif %}>
+                    <span>Incluir projeções em aberto</span>
+                </label>
+                {% endif %}
+
+                {% if "include_reconciled_only" in report_definition.filters %}
+                <label class="check-field">
+                    <input type="checkbox" name="include_reconciled_only" value="true" {% if (filters.get('include_reconciled_only', ['false']) | first) == 'true' %}checked{% endif %}>
+                    <span>Somente conciliados</span>
+                </label>
+                {% endif %}
+
+                {% if "include_overdraft" in report_definition.filters %}
+                <label class="check-field">
+                    <input type="checkbox" name="include_overdraft" value="true" {% if 'include_overdraft' not in filters or (filters.get('include_overdraft', []) | first) == 'true' %}checked{% endif %}>
+                    <span>Considerar limites financeiros</span>
+                </label>
+                {% endif %}
+            {% endif %}
+
+            <div class="report-actions{% if is_dre %} report-actions--full{% endif %}">
+                <button type="submit" class="btn btn-primary">Gerar relatório</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<style>
+    .fin-report-page { padding: 0 2rem 2rem; display:flex; flex-direction:column; gap:1rem; }
+    .report-hero, .report-panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+    .report-hero { padding:1.35rem; }
+    .report-panel { padding:1.25rem; }
+    .report-eyebrow { margin:0 0 .4rem; font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .report-subtitle { color:var(--text-secondary); max-width:880px; }
+    .report-filter-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; align-items:end; }
+    .report-filter-grid label, .date-field-row label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); }
+    .report-filter-grid input[type="date"], .report-filter-grid select { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.82rem .88rem; color:var(--text-primary); }
+    .report-filter-grid--dre { display:flex; flex-direction:column; gap:1rem; align-items:stretch; }
+    .report-filter-grid--cash-flow { display:block; }
+    .report-filter-grid--ledger { display:flex; flex-direction:column; gap:1rem; align-items:stretch; }
+    .report-filter-grid--working-capital { display:flex; flex-direction:column; gap:1rem; align-items:stretch; }
+    .dre-dates-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+    .date-card, .dre-config-grid fieldset { border:1px solid var(--border); border-radius:16px; padding:1rem; background:var(--surface-secondary); }
+    .date-card h3 { margin:0 0 .75rem; font-size:1rem; color:var(--text-primary); }
+    .date-field-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .report-block-field { display:flex; flex-direction:column; gap:.45rem; color:var(--text-secondary); }
+    .report-block-field select[multiple] { min-height:148px; }
+    .report-block-field small { color:var(--text-secondary); opacity:.9; }
+    .checkbox-list { display:flex; flex-direction:column; gap:.45rem; padding:.85rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-secondary); }
+    .cash-flow-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:1rem; }
+    .cash-flow-sidebar, .cash-flow-main { display:flex; flex-direction:column; gap:1rem; }
+    .cash-flow-fieldset { border:1px solid var(--border); border-radius:16px; padding:1rem; background:var(--surface-secondary); }
+    .cash-flow-fieldset legend { padding:0 .4rem; font-weight:700; color:var(--text-primary); }
+    .cash-flow-banner { padding:1rem; border-radius:16px; background:linear-gradient(135deg, #1d4ed8, #2563eb); color:#fff; }
+    .cash-flow-banner .check-field span { color:#fff; font-weight:700; }
+    .cash-flow-filters-panel { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
+    .cash-flow-filters-panel summary { cursor:pointer; list-style:none; padding:1rem; font-weight:700; color:var(--text-primary); }
+    .cash-flow-filters-panel summary::-webkit-details-marker { display:none; }
+    .cash-flow-extra-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; padding:0 1rem 1rem; }
+    .cash-flow-preview { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); overflow:hidden; }
+    .cash-flow-preview__head { display:grid; grid-template-columns:1.2fr .8fr .9fr .9fr 1.1fr 1fr .9fr .9fr; gap:.5rem; padding:1rem; font-weight:700; color:#1d4ed8; border-bottom:1px solid var(--border); }
+    .cash-flow-preview__empty { padding:1.5rem 1rem; color:var(--text-secondary); }
+    .working-capital-layout { display:flex; flex-direction:column; gap:1rem; }
+    .working-capital-banner { padding:1rem; border-radius:16px 16px 0 0; background:linear-gradient(135deg, #0f172a, #1e293b); color:#fff; font-weight:700; }
+    .working-capital-reference { display:grid; grid-template-columns:1.2fr .8fr; gap:1rem; align-items:end; }
+    .working-capital-table { border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--surface-secondary); }
+    .working-capital-table__head, .working-capital-table__row { display:grid; grid-template-columns:50px 70px 1.9fr .7fr .8fr 1fr 1fr; gap:1rem; align-items:center; padding:.9rem 1rem; }
+    .working-capital-table__head { font-weight:700; color:var(--text-primary); border-bottom:1px solid var(--border); }
+    .working-capital-table__row { border-bottom:1px solid var(--border); color:var(--text-secondary); }
+    .working-capital-table__row:last-child { border-bottom:none; }
+    .ledger-config-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:1rem; }
+    .ledger-config-grid fieldset { border:1px solid var(--border); border-radius:16px; padding:1rem; background:var(--surface-secondary); margin:0; }
+    .ledger-config-grid legend { padding:0 .4rem; font-weight:700; color:var(--text-primary); }
+    .dre-config-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; }
+    .dre-config-grid fieldset { margin:0; min-height:100%; }
+    .dre-config-grid legend { padding:0 .4rem; font-weight:700; color:var(--text-primary); }
+    .check-field, .radio-field { display:flex; flex-direction:row !important; align-items:center; gap:.65rem !important; min-height:32px; }
+    .report-actions { display:flex; justify-content:flex-end; }
+    .report-actions--full { justify-content:stretch; }
+    .report-actions--full .btn { width:100%; }
+    .btn { border:none; border-radius:12px; padding:.85rem 1rem; font-weight:700; cursor:pointer; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    @media (max-width: 1200px) {
+        .dre-dates-grid, .dre-config-grid, .cash-flow-extra-grid, .ledger-config-grid, .working-capital-reference { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .cash-flow-layout { grid-template-columns:1fr; }
+    }
+    @media (max-width: 960px) {
+        .fin-report-page { padding:0 1rem 1.5rem; }
+        .report-filter-grid, .dre-dates-grid, .date-field-row, .dre-config-grid, .cash-flow-extra-grid, .cash-flow-preview__head, .ledger-config-grid, .working-capital-reference, .working-capital-table__head, .working-capital-table__row { grid-template-columns:1fr; }
+        .report-actions .btn { width:100%; }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('.report-filter-grid[data-view-action]');
+        if (!form) return;
+        form.addEventListener('submit', function () {
+            const outputMode = form.querySelector('input[name="output_mode"]:checked');
+            if (!outputMode) {
+                form.action = form.dataset.viewAction;
+                return;
+            }
+            form.action = outputMode.value === 'pdf' ? form.dataset.pdfAction : form.dataset.viewAction;
+        });
+    });
+</script>
+{% endblock %}

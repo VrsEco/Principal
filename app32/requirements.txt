@@ -44,6 +44,7 @@ playwright
 
 # Report formatting / i18n
 babel
+openpyxl
 
 # Testing
 pytest

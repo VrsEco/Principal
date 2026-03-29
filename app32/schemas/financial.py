@@ -511,28 +511,6 @@ class FinancialAccountCategoryUpdateInput(_SimpleFinancialCatalogBase):
     metadata_json: Optional[Dict[str, Any]] = None
 
 
-class FinancialPaymentTermInput(_SimpleFinancialCatalogBase):
-    company_id: int
-    code: Optional[str] = Field(None, max_length=30)
-    name: str = Field(..., min_length=2, max_length=120)
-    external_code: Optional[str] = Field(None, max_length=120)
-    installment_count: Optional[int] = Field(1, ge=1, le=360)
-    interval_days: Optional[int] = Field(30, ge=0, le=3650)
-    description: Optional[str] = None
-    is_active: bool = True
-    metadata_json: Dict[str, Any] = Field(default_factory=dict)
-
-
-class FinancialPaymentTermUpdateInput(_SimpleFinancialCatalogBase):
-    code: Optional[str] = Field(None, min_length=1, max_length=30)
-    name: Optional[str] = Field(None, min_length=2, max_length=120)
-    external_code: Optional[str] = Field(None, max_length=120)
-    installment_count: Optional[int] = Field(None, ge=1, le=360)
-    interval_days: Optional[int] = Field(None, ge=0, le=3650)
-    description: Optional[str] = None
-    is_active: Optional[bool] = None
-    metadata_json: Optional[Dict[str, Any]] = None
-
 
 class FinancialAssetAccountInput(_SimpleFinancialCatalogBase):
     company_id: int

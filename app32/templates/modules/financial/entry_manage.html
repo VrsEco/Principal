@@ -1,6 +1,7 @@
 {% extends "layouts/workspace.html" %}
 {% set signed_amount = (-(entry.original_amount or 0)) if entry.movement_nature == 'debit' else (entry.original_amount or 0) %}
 {% set amount_variant = 'negative' if signed_amount < 0 else 'positive' %}
+{% set is_reconciled = entry.metadata_json.reconciled if entry.metadata_json and entry.metadata_json.reconciled is not none else false %}
 
 {% block title %}Financeiro - Gestão do Lançamento{% endblock %}
 
@@ -24,6 +25,26 @@
     <section class="page-actions" style="display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem;">
         <a href="/financial/entries" class="btn btn-secondary" style="text-decoration:none;">Voltar</a>
     </section>
+
+    {% if is_reconciled %}
+    <section class="panel reconciliation-lock-panel">
+        <div class="reconciliation-lock-header">
+            <div>
+                <h2>Lançamento conciliado</h2>
+                <p>Este registro está protegido. Para editar, é obrigatório desmarcar a conciliação antes de salvar. A hierarquia de senhas será validada no backend.</p>
+            </div>
+            <span class="reconciliation-badge">Conciliado</span>
+        </div>
+        <label class="unlock-toggle">
+            <input type="checkbox" id="unlock-reconciliation-toggle" name="unlock_reconciliation">
+            <span>Desmarcar conciliação para permitir alteração</span>
+        </label>
+        <label>
+            <span>Motivo do desbloqueio</span>
+            <textarea id="unlock-reconciliation-reason" rows="2" placeholder="Informe o motivo da demarcação antes de salvar." disabled></textarea>
+        </label>
+    </section>
+    {% endif %}
 
     <section class="entry-summary-cards">
         <article class="entry-summary-card">
@@ -148,6 +169,10 @@
     .panel-header h2 { margin:0; }
     .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); }
     .panel-body { padding:1.25rem; }
+    .reconciliation-lock-panel { margin-bottom:1rem; border:1px solid rgba(245, 158, 11, 0.35); background:rgba(245, 158, 11, 0.08); }
+    .reconciliation-lock-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:.75rem; }
+    .reconciliation-badge { display:inline-flex; align-items:center; padding:.35rem .75rem; border-radius:999px; background:#92400e; color:#fff; font-size:.78rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+    .unlock-toggle { display:flex; align-items:center; gap:.65rem; margin-bottom:.75rem; font-weight:700; }
     .entry-summary-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
     .entry-summary-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem 1.25rem; }
     .entry-summary-label { display:block; margin-bottom:.35rem; color:var(--text-tertiary); text-transform:uppercase; font-size:.75rem; font-weight:700; }
@@ -444,6 +469,17 @@
         payload.original_amount = payload.original_amount ? Number(payload.original_amount) : 0;
         payload.activity_id = payload.activity_id ? Number(payload.activity_id) : null;
         payload.process_instance_id = payload.process_instance_id ? Number(payload.process_instance_id) : null;
+        const unlockToggle = document.getElementById('unlock-reconciliation-toggle');
+        const unlockReason = document.getElementById('unlock-reconciliation-reason');
+        if (unlockToggle) {
+            payload.unlock_reconciliation = unlockToggle.checked;
+            payload.reconciled = !unlockToggle.checked;
+            payload.reconciliation_unlock_reason = unlockReason ? unlockReason.value.trim() : '';
+            if (unlockToggle.checked && !payload.reconciliation_unlock_reason) {
+                alert('Informe o motivo para desmarcar a conciliação.');
+                return;
+            }
+        }
 
         const response = await fetch(`/api/financial/entries/${entryId}?company_id=${companyId}`, {
             method: 'PUT',
@@ -459,6 +495,17 @@
         alert('Lançamento atualizado com sucesso.');
         fetchEntry();
     });
+
+    const unlockToggle = document.getElementById('unlock-reconciliation-toggle');
+    const unlockReason = document.getElementById('unlock-reconciliation-reason');
+    if (unlockToggle && unlockReason) {
+        unlockToggle.addEventListener('change', () => {
+            unlockReason.disabled = !unlockToggle.checked;
+            if (!unlockToggle.checked) {
+                unlockReason.value = '';
+            }
+        });
+    }
 
     function addAllocationDraft() {
         const formData = new FormData(document.getElementById('allocations-form'));

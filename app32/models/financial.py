@@ -315,36 +315,6 @@ class FinancialAccountCategory(db.Model):
         }
 
 
-class FinancialPaymentTerm(db.Model):
-    __tablename__ = "financial_payment_terms"
-    __table_args__ = (
-        db.UniqueConstraint("company_id", "code", name="uq_financial_payment_terms_company_code"),
-    )
-
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
-    code = db.Column(db.String(30), nullable=False)
-    name = db.Column(db.String(120), nullable=False)
-    description = db.Column(db.Text)
-    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
-    metadata_json = db.Column(JSONB, nullable=False, default=dict)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = db.Column(db.DateTime)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "company_id": self.company_id,
-            "code": self.code,
-            "name": self.name,
-            "description": self.description,
-            "is_active": self.is_active,
-            "metadata_json": self.metadata_json or {},
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
-
 
 class FinancialAssetAccount(db.Model):
     __tablename__ = "financial_asset_accounts"

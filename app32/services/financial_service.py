@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import db
 from models.financial import FinancialEntry, FinancialEntryAllocation, FinancialSettlement
+from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine
 from models.process import ProcessInstance, ProcessRoutine
 from models.routine import Routine
 from schemas.financial import (
@@ -14,6 +15,7 @@ from schemas.financial import (
     FinancialSettlementInput,
 )
 from services.financial_catalog_service import FinancialCatalogService
+from utils.permissions import is_administrator
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +41,46 @@ class FinancialService:
         payload["signed_amount"] = signed_amount
         payload["amount_direction"] = FinancialService.get_amount_direction(movement_nature)
         payload["display_variant"] = "negative" if signed_amount < 0 else "positive"
+        metadata = payload.get("metadata_json") or {}
+        payload["is_reconciled"] = bool(metadata.get("reconciled"))
         return payload
+
+    @staticmethod
+    def is_entry_reconciled(entry: FinancialEntry) -> bool:
+        metadata = dict(entry.metadata_json or {})
+        if metadata.get("reconciled"):
+            return True
+        return bool(
+            FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == entry.company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+                FinancialSettlement.reconciliation_status.in_(["matched", "reconciled"]),
+            ).first()
+        )
+
+    @staticmethod
+    def set_entry_reconciliation_state(
+        *,
+        entry: FinancialEntry,
+        reconciled: bool,
+        actor_reason: Optional[str] = None,
+    ) -> None:
+        metadata = dict(entry.metadata_json or {})
+        metadata["reconciled"] = bool(reconciled)
+        metadata["reconciliation_updated_reason"] = actor_reason
+        entry.metadata_json = metadata
+
+        target_status = "reconciled" if reconciled else "pending"
+        settlements = FinancialSettlement.query.filter(
+            FinancialSettlement.company_id == entry.company_id,
+            FinancialSettlement.financial_entry_id == entry.id,
+            FinancialSettlement.deleted_at.is_(None),
+            FinancialSettlement.settlement_status != "cancelled",
+        ).all()
+        for settlement in settlements:
+            settlement.reconciliation_status = target_status
 
     @staticmethod
     def serialize_entry(entry: FinancialEntry, *, include_children: bool = True) -> Dict[str, Any]:
@@ -167,6 +208,93 @@ class FinancialService:
         return None
 
     @staticmethod
+    def _merge_budget_metadata(
+        metadata_json: Optional[Dict[str, Any]],
+        budget_links: Optional[Dict[str, Optional[int]]],
+    ) -> Dict[str, Any]:
+        metadata = dict(metadata_json or {})
+        for key in ("budget_line_id", "budget_contract_id", "budget_document_id"):
+            value = (budget_links or {}).get(key)
+            if value is None:
+                metadata.pop(key, None)
+                continue
+            metadata[key] = value
+        return metadata
+
+    @staticmethod
+    def _resolve_budget_links(
+        *,
+        company_id: int,
+        budget_line_id: Optional[int],
+        budget_contract_id: Optional[int],
+        budget_document_id: Optional[int],
+    ) -> Tuple[Optional[Dict[str, Optional[int]]], Optional[str]]:
+        def _get_line(line_id: Optional[int]) -> Optional[FinancialBudgetLine]:
+            if not line_id:
+                return None
+            return FinancialBudgetLine.query.filter(
+                FinancialBudgetLine.id == int(line_id),
+                FinancialBudgetLine.company_id == company_id,
+                FinancialBudgetLine.deleted_at.is_(None),
+            ).first()
+
+        def _get_contract(contract_id: Optional[int]) -> Optional[FinancialBudgetContract]:
+            if not contract_id:
+                return None
+            return FinancialBudgetContract.query.filter(
+                FinancialBudgetContract.id == int(contract_id),
+                FinancialBudgetContract.company_id == company_id,
+                FinancialBudgetContract.deleted_at.is_(None),
+            ).first()
+
+        def _get_document(document_id: Optional[int]) -> Optional[FinancialBudgetDocument]:
+            if not document_id:
+                return None
+            return FinancialBudgetDocument.query.filter(
+                FinancialBudgetDocument.id == int(document_id),
+                FinancialBudgetDocument.company_id == company_id,
+                FinancialBudgetDocument.deleted_at.is_(None),
+            ).first()
+
+        line = _get_line(budget_line_id)
+        if budget_line_id and not line:
+            return None, "Verba orçamentária não encontrada no escopo da empresa."
+
+        contract = _get_contract(budget_contract_id)
+        if budget_contract_id and not contract:
+            return None, "Contrato orçamentário não encontrado no escopo da empresa."
+        if contract:
+            if line and contract.budget_line_id != line.id:
+                return None, "Contrato orçamentário não pertence à verba informada."
+            if not line:
+                line = _get_line(contract.budget_line_id)
+                if not line:
+                    return None, "Verba orçamentária vinculada ao contrato não encontrada no escopo da empresa."
+
+        document = _get_document(budget_document_id)
+        if budget_document_id and not document:
+            return None, "NF/equivalente orçamentária não encontrada no escopo da empresa."
+        if document:
+            if contract and document.budget_contract_id != contract.id:
+                return None, "NF/equivalente não pertence ao contrato informado."
+            if not contract:
+                contract = _get_contract(document.budget_contract_id)
+                if not contract:
+                    return None, "Contrato orçamentário vinculado à NF/equivalente não encontrado no escopo da empresa."
+            if line and contract.budget_line_id != line.id:
+                return None, "NF/equivalente não pertence à verba informada."
+            if not line:
+                line = _get_line(contract.budget_line_id)
+                if not line:
+                    return None, "Verba orçamentária vinculada à NF/equivalente não encontrada no escopo da empresa."
+
+        return {
+            "budget_line_id": line.id if line else None,
+            "budget_contract_id": contract.id if contract else None,
+            "budget_document_id": document.id if document else None,
+        }, None
+
+    @staticmethod
     def create_entry(
         *,
         payload: Dict[str, Any],
@@ -200,6 +328,15 @@ class FinancialService:
         if reference_error:
             return None, reference_error
 
+        budget_links, budget_error = FinancialService._resolve_budget_links(
+            company_id=data.company_id,
+            budget_line_id=getattr(data, "budget_line_id", None),
+            budget_contract_id=getattr(data, "budget_contract_id", None),
+            budget_document_id=getattr(data, "budget_document_id", None),
+        )
+        if budget_error:
+            return None, budget_error
+
         existing = FinancialEntry.query.filter(
             FinancialEntry.company_id == data.company_id,
             FinancialEntry.entry_code == data.entry_code,
@@ -208,7 +345,13 @@ class FinancialService:
             return None, f"Já existe lançamento com código {data.entry_code} para esta empresa."
 
         try:
-            entry = FinancialEntry(**data.model_dump())
+            normalized = data.model_dump()
+            normalized.update(budget_links or {})
+            normalized["metadata_json"] = FinancialService._merge_budget_metadata(
+                normalized.get("metadata_json"),
+                budget_links,
+            )
+            entry = FinancialEntry(**normalized)
             db.session.add(entry)
             db.session.commit()
             return entry, None
@@ -241,8 +384,34 @@ class FinancialService:
         ).first()
         if not entry:
             return None, "Lançamento financeiro não encontrado no escopo da empresa."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=company_id, entry=entry)
+        if active_bordero:
+            return None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}."
 
         merged = data.model_dump(exclude_unset=True)
+        unlock_reconciliation = bool(merged.pop("unlock_reconciliation", False))
+        requested_reconciled_state = merged.pop("reconciled", None)
+        unlock_reason = merged.pop("reconciliation_unlock_reason", None)
+
+        if FinancialService.is_entry_reconciled(entry):
+            if unlock_reconciliation or requested_reconciled_state is False:
+                if not is_administrator(company_id):
+                    return None, (
+                        "Lançamento conciliado exige demarcação por usuário com hierarquia administrativa."
+                    )
+                FinancialService.set_entry_reconciliation_state(
+                    entry=entry,
+                    reconciled=False,
+                    actor_reason=unlock_reason or "Demarcação manual de conciliação.",
+                )
+            else:
+                return None, (
+                    "Lançamento conciliado está protegido. "
+                    "Para alterar, um administrador deve demarcar a opção de conciliado."
+                )
+
         activity_id = merged.get("activity_id", entry.activity_id)
         process_instance_id = merged.get("process_instance_id", entry.process_instance_id)
         routine_id = merged.get("routine_id", entry.routine_id)
@@ -266,9 +435,29 @@ class FinancialService:
         if reference_error:
             return None, reference_error
 
+        budget_links, budget_error = FinancialService._resolve_budget_links(
+            company_id=company_id,
+            budget_line_id=merged.get("budget_line_id", getattr(entry, "budget_line_id", None)),
+            budget_contract_id=merged.get("budget_contract_id", getattr(entry, "budget_contract_id", None)),
+            budget_document_id=merged.get("budget_document_id", getattr(entry, "budget_document_id", None)),
+        )
+        if budget_error:
+            return None, budget_error
+
         try:
+            merged.update(budget_links or {})
+            merged["metadata_json"] = FinancialService._merge_budget_metadata(
+                merged.get("metadata_json", entry.metadata_json),
+                budget_links,
+            )
             for key, value in merged.items():
                 setattr(entry, key, value)
+            if requested_reconciled_state is True:
+                FinancialService.set_entry_reconciliation_state(
+                    entry=entry,
+                    reconciled=True,
+                    actor_reason=unlock_reason or "Marcação manual de conciliação.",
+                )
             db.session.commit()
             return entry, None
         except Exception as exc:
@@ -298,6 +487,11 @@ class FinancialService:
         ).first()
         if not entry:
             return None, "Lançamento financeiro não encontrado para rateio."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=data.company_id, entry=entry)
+        if active_bordero:
+            return None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}."
 
         normalized_allocations: List[FinancialAllocationInput] = []
         for item in data.allocations:
@@ -378,6 +572,11 @@ class FinancialService:
         ).first()
         if not entry:
             return None, "Lançamento financeiro não encontrado para liquidação."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=data.company_id, entry=entry)
+        if active_bordero:
+            return None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}. Faça a baixa pelo borderô."
 
         existing = FinancialSettlement.query.filter(
             FinancialSettlement.company_id == data.company_id,

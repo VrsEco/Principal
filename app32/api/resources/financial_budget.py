@@ -22,15 +22,38 @@ def _get_company_id_or_error():
     return company_id, None
 
 
+def _parse_bool_arg(name: str, default: bool = False) -> bool:
+    raw = (request.args.get(name) or "").strip().lower()
+    if raw in {"1", "true", "yes", "sim", "on"}:
+        return True
+    if raw in {"0", "false", "no", "nao", "não", "off"}:
+        return False
+    return default
+
+
 class FinancialBudgetVersionListResource(Resource):
     @permission_required("financial", "view")
     def get(self):
         company_id, error = _get_company_id_or_error()
         if error:
             return error
+        budget_cycle = request.args.get("budget_cycle")
+        budget_category = request.args.get("budget_category")
+        budget_group = request.args.get("budget_group")
+        consolidated = _parse_bool_arg("consolidated", default=False)
+        group_by_cycle = _parse_bool_arg("group_by_cycle", default=False)
+        group_by_category = _parse_bool_arg("group_by_category", default=False)
+        include_summary = _parse_bool_arg("include_summary", default=False)
         result, service_error = FinancialBudgetService.list_versions(
             company_id=company_id,
             allowed_company_ids=get_accessible_company_ids(),
+            budget_cycle=budget_cycle,
+            budget_category=budget_category,
+            budget_group=budget_group,
+            consolidated=consolidated,
+            group_by_cycle=group_by_cycle,
+            group_by_category=group_by_category,
+            include_summary=include_summary,
         )
         if service_error:
             return {"error": service_error}, 400
@@ -210,6 +233,12 @@ class FinancialBudgetPlanningWorkspaceResource(Resource):
         result, service_error = FinancialBudgetWorkspaceService.get_planning_workspace(
             company_id=company_id,
             version_id=request.args.get("version_id", type=int),
+            budget_cycle=request.args.get("budget_cycle"),
+            budget_category=request.args.get("budget_category"),
+            budget_group=request.args.get("budget_group"),
+            consolidated=_parse_bool_arg("consolidated", default=False),
+            group_by_cycle=_parse_bool_arg("group_by_cycle", default=False),
+            group_by_category=_parse_bool_arg("group_by_category", default=False),
             allowed_company_ids=get_accessible_company_ids(),
         )
         if service_error:
@@ -229,6 +258,14 @@ class FinancialBudgetExecutionWorkspaceResource(Resource):
             line_id=request.args.get("line_id", type=int),
             contract_id=request.args.get("contract_id", type=int),
             document_id=request.args.get("document_id", type=int),
+            budget_cycle=request.args.get("budget_cycle"),
+            budget_category=request.args.get("budget_category"),
+            budget_group=request.args.get("budget_group"),
+            consolidated=_parse_bool_arg("consolidated", default=False),
+            group_by_cycle=_parse_bool_arg("group_by_cycle", default=False),
+            group_by_category=_parse_bool_arg("group_by_category", default=False),
+            include_operational_queue=_parse_bool_arg("include_operational_queue", default=False),
+            queue_limit=request.args.get("queue_limit", type=int) or 50,
             allowed_company_ids=get_accessible_company_ids(),
         )
         if service_error:

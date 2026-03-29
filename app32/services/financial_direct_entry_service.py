@@ -6,6 +6,12 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 from models import db
 from models.financial import FinancialCounterparty, FinancialDomainEnablement, FinancialEntry, FinancialSchedule
+from models.financial_budget import (
+    FinancialBudgetContract,
+    FinancialBudgetDocument,
+    FinancialBudgetLine,
+    FinancialBudgetVersion,
+)
 from schemas.financial import FinancialDirectEntryCreateInput
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_schedule_service import FinancialScheduleService
@@ -74,6 +80,47 @@ class FinancialDirectEntryService:
         if error:
             return None, error
 
+        default_suggestions, error = FinancialScheduleService.list_default_suggestions(
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if error:
+            return None, error
+
+        budget_versions = (
+            FinancialBudgetVersion.query.filter(
+                FinancialBudgetVersion.company_id == company_id,
+                FinancialBudgetVersion.deleted_at.is_(None),
+            )
+            .order_by(FinancialBudgetVersion.period_start.desc(), FinancialBudgetVersion.id.desc())
+            .all()
+        )
+        budget_lines = (
+            FinancialBudgetLine.query.filter(
+                FinancialBudgetLine.company_id == company_id,
+                FinancialBudgetLine.deleted_at.is_(None),
+                FinancialBudgetLine.is_active.is_(True),
+            )
+            .order_by(FinancialBudgetLine.line_order.asc(), FinancialBudgetLine.id.asc())
+            .all()
+        )
+        budget_contracts = (
+            FinancialBudgetContract.query.filter(
+                FinancialBudgetContract.company_id == company_id,
+                FinancialBudgetContract.deleted_at.is_(None),
+            )
+            .order_by(FinancialBudgetContract.name.asc(), FinancialBudgetContract.id.asc())
+            .all()
+        )
+        budget_documents = (
+            FinancialBudgetDocument.query.filter(
+                FinancialBudgetDocument.company_id == company_id,
+                FinancialBudgetDocument.deleted_at.is_(None),
+            )
+            .order_by(FinancialBudgetDocument.title.asc(), FinancialBudgetDocument.id.asc())
+            .all()
+        )
+
         return {
             "counterparties": counterparties,
             "bank_accounts": bank_accounts,
@@ -82,6 +129,45 @@ class FinancialDirectEntryService:
             "correction_indexes": correction_indexes,
             "discount_rules": discount_rules,
             "enabled_domains": enabled_domains,
+            "default_suggestions": default_suggestions or {},
+            "budget_versions": [
+                {
+                    "id": item.id,
+                    "code": item.full_code or item.code,
+                    "name": item.name,
+                    "status": item.status,
+                    "budget_category": getattr(item, "budget_category", None),
+                }
+                for item in budget_versions
+            ],
+            "budget_lines": [
+                {
+                    "id": item.id,
+                    "budget_version_id": item.budget_version_id,
+                    "code": getattr(item, "full_code", None) or item.line_code,
+                    "name": item.line_name,
+                }
+                for item in budget_lines
+            ],
+            "budget_contracts": [
+                {
+                    "id": item.id,
+                    "budget_line_id": item.budget_line_id,
+                    "code": getattr(item, "full_code", None) or item.contract_code,
+                    "name": item.name,
+                }
+                for item in budget_contracts
+            ],
+            "budget_documents": [
+                {
+                    "id": item.id,
+                    "budget_contract_id": item.budget_contract_id,
+                    "code": getattr(item, "full_code", None) or item.document_code,
+                    "name": item.title,
+                    "is_default_suggestion": bool(getattr(item, "is_default_suggestion", False)),
+                }
+                for item in budget_documents
+            ],
         }, None
 
     @staticmethod
@@ -126,6 +212,10 @@ class FinancialDirectEntryService:
                     {
                         "chart_account_id": item.chart_account_id,
                         "cost_center_id": item.cost_center_id,
+                        "budget_line_id": item.budget_line_id,
+                        "budget_contract_id": item.budget_contract_id,
+                        "budget_document_id": item.budget_document_id,
+                        "allocation_type": item.allocation_type,
                         "percentage": item.percentage,
                         "allocated_amount": item.allocated_amount,
                     }
@@ -188,6 +278,10 @@ class FinancialDirectEntryService:
                         "domain_type": item.domain_type,
                         "domain_source_id": item.domain_source_id,
                         "domain_label": item.domain_label,
+                        "budget_version_id": item.budget_version_id,
+                        "budget_line_id": item.budget_line_id,
+                        "budget_contract_id": item.budget_contract_id,
+                        "budget_document_id": item.budget_document_id,
                     },
                 }
                 for item in data.allocations
@@ -303,7 +397,12 @@ class FinancialDirectEntryService:
 
     @staticmethod
     def _build_schedule_payload(data: FinancialDirectEntryCreateInput) -> Dict[str, Any]:
-        metadata_json = {
+        budget_links = {
+            "budget_line_id": data.budget_line_id,
+            "budget_contract_id": data.budget_contract_id,
+            "budget_document_id": data.budget_document_id,
+        }
+        metadata_json = FinancialService._merge_budget_metadata({
             **(data.metadata_json or {}),
             "direct_entry": True,
             "document_number": data.document_number,
@@ -320,11 +419,15 @@ class FinancialDirectEntryService:
                     "domain_source_id": item.domain_source_id,
                     "domain_label": item.domain_label,
                     "notes": item.notes,
+                    "budget_version_id": item.budget_version_id,
+                    "budget_line_id": item.budget_line_id,
+                    "budget_contract_id": item.budget_contract_id,
+                    "budget_document_id": item.budget_document_id,
                     "metadata_json": item.metadata_json or {},
                 }
                 for item in data.allocations
             ],
-        }
+        }, budget_links)
         return {
             "company_id": data.company_id,
             "schedule_code": FinancialScheduleService._generate_schedule_code(data.company_id),
@@ -344,6 +447,9 @@ class FinancialDirectEntryService:
             "counterparty_id": data.counterparty_id,
             "chart_account_id": data.chart_account_id or (data.allocations[0].chart_account_id if data.allocations else None),
             "cost_center_id": data.cost_center_id or (data.allocations[0].cost_center_id if data.allocations else None),
+            "budget_line_id": data.budget_line_id,
+            "budget_contract_id": data.budget_contract_id,
+            "budget_document_id": data.budget_document_id,
             "created_by_user_id": data.created_by_user_id,
             "created_by_employee_id": data.created_by_employee_id,
             "created_by_agent": data.created_by_agent,
@@ -354,13 +460,18 @@ class FinancialDirectEntryService:
     @staticmethod
     def _build_entry_payload(data: FinancialDirectEntryCreateInput, schedule: FinancialSchedule) -> Dict[str, Any]:
         entry_code = f"DIR-{schedule.id:06d}"
-        metadata_json = {
+        budget_links = {
+            "budget_line_id": data.budget_line_id,
+            "budget_contract_id": data.budget_contract_id,
+            "budget_document_id": data.budget_document_id,
+        }
+        metadata_json = FinancialService._merge_budget_metadata({
             **(data.metadata_json or {}),
             "direct_entry": True,
             "schedule_id": schedule.id,
             "correction_index_id": data.correction_index_id,
             "discount_rule_id": data.discount_rule_id,
-        }
+        }, budget_links)
         return {
             "company_id": data.company_id,
             "entry_code": entry_code,
@@ -381,6 +492,9 @@ class FinancialDirectEntryService:
             "counterparty_id": data.counterparty_id,
             "chart_account_id": data.chart_account_id or (data.allocations[0].chart_account_id if data.allocations else None),
             "cost_center_id": data.cost_center_id or (data.allocations[0].cost_center_id if data.allocations else None),
+            "budget_line_id": data.budget_line_id,
+            "budget_contract_id": data.budget_contract_id,
+            "budget_document_id": data.budget_document_id,
             "created_by_user_id": data.created_by_user_id,
             "created_by_employee_id": data.created_by_employee_id,
             "created_by_agent": data.created_by_agent,

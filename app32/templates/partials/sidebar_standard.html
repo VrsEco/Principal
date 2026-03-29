@@ -233,9 +233,6 @@
                             <a href="/financial/catalogs/account-categories" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/account-categories' }}">
                                 <span>Categorias de Conta</span>
                             </a>
-                            <a href="/financial/catalogs/payment-terms" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/payment-terms' }}">
-                                <span>Condições de Pagamento</span>
-                            </a>
                             <a href="/financial/catalogs/asset-accounts" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/asset-accounts' }}">
                                 <span>Contas Patrimoniais</span>
                             </a>
@@ -298,7 +295,7 @@
                 </div>
             </div>
 
-            <div class="sidebar-subgroup {{ 'open' if request.path == '/financial/schedules' or request.path == '/financial/entries' or '/financial/entries/' in request.path or request.path == '/financial/entries/direct' or request.path == '/financial/ingestions' or request.path == '/financial/closings' }}">
+            <div class="sidebar-subgroup {{ 'open' if request.path == '/financial/schedules' or request.path == '/financial/entries' or '/financial/entries/' in request.path or request.path == '/financial/entries/direct' or request.path == '/financial/ingestions' or request.path == '/financial/closings' or request.path == '/financial/budget' or request.path == '/financial/budget/execution' or request.path == '/financial/reconciliation' or request.path == '/financial/borderos' or '/financial/borderos/' in request.path or request.path == '/financial/borderos/new' }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     Operação
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -319,10 +316,22 @@
                     <a href="/financial/closings" class="sub-nav-link {{ 'active' if request.path == '/financial/closings' }}">
                         <span>Fechamentos Core</span>
                     </a>
+                    <a href="/financial/budget" class="sub-nav-link {{ 'active' if request.path == '/financial/budget' }}">
+                        <span>Orçamento Matricial</span>
+                    </a>
+                    <a href="/financial/budget/execution" class="sub-nav-link {{ 'active' if request.path == '/financial/budget/execution' }}">
+                        <span>NF/Assemelhados</span>
+                    </a>
+                    <a href="/financial/reconciliation" class="sub-nav-link {{ 'active' if request.path == '/financial/reconciliation' }}">
+                        <span>Conciliação Bancária</span>
+                    </a>
+                    <a href="/financial/borderos" class="sub-nav-link {{ 'active' if request.path == '/financial/borderos' or '/financial/borderos/' in request.path or request.path == '/financial/borderos/new' }}">
+                        <span>Borderô</span>
+                    </a>
                 </div>
             </div>
 
-            <div class="sidebar-subgroup {{ 'open' if request.path == '/financial' or request.path == '/financial/dashboard' or request.path == '/financial/reports' or request.path == '/financial/budget' or request.path == '/financial/budget/execution' }}">
+            <div class="sidebar-subgroup {{ 'open' if request.path == '/financial' or request.path == '/financial/dashboard' or '/financial/reports/' in request.path }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     Gestão
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -334,14 +343,23 @@
                     <a href="/financial" class="sub-nav-link {{ 'active' if request.path == '/financial' or request.path == '/financial/dashboard' }}">
                         <span>Dashboard Visão</span>
                     </a>
-                    <a href="/financial/reports" class="sub-nav-link {{ 'active' if request.path == '/financial/reports' }}">
-                        <span>Relatórios</span>
+                    <a href="/financial/reports/agendamento" class="sub-nav-link {{ 'active' if '/financial/reports/agendamento' in request.path }}">
+                        <span>Relatório de Agendamento</span>
                     </a>
-                    <a href="/financial/budget" class="sub-nav-link {{ 'active' if request.path == '/financial/budget' }}">
-                        <span>Orçamento Matricial</span>
+                    <a href="/financial/reports/extrato-bancario" class="sub-nav-link {{ 'active' if '/financial/reports/extrato-bancario' in request.path }}">
+                        <span>Extrato Bancário</span>
                     </a>
-                    <a href="/financial/budget/execution" class="sub-nav-link {{ 'active' if request.path == '/financial/budget/execution' }}">
-                        <span>Contratos / NF</span>
+                    <a href="/financial/reports/demonstrativo-resultados" class="sub-nav-link {{ 'active' if '/financial/reports/demonstrativo-resultados' in request.path }}">
+                        <span>Demonstrativo de Resultados</span>
+                    </a>
+                    <a href="/financial/reports/fluxo-caixa" class="sub-nav-link {{ 'active' if '/financial/reports/fluxo-caixa' in request.path }}">
+                        <span>Fluxo de Caixa</span>
+                    </a>
+                    <a href="/financial/reports/razao" class="sub-nav-link {{ 'active' if '/financial/reports/razao' in request.path }}">
+                        <span>Razão</span>
+                    </a>
+                    <a href="/financial/reports/capital-circulante-liquido" class="sub-nav-link {{ 'active' if '/financial/reports/capital-circulante-liquido' in request.path }}">
+                        <span>Capital Circulante Líquido</span>
                     </a>
                 </div>
             </div>

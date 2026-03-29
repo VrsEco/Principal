@@ -510,6 +510,9 @@ def register_api_resources(api):
         FinancialScheduleCreateEntryResource,
         FinancialScheduleAttachmentListResource,
         FinancialScheduleAttachmentResource,
+        FinancialBorderoListResource,
+        FinancialBorderoResource,
+        FinancialBorderoSettlementListResource,
         FinancialAutomationRuleListResource,
         FinancialAutomationRuleResource,
         FinancialAutomationExecutionListResource,
@@ -524,6 +527,11 @@ def register_api_resources(api):
         FinancialImportBatchProcessResource,
         FinancialImportBatchReconcileResource,
         FinancialReconciliationMatchReviewResource,
+        FinancialBankReconciliationOverviewResource,
+        FinancialBankReconciliationWorkspaceResource,
+        FinancialBankReconciliationRowCandidatesResource,
+        FinancialBankReconciliationRowMatchResource,
+        FinancialBankReconciliationCreateEntryResource,
         FinancialClassificationRuleListResource,
         FinancialClassificationRuleResource,
         FinancialClassificationRuleToggleResource,
@@ -675,6 +683,9 @@ def register_api_resources(api):
     api.add_resource(FinancialScheduleCreateEntryResource, '/api/financial/schedules/<int:schedule_id>/create-entry')
     api.add_resource(FinancialScheduleAttachmentListResource, '/api/financial/schedules/<int:schedule_id>/attachments')
     api.add_resource(FinancialScheduleAttachmentResource, '/api/financial/schedules/<int:schedule_id>/attachments/<string:attachment_id>')
+    api.add_resource(FinancialBorderoListResource, '/api/financial/borderos')
+    api.add_resource(FinancialBorderoResource, '/api/financial/borderos/<int:bordero_id>')
+    api.add_resource(FinancialBorderoSettlementListResource, '/api/financial/borderos/<int:bordero_id>/settlements')
     api.add_resource(FinancialAutomationRuleListResource, '/api/financial/automation-rules')
     api.add_resource(FinancialAutomationRuleResource, '/api/financial/automation-rules/<int:rule_id>')
     api.add_resource(FinancialAutomationExecutionListResource, '/api/financial/automation-executions')
@@ -692,6 +703,11 @@ def register_api_resources(api):
     api.add_resource(FinancialImportBatchAIRankingResource, '/api/financial/imports/<int:batch_id>/ai-rank-classification')
     api.add_resource(FinancialImportBatchReconcileResource, '/api/financial/imports/<int:batch_id>/reconcile')
     api.add_resource(FinancialReconciliationMatchReviewResource, '/api/financial/reconciliation-matches/<int:match_id>/review')
+    api.add_resource(FinancialBankReconciliationOverviewResource, '/api/financial/reconciliation/overview')
+    api.add_resource(FinancialBankReconciliationWorkspaceResource, '/api/financial/reconciliation/workspace')
+    api.add_resource(FinancialBankReconciliationRowCandidatesResource, '/api/financial/reconciliation/rows/<int:row_id>/candidates')
+    api.add_resource(FinancialBankReconciliationRowMatchResource, '/api/financial/reconciliation/rows/<int:row_id>/match')
+    api.add_resource(FinancialBankReconciliationCreateEntryResource, '/api/financial/reconciliation/rows/<int:row_id>/create-entry')
     api.add_resource(FinancialClassificationRuleListResource, '/api/financial/classification-rules')
     api.add_resource(FinancialClassificationRuleResource, '/api/financial/classification-rules/<int:rule_id>')
     api.add_resource(FinancialClassificationRuleToggleResource, '/api/financial/classification-rules/<int:rule_id>/toggle')
@@ -749,6 +765,7 @@ def register_blueprints(app):
     from api.routes.integrations import integrations_bp
     from api.routes.portfolios import portfolios_bp
     from api.routes.financial import financial_bp
+    import api.routes.financial_reports  # noqa: F401
     from api.user_employee import user_employee_bp
     from api.routes.meetings import meetings_bp
     # from api.routes.ai_board import ai_board_bp

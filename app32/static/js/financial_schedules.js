@@ -9,9 +9,22 @@
   let schedules = [];
   let selectedSchedule = null;
   let entryTypeLocked = false;
-  let optionsCache = { counterparties: [], chart_accounts: [], cost_centers: [], correction_indexes: [], discount_rules: [], enabled_domains: [] };
+  let optionsCache = {
+    counterparties: [],
+    chart_accounts: [],
+    cost_centers: [],
+    correction_indexes: [],
+    discount_rules: [],
+    enabled_domains: [],
+    budget_versions: [],
+    budget_lines: [],
+    budget_contracts: [],
+    budget_documents: [],
+    default_suggestions: {},
+  };
   let allocationRows = [];
   let pendingAttachments = [];
+  let borderoLocked = false;
 
   const $ = (id) => document.getElementById(id);
   const form = $('schedule-form');
@@ -153,6 +166,15 @@
     return item.code ? `${item.code} - ${item.name}` : (item.name || item.id);
   }
 
+  function buildBudgetLabel(item) {
+    const code = item.code || '';
+    const name = item.name || '';
+    return code && name ? `${code} - ${name}` : (code || name || item.id);
+  }
+
+  const defaultSuggestions = () => optionsCache.default_suggestions || {};
+  const asOptionValue = (value) => (value == null || value === '' ? '' : String(value));
+
   function getTopAmount() {
     return round2(parseCurrency($('field-amount').value));
   }
@@ -231,40 +253,54 @@
   function renderAllocations() {
     const body = $('allocations-body');
     if (!allocationRows.length) {
-      body.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum rateio informado.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum rateio informado.</td></tr>';
       renderAllocationSummary();
       return;
     }
 
     const chartOptions = buildOptions(analyticChartAccounts(), 'Selecione...', buildChartAccountLabel);
     const costCenterOptions = buildOptions(finalCostCenters(), 'Selecione...', buildCostCenterLabel);
+    const budgetDocumentOptions = buildOptions(optionsCache.budget_documents, 'Selecione...', buildBudgetLabel);
 
     body.innerHTML = allocationRows.map((row, index) => `
       <tr>
-        <td><select data-index="${index}" data-field="chart_account_id">${chartOptions}</select></td>
-        <td><select data-index="${index}" data-field="cost_center_id">${costCenterOptions}</select></td>
-        <td><select data-index="${index}" data-field="domain_value">${buildDomainOptions(row.domain_value || '')}</select></td>
-        <td><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal"></td>
-        <td><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric"></td>
-        <td><div class="rateio-actions"><button type="button" class="btn btn-secondary btn-icon" data-action="duplicate" data-index="${index}">+</button><button type="button" class="btn btn-secondary btn-icon" data-action="remove" data-index="${index}">×</button></div></td>
+        <td class="rateio-cell rateio-cell--chart-account"><select data-index="${index}" data-field="chart_account_id" aria-label="Plano de conta da linha ${index + 1}">${chartOptions}</select></td>
+        <td class="rateio-cell rateio-cell--cost-center"><select data-index="${index}" data-field="cost_center_id" aria-label="Centro de resultado da linha ${index + 1}">${costCenterOptions}</select></td>
+        <td class="rateio-cell rateio-cell--budget-document"><select data-index="${index}" data-field="budget_document_id" aria-label="NF ou assemelhado da linha ${index + 1}">${budgetDocumentOptions}</select></td>
+        <td class="rateio-cell rateio-cell--domain"><select data-index="${index}" data-field="domain_value" aria-label="Projeto ou processo da linha ${index + 1}">${buildDomainOptions(row.domain_value || '')}</select></td>
+        <td class="rateio-cell rateio-cell--percentage"><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal" placeholder="0,0000" aria-label="Percentual da linha ${index + 1}"></td>
+        <td class="rateio-cell rateio-cell--amount"><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric" placeholder="0,00" aria-label="Valor da linha ${index + 1}"></td>
+        <td class="rateio-cell rateio-cell--actions"><div class="rateio-actions"><button type="button" class="btn btn-secondary btn-icon" data-action="duplicate" data-index="${index}" aria-label="Duplicar linha ${index + 1}">+</button><button type="button" class="btn btn-secondary btn-icon" data-action="remove" data-index="${index}" aria-label="Remover linha ${index + 1}">×</button></div></td>
       </tr>`).join('');
 
     allocationRows.forEach((row, index) => {
       body.querySelector(`select[data-field="chart_account_id"][data-index="${index}"]`).value = row.chart_account_id || '';
       body.querySelector(`select[data-field="cost_center_id"][data-index="${index}"]`).value = row.cost_center_id || '';
+      body.querySelector(`select[data-field="budget_document_id"][data-index="${index}"]`).value = row.budget_document_id || '';
     });
 
     renderAllocationSummary();
   }
 
   function createAllocationRow(defaults = {}) {
+    const suggestions = defaultSuggestions();
+    const domainType = defaults.domain_type || suggestions.domain_type || null;
+    const domainSourceId = defaults.domain_source_id || suggestions.domain_source_id || null;
     return {
       chart_account_id: defaults.chart_account_id || '',
-      cost_center_id: defaults.cost_center_id || '',
-      domain_type: defaults.domain_type || null,
-      domain_source_id: defaults.domain_source_id || null,
-      domain_label: defaults.domain_label || null,
-      domain_value: defaults.domain_type && defaults.domain_source_id ? `${defaults.domain_type}:${defaults.domain_source_id}` : '',
+      cost_center_id: asOptionValue(defaults.cost_center_id || suggestions.cost_center_id || ''),
+      budget_version_id: asOptionValue(defaults.budget_version_id || suggestions.budget_version_id || ''),
+      budget_version_code: defaults.budget_version_code || null,
+      budget_line_id: asOptionValue(defaults.budget_line_id || suggestions.budget_line_id || ''),
+      budget_line_code: defaults.budget_line_code || null,
+      budget_contract_id: asOptionValue(defaults.budget_contract_id || suggestions.budget_contract_id || ''),
+      budget_contract_code: defaults.budget_contract_code || null,
+      budget_document_id: asOptionValue(defaults.budget_document_id || suggestions.budget_document_id || ''),
+      budget_document_code: defaults.budget_document_code || null,
+      domain_type: domainType,
+      domain_source_id: domainSourceId,
+      domain_label: defaults.domain_label || suggestions.domain_label || null,
+      domain_value: domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '',
       percentage: defaults.percentage ?? '100',
       allocated_amount: defaults.allocated_amount ?? null,
       allocated_amount_display: defaults.allocated_amount_display || '',
@@ -331,6 +367,14 @@
     allocationRows = (schedule.allocations || []).map((item) => createAllocationRow({
       chart_account_id: item.chart_account_id || '',
       cost_center_id: item.cost_center_id || '',
+      budget_version_id: item.budget_version_id || item.metadata_json?.budget_version_id || '',
+      budget_version_code: item.budget_version_code || item.metadata_json?.budget_version_code || null,
+      budget_line_id: item.budget_line_id || item.metadata_json?.budget_line_id || '',
+      budget_line_code: item.budget_line_code || item.metadata_json?.budget_line_code || null,
+      budget_contract_id: item.budget_contract_id || item.metadata_json?.budget_contract_id || '',
+      budget_contract_code: item.budget_contract_code || item.metadata_json?.budget_contract_code || null,
+      budget_document_id: item.budget_document_id || item.metadata_json?.budget_document_id || '',
+      budget_document_code: item.budget_document_code || item.metadata_json?.budget_document_code || null,
       domain_type: item.domain_type || null,
       domain_source_id: item.domain_source_id || null,
       domain_label: item.domain_label || null,
@@ -346,6 +390,7 @@
   }
 
   function fillForm(schedule) {
+    borderoLocked = Boolean(schedule.is_bordero_locked);
     form.schedule_id.value = schedule.id || '';
     form.schedule_code.value = schedule.schedule_code || '';
     form.status.value = schedule.status || 'active';
@@ -368,6 +413,18 @@
     renderAttachments(schedule.attachments || []);
     renderBaixas(schedule.related_entries || []);
     $('baixas-tab-button').classList.toggle('hidden', !(schedule.related_entries || []).length);
+    Array.from(form.elements).forEach((field) => {
+      if (!field || ['schedule_id', 'schedule_code'].includes(field.name)) return;
+      field.disabled = borderoLocked;
+    });
+    document.querySelectorAll('.sched-footer-actions button').forEach((button) => {
+      if (button.textContent.includes('Cancelar')) return;
+      button.disabled = borderoLocked;
+    });
+    if (borderoLocked && entryTypeBanner) {
+      const code = schedule.bordero?.code || schedule.summary?.bordero_code || 'Borderô';
+      entryTypeBanner.textContent = `Agendamento bloqueado pelo ${code}. Consulta liberada; edição e baixa direta indisponíveis.`;
+    }
     window.toggleRepeatFields();
   }
 
@@ -429,6 +486,14 @@
         allocations: allocationRows.map((row) => ({
           chart_account_id: Number(row.chart_account_id || 0) || null,
           cost_center_id: Number(row.cost_center_id || 0) || null,
+          budget_version_id: Number(row.budget_version_id || 0) || null,
+          budget_version_code: row.budget_version_code || null,
+          budget_line_id: Number(row.budget_line_id || 0) || null,
+          budget_line_code: row.budget_line_code || null,
+          budget_contract_id: Number(row.budget_contract_id || 0) || null,
+          budget_contract_code: row.budget_contract_code || null,
+          budget_document_id: Number(row.budget_document_id || 0) || null,
+          budget_document_code: row.budget_document_code || null,
           domain_type: row.domain_type || null,
           domain_source_id: row.domain_source_id || null,
           domain_label: row.domain_label || null,
@@ -452,6 +517,10 @@
     $('field-counterparty').innerHTML = buildOptions(optionsCache.counterparties, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('field-correction-index').innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
     $('field-discount-rule').innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    if (allocationRows.length) {
+      allocationRows = allocationRows.map((row) => createAllocationRow(row));
+      renderAllocations();
+    }
   }
 
   async function loadSchedules() {
@@ -468,8 +537,15 @@
   };
 
   window.startNewSchedule = (entryType = initialEntryType) => {
+    borderoLocked = false;
     selectedSchedule = null;
     form.reset();
+    Array.from(form.elements).forEach((field) => {
+      if (field) field.disabled = false;
+    });
+    document.querySelectorAll('.sched-footer-actions button').forEach((button) => {
+      button.disabled = false;
+    });
     form.schedule_id.value = '';
     form.schedule_code.value = '';
     form.status.value = 'active';
@@ -510,6 +586,7 @@
 
   window.handleScheduleAction = async (action) => {
     try {
+      if (borderoLocked) throw new Error(`Agendamento bloqueado pelo ${selectedSchedule?.bordero?.code || 'borderô'}.`);
       if (action === 'cancel') return window.location.href = '/financial/schedules';
       const saved = await saveSchedule();
       if (action === 'save_and_new') return window.startNewSchedule(initialEntryType);
@@ -681,6 +758,33 @@
     const field = event.target.dataset.field;
     const index = Number(event.target.dataset.index || -1);
     if (index < 0 || !field || !allocationRows[index]) return;
+    if (field === 'budget_document_id') {
+      const value = event.target.value;
+      const item = (optionsCache.budget_documents || []).find((candidate) => String(candidate.id) === String(value));
+      if (!value || !item) {
+        allocationRows[index].budget_version_id = '';
+        allocationRows[index].budget_version_code = null;
+        allocationRows[index].budget_line_id = '';
+        allocationRows[index].budget_line_code = null;
+        allocationRows[index].budget_contract_id = '';
+        allocationRows[index].budget_contract_code = null;
+        allocationRows[index].budget_document_id = '';
+        allocationRows[index].budget_document_code = null;
+        return;
+      }
+      allocationRows[index].budget_document_id = value;
+      allocationRows[index].budget_document_code = item?.code || null;
+      const contract = (optionsCache.budget_contracts || []).find((candidate) => String(candidate.id) === String(item.budget_contract_id || ''));
+      const line = (optionsCache.budget_lines || []).find((candidate) => String(candidate.id) === String(contract?.budget_line_id || ''));
+      const version = (optionsCache.budget_versions || []).find((candidate) => String(candidate.id) === String(line?.budget_version_id || ''));
+      allocationRows[index].budget_contract_id = contract ? String(contract.id) : '';
+      allocationRows[index].budget_contract_code = contract?.code || null;
+      allocationRows[index].budget_line_id = line ? String(line.id) : '';
+      allocationRows[index].budget_line_code = line?.code || null;
+      allocationRows[index].budget_version_id = version ? String(version.id) : '';
+      allocationRows[index].budget_version_code = version?.code || null;
+      return;
+    }
     if (field === 'domain_value') {
       const value = event.target.value;
       allocationRows[index].domain_value = value;

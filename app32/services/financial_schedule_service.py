@@ -13,7 +13,15 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from models import db
-from models.financial import FinancialChartAccount, FinancialCostCenter, FinancialEntry, FinancialSchedule, FinancialSettlement
+from models.financial import (
+    FinancialChartAccount,
+    FinancialCostCenter,
+    FinancialDomainEnablement,
+    FinancialEntry,
+    FinancialSchedule,
+    FinancialSettlement,
+)
+from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine, FinancialBudgetVersion
 from schemas.financial import FinancialScheduleCreateInput, FinancialScheduleUpdateInput
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
@@ -125,6 +133,19 @@ class FinancialScheduleService:
         if allocation_error:
             return None, allocation_error
 
+        allocation_budget_links = FinancialScheduleService._derive_budget_links_from_allocations(
+            metadata_json=data.metadata_json,
+        )
+
+        budget_links, budget_error = FinancialService._resolve_budget_links(
+            company_id=data.company_id,
+            budget_line_id=getattr(data, "budget_line_id", None) or allocation_budget_links.get("budget_line_id"),
+            budget_contract_id=getattr(data, "budget_contract_id", None) or allocation_budget_links.get("budget_contract_id"),
+            budget_document_id=getattr(data, "budget_document_id", None) or allocation_budget_links.get("budget_document_id"),
+        )
+        if budget_error:
+            return None, budget_error
+
         existing = FinancialSchedule.query.filter(
             FinancialSchedule.company_id == data.company_id,
             FinancialSchedule.schedule_code == data.schedule_code,
@@ -135,7 +156,13 @@ class FinancialScheduleService:
 
         try:
             normalized = data.model_dump()
-            normalized["metadata_json"] = FinancialScheduleService._sanitize_json(normalized.get("metadata_json") or {})
+            normalized.update(budget_links or {})
+            normalized["metadata_json"] = FinancialScheduleService._sanitize_json(
+                FinancialService._merge_budget_metadata(
+                    normalized.get("metadata_json") or {},
+                    budget_links,
+                )
+            )
             normalized["next_due_date"] = normalized.get("next_due_date") or normalized["first_due_date"]
             schedule = FinancialSchedule(**normalized)
             db.session.add(schedule)
@@ -170,6 +197,11 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Agendamento financeiro não encontrado no escopo da empresa."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
+        if active_bordero:
+            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         merged = data.model_dump(exclude_unset=True)
         if "metadata_json" in merged:
@@ -199,6 +231,19 @@ class FinancialScheduleService:
         if allocation_error:
             return None, allocation_error
 
+        allocation_budget_links = FinancialScheduleService._derive_budget_links_from_allocations(
+            metadata_json=merged.get("metadata_json", schedule.metadata_json),
+        )
+
+        budget_links, budget_error = FinancialService._resolve_budget_links(
+            company_id=company_id,
+            budget_line_id=merged.get("budget_line_id", getattr(schedule, "budget_line_id", None)) or allocation_budget_links.get("budget_line_id"),
+            budget_contract_id=merged.get("budget_contract_id", getattr(schedule, "budget_contract_id", None)) or allocation_budget_links.get("budget_contract_id"),
+            budget_document_id=merged.get("budget_document_id", getattr(schedule, "budget_document_id", None)) or allocation_budget_links.get("budget_document_id"),
+        )
+        if budget_error:
+            return None, budget_error
+
         start_date = merged.get("start_date", schedule.start_date)
         end_date = merged.get("end_date", schedule.end_date)
         first_due_date = merged.get("first_due_date", schedule.first_due_date)
@@ -211,6 +256,13 @@ class FinancialScheduleService:
             return None, "next_due_date não pode ser menor que first_due_date."
 
         try:
+            merged.update(budget_links or {})
+            merged["metadata_json"] = FinancialScheduleService._sanitize_json(
+                FinancialService._merge_budget_metadata(
+                    merged.get("metadata_json", schedule.metadata_json),
+                    budget_links,
+                )
+            )
             for key, value in merged.items():
                 setattr(schedule, key, value)
             db.session.commit()
@@ -239,6 +291,11 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Agendamento financeiro não encontrado no escopo da empresa."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
+        if active_bordero:
+            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         if status not in {"active", "paused", "cancelled", "completed", "draft"}:
             return None, "Status inválido para o agendamento."
@@ -270,6 +327,11 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Agendamento financeiro não encontrado no escopo da empresa."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
+        if active_bordero:
+            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         has_entries = (
             FinancialEntry.query.filter(
@@ -297,6 +359,7 @@ class FinancialScheduleService:
         schedule_id: int,
         company_id: int,
         allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -309,6 +372,12 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Agendamento financeiro não encontrado no escopo da empresa."
+        if not ignore_bordero_lock:
+            from services.financial_bordero_service import FinancialBorderoService
+
+            active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
+            if active_bordero:
+                return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         due_date = schedule.next_due_date or schedule.first_due_date
         if not due_date:
@@ -434,7 +503,6 @@ class FinancialScheduleService:
 
                     next_due = FinancialScheduleService._calculate_next_due_date(schedule, schedule.next_due_date)
                     if not next_due or (schedule.end_date and next_due > schedule.end_date):
-                        schedule.next_due_date = None
                         schedule.status = "completed"
                         break
                     schedule.next_due_date = next_due
@@ -472,6 +540,11 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Agendamento financeiro não encontrado no escopo da empresa."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
+        if active_bordero:
+            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         if not file or not file.filename:
             return None, "Nenhum arquivo informado."
@@ -521,6 +594,11 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Agendamento financeiro não encontrado no escopo da empresa."
+        from services.financial_bordero_service import FinancialBorderoService
+
+        active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
+        if active_bordero:
+            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         metadata = dict(schedule.metadata_json or {})
         attachments = list(metadata.get("attachments") or [])
@@ -556,7 +634,12 @@ class FinancialScheduleService:
         occurrence_date: Optional[date] = None,
     ) -> Dict[str, Any]:
         due_date = occurrence_date or schedule.next_due_date or schedule.first_due_date
-        metadata = dict(schedule.metadata_json or {})
+        budget_links = {
+            "budget_line_id": getattr(schedule, "budget_line_id", None),
+            "budget_contract_id": getattr(schedule, "budget_contract_id", None),
+            "budget_document_id": getattr(schedule, "budget_document_id", None),
+        }
+        metadata = FinancialService._merge_budget_metadata(dict(schedule.metadata_json or {}), budget_links)
         status = "posted" if (schedule.auto_post or force_posted) else "scheduled"
         document_number = None
         explicit_document = str(metadata.get("document_number") or "").strip()
@@ -591,6 +674,9 @@ class FinancialScheduleService:
             "counterparty_id": schedule.counterparty_id,
             "chart_account_id": schedule.chart_account_id,
             "cost_center_id": schedule.cost_center_id,
+            "budget_line_id": getattr(schedule, "budget_line_id", None),
+            "budget_contract_id": getattr(schedule, "budget_contract_id", None),
+            "budget_document_id": getattr(schedule, "budget_document_id", None),
             "activity_id": schedule.activity_id,
             "process_instance_id": schedule.process_instance_id,
             "routine_id": schedule.routine_id,
@@ -638,6 +724,14 @@ class FinancialScheduleService:
                         "domain_type": item.get("domain_type"),
                         "domain_source_id": item.get("domain_source_id"),
                         "domain_label": item.get("domain_label"),
+                        "budget_version_id": item.get("budget_version_id"),
+                        "budget_version_code": item.get("budget_version_code"),
+                        "budget_line_id": item.get("budget_line_id"),
+                        "budget_line_code": item.get("budget_line_code"),
+                        "budget_contract_id": item.get("budget_contract_id"),
+                        "budget_contract_code": item.get("budget_contract_code"),
+                        "budget_document_id": item.get("budget_document_id"),
+                        "budget_document_code": item.get("budget_document_code"),
                     },
                 }
             )
@@ -691,6 +785,7 @@ class FinancialScheduleService:
         amount_total = Decimal(str(template_amount or 0))
         percentage_total = Decimal("0")
         allocated_total = Decimal("0")
+        allocation_mode: Optional[str] = None
 
         for index, item in enumerate(allocations, start=1):
             chart_account_id = item.get("chart_account_id")
@@ -699,6 +794,19 @@ class FinancialScheduleService:
                 return f"Selecione o plano de contas na linha {index} do rateio."
             if not cost_center_id:
                 return f"Selecione o centro de resultado na linha {index} do rateio."
+
+            budget_line_id = item.get("budget_line_id")
+            budget_contract_id = item.get("budget_contract_id")
+            budget_document_id = item.get("budget_document_id")
+            if budget_line_id or budget_contract_id or budget_document_id:
+                _, budget_error = FinancialService._resolve_budget_links(
+                    company_id=company_id,
+                    budget_line_id=budget_line_id,
+                    budget_contract_id=budget_contract_id,
+                    budget_document_id=budget_document_id,
+                )
+                if budget_error:
+                    return f"Linha {index} do rateio: {budget_error}"
 
             chart_account = FinancialChartAccount.query.filter(
                 FinancialChartAccount.id == chart_account_id,
@@ -734,18 +842,28 @@ class FinancialScheduleService:
             except Exception:
                 return f"Percentual ou valor inválido na linha {index} do rateio."
 
-            if percentage <= 0:
+            current_mode = str(item.get("allocation_type") or "percentage").strip().lower()
+            if allocation_mode is None:
+                allocation_mode = current_mode
+            elif allocation_mode != current_mode:
+                return "Não é permitido misturar rateio por percentual e por valor no mesmo agendamento."
+
+            if current_mode == "percentage" and percentage <= 0:
                 return f"Informe um percentual maior que zero na linha {index} do rateio."
+            if current_mode == "amount" and allocated_amount <= 0:
+                return f"Informe um valor maior que zero na linha {index} do rateio."
+            if current_mode not in {"percentage", "amount"}:
+                return f"Tipo de rateio inválido na linha {index} do agendamento."
             if allocated_amount < 0:
                 return f"O valor da linha {index} do rateio não pode ser negativo."
 
             percentage_total += percentage
             allocated_total += allocated_amount
 
-        if abs(percentage_total - Decimal("100")) > Decimal("0.01"):
+        if allocation_mode == "percentage" and abs(percentage_total - Decimal("100")) > Decimal("0.01"):
             return "A soma dos percentuais do rateio deve ser exatamente 100%."
 
-        if abs(allocated_total - amount_total) > Decimal("0.01"):
+        if allocation_mode == "amount" and abs(allocated_total - amount_total) > Decimal("0.01"):
             return "A soma dos valores do rateio deve ser igual ao valor do agendamento."
 
         return None
@@ -758,6 +876,8 @@ class FinancialScheduleService:
         include_related_entries: bool = False,
         include_summary: bool = False,
     ) -> Dict[str, Any]:
+        from services.financial_bordero_service import FinancialBorderoService
+
         payload = schedule.to_dict()
         payload["signed_template_amount"] = FinancialService.get_signed_amount(
             payload.get("template_amount"),
@@ -774,6 +894,22 @@ class FinancialScheduleService:
         payload["competence_mode"] = metadata.get("competence_mode") or "same_as_due"
         payload["related_entries"] = []
         payload["has_entries"] = False
+        active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(
+            company_id=schedule.company_id,
+            schedule_id=schedule.id,
+        )
+        payload["bordero"] = (
+            {
+                "id": active_bordero.id,
+                "code": active_bordero.bordero_code,
+                "status": active_bordero.status,
+                "type": active_bordero.bordero_type,
+                "locked": True,
+            }
+            if active_bordero
+            else None
+        )
+        payload["is_bordero_locked"] = bool(active_bordero)
         if include_related_entries:
             entries = FinancialEntry.query.filter(
                 FinancialEntry.company_id == schedule.company_id,
@@ -784,7 +920,35 @@ class FinancialScheduleService:
             payload["has_entries"] = bool(entries)
         if include_summary:
             payload["summary"] = FinancialScheduleService._build_schedule_summary(schedule)
+            if payload["summary"] is not None:
+                payload["summary"]["bordero_code"] = active_bordero.bordero_code if active_bordero else None
+                payload["summary"]["is_bordero_locked"] = bool(active_bordero)
         return payload
+
+    @staticmethod
+    def _derive_budget_links_from_allocations(
+        *,
+        metadata_json: Optional[Dict[str, Any]],
+    ) -> Dict[str, Optional[int]]:
+        allocations = list((metadata_json or {}).get("allocations") or [])
+        if not allocations:
+            return {}
+
+        def _single_value(key: str) -> Optional[int]:
+            values = {
+                int(value)
+                for value in (item.get(key) for item in allocations)
+                if str(value or "").strip()
+            }
+            if len(values) == 1:
+                return next(iter(values))
+            return None
+
+        return {
+            "budget_line_id": _single_value("budget_line_id"),
+            "budget_contract_id": _single_value("budget_contract_id"),
+            "budget_document_id": _single_value("budget_document_id"),
+        }
 
     @staticmethod
     def _expected_movement_nature(entry_type: str) -> str:
@@ -907,6 +1071,111 @@ class FinancialScheduleService:
                 if item.get("is_enabled"):
                     enabled.append(item)
         return enabled, None
+
+    @staticmethod
+    def list_default_suggestions(
+        *,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        result: Dict[str, Any] = {}
+
+        default_cost_center = (
+            FinancialCostCenter.query.filter(
+                FinancialCostCenter.company_id == company_id,
+                FinancialCostCenter.deleted_at.is_(None),
+                FinancialCostCenter.is_active.is_(True),
+                FinancialCostCenter.is_default_suggestion.is_(True),
+            )
+            .order_by(FinancialCostCenter.updated_at.desc(), FinancialCostCenter.id.desc())
+            .first()
+        )
+        if default_cost_center:
+            result["cost_center_id"] = default_cost_center.id
+            result["cost_center_label"] = (
+                f"{default_cost_center.code} - {default_cost_center.name}"
+                if default_cost_center.code
+                else default_cost_center.name
+            )
+
+        default_domain = (
+            FinancialDomainEnablement.query.filter(
+                FinancialDomainEnablement.company_id == company_id,
+                FinancialDomainEnablement.deleted_at.is_(None),
+                FinancialDomainEnablement.is_enabled.is_(True),
+                FinancialDomainEnablement.is_default_suggestion.is_(True),
+            )
+            .order_by(FinancialDomainEnablement.updated_at.desc(), FinancialDomainEnablement.id.desc())
+            .first()
+        )
+        if default_domain:
+            enabled_result, error = FinancialDomainEnablementService.list_items(
+                company_id=company_id,
+                domain_type=default_domain.domain_type,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if error:
+                return None, error
+            default_item = next(
+                (
+                    item for item in (enabled_result or {}).get("items", [])
+                    if int(item.get("source_id") or 0) == int(default_domain.source_id)
+                ),
+                None,
+            )
+            if default_item:
+                result["domain_type"] = default_item.get("domain_type")
+                result["domain_source_id"] = default_item.get("source_id")
+                result["domain_label"] = default_item.get("display_label")
+
+        default_document = (
+            FinancialBudgetDocument.query.filter(
+                FinancialBudgetDocument.company_id == company_id,
+                FinancialBudgetDocument.deleted_at.is_(None),
+                FinancialBudgetDocument.is_default_suggestion.is_(True),
+            )
+            .order_by(FinancialBudgetDocument.updated_at.desc(), FinancialBudgetDocument.id.desc())
+            .first()
+        )
+        if default_document:
+            contract = FinancialBudgetContract.query.filter(
+                FinancialBudgetContract.company_id == company_id,
+                FinancialBudgetContract.id == default_document.budget_contract_id,
+                FinancialBudgetContract.deleted_at.is_(None),
+            ).first()
+            line = (
+                FinancialBudgetLine.query.filter(
+                    FinancialBudgetLine.company_id == company_id,
+                    FinancialBudgetLine.id == contract.budget_line_id,
+                    FinancialBudgetLine.deleted_at.is_(None),
+                ).first()
+                if contract
+                else None
+            )
+            version = (
+                FinancialBudgetVersion.query.filter(
+                    FinancialBudgetVersion.company_id == company_id,
+                    FinancialBudgetVersion.id == line.budget_version_id,
+                    FinancialBudgetVersion.deleted_at.is_(None),
+                ).first()
+                if line
+                else None
+            )
+            result.update(
+                {
+                    "budget_version_id": version.id if version else None,
+                    "budget_line_id": line.id if line else None,
+                    "budget_contract_id": contract.id if contract else None,
+                    "budget_document_id": default_document.id,
+                    "budget_document_label": default_document.title,
+                }
+            )
+
+        return result, None
 
     @staticmethod
     def _calculate_next_due_date(schedule: FinancialSchedule, current_due_date: date) -> Optional[date]:
