@@ -113,3 +113,14 @@ def test_validate_related_scope_rejects_analytic_cost_center_parent(monkeypatch)
     )
 
     assert error == "Centro analítico não pode ser usado como centro pai."
+
+
+def test_validate_cost_center_default_rule_requires_analytic():
+    error = FinancialCatalogService._validate_cost_center_default_rule(
+        {
+            "is_default_suggestion": True,
+            "accepts_posting": False,
+        }
+    )
+
+    assert error == "Somente centros de custo analíticos podem ser definidos como padrão."
