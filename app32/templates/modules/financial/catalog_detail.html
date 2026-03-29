@@ -788,6 +788,7 @@
                 { name: 'name', label: 'Nome', section: 'main', required: true },
                 { name: 'operation_type', label: 'Uso', section: 'main', type: 'select', options: [['both', 'Pagamento e recebimento'], ['payable', 'Somente pagamento'], ['receivable', 'Somente recebimento']] },
                 { name: 'settlement_days', label: 'Prazo de liquidação (dias)', section: 'main', type: 'number', min: 0, max: 3650, hint: 'Dias esperados para compensação' },
+                { name: 'is_default_suggestion', label: 'Registro padrão', section: 'main', type: 'select', options: [['false', 'Não'], ['true', 'Sim']], hint: 'Quando marcado, o Financeiro sugere esta forma de pagamento automaticamente.' },
                 { name: 'external_code', label: 'Forma externa', section: 'main', maxlength: 120, hint: 'Campo livre para integração com outros sistemas' },
                 { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
             ],

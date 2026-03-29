@@ -622,6 +622,7 @@ class FinancialPaymentMethodInput(_SimpleFinancialCatalogBase):
     settlement_days: Optional[int] = Field(0, ge=0, le=3650)
     description: Optional[str] = None
     is_active: bool = True
+    is_default_suggestion: bool = False
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -633,6 +634,7 @@ class FinancialPaymentMethodUpdateInput(_SimpleFinancialCatalogBase):
     settlement_days: Optional[int] = Field(None, ge=0, le=3650)
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    is_default_suggestion: Optional[bool] = None
     metadata_json: Optional[Dict[str, Any]] = None
 
 

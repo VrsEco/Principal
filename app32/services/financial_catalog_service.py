@@ -254,6 +254,18 @@ class FinancialCatalogService:
             item.is_default_suggestion = False
 
     @staticmethod
+    def _clear_default_payment_method_suggestions(*, company_id: int, exclude_item_id: Optional[int] = None) -> None:
+        query = FinancialPaymentMethod.query.filter(
+            FinancialPaymentMethod.company_id == company_id,
+            FinancialPaymentMethod.deleted_at.is_(None),
+            FinancialPaymentMethod.is_default_suggestion.is_(True),
+        )
+        if exclude_item_id:
+            query = query.filter(FinancialPaymentMethod.id != exclude_item_id)
+        for item in query.all():
+            item.is_default_suggestion = False
+
+    @staticmethod
     def _validate_cost_center_default_rule(data: Dict) -> Optional[str]:
         if not bool(data.get("is_default_suggestion")):
             return None
@@ -768,6 +780,12 @@ class FinancialCatalogService:
                     company_id=data["company_id"],
                     exclude_item_id=item.id,
                 )
+            if catalog_type == "payment_methods" and bool(data.get("is_default_suggestion")):
+                db.session.flush()
+                FinancialCatalogService._clear_default_payment_method_suggestions(
+                    company_id=data["company_id"],
+                    exclude_item_id=item.id,
+                )
             if catalog_type == "correction_indexes":
                 db.session.flush()
                 metadata = dict(item.metadata_json or {})
@@ -880,6 +898,11 @@ class FinancialCatalogService:
                     company_id=company_id,
                     exclude_item_id=item.id,
                 )
+            if catalog_type == "payment_methods" and bool(getattr(item, "is_default_suggestion", False)):
+                FinancialCatalogService._clear_default_payment_method_suggestions(
+                    company_id=company_id,
+                    exclude_item_id=item.id,
+                )
             if catalog_type == "correction_indexes":
                 metadata = dict(item.metadata_json or {})
                 FinancialCatalogService._clear_default_correction_index_flags(
@@ -938,6 +961,8 @@ class FinancialCatalogService:
         try:
             item.is_active = bool(is_active)
             if not item.is_active and catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):
+                item.is_default_suggestion = False
+            if not item.is_active and catalog_type == "payment_methods" and getattr(item, "is_default_suggestion", False):
                 item.is_default_suggestion = False
             if not item.is_active and catalog_type == "correction_indexes":
                 metadata = dict(item.metadata_json or {})
@@ -1004,6 +1029,8 @@ class FinancialCatalogService:
 
         try:
             if catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):
+                item.is_default_suggestion = False
+            if catalog_type == "payment_methods" and getattr(item, "is_default_suggestion", False):
                 item.is_default_suggestion = False
             item.deleted_at = datetime.utcnow()
             db.session.commit()

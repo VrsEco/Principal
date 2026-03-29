@@ -423,6 +423,7 @@ class FinancialPaymentMethod(db.Model):
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_default_suggestion = db.Column(db.Boolean, nullable=False, default=False, index=True)
     metadata_json = db.Column(JSONB, nullable=False, default=dict)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -436,6 +437,7 @@ class FinancialPaymentMethod(db.Model):
             "name": self.name,
             "description": self.description,
             "is_active": self.is_active,
+            "is_default_suggestion": self.is_default_suggestion,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

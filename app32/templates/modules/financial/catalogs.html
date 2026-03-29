@@ -22,8 +22,8 @@
     </header>
 
     <section class="catalog-grid">
-        {% for slug, page in catalog_pages.items() %}
-        <a href="/financial/catalogs/{{ slug }}" class="catalog-card">
+        {% for slug, page in catalog_pages %}
+        <a href="{{ page.href or '/financial/catalogs/' ~ slug }}" class="catalog-card">
             <div class="catalog-card-top">
                 <span class="catalog-badge">{{ page.eyebrow }}</span>
             </div>

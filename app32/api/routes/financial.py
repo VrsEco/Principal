@@ -13,9 +13,16 @@ financial_bp = Blueprint("financial", __name__)
 
 
 FINANCIAL_CATALOG_PAGES = {
+    "counterparties": {
+        "api_type": "counterparties",
+        "title": "Favorecidos",
+        "new_label": "Novo favorecido",
+        "eyebrow": "Relacionamentos financeiros",
+        "description": "Cadastre fornecedores e favorecidos com dados operacionais, defaults financeiros e evolução por abas.",
+    },
     "bank-accounts": {
         "api_type": "bank_accounts",
-        "title": "Contas Bancárias",
+        "title": "Contas bancárias",
         "new_label": "Nova conta bancária",
         "eyebrow": "Base operacional",
         "description": "Gestão de contas bancárias, PIX, agência, conta, titularidade e moeda base do financeiro.",
@@ -29,31 +36,17 @@ FINANCIAL_CATALOG_PAGES = {
     },
     "cost-centers": {
         "api_type": "cost_centers",
-        "title": "Centros de Resultados",
+        "title": "Centro de Resultados",
         "new_label": "Novo centro de resultados",
         "eyebrow": "Estrutura gerencial",
         "description": "Organize rateios, análises gerenciais e futuras abas específicas por centro, gestor e governança.",
     },
-    "counterparties": {
-        "api_type": "counterparties",
-        "title": "Favorecidos",
-        "new_label": "Novo favorecido",
-        "eyebrow": "Relacionamentos financeiros",
-        "description": "Cadastre fornecedores e favorecidos com dados operacionais, defaults financeiros e evolução por abas.",
-    },
-    "account-categories": {
-        "api_type": "account_categories",
-        "title": "Categorias de Conta",
-        "new_label": "Nova categoria",
-        "eyebrow": "Classificação auxiliar",
-        "description": "Classifique contas e lançamentos com categorias auxiliares do financeiro.",
-    },
-    "asset-accounts": {
-        "api_type": "asset_accounts",
-        "title": "Contas Patrimoniais",
-        "new_label": "Nova conta patrimonial",
-        "eyebrow": "Patrimônio",
-        "description": "Cadastre contas patrimoniais para controle de bens, ativos e integrações correlatas.",
+    "payment-methods": {
+        "api_type": "payment_methods",
+        "title": "Formas Financeiras",
+        "new_label": "Nova forma financeira",
+        "eyebrow": "Meios de pagamento",
+        "description": "Mantenha formas financeiras usadas no operacional, importações e automações.",
     },
     "correction-indexes": {
         "api_type": "correction_indexes",
@@ -69,14 +62,43 @@ FINANCIAL_CATALOG_PAGES = {
         "eyebrow": "Condições comerciais",
         "description": "Cadastre regras de desconto para reutilização em lançamentos e integrações.",
     },
-    "payment-methods": {
-        "api_type": "payment_methods",
-        "title": "Formas Financeiras",
-        "new_label": "Nova forma financeira",
-        "eyebrow": "Meios de pagamento",
-        "description": "Mantenha formas financeiras usadas no operacional, importações e automações.",
+    "account-categories": {
+        "api_type": "account_categories",
+        "title": "Categorias de Conta",
+        "new_label": "Nova categoria",
+        "eyebrow": "Classificação auxiliar",
+        "description": "Classifique contas e lançamentos com categorias auxiliares do financeiro.",
+    },
+    "asset-accounts": {
+        "api_type": "asset_accounts",
+        "title": "Contas Patrimoniais",
+        "new_label": "Nova conta patrimonial",
+        "eyebrow": "Patrimônio",
+        "description": "Cadastre contas patrimoniais para controle de bens, ativos e integrações correlatas.",
     },
 }
+
+
+FINANCIAL_CATALOG_HUB_PAGES = [
+    ("counterparties", FINANCIAL_CATALOG_PAGES["counterparties"]),
+    ("bank-accounts", FINANCIAL_CATALOG_PAGES["bank-accounts"]),
+    ("chart-accounts", FINANCIAL_CATALOG_PAGES["chart-accounts"]),
+    ("cost-centers", FINANCIAL_CATALOG_PAGES["cost-centers"]),
+    (
+        "domain-enablements",
+        {
+            "title": "Projetos / Processos",
+            "eyebrow": "Escopo operacional",
+            "description": "Defina os projetos e processos habilitados para uso no financeiro e futuras vinculações analíticas.",
+            "href": "/financial/domain-enablements",
+        },
+    ),
+    ("payment-methods", FINANCIAL_CATALOG_PAGES["payment-methods"]),
+    ("correction-indexes", FINANCIAL_CATALOG_PAGES["correction-indexes"]),
+    ("discount-rules", FINANCIAL_CATALOG_PAGES["discount-rules"]),
+    ("account-categories", FINANCIAL_CATALOG_PAGES["account-categories"]),
+    ("asset-accounts", FINANCIAL_CATALOG_PAGES["asset-accounts"]),
+]
 
 
 def get_active_company():
@@ -277,7 +299,7 @@ def financial_catalogs_page():
         "modules/financial/catalogs.html",
         company=company,
         company_id=company.id if company else None,
-        catalog_pages=FINANCIAL_CATALOG_PAGES,
+        catalog_pages=FINANCIAL_CATALOG_HUB_PAGES,
     )
 
 

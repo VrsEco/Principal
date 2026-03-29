@@ -2,12 +2,13 @@ from flask import request, session
 from flask_restful import Resource
 from flask_login import login_required, current_user
 from models import Meeting, MeetingAgendaItem, Project, Company, Employee, db
-from utils.permissions import can_access_company, get_default_company_id, has_company_full_access
+from utils.permissions import get_default_company_id, has_company_full_access
 from datetime import datetime
 import json
 import logging
 
 logger = logging.getLogger(__name__)
+PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 
 def _parse_optional_int(value):
@@ -27,7 +28,11 @@ def user_can_access_company(company_id):
     if not company or not bool(getattr(company, 'is_active', True)):
         return False
 
-    return can_access_company(company_id)
+    if str(getattr(current_user, 'role', '')).strip().lower() in {'admin', 'administrator'}:
+        return True
+
+    employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+    return employee is not None
 
 
 def get_request_company_id():
@@ -110,12 +115,13 @@ class MeetingListResource(Resource):
             return {
                 "success": True, 
                 "message": "Reunião criada com sucesso!", 
-                "meeting_id": meeting.id
+                "meeting_id": meeting.id,
+                "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
             }, 201
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error creating meeting: {e}")
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingResource(Resource):
     @login_required
@@ -145,10 +151,15 @@ class MeetingResource(Resource):
             if 'agenda' in data: meeting.agenda_json = json.dumps(data['agenda'])
             
             db.session.commit()
-            return {"success": True, "message": "Dados atualizados!"}
+            return {
+                "success": True,
+                "message": "Dados atualizados!",
+                "meeting_id": meeting.id,
+                "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+            }
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
     @login_required
     def delete(self, meeting_id):
@@ -162,7 +173,7 @@ class MeetingResource(Resource):
             return {"success": True, "message": "Reunião excluída com sucesso!"}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingExecutionResource(Resource):
     @login_required
@@ -185,10 +196,15 @@ class MeetingExecutionResource(Resource):
             if 'activities' in data: meeting.activities_json = json.dumps(data['activities'])
             
             db.session.commit()
-            return {"success": True, "message": "Execução salva!"}
+            return {
+                "success": True,
+                "message": "Execução salva!",
+                "meeting_id": meeting.id,
+                "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+            }
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingStartResource(Resource):
     @login_required
@@ -243,13 +259,15 @@ class MeetingStartResource(Resource):
                 "message": "Reunião iniciada!",
                 "project_id": meeting.project_id,
                 "project_title": project.name if project else None,
+                "project_code": project.code if project else None,
                 "actual_date": meeting.actual_date.isoformat(),
-                "actual_time": meeting.actual_time
+                "actual_time": meeting.actual_time,
+                "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
             }
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error starting meeting: {e}")
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingFinishResource(Resource):
     @login_required
@@ -287,10 +305,14 @@ class MeetingFinishResource(Resource):
                     logger.error(f"Erro ao criar tarefa resumo: {ex}")
             
             db.session.commit()
-            return {"success": True, "message": "Reunião finalizada e resumida no projeto!"}
+            return {
+                "success": True,
+                "message": "Reunião finalizada e resumida no projeto!",
+                "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+            }
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingAgendaUseResource(Resource):
     @login_required
@@ -318,7 +340,7 @@ class MeetingActivitiesResource(Resource):
         meeting_activities = []
         try:
             meeting_activities = json.loads(meeting.activities_json or "[]")
-        except:
+        except Exception:
             pass
 
         # 2. Activities already created in projects
@@ -341,7 +363,8 @@ class MeetingActivitiesResource(Resource):
             "meeting_activities": meeting_activities,
             "project_activities": project_activities,
             "project_id": meeting.project_id,
-            "project_title": project.name if project else None
+            "project_title": project.name if project else None,
+            "project_code": project.code if project else None,
         }
 
 class MeetingSyncCheckResource(Resource):
@@ -359,7 +382,7 @@ class MeetingSyncCheckResource(Resource):
         
         try:
             m_acts = json.loads(meeting.activities_json or "[]")
-        except:
+        except Exception:
             m_acts = []
             
         p_tasks = ProjectTask.query.filter_by(project_id=meeting.project_id).all()
@@ -406,7 +429,7 @@ class MeetingSyncActivitiesResource(Resource):
                 if title not in p_titles:
                     try:
                         due_date = datetime.strptime(act.get('deadline'), '%Y-%m-%d').date() if act.get('deadline') else None
-                    except:
+                    except Exception:
                         due_date = None
                         
                     task = ProjectTask(
@@ -443,7 +466,7 @@ class MeetingSyncActivitiesResource(Resource):
             }
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500
 
 class MeetingRemoveFromProjectResource(Resource):
     @login_required
@@ -468,4 +491,4 @@ class MeetingRemoveFromProjectResource(Resource):
             return {"success": True, "message": "Atividade não encontrada no projeto"}
         except Exception as e:
             db.session.rollback()
-            return {"success": False, "message": str(e)}, 500
+            return {"success": False, "message": PUBLIC_ERROR_MESSAGE}, 500

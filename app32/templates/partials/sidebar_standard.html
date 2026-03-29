@@ -211,30 +211,30 @@
                 <div class="subgroup-content">
                     <div class="sidebar-subgroup {{ 'open' if '/financial/catalogs' in request.path or '/financial/domain-enablements' in request.path }}">
                         <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                            Cadastro
+                            Cadastros
                             <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="3">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
                         <div class="subgroup-content">
+                            <a href="/financial/catalogs/counterparties" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/counterparties' }}">
+                                <span>Favorecidos</span>
+                            </a>
                             <a href="/financial/catalogs/bank-accounts" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/bank-accounts' }}">
-                                <span>Contas Bancárias</span>
+                                <span>Contas bancárias</span>
                             </a>
                             <a href="/financial/catalogs/chart-accounts" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/chart-accounts' }}">
                                 <span>Plano de Contas</span>
                             </a>
                             <a href="/financial/catalogs/cost-centers" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/cost-centers' }}">
-                                <span>Centros de Resultados</span>
+                                <span>Centro de Resultados</span>
                             </a>
-                            <a href="/financial/catalogs/counterparties" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/counterparties' }}">
-                                <span>Favorecidos</span>
+                            <a href="/financial/domain-enablements" class="sub-nav-link {{ 'active' if request.path == '/financial/domain-enablements' }}">
+                                <span>Projetos / Processos</span>
                             </a>
-                            <a href="/financial/catalogs/account-categories" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/account-categories' }}">
-                                <span>Categorias de Conta</span>
-                            </a>
-                            <a href="/financial/catalogs/asset-accounts" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/asset-accounts' }}">
-                                <span>Contas Patrimoniais</span>
+                            <a href="/financial/catalogs/payment-methods" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/payment-methods' }}">
+                                <span>Formas Financeiras</span>
                             </a>
                             <a href="/financial/catalogs/correction-indexes" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/correction-indexes' }}">
                                 <span>Correções Financeiras</span>
@@ -242,11 +242,11 @@
                             <a href="/financial/catalogs/discount-rules" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/discount-rules' }}">
                                 <span>Descontos</span>
                             </a>
-                            <a href="/financial/catalogs/payment-methods" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/payment-methods' }}">
-                                <span>Formas Financeiras</span>
+                            <a href="/financial/catalogs/account-categories" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/account-categories' }}">
+                                <span>Categorias de Conta</span>
                             </a>
-                            <a href="/financial/domain-enablements" class="sub-nav-link {{ 'active' if request.path == '/financial/domain-enablements' }}">
-                                <span>Projetos / Processos</span>
+                            <a href="/financial/catalogs/asset-accounts" class="sub-nav-link {{ 'active' if request.path == '/financial/catalogs/asset-accounts' }}">
+                                <span>Contas Patrimoniais</span>
                             </a>
                         </div>
                     </div>
