@@ -42,6 +42,12 @@ class _ColumnStub:
         return self
 
 
+class _Today2026_04_01:
+    @staticmethod
+    def today():
+        return date(2026, 4, 1)
+
+
 def test_workspace_consolidates_planned_contracted_executed_and_scheduled_totals(monkeypatch):
     version = _SimpleObj(id=1, company_id=9, code="AA.O.2026.CAPEX.1", name="CAPEX 2026", status="active")
     line = _SimpleObj(
@@ -419,17 +425,32 @@ def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(mo
     monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_refresh_document_status", lambda *args, **kwargs: None)
     monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_document", lambda item: {"id": item.id})
     monkeypatch.setattr(
+        workspace_module.FinancialBudgetSchedulePolicy,
+        "get_document_capacity",
+        lambda **kwargs: (
+            {
+                "document": document,
+                "scheduled_total": Decimal("0.00"),
+                "document_total": Decimal("50.00"),
+                "available_to_schedule": Decimal("50.00"),
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
         workspace_module.FinancialScheduleService,
         "list_default_suggestions",
         lambda **kwargs: ({"payable_correction_index_id": 88}, None),
     )
+    monkeypatch.setattr(workspace_module, "date", _Today2026_04_01)
     monkeypatch.setattr(workspace_module.db.session, "commit", lambda: None)
     monkeypatch.setattr(workspace_module.db.session, "rollback", lambda: None)
 
     captured = {}
 
-    def _fake_create_schedule(*, payload, allowed_company_ids=None):
+    def _fake_create_schedule(*, payload, allowed_company_ids=None, auto_commit=True):
         captured["payload"] = payload
+        captured["auto_commit"] = auto_commit
         return {"id": 555, "name": payload["name"]}, None
 
     monkeypatch.setattr(workspace_module.FinancialScheduleService, "create_schedule", _fake_create_schedule)
@@ -455,6 +476,7 @@ def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(mo
 
     assert error is None
     assert result["created_schedules"][0]["id"] == 555
+    assert captured["auto_commit"] is False
     payload = captured["payload"]
     assert payload["budget_document_id"] == 30
     assert payload["name"] == "Parcela única"
@@ -587,14 +609,21 @@ def test_update_document_schedule_rebuilds_payload_with_document_inheritance(mon
     monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_refresh_document_status", lambda *args, **kwargs: None)
     monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_document", lambda item: {"id": item.id})
     monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_schedule", lambda item: {"id": item.id, "name": item.name})
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(workspace_module, "date", _Today2026_04_01)
     monkeypatch.setattr(workspace_module.db.session, "commit", lambda: None)
     monkeypatch.setattr(workspace_module.db.session, "rollback", lambda: None)
 
     captured = {}
 
-    def _fake_update_schedule(*, schedule_id, company_id, payload, allowed_company_ids=None):
+    def _fake_update_schedule(*, schedule_id, company_id, payload, allowed_company_ids=None, auto_commit=True):
         captured["schedule_id"] = schedule_id
         captured["payload"] = payload
+        captured["auto_commit"] = auto_commit
         schedule.name = payload["name"]
         schedule.status = payload["status"]
         schedule.template_amount = payload["template_amount"]
@@ -625,6 +654,7 @@ def test_update_document_schedule_rebuilds_payload_with_document_inheritance(mon
 
     assert error is None
     assert result["id"] == 40
+    assert captured["auto_commit"] is False
     payload = captured["payload"]
     assert captured["schedule_id"] == 40
     assert payload["budget_document_id"] == 30
@@ -694,3 +724,137 @@ def test_update_document_schedule_blocks_items_with_generated_entries(monkeypatc
 
     assert result is None
     assert error == "Este agendamento já possui baixa/lançamento financeiro vinculado e não pode ser editado por aqui."
+
+
+def test_create_document_schedules_uses_outer_transaction_and_rolls_back_batch(monkeypatch):
+    document = _SimpleObj(id=30, company_id=9, document_amount=Decimal("300.00"))
+    rollback_state = {"called": False}
+    commit_state = {"called": False}
+    create_calls = []
+
+    monkeypatch.setattr(workspace_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetWorkspaceService,
+        "_get_document_schedule_context",
+        lambda **kwargs: (
+            {
+                "document": document,
+                "contract": _SimpleObj(id=20),
+                "line": _SimpleObj(id=10),
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetWorkspaceService,
+        "_list_schedules_for_document",
+        lambda **kwargs: [],
+    )
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetWorkspaceService,
+        "_build_document_schedule_payload",
+        lambda **kwargs: {"template_amount": kwargs["amount"]},
+    )
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetSchedulePolicy,
+        "get_document_capacity",
+        lambda **kwargs: (
+            {
+                "document": document,
+                "scheduled_total": Decimal("0.00"),
+                "document_total": Decimal("300.00"),
+                "available_to_schedule": Decimal("300.00"),
+            },
+            None,
+        ),
+    )
+
+    def _fake_create_schedule(*, payload, allowed_company_ids=None, auto_commit=True):
+        create_calls.append(auto_commit)
+        if len(create_calls) == 2:
+            return None, "falha controlada"
+        return {"id": len(create_calls), "template_amount": float(payload["template_amount"])}, None
+
+    monkeypatch.setattr(workspace_module.FinancialScheduleService, "create_schedule", _fake_create_schedule)
+    monkeypatch.setattr(workspace_module.db.session, "rollback", lambda: rollback_state.__setitem__("called", True))
+    monkeypatch.setattr(workspace_module.db.session, "commit", lambda: commit_state.__setitem__("called", True))
+
+    result, error = FinancialBudgetWorkspaceService.create_document_schedules(
+        company_id=9,
+        document_id=30,
+        payload={
+            "installments": [
+                {"due_date": date(2026, 4, 10), "amount": Decimal("100.00"), "label": "Parcela 1"},
+                {"due_date": date(2026, 5, 10), "amount": Decimal("100.00"), "label": "Parcela 2"},
+            ]
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == "falha controlada"
+    assert create_calls == [False, False]
+    assert rollback_state["called"] is True
+    assert commit_state["called"] is False
+
+
+def test_create_document_schedules_blocks_past_due_installment_with_correction_index(monkeypatch):
+    document = _SimpleObj(id=30, company_id=9, document_amount=Decimal("100.00"))
+    create_state = {"called": False}
+
+    monkeypatch.setattr(workspace_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetWorkspaceService,
+        "_get_document_schedule_context",
+        lambda **kwargs: (
+            {
+                "document": document,
+                "contract": _SimpleObj(id=20),
+                "line": _SimpleObj(id=10),
+                "default_correction_index_id": 88,
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetSchedulePolicy,
+        "get_document_capacity",
+        lambda **kwargs: (
+            {
+                "document": document,
+                "scheduled_total": Decimal("0.00"),
+                "document_total": Decimal("100.00"),
+                "available_to_schedule": Decimal("100.00"),
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(workspace_module, "date", _Today2026_04_01)
+    monkeypatch.setattr(
+        workspace_module.FinancialScheduleService,
+        "create_schedule",
+        lambda **kwargs: create_state.__setitem__("called", True),
+    )
+
+    result, error = FinancialBudgetWorkspaceService.create_document_schedules(
+        company_id=9,
+        document_id=30,
+        payload={
+            "installments": [
+                {
+                    "due_date": date(2026, 3, 10),
+                    "competence_date": date(2026, 3, 1),
+                    "amount": Decimal("50.00"),
+                    "label": "Parcela 1",
+                }
+            ]
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == (
+        "Parcela 1/1: Para NF com índice de correção ativo, informe vencimento igual ou posterior à data atual "
+        "ou use a tela completa de Agendamentos."
+    )
+    assert create_state["called"] is False

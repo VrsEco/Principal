@@ -89,6 +89,11 @@ def test_create_schedule_sanitizes_metadata_json_before_insert(monkeypatch):
             None,
         ),
     )
+    monkeypatch.setattr(
+        schedule_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: None,
+    )
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
@@ -139,6 +144,76 @@ def test_create_schedule_sanitizes_metadata_json_before_insert(monkeypatch):
     assert captured["kwargs"]["metadata_json"]["budget_document_id"] == 56
 
 
+def test_create_schedule_uses_flush_when_auto_commit_is_disabled(monkeypatch):
+    captured = {}
+
+    class _FakeSchedule:
+        company_id = _Column()
+        schedule_code = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(None)
+
+        def __init__(self, **kwargs):
+            captured["kwargs"] = kwargs
+            self.__dict__.update(kwargs)
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: ({"budget_line_id": None, "budget_contract_id": None, "budget_document_id": None}, None),
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
+    monkeypatch.setattr(schedule_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
+    monkeypatch.setattr(schedule_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
+    monkeypatch.setattr(schedule_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(schedule_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+
+    result, error = FinancialScheduleService.create_schedule(
+        payload={
+            "company_id": 9,
+            "schedule_code": "SCH-002",
+            "name": "Condomínio",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "origin_type": "manual",
+            "status": "draft",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": date(2026, 3, 22),
+            "first_due_date": date(2026, 3, 22),
+            "description": "Teste flush",
+            "template_amount": Decimal("300.00"),
+            "currency_code": "BRL",
+            "metadata_json": {
+                "allocations": [
+                    {
+                        "allocation_type": "amount",
+                        "allocated_amount": Decimal("300.00"),
+                        "chart_account_id": 1,
+                        "cost_center_id": 2,
+                    }
+                ]
+            },
+        },
+        allowed_company_ids=[9],
+        auto_commit=False,
+    )
+
+    assert error is None
+    assert result is not None
+    assert captured["flushed"] is True
+    assert "committed" not in captured
+
+
 def test_update_schedule_sanitizes_metadata_json_before_persist(monkeypatch):
     class _FakeSchedule:
         id = _Column()
@@ -184,6 +259,11 @@ def test_update_schedule_sanitizes_metadata_json_before_persist(monkeypatch):
             None,
         ),
     )
+    monkeypatch.setattr(
+        schedule_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: None,
+    )
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
@@ -219,6 +299,175 @@ def test_update_schedule_sanitizes_metadata_json_before_persist(monkeypatch):
     assert schedule.metadata_json["budget_line_id"] == 90
     assert schedule.metadata_json["budget_contract_id"] == 91
     assert schedule.metadata_json["budget_document_id"] == 92
+
+
+def test_update_schedule_uses_flush_when_auto_commit_is_disabled(monkeypatch):
+    class _FakeSchedule:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(None)
+
+        def __init__(self):
+            self.company_id = 9
+            self.entry_type = "payable"
+            self.movement_nature = "debit"
+            self.start_date = date(2026, 3, 22)
+            self.end_date = None
+            self.first_due_date = date(2026, 3, 22)
+            self.next_due_date = date(2026, 3, 22)
+            self.metadata_json = {
+                "allocations": [
+                    {
+                        "allocation_type": "amount",
+                        "allocated_amount": 200.0,
+                        "chart_account_id": 1,
+                        "cost_center_id": 2,
+                    }
+                ]
+            }
+            self.bank_account_id = None
+            self.counterparty_id = None
+            self.chart_account_id = 1
+            self.cost_center_id = 2
+            self.budget_line_id = None
+            self.budget_contract_id = None
+            self.budget_document_id = None
+            self.activity_id = None
+            self.process_instance_id = None
+            self.routine_id = None
+            self.template_amount = Decimal("200.00")
+            self.schedule_code = "SCH-003"
+
+    schedule = _FakeSchedule()
+    _FakeSchedule.query = _QueryStub(schedule)
+    captured = {}
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: ({"budget_line_id": None, "budget_contract_id": None, "budget_document_id": None}, None),
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
+    monkeypatch.setattr(schedule_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(schedule_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+
+    result, error = FinancialScheduleService.update_schedule(
+        schedule_id=1,
+        company_id=9,
+        payload={
+            "description": "Atualizado sem commit interno",
+            "metadata_json": {
+                "allocations": [
+                    {
+                        "allocation_type": "amount",
+                        "allocated_amount": Decimal("200.00"),
+                        "chart_account_id": 1,
+                        "cost_center_id": 2,
+                    }
+                ]
+            },
+        },
+        allowed_company_ids=[9],
+        auto_commit=False,
+    )
+
+    assert error is None
+    assert result is not None
+    assert captured["flushed"] is True
+    assert "committed" not in captured
+
+
+def test_build_budget_document_schedule_payload_preserves_budget_hierarchy_without_operational_links():
+    counterparty = type("Counterparty", (), {"id": 91, "name": "Fornecedor XPTO"})()
+    version = type("Version", (), {"code": "AA.O.2026.CAPEX.1"})()
+    line = type(
+        "Line",
+        (),
+        {
+            "id": 10,
+            "budget_version_id": 1,
+            "version": version,
+            "line_code": "AA.O.2026.CAPEX.1.2",
+            "movement_nature": "debit",
+            "chart_account_id": 301,
+            "cost_center_id": 401,
+            "activity_id": 501,
+            "process_instance_id": 601,
+            "routine_id": 701,
+            "metadata_json": {},
+        },
+    )()
+    contract = type(
+        "Contract",
+        (),
+        {
+            "id": 20,
+            "contract_code": "AA.O.2026.CAPEX.1.2.3",
+            "name": "Contrato Infra",
+            "notes": "Notas contrato",
+            "counterparty": None,
+            "metadata_json": {},
+        },
+    )()
+    document = type(
+        "Document",
+        (),
+        {
+            "id": 30,
+            "document_code": "AA.O.2026.CAPEX.1.2.3.4",
+            "title": "NF Infra",
+            "document_number": "NF-123",
+            "notes": "Notas NF",
+            "counterparty": counterparty,
+            "metadata_json": {},
+        },
+    )()
+
+    payload = FinancialScheduleService.build_budget_document_schedule_payload(
+        company_id=9,
+        document=document,
+        contract=contract,
+        line=line,
+        label="Parcela 1/2",
+        amount=Decimal("250.00"),
+        due_date=date(2026, 4, 10),
+        competence_date=date(2026, 4, 10),
+        notes=None,
+        status="active",
+        auto_post=False,
+        default_suggestions={"domain_type": "process", "domain_source_id": 77, "domain_label": "Proc. XPTO"},
+        default_correction_index_id=12,
+        domain_type="process",
+        domain_source_id=77,
+        domain_label="Proc. XPTO",
+    )
+
+    assert payload["budget_line_id"] == 10
+    assert payload["budget_contract_id"] == 20
+    assert payload["budget_document_id"] == 30
+    assert payload["entry_type"] == "payable"
+    assert payload["movement_nature"] == "debit"
+    assert payload["counterparty_id"] == 91
+    assert "activity_id" not in payload
+    assert "process_instance_id" not in payload
+    assert "routine_id" not in payload
+    assert payload["metadata_json"]["budget_schedule_source"] == "financial_budget_workspace"
+    assert payload["metadata_json"]["budget_document_id"] == 30
+    assert payload["metadata_json"]["budget_document_code"] == "AA.O.2026.CAPEX.1.2.3.4"
+    assert payload["metadata_json"]["document_number"] == "NF-123"
+    allocation = payload["metadata_json"]["allocations"][0]
+    assert allocation["chart_account_id"] == 301
+    assert allocation["cost_center_id"] == 401
+    assert allocation["budget_line_id"] == 10
+    assert allocation["budget_contract_id"] == 20
+    assert allocation["budget_document_id"] == 30
 
 
 def test_build_entry_payload_propagates_budget_links():
@@ -265,6 +514,137 @@ def test_build_entry_payload_propagates_budget_links():
     assert payload["metadata_json"]["budget_line_id"] == 10
     assert payload["metadata_json"]["budget_contract_id"] == 20
     assert payload["metadata_json"]["budget_document_id"] == 30
+
+
+def test_update_schedule_accepts_same_schedule_code_in_payload(monkeypatch):
+    import services.financial_schedule_service as schedule_module
+    import services.financial_bordero_service as bordero_module
+
+    class _Column:
+        def __eq__(self, other):
+            return self
+
+        def is_(self, other):
+            return self
+
+    class _Query:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return schedule
+
+    class _Schedule:
+        query = _Query()
+        id = 1
+        company_id = 9
+        schedule_code = "SCH-077"
+        entry_type = "payable"
+        movement_nature = "debit"
+        start_date = date(2026, 3, 20)
+        end_date = None
+        first_due_date = date(2026, 3, 25)
+        next_due_date = date(2026, 3, 25)
+        template_amount = Decimal("100.00")
+        bank_account_id = None
+        counterparty_id = 2
+        chart_account_id = 3
+        cost_center_id = 4
+        budget_line_id = None
+        budget_contract_id = None
+        budget_document_id = None
+        activity_id = None
+        process_instance_id = None
+        routine_id = None
+        metadata_json = {}
+        deleted_at = _Column()
+
+    schedule = _Schedule()
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _Schedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialService, "_resolve_budget_links", lambda **kwargs: ({}, None))
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.db.session, "commit", lambda: None)
+    monkeypatch.setattr(schedule_module.db.session, "rollback", lambda: None)
+
+    result, error = schedule_module.FinancialScheduleService.update_schedule(
+        schedule_id=1,
+        company_id=9,
+        payload={
+            "schedule_code": "SCH-077",
+            "description": "Conta atualizada",
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result is not None
+    assert schedule.schedule_code == "SCH-077"
+    assert schedule.description == "Conta atualizada"
+
+
+def test_update_schedule_rejects_schedule_code_change(monkeypatch):
+    import services.financial_schedule_service as schedule_module
+    import services.financial_bordero_service as bordero_module
+
+    class _Column:
+        def __eq__(self, other):
+            return self
+
+        def is_(self, other):
+            return self
+
+    class _Query:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return schedule
+
+    class _Schedule:
+        query = _Query()
+        id = 1
+        company_id = 9
+        schedule_code = "SCH-077"
+        entry_type = "payable"
+        movement_nature = "debit"
+        start_date = date(2026, 3, 20)
+        end_date = None
+        first_due_date = date(2026, 3, 25)
+        next_due_date = date(2026, 3, 25)
+        template_amount = Decimal("100.00")
+        bank_account_id = None
+        counterparty_id = 2
+        chart_account_id = 3
+        cost_center_id = 4
+        budget_line_id = None
+        budget_contract_id = None
+        budget_document_id = None
+        activity_id = None
+        process_instance_id = None
+        routine_id = None
+        metadata_json = {}
+        deleted_at = _Column()
+
+    schedule = _Schedule()
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _Schedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
+
+    result, error = schedule_module.FinancialScheduleService.update_schedule(
+        schedule_id=1,
+        company_id=9,
+        payload={"schedule_code": "SCH-999"},
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == "O código do agendamento não pode ser alterado após a criação."
 
 
 def test_create_schedule_returns_friendly_date_validation_message():
@@ -363,6 +743,56 @@ def test_create_schedule_rejects_duplicate_code_even_if_existing_row_is_soft_del
     assert error == "Já existe agendamento com código AG-000010 para esta empresa."
 
 
+def test_create_schedule_blocks_when_budget_document_exceeds_capacity(monkeypatch):
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: (
+            {
+                "budget_line_id": 10,
+                "budget_contract_id": 20,
+                "budget_document_id": 30,
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: "A soma das parcelas ultrapassa o valor executado da NF/equivalente.",
+    )
+    add_state = {"called": False}
+    monkeypatch.setattr(schedule_module.db.session, "add", lambda obj: add_state.__setitem__("called", True))
+
+    result, error = FinancialScheduleService.create_schedule(
+        payload={
+            "company_id": 9,
+            "schedule_code": "AG-OVER",
+            "name": "Agendamento acima do saldo",
+            "entry_type": "receivable",
+            "movement_nature": "credit",
+            "origin_type": "manual",
+            "status": "active",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": date(2026, 4, 1),
+            "first_due_date": date(2026, 4, 20),
+            "description": "Agendamento acima do saldo",
+            "template_amount": Decimal("3000.00"),
+            "currency_code": "BRL",
+            "metadata_json": {"allocations": [{"chart_account_id": 3, "cost_center_id": 8, "allocation_type": "amount", "allocated_amount": Decimal("3000.00")}]},
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == "A soma das parcelas ultrapassa o valor executado da NF/equivalente."
+    assert add_state["called"] is False
+
+
 def test_create_schedule_retries_auto_generated_code_after_unique_violation(monkeypatch):
     captured = {"codes": []}
 
@@ -442,6 +872,75 @@ def test_create_schedule_retries_auto_generated_code_after_unique_violation(monk
     assert result["schedule_code"] == "AG-000011"
     assert captured["codes"] == ["AG-000010", "AG-000011"]
     assert commit_attempts["count"] == 2
+
+
+def test_update_schedule_blocks_when_budget_document_exceeds_capacity(monkeypatch):
+    class _Schedule:
+        id = 40
+        company_id = 9
+        schedule_code = "AG-040"
+        entry_type = "receivable"
+        movement_nature = "credit"
+        start_date = date(2026, 4, 1)
+        end_date = None
+        first_due_date = date(2026, 4, 20)
+        next_due_date = date(2026, 4, 20)
+        template_amount = Decimal("2500.00")
+        bank_account_id = None
+        counterparty_id = 2
+        chart_account_id = 3
+        cost_center_id = 8
+        budget_line_id = 10
+        budget_contract_id = 20
+        budget_document_id = 30
+        activity_id = None
+        process_instance_id = None
+        routine_id = None
+        metadata_json = {"allocations": [{"chart_account_id": 3, "cost_center_id": 8, "allocation_type": "amount", "allocated_amount": Decimal("2500.00")}]}
+        deleted_at = _Column()
+
+    class _FakeSchedule:
+        query = _QueryStub(_Schedule())
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: (
+            {
+                "budget_line_id": 10,
+                "budget_contract_id": 20,
+                "budget_document_id": 30,
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: "A soma das parcelas ultrapassa o valor executado da NF/equivalente.",
+    )
+    monkeypatch.setattr(schedule_module.db.session, "commit", lambda: (_ for _ in ()).throw(AssertionError("não deveria commitar")))
+
+    result, error = FinancialScheduleService.update_schedule(
+        schedule_id=40,
+        company_id=9,
+        payload={
+            "template_amount": Decimal("3000.00"),
+            "description": "Tentativa acima do saldo",
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == "A soma das parcelas ultrapassa o valor executado da NF/equivalente."
 
 
 def test_derive_budget_links_from_allocations_returns_unique_chain_only():

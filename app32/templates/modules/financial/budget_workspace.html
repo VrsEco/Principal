@@ -228,7 +228,7 @@ function renderKpiValue(elementId, value) { const el = byId(elementId); if (!el)
 function renderKPIs() { const summary = state.workspace?.summary || {}; const planned = Number(summary.planned_total || 0); const contracted = Number(summary.contracted_total || 0); const executed = Number(summary.executed_total || 0); const scheduled = Number(summary.scheduled_total || 0); renderKpiValue('kpi-planned', planned); renderKpiValue('kpi-contracted', contracted); renderKpiValue('kpi-executed', executed); renderKpiValue('kpi-balance', scheduled); }
 function renderSummaryBox(item) { return item; }
 function renderContext() { return null; }
-function buildDetailTitle(item) { if (item) return `${codeFor(item)} - ${nameFor(item)}`; if (state.creating) return 'Novo registro'; return 'Selecione um registro'; }
+function buildDetailTitle(item) { if (state.creating) return 'Novo registro'; if (item) return `${codeFor(item)} - ${nameFor(item)}`; return 'Selecione um registro'; }
 function buildDetailEyebrow(item) { if (state.activeType === 'schedule') return 'Formulário Agendamentos'; return `Formulário ${TYPE_META[state.activeType]?.label || 'Registro'}`; }
 function metricValues(item, type) { return metricValuesByType(type, item); }
 function nextType(type) { const idx = TYPE_ORDER.indexOf(type); return TYPE_ORDER[idx + 1] || null; }
@@ -237,6 +237,7 @@ function nodeHasChildren(type, item) { const summary = item?.summary || {}; if (
 function buildTreeHtml() { const versions = state.workspace?.versions || []; const lines = state.workspace?.lines || []; const contracts = state.workspace?.contracts || []; const documents = state.workspace?.documents || []; const schedules = state.workspace?.schedules || []; const selectedVersionId = String(state.workspace?.selected_version_id || ''); const selectedLineId = String(state.workspace?.selected_line_id || ''); const selectedContractId = String(state.workspace?.selected_contract_id || ''); const selectedDocumentId = String(state.workspace?.selected_document_id || ''); return versions.map((version) => { const versionSelected = String(version.id) === selectedVersionId; const versionChildren = versionSelected ? lines.map((line) => { const lineSelected = String(line.id) === selectedLineId; const lineChildren = lineSelected ? contracts.map((contract) => { const contractSelected = String(contract.id) === selectedContractId; const contractChildren = contractSelected ? documents.map((document) => { const documentSelected = String(document.id) === selectedDocumentId; const documentChildren = documentSelected ? schedules.map((schedule) => renderTreeRow('schedule', schedule, 4, false)).join('') : ''; return renderTreeRow('document', document, 3, nodeHasChildren('document', document), documentChildren); }).join('') : ''; return renderTreeRow('contract', contract, 2, nodeHasChildren('contract', contract), contractChildren); }).join('') : ''; return renderTreeRow('line', line, 1, nodeHasChildren('line', line), lineChildren); }).join('') : ''; return renderTreeRow('version', version, 0, nodeHasChildren('version', version), versionChildren); }).join(''); }
  function renderTree() { const versions = state.workspace?.versions || []; const lines = state.workspace?.lines || []; const contracts = state.workspace?.contracts || []; const documents = state.workspace?.documents || []; const schedules = state.workspace?.schedules || []; byId('tree-summary-pill').textContent = `${versions.length + lines.length + contracts.length + documents.length + schedules.length} registros`; byId('tree-list').innerHTML = versions.length ? buildTreeHtml() : '<div class="bw-empty">Nenhum orçamento cadastrado.<div style="margin-top:.85rem"><button class="bw-btn bw-btn--primary" type="button" onclick="beginCreateRoot()">Criar primeiro orçamento</button></div></div>'; }
 function renderOptions() { fillSelect(byId('line-chart-account'), state.options?.chart_accounts || [], (item) => `${item.code || ''} - ${item.name}`); fillSelect(byId('line-cost-center'), state.options?.cost_centers || [], (item) => `${item.code || ''} - ${item.name}`); fillSelect(byId('contract-counterparty'), state.options?.counterparties || [], (item) => `${item.code || ''} - ${item.name}`); fillSelect(byId('document-counterparty'), state.options?.counterparties || [], (item) => `${item.code || ''} - ${item.name}`); }
+function buildScheduleDraft() { const document = state.workspace?.selected_document; const line = state.workspace?.selected_line; const availableToSchedule = Math.max(Number(document?.summary?.available_to_schedule || 0), 0); return { schedule_code: '', name: '', movement_nature: line?.movement_nature || 'debit', template_amount: availableToSchedule, start_date: '', first_due_date: '', status: 'active', notes: '' }; }
 function populateForm(type, item) {
     const line = state.workspace?.selected_line;
     const contract = state.workspace?.selected_contract;
@@ -281,18 +282,19 @@ function populateForm(type, item) {
         byId('document-notes').value = item?.notes || '';
     }
     if (type === 'schedule') {
-        byId('schedule-code').value = item?.schedule_code || '(gerado automaticamente)';
-        byId('schedule-name').value = item?.name || '';
-        byId('schedule-nature').value = entryExit(item?.movement_nature || line?.movement_nature);
-        setMoneyInputValue('schedule-amount', item?.template_amount || 0);
-        byId('schedule-competence-date').value = item?.start_date || item?.first_due_date || '';
-        byId('schedule-due-date').value = item?.first_due_date || '';
-        byId('schedule-status').value = item?.status || 'active';
+        const scheduleItem = state.creating ? buildScheduleDraft() : item;
+        byId('schedule-code').value = scheduleItem?.schedule_code || '(gerado automaticamente)';
+        byId('schedule-name').value = scheduleItem?.name || '';
+        byId('schedule-nature').value = entryExit(scheduleItem?.movement_nature || line?.movement_nature);
+        setMoneyInputValue('schedule-amount', scheduleItem?.template_amount || 0);
+        byId('schedule-competence-date').value = scheduleItem?.start_date || scheduleItem?.first_due_date || '';
+        byId('schedule-due-date').value = scheduleItem?.first_due_date || '';
+        byId('schedule-status').value = scheduleItem?.status || 'active';
         byId('schedule-document-label').value = document ? `${document.document_code} - ${document.title}` : '';
-        byId('schedule-notes').value = item?.notes || '';
+        byId('schedule-notes').value = scheduleItem?.notes || '';
     }
 }
-function renderDetail() { hideSections(); const item = activeRecord(); renderContext(); renderSummaryBox(item); byId('detail-eyebrow').textContent = buildDetailEyebrow(item); byId('detail-title').textContent = buildDetailTitle(item); sectionFor(state.activeType)?.classList.add('is-active'); populateForm(state.activeType, item); setMode(state.creating ? 'create' : state.mode === 'edit' ? 'edit' : 'view'); }
+function renderDetail() { hideSections(); const item = state.creating ? null : activeRecord(); renderContext(); renderSummaryBox(item); byId('detail-eyebrow').textContent = buildDetailEyebrow(item); byId('detail-title').textContent = buildDetailTitle(item); sectionFor(state.activeType)?.classList.add('is-active'); populateForm(state.activeType, item); setMode(state.creating ? 'create' : state.mode === 'edit' ? 'edit' : 'view'); }
 async function loadWorkspace(extra = {}) { const query = new URLSearchParams({ company_id: companyId }); Object.entries({ ...currentSelection(), ...extra }).forEach(([key, value]) => { if (value) query.set(key, value); }); state.workspace = await api(`/api/financial/budget/execution-workspace?${query.toString()}`); expandSelectionPath(); if (!(state.workspace?.versions || []).length && !state.creating) { state.activeType = 'version'; state.mode = 'create'; state.creating = true; } renderKPIs(); renderTree(); renderDetail(); updateHistory(); }
 async function loadOptions() { state.options = await api(`/api/financial/budget/options?company_id=${companyId}`); renderOptions(); }
 async function selectNode(type, id, mode = 'view') { state.creating = false; state.activeType = type; state.mode = mode; const extra = {}; if (type === 'version') Object.assign(extra, { version_id: id, line_id: '', contract_id: '', document_id: '', schedule_id: '' }); if (type === 'line') Object.assign(extra, { line_id: id, contract_id: '', document_id: '', schedule_id: '' }); if (type === 'contract') Object.assign(extra, { contract_id: id, document_id: '', schedule_id: '' }); if (type === 'document') Object.assign(extra, { document_id: id, schedule_id: '' }); if (type === 'schedule') Object.assign(extra, { schedule_id: id }); await loadWorkspace(extra); }

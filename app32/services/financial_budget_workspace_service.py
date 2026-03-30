@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -22,6 +22,7 @@ from models.financial_budget import (
     BUDGET_DOCUMENT_TYPE_VALUES,
 )
 from services.financial_budget_code_service import FinancialBudgetCodeService
+from services.financial_budget_schedule_policy import FinancialBudgetSchedulePolicy
 from schemas.financial_budget import (
     FinancialBudgetContractCreateInput,
     FinancialBudgetContractUpdateInput,
@@ -886,23 +887,33 @@ class FinancialBudgetWorkspaceService:
         assert schedule_context is not None
 
         document = schedule_context["document"]
-
-        current_schedules = FinancialBudgetWorkspaceService._list_schedules_for_document(
+        capacity, capacity_error = FinancialBudgetSchedulePolicy.get_document_capacity(
             company_id=company_id,
-            document_id=document.id,
+            budget_document_id=document.id,
+            allowed_company_ids=allowed_company_ids,
         )
-        existing_total = FinancialBudgetWorkspaceService._sum_schedule_amounts(current_schedules)
+        if capacity_error:
+            return None, capacity_error
+        assert capacity is not None
         batch_total = sum((Decimal(str(item.amount)) for item in data.installments), _DECIMAL_ZERO)
-        document_total = Decimal(str(document.document_amount or 0))
-
-        if existing_total + batch_total > document_total + _DECIMAL_TOLERANCE:
-            return None, "A soma das parcelas ultrapassa o valor executado da NF/equivalente."
+        if FinancialBudgetSchedulePolicy.would_exceed_document_capacity(
+            scheduled_total=capacity["scheduled_total"],
+            requested_amount=batch_total,
+            document_total=capacity["document_total"],
+        ):
+            return None, FinancialBudgetSchedulePolicy.CAPACITY_EXCEEDED_MESSAGE
 
         created_items: List[Dict[str, Any]] = []
 
         try:
             total_installments = len(data.installments)
             for index, installment in enumerate(data.installments, start=1):
+                date_error = FinancialBudgetWorkspaceService._validate_workspace_schedule_due_date(
+                    due_date=installment.due_date,
+                    context=schedule_context,
+                )
+                if date_error:
+                    return None, f"Parcela {index}/{total_installments}: {date_error}"
                 schedule_payload = FinancialBudgetWorkspaceService._build_document_schedule_payload(
                     company_id=company_id,
                     context=schedule_context,
@@ -917,6 +928,7 @@ class FinancialBudgetWorkspaceService:
                 result, error = FinancialScheduleService.create_schedule(
                     payload=schedule_payload,
                     allowed_company_ids=allowed_company_ids,
+                    auto_commit=False,
                 )
                 if error:
                     db.session.rollback()
@@ -976,22 +988,24 @@ class FinancialBudgetWorkspaceService:
         if FinancialBudgetWorkspaceService._has_generated_entries(company_id=company_id, schedule_ids=[schedule.id]):
             return None, "Este agendamento já possui baixa/lançamento financeiro vinculado e não pode ser editado por aqui."
 
-        current_schedules = FinancialBudgetWorkspaceService._list_schedules_for_document(
-            company_id=company_id,
-            document_id=document.id,
-        )
-        existing_other_total = sum(
-            (
-                Decimal(str(item.template_amount or 0))
-                for item in current_schedules
-                if int(getattr(item, "id", 0) or 0) != schedule.id
-            ),
-            _DECIMAL_ZERO,
-        )
         requested_amount = Decimal(str(data.amount))
-        document_total = Decimal(str(document.document_amount or 0))
-        if existing_other_total + requested_amount > document_total + _DECIMAL_TOLERANCE:
-            return None, "A soma das parcelas ultrapassa o valor executado da NF/equivalente."
+        capacity_error = FinancialBudgetSchedulePolicy.validate_document_schedule_amount(
+            company_id=company_id,
+            budget_document_id=document.id,
+            requested_amount=requested_amount,
+            allowed_company_ids=allowed_company_ids,
+            exclude_schedule_id=schedule.id,
+        )
+        if capacity_error:
+            return None, capacity_error
+
+        date_error = FinancialBudgetWorkspaceService._validate_workspace_schedule_due_date(
+            due_date=data.due_date,
+            context=schedule_context,
+            current_schedule=schedule,
+        )
+        if date_error:
+            return None, date_error
 
         schedule_payload = FinancialBudgetWorkspaceService._build_document_schedule_payload(
             company_id=company_id,
@@ -1011,6 +1025,7 @@ class FinancialBudgetWorkspaceService:
             company_id=company_id,
             payload=schedule_payload,
             allowed_company_ids=allowed_company_ids,
+            auto_commit=False,
         )
         if error:
             return None, error
@@ -1084,6 +1099,43 @@ class FinancialBudgetWorkspaceService:
         except Exception as exc:
             db.session.rollback()
             return None, f"Não foi possível remover o agendamento financeiro: {exc}"
+
+    @staticmethod
+    def _resolve_workspace_correction_index_id(
+        *,
+        context: Dict[str, Any],
+        current_schedule: Optional[FinancialSchedule] = None,
+    ) -> Optional[int]:
+        existing_metadata = dict(getattr(current_schedule, "metadata_json", None) or {})
+        correction_index_id = existing_metadata.get("correction_index_id") or context.get("default_correction_index_id")
+        if correction_index_id in ("", None):
+            return None
+        try:
+            return int(correction_index_id)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _validate_workspace_schedule_due_date(
+        *,
+        due_date: Optional[date],
+        context: Dict[str, Any],
+        current_schedule: Optional[FinancialSchedule] = None,
+    ) -> Optional[str]:
+        if not due_date:
+            return None
+        correction_index_id = FinancialBudgetWorkspaceService._resolve_workspace_correction_index_id(
+            context=context,
+            current_schedule=current_schedule,
+        )
+        if not correction_index_id:
+            return None
+        if due_date >= date.today():
+            return None
+        return (
+            "Para NF com índice de correção ativo, informe vencimento igual ou posterior à data atual "
+            "ou use a tela completa de Agendamentos."
+        )
 
     @staticmethod
     def _get_document_schedule_context(
@@ -1177,118 +1229,25 @@ class FinancialBudgetWorkspaceService:
         auto_post: Optional[bool],
         current_schedule: Optional[FinancialSchedule] = None,
     ) -> Dict[str, Any]:
-        document = context["document"]
-        contract = context["contract"]
-        line = context["line"]
-        counterparty = context.get("counterparty")
-        default_suggestions = dict(context.get("default_suggestions") or {})
-        line_metadata = dict(context.get("line_metadata") or {})
-        contract_metadata = dict(context.get("contract_metadata") or {})
-        document_metadata = dict(context.get("document_metadata") or {})
-        existing_metadata = dict(getattr(current_schedule, "metadata_json", None) or {})
-        base_metadata = {
-            **default_suggestions,
-            **line_metadata,
-            **contract_metadata,
-            **document_metadata,
-            **existing_metadata,
-        }
-        normalized_label = str(label or "").strip()
-        effective_notes = notes if notes is not None else (getattr(current_schedule, "notes", None) or None)
-        effective_due_date = due_date
-        effective_competence_date = competence_date or due_date
-        competence_mode = "same_as_due" if effective_competence_date == effective_due_date else "keep_first_competence"
-        domain_type = context.get("domain_type")
-        domain_source_id = context.get("domain_source_id")
-        domain_label = context.get("domain_label")
-        domain_value = f"{domain_type}:{domain_source_id}" if domain_type and domain_source_id is not None else ""
-        correction_index_id = (
-            base_metadata.get("correction_index_id")
-            or context.get("default_correction_index_id")
+        return FinancialScheduleService.build_budget_document_schedule_payload(
+            company_id=company_id,
+            document=context["document"],
+            contract=context["contract"],
+            line=context["line"],
+            label=label,
+            amount=amount,
+            due_date=due_date,
+            competence_date=competence_date,
+            notes=notes,
+            status=status,
+            auto_post=auto_post,
+            current_schedule=current_schedule,
+            default_suggestions=context.get("default_suggestions"),
+            default_correction_index_id=context.get("default_correction_index_id"),
+            domain_type=context.get("domain_type"),
+            domain_source_id=context.get("domain_source_id"),
+            domain_label=context.get("domain_label"),
         )
-        allocation_notes = f"{normalized_label} | {document.title}"
-
-        metadata_json = {
-            **base_metadata,
-            "document_number": document.document_number or document.document_code,
-            "competence_mode": competence_mode,
-            "correction_index_id": correction_index_id,
-            "discount_rule_id": base_metadata.get("discount_rule_id"),
-            "discount_amount_override": base_metadata.get("discount_amount_override", 0),
-            "repeat_count": base_metadata.get("repeat_count", 1),
-            "attachments": list(base_metadata.get("attachments") or []),
-            "counterparty_name": counterparty.name if counterparty else base_metadata.get("counterparty_name"),
-            "budget_version_id": line.budget_version_id,
-            "budget_version_code": getattr(line.version, "code", None),
-            "budget_line_id": line.id,
-            "budget_line_code": line.line_code,
-            "budget_contract_id": contract.id,
-            "budget_contract_code": contract.contract_code,
-            "budget_document_id": document.id,
-            "budget_document_code": document.document_code,
-            "budget_document_title": document.title,
-            "contract_name": contract.name,
-            "domain_type": domain_type,
-            "domain_source_id": domain_source_id,
-            "domain_label": domain_label,
-            "domain_value": domain_value,
-            "allocations": [
-                {
-                    "chart_account_id": line.chart_account_id,
-                    "cost_center_id": line.cost_center_id,
-                    "allocation_type": "amount",
-                    "percentage": 100,
-                    "allocated_amount": float(amount),
-                    "notes": allocation_notes,
-                    "domain_type": domain_type,
-                    "domain_source_id": domain_source_id,
-                    "domain_label": domain_label,
-                    "domain_value": domain_value,
-                    "budget_version_id": line.budget_version_id,
-                    "budget_version_code": getattr(line.version, "code", None),
-                    "budget_line_id": line.id,
-                    "budget_line_code": line.line_code,
-                    "budget_contract_id": contract.id,
-                    "budget_contract_code": contract.contract_code,
-                    "budget_document_id": document.id,
-                    "budget_document_code": document.document_code,
-                    "metadata_json": {
-                        "adjustment_kind": None,
-                        "adjustment_label": None,
-                    },
-                }
-            ],
-        }
-
-        return {
-            "company_id": company_id,
-            "budget_line_id": line.id,
-            "budget_contract_id": contract.id,
-            "budget_document_id": document.id,
-            "name": normalized_label,
-            "entry_type": context["entry_type"],
-            "movement_nature": line.movement_nature,
-            "origin_type": getattr(current_schedule, "origin_type", None) or "manual",
-            "status": status,
-            "frequency": "one_time",
-            "interval_value": 1,
-            "start_date": effective_competence_date,
-            "first_due_date": effective_due_date,
-            "next_due_date": effective_due_date,
-            "description": allocation_notes,
-            "memo": effective_notes or getattr(current_schedule, "memo", None) or document.notes or contract.notes,
-            "document_number_prefix": document.document_number or document.document_code or getattr(current_schedule, "document_number_prefix", None),
-            "template_amount": amount,
-            "counterparty_id": counterparty.id if counterparty else getattr(current_schedule, "counterparty_id", None),
-            "chart_account_id": line.chart_account_id,
-            "cost_center_id": line.cost_center_id,
-            "activity_id": line.activity_id,
-            "process_instance_id": line.process_instance_id,
-            "routine_id": line.routine_id,
-            "notes": effective_notes or normalized_label,
-            "auto_post": bool(auto_post) if auto_post is not None else bool(getattr(current_schedule, "auto_post", False)),
-            "metadata_json": metadata_json,
-        }
 
     @staticmethod
     def _resolve_version(*, company_id: int, version_id: Optional[int]) -> Optional[FinancialBudgetVersion]:

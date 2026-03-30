@@ -807,6 +807,7 @@ class FinancialScheduleCreateInput(BaseModel):
 class FinancialScheduleUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    schedule_code: Optional[str] = Field(None, min_length=3, max_length=50)
     name: Optional[str] = Field(None, min_length=3, max_length=120)
     entry_type: Optional[str] = Field(None, pattern=_choices_pattern(ENTRY_TYPE_VALUES))
     movement_nature: Optional[str] = Field(None, pattern=_choices_pattern(MOVEMENT_NATURE_VALUES))
