@@ -340,6 +340,7 @@ class FinancialBudgetWorkspaceService:
 
         return {
             **(base_options or {}),
+            "collaborators": list((base_options or {}).get("employees") or []),
             "budget_categories": [
                 {"code": "CAPEX", "label": "CAPEX"},
                 {"code": "OPEX", "label": "OPEX"},
@@ -447,6 +448,7 @@ class FinancialBudgetWorkspaceService:
             company_id=data.company_id,
             chart_account_id=data.chart_account_id,
             cost_center_id=data.cost_center_id,
+            employee_id=data.responsible_employee_id,
         )
         if reference_error:
             return None, reference_error
@@ -496,6 +498,7 @@ class FinancialBudgetWorkspaceService:
             company_id=company_id,
             chart_account_id=merged.get("chart_account_id", item.chart_account_id),
             cost_center_id=merged.get("cost_center_id", item.cost_center_id),
+            employee_id=merged.get("responsible_employee_id", item.responsible_employee_id),
         )
         if reference_error:
             return None, reference_error
@@ -578,6 +581,7 @@ class FinancialBudgetWorkspaceService:
         reference_error = FinancialCatalogService.validate_reference_ids(
             company_id=data.company_id,
             counterparty_id=data.counterparty_id,
+            employee_id=data.responsible_employee_id,
         )
         if reference_error:
             return None, reference_error
@@ -625,6 +629,7 @@ class FinancialBudgetWorkspaceService:
         reference_error = FinancialCatalogService.validate_reference_ids(
             company_id=company_id,
             counterparty_id=merged.get("counterparty_id", item.counterparty_id),
+            employee_id=merged.get("responsible_employee_id", item.responsible_employee_id),
         )
         if reference_error:
             return None, reference_error

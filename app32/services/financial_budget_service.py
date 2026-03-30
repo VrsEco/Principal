@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from models import (
     db,
+    Employee,
     FinancialBudgetAmount,
     FinancialBudgetLine,
     FinancialBudgetVersion,
@@ -147,6 +148,13 @@ class FinancialBudgetService:
         if scope_error:
             return None, scope_error
 
+        reference_error = FinancialCatalogService.validate_reference_ids(
+            company_id=data.company_id,
+            employee_id=data.responsible_employee_id,
+        )
+        if reference_error:
+            return None, reference_error
+
         existing = FinancialBudgetVersion.query.filter(
             FinancialBudgetVersion.company_id == data.company_id,
             FinancialBudgetVersion.code == data.code,
@@ -215,6 +223,14 @@ class FinancialBudgetService:
             normalized_payload["company_id"] = company_id
         data = FinancialBudgetVersionUpdateInput.model_validate(normalized_payload)
         merged = data.model_dump(exclude_unset=True)
+
+        reference_error = FinancialCatalogService.validate_reference_ids(
+            company_id=company_id,
+            employee_id=merged.get("responsible_employee_id", version.responsible_employee_id),
+        )
+        if reference_error:
+            return None, reference_error
+
         period_start = merged.get("period_start", version.period_start)
         period_end = merged.get("period_end", version.period_end)
         if period_end < period_start:
@@ -374,6 +390,7 @@ class FinancialBudgetService:
                 company_id=data.company_id,
                 chart_account_id=row.chart_account_id,
                 cost_center_id=row.cost_center_id,
+                employee_id=row.responsible_employee_id,
             )
             if reference_error:
                 return None, reference_error
@@ -430,10 +447,27 @@ class FinancialBudgetService:
             .order_by(FinancialCostCenter.name.asc())
             .all()
         )
+        employees = (
+            Employee.query.filter(
+                Employee.company_id == company_id,
+            )
+            .order_by(Employee.name.asc(), Employee.id.asc())
+            .all()
+        )
 
         return {
             "chart_accounts": [{"id": item.id, "name": item.name, "code": item.code} for item in chart_accounts],
             "cost_centers": [{"id": item.id, "name": item.name, "code": item.code} for item in cost_centers],
+            "employees": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "email": item.email,
+                    "department": item.department,
+                    "status": item.status,
+                }
+                for item in employees
+            ],
         }, None
 
     @staticmethod

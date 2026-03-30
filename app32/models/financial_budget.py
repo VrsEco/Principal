@@ -114,6 +114,7 @@ class FinancialBudgetVersion(db.Model):
     status = db.Column(db.String(20), nullable=False, default="draft", index=True)
     period_start = db.Column(db.Date, nullable=False, index=True)
     period_end = db.Column(db.Date, nullable=False, index=True)
+    responsible_employee_id = db.Column(db.Integer, db.ForeignKey("employees.id", ondelete="SET NULL"), index=True)
     notes = db.Column(db.Text)
     metadata_json = db.Column(JSONB, nullable=False, default=dict)
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
@@ -125,6 +126,7 @@ class FinancialBudgetVersion(db.Model):
 
     created_by_user = db.relationship("User", foreign_keys=[created_by_user_id])
     approved_by_user = db.relationship("User", foreign_keys=[approved_by_user_id])
+    responsible_employee = db.relationship("Employee", foreign_keys=[responsible_employee_id])
     lines = db.relationship(
         "FinancialBudgetLine",
         backref="version",
@@ -147,6 +149,8 @@ class FinancialBudgetVersion(db.Model):
             "status": self.status,
             "period_start": self.period_start.isoformat() if self.period_start else None,
             "period_end": self.period_end.isoformat() if self.period_end else None,
+            "responsible_employee_id": self.responsible_employee_id,
+            "responsible_employee_name": self.responsible_employee.name if self.responsible_employee else None,
             "notes": self.notes,
             "metadata_json": self.metadata_json or {},
             "created_by_user_id": self.created_by_user_id,
@@ -207,6 +211,7 @@ class FinancialBudgetLine(db.Model):
     planned_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     chart_account_id = db.Column(db.Integer, db.ForeignKey("financial_chart_accounts.id"), index=True)
     cost_center_id = db.Column(db.Integer, db.ForeignKey("financial_cost_centers.id"), index=True)
+    responsible_employee_id = db.Column(db.Integer, db.ForeignKey("employees.id", ondelete="SET NULL"), index=True)
     activity_id = db.Column(db.Integer, db.ForeignKey("process_routines.id"), index=True)
     process_instance_id = db.Column(db.Integer, db.ForeignKey("process_instances.id"), index=True)
     routine_id = db.Column(db.Integer, db.ForeignKey("routines.id"), index=True)
@@ -219,6 +224,7 @@ class FinancialBudgetLine(db.Model):
 
     chart_account = db.relationship("FinancialChartAccount", foreign_keys=[chart_account_id])
     cost_center = db.relationship("FinancialCostCenter", foreign_keys=[cost_center_id])
+    responsible_employee = db.relationship("Employee", foreign_keys=[responsible_employee_id])
     activity = db.relationship("ProcessRoutine", foreign_keys=[activity_id])
     process_instance = db.relationship("ProcessInstance", foreign_keys=[process_instance_id])
     routine = db.relationship("Routine", foreign_keys=[routine_id])
@@ -251,6 +257,8 @@ class FinancialBudgetLine(db.Model):
             "planned_amount": float(self.planned_amount or 0),
             "chart_account_id": self.chart_account_id,
             "cost_center_id": self.cost_center_id,
+            "responsible_employee_id": self.responsible_employee_id,
+            "responsible_employee_name": self.responsible_employee.name if self.responsible_employee else None,
             "activity_id": self.activity_id,
             "process_instance_id": self.process_instance_id,
             "routine_id": self.routine_id,
@@ -341,6 +349,7 @@ class FinancialBudgetContract(db.Model):
     status = db.Column(db.String(20), nullable=False, default="draft", index=True)
     contract_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     counterparty_id = db.Column(db.Integer, db.ForeignKey("financial_counterparties.id"), index=True)
+    responsible_employee_id = db.Column(db.Integer, db.ForeignKey("employees.id", ondelete="SET NULL"), index=True)
     signed_at = db.Column(db.Date)
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
@@ -352,6 +361,7 @@ class FinancialBudgetContract(db.Model):
     deleted_at = db.Column(db.DateTime)
 
     counterparty = db.relationship("FinancialCounterparty", foreign_keys=[counterparty_id])
+    responsible_employee = db.relationship("Employee", foreign_keys=[responsible_employee_id])
     documents = db.relationship(
         "FinancialBudgetDocument",
         backref="budget_contract",
@@ -372,6 +382,8 @@ class FinancialBudgetContract(db.Model):
             "status": self.status,
             "contract_amount": float(self.contract_amount or 0),
             "counterparty_id": self.counterparty_id,
+            "responsible_employee_id": self.responsible_employee_id,
+            "responsible_employee_name": self.responsible_employee.name if self.responsible_employee else None,
             "signed_at": self.signed_at.isoformat() if self.signed_at else None,
             "start_date": self.start_date.isoformat() if self.start_date else None,
             "end_date": self.end_date.isoformat() if self.end_date else None,

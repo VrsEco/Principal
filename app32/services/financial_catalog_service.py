@@ -7,7 +7,7 @@ from typing import Dict, Optional, Sequence, Tuple, Type
 
 from sqlalchemy.exc import IntegrityError
 
-from models import db
+from models import Employee, db
 from models.financial import (
     FinancialAccountCategory,
     FinancialAssetAccount,
@@ -554,6 +554,7 @@ class FinancialCatalogService:
         chart_account_id: Optional[int] = None,
         cost_center_id: Optional[int] = None,
         counterparty_id: Optional[int] = None,
+        employee_id: Optional[int] = None,
     ) -> Optional[str]:
         if bank_account_id:
             bank_account = FinancialBankAccount.query.filter(
@@ -590,6 +591,14 @@ class FinancialCatalogService:
             ).first()
             if not counterparty:
                 return "Favorecido não encontrado no escopo da empresa."
+
+        if employee_id:
+            employee = Employee.query.filter(
+                Employee.id == employee_id,
+                Employee.company_id == company_id,
+            ).first()
+            if not employee:
+                return "Colaborador responsável não encontrado no escopo da empresa."
 
         return None
 
