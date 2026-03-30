@@ -254,3 +254,106 @@ def test_execution_workspace_rejects_cross_tenant_and_invalid_child_selection(mo
 
     assert result is None
     assert error == "Verba orçamentária não encontrada para o orçamento selecionado."
+
+
+def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(monkeypatch):
+    version = _SimpleObj(id=1, code="AA.O.1")
+    line = _SimpleObj(
+        id=10,
+        company_id=9,
+        budget_version_id=1,
+        line_code="AA.O.1.1",
+        movement_nature="debit",
+        chart_account_id=101,
+        cost_center_id=202,
+        activity_id=303,
+        process_instance_id=404,
+        routine_id=505,
+        metadata_json={
+            "domain_type": "project",
+            "domain_source_id": 77,
+            "domain_label": "Projeto Âncora",
+        },
+        version=version,
+    )
+    counterparty = _SimpleObj(id=900, name="Fornecedor Estratégico")
+    contract = _SimpleObj(
+        id=20,
+        company_id=9,
+        budget_line_id=10,
+        contract_code="AA.O.1.1.1",
+        name="Contrato 01",
+        counterparty=counterparty,
+        metadata_json={},
+    )
+    document = _SimpleObj(
+        id=30,
+        company_id=9,
+        budget_contract_id=20,
+        document_code="AA.O.1.1.1.1",
+        title="Nota 01",
+        document_number="NF-0001",
+        document_amount=Decimal("50.00"),
+        counterparty=None,
+        notes="Observação da NF",
+        metadata_json={},
+    )
+
+    monkeypatch.setattr(workspace_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_get_document", lambda **kwargs: document)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_get_contract", lambda **kwargs: contract)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_get_line", lambda **kwargs: line)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_schedules_for_document", lambda **kwargs: [])
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_refresh_document_status", lambda *args, **kwargs: None)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_document", lambda item: {"id": item.id})
+    monkeypatch.setattr(
+        workspace_module.FinancialScheduleService,
+        "list_default_suggestions",
+        lambda **kwargs: ({"payable_correction_index_id": 88}, None),
+    )
+    monkeypatch.setattr(workspace_module.db.session, "commit", lambda: None)
+    monkeypatch.setattr(workspace_module.db.session, "rollback", lambda: None)
+
+    captured = {}
+
+    def _fake_create_schedule(*, payload, allowed_company_ids=None):
+        captured["payload"] = payload
+        return {"id": 555, "name": payload["name"]}, None
+
+    monkeypatch.setattr(workspace_module.FinancialScheduleService, "create_schedule", _fake_create_schedule)
+
+    result, error = FinancialBudgetWorkspaceService.create_document_schedules(
+        company_id=9,
+        document_id=30,
+        payload={
+            "company_id": 9,
+            "installments": [
+                {
+                    "due_date": date(2026, 4, 10),
+                    "amount": Decimal("50.00"),
+                    "label": "Parcela única",
+                }
+            ],
+            "notes": "Gerado pelo workspace",
+            "auto_post": False,
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result["created_schedules"][0]["id"] == 555
+    payload = captured["payload"]
+    assert payload["budget_document_id"] == 30
+    assert payload["chart_account_id"] == 101
+    assert payload["cost_center_id"] == 202
+    assert payload["metadata_json"]["correction_index_id"] == 88
+    assert payload["metadata_json"]["discount_rule_id"] is None
+    assert payload["metadata_json"]["discount_amount_override"] == 0
+    assert payload["metadata_json"]["repeat_count"] == 1
+    assert payload["metadata_json"]["attachments"] == []
+    assert payload["metadata_json"]["counterparty_name"] == "Fornecedor Estratégico"
+    allocation = payload["metadata_json"]["allocations"][0]
+    assert allocation["allocation_type"] == "amount"
+    assert allocation["allocated_amount"] == 50.0
+    assert allocation["domain_value"] == "project:77"
+    assert allocation["notes"] == "Parcela única | Nota 01"

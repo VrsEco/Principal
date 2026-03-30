@@ -946,10 +946,16 @@ class FinancialBudgetWorkspaceService:
                 label = installment.label or f"Parcela {index}/{total_installments}"
                 amount = Decimal(str(installment.amount))
                 competence_date = installment.competence_date or installment.due_date
+                allocation_domain_value = (
+                    f"{domain_type}:{domain_source_id}"
+                    if domain_type and domain_source_id is not None
+                    else ""
+                )
                 allocation_metadata = {
                     "domain_type": domain_type,
                     "domain_source_id": domain_source_id,
                     "domain_label": domain_label,
+                    "domain_value": allocation_domain_value,
                     "budget_version_id": line.budget_version_id,
                     "budget_version_code": getattr(line.version, "code", None),
                     "budget_line_id": line.id,
@@ -994,6 +1000,10 @@ class FinancialBudgetWorkspaceService:
                         "document_number": document.document_number or document.document_code,
                         "competence_mode": "same_as_due",
                         "correction_index_id": default_correction_index_id,
+                        "discount_rule_id": None,
+                        "discount_amount_override": 0,
+                        "repeat_count": 1,
+                        "attachments": list(document_metadata.get("attachments") or []),
                         "counterparty_name": counterparty.name if counterparty else None,
                         "budget_version_id": line.budget_version_id,
                         "budget_version_code": getattr(line.version, "code", None),
@@ -1012,9 +1022,14 @@ class FinancialBudgetWorkspaceService:
                             {
                                 "chart_account_id": line.chart_account_id,
                                 "cost_center_id": line.cost_center_id,
-                                "allocation_type": "percentage",
+                                "allocation_type": "amount",
                                 "percentage": 100,
                                 "allocated_amount": float(amount),
+                                "notes": f"{label} | {document.title}",
+                                "metadata_json": {
+                                    "adjustment_kind": None,
+                                    "adjustment_label": None,
+                                },
                                 **allocation_metadata,
                             }
                         ],
