@@ -49,17 +49,17 @@
         </article>
         <article class="budget-kpi">
             <span>Previsto</span>
-            <strong id="kpi-planned">R$ 0,00</strong>
+            <strong id="kpi-planned" class="amount-positive">0,00</strong>
             <small>Consolidado do conjunto</small>
         </article>
         <article class="budget-kpi">
             <span>Executado</span>
-            <strong id="kpi-executed">R$ 0,00</strong>
+            <strong id="kpi-executed" class="amount-positive">0,00</strong>
             <small>Valor lançado</small>
         </article>
         <article class="budget-kpi">
             <span>Saldo</span>
-            <strong id="kpi-balance">R$ 0,00</strong>
+            <strong id="kpi-balance" class="amount-positive">0,00</strong>
             <small>Previsto menos executado</small>
         </article>
     </section>
@@ -199,7 +199,7 @@
 .budget-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
 .budget-kpi{padding:1rem 1.1rem;min-height:112px;display:flex;flex-direction:column;justify-content:center}
 .budget-kpi span{display:block;color:var(--text-secondary);font-size:.8rem}
-.budget-kpi strong{display:block;margin-top:.35rem;font-size:1.15rem;line-height:1.2}
+.budget-kpi strong{display:block;margin-top:.35rem;font-size:1.15rem;line-height:1.2}.amount-positive{color:#2563eb;font-weight:800}.amount-negative{color:#dc2626;font-weight:800}
 .budget-kpi small{display:block;margin-top:.2rem;color:var(--text-tertiary)}
 .budget-filter-count{min-width:1.35rem;height:1.35rem;padding:0 .35rem;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(59,130,246,.14);color:#1d4ed8;font-size:.75rem;font-weight:700}
 .budget-card{overflow:hidden}
@@ -282,7 +282,10 @@ const state = {
 };
 
 const byId = (id) => document.getElementById(id);
-const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const amountClass = (value) => Number(value || 0) < 0 ? 'amount-negative' : 'amount-positive';
+const formatCurrency = (value) => { const numeric = Number(value || 0); const absolute = Math.abs(numeric).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return numeric < 0 ? `- ${absolute}` : absolute; };
+function moneySpan(value) { return `<span class="${amountClass(value)}">${formatCurrency(value)}</span>`; }
+function renderKpiValue(id, value) { const el = byId(id); if (!el) return; el.textContent = formatCurrency(value); el.classList.remove('amount-positive', 'amount-negative'); el.classList.add(amountClass(value)); }
 const slugify = (value) => String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -318,9 +321,9 @@ function financialWorkspaceUrl(versionId = '', extra = {}) {
 }
 
 function renderKpis(summary) {
-    byId('kpi-planned').textContent = formatCurrency(summary?.planned_total || 0);
-    byId('kpi-executed').textContent = formatCurrency(summary?.executed_total || 0);
-    byId('kpi-balance').textContent = formatCurrency((summary?.planned_total || 0) - (summary?.executed_total || 0));
+    renderKpiValue('kpi-planned', summary?.planned_total || 0);
+    renderKpiValue('kpi-executed', summary?.executed_total || 0);
+    renderKpiValue('kpi-balance', (summary?.planned_total || 0) - (summary?.executed_total || 0));
     byId('kpi-selected-count').textContent = String(state.selection.size || 0);
     updateFiltersBadge();
 }
@@ -393,10 +396,10 @@ function renderBudgetDetail() {
             <span>Linhas: <strong>${lines.length}</strong></span>
         </div>
         <div class="budget-detail-grid">
-            <article class="budget-detail-kpi"><span>Previsto</span><strong>${formatCurrency(summary.planned_total)}</strong></article>
-            <article class="budget-detail-kpi"><span>Contratado</span><strong>${formatCurrency(summary.contracted_total)}</strong></article>
-            <article class="budget-detail-kpi"><span>Executado</span><strong>${formatCurrency(summary.executed_total)}</strong></article>
-            <article class="budget-detail-kpi"><span>Agendado</span><strong>${formatCurrency(summary.scheduled_total)}</strong></article>
+            <article class="budget-detail-kpi"><span>Previsto</span><strong>${moneySpan(summary.planned_total)}</strong></article>
+            <article class="budget-detail-kpi"><span>Contratado</span><strong>${moneySpan(summary.contracted_total)}</strong></article>
+            <article class="budget-detail-kpi"><span>Executado</span><strong>${moneySpan(summary.executed_total)}</strong></article>
+            <article class="budget-detail-kpi"><span>Agendado</span><strong>${moneySpan(summary.scheduled_total)}</strong></article>
         </div>
         <div class="budget-item-meta">
             <span>Atualizado em <strong>${budget.updated_at || budget.created_at || '-'}</strong></span>
@@ -461,9 +464,9 @@ function renderList() {
                         <span>Atualizado: <strong>${item.updated_at || item.created_at || '-'}</strong></span>
                     </div>
                     <div class="budget-item-summary">
-                        <article class="budget-metric"><span>Previsto</span><strong>${formatCurrency(summary.planned_total)}</strong></article>
-                        <article class="budget-metric"><span>Executado</span><strong>${formatCurrency(summary.executed_total)}</strong></article>
-                        <article class="budget-metric"><span>Saldo</span><strong>${formatCurrency((summary.planned_total || 0) - (summary.executed_total || 0))}</strong></article>
+                        <article class="budget-metric"><span>Previsto</span><strong>${moneySpan(summary.planned_total)}</strong></article>
+                        <article class="budget-metric"><span>Executado</span><strong>${moneySpan(summary.executed_total)}</strong></article>
+                        <article class="budget-metric"><span>Saldo</span><strong>${moneySpan((summary.planned_total || 0) - (summary.executed_total || 0))}</strong></article>
                         <article class="budget-metric"><span>Linhas</span><strong>${summary.lines_count ?? 0}</strong></article>
                     </div>
                 </div>

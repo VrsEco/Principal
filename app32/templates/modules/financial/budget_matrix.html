@@ -28,7 +28,7 @@
 .budget-muted{margin:.3rem 0 0;color:var(--text-secondary)}
 .budget-kpi{padding:1rem}
 .budget-kpi span{display:block;color:var(--text-secondary);font-size:.8rem}
-.budget-kpi strong{display:block;margin-top:.35rem;font-size:1.1rem}
+.budget-kpi strong{display:block;margin-top:.35rem;font-size:1.1rem}.amount-positive{color:#2563eb;font-weight:800}.amount-negative{color:#dc2626;font-weight:800}
 .budget-field{display:flex;flex-direction:column;gap:.35rem}
 .budget-field span{font-size:.9rem;color:var(--text-secondary)}
 .budget-field input,.budget-field select,.budget-field textarea{background:var(--surface-secondary);border:1px solid var(--border);border-radius:12px;padding:.78rem .88rem;color:var(--text-primary)}
@@ -74,10 +74,10 @@
     </section>
 
     <section class="budget-grid budget-grid--summary">
-        <article class="budget-kpi"><span>Planejado</span><strong id="sum-planned">R$ 0,00</strong></article>
-        <article class="budget-kpi"><span>Contratado</span><strong id="sum-contracted">R$ 0,00</strong></article>
-        <article class="budget-kpi"><span>Executado</span><strong id="sum-executed">R$ 0,00</strong></article>
-        <article class="budget-kpi"><span>Agendado</span><strong id="sum-scheduled">R$ 0,00</strong></article>
+        <article class="budget-kpi"><span>Planejado</span><strong id="sum-planned">0,00</strong></article>
+        <article class="budget-kpi"><span>Contratado</span><strong id="sum-contracted">0,00</strong></article>
+        <article class="budget-kpi"><span>Executado</span><strong id="sum-executed">0,00</strong></article>
+        <article class="budget-kpi"><span>Agendado</span><strong id="sum-scheduled">0,00</strong></article>
     </section>
 
     <section class="budget-grid budget-grid--main">
@@ -206,7 +206,9 @@ const companyId = Number(budgetRoot?.dataset.companyId || 0);
 const state = { workspace: null, options: null, editingLineId: null, creatingVersion: false };
 
 const byId = (id) => document.getElementById(id);
-const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const amountClass = (value) => Number(value || 0) < 0 ? 'amount-negative' : 'amount-positive';
+const formatCurrency = (value) => { const numeric = Number(value || 0); const absolute = Math.abs(numeric).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return numeric < 0 ? `- ${absolute}` : absolute; };
+function applyAmountClass(id, value) { const el = byId(id); if (!el) return; el.classList.remove('amount-positive', 'amount-negative'); el.classList.add(amountClass(value)); }
 const slugify = (value) => String(value || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/(^-|-$)/g, '').toUpperCase();
 async function api(url, options = {}) { const r = await fetch(url, options); const p = await r.json(); if (!r.ok) throw new Error(p.error || (p.errors || []).map(item => item.msg).join(' | ') || 'Falha na operação.'); return p; }
 
