@@ -63,10 +63,10 @@
     </section>
 
     <section class="bw-kpis">
-        <article class="bw-kpi"><span>Orçado</span><strong id="kpi-planned">R$ 0,00</strong></article>
-        <article class="bw-kpi"><span>Contratados</span><strong id="kpi-contracted">R$ 0,00</strong></article>
-        <article class="bw-kpi"><span>Executados</span><strong id="kpi-executed">R$ 0,00</strong></article>
-        <article class="bw-kpi"><span>Agendados</span><strong id="kpi-balance">R$ 0,00</strong></article>
+        <article class="bw-kpi"><span>Orçado</span><strong id="kpi-planned" class="amount-positive">0,00</strong></article>
+        <article class="bw-kpi"><span>Contratados</span><strong id="kpi-contracted" class="amount-positive">0,00</strong></article>
+        <article class="bw-kpi"><span>Executados</span><strong id="kpi-executed" class="amount-positive">0,00</strong></article>
+        <article class="bw-kpi"><span>Agendados</span><strong id="kpi-balance" class="amount-positive">0,00</strong></article>
     </section>
 
     <section class="bw-layout">
@@ -221,7 +221,8 @@ function metricValuesByType(type, item) {
     const balance = planned - realized;
     return { planned, realized, balance, extra: realized };
 }
-function renderKPIs() { const summary = state.workspace?.summary || {}; const planned = Number(summary.planned_total || 0); const contracted = Number(summary.contracted_total || 0); const executed = Number(summary.executed_total || 0); const scheduled = Number(summary.scheduled_total || 0); byId('kpi-planned').textContent = fmtMoneyAbsolute(planned); byId('kpi-contracted').textContent = fmtMoneyAbsolute(contracted); byId('kpi-executed').textContent = fmtMoneyAbsolute(executed); byId('kpi-balance').textContent = fmtMoneyAbsolute(scheduled); }
+function renderKpiValue(elementId, value) { const el = byId(elementId); if (!el) return; el.textContent = fmt(value); el.classList.remove('amount-positive', 'amount-negative'); el.classList.add(amountClass(value)); }
+function renderKPIs() { const summary = state.workspace?.summary || {}; const planned = Number(summary.planned_total || 0); const contracted = Number(summary.contracted_total || 0); const executed = Number(summary.executed_total || 0); const scheduled = Number(summary.scheduled_total || 0); renderKpiValue('kpi-planned', planned); renderKpiValue('kpi-contracted', contracted); renderKpiValue('kpi-executed', executed); renderKpiValue('kpi-balance', scheduled); }
 function renderSummaryBox(item) { return item; }
 function renderContext() { return null; }
 function buildDetailTitle(item) { if (item) return `Formulário - ${TYPE_META[state.activeType]?.label || 'Registro'} - ${codeFor(item)} · ${nameFor(item)}`; if (state.creating && state.activeType === 'version') return 'Formulário - Orçamento - Novo registro'; return 'Formulário - Selecione um registro'; }
