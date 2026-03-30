@@ -22,6 +22,7 @@ from schemas.financial import (
     financial_entry_allocation_schema,
     financial_entry_allocations_schema,
     financial_settlement_schema,
+    financial_settlements_schema,
 )
 from services.financial_service import FinancialService
 from services.financial_import_service import FinancialImportService

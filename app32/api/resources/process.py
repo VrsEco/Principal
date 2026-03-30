@@ -1307,7 +1307,7 @@ class ProcessRoutineListResource(Resource):
             routines = fetch_pop_routines(process.id)
             return routines, 200
         except Exception as e:
-            current_app.logger.exception("Erro ao atualizar POP routine routine_id=%s", routine_id)
+            current_app.logger.exception("Erro ao listar POP routines do processo process_id=%s", process_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'create')
@@ -1418,7 +1418,7 @@ class ProcessRoutineResource(Resource):
         except ValidationError as err:
             return {"errors": err.messages}, 400
         except Exception as e:
-            current_app.logger.exception("Erro ao listar schedules do processo process_id=%s", process_id)
+            current_app.logger.exception("Erro ao atualizar POP routine routine_id=%s", routine_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'delete')
