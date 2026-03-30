@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules_list.css', v='20260329a') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules_list.css', v='20260329b') }}">
 {% endblock %}
 
 {% block navbar_actions %}
@@ -28,94 +28,47 @@
 {% endblock %}
 
 {% block workspace_content %}
-<div class="sched-page" data-company-id="{{ company_id or '' }}">
-    <section class="sched-hero">
+<div class="sched-list-page" data-company-id="{{ company_id or '' }}">
+    <header class="sched-list-header">
         <div>
-            <p class="sched-eyebrow">Operação financeira</p>
             <h1>Agendamentos</h1>
-            <p class="sched-subtitle">Redesenho operacional alinhado ao novo workspace orçamentário, com visão de lista à esquerda e painel executivo à direita.</p>
+            <p class="sched-list-subtitle">Visão operacional com filtros, subtotais e ações rápidas para pagamento e recebimento.</p>
         </div>
-        <div class="sched-hero-actions">
-            <a class="sched-btn sched-btn--secondary" href="/financial/schedules/new?entry_type=receivable">Novo recebimento</a>
-            <a class="sched-btn sched-btn--primary" href="/financial/schedules/new?entry_type=payable">Novo pagamento</a>
+        <div class="sched-list-actions">
+            <a class="btn btn-secondary" href="/financial/schedules/new?entry_type=receivable">Criar agendamento a receber</a>
+            <a class="btn btn-primary" href="/financial/schedules/new?entry_type=payable">Criar agendamento a pagar</a>
         </div>
+    </header>
+
+    <section class="sched-list-kpis" id="schedule-kpis">
+        <article class="sched-kpi"><span>Total</span><strong>0</strong><small>Agendamentos filtrados</small></article>
+        <article class="sched-kpi"><span>A Receber</span><strong>R$ 0,00</strong><small>Saldo em recebimentos</small></article>
+        <article class="sched-kpi"><span>A Pagar</span><strong>R$ 0,00</strong><small>Saldo em pagamentos</small></article>
+        <article class="sched-kpi"><span>Em Aberto</span><strong>0</strong><small>Sem baixa integral</small></article>
     </section>
 
-    <section class="sched-kpis" id="schedule-kpis">
-        <article class="sched-kpi"><span>Total filtrado</span><strong>0</strong><small>Agendamentos visíveis</small></article>
-        <article class="sched-kpi"><span>A receber</span><strong>R$ 0,00</strong><small>Saldo de recebimentos</small></article>
-        <article class="sched-kpi"><span>A pagar</span><strong>R$ 0,00</strong><small>Saldo de pagamentos</small></article>
-        <article class="sched-kpi"><span>Em aberto</span><strong>0</strong><small>Itens sem liquidação integral</small></article>
-    </section>
-
-    <section class="sched-layout">
-        <article class="sched-card">
-            <div class="sched-card-head">
-                <div>
-                    <p class="sched-eyebrow">Carteira</p>
-                    <h2>Fila operacional</h2>
-                    <p class="sched-muted">Selecione um agendamento para consultar, liquidar, editar ou excluir.</p>
-                </div>
-                <div class="sched-toolbar">
-                    <span class="sched-pill" id="schedule-results-pill">0 registros</span>
-                </div>
-            </div>
-            <div class="sched-card-body">
-                <div class="sched-inline-filters">
-                    <input id="schedule-filter-search" type="search" placeholder="Buscar por código, histórico ou favorecido">
-                    <select id="schedule-filter-type">
-                        <option value="">Todos os tipos</option>
-                        <option value="payable">Pagamentos</option>
-                        <option value="receivable">Recebimentos</option>
-                    </select>
-                    <select id="schedule-filter-settlement">
-                        <option value="">Todas as liquidações</option>
-                        <option value="open">Em aberto</option>
-                        <option value="partial">Liquidado parcial</option>
-                        <option value="settled">Liquidado</option>
-                    </select>
-                    <button type="button" class="sched-btn sched-btn--ghost" id="schedule-clear-filters">Limpar filtros</button>
-                </div>
-
-                <div class="sched-list" id="schedule-list-results">
-                    <div class="sched-empty">Carregando agendamentos...</div>
-                </div>
-            </div>
-        </article>
-
-        <article class="sched-card sched-detail-card" id="schedule-detail-card">
-            <div class="sched-card-head">
-                <div>
-                    <p class="sched-eyebrow">Painel executivo</p>
-                    <h2 id="schedule-detail-title">Selecione um agendamento</h2>
-                    <p class="sched-muted" id="schedule-detail-subtitle">Os dados consolidados do registro aparecerão aqui.</p>
-                </div>
-                <span class="sched-pill" id="schedule-detail-state">Sem seleção</span>
-            </div>
-            <div class="sched-card-body">
-                <div class="sched-context" id="schedule-detail-context"></div>
-                <div class="sched-summary" id="schedule-detail-summary">Escolha um registro na fila operacional para visualizar detalhes.</div>
-
-                <div class="sched-detail-actions">
-                    <button type="button" class="sched-btn sched-btn--primary" id="schedule-action-settle">Liquidar</button>
-                    <a class="sched-btn sched-btn--secondary" id="schedule-action-edit" href="/financial/schedules/new">Editar</a>
-                    <button type="button" class="sched-btn sched-btn--ghost" id="schedule-action-delete">Excluir</button>
-                </div>
-
-                <div class="sched-detail-grid" id="schedule-detail-grid">
-                    <div class="sched-detail-field"><span>Código</span><strong id="detail-code">-</strong></div>
-                    <div class="sched-detail-field"><span>Tipo</span><strong id="detail-type">-</strong></div>
-                    <div class="sched-detail-field"><span>Favorecido</span><strong id="detail-counterparty">-</strong></div>
-                    <div class="sched-detail-field"><span>Status</span><strong id="detail-status">-</strong></div>
-                    <div class="sched-detail-field"><span>Competência</span><strong id="detail-competence">-</strong></div>
-                    <div class="sched-detail-field"><span>Vencimento</span><strong id="detail-due-date">-</strong></div>
-                    <div class="sched-detail-field"><span>Valor do título</span><strong id="detail-title-amount">R$ 0,00</strong></div>
-                    <div class="sched-detail-field"><span>Saldo aberto</span><strong id="detail-open-amount">R$ 0,00</strong></div>
-                    <div class="sched-detail-field sched-detail-field--full"><span>Histórico</span><strong id="detail-description">-</strong></div>
-                    <div class="sched-detail-field sched-detail-field--full"><span>Relação orçamentária / borderô</span><strong id="detail-links">-</strong></div>
-                </div>
-            </div>
-        </article>
+    <section class="sched-list-card">
+        <div class="sched-table-wrap">
+            <table class="sched-table">
+                <thead>
+                    <tr>
+                        <th>Situação</th>
+                        <th>ID</th>
+                        <th>Histórico</th>
+                        <th>Tipo</th>
+                        <th>Valor Título</th>
+                        <th>Saldo</th>
+                        <th>Favorecido</th>
+                        <th>Competência</th>
+                        <th>Vencimento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-table-body">
+                    <tr><td colspan="10" class="empty-state">Carregando agendamentos...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </section>
 </div>
 {% endblock %}
@@ -123,10 +76,34 @@
 {% block sidebar_right %}
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
-    <p class="sched-sidebar-subtitle">Filtros complementares da fila operacional.</p>
+    <p class="sched-sidebar-subtitle">Padrão obrigatório: filtros na sidebar direita acionada pelo cabeçalho.</p>
 </div>
 
 <div class="sidebar-content-ws sched-sidebar-filters">
+    <div class="filter-group">
+        <label class="filter-label">Buscar</label>
+        <input id="schedule-filter-search" type="search" placeholder="Código, histórico ou favorecido">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Tipo</label>
+        <select id="schedule-filter-type" class="filter-select">
+            <option value="">Todos</option>
+            <option value="payable">Pagamentos</option>
+            <option value="receivable">Recebimentos</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Liquidação</label>
+        <select id="schedule-filter-settlement" class="filter-select">
+            <option value="">Todos</option>
+            <option value="open">Em aberto</option>
+            <option value="partial">Liquidado parcial</option>
+            <option value="settled">Liquidado</option>
+        </select>
+    </div>
+
     <div class="filter-group">
         <label class="filter-label">Favorecido</label>
         <input id="schedule-filter-counterparty" type="search" placeholder="Nome do favorecido">
@@ -165,5 +142,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260329a') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260329b') }}"></script>
 {% endblock %}
