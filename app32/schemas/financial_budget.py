@@ -170,6 +170,7 @@ class FinancialBudgetVersionInput(BaseModel):
     status: str = Field("draft", pattern=_choices_pattern(BUDGET_VERSION_STATUS_VALUES))
     period_start: date
     period_end: date
+    responsible_employee_id: Optional[int] = None
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
     created_by_user_id: Optional[int] = None
@@ -200,6 +201,7 @@ class FinancialBudgetVersionUpdateInput(BaseModel):
     status: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_VERSION_STATUS_VALUES))
     period_start: Optional[date] = None
     period_end: Optional[date] = None
+    responsible_employee_id: Optional[int] = None
     notes: Optional[str] = None
     metadata_json: Optional[Dict[str, Any]] = None
     approved_by_user_id: Optional[int] = None
@@ -261,6 +263,7 @@ class FinancialBudgetMatrixLineInput(BaseModel):
     planned_amount: Decimal = Field(default=Decimal("0"), ge=0)
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    responsible_employee_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
@@ -307,6 +310,7 @@ class FinancialBudgetLineCreate(BaseModel):
     planned_amount: Decimal = Field(default=Decimal("0"), ge=0)
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    responsible_employee_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
@@ -334,6 +338,7 @@ class FinancialBudgetLineUpdate(BaseModel):
     planned_amount: Optional[Decimal] = Field(None, ge=0)
     chart_account_id: Optional[int] = None
     cost_center_id: Optional[int] = None
+    responsible_employee_id: Optional[int] = None
     activity_id: Optional[int] = None
     process_instance_id: Optional[int] = None
     routine_id: Optional[int] = None
@@ -376,6 +381,7 @@ class FinancialBudgetContractCreateInput(BaseModel):
     status: str = Field("draft", pattern=_choices_pattern(BUDGET_CONTRACT_STATUS_VALUES))
     contract_amount: Decimal = Field(..., ge=0)
     counterparty_id: Optional[int] = None
+    responsible_employee_id: Optional[int] = None
     signed_at: Optional[date] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
@@ -400,6 +406,7 @@ class FinancialBudgetContractUpdateInput(BaseModel):
     status: Optional[str] = Field(None, pattern=_choices_pattern(BUDGET_CONTRACT_STATUS_VALUES))
     contract_amount: Optional[Decimal] = Field(None, ge=0)
     counterparty_id: Optional[int] = None
+    responsible_employee_id: Optional[int] = None
     signed_at: Optional[date] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
