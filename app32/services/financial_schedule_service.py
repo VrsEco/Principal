@@ -26,6 +26,7 @@ from models.financial import (
 )
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine, FinancialBudgetVersion
 from schemas.financial import FinancialScheduleCreateInput, FinancialScheduleUpdateInput
+from services.financial_budget_schedule_policy import FinancialBudgetSchedulePolicy
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
 from services.financial_service import FinancialService
@@ -114,10 +115,145 @@ class FinancialScheduleService:
         return FinancialScheduleService._serialize_schedule(schedule, include_related_entries=True), None
 
     @staticmethod
+    def build_budget_document_schedule_payload(
+        *,
+        company_id: int,
+        document: FinancialBudgetDocument,
+        contract: FinancialBudgetContract,
+        line: FinancialBudgetLine,
+        label: str,
+        amount: Decimal,
+        due_date: Any,
+        competence_date: Any,
+        notes: Optional[str],
+        status: str,
+        auto_post: Optional[bool],
+        current_schedule: Optional[FinancialSchedule] = None,
+        default_suggestions: Optional[Dict[str, Any]] = None,
+        default_correction_index_id: Optional[int] = None,
+        domain_type: Optional[str] = None,
+        domain_source_id: Optional[int] = None,
+        domain_label: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        counterparty = getattr(document, "counterparty", None) or getattr(contract, "counterparty", None)
+        default_suggestions = dict(default_suggestions or {})
+        line_metadata = dict(getattr(line, "metadata_json", None) or {})
+        contract_metadata = dict(getattr(contract, "metadata_json", None) or {})
+        document_metadata = dict(getattr(document, "metadata_json", None) or {})
+        existing_metadata = dict(getattr(current_schedule, "metadata_json", None) or {})
+        base_metadata = {
+            **default_suggestions,
+            **line_metadata,
+            **contract_metadata,
+            **document_metadata,
+            **existing_metadata,
+        }
+
+        normalized_label = str(label or "").strip()
+        effective_notes = notes if notes is not None else (getattr(current_schedule, "notes", None) or None)
+        effective_due_date = due_date
+        effective_competence_date = competence_date or due_date
+        competence_mode = "same_as_due" if effective_competence_date == effective_due_date else "keep_first_competence"
+        effective_domain_type = domain_type
+        effective_domain_source_id = domain_source_id
+        effective_domain_label = domain_label
+        domain_value = (
+            f"{effective_domain_type}:{effective_domain_source_id}"
+            if effective_domain_type and effective_domain_source_id is not None
+            else ""
+        )
+        correction_index_id = base_metadata.get("correction_index_id") or default_correction_index_id
+        allocation_notes = f"{normalized_label} | {document.title}"
+
+        metadata_json = {
+            **base_metadata,
+            "budget_schedule_source": "financial_budget_workspace",
+            "document_number": document.document_number or document.document_code,
+            "competence_mode": competence_mode,
+            "correction_index_id": correction_index_id,
+            "discount_rule_id": base_metadata.get("discount_rule_id"),
+            "discount_amount_override": base_metadata.get("discount_amount_override", 0),
+            "repeat_count": base_metadata.get("repeat_count", 1),
+            "attachments": list(base_metadata.get("attachments") or []),
+            "counterparty_name": getattr(counterparty, "name", None) or base_metadata.get("counterparty_name"),
+            "budget_version_id": line.budget_version_id,
+            "budget_version_code": getattr(getattr(line, "version", None), "code", None),
+            "budget_line_id": line.id,
+            "budget_line_code": line.line_code,
+            "budget_contract_id": contract.id,
+            "budget_contract_code": contract.contract_code,
+            "budget_document_id": document.id,
+            "budget_document_code": document.document_code,
+            "budget_document_title": document.title,
+            "contract_name": contract.name,
+            "domain_type": effective_domain_type,
+            "domain_source_id": effective_domain_source_id,
+            "domain_label": effective_domain_label,
+            "domain_value": domain_value,
+            "allocations": [
+                {
+                    "chart_account_id": line.chart_account_id,
+                    "cost_center_id": line.cost_center_id,
+                    "allocation_type": "amount",
+                    "percentage": 100,
+                    "allocated_amount": float(amount),
+                    "notes": allocation_notes,
+                    "domain_type": effective_domain_type,
+                    "domain_source_id": effective_domain_source_id,
+                    "domain_label": effective_domain_label,
+                    "domain_value": domain_value,
+                    "budget_version_id": line.budget_version_id,
+                    "budget_version_code": getattr(getattr(line, "version", None), "code", None),
+                    "budget_line_id": line.id,
+                    "budget_line_code": line.line_code,
+                    "budget_contract_id": contract.id,
+                    "budget_contract_code": contract.contract_code,
+                    "budget_document_id": document.id,
+                    "budget_document_code": document.document_code,
+                    "metadata_json": {
+                        "adjustment_kind": None,
+                        "adjustment_label": None,
+                    },
+                }
+            ],
+        }
+
+        return {
+            "company_id": company_id,
+            "budget_line_id": line.id,
+            "budget_contract_id": contract.id,
+            "budget_document_id": document.id,
+            "name": normalized_label,
+            "entry_type": "receivable" if line.movement_nature == "credit" else "payable",
+            "movement_nature": line.movement_nature,
+            "origin_type": getattr(current_schedule, "origin_type", None) or "manual",
+            "status": status,
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": effective_competence_date,
+            "first_due_date": effective_due_date,
+            "next_due_date": effective_due_date,
+            "description": allocation_notes,
+            "memo": effective_notes or getattr(current_schedule, "memo", None) or document.notes or contract.notes,
+            "document_number_prefix": document.document_number
+            or document.document_code
+            or getattr(current_schedule, "document_number_prefix", None),
+            "template_amount": amount,
+            "counterparty_id": getattr(counterparty, "id", None)
+            or getattr(current_schedule, "counterparty_id", None),
+            "chart_account_id": line.chart_account_id,
+            "cost_center_id": line.cost_center_id,
+            "notes": effective_notes or normalized_label,
+            "auto_post": bool(auto_post) if auto_post is not None else bool(getattr(current_schedule, "auto_post", False)),
+            "metadata_json": metadata_json,
+        }
+
+    @staticmethod
     def create_schedule(
         *,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
+        auto_commit: bool = True,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         normalized_payload = dict(payload or {})
         company_id = normalized_payload.get("company_id")
@@ -173,6 +309,15 @@ class FinancialScheduleService:
         if budget_error:
             return None, budget_error
 
+        budget_document_error = FinancialBudgetSchedulePolicy.validate_document_schedule_amount(
+            company_id=data.company_id,
+            budget_document_id=(budget_links or {}).get("budget_document_id"),
+            requested_amount=data.template_amount,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if budget_document_error:
+            return None, budget_document_error
+
         existing = FinancialScheduleService._find_schedule_by_code(
             company_id=data.company_id,
             schedule_code=data.schedule_code,
@@ -203,7 +348,10 @@ class FinancialScheduleService:
                 schedule = FinancialSchedule(**payload_to_persist)
                 db.session.add(schedule)
                 try:
-                    db.session.commit()
+                    if auto_commit:
+                        db.session.commit()
+                    else:
+                        db.session.flush()
                     return FinancialScheduleService._serialize_schedule(schedule), None
                 except IntegrityError as exc:
                     db.session.rollback()
@@ -233,6 +381,7 @@ class FinancialScheduleService:
         company_id: int,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
+        auto_commit: bool = True,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         try:
             data = FinancialScheduleUpdateInput(**payload)
@@ -257,6 +406,10 @@ class FinancialScheduleService:
             return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         merged = data.model_dump(exclude_unset=True)
+        if "schedule_code" in merged:
+            if merged["schedule_code"] != schedule.schedule_code:
+                return None, "O código do agendamento não pode ser alterado após a criação."
+            merged.pop("schedule_code", None)
         if "metadata_json" in merged:
             merged["metadata_json"] = FinancialScheduleService._sanitize_json(merged.get("metadata_json") or {})
         if "entry_type" in merged and merged["entry_type"] != schedule.entry_type:
@@ -298,6 +451,16 @@ class FinancialScheduleService:
         if budget_error:
             return None, budget_error
 
+        budget_document_error = FinancialBudgetSchedulePolicy.validate_document_schedule_amount(
+            company_id=company_id,
+            budget_document_id=(budget_links or {}).get("budget_document_id"),
+            requested_amount=merged.get("template_amount", schedule.template_amount),
+            allowed_company_ids=allowed_company_ids,
+            exclude_schedule_id=schedule.id,
+        )
+        if budget_document_error:
+            return None, budget_document_error
+
         start_date = merged.get("start_date", schedule.start_date)
         end_date = merged.get("end_date", schedule.end_date)
         first_due_date = merged.get("first_due_date", schedule.first_due_date)
@@ -319,7 +482,10 @@ class FinancialScheduleService:
             )
             for key, value in merged.items():
                 setattr(schedule, key, value)
-            db.session.commit()
+            if auto_commit:
+                db.session.commit()
+            else:
+                db.session.flush()
             return FinancialScheduleService._serialize_schedule(schedule), None
         except Exception as exc:
             db.session.rollback()
