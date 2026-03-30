@@ -256,6 +256,99 @@ def test_execution_workspace_rejects_cross_tenant_and_invalid_child_selection(mo
     assert error == "Verba orçamentária não encontrada para o orçamento selecionado."
 
 
+def test_execution_workspace_falls_back_to_first_document_schedule_when_requested_id_is_missing(monkeypatch):
+    version = _SimpleObj(
+        id=1,
+        company_id=9,
+        code="AA.O.1",
+        name="Opex 2026",
+        metadata_json={},
+        period_start=date(2026, 1, 1),
+        to_dict=lambda: {"id": 1, "company_id": 9, "metadata_json": {}, "period_start": "2026-01-01"},
+    )
+    line = _SimpleObj(
+        id=10,
+        company_id=9,
+        budget_version_id=1,
+        line_code="AA.O.1.1",
+        line_name="Receitas Janeiro 2026",
+        movement_nature="credit",
+        planned_amount=Decimal("100.00"),
+        chart_account=None,
+        cost_center=None,
+        metadata_json={},
+        to_dict=lambda: {"id": 10, "company_id": 9, "budget_version_id": 1},
+    )
+    contract = _SimpleObj(
+        id=20,
+        company_id=9,
+        budget_line_id=10,
+        contract_code="AA.O.1.1.1",
+        name="Contrato 01",
+        status="active",
+        contract_amount=Decimal("80.00"),
+        counterparty=None,
+        metadata_json={},
+        to_dict=lambda: {"id": 20, "company_id": 9, "budget_line_id": 10},
+    )
+    document = _SimpleObj(
+        id=30,
+        company_id=9,
+        budget_contract_id=20,
+        document_code="AA.O.1.1.1.1",
+        title="Nota 01",
+        document_type="invoice",
+        status="registered",
+        document_amount=Decimal("80.00"),
+        counterparty=None,
+        metadata_json={},
+        to_dict=lambda: {"id": 30, "company_id": 9, "budget_contract_id": 20},
+    )
+    schedule = _SimpleObj(
+        id=40,
+        company_id=9,
+        budget_document_id=30,
+        template_amount=Decimal("80.00"),
+        movement_nature="credit",
+        first_due_date=date(2026, 4, 10),
+        to_dict=lambda: {
+            "id": 40,
+            "company_id": 9,
+            "budget_document_id": 30,
+            "template_amount": 80.0,
+            "movement_nature": "credit",
+            "first_due_date": "2026-04-10",
+        },
+    )
+
+    monkeypatch.setattr(workspace_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(workspace_module.FinancialBudgetService, "list_versions", lambda *args, **kwargs: ([version.to_dict()], None))
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_get_version", lambda **kwargs: version)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_lines_for_version", lambda **kwargs: [line])
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_resolve_selected_line", lambda **kwargs: line)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_contracts_for_line", lambda **kwargs: [contract])
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_resolve_selected_contract", lambda **kwargs: contract)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_documents_for_contract", lambda **kwargs: [document])
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_resolve_selected_document", lambda **kwargs: document)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_schedules_for_document", lambda **kwargs: [schedule])
+
+    result, error = FinancialBudgetWorkspaceService.get_execution_workspace(
+        company_id=9,
+        version_id=1,
+        line_id=10,
+        contract_id=20,
+        document_id=30,
+        schedule_id=999,
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result["selected_document_id"] == 30
+    assert result["selected_schedule_id"] == 40
+    assert result["selected_schedule"]["id"] == 40
+    assert result["schedules"][0]["id"] == 40
+
+
 def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(monkeypatch):
     version = _SimpleObj(id=1, code="AA.O.1")
     line = _SimpleObj(

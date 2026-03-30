@@ -10,6 +10,10 @@
 <span class="current">Agendamentos</span>
 {% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules_list.css', v='20260329a') }}">
+{% endblock %}
+
 {% block navbar_actions %}
 <div style="display:flex;align-items:center;gap:.75rem;">
     <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
@@ -114,9 +118,6 @@
         </article>
     </section>
 </div>
-
-<link rel="stylesheet" href="/static/css/financial_schedules_list.css">
-<script src="/static/js/financial_schedules_list.js"></script>
 {% endblock %}
 
 {% block sidebar_right %}
@@ -161,4 +162,8 @@
         <button type="button" class="btn btn-secondary w-100 mt-2" id="schedule-sidebar-clear-filters">Limpar filtros</button>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260329a') }}"></script>
 {% endblock %}

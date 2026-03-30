@@ -10,6 +10,10 @@
 <span class="current">Agendamentos</span>
 {% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260329a') }}">
+{% endblock %}
+
 {% block workspace_content %}
 <div class="sched-page sched-page--form" data-company-id="{{ company_id or '' }}" data-schedule-id="{{ schedule_id or '' }}" data-entry-type="" data-initial-entry-type="{{ initial_entry_type or '' }}">
     <header class="sched-header">
@@ -235,7 +239,8 @@
         </form>
     </div>
 </div>
+{% endblock %}
 
-<link rel="stylesheet" href="/static/css/financial_schedules.css">
-<script src="/static/js/financial_schedules.js"></script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260329a') }}"></script>
 {% endblock %}
