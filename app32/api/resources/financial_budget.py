@@ -480,6 +480,26 @@ class FinancialBudgetDocumentScheduleListResource(Resource):
 
 
 class FinancialBudgetDocumentScheduleResource(Resource):
+    @permission_required("financial", "edit")
+    def put(self, document_id: int, schedule_id: int):
+        company_id, error = _get_company_id_or_error()
+        if error:
+            return error
+        try:
+            payload = request.get_json(silent=True) or {}
+            result, service_error = FinancialBudgetWorkspaceService.update_document_schedule(
+                company_id=company_id,
+                document_id=document_id,
+                schedule_id=schedule_id,
+                payload=payload,
+                allowed_company_ids=get_accessible_company_ids(),
+            )
+            if service_error:
+                return {"error": service_error}, 400
+            return result, 200
+        except ValidationError as exc:
+            return {"errors": exc.errors()}, 400
+
     @permission_required("financial", "delete")
     def delete(self, document_id: int, schedule_id: int):
         company_id, error = _get_company_id_or_error()

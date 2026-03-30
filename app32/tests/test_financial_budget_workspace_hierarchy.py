@@ -23,6 +23,25 @@ class _SimpleObj:
         return dict(self.__dict__)
 
 
+class _QueryStub:
+    def __init__(self, result):
+        self._result = result
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def first(self):
+        return self._result
+
+
+class _ColumnStub:
+    def __eq__(self, other):
+        return self
+
+    def is_(self, other):
+        return self
+
+
 def test_workspace_consolidates_planned_contracted_executed_and_scheduled_totals(monkeypatch):
     version = _SimpleObj(id=1, company_id=9, code="AA.O.2026.CAPEX.1", name="CAPEX 2026", status="active")
     line = _SimpleObj(
@@ -423,6 +442,7 @@ def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(mo
             "installments": [
                 {
                     "due_date": date(2026, 4, 10),
+                    "competence_date": date(2026, 4, 1),
                     "amount": Decimal("50.00"),
                     "label": "Parcela única",
                 }
@@ -437,8 +457,11 @@ def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(mo
     assert result["created_schedules"][0]["id"] == 555
     payload = captured["payload"]
     assert payload["budget_document_id"] == 30
+    assert payload["name"] == "Parcela única"
+    assert payload["start_date"] == date(2026, 4, 1)
     assert payload["chart_account_id"] == 101
     assert payload["cost_center_id"] == 202
+    assert payload["metadata_json"]["competence_mode"] == "keep_first_competence"
     assert payload["metadata_json"]["correction_index_id"] == 88
     assert payload["metadata_json"]["discount_rule_id"] is None
     assert payload["metadata_json"]["discount_amount_override"] == 0
@@ -450,3 +473,224 @@ def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(mo
     assert allocation["allocated_amount"] == 50.0
     assert allocation["domain_value"] == "project:77"
     assert allocation["notes"] == "Parcela única | Nota 01"
+
+
+def test_update_document_schedule_rebuilds_payload_with_document_inheritance(monkeypatch):
+    version = _SimpleObj(id=1, code="AA.O.1")
+    line = _SimpleObj(
+        id=10,
+        company_id=9,
+        budget_version_id=1,
+        line_code="AA.O.1.1",
+        movement_nature="credit",
+        chart_account_id=101,
+        cost_center_id=202,
+        activity_id=303,
+        process_instance_id=404,
+        routine_id=505,
+        metadata_json={
+            "domain_type": "project",
+            "domain_source_id": 77,
+            "domain_label": "Projeto Norte",
+        },
+        version=version,
+    )
+    counterparty = _SimpleObj(id=900, name="Cliente Premium")
+    contract = _SimpleObj(
+        id=20,
+        company_id=9,
+        budget_line_id=10,
+        contract_code="AA.O.1.1.1",
+        name="Contrato 01",
+        counterparty=counterparty,
+        metadata_json={},
+    )
+    document = _SimpleObj(
+        id=30,
+        company_id=9,
+        budget_contract_id=20,
+        document_code="AA.O.1.1.1.1",
+        title="Nota 01",
+        document_number="NF-0001",
+        document_amount=Decimal("120.00"),
+        counterparty=None,
+        notes="Observação da NF",
+        metadata_json={},
+    )
+    schedule = _SimpleObj(
+        id=40,
+        company_id=9,
+        budget_document_id=30,
+        schedule_code="AG-000001",
+        name="Parcela antiga",
+        status="active",
+        origin_type="manual",
+        movement_nature="credit",
+        entry_type="receivable",
+        template_amount=Decimal("20.00"),
+        first_due_date=date(2026, 4, 10),
+        next_due_date=date(2026, 4, 10),
+        start_date=date(2026, 4, 10),
+        auto_post=False,
+        notes="Observação antiga",
+        memo="Memo antigo",
+        document_number_prefix="NF-0001",
+        chart_account_id=101,
+        cost_center_id=202,
+        activity_id=303,
+        process_instance_id=404,
+        routine_id=505,
+        counterparty_id=900,
+        metadata_json={"discount_rule_id": 901},
+    )
+
+    monkeypatch.setattr(workspace_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetWorkspaceService,
+        "_get_document_schedule_context",
+        lambda **kwargs: (
+            {
+                "document": document,
+                "contract": contract,
+                "line": line,
+                "entry_type": "receivable",
+                "counterparty": counterparty,
+                "default_suggestions": {"receivable_correction_index_id": 88},
+                "default_correction_index_id": 88,
+                "line_metadata": dict(line.metadata_json),
+                "contract_metadata": {},
+                "document_metadata": {},
+                "domain_type": "project",
+                "domain_source_id": 77,
+                "domain_label": "Projeto Norte",
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        workspace_module,
+        "FinancialSchedule",
+        type(
+            "FakeFinancialSchedule",
+            (),
+            {
+                "query": _QueryStub(schedule),
+                "id": _ColumnStub(),
+                "company_id": _ColumnStub(),
+                "budget_document_id": _ColumnStub(),
+                "deleted_at": _ColumnStub(),
+            },
+        ),
+    )
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_has_generated_entries", lambda **kwargs: False)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_schedules_for_document", lambda **kwargs: [schedule])
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_refresh_document_status", lambda *args, **kwargs: None)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_document", lambda item: {"id": item.id})
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_schedule", lambda item: {"id": item.id, "name": item.name})
+    monkeypatch.setattr(workspace_module.db.session, "commit", lambda: None)
+    monkeypatch.setattr(workspace_module.db.session, "rollback", lambda: None)
+
+    captured = {}
+
+    def _fake_update_schedule(*, schedule_id, company_id, payload, allowed_company_ids=None):
+        captured["schedule_id"] = schedule_id
+        captured["payload"] = payload
+        schedule.name = payload["name"]
+        schedule.status = payload["status"]
+        schedule.template_amount = payload["template_amount"]
+        schedule.start_date = payload["start_date"]
+        schedule.first_due_date = payload["first_due_date"]
+        schedule.next_due_date = payload["next_due_date"]
+        schedule.notes = payload["notes"]
+        schedule.metadata_json = payload["metadata_json"]
+        return {"id": schedule_id}, None
+
+    monkeypatch.setattr(workspace_module.FinancialScheduleService, "update_schedule", _fake_update_schedule)
+
+    result, error = FinancialBudgetWorkspaceService.update_document_schedule(
+        company_id=9,
+        document_id=30,
+        schedule_id=40,
+        payload={
+            "label": "Parcela renegociada",
+            "amount": Decimal("45.00"),
+            "due_date": date(2026, 5, 10),
+            "competence_date": date(2026, 5, 1),
+            "status": "paused",
+            "notes": "Renegociação maio",
+            "auto_post": False,
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result["id"] == 40
+    payload = captured["payload"]
+    assert captured["schedule_id"] == 40
+    assert payload["budget_document_id"] == 30
+    assert payload["name"] == "Parcela renegociada"
+    assert payload["status"] == "paused"
+    assert payload["template_amount"] == Decimal("45.00")
+    assert payload["start_date"] == date(2026, 5, 1)
+    assert payload["first_due_date"] == date(2026, 5, 10)
+    assert payload["chart_account_id"] == 101
+    assert payload["cost_center_id"] == 202
+    assert payload["counterparty_id"] == 900
+    assert payload["metadata_json"]["competence_mode"] == "keep_first_competence"
+    assert payload["metadata_json"]["correction_index_id"] == 88
+    assert payload["metadata_json"]["discount_rule_id"] == 901
+    allocation = payload["metadata_json"]["allocations"][0]
+    assert allocation["allocated_amount"] == 45.0
+    assert allocation["domain_value"] == "project:77"
+    assert allocation["notes"] == "Parcela renegociada | Nota 01"
+
+
+def test_update_document_schedule_blocks_items_with_generated_entries(monkeypatch):
+    document = _SimpleObj(id=30, company_id=9, document_amount=Decimal("120.00"))
+    schedule = _SimpleObj(id=40, company_id=9, budget_document_id=30)
+
+    monkeypatch.setattr(workspace_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetWorkspaceService,
+        "_get_document_schedule_context",
+        lambda **kwargs: (
+            {
+                "document": document,
+                "contract": _SimpleObj(id=20),
+                "line": _SimpleObj(id=10),
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        workspace_module,
+        "FinancialSchedule",
+        type(
+            "FakeFinancialSchedule",
+            (),
+            {
+                "query": _QueryStub(schedule),
+                "id": _ColumnStub(),
+                "company_id": _ColumnStub(),
+                "budget_document_id": _ColumnStub(),
+                "deleted_at": _ColumnStub(),
+            },
+        ),
+    )
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_has_generated_entries", lambda **kwargs: True)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_schedules_for_document", lambda **kwargs: [schedule])
+
+    result, error = FinancialBudgetWorkspaceService.update_document_schedule(
+        company_id=9,
+        document_id=30,
+        schedule_id=40,
+        payload={
+            "label": "Parcela bloqueada",
+            "amount": Decimal("10.00"),
+            "due_date": date(2026, 5, 10),
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == "Este agendamento já possui baixa/lançamento financeiro vinculado e não pode ser editado por aqui."

@@ -15,7 +15,7 @@ from models import (
     FinancialBudgetLine,
     FinancialBudgetVersion,
 )
-from models.financial import MOVEMENT_NATURE_VALUES
+from models.financial import MOVEMENT_NATURE_VALUES, SCHEDULE_STATUS_VALUES
 from models.financial_budget import (
     BUDGET_CATEGORY_VALUES,
     BUDGET_CYCLE_STATUS_VALUES,
@@ -497,3 +497,20 @@ class FinancialBudgetDocumentScheduleBatchInput(BaseModel):
         if not self.installments:
             raise ValueError("Informe ao menos uma parcela para gerar os agendamentos.")
         return self
+
+
+class FinancialBudgetDocumentScheduleUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str = Field(..., min_length=1, max_length=120)
+    due_date: date
+    amount: Decimal = Field(..., gt=0)
+    competence_date: Optional[date] = None
+    status: str = Field("active", pattern=_choices_pattern(SCHEDULE_STATUS_VALUES))
+    notes: Optional[str] = None
+    auto_post: Optional[bool] = None
+
+    @field_validator("label", "notes", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        return _strip_text(value)
