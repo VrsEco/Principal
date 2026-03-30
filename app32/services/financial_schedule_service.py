@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from flask import current_app
+from sqlalchemy.exc import IntegrityError
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
@@ -34,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 
 class FinancialScheduleService:
+    AUTO_GENERATED_SCHEDULE_CODE_MAX_ATTEMPTS = 5
+
     @staticmethod
     def _sanitize_json(value: Any) -> Any:
         if isinstance(value, Decimal):
@@ -118,7 +121,8 @@ class FinancialScheduleService:
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         normalized_payload = dict(payload or {})
         company_id = normalized_payload.get("company_id")
-        if company_id and not normalized_payload.get("schedule_code"):
+        auto_generated_code = bool(company_id and not normalized_payload.get("schedule_code"))
+        if auto_generated_code:
             normalized_payload["schedule_code"] = FinancialScheduleService._generate_schedule_code(int(company_id))
 
         try:
@@ -169,28 +173,54 @@ class FinancialScheduleService:
         if budget_error:
             return None, budget_error
 
-        existing = FinancialSchedule.query.filter(
-            FinancialSchedule.company_id == data.company_id,
-            FinancialSchedule.schedule_code == data.schedule_code,
-            FinancialSchedule.deleted_at.is_(None),
-        ).first()
-        if existing:
+        existing = FinancialScheduleService._find_schedule_by_code(
+            company_id=data.company_id,
+            schedule_code=data.schedule_code,
+        )
+        if existing and not auto_generated_code:
             return None, f"Já existe agendamento com código {data.schedule_code} para esta empresa."
 
-        try:
-            normalized = data.model_dump()
-            normalized.update(budget_links or {})
-            normalized["metadata_json"] = FinancialScheduleService._sanitize_json(
-                FinancialService._merge_budget_metadata(
-                    normalized.get("metadata_json") or {},
-                    budget_links,
-                )
+        normalized = data.model_dump()
+        normalized.update(budget_links or {})
+        normalized["metadata_json"] = FinancialScheduleService._sanitize_json(
+            FinancialService._merge_budget_metadata(
+                normalized.get("metadata_json") or {},
+                budget_links,
             )
-            normalized["next_due_date"] = normalized.get("next_due_date") or normalized["first_due_date"]
-            schedule = FinancialSchedule(**normalized)
-            db.session.add(schedule)
-            db.session.commit()
-            return FinancialScheduleService._serialize_schedule(schedule), None
+        )
+        normalized["next_due_date"] = normalized.get("next_due_date") or normalized["first_due_date"]
+        max_attempts = FinancialScheduleService.AUTO_GENERATED_SCHEDULE_CODE_MAX_ATTEMPTS if auto_generated_code else 1
+        current_schedule_code = normalized["schedule_code"]
+
+        try:
+            for attempt in range(max_attempts):
+                payload_to_persist = dict(normalized)
+                if auto_generated_code:
+                    if attempt > 0:
+                        current_schedule_code = FinancialScheduleService._generate_schedule_code(data.company_id)
+                    payload_to_persist["schedule_code"] = current_schedule_code
+
+                schedule = FinancialSchedule(**payload_to_persist)
+                db.session.add(schedule)
+                try:
+                    db.session.commit()
+                    return FinancialScheduleService._serialize_schedule(schedule), None
+                except IntegrityError as exc:
+                    db.session.rollback()
+                    if auto_generated_code and FinancialScheduleService._is_schedule_code_unique_violation(exc):
+                        logger.warning(
+                            "Conflito ao gerar schedule_code automático para company_id=%s; tentativa=%s/%s",
+                            data.company_id,
+                            attempt + 1,
+                            max_attempts,
+                        )
+                        continue
+                    if FinancialScheduleService._is_schedule_code_unique_violation(exc):
+                        return None, (
+                            f"Já existe agendamento com código {payload_to_persist['schedule_code']} para esta empresa."
+                        )
+                    raise
+            return None, "Não foi possível gerar um código único para o agendamento. Tente novamente."
         except Exception as exc:
             db.session.rollback()
             logger.exception("Erro ao criar agendamento financeiro")
@@ -1171,11 +1201,24 @@ class FinancialScheduleService:
         return due_date
 
     @staticmethod
+    def _find_schedule_by_code(*, company_id: int, schedule_code: str) -> Optional[FinancialSchedule]:
+        return FinancialSchedule.query.filter(
+            FinancialSchedule.company_id == company_id,
+            FinancialSchedule.schedule_code == schedule_code,
+        ).first()
+
+    @staticmethod
+    def _is_schedule_code_unique_violation(exc: Exception) -> bool:
+        constraint_name = getattr(getattr(getattr(exc, "orig", None), "diag", None), "constraint_name", None)
+        if constraint_name == "uq_financial_schedules_company_code":
+            return True
+        return "uq_financial_schedules_company_code" in str(exc)
+
+    @staticmethod
     def _generate_schedule_code(company_id: int) -> str:
         prefix = "AG"
         base_query = FinancialSchedule.query.filter(
             FinancialSchedule.company_id == company_id,
-            FinancialSchedule.deleted_at.is_(None),
             FinancialSchedule.schedule_code.like(f"{prefix}-%"),
         )
         last = base_query.order_by(FinancialSchedule.id.desc()).first()
@@ -1185,7 +1228,14 @@ class FinancialScheduleService:
                 next_number = int(str(last.schedule_code).split("-")[-1]) + 1
             except Exception:
                 next_number = last.id + 1
-        return f"{prefix}-{next_number:06d}"
+        schedule_code = f"{prefix}-{next_number:06d}"
+        while FinancialScheduleService._find_schedule_by_code(
+            company_id=company_id,
+            schedule_code=schedule_code,
+        ):
+            next_number += 1
+            schedule_code = f"{prefix}-{next_number:06d}"
+        return schedule_code
 
     @staticmethod
     def list_enabled_domains(

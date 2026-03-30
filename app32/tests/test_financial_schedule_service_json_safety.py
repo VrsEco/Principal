@@ -3,6 +3,8 @@ import sys
 from datetime import date, datetime
 from decimal import Decimal
 
+from sqlalchemy.exc import IntegrityError
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import services.financial_schedule_service as schedule_module
@@ -16,6 +18,9 @@ class _Column:
 
     def is_(self, other):
         return ("is", other)
+
+    def like(self, other):
+        return ("like", other)
 
     def desc(self):
         return self
@@ -289,6 +294,154 @@ def test_create_schedule_returns_friendly_date_validation_message():
         "Payload inválido para criação do agendamento: "
         "o vencimento não pode ser anterior à competência."
     )
+
+
+def test_generate_schedule_code_considers_soft_deleted_history(monkeypatch):
+    class _LastSchedule:
+        id = 10
+        schedule_code = "AG-000010"
+
+    class _FakeSchedule:
+        company_id = _Column()
+        schedule_code = _Column()
+        id = _Column()
+        query = _QueryStub(_LastSchedule())
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_find_schedule_by_code",
+        lambda **kwargs: None,
+    )
+
+    generated = schedule_module.FinancialScheduleService._generate_schedule_code(9)
+
+    assert generated == "AG-000011"
+
+
+def test_create_schedule_rejects_duplicate_code_even_if_existing_row_is_soft_deleted(monkeypatch):
+    class _ExistingSchedule:
+        id = 99
+
+    class _FakeSchedule:
+        company_id = _Column()
+        schedule_code = _Column()
+        query = _QueryStub(_ExistingSchedule())
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: ({}, None),
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+
+    result, error = schedule_module.FinancialScheduleService.create_schedule(
+        payload={
+            "company_id": 9,
+            "schedule_code": "AG-000010",
+            "name": "Teste duplicado",
+            "entry_type": "receivable",
+            "movement_nature": "credit",
+            "origin_type": "manual",
+            "status": "active",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": date(2026, 3, 1),
+            "first_due_date": date(2026, 3, 10),
+            "description": "Teste duplicado",
+            "template_amount": Decimal("2500.00"),
+            "currency_code": "BRL",
+            "metadata_json": {},
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == "Já existe agendamento com código AG-000010 para esta empresa."
+
+
+def test_create_schedule_retries_auto_generated_code_after_unique_violation(monkeypatch):
+    captured = {"codes": []}
+
+    class _FakeSchedule:
+        company_id = _Column()
+        schedule_code = _Column()
+        query = _QueryStub(None)
+
+        def __init__(self, **kwargs):
+            captured["codes"].append(kwargs["schedule_code"])
+            self.__dict__.update(kwargs)
+
+    class _OrigDiag:
+        constraint_name = "uq_financial_schedules_company_code"
+
+    class _Orig:
+        diag = _OrigDiag()
+
+    commit_attempts = {"count": 0}
+
+    def _commit():
+        commit_attempts["count"] += 1
+        if commit_attempts["count"] == 1:
+            raise IntegrityError("INSERT", {}, _Orig())
+
+    def _rollback():
+        captured["rollback"] = captured.get("rollback", 0) + 1
+
+    generated_codes = iter(["AG-000010", "AG-000011", "AG-000011"])
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: ({}, None),
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_generate_schedule_code",
+        lambda company_id: next(generated_codes),
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_find_schedule_by_code",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(schedule_module.db.session, "add", lambda obj: captured.setdefault("added", []).append(obj))
+    monkeypatch.setattr(schedule_module.db.session, "commit", _commit)
+    monkeypatch.setattr(schedule_module.db.session, "rollback", _rollback)
+
+    result, error = schedule_module.FinancialScheduleService.create_schedule(
+        payload={
+            "company_id": 9,
+            "name": "Teste retry",
+            "entry_type": "receivable",
+            "movement_nature": "credit",
+            "origin_type": "manual",
+            "status": "active",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": date(2026, 3, 1),
+            "first_due_date": date(2026, 3, 10),
+            "description": "Teste retry",
+            "template_amount": Decimal("2500.00"),
+            "currency_code": "BRL",
+            "metadata_json": {},
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result is not None
+    assert result["schedule_code"] == "AG-000011"
+    assert captured["codes"] == ["AG-000010", "AG-000011"]
+    assert commit_attempts["count"] == 2
 
 
 def test_derive_budget_links_from_allocations_returns_unique_chain_only():

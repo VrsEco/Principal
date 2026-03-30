@@ -431,7 +431,6 @@ class FinancialDirectEntryService:
         }, budget_links)
         return {
             "company_id": data.company_id,
-            "schedule_code": FinancialScheduleService._generate_schedule_code(data.company_id),
             "name": data.description[:120],
             "description": data.description,
             "entry_type": data.entry_type,
