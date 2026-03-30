@@ -262,7 +262,7 @@ class FinancialBudgetWorkspaceService:
             schedule_id=schedule_id,
         )
         if schedule_id and not selected_schedule:
-            return None, "Agendamento não encontrado para a NF/equivalente selecionada."
+            selected_schedule = schedules[0] if schedules else None
         operational_queue = (
             FinancialBudgetWorkspaceService._list_operational_queue(
                 company_id=company_id,
