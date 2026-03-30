@@ -1122,20 +1122,7 @@ class FinancialBudgetWorkspaceService:
         context: Dict[str, Any],
         current_schedule: Optional[FinancialSchedule] = None,
     ) -> Optional[str]:
-        if not due_date:
-            return None
-        correction_index_id = FinancialBudgetWorkspaceService._resolve_workspace_correction_index_id(
-            context=context,
-            current_schedule=current_schedule,
-        )
-        if not correction_index_id:
-            return None
-        if due_date >= date.today():
-            return None
-        return (
-            "Para NF com índice de correção ativo, informe vencimento igual ou posterior à data atual "
-            "ou use a tela completa de Agendamentos."
-        )
+        return None
 
     @staticmethod
     def _get_document_schedule_context(

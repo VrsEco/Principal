@@ -44,6 +44,12 @@ class _QueryStub:
         return list(self._all_result)
 
 
+class _Today2026_04_01:
+    @staticmethod
+    def today():
+        return date(2026, 4, 1)
+
+
 def test_sanitize_json_converts_decimal_date_datetime_and_sequences():
     payload = {
         "amount": Decimal("250.90"),
@@ -468,6 +474,112 @@ def test_build_budget_document_schedule_payload_preserves_budget_hierarchy_witho
     assert allocation["budget_line_id"] == 10
     assert allocation["budget_contract_id"] == 20
     assert allocation["budget_document_id"] == 30
+
+
+def test_build_budget_document_schedule_payload_adds_adjustment_allocations_for_past_due_items(monkeypatch):
+    counterparty = type("Counterparty", (), {"id": 91, "name": "Fornecedor XPTO"})()
+    version = type("Version", (), {"code": "AA.O.2026.CAPEX.1"})()
+    line = type(
+        "Line",
+        (),
+        {
+            "id": 10,
+            "budget_version_id": 1,
+            "version": version,
+            "line_code": "AA.O.2026.CAPEX.1.2",
+            "movement_nature": "debit",
+            "chart_account_id": 301,
+            "cost_center_id": 401,
+            "metadata_json": {},
+        },
+    )()
+    contract = type(
+        "Contract",
+        (),
+        {
+            "id": 20,
+            "contract_code": "AA.O.2026.CAPEX.1.2.3",
+            "name": "Contrato Infra",
+            "notes": "Notas contrato",
+            "counterparty": None,
+            "metadata_json": {},
+        },
+    )()
+    document = type(
+        "Document",
+        (),
+        {
+            "id": 30,
+            "document_code": "AA.O.2026.CAPEX.1.2.3.4",
+            "title": "NF Infra",
+            "document_number": "NF-123",
+            "notes": "Notas NF",
+            "counterparty": counterparty,
+            "metadata_json": {},
+        },
+    )()
+
+    class _FakeCorrectionIndex:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        is_active = _Column()
+        query = _QueryStub(type("Correction", (), {"metadata_json": {"penalty_rate": 10, "chart_account_id": 777}})())
+
+    class _FakeDiscountRule:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        is_active = _Column()
+        query = _QueryStub(type("Discount", (), {"metadata_json": {"discount_type": "percentage", "value": 5, "chart_account_id": 888}})())
+
+    monkeypatch.setattr(schedule_module, "FinancialCorrectionIndex", _FakeCorrectionIndex)
+    monkeypatch.setattr(schedule_module, "FinancialDiscountRule", _FakeDiscountRule)
+    monkeypatch.setattr(schedule_module, "date", _Today2026_04_01)
+
+    payload = FinancialScheduleService.build_budget_document_schedule_payload(
+        company_id=9,
+        document=document,
+        contract=contract,
+        line=line,
+        label="Parcela vencida",
+        amount=Decimal("250.00"),
+        due_date=date(2026, 3, 10),
+        competence_date=date(2026, 3, 10),
+        notes=None,
+        status="active",
+        auto_post=False,
+        default_suggestions={"discount_rule_id": 21},
+        default_correction_index_id=12,
+        domain_type="process",
+        domain_source_id=77,
+        domain_label="Proc. XPTO",
+    )
+
+    allocations = payload["metadata_json"]["allocations"]
+    assert len(allocations) == 3
+
+    base_allocation, correction_allocation, discount_allocation = allocations
+    assert base_allocation["allocated_amount"] == 250.0
+    assert base_allocation["chart_account_id"] == 301
+    assert base_allocation["budget_document_id"] == 30
+
+    assert correction_allocation["allocated_amount"] == 25.0
+    assert correction_allocation["chart_account_id"] == 777
+    assert correction_allocation["cost_center_id"] == 401
+    assert correction_allocation["budget_document_id"] is None
+    assert correction_allocation["metadata_json"]["adjustment_kind"] == "correction"
+    assert correction_allocation["metadata_json"]["adjustment_label"] == "Correção Financeira"
+
+    assert discount_allocation["allocated_amount"] == -12.5
+    assert discount_allocation["chart_account_id"] == 888
+    assert discount_allocation["cost_center_id"] == 401
+    assert discount_allocation["budget_document_id"] is None
+    assert discount_allocation["metadata_json"]["adjustment_kind"] == "discount"
+    assert discount_allocation["metadata_json"]["adjustment_label"] == "Desconto"
+
+    allocated_total = sum(Decimal(str(item["allocated_amount"])) for item in allocations)
+    assert allocated_total == Decimal("262.5")
 
 
 def test_build_entry_payload_propagates_budget_links():
@@ -1118,6 +1230,90 @@ def test_validate_schedule_allocations_accepts_amount_mode_total_match(monkeypat
                     "allocation_type": "amount",
                     "allocated_amount": Decimal("1500.00"),
                 }
+            ]
+        },
+    )
+
+    assert error is None
+
+
+def test_validate_schedule_allocations_accepts_adjustment_rows_matching_updated_amount(monkeypatch):
+    class _FakeChartAccount:
+        company_id = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        accepts_posting = True
+        query = _QueryStub(type("Chart", (), {"accepts_posting": True})())
+
+    class _SequentialQuery:
+        def __init__(self, responses):
+            self._responses = list(responses)
+
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            if self._responses:
+                return self._responses.pop(0)
+            return None
+
+    class _FakeCostCenter:
+        company_id = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        parent_id = _Column()
+        query = _SequentialQuery(
+            [
+                type("Center", (), {"id": 8})(),
+                None,
+                type("Center", (), {"id": 8})(),
+                None,
+                type("Center", (), {"id": 8})(),
+                None,
+            ]
+        )
+
+    monkeypatch.setattr(schedule_module, "FinancialChartAccount", _FakeChartAccount)
+    monkeypatch.setattr(schedule_module, "FinancialCostCenter", _FakeCostCenter)
+    monkeypatch.setattr(schedule_module.FinancialService, "_resolve_budget_links", lambda **kwargs: ({}, None))
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": 250.0,
+            "correction_amount": 25.0,
+            "discount_amount": 12.5,
+            "updated_amount": 262.5,
+        },
+    )
+
+    error = FinancialScheduleService._validate_schedule_allocations(
+        company_id=9,
+        template_amount=Decimal("250.00"),
+        due_date=date(2026, 3, 10),
+        metadata_json={
+            "allocations": [
+                {
+                    "chart_account_id": 301,
+                    "cost_center_id": 8,
+                    "allocation_type": "amount",
+                    "allocated_amount": Decimal("250.00"),
+                    "metadata_json": {"adjustment_kind": None},
+                },
+                {
+                    "chart_account_id": 777,
+                    "cost_center_id": 8,
+                    "allocation_type": "amount",
+                    "allocated_amount": Decimal("25.00"),
+                    "metadata_json": {"adjustment_kind": "correction"},
+                },
+                {
+                    "chart_account_id": 888,
+                    "cost_center_id": 8,
+                    "allocation_type": "amount",
+                    "allocated_amount": Decimal("-12.50"),
+                    "metadata_json": {"adjustment_kind": "discount"},
+                },
             ]
         },
     )

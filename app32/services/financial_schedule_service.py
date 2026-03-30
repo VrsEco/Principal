@@ -190,33 +190,21 @@ class FinancialScheduleService:
             "domain_source_id": effective_domain_source_id,
             "domain_label": effective_domain_label,
             "domain_value": domain_value,
-            "allocations": [
-                {
-                    "chart_account_id": line.chart_account_id,
-                    "cost_center_id": line.cost_center_id,
-                    "allocation_type": "amount",
-                    "percentage": 100,
-                    "allocated_amount": float(amount),
-                    "notes": allocation_notes,
-                    "domain_type": effective_domain_type,
-                    "domain_source_id": effective_domain_source_id,
-                    "domain_label": effective_domain_label,
-                    "domain_value": domain_value,
-                    "budget_version_id": line.budget_version_id,
-                    "budget_version_code": getattr(getattr(line, "version", None), "code", None),
-                    "budget_line_id": line.id,
-                    "budget_line_code": line.line_code,
-                    "budget_contract_id": contract.id,
-                    "budget_contract_code": contract.contract_code,
-                    "budget_document_id": document.id,
-                    "budget_document_code": document.document_code,
-                    "metadata_json": {
-                        "adjustment_kind": None,
-                        "adjustment_label": None,
-                    },
-                }
-            ],
         }
+        metadata_json["allocations"] = FinancialScheduleService._build_budget_document_schedule_allocations(
+            company_id=company_id,
+            line=line,
+            contract=contract,
+            document=document,
+            metadata_json=metadata_json,
+            template_amount=amount,
+            due_date=effective_due_date,
+            allocation_notes=allocation_notes,
+            domain_type=effective_domain_type,
+            domain_source_id=effective_domain_source_id,
+            domain_label=effective_domain_label,
+            domain_value=domain_value,
+        )
 
         return {
             "company_id": company_id,
@@ -247,6 +235,173 @@ class FinancialScheduleService:
             "auto_post": bool(auto_post) if auto_post is not None else bool(getattr(current_schedule, "auto_post", False)),
             "metadata_json": metadata_json,
         }
+
+    @staticmethod
+    def _build_budget_document_schedule_allocations(
+        *,
+        company_id: int,
+        line: FinancialBudgetLine,
+        contract: FinancialBudgetContract,
+        document: FinancialBudgetDocument,
+        metadata_json: Dict[str, Any],
+        template_amount: Decimal,
+        due_date: Any,
+        allocation_notes: str,
+        domain_type: Optional[str],
+        domain_source_id: Optional[int],
+        domain_label: Optional[str],
+        domain_value: str,
+    ) -> List[Dict[str, Any]]:
+        allocations: List[Dict[str, Any]] = [
+            {
+                "chart_account_id": line.chart_account_id,
+                "cost_center_id": line.cost_center_id,
+                "allocation_type": "amount",
+                "percentage": 100,
+                "allocated_amount": float(template_amount),
+                "notes": allocation_notes,
+                "domain_type": domain_type,
+                "domain_source_id": domain_source_id,
+                "domain_label": domain_label,
+                "domain_value": domain_value,
+                "budget_version_id": line.budget_version_id,
+                "budget_version_code": getattr(getattr(line, "version", None), "code", None),
+                "budget_line_id": line.id,
+                "budget_line_code": line.line_code,
+                "budget_contract_id": contract.id,
+                "budget_contract_code": contract.contract_code,
+                "budget_document_id": document.id,
+                "budget_document_code": document.document_code,
+                "metadata_json": {
+                    "adjustment_kind": None,
+                    "adjustment_label": None,
+                },
+            }
+        ]
+        adjustment_totals = FinancialScheduleService._calculate_schedule_adjustments(
+            company_id=company_id,
+            template_amount=template_amount,
+            metadata_json=metadata_json,
+            due_date=due_date,
+        )
+        correction_amount = Decimal(str(adjustment_totals.get("correction_amount") or 0))
+        if correction_amount > 0:
+            allocations.append(
+                FinancialScheduleService._build_budget_document_adjustment_allocation(
+                    kind="correction",
+                    label="Correção Financeira",
+                    amount=correction_amount,
+                    chart_account_id=FinancialScheduleService._resolve_adjustment_chart_account_id(
+                        company_id=company_id,
+                        adjustment_kind="correction",
+                        adjustment_source_id=metadata_json.get("correction_index_id"),
+                        fallback_chart_account_id=line.chart_account_id,
+                    ),
+                    cost_center_id=line.cost_center_id,
+                    domain_type=domain_type,
+                    domain_source_id=domain_source_id,
+                    domain_label=domain_label,
+                    domain_value=domain_value,
+                    notes=f"Correção Financeira | {document.title}",
+                )
+            )
+
+        discount_amount = Decimal(str(adjustment_totals.get("discount_amount") or 0))
+        if discount_amount > 0:
+            allocations.append(
+                FinancialScheduleService._build_budget_document_adjustment_allocation(
+                    kind="discount",
+                    label="Desconto",
+                    amount=discount_amount * Decimal("-1"),
+                    chart_account_id=FinancialScheduleService._resolve_adjustment_chart_account_id(
+                        company_id=company_id,
+                        adjustment_kind="discount",
+                        adjustment_source_id=metadata_json.get("discount_rule_id"),
+                        fallback_chart_account_id=line.chart_account_id,
+                    ),
+                    cost_center_id=line.cost_center_id,
+                    domain_type=domain_type,
+                    domain_source_id=domain_source_id,
+                    domain_label=domain_label,
+                    domain_value=domain_value,
+                    notes=f"Desconto | {document.title}",
+                )
+            )
+
+        return allocations
+
+    @staticmethod
+    def _build_budget_document_adjustment_allocation(
+        *,
+        kind: str,
+        label: str,
+        amount: Decimal,
+        chart_account_id: Optional[int],
+        cost_center_id: Optional[int],
+        domain_type: Optional[str],
+        domain_source_id: Optional[int],
+        domain_label: Optional[str],
+        domain_value: str,
+        notes: str,
+    ) -> Dict[str, Any]:
+        return {
+            "chart_account_id": chart_account_id,
+            "cost_center_id": cost_center_id,
+            "allocation_type": "amount",
+            "percentage": None,
+            "allocated_amount": float(amount),
+            "notes": notes,
+            "domain_type": domain_type,
+            "domain_source_id": domain_source_id,
+            "domain_label": domain_label,
+            "domain_value": domain_value,
+            "budget_version_id": None,
+            "budget_version_code": None,
+            "budget_line_id": None,
+            "budget_line_code": None,
+            "budget_contract_id": None,
+            "budget_contract_code": None,
+            "budget_document_id": None,
+            "budget_document_code": None,
+            "metadata_json": {
+                "adjustment_kind": kind,
+                "adjustment_label": label,
+            },
+        }
+
+    @staticmethod
+    def _resolve_adjustment_chart_account_id(
+        *,
+        company_id: int,
+        adjustment_kind: str,
+        adjustment_source_id: Optional[Any],
+        fallback_chart_account_id: Optional[int],
+    ) -> Optional[int]:
+        if adjustment_source_id in ("", None):
+            return fallback_chart_account_id
+
+        model = FinancialCorrectionIndex if adjustment_kind == "correction" else FinancialDiscountRule
+        try:
+            normalized_source_id = int(adjustment_source_id)
+        except (TypeError, ValueError):
+            return fallback_chart_account_id
+
+        adjustment_source = model.query.filter(
+            model.id == normalized_source_id,
+            model.company_id == company_id,
+            model.deleted_at.is_(None),
+            model.is_active.is_(True),
+        ).first()
+        if not adjustment_source:
+            return fallback_chart_account_id
+
+        chart_account_id = dict(adjustment_source.metadata_json or {}).get("chart_account_id")
+        if chart_account_id in ("", None):
+            return fallback_chart_account_id
+        try:
+            return int(chart_account_id)
+        except (TypeError, ValueError):
+            return fallback_chart_account_id
 
     @staticmethod
     def create_schedule(
@@ -1232,16 +1387,16 @@ class FinancialScheduleService:
 
         correction_index_id = metadata.get("correction_index_id")
         if correction_index_id and due_date:
-            correction = FinancialCorrectionIndex.query.filter(
-                FinancialCorrectionIndex.id == int(correction_index_id),
-                FinancialCorrectionIndex.company_id == company_id,
-                FinancialCorrectionIndex.deleted_at.is_(None),
-                FinancialCorrectionIndex.is_active.is_(True),
-            ).first()
-            if correction:
-                correction_metadata = dict(correction.metadata_json or {})
-                overdue_days = max((date.today() - due_date).days, 0)
-                if overdue_days > 0:
+            overdue_days = max((date.today() - due_date).days, 0)
+            if overdue_days > 0:
+                correction = FinancialCorrectionIndex.query.filter(
+                    FinancialCorrectionIndex.id == int(correction_index_id),
+                    FinancialCorrectionIndex.company_id == company_id,
+                    FinancialCorrectionIndex.deleted_at.is_(None),
+                    FinancialCorrectionIndex.is_active.is_(True),
+                ).first()
+                if correction:
+                    correction_metadata = dict(correction.metadata_json or {})
                     interest_rate = Decimal(str(correction_metadata.get("interest_rate") or 0))
                     penalty_rate = Decimal(str(correction_metadata.get("penalty_rate") or 0))
                     penalty_limit_rate = Decimal(str(correction_metadata.get("penalty_limit_rate") or 0))

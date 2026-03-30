@@ -614,6 +614,16 @@ def test_update_document_schedule_rebuilds_payload_with_document_inheritance(mon
         "validate_document_schedule_amount",
         lambda **kwargs: None,
     )
+    monkeypatch.setattr(
+        workspace_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": float(kwargs["template_amount"]),
+            "correction_amount": 0.0,
+            "discount_amount": 0.0,
+            "updated_amount": float(kwargs["template_amount"]),
+        },
+    )
     monkeypatch.setattr(workspace_module, "date", _Today2026_04_01)
     monkeypatch.setattr(workspace_module.db.session, "commit", lambda: None)
     monkeypatch.setattr(workspace_module.db.session, "rollback", lambda: None)
@@ -798,9 +808,9 @@ def test_create_document_schedules_uses_outer_transaction_and_rolls_back_batch(m
     assert commit_state["called"] is False
 
 
-def test_create_document_schedules_blocks_past_due_installment_with_correction_index(monkeypatch):
+def test_create_document_schedules_allows_past_due_installment_with_correction_index(monkeypatch):
     document = _SimpleObj(id=30, company_id=9, document_amount=Decimal("100.00"))
-    create_state = {"called": False}
+    captured = {"create_called": False}
 
     monkeypatch.setattr(workspace_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
     monkeypatch.setattr(
@@ -829,12 +839,50 @@ def test_create_document_schedules_blocks_past_due_installment_with_correction_i
             None,
         ),
     )
-    monkeypatch.setattr(workspace_module, "date", _Today2026_04_01)
+    monkeypatch.setattr(
+        workspace_module.FinancialBudgetWorkspaceService,
+        "_build_document_schedule_payload",
+        lambda **kwargs: {
+            "company_id": 9,
+            "budget_document_id": document.id,
+            "name": kwargs["label"],
+            "entry_type": "receivable",
+            "movement_nature": "credit",
+            "origin_type": "manual",
+            "status": "active",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": kwargs["competence_date"],
+            "first_due_date": kwargs["due_date"],
+            "next_due_date": kwargs["due_date"],
+            "description": "Parcela 1 | NF teste",
+            "template_amount": kwargs["amount"],
+            "chart_account_id": 101,
+            "cost_center_id": 202,
+            "counterparty_id": 900,
+            "metadata_json": {
+                "allocations": [
+                    {
+                        "chart_account_id": 101,
+                        "cost_center_id": 202,
+                        "allocation_type": "amount",
+                        "allocated_amount": 50.0,
+                    }
+                ]
+            },
+        },
+    )
     monkeypatch.setattr(
         workspace_module.FinancialScheduleService,
         "create_schedule",
-        lambda **kwargs: create_state.__setitem__("called", True),
+        lambda **kwargs: (captured.__setitem__("create_called", True) or {"id": 501, "name": "Parcela 1"}, None),
     )
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_refresh_document_status", lambda *args, **kwargs: None)
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_list_schedules_for_document", lambda **kwargs: [])
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_document", lambda item: {"id": item.id})
+    monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_schedule", lambda item: {"id": item.id})
+    monkeypatch.setattr(workspace_module.db.session, "commit", lambda: None)
+    monkeypatch.setattr(workspace_module.db.session, "rollback", lambda: None)
 
     result, error = FinancialBudgetWorkspaceService.create_document_schedules(
         company_id=9,
@@ -852,9 +900,6 @@ def test_create_document_schedules_blocks_past_due_installment_with_correction_i
         allowed_company_ids=[9],
     )
 
-    assert result is None
-    assert error == (
-        "Parcela 1/1: Para NF com índice de correção ativo, informe vencimento igual ou posterior à data atual "
-        "ou use a tela completa de Agendamentos."
-    )
-    assert create_state["called"] is False
+    assert error is None
+    assert result["created_schedules"][0]["id"] == 501
+    assert captured["create_called"] is True
