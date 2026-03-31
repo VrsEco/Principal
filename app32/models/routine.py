@@ -15,6 +15,7 @@ class Routine(db.Model):
     
     schedule_type = db.Column(db.String(50), default='weekly')  # daily, weekly, monthly, quarterly, yearly, specific
     schedule_value = db.Column(db.String(255))
+    start_time = db.Column(db.String(10), default='00:01')
     
     deadline_days = db.Column(db.Integer, default=0)
     deadline_hours = db.Column(db.Integer, default=0)

@@ -141,6 +141,10 @@ class FinancialAutomationService:
             return None, "Regra de automação financeira não encontrada no escopo da empresa."
 
         merged = data.model_dump(exclude_unset=True)
+        if "rule_code" in merged:
+            if merged["rule_code"] != rule.rule_code:
+                return None, "O código da regra de automação não pode ser alterado após a criação."
+            merged.pop("rule_code", None)
         validation_error = FinancialAutomationService._validate_rule_scope(
             company_id=company_id,
             process_id=merged.get("process_id", rule.process_id),

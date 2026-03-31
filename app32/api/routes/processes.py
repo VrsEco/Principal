@@ -433,6 +433,7 @@ def api_get_process_routines(company_id):
                 r.process_id,
                 r.schedule_type,
                 r.schedule_value,
+                r.start_time,
                 r.deadline_days,
                 r.deadline_hours,
                 r.deadline_date,
@@ -463,6 +464,7 @@ def api_get_process_routines(company_id):
                 r.process_id,
                 r.schedule_type,
                 r.schedule_value,
+                r.start_time,
                 r.deadline_days,
                 r.deadline_hours,
                 r.deadline_date,
@@ -496,6 +498,7 @@ def api_create_process_routine(company_id):
         process_id = _coerce_optional_int(data.get("process_id"), default=None)
         schedule_type = _coerce_optional_text(data.get("schedule_type")) or "weekly"
         schedule_value = _coerce_optional_text(data.get("schedule_value"))
+        start_time = _coerce_optional_text(data.get("start_time")) or "00:01"
         deadline_days = _coerce_optional_int(data.get("deadline_days"), default=0)
         deadline_hours = _coerce_optional_int(data.get("deadline_hours"), default=0)
         deadline_date = _coerce_optional_text(data.get("deadline_date"))
@@ -509,9 +512,9 @@ def api_create_process_routine(company_id):
             """
             INSERT INTO routines (
                 company_id, name, description, process_id,
-                schedule_type, schedule_value, deadline_days, deadline_hours, deadline_date,
+                schedule_type, schedule_value, start_time, deadline_days, deadline_hours, deadline_date,
                 score_weight, is_active, created_at, updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id
         """,
             (
@@ -521,6 +524,7 @@ def api_create_process_routine(company_id):
                 process_id,
                 schedule_type,
                 schedule_value,
+                start_time,
                 deadline_days,
                 deadline_hours,
                 deadline_date,
@@ -552,6 +556,7 @@ def api_update_process_routine(company_id, routine_id):
         process_id = _coerce_optional_int(data.get("process_id"), default=None)
         schedule_type = _coerce_optional_text(data.get("schedule_type"))
         schedule_value = _coerce_optional_text(data.get("schedule_value"))
+        start_time = _coerce_optional_text(data.get("start_time")) or "00:01"
         deadline_days = _coerce_optional_int(data.get("deadline_days"), default=0)
         deadline_hours = _coerce_optional_int(data.get("deadline_hours"), default=0)
         score_weight = _coerce_optional_float(data.get("score_weight"), default=1.0)
@@ -567,6 +572,7 @@ def api_update_process_routine(company_id, routine_id):
                 process_id = %s,
                 schedule_type = %s,
                 schedule_value = %s,
+                start_time = %s,
                 deadline_days = %s,
                 deadline_hours = %s,
                 score_weight = %s,
@@ -579,6 +585,7 @@ def api_update_process_routine(company_id, routine_id):
                 process_id,
                 schedule_type,
                 schedule_value,
+                start_time,
                 deadline_days,
                 deadline_hours,
                 score_weight,
@@ -776,7 +783,7 @@ def routine_details_page(company_id, routine_id):
     if is_new:
         routine = {
             "id": None, "name": "", "description": "", "process_id": None,
-            "schedule_type": "weekly", "schedule_value": "",
+            "schedule_type": "weekly", "schedule_value": "", "start_time": "00:01",
             "deadline_days": 0, "deadline_hours": 0, "score_weight": 1.0
         }
     else:

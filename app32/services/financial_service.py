@@ -509,6 +509,10 @@ class FinancialService:
             return None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}."
 
         merged = data.model_dump(exclude_unset=True)
+        if "entry_code" in merged:
+            if merged["entry_code"] != entry.entry_code:
+                return None, "O código do lançamento não pode ser alterado após a criação."
+            merged.pop("entry_code", None)
         unlock_reconciliation = bool(merged.pop("unlock_reconciliation", False))
         requested_reconciled_state = merged.pop("reconciled", None)
         unlock_reason = merged.pop("reconciliation_unlock_reason", None)

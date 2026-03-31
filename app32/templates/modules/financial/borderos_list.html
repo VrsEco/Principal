@@ -10,45 +10,67 @@
 <span class="current">Borderôs</span>
 {% endblock %}
 
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="finance-filter-count" id="borderos-filters-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
 {% block workspace_content %}
-<div class="bordero-list-page" data-company-id="{{ company_id or '' }}">
-    <header class="bordero-list-header">
+<div class="finance-page bordero-list-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="finance-header bordero-list-header">
         <div>
             <h1>Borderôs</h1>
-            <p class="bordero-list-subtitle">Agrupe agendamentos a pagar ou a receber, congele os títulos participantes e faça a baixa centralizada com rateio automático.</p>
+            <p class="subtitle">Agrupe agendamentos a pagar ou a receber, congele os títulos participantes e faça a baixa centralizada com rateio automático.</p>
         </div>
-        <div class="bordero-list-actions">
-            <a class="btn btn-secondary" href="/financial/borderos/new?bordero_type=receivable">Novo borderô de recebimento</a>
-            <a class="btn btn-primary" href="/financial/borderos/new?bordero_type=payable">Novo borderô de pagamento</a>
+        <div class="finance-header-actions bordero-list-actions">
+            <a class="btn btn-secondary" href="/financial/borderos/new?bordero_type=receivable" style="text-decoration:none;">Novo borderô de recebimento</a>
+            <a class="btn btn-primary" href="/financial/borderos/new?bordero_type=payable" style="text-decoration:none;">Novo borderô de pagamento</a>
         </div>
     </header>
 
-    <section class="bordero-kpis" id="bordero-kpis">
-        <article class="bordero-kpi"><span>Total</span><strong>0</strong><small>Borderôs filtrados</small></article>
-        <article class="bordero-kpi"><span>Aberto</span><strong>R$ 0,00</strong><small>Saldo total em aberto</small></article>
-        <article class="bordero-kpi"><span>Liquidado</span><strong>R$ 0,00</strong><small>Montante já baixado</small></article>
-        <article class="bordero-kpi"><span>Itens</span><strong>0</strong><small>Títulos agrupados</small></article>
+    <section class="stat-grid" id="bordero-kpis">
+        <article class="stat-card bordero-kpi">
+            <span class="stat-label">Borderôs</span>
+            <strong>0</strong>
+            <small>Registros filtrados na visão atual</small>
+        </article>
+        <article class="stat-card bordero-kpi">
+            <span class="stat-label">Em aberto</span>
+            <strong class="stat-value stat-value--neutral">R$ 0,00</strong>
+            <small>Saldo consolidado pendente</small>
+        </article>
+        <article class="stat-card bordero-kpi">
+            <span class="stat-label">Liquidado</span>
+            <strong class="stat-value stat-value--positive">R$ 0,00</strong>
+            <small>Montante já baixado</small>
+        </article>
+        <article class="stat-card bordero-kpi">
+            <span class="stat-label">Itens</span>
+            <strong>0</strong>
+            <small>Títulos agrupados nos borderôs</small>
+        </article>
     </section>
 
-    <section class="bordero-list-card">
-        <div class="bordero-filters">
-            <input id="bordero-filter-search" type="search" placeholder="Buscar por código ou descrição">
-            <select id="bordero-filter-type">
-                <option value="">Todos os tipos</option>
-                <option value="payable">Pagamentos</option>
-                <option value="receivable">Recebimentos</option>
-            </select>
-            <select id="bordero-filter-status">
-                <option value="">Todos os status</option>
-                <option value="open">Aberto</option>
-                <option value="partially_settled">Parcialmente liquidado</option>
-                <option value="settled">Liquidado</option>
-                <option value="cancelled">Cancelado</option>
-            </select>
+    <section class="panel bordero-list-card">
+        <div class="panel-header">
+            <div>
+                <h2>Lista operacional</h2>
+                <p>Consulte os borderôs criados, acompanhe o saldo aberto e acesse rapidamente os detalhes operacionais.</p>
+            </div>
+            <div class="panel-header-actions">
+                <span class="panel-chip" id="bordero-active-filters-chip">Sem filtros ativos</span>
+            </div>
         </div>
-
-        <div class="bordero-table-wrap">
-            <table class="bordero-table">
+        <div class="table-wrap bordero-table-wrap">
+            <table class="data-table bordero-table">
                 <thead>
                     <tr>
                         <th>Status</th>
@@ -63,13 +85,132 @@
                     </tr>
                 </thead>
                 <tbody id="bordero-table-body">
-                    <tr><td colspan="9" class="empty-state">Carregando borderôs...</td></tr>
+                    <tr><td colspan="9" class="empty-cell">Carregando borderôs...</td></tr>
                 </tbody>
             </table>
         </div>
     </section>
 </div>
 
+<style>
+    .finance-page { padding: 0 2rem 2rem; }
+    .finance-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; gap:1rem; }
+    .finance-header-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+    .subtitle { color:var(--text-secondary); max-width:760px; margin-top:.35rem; }
+    .stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .stat-card, .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+    .stat-card { padding:1.25rem; display:flex; flex-direction:column; gap:.5rem; }
+    .stat-label { color:var(--text-tertiary); text-transform:uppercase; font-size:.75rem; font-weight:700; }
+    .stat-card strong { font-size:2rem; color:var(--text-primary); }
+    .stat-card small { color:var(--text-secondary); }
+    .stat-value--positive { color:#2563eb !important; }
+    .stat-value--negative { color:#dc2626 !important; }
+    .stat-value--neutral { color:var(--text-primary) !important; }
+    .panel { margin-bottom:1.5rem; }
+    .panel-header { padding:1.25rem 1.25rem 0; display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
+    .panel-header h2 { margin:0; }
+    .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); max-width:820px; }
+    .panel-header-actions { display:flex; align-items:center; gap:.75rem; }
+    .panel-chip {
+        display:inline-flex; align-items:center; justify-content:center; min-height:2rem;
+        padding:.35rem .75rem; border-radius:999px; background:var(--surface-secondary);
+        color:var(--text-secondary); border:1px solid var(--border); font-size:.78rem; font-weight:700;
+    }
+    .finance-filter-count {
+        min-width: 1.35rem; height: 1.35rem; padding: 0 .35rem; border-radius: 999px; display: inline-flex;
+        align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.14); color: #1d4ed8; font-size: .75rem; font-weight: 700;
+    }
+    .table-wrap { padding:1.25rem; overflow:auto; }
+    .data-table { width:100%; border-collapse:collapse; min-width:1180px; }
+    .data-table th, .data-table td { padding:.9rem .75rem; border-bottom:1px solid var(--border); text-align:left; vertical-align:middle; }
+    .data-table th { color:var(--text-tertiary); font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; }
+    .empty-cell { text-align:center; color:var(--text-tertiary); padding:2rem 1rem; }
+    .entry-code-pill {
+        display:inline-flex; align-items:center; justify-content:center; min-width:3.75rem;
+        padding:.35rem .7rem; border-radius:999px; background:var(--surface-secondary);
+        border:1px solid var(--border); font-weight:800; font-variant-numeric:tabular-nums;
+    }
+    .cell-muted { color:var(--text-tertiary); font-size:.84rem; }
+    .actions-stack { display:flex; gap:.5rem; flex-wrap:wrap; }
+    .borderos-sidebar-subtitle { margin:.35rem 0 0; color:var(--text-secondary); }
+    .borderos-sidebar-filters { padding:1rem; }
+    .borderos-sidebar-filters .filter-group { margin-bottom:1.25rem; }
+    .borderos-sidebar-filters .filter-label {
+        font-size:0.72rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary);
+        margin-bottom:0.5rem; display:block; letter-spacing:0.05em;
+    }
+    .borderos-sidebar-filters input,
+    .borderos-sidebar-filters select {
+        width:100%; padding:0.7rem 0.875rem; border-radius:10px; border:1.5px solid var(--border);
+        background:var(--surface-secondary); color:var(--text-primary); font-size:0.85rem; transition:all 0.2s;
+    }
+    .borderos-sidebar-filters input:focus,
+    .borderos-sidebar-filters select:focus { border-color:var(--primary); outline:none; background:var(--surface); }
+    .borderos-sidebar-actions { margin-top:2rem; border-top:1px solid var(--border); padding-top:1.5rem; }
+    .w-100 { width:100%; justify-content:center; }
+    .mt-2 { margin-top:.5rem; }
+    .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .btn-sm { padding:.62rem .85rem; font-size:.84rem; }
+    @media (max-width: 960px) {
+        .finance-page { padding:0 1rem 1.5rem; }
+        .stat-grid { grid-template-columns:1fr; }
+        .table-wrap { padding:.85rem; }
+    }
+    @media (max-width: 768px) {
+        .finance-header { flex-direction:column; gap:.85rem; }
+        .finance-header .btn, .finance-header a.btn { width:100%; }
+        .finance-header-actions { width:100%; flex-direction:column; }
+        .panel-header { padding:1rem 1rem 0; }
+        .panel-header-actions { width:100%; }
+        .panel-chip { width:100%; justify-content:center; }
+        .stat-card strong { font-size:1.6rem; }
+    }
+    @media (max-width: 520px) {
+        .finance-page { padding:0 .75rem 1rem; }
+    }
+</style>
+
 <link rel="stylesheet" href="/static/css/financial_borderos.css">
 <script src="/static/js/financial_borderos_list.js"></script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3>Filtros de Borderôs</h3>
+    <p class="borderos-sidebar-subtitle">Refine a visão operacional por texto, tipo e status.</p>
+</div>
+
+<div class="borderos-sidebar-filters">
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-search">Busca</label>
+        <input id="bordero-filter-search" type="search" placeholder="Código, descrição ou observação">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-type">Tipo</label>
+        <select id="bordero-filter-type">
+            <option value="">Todos os tipos</option>
+            <option value="payable">Pagamentos</option>
+            <option value="receivable">Recebimentos</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-status">Status</label>
+        <select id="bordero-filter-status">
+            <option value="">Todos os status</option>
+            <option value="open">Aberto</option>
+            <option value="partially_settled">Parcialmente liquidado</option>
+            <option value="settled">Liquidado</option>
+            <option value="cancelled">Cancelado</option>
+        </select>
+    </div>
+
+    <div class="borderos-sidebar-actions">
+        <button type="button" class="btn btn-primary w-100" id="borderos-apply-filters">Aplicar filtros</button>
+        <button type="button" class="btn btn-secondary w-100 mt-2" id="borderos-clear-filters">Limpar filtros</button>
+    </div>
+</div>
 {% endblock %}

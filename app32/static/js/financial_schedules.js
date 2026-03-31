@@ -685,8 +685,9 @@
     validateAllocationSummary();
     const frequency = $('field-repeat-toggle').value === 'true' ? $('field-frequency').value : 'one_time';
     const primaryAllocation = getBaseAllocationRows()[0] || allocationRows[0] || {};
+    const isUpdate = Boolean(form.schedule_id.value);
     return {
-      schedule_code: form.schedule_code.value || undefined,
+      schedule_code: isUpdate ? undefined : (form.schedule_code.value || undefined),
       name: description.slice(0, 120),
       description,
       memo: null,

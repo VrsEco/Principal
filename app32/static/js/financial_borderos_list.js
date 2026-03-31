@@ -6,6 +6,10 @@
     const companyId = Number(page.dataset.companyId || 0);
     const tbody = document.getElementById('bordero-table-body');
     const kpis = Array.from(document.querySelectorAll('#bordero-kpis .bordero-kpi'));
+    const filterCount = document.getElementById('borderos-filters-count');
+    const activeFiltersChip = document.getElementById('bordero-active-filters-chip');
+    const applyButton = document.getElementById('borderos-apply-filters');
+    const clearButton = document.getElementById('borderos-clear-filters');
     const filters = {
       search: document.getElementById('bordero-filter-search'),
       type: document.getElementById('bordero-filter-type'),
@@ -16,6 +20,7 @@
     const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const typeLabel = (value) => value === 'payable' ? 'Pagamento' : 'Recebimento';
     const statusLabel = (value) => ({ open: 'Aberto', partially_settled: 'Parcial', settled: 'Liquidado', cancelled: 'Cancelado', draft: 'Rascunho' }[value] || value || '-');
+    const getActiveFilters = () => Object.values(filters).filter((input) => String(input?.value || '').trim());
 
     async function fetchJson(url, options) {
       const response = await fetch(url, options);
@@ -29,12 +34,32 @@
       const type = String(filters.type?.value || '').trim();
       const status = String(filters.status?.value || '').trim();
       return borderos.filter((item) => {
-        const haystack = `${item.bordero_code || ''} ${item.description || ''}`.toLowerCase();
+        const haystack = `${item.bordero_code || ''} ${item.description || ''} ${item.notes || ''}`.toLowerCase();
         if (search && !haystack.includes(search)) return false;
         if (type && item.bordero_type !== type) return false;
         if (status && item.status !== status) return false;
         return true;
       });
+    }
+
+    function updateFilterIndicators() {
+      const activeCount = getActiveFilters().length;
+      if (filterCount) filterCount.textContent = String(activeCount);
+
+      if (!activeFiltersChip) return;
+      if (!activeCount) {
+        activeFiltersChip.textContent = 'Sem filtros ativos';
+        return;
+      }
+
+      const labels = [];
+      const search = String(filters.search?.value || '').trim();
+      const type = String(filters.type?.value || '').trim();
+      const status = String(filters.status?.value || '').trim();
+      if (search) labels.push(`Busca: ${search}`);
+      if (type) labels.push(`Tipo: ${typeLabel(type)}`);
+      if (status) labels.push(`Status: ${statusLabel(status)}`);
+      activeFiltersChip.textContent = labels.join(' · ');
     }
 
     function renderKpis(items) {
@@ -49,20 +74,21 @@
 
     function render() {
       const items = getFiltered();
+      updateFilterIndicators();
       renderKpis(items);
       if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum borderô encontrado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-cell">Nenhum borderô encontrado para os filtros aplicados.</td></tr>';
         return;
       }
 
       tbody.innerHTML = items.map((item) => `
         <tr>
           <td><span class="bordero-pill bordero-pill--${item.status}">${statusLabel(item.status)}</span></td>
-          <td>${item.bordero_code || '-'}</td>
+          <td><span class="entry-code-pill">${item.bordero_code || '-'}</span></td>
           <td>
             <div class="bordero-row-title">
               <strong>${item.description || 'Sem descrição'}</strong>
-              <small>ID ${item.id} · ${item.notes || 'Sem observações'}</small>
+              <small class="cell-muted">ID ${item.id} · ${item.notes || 'Sem observações'}</small>
             </div>
           </td>
           <td><span class="bordero-pill bordero-pill--${item.bordero_type}">${typeLabel(item.bordero_type)}</span></td>
@@ -70,7 +96,11 @@
           <td>${money(item.signed_total_amount || item.total_amount || 0)}</td>
           <td>${money(item.signed_settled_amount || item.settled_amount || 0)}</td>
           <td>${money(item.signed_open_amount || item.open_amount || 0)}</td>
-          <td><a class="btn btn-secondary" href="/financial/borderos/${item.id}">Abrir</a></td>
+          <td>
+            <div class="actions-stack">
+              <a class="btn btn-secondary btn-sm" href="/financial/borderos/${item.id}">Abrir</a>
+            </div>
+          </td>
         </tr>
       `).join('');
     }
@@ -81,14 +111,23 @@
     }
 
     Object.values(filters).forEach((input) => {
-      input?.addEventListener('input', render);
-      input?.addEventListener('change', render);
+      input?.addEventListener('input', updateFilterIndicators);
+      input?.addEventListener('change', updateFilterIndicators);
+    });
+
+    applyButton?.addEventListener('click', render);
+    clearButton?.addEventListener('click', () => {
+      Object.values(filters).forEach((input) => {
+        if (input) input.value = '';
+      });
+      render();
     });
 
     try {
       await load();
     } catch (error) {
-      tbody.innerHTML = `<tr><td colspan="9" class="empty-state">${error.message}</td></tr>`;
+      updateFilterIndicators();
+      tbody.innerHTML = `<tr><td colspan="9" class="empty-cell">${error.message}</td></tr>`;
     }
   }
 

@@ -522,6 +522,8 @@ def register_api_resources(api):
         FinancialEntryAllocationListResource,
         FinancialEntrySettlementListResource,
         FinancialSettlementResource,
+        FinancialSettlementAttachmentListResource,
+        FinancialSettlementAttachmentResource,
         FinancialImportBatchListResource,
         FinancialImportBatchResource,
         FinancialImportBatchProcessResource,
@@ -695,6 +697,8 @@ def register_api_resources(api):
     api.add_resource(FinancialEntryAllocationListResource, '/api/financial/entries/<int:entry_id>/allocations')
     api.add_resource(FinancialEntrySettlementListResource, '/api/financial/entries/<int:entry_id>/settlements')
     api.add_resource(FinancialSettlementResource, '/api/financial/settlements/<int:settlement_id>')
+    api.add_resource(FinancialSettlementAttachmentListResource, '/api/financial/settlements/<int:settlement_id>/attachments')
+    api.add_resource(FinancialSettlementAttachmentResource, '/api/financial/settlements/<int:settlement_id>/attachments/<string:attachment_id>')
     api.add_resource(FinancialImportBatchListResource, '/api/financial/imports')
     api.add_resource(FinancialImportBatchResource, '/api/financial/imports/<int:batch_id>')
     api.add_resource(FinancialImportBatchProcessResource, '/api/financial/imports/<int:batch_id>/process')
@@ -765,6 +769,7 @@ def register_blueprints(app):
     from api.routes.integrations import integrations_bp
     from api.routes.portfolios import portfolios_bp
     from api.routes.financial import financial_bp
+    import api.routes.financial_reports  # noqa: F401
     from api.user_employee import user_employee_bp
     from api.routes.meetings import meetings_bp
     # from api.routes.ai_board import ai_board_bp
