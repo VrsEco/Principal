@@ -43,8 +43,18 @@ def login():
             
             # Check companies this user has access to
             employee_records = Employee.query.filter_by(user_id=user.id, status='active').all()
+            active_company_ids = [
+                employee.company_id
+                for employee in employee_records
+                if getattr(employee, 'company_id', None) is not None
+            ]
             
-            # Always go to portal so user can see their global notes
+            # Usuário com uma única empresa deve entrar direto no ambiente de trabalho
+            # para evitar bloqueio operacional no portal de seleção.
+            if len(active_company_ids) == 1 and not is_platform_admin():
+                session['active_company_id'] = active_company_ids[0]
+                return jsonify({"success": True, "redirect": "/my-work"})
+
             if len(employee_records) > 0 or is_platform_admin():
                 return jsonify({"success": True, "redirect": "/portal"})
             else:
