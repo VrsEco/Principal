@@ -885,6 +885,7 @@ class FinancialAutomationRuleCreateInput(BaseModel):
 class FinancialAutomationRuleUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    rule_code: Optional[str] = Field(None, min_length=3, max_length=50)
     name: Optional[str] = Field(None, min_length=3, max_length=120)
     process_id: Optional[int] = None
     activity_id: Optional[int] = None
@@ -1043,6 +1044,7 @@ class FinancialEntryCreateInput(BaseModel):
 class FinancialEntryUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    entry_code: Optional[str] = Field(None, min_length=3, max_length=50)
     entry_type: Optional[str] = Field(None, pattern=_choices_pattern(ENTRY_TYPE_VALUES))
     movement_nature: Optional[str] = Field(None, pattern=_choices_pattern(MOVEMENT_NATURE_VALUES))
     origin_type: Optional[str] = Field(None, pattern=_choices_pattern(ENTRY_ORIGIN_VALUES))

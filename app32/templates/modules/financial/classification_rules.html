@@ -422,9 +422,11 @@
         const formData = new FormData(event.currentTarget);
         const ruleId = formData.get('rule_id');
         const payload = normalizePayload(formData);
-        payload.company_id = companyId;
 
         const isUpdate = Boolean(ruleId);
+        if (!isUpdate) {
+            payload.company_id = companyId;
+        }
         const url = isUpdate
             ? `/api/financial/classification-rules/${ruleId}?company_id=${companyId}`
             : `/api/financial/classification-rules?company_id=${companyId}`;

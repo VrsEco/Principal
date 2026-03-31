@@ -395,26 +395,25 @@
     }
 
     function formatScheduleDetails(routine) {
-      const defaultStartTime = '00:01';
+      const startTime = routine.start_time || '00:01';
 
       if (routine.schedule_type === 'weekly') {
-        return `${formatWeeklyDays(routine.schedule_value)} | Start: ${defaultStartTime}`;
+        return `${formatWeeklyDays(routine.schedule_value)} | Início: ${startTime}`;
       }
 
       if (routine.schedule_type === 'daily') {
-        const startTime = (routine.schedule_value || '').trim() || defaultStartTime;
-        return `Todos os dias | Start: ${startTime}`;
+        return `Todos os dias | Início: ${startTime}`;
       }
 
       if (routine.schedule_type === 'monthly' && routine.schedule_value) {
-        return `Todo dia ${routine.schedule_value} | Start: ${defaultStartTime}`;
+        return `Todo dia ${routine.schedule_value} | Início: ${startTime}`;
       }
 
       if (routine.schedule_type === 'quarterly' && routine.schedule_value) {
         const [quarterMonth, quarterDay] = String(routine.schedule_value).split('-');
         const formattedQuarterMonth = formatQuarterMonth(quarterMonth);
         if (formattedQuarterMonth && quarterDay) {
-          return `${formattedQuarterMonth}, dia ${quarterDay} | Start: ${defaultStartTime}`;
+          return `${formattedQuarterMonth}, dia ${quarterDay} | Início: ${startTime}`;
         }
       }
 
@@ -422,16 +421,16 @@
         const [day, month] = String(routine.schedule_value).split('/');
         const formattedMonth = monthLabels[Number(month)];
         if (day && formattedMonth) {
-          return `Todo ${day}/${formattedMonth} | Start: ${defaultStartTime}`;
+          return `Todo ${day}/${formattedMonth} | Início: ${startTime}`;
         }
       }
 
       if (routine.schedule_type === 'specific' && routine.schedule_value) {
         const formattedDate = formatSpecificDate(routine.schedule_value);
-        return `${formattedDate || routine.schedule_value} | Start: ${defaultStartTime}`;
+        return `${formattedDate || routine.schedule_value} | Início: ${startTime}`;
       }
 
-      return `${scheduleLabels[routine.schedule_type] || routine.schedule_type || 'Manual'} | Start: ${defaultStartTime}`;
+      return `${scheduleLabels[routine.schedule_type] || routine.schedule_type || 'Manual'} | Início: ${startTime}`;
     }
 
     grid.innerHTML = data.map(r => {

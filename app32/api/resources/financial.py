@@ -55,6 +55,13 @@ logger = logging.getLogger(__name__)
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 
+def _sanitize_update_payload(payload: dict | None, *extra_fields: str) -> dict:
+    sanitized = dict(payload or {})
+    for field in {"company_id", "id", "created_at", "updated_at", "deleted_at", *extra_fields}:
+        sanitized.pop(field, None)
+    return sanitized
+
+
 def _serialize_entry(entry: FinancialEntry) -> dict:
     return FinancialService.serialize_entry(entry)
 
@@ -204,8 +211,7 @@ class FinancialCatalogResource(Resource):
     @permission_required("financial", "edit")
     def put(self, catalog_type: str, item_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json(silent=True) or {}
-        payload.pop("company_id", None)
+        payload = _sanitize_update_payload(request.get_json(silent=True))
         result, error = FinancialCatalogService.update_item(
             catalog_type=catalog_type,
             item_id=item_id,
@@ -281,7 +287,7 @@ class FinancialDomainEnablementResource(Resource):
     @permission_required("financial", "edit")
     def put(self, domain_type: str, source_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json(silent=True) or {}
+        payload = _sanitize_update_payload(request.get_json(silent=True), "domain_type", "source_id")
         result, error = FinancialDomainEnablementService.update_item(
             company_id=company_id,
             domain_type=domain_type,
@@ -356,7 +362,7 @@ class FinancialIngestionRecordResource(Resource):
     @permission_required("financial", "edit")
     def put(self, record_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json(silent=True) or {}
+        payload = _sanitize_update_payload(request.get_json(silent=True), "record_id", "import_batch_id")
         result, error = FinancialIngestionService.update_record(
             record_id=record_id,
             company_id=company_id,
@@ -589,8 +595,14 @@ class FinancialScheduleResource(Resource):
     @permission_required("financial", "edit")
     def put(self, schedule_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json(silent=True) or {}
-        payload.pop("company_id", None)
+        payload = _sanitize_update_payload(
+            request.get_json(silent=True),
+            "schedule_id",
+            "schedule_code",
+            "created_by_user_id",
+            "created_by_employee_id",
+            "created_by_agent",
+        )
         result, error = FinancialScheduleService.update_schedule(
             schedule_id=schedule_id,
             company_id=company_id,
@@ -803,8 +815,7 @@ class FinancialAutomationRuleResource(Resource):
     @permission_required("financial", "edit")
     def put(self, rule_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json(silent=True) or {}
-        payload.pop("company_id", None)
+        payload = _sanitize_update_payload(request.get_json(silent=True), "rule_id", "rule_code")
         result, error = FinancialAutomationService.update_rule(
             rule_id=rule_id,
             company_id=company_id,
@@ -879,8 +890,14 @@ class FinancialEntryResource(Resource):
     @permission_required("financial", "edit")
     def put(self, entry_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json() or {}
-        payload.pop("company_id", None)
+        payload = _sanitize_update_payload(
+            request.get_json(),
+            "entry_id",
+            "entry_code",
+            "created_by_user_id",
+            "created_by_employee_id",
+            "created_by_agent",
+        )
 
         entry, error = FinancialService.update_entry(
             entry_id=entry_id,
@@ -1290,8 +1307,7 @@ class FinancialClassificationRuleResource(Resource):
     @permission_required("financial", "edit")
     def put(self, rule_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json(silent=True) or {}
-        payload.pop("company_id", None)
+        payload = _sanitize_update_payload(request.get_json(silent=True), "rule_id")
         result, error = FinancialClassificationService.update_rule(
             rule_id=rule_id,
             company_id=company_id,
