@@ -86,28 +86,22 @@ class FinancialBorderoService:
         if scope_error:
             return None, scope_error
 
-        reference_error = FinancialCatalogService.validate_reference_ids(
-            company_id=data.company_id,
-            bank_account_id=data.bank_account_id,
-        )
-        if reference_error:
-            return None, reference_error
-
         created_items: List[FinancialBorderoItem] = []
         total_amount = Decimal("0")
         try:
+            bordero_name = (data.name or data.description or data.notes or "").strip()
+            bordero_description = (data.description or data.notes or bordero_name).strip() or bordero_name
             bordero = FinancialBordero(
                 company_id=data.company_id,
                 bordero_code=FinancialBorderoService._generate_bordero_code(data.company_id),
-                name=data.name,
+                name=bordero_name,
                 bordero_type=data.bordero_type,
                 status="open",
-                description=data.description or data.name,
-                bank_account_id=data.bank_account_id,
+                description=bordero_description,
                 created_by_user_id=data.created_by_user_id,
                 created_by_employee_id=data.created_by_employee_id,
                 created_by_agent=data.created_by_agent,
-                notes=data.notes,
+                notes=data.notes or bordero_description,
                 metadata_json=dict(data.metadata_json or {}),
                 created_at=datetime.combine(data.created_date, datetime.min.time()) if data.created_date else datetime.utcnow(),
             )
@@ -210,13 +204,6 @@ class FinancialBorderoService:
         if not bordero:
             return None, "Borderô não encontrado no escopo da empresa."
 
-        reference_error = FinancialCatalogService.validate_reference_ids(
-            company_id=company_id,
-            bank_account_id=data.bank_account_id if "bank_account_id" in data.model_fields_set else bordero.bank_account_id,
-        )
-        if reference_error:
-            return None, reference_error
-
         try:
             if "name" in data.model_fields_set and data.name:
                 bordero.name = data.name
@@ -224,8 +211,6 @@ class FinancialBorderoService:
                 bordero.description = data.description or bordero.name
             if "created_date" in data.model_fields_set and data.created_date:
                 bordero.created_at = datetime.combine(data.created_date, datetime.min.time())
-            if "bank_account_id" in data.model_fields_set:
-                bordero.bank_account_id = data.bank_account_id
             if "notes" in data.model_fields_set:
                 bordero.notes = data.notes
             if "metadata_json" in data.model_fields_set and data.metadata_json is not None:

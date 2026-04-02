@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260402d') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260402e') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -49,15 +49,11 @@
                     </label>
                     <label class="field field-span-2">
                         <span>Descrição</span>
-                        <input id="bordero-description" maxlength="255" placeholder="Resumo complementar do borderô">
-                    </label>
-                    <label class="field">
-                        <span>Conta bancária</span>
-                        <select id="bordero-bank-account"></select>
+                        <textarea id="bordero-description" rows="2" maxlength="255" placeholder="Descrição operacional e observações do borderô"></textarea>
                     </label>
                     <label class="field field-span-3">
-                        <span>Observação</span>
-                        <textarea id="bordero-notes" rows="2" placeholder="Observações operacionais"></textarea>
+                        <span>&nbsp;</span>
+                        <div class="bordero-helper-text">Campo unificado para descrição e observações.</div>
                     </label>
                 </div>
 
@@ -178,5 +174,5 @@
     </section>
 </div>
 
-<script src="/static/js/financial_borderos.js"></script>
+<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260402e') }}"></script>
 {% endblock %}

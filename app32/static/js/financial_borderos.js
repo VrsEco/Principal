@@ -55,11 +55,10 @@
     return item.display_label || item.name || item.code || `Conta ${item.id}`;
   }
 
-  function renderBankAccountOptions() {
+  function renderSettlementBankAccountOptions() {
     const html = ['<option value="">Selecione...</option>']
       .concat(state.bankAccounts.map((item) => `<option value="${item.id}">${bankAccountLabel(item)}</option>`))
       .join('');
-    $('bordero-bank-account').innerHTML = html;
     $('settlement-bank-account').innerHTML = html;
   }
 
@@ -173,7 +172,7 @@
 
   async function loadBankAccounts() {
     state.bankAccounts = await fetchJson(`/api/financial/catalogs/bank_accounts?company_id=${companyId}`);
-    renderBankAccountOptions();
+    renderSettlementBankAccountOptions();
   }
 
   function renderDetail(bordero) {
@@ -186,10 +185,8 @@
     $('detail-total').textContent = money(bordero.signed_total_amount || bordero.total_amount || 0);
     $('detail-open').textContent = money(bordero.signed_open_amount || bordero.open_amount || 0);
     $('bordero-name').value = bordero.name || '';
-    $('bordero-description').value = bordero.description || '';
-    $('bordero-notes').value = bordero.notes || '';
+    $('bordero-description').value = bordero.description || bordero.notes || '';
     ensureCreatedDateValue(bordero.created_date || bordero.created_at);
-    $('bordero-bank-account').value = bordero.bank_account_id || '';
     $('settlement-bank-account').value = bordero.bank_account_id || '';
 
     const itemsBody = $('bordero-items-body');
@@ -261,8 +258,7 @@
       name,
       description: $('bordero-description').value.trim() || null,
       created_date: $('bordero-created-date').value || null,
-      bank_account_id: Number($('bordero-bank-account').value || 0) || null,
-      notes: $('bordero-notes').value.trim() || null,
+      notes: $('bordero-description').value.trim() || null,
       items,
     };
     const created = await fetchJson(`/api/financial/borderos?company_id=${companyId}`, {
@@ -279,8 +275,7 @@
       name: $('bordero-name').value.trim(),
       description: $('bordero-description').value.trim() || null,
       created_date: $('bordero-created-date').value || null,
-      bank_account_id: Number($('bordero-bank-account').value || 0) || null,
-      notes: $('bordero-notes').value.trim() || null,
+      notes: $('bordero-description').value.trim() || null,
     };
     if (!payload.name) throw new Error('Informe o nome do borderô.');
     const updated = await fetchJson(`/api/financial/borderos/${borderoId}?company_id=${companyId}`, {
