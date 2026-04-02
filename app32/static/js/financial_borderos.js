@@ -63,6 +63,7 @@
 
   function applyType(type) {
     state.selectedType = type;
+    page.dataset.borderoType = type || '';
     document.querySelectorAll('.bordero-type-chip').forEach((button) => {
       const active = button.dataset.type === type;
       button.classList.toggle('btn-primary', active);
@@ -118,17 +119,17 @@
       const counterparty = summary.counterparty_name || item.metadata_json?.counterparty_name || '-';
       return `
         <tr data-schedule-id="${item.id}">
-          <td><input type="checkbox" class="bordero-schedule-selector"></td>
-          <td>
+          <td data-label="Selecionar"><input type="checkbox" class="bordero-schedule-selector"></td>
+          <td data-label="Agendamento">
             <div class="bordero-row-title">
               <strong>${item.description || 'Sem histórico'}</strong>
               <small>${item.schedule_code || '-'} · ${item.status || '-'}</small>
             </div>
           </td>
-          <td>${counterparty}</td>
-          <td>${formatDate(item.next_due_date || item.first_due_date)}</td>
-          <td>${money(openTotal)}</td>
-          <td><input class="bordero-amount-input" inputmode="numeric" value="${formatCurrencyFromDigits(Math.round(openTotal * 100))}" data-open-amount="${openTotal}"></td>
+          <td data-label="Favorecido">${counterparty}</td>
+          <td data-label="Vencimento">${formatDate(item.next_due_date || item.first_due_date)}</td>
+          <td data-label="Saldo aberto">${money(openTotal)}</td>
+          <td data-label="Valor no borderô"><input class="bordero-amount-input" inputmode="numeric" value="${formatCurrencyFromDigits(Math.round(openTotal * 100))}" data-open-amount="${openTotal}"></td>
         </tr>
       `;
     }).join('');
@@ -171,6 +172,7 @@
 
   function renderDetail(bordero) {
     state.bordero = bordero;
+    page.dataset.borderoType = bordero.bordero_type || '';
     $('bordero-title').textContent = `${bordero.bordero_code} · ${bordero.description || 'Borderô financeiro'}`;
     banner.textContent = `${typeLabel(bordero.bordero_type)} · ${statusLabel(bordero.status)} · os títulos permanecem congelados e a baixa acontece somente no nível do borderô.`;
     $('detail-code').textContent = bordero.bordero_code || '-';
@@ -192,17 +194,17 @@
         const summary = snap.summary || {};
         return `
           <tr>
-            <td>${item.item_code || '-'}</td>
-            <td>
+            <td data-label="Item">${item.item_code || '-'}</td>
+            <td data-label="Agendamento">
               <div class="bordero-row-title">
                 <strong>${snap.description || 'Sem histórico'}</strong>
                 <small>${snap.schedule_code || summary.schedule_code || '-'} · agendamento ${item.financial_schedule_id}</small>
               </div>
             </td>
-            <td>${summary.counterparty_name || snap.metadata_json?.counterparty_name || '-'}</td>
-            <td>${money(item.selected_amount || 0)}</td>
-            <td>${money(item.settled_amount || 0)}</td>
-            <td>${money(item.open_amount || 0)}</td>
+            <td data-label="Favorecido">${summary.counterparty_name || snap.metadata_json?.counterparty_name || '-'}</td>
+            <td data-label="Selecionado">${money(item.selected_amount || 0)}</td>
+            <td data-label="Liquidado">${money(item.settled_amount || 0)}</td>
+            <td data-label="Em aberto">${money(item.open_amount || 0)}</td>
           </tr>
         `;
       }).join('');
@@ -215,12 +217,12 @@
     } else {
       settlementsBody.innerHTML = settlements.map((item) => `
         <tr>
-          <td>${item.settlement_code || '-'}</td>
-          <td>${formatDate(item.settlement_date)}</td>
-          <td>${money(item.gross_amount || 0)}</td>
-          <td>${money(item.allocated_amount || 0)}</td>
-          <td>${money(item.variance_amount || 0)}</td>
-          <td>${settlementStatusLabel(item.settlement_status)}</td>
+          <td data-label="Código">${item.settlement_code || '-'}</td>
+          <td data-label="Data">${formatDate(item.settlement_date)}</td>
+          <td data-label="Valor bruto">${money(item.gross_amount || 0)}</td>
+          <td data-label="Alocado">${money(item.allocated_amount || 0)}</td>
+          <td data-label="Variação">${money(item.variance_amount || 0)}</td>
+          <td data-label="Status">${settlementStatusLabel(item.settlement_status)}</td>
         </tr>
       `).join('');
     }
