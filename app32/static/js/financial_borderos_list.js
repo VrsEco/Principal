@@ -83,20 +83,20 @@
 
       tbody.innerHTML = items.map((item) => `
         <tr>
-          <td><span class="bordero-pill bordero-pill--${item.status}">${statusLabel(item.status)}</span></td>
-          <td><span class="entry-code-pill">${item.bordero_code || '-'}</span></td>
-          <td>
+          <td data-label="Status"><span class="bordero-pill bordero-pill--${item.status}">${statusLabel(item.status)}</span></td>
+          <td data-label="Código"><span class="entry-code-pill">${item.bordero_code || '-'}</span></td>
+          <td data-label="Descrição">
             <div class="bordero-row-title">
               <strong>${item.description || 'Sem descrição'}</strong>
               <small class="cell-muted">ID ${item.id} · ${item.notes || 'Sem observações'}</small>
             </div>
           </td>
-          <td><span class="bordero-pill bordero-pill--${item.bordero_type}">${typeLabel(item.bordero_type)}</span></td>
-          <td>${item.item_count || 0}</td>
-          <td>${money(item.signed_total_amount || item.total_amount || 0)}</td>
-          <td>${money(item.signed_settled_amount || item.settled_amount || 0)}</td>
-          <td>${money(item.signed_open_amount || item.open_amount || 0)}</td>
-          <td>
+          <td data-label="Tipo"><span class="bordero-pill bordero-pill--${item.bordero_type}">${typeLabel(item.bordero_type)}</span></td>
+          <td data-label="Itens">${item.item_count || 0}</td>
+          <td data-label="Total">${money(item.signed_total_amount || item.total_amount || 0)}</td>
+          <td data-label="Liquidado">${money(item.signed_settled_amount || item.settled_amount || 0)}</td>
+          <td data-label="Em aberto">${money(item.signed_open_amount || item.open_amount || 0)}</td>
+          <td data-label="Ações">
             <div class="actions-stack">
               <a class="btn btn-secondary btn-sm" href="/financial/borderos/${item.id}">Abrir</a>
             </div>
