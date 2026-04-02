@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260402c') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260402d') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -24,6 +24,7 @@
             <p class="bordero-header-subtitle">Operação centralizada para baixa única de títulos agrupados. Títulos participantes ficam congelados enquanto o borderô estiver ativo.</p>
         </div>
         <div class="bordero-header-actions">
+            <button type="button" class="btn btn-primary hidden" id="bordero-save-button">Salvar alterações</button>
             <a class="btn btn-secondary" href="/financial/borderos">Voltar para lista</a>
         </div>
     </header>
@@ -36,22 +37,27 @@
                 <div class="bordero-grid bordero-grid-top">
                     <label class="field">
                         <span>Tipo</span>
-                        <div class="bordero-type-switch">
-                            <button type="button" class="btn btn-secondary bordero-type-chip" data-type="receivable">Recebimento</button>
-                            <button type="button" class="btn btn-secondary bordero-type-chip" data-type="payable">Pagamento</button>
-                        </div>
+                        <div class="bordero-type-info" id="bordero-type-info">Tipo não definido</div>
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Nome</span>
+                        <input id="bordero-name" maxlength="160" placeholder="Ex.: Borderô semanal fornecedores escritório">
+                    </label>
+                    <label class="field">
+                        <span>Data da criação</span>
+                        <input id="bordero-created-date" type="date">
                     </label>
                     <label class="field field-span-2">
                         <span>Descrição</span>
-                        <input id="bordero-description" maxlength="255" placeholder="Ex.: Borderô semanal fornecedores escritório" {{ 'disabled' if bordero_id else '' }}>
+                        <input id="bordero-description" maxlength="255" placeholder="Resumo complementar do borderô">
                     </label>
                     <label class="field">
                         <span>Conta bancária</span>
-                        <select id="bordero-bank-account" {{ 'disabled' if bordero_id else '' }}></select>
+                        <select id="bordero-bank-account"></select>
                     </label>
                     <label class="field field-span-3">
-                        <span>Observações</span>
-                        <textarea id="bordero-notes" rows="2" placeholder="Observações operacionais" {{ 'disabled' if bordero_id else '' }}></textarea>
+                        <span>Observação</span>
+                        <textarea id="bordero-notes" rows="2" placeholder="Observações operacionais"></textarea>
                     </label>
                 </div>
 

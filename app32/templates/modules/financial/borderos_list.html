@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260402c') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260402d') }}">
 {% endblock %}
 
 {% block navbar_actions %}
@@ -79,7 +79,7 @@
                     <tr>
                         <th>Status</th>
                         <th>Código</th>
-                        <th>Descrição</th>
+                        <th>Nome / Descrição</th>
                         <th>Tipo</th>
                         <th>Itens</th>
                         <th>Total</th>
@@ -108,7 +108,7 @@
 <div class="borderos-sidebar-filters">
     <div class="filter-group">
         <label class="filter-label" for="bordero-filter-search">Busca</label>
-        <input id="bordero-filter-search" type="search" placeholder="Código, descrição ou observação">
+        <input id="bordero-filter-search" type="search" placeholder="Código, nome, descrição ou observação">
     </div>
 
     <div class="filter-group">

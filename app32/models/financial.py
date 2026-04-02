@@ -669,6 +669,7 @@ class FinancialBordero(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
     bordero_code = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(160), nullable=False)
     bordero_type = db.Column(db.String(20), nullable=False, index=True)
     status = db.Column(db.String(30), nullable=False, default="draft", index=True)
     description = db.Column(db.String(255), nullable=False)
@@ -703,6 +704,7 @@ class FinancialBordero(db.Model):
             "id": self.id,
             "company_id": self.company_id,
             "bordero_code": self.bordero_code,
+            "name": self.name,
             "bordero_type": self.bordero_type,
             "status": self.status,
             "description": self.description,
@@ -716,6 +718,7 @@ class FinancialBordero(db.Model):
             "notes": self.notes,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_date": self.created_at.date().isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 

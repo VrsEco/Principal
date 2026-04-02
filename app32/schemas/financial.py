@@ -1161,7 +1161,9 @@ class FinancialBorderoCreateInput(BaseModel):
 
     company_id: int
     bordero_type: str = Field(..., pattern=_choices_pattern(BORDERO_TYPE_VALUES))
-    description: str = Field(..., min_length=3, max_length=255)
+    name: str = Field(..., min_length=2, max_length=160)
+    description: Optional[str] = Field(None, max_length=255)
+    created_date: Optional[date] = None
     bank_account_id: Optional[int] = None
     items: List[FinancialBorderoItemInput] = Field(default_factory=list, min_length=1)
     created_by_user_id: Optional[int] = None
@@ -1169,6 +1171,17 @@ class FinancialBorderoCreateInput(BaseModel):
     created_by_agent: Optional[str] = Field(None, max_length=50)
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FinancialBorderoUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = Field(None, min_length=2, max_length=160)
+    description: Optional[str] = Field(None, max_length=255)
+    created_date: Optional[date] = None
+    bank_account_id: Optional[int] = None
+    notes: Optional[str] = None
+    metadata_json: Optional[Dict[str, Any]] = None
 
 
 class FinancialBorderoSettlementInput(BaseModel):

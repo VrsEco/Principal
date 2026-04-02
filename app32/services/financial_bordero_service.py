@@ -14,7 +14,7 @@ from models.financial import (
     FinancialSchedule,
     FinancialSettlement,
 )
-from schemas.financial import FinancialBorderoCreateInput, FinancialBorderoSettlementInput
+from schemas.financial import FinancialBorderoCreateInput, FinancialBorderoSettlementInput, FinancialBorderoUpdateInput
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
@@ -99,15 +99,17 @@ class FinancialBorderoService:
             bordero = FinancialBordero(
                 company_id=data.company_id,
                 bordero_code=FinancialBorderoService._generate_bordero_code(data.company_id),
+                name=data.name,
                 bordero_type=data.bordero_type,
                 status="open",
-                description=data.description,
+                description=data.description or data.name,
                 bank_account_id=data.bank_account_id,
                 created_by_user_id=data.created_by_user_id,
                 created_by_employee_id=data.created_by_employee_id,
                 created_by_agent=data.created_by_agent,
                 notes=data.notes,
                 metadata_json=dict(data.metadata_json or {}),
+                created_at=datetime.combine(data.created_date, datetime.min.time()) if data.created_date else datetime.utcnow(),
             )
             db.session.add(bordero)
             db.session.flush()
@@ -182,6 +184,98 @@ class FinancialBorderoService:
             db.session.rollback()
             logger.exception("Erro ao criar borderô financeiro")
             return None, f"Erro ao criar borderô: {exc}"
+
+    @staticmethod
+    def update_bordero(
+        *,
+        bordero_id: int,
+        company_id: int,
+        payload: Dict[str, Any],
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        try:
+            data = FinancialBorderoUpdateInput(**(payload or {}))
+        except Exception as exc:
+            return None, f"Payload inválido para atualização do borderô: {exc}"
+
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        bordero = FinancialBordero.query.filter(
+            FinancialBordero.id == bordero_id,
+            FinancialBordero.company_id == company_id,
+            FinancialBordero.deleted_at.is_(None),
+        ).first()
+        if not bordero:
+            return None, "Borderô não encontrado no escopo da empresa."
+
+        reference_error = FinancialCatalogService.validate_reference_ids(
+            company_id=company_id,
+            bank_account_id=data.bank_account_id if "bank_account_id" in data.model_fields_set else bordero.bank_account_id,
+        )
+        if reference_error:
+            return None, reference_error
+
+        try:
+            if "name" in data.model_fields_set and data.name:
+                bordero.name = data.name
+            if "description" in data.model_fields_set:
+                bordero.description = data.description or bordero.name
+            if "created_date" in data.model_fields_set and data.created_date:
+                bordero.created_at = datetime.combine(data.created_date, datetime.min.time())
+            if "bank_account_id" in data.model_fields_set:
+                bordero.bank_account_id = data.bank_account_id
+            if "notes" in data.model_fields_set:
+                bordero.notes = data.notes
+            if "metadata_json" in data.model_fields_set and data.metadata_json is not None:
+                bordero.metadata_json = dict(data.metadata_json or {})
+            db.session.commit()
+            return FinancialBorderoService._serialize_bordero(bordero, include_items=True, include_settlements=True), None
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao atualizar borderô financeiro %s", bordero_id)
+            return None, f"Erro ao atualizar borderô: {exc}"
+
+    @staticmethod
+    def delete_bordero(
+        *,
+        bordero_id: int,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        bordero = FinancialBordero.query.filter(
+            FinancialBordero.id == bordero_id,
+            FinancialBordero.company_id == company_id,
+            FinancialBordero.deleted_at.is_(None),
+        ).first()
+        if not bordero:
+            return None, "Borderô não encontrado no escopo da empresa."
+
+        has_settlements = (
+            FinancialBorderoSettlement.query.filter(
+                FinancialBorderoSettlement.company_id == company_id,
+                FinancialBorderoSettlement.bordero_id == bordero.id,
+                FinancialBorderoSettlement.deleted_at.is_(None),
+            ).first()
+            is not None
+        )
+        if has_settlements:
+            return None, "Não é possível excluir um borderô que já possui baixa registrada."
+
+        try:
+            bordero.deleted_at = datetime.utcnow()
+            bordero.status = "cancelled"
+            db.session.commit()
+            return {"message": "Borderô removido com sucesso.", "id": bordero_id}, None
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao remover borderô financeiro %s", bordero_id)
+            return None, f"Erro ao remover borderô: {exc}"
 
     @staticmethod
     def create_settlement(
@@ -377,6 +471,8 @@ class FinancialBorderoService:
         ).order_by(FinancialBorderoSettlement.settlement_date.asc(), FinancialBorderoSettlement.id.asc())
         payload["item_count"] = items_query.count()
         payload["settlement_count"] = settlements_query.count()
+        payload["can_delete"] = payload["settlement_count"] == 0
+        payload["can_settle"] = payload["status"] != "cancelled" and Decimal(str(bordero.open_amount or 0)) > Decimal("0.00")
         payload["signed_total_amount"] = FinancialService.get_signed_amount(bordero.total_amount, "credit" if bordero.bordero_type == "receivable" else "debit")
         payload["signed_settled_amount"] = FinancialService.get_signed_amount(bordero.settled_amount, "credit" if bordero.bordero_type == "receivable" else "debit")
         payload["signed_open_amount"] = FinancialService.get_signed_amount(bordero.open_amount, "credit" if bordero.bordero_type == "receivable" else "debit")

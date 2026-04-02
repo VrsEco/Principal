@@ -167,6 +167,18 @@
   flex-wrap: wrap;
 }
 
+.bordero-type-info {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: var(--bordero-soft);
+  border: 1px solid var(--bordero-border);
+  color: var(--bordero-text);
+  font-weight: 700;
+}
+
 .bordero-type-chip {
   min-height: 44px;
   border-radius: 999px;
@@ -517,6 +529,11 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.actions-stack .is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .borderos-sidebar-subtitle {

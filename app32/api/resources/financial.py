@@ -769,6 +769,32 @@ class FinancialBorderoResource(Resource):
             return {"error": error}, 404
         return result, 200
 
+    @permission_required("financial", "edit")
+    def put(self, bordero_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialBorderoService.update_bordero(
+            bordero_id=bordero_id,
+            company_id=company_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "delete")
+    def delete(self, bordero_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialBorderoService.delete_bordero(
+            bordero_id=bordero_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
 
 class FinancialBorderoSettlementListResource(Resource):
     @permission_required("financial", "create")
