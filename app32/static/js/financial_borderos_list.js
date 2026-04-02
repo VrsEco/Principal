@@ -34,7 +34,7 @@
       const type = String(filters.type?.value || '').trim();
       const status = String(filters.status?.value || '').trim();
       return borderos.filter((item) => {
-        const haystack = `${item.bordero_code || ''} ${item.description || ''} ${item.notes || ''}`.toLowerCase();
+        const haystack = `${item.bordero_code || ''} ${item.name || ''} ${item.description || ''} ${item.notes || ''}`.toLowerCase();
         if (search && !haystack.includes(search)) return false;
         if (type && item.bordero_type !== type) return false;
         if (status && item.status !== status) return false;
@@ -87,8 +87,8 @@
           <td data-label="Código"><span class="entry-code-pill">${item.bordero_code || '-'}</span></td>
           <td data-label="Descrição">
             <div class="bordero-row-title">
-              <strong>${item.description || 'Sem descrição'}</strong>
-              <small class="cell-muted">ID ${item.id} · ${item.notes || 'Sem observações'}</small>
+              <strong>${item.name || item.description || 'Sem nome'}</strong>
+              <small class="cell-muted">${item.description || 'Sem descrição'} · ${item.notes || 'Sem observações'}</small>
             </div>
           </td>
           <td data-label="Tipo"><span class="bordero-pill bordero-pill--${item.bordero_type}">${typeLabel(item.bordero_type)}</span></td>
@@ -98,7 +98,11 @@
           <td data-label="Em aberto">${money(item.signed_open_amount || item.open_amount || 0)}</td>
           <td data-label="Ações">
             <div class="actions-stack">
-              <a class="btn btn-secondary btn-sm" href="/financial/borderos/${item.id}">Abrir</a>
+              <a class="btn btn-secondary btn-sm" href="/financial/borderos/${item.id}?company_id=${companyId}">Editar</a>
+              ${item.can_settle
+                ? `<a class="btn btn-primary btn-sm" href="/financial/borderos/${item.id}?company_id=${companyId}">Baixar</a>`
+                : `<span class="btn btn-primary btn-sm is-disabled">Baixar</span>`}
+              <button type="button" class="btn btn-danger btn-sm" data-action="delete" data-id="${item.id}" ${item.can_delete ? '' : 'disabled'}>Excluir</button>
             </div>
           </td>
         </tr>
@@ -108,6 +112,13 @@
     async function load() {
       borderos = await fetchJson(`/api/financial/borderos?company_id=${companyId}`);
       render();
+    }
+
+    async function deleteBordero(borderoId) {
+      const confirmed = window.confirm('Deseja realmente excluir este borderô?');
+      if (!confirmed) return;
+      await fetchJson(`/api/financial/borderos/${borderoId}?company_id=${companyId}`, { method: 'DELETE' });
+      await load();
     }
 
     Object.values(filters).forEach((input) => {
@@ -121,6 +132,16 @@
         if (input) input.value = '';
       });
       render();
+    });
+
+    tbody?.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-action="delete"]');
+      if (!button) return;
+      try {
+        await deleteBordero(Number(button.dataset.id));
+      } catch (error) {
+        alert(error.message);
+      }
     });
 
     try {

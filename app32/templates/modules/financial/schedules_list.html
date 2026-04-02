@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules_list.css', v='20260329b') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules_list.css', v='20260402a') }}">
 {% endblock %}
 
 {% block navbar_actions %}
@@ -105,6 +105,16 @@
     </div>
 
     <div class="filter-group">
+        <label class="filter-label">Borderô</label>
+        <select id="schedule-filter-bordero" class="filter-select">
+            <option value="">Todos</option>
+            <option value="bordero">Somente borderôs</option>
+            <option value="item">Itens em borderô</option>
+            <option value="free">Sem borderô</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
         <label class="filter-label">Favorecido</label>
         <input id="schedule-filter-counterparty" type="search" placeholder="Nome do favorecido">
     </div>
@@ -142,5 +152,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260329b') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260402a') }}"></script>
 {% endblock %}

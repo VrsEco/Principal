@@ -17,8 +17,10 @@
   const createSection = $('bordero-create-section');
   const detailSection = $('bordero-detail-section');
   const createButton = $('bordero-create-button');
+  const saveButton = $('bordero-save-button');
   const settlementButton = $('bordero-settlement-button');
   const banner = $('bordero-banner');
+  const typeInfo = $('bordero-type-info');
   const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatDate = (value) => {
     if (!value) return '-';
@@ -61,15 +63,19 @@
     $('settlement-bank-account').innerHTML = html;
   }
 
+  function ensureCreatedDateValue(value) {
+    const normalized = String(value || '').trim();
+    if (normalized) {
+      $('bordero-created-date').value = normalized.slice(0, 10);
+      return;
+    }
+    $('bordero-created-date').value = new Date().toISOString().slice(0, 10);
+  }
+
   function applyType(type) {
     state.selectedType = type;
     page.dataset.borderoType = type || '';
-    document.querySelectorAll('.bordero-type-chip').forEach((button) => {
-      const active = button.dataset.type === type;
-      button.classList.toggle('btn-primary', active);
-      button.classList.toggle('btn-secondary', !active);
-      if (borderoId) button.disabled = true;
-    });
+    typeInfo.textContent = type ? typeLabel(type) : 'Tipo não definido';
     if (!type) {
       banner.textContent = 'Selecione o tipo do borderô e os agendamentos elegíveis.';
       $('bordero-schedule-body').innerHTML = '<tr><td colspan="6" class="empty-state">Selecione um tipo para carregar os agendamentos.</td></tr>';
@@ -173,14 +179,16 @@
   function renderDetail(bordero) {
     state.bordero = bordero;
     page.dataset.borderoType = bordero.bordero_type || '';
-    $('bordero-title').textContent = `${bordero.bordero_code} · ${bordero.description || 'Borderô financeiro'}`;
+    $('bordero-title').textContent = `${bordero.bordero_code} · ${bordero.name || bordero.description || 'Borderô financeiro'}`;
     banner.textContent = `${typeLabel(bordero.bordero_type)} · ${statusLabel(bordero.status)} · os títulos permanecem congelados e a baixa acontece somente no nível do borderô.`;
     $('detail-code').textContent = bordero.bordero_code || '-';
     $('detail-status').textContent = statusLabel(bordero.status);
     $('detail-total').textContent = money(bordero.signed_total_amount || bordero.total_amount || 0);
     $('detail-open').textContent = money(bordero.signed_open_amount || bordero.open_amount || 0);
+    $('bordero-name').value = bordero.name || '';
     $('bordero-description').value = bordero.description || '';
     $('bordero-notes').value = bordero.notes || '';
+    ensureCreatedDateValue(bordero.created_date || bordero.created_at);
     $('bordero-bank-account').value = bordero.bank_account_id || '';
     $('settlement-bank-account').value = bordero.bank_account_id || '';
 
@@ -229,10 +237,7 @@
 
     createSection.classList.add('hidden');
     detailSection.classList.remove('hidden');
-    document.querySelectorAll('.bordero-type-chip').forEach((button) => button.disabled = true);
-    $('bordero-description').disabled = true;
-    $('bordero-notes').disabled = true;
-    $('bordero-bank-account').disabled = true;
+    saveButton?.classList.remove('hidden');
     const openAmount = Number(bordero.open_amount || 0);
     const canSettle = bordero.status !== 'cancelled' && openAmount > 0;
     $('settlement-date').value = new Date().toISOString().slice(0, 10);
@@ -248,10 +253,14 @@
   async function createBordero() {
     const items = selectedItemsPayload();
     if (!state.selectedType) throw new Error('Selecione o tipo do borderô.');
+    const name = $('bordero-name').value.trim();
+    if (!name) throw new Error('Informe o nome do borderô.');
     if (!items.length) throw new Error('Selecione ao menos um agendamento.');
     const payload = {
       bordero_type: state.selectedType,
-      description: $('bordero-description').value.trim(),
+      name,
+      description: $('bordero-description').value.trim() || null,
+      created_date: $('bordero-created-date').value || null,
       bank_account_id: Number($('bordero-bank-account').value || 0) || null,
       notes: $('bordero-notes').value.trim() || null,
       items,
@@ -262,6 +271,24 @@
       body: JSON.stringify(payload),
     });
     window.location.href = `/financial/borderos/${created.id}`;
+  }
+
+  async function saveBordero() {
+    if (!borderoId) return;
+    const payload = {
+      name: $('bordero-name').value.trim(),
+      description: $('bordero-description').value.trim() || null,
+      created_date: $('bordero-created-date').value || null,
+      bank_account_id: Number($('bordero-bank-account').value || 0) || null,
+      notes: $('bordero-notes').value.trim() || null,
+    };
+    if (!payload.name) throw new Error('Informe o nome do borderô.');
+    const updated = await fetchJson(`/api/financial/borderos/${borderoId}?company_id=${companyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    renderDetail(updated);
   }
 
   async function createSettlement() {
@@ -284,13 +311,13 @@
   async function init() {
     try {
       await Promise.all([loadBankAccounts(), loadSchedules()]);
-      document.querySelectorAll('.bordero-type-chip').forEach((button) => {
-        button.addEventListener('click', () => applyType(button.dataset.type));
-      });
       $('bordero-schedule-search')?.addEventListener('input', renderEligibleSchedules);
       $('bordero-refresh-schedules')?.addEventListener('click', loadSchedules);
       $('settlement-amount')?.addEventListener('input', (event) => {
         event.target.value = formatCurrencyFromDigits(event.target.value);
+      });
+      saveButton?.addEventListener('click', async () => {
+        try { await saveBordero(); alert('Borderô atualizado com sucesso.'); } catch (error) { alert(error.message); }
       });
       createButton?.addEventListener('click', async () => {
         try { await createBordero(); } catch (error) { alert(error.message); }
@@ -302,6 +329,7 @@
       if (borderoId) {
         await loadDetail();
       } else {
+        ensureCreatedDateValue();
         applyType(state.selectedType || '');
       }
     } catch (error) {
