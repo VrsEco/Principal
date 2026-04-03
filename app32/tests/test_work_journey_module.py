@@ -8,6 +8,7 @@ from flask import Flask
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from api.routes import work_journey as work_journey_route
+from services import work_journey_service
 from services.work_journey_helpers import block_chronology_key, clamp_period, rule_matches_date
 
 
@@ -45,6 +46,22 @@ class _FakeEmployeeQuery:
 class _Column:
     def asc(self):
         return self
+
+
+class _FakeSession:
+    def add(self, *_args, **_kwargs):
+        return None
+
+    def commit(self):
+        return None
+
+
+class _FakeBlockQuery:
+    def filter_by(self, **_kwargs):
+        return self
+
+    def first(self):
+        return None
 
 
 
@@ -107,6 +124,40 @@ def test_work_journey_page_renders_employee_payload(monkeypatch):
     assert response['selected_employee_id'] == 3
     assert response['employees_payload'][0]['name'] == 'Ana'
 
+
+def test_save_block_respects_empty_accepted_item_types(monkeypatch):
+    fake_employee = SimpleNamespace(id=3)
+
+    class _FakeBlock:
+        query = _FakeBlockQuery()
+
+        def __init__(self, company_id=None, employee_id=None):
+            self.company_id = company_id
+            self.employee_id = employee_id
+
+        def to_dict(self):
+            return {'accepted_item_types': list(self.accepted_item_types or [])}
+
+    monkeypatch.setattr(work_journey_service, 'ensure_employee', lambda company_id, employee_id: fake_employee)
+    monkeypatch.setattr(work_journey_service, 'WorkJourneyBlock', _FakeBlock)
+    monkeypatch.setattr(work_journey_service, 'db', SimpleNamespace(session=_FakeSession()))
+
+    payload = {
+        'employee_id': 3,
+        'name': 'Meditação',
+        'description': 'Meditação e estudo',
+        'start_time': '08:00',
+        'end_time': '09:00',
+        'block_mode': 'reserved_full',
+        'weekdays': [0, 1, 2, 3, 4],
+        'accepted_item_types': [],
+        'order_index': 0,
+        'is_active': True,
+    }
+
+    result = work_journey_service.save_block(9, payload)
+
+    assert result['accepted_item_types'] == []
 
 
 def test_templates_expose_work_journey_entrypoints():

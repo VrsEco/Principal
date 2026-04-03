@@ -47,7 +47,10 @@ def save_block(company_id: int, payload: dict[str, Any], block_id: int | None = 
     block.end_time = datetime.strptime(payload['end_time'], '%H:%M').time()
     block.block_mode = payload.get('block_mode') or 'operational'
     block.weekdays_json = payload.get('weekdays') or [0, 1, 2, 3, 4]
-    block.accepted_item_types = payload.get('accepted_item_types') or ['manual', 'process_instance', 'project_task', 'meeting']
+    accepted_item_types = payload.get('accepted_item_types')
+    if accepted_item_types is None:
+        accepted_item_types = ['manual', 'process_instance', 'project_task', 'meeting']
+    block.accepted_item_types = list(accepted_item_types)
     block.order_index = int(payload.get('order_index') or 0)
     block.is_active = bool(payload.get('is_active', True))
 
