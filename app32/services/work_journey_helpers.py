@@ -110,3 +110,13 @@ def summarize_weekdays(days: list[int]) -> str:
     if not days:
         return 'Todos os dias úteis'
     return ', '.join(WEEKDAY_LABELS.get(day, str(day)) for day in days)
+
+
+def block_chronology_key(block) -> tuple[int, int, int, str, int]:
+    weekdays = sorted(int(day) for day in (getattr(block, 'weekdays_json', None) or []))
+    first_weekday = weekdays[0] if weekdays else 7
+    start_minutes = time_to_minutes(getattr(block, 'start_time', None))
+    end_minutes = time_to_minutes(getattr(block, 'end_time', None))
+    name = str(getattr(block, 'name', '') or '').strip().lower()
+    identifier = int(getattr(block, 'id', 0) or 0)
+    return (first_weekday, start_minutes, end_minutes, name, identifier)

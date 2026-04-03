@@ -8,7 +8,7 @@ from flask import Flask
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from api.routes import work_journey as work_journey_route
-from services.work_journey_helpers import clamp_period, rule_matches_date
+from services.work_journey_helpers import block_chronology_key, clamp_period, rule_matches_date
 
 
 class _FakeCompanyQuery:
@@ -65,6 +65,18 @@ def test_clamp_period_returns_expected_ranges():
     start, end = clamp_period('month', date(2026, 4, 8))
     assert start.isoformat() == '2026-04-01'
     assert end.isoformat() == '2026-04-30'
+
+
+def test_block_chronology_key_prioritizes_weekday_then_time():
+    blocks = [
+        SimpleNamespace(id=3, name='Treinamento', weekdays_json=[4], start_time=SimpleNamespace(hour=9, minute=0), end_time=SimpleNamespace(hour=12, minute=0)),
+        SimpleNamespace(id=1, name='Indicadores', weekdays_json=[0], start_time=SimpleNamespace(hour=8, minute=0), end_time=SimpleNamespace(hour=9, minute=0)),
+        SimpleNamespace(id=2, name='Processos', weekdays_json=[0], start_time=SimpleNamespace(hour=10, minute=0), end_time=SimpleNamespace(hour=11, minute=0)),
+    ]
+
+    ordered = sorted(blocks, key=block_chronology_key)
+
+    assert [block.id for block in ordered] == [1, 2, 3]
 
 
 
