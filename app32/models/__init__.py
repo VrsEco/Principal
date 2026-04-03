@@ -79,6 +79,13 @@ from .agent_action_backlog_link import AgentActionBacklogLink
 from .agent_menu import AgentMenuOption, AgentMenuSession
 from .workflow_gap import WorkflowGapCandidate
 from .workflow_usage import WorkflowExecutionLog
+from .work_journey import (
+    WorkJourneyBlock,
+    WorkJourneyRule,
+    WorkJourneyItem,
+    WorkJourneyAbsenceRequest,
+    WorkJourneyTransferRequest,
+)
 
 # Incentive Module (Specific structures)
 from .incentive import (
@@ -103,6 +110,7 @@ __all__ = [
     'UiCatalog', 'UserLog',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog',
+    'WorkJourneyBlock', 'WorkJourneyRule', 'WorkJourneyItem', 'WorkJourneyAbsenceRequest', 'WorkJourneyTransferRequest',
     'IncentiveRuleSet', 'IncentiveRule',
     'IncentiveGovernabilityMatrix', 'IncentiveCalculation',
     'IncentiveParticipant'
