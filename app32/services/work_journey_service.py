@@ -80,6 +80,32 @@ def list_employee_rules(company_id: int, employee_id: int) -> list[dict[str, Any
     return [rule.to_dict() for rule in rules]
 
 
+def list_manual_tasks(company_id: int, employee_id: int) -> dict[str, Any]:
+    ensure_employee(company_id, employee_id)
+    items = (
+        WorkJourneyItem.query.filter(
+            WorkJourneyItem.company_id == company_id,
+            WorkJourneyItem.employee_id == employee_id,
+            WorkJourneyItem.item_type == 'manual',
+            WorkJourneyItem.rule_id.is_(None),
+            WorkJourneyItem.source_id.is_(None),
+        )
+        .order_by(WorkJourneyItem.due_date.desc().nullslast(), WorkJourneyItem.updated_at.desc(), WorkJourneyItem.id.desc())
+        .all()
+    )
+    serialized = [serialize_item(item) for item in items]
+    return {
+        'items': serialized,
+        'summary': {
+            'total_count': len(serialized),
+            'completed_count': len([item for item in items if item.status == 'completed']),
+            'pending_count': len([item for item in items if item.status != 'completed']),
+            'planned_minutes': sum(int(item.estimated_minutes or 0) for item in items),
+            'worked_minutes': sum(int(item.worked_minutes or 0) for item in items),
+        },
+    }
+
+
 def save_rule(company_id: int, payload: dict[str, Any], rule_id: int | None = None) -> dict[str, Any]:
     employee = ensure_employee(company_id, payload['employee_id'])
     rule = (
@@ -338,6 +364,7 @@ def serialize_item(item: WorkJourneyItem) -> dict[str, Any]:
     payload['is_overdue'] = bool(item.due_date and item.due_date < date.today() and item.status != 'completed')
     payload['source_label'] = (item.metadata_json or {}).get('source_label')
     payload['source_url'] = (item.metadata_json or {}).get('source_url')
+    payload['block_name'] = item.block.name if getattr(item, 'block', None) else None
     return payload
 
 

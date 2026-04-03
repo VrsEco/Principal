@@ -87,6 +87,7 @@
         <div class="journey-tabs__header">
             <button class="journey-tab is-active" data-tab="agenda">Agenda</button>
             <button class="journey-tab" data-tab="blocks">Blocos</button>
+            <button class="journey-tab" data-tab="manual-tasks">Tarefas Avulsas</button>
             <button class="journey-tab" data-tab="absences">Ausências</button>
             <button class="journey-tab" data-tab="transfers">Transferências</button>
         </div>
@@ -325,6 +326,26 @@
                 <div id="journeyTransferList"></div>
             </div>
         </div>
+
+        <div class="journey-tabpanel" data-panel="manual-tasks">
+            <div class="journey-panel__header journey-panel__header--tab">
+                <div>
+                    <h2 class="journey-section-title">Tarefas Avulsas</h2>
+                    <p class="journey-section-subtitle">Acompanhe todas as tarefas avulsas cadastradas para o colaborador, com histórico de execução e impacto na capacidade planejada/realizada.</p>
+                </div>
+                <button id="manualTaskTabStartBtn" class="btn btn-primary">➕ Nova tarefa avulsa</button>
+            </div>
+            <div class="journey-list-card">
+                <div class="journey-list-card__header">
+                    <div>
+                        <h3>Cadastro consolidado</h3>
+                        <p>As tarefas avulsas abaixo entram na capacidade operacional do colaborador conforme sua data e esforço realizado.</p>
+                    </div>
+                    <div id="manualTasksSummary" class="journey-badges"></div>
+                </div>
+                <div id="journeyManualTasksList"></div>
+            </div>
+        </div>
     </section>
 </div>
 
@@ -340,4 +361,5 @@
 <script src="{{ url_for('static', filename='js/work-journey-utils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-routines.js') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey-manual-tasks.js') }}"></script>
 {% endblock %}

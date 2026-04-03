@@ -37,6 +37,7 @@ from services.work_journey_service import (
     delete_rule,
     get_work_journey_board,
     list_employee_blocks,
+    list_manual_tasks,
     list_employee_rules,
     save_block,
     save_rule,
@@ -98,6 +99,11 @@ def register_work_journey_tools(mcp) -> None:
         """Atualiza status, bloco ou esforço real de uma tarefa da jornada."""
         data = WorkJourneyItemUpdateSchema.model_validate(payload).model_dump(exclude_unset=True)
         return {'item': _run(update_work_item, company_id, item_id, data)}
+
+    @mcp.tool()
+    def list_work_journey_manual_tasks_tool(company_id: int, employee_id: int) -> dict:
+        """Lista todas as tarefas avulsas cadastradas para um colaborador na jornada operacional."""
+        return {'data': _run(list_manual_tasks, company_id, employee_id)}
 
     @mcp.tool()
     def create_work_journey_manual_task_tool(company_id: int, payload: dict) -> dict:
