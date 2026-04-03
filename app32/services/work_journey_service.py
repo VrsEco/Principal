@@ -5,7 +5,14 @@ from typing import Any
 
 from models import db, Employee, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
 from services.work_journey_base import WorkJourneyError, ensure_employee
-from services.work_journey_helpers import ITEM_TYPE_LABELS, PRIORITY_ORDER, STATUS_LABELS, clamp_period, duration_minutes
+from services.work_journey_helpers import (
+    ITEM_TYPE_LABELS,
+    PRIORITY_ORDER,
+    STATUS_LABELS,
+    block_chronology_key,
+    clamp_period,
+    duration_minutes,
+)
 from services.work_journey_sync import (
     load_period_items,
     propagate_item_status,
@@ -18,11 +25,8 @@ from services.work_journey_sync import (
 
 def list_employee_blocks(company_id: int, employee_id: int) -> list[dict[str, Any]]:
     ensure_employee(company_id, employee_id)
-    blocks = (
-        WorkJourneyBlock.query.filter_by(company_id=company_id, employee_id=employee_id)
-        .order_by(WorkJourneyBlock.order_index.asc(), WorkJourneyBlock.start_time.asc(), WorkJourneyBlock.id.asc())
-        .all()
-    )
+    blocks = WorkJourneyBlock.query.filter_by(company_id=company_id, employee_id=employee_id).all()
+    blocks = sorted(blocks, key=block_chronology_key)
     return [block.to_dict() for block in blocks]
 
 
@@ -121,11 +125,8 @@ def get_work_journey_board(company_id: int, employee_id: int, anchor: date, scop
     period_start, period_end = clamp_period(scope, anchor)
     sync_work_journey_items(company_id, employee_id, period_start, period_end)
 
-    blocks = (
-        WorkJourneyBlock.query.filter_by(company_id=company_id, employee_id=employee_id, is_active=True)
-        .order_by(WorkJourneyBlock.order_index.asc(), WorkJourneyBlock.start_time.asc(), WorkJourneyBlock.id.asc())
-        .all()
-    )
+    blocks = WorkJourneyBlock.query.filter_by(company_id=company_id, employee_id=employee_id, is_active=True).all()
+    blocks = sorted(blocks, key=block_chronology_key)
     weekday = anchor.weekday()
     active_blocks = [block for block in blocks if weekday in (block.weekdays_json or [])]
 
