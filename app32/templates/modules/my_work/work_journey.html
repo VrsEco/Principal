@@ -1,0 +1,268 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Jornada por Blocos | Versus{% endblock %}
+
+{% block workspace_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey.css') }}">
+
+<div class="journey-page" data-company-id="{{ company.id }}" data-selected-employee-id="{{ selected_employee_id or '' }}" data-can-manage-all="{{ can_manage_all|tojson }}" data-today="{{ today }}">
+    <div class="workspace-header journey-header">
+        <div>
+            <h1 class="text-h1">🧭 Jornada Operacional por Blocos</h1>
+            <p class="text-secondary">Estruture horários do colaborador, aloque obrigações recorrentes e acompanhe a capacidade operacional.</p>
+        </div>
+        <div class="journey-header__actions">
+            <a class="btn btn-secondary" href="{{ url_for('my_work.my_work') }}">← Meu Trabalho</a>
+        </div>
+    </div>
+
+    <section class="surface-card journey-toolbar">
+        <div class="journey-toolbar__grid">
+            <div class="form-group">
+                <label class="form-label">Colaborador</label>
+                <select id="journeyEmployeeSelect" class="form-select-custom">
+                    {% for employee in employees %}
+                    <option value="{{ employee.id }}" {{ 'selected' if selected_employee_id == employee.id else '' }}>{{ employee.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data âncora</label>
+                <input id="journeyDateInput" type="date" class="form-control" value="{{ today }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Escopo</label>
+                <select id="journeyScopeSelect" class="form-select-custom">
+                    <option value="day">Dia</option>
+                    <option value="week">Semana</option>
+                    <option value="month">Mês</option>
+                </select>
+            </div>
+            <div class="journey-toolbar__buttons">
+                <button id="journeyRefreshBtn" class="btn btn-primary">Atualizar visão</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="journey-summary" id="journeySummaryCards"></section>
+
+    <section class="surface-card journey-tabs">
+        <div class="journey-tabs__header">
+            <button class="journey-tab is-active" data-tab="agenda">Agenda</button>
+            <button class="journey-tab" data-tab="blocks">Blocos</button>
+            <button class="journey-tab" data-tab="rules">Obrigações</button>
+            <button class="journey-tab" data-tab="absences">Ausências</button>
+            <button class="journey-tab" data-tab="transfers">Transferências</button>
+        </div>
+
+        <div class="journey-tabpanel is-active" data-panel="agenda">
+            <div class="journey-board">
+                <div class="journey-board__main">
+                    <div id="journeyBlocksContainer" class="journey-blocks"></div>
+                </div>
+                <aside class="journey-board__aside">
+                    <div class="journey-sidecard">
+                        <div class="journey-sidecard__header">
+                            <h3>Não alocadas</h3>
+                            <span id="journeyUnassignedCount" class="badge-pill">0</span>
+                        </div>
+                        <div id="journeyUnassignedContainer" class="journey-sidecard__content"></div>
+                    </div>
+                    <div class="journey-sidecard">
+                        <div class="journey-sidecard__header">
+                            <h3>Período</h3>
+                        </div>
+                        <div id="journeyPeriodContainer" class="journey-sidecard__content"></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+        <div class="journey-tabpanel" data-panel="blocks">
+            <div class="journey-management-grid">
+                <form id="journeyBlockForm" class="surface-secondary journey-form-card">
+                    <input type="hidden" id="blockIdInput">
+                    <h3>Configurar bloco</h3>
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <input id="blockNameInput" class="form-control" required>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Início</label>
+                            <input id="blockStartInput" type="time" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fim</label>
+                            <input id="blockEndInput" type="time" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea id="blockDescriptionInput" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Dias da semana</label>
+                        <div class="journey-checkbox-grid" id="blockWeekdaysGroup"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipos aceitos</label>
+                        <div class="journey-checkbox-grid" id="blockTypesGroup"></div>
+                    </div>
+                    <div class="journey-form-actions">
+                        <button type="button" class="btn btn-secondary" id="blockCancelBtn">Limpar</button>
+                        <button type="submit" class="btn btn-primary">Salvar bloco</button>
+                    </div>
+                </form>
+                <div class="journey-list-card">
+                    <div class="journey-list-card__header">
+                        <h3>Blocos cadastrados</h3>
+                    </div>
+                    <div id="journeyBlocksList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="journey-tabpanel" data-panel="rules">
+            <div class="journey-management-grid">
+                <form id="journeyRuleForm" class="surface-secondary journey-form-card">
+                    <input type="hidden" id="ruleIdInput">
+                    <h3>Nova obrigação recorrente</h3>
+                    <div class="form-group">
+                        <label class="form-label">Título</label>
+                        <input id="ruleTitleInput" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea id="ruleDescriptionInput" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Tipo</label>
+                            <select id="ruleItemTypeInput" class="form-select-custom">
+                                <option value="manual">Manual</option>
+                                <option value="process_instance">Instância de processo</option>
+                                <option value="project_task">Atividade de projeto</option>
+                                <option value="meeting">Reunião</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Recorrência</label>
+                            <select id="ruleRecurrenceInput" class="form-select-custom">
+                                <option value="daily">Diária</option>
+                                <option value="weekly">Semanal</option>
+                                <option value="monthly">Mensal</option>
+                                <option value="annual">Anual</option>
+                                <option value="sporadic">Esporádica</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Minutos previstos</label>
+                            <input id="ruleMinutesInput" type="number" min="5" max="720" class="form-control" value="60">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prioridade</label>
+                            <select id="rulePriorityInput" class="form-select-custom">
+                                <option value="low">Baixa</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">Alta</option>
+                                <option value="urgent">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Data inicial</label>
+                            <input id="ruleStartDateInput" type="date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data final</label>
+                            <input id="ruleEndDateInput" type="date" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bloco preferencial</label>
+                        <select id="ruleBlockInput" class="form-select-custom"><option value="">Sem preferência</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Configuração da recorrência</label>
+                        <div id="ruleConfigContainer"></div>
+                    </div>
+                    <div class="journey-form-actions">
+                        <button type="button" class="btn btn-secondary" id="ruleCancelBtn">Limpar</button>
+                        <button type="submit" class="btn btn-primary">Salvar obrigação</button>
+                    </div>
+                </form>
+                <div class="journey-list-card">
+                    <div class="journey-list-card__header">
+                        <h3>Obrigações cadastradas</h3>
+                    </div>
+                    <div id="journeyRulesList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="journey-tabpanel" data-panel="absences">
+            <div class="journey-management-grid">
+                <form id="journeyAbsenceForm" class="surface-secondary journey-form-card">
+                    <h3>Solicitar ausência</h3>
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select id="absenceTypeInput" class="form-select-custom">
+                            <option value="vacation">Férias</option>
+                            <option value="absence">Ausência</option>
+                            <option value="medical_leave">Licença médica</option>
+                        </select>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Início</label>
+                            <input id="absenceStartInput" type="date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fim</label>
+                            <input id="absenceEndInput" type="date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Motivo</label>
+                        <textarea id="absenceReasonInput" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="journey-form-actions">
+                        <button type="submit" class="btn btn-primary">Solicitar</button>
+                    </div>
+                </form>
+                <div class="journey-list-card">
+                    <div class="journey-list-card__header">
+                        <h3>Solicitações</h3>
+                    </div>
+                    <div id="journeyAbsenceList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="journey-tabpanel" data-panel="transfers">
+            <div class="journey-list-card">
+                <div class="journey-list-card__header">
+                    <h3>Solicitações de transferência</h3>
+                </div>
+                <div id="journeyTransferList"></div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    window.workJourneyBootstrap = {
+        companyId: {{ company.id }},
+        selectedEmployeeId: {{ selected_employee_id or 'null' }},
+        canManageAll: {{ can_manage_all|tojson }},
+        today: '{{ today }}',
+        employees: {{ employees_payload|tojson }},
+    };
+</script>
+<script src="{{ url_for('static', filename='js/work-journey-utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey.js') }}"></script>
+{% endblock %}

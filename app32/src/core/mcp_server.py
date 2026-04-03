@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from src.intelligence.tools import consult_rules, query_database, get_my_work
 
 from src.intelligence.tools import tools as system_tools
+from src.core.mcp_work_journey_tools import register_work_journey_tools
 
 # Tenta importar MCP
 try:
@@ -43,6 +44,7 @@ def run_mcp_server():
                 return mcp_tool_wrapper
             make_wrapper(tool)
 
+    register_work_journey_tools(mcp)
 
     # Ferramentas Adicionais de Diagnóstico de Sistema
     @mcp.tool()
