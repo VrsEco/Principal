@@ -163,53 +163,93 @@
 
         <!-- Aba: Executores -->
         <div id="tab-collaborators" class="tab-content">
-            <div id="collaboratorFormCard" class="surface-secondary p-4 rounded-3 mb-4"
-                style="display: none; border: 1px dashed var(--border);">
-                <h4 class="text-h4 mb-3">Adicionar Executor</h4>
+            <div class="executors-overview">
+                <article class="surface-secondary executors-summary-card">
+                    <div class="executors-summary-header">
+                        <div>
+                            <p class="executors-eyebrow">Distribuição de execução</p>
+                            <h3 class="text-h3">Equipe executora da rotina</h3>
+                            <p class="text-secondary">Gerencie capacidade, dedicação e alocação dos executores sem sair do padrão do APP32.</p>
+                        </div>
+                        <button class="btn btn-primary" type="button" onclick="openAddCollaboratorForm()">
+                            ➕ Adicionar executor
+                        </button>
+                    </div>
+                    <div class="executors-metrics-grid">
+                        <div class="executor-metric-card">
+                            <span class="executor-metric-label">Executores</span>
+                            <strong class="executor-metric-value" id="collaboratorCount">0</strong>
+                            <span class="executor-metric-hint">Colaboradores vinculados</span>
+                        </div>
+                        <div class="executor-metric-card">
+                            <span class="executor-metric-label">Dedicação total</span>
+                            <strong class="executor-metric-value" id="collaboratorsHours">0h</strong>
+                            <span class="executor-metric-hint">Carga somada da rotina</span>
+                        </div>
+                        <div class="executor-metric-card">
+                            <span class="executor-metric-label">Processo</span>
+                            <strong class="executor-metric-value executor-metric-value--sm" id="routineProcessName">{{ (routine.process_code ~ ' - ' ~ routine.process_name) if routine.process_name else 'Não vinculado' }}</strong>
+                            <span class="executor-metric-hint">Contexto operacional</span>
+                        </div>
+                        <div class="executor-metric-card">
+                            <span class="executor-metric-label">Agendamento</span>
+                            <strong class="executor-metric-value executor-metric-value--sm" id="routineScheduleSummary">Aguardando dados</strong>
+                            <span class="executor-metric-hint">Cadência atual da rotina</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <div id="collaboratorFormCard" class="surface-card executor-form-card" style="display: none;">
+                <div class="executor-form-header">
+                    <div>
+                        <h4 class="text-h4" id="collaboratorFormTitle">Adicionar executor</h4>
+                        <p class="text-secondary" id="collaboratorFormDescription">Escolha um colaborador ativo da empresa e defina a dedicação prevista para esta rotina.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="cancelCollaboratorForm()">Recolher</button>
+                </div>
                 <form id="collaboratorForm">
-                    <input type="hidden" id="collaboratorId" name="collaborator_id">
+                    <input type="hidden" id="collaboratorId">
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">Colaborador *</label>
-                            <select name="employee_id" id="collaboratorEmployeeId" class="form-select"
-                                required></select>
+                            <select name="employee_id" id="collaboratorEmployeeId" class="form-select-custom" required></select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Horas/Dedicação *</label>
-                            <input type="number" name="hours_used" id="hoursUsed" class="form-control" step="0.5"
-                                min="0.5" required>
+                            <input type="number" name="hours_used" id="hoursUsed" class="form-control" step="0.5" min="0.5" required>
                         </div>
                     </div>
-                    <div class="form-group mt-3">
+                    <div class="form-group" style="margin-top: 1rem;">
                         <label class="form-label">Notas</label>
-                        <textarea name="notes" id="collaboratorNotes" class="form-control" rows="2"></textarea>
+                        <textarea name="notes" id="collaboratorNotes" class="form-control" rows="3" placeholder="Contexto adicional, observações operacionais ou particularidades da alocação."></textarea>
                     </div>
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                        <button type="button" class="btn btn-secondary btn-sm"
-                            onclick="cancelCollaboratorForm()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Salvar Executor</button>
+                    <div class="executor-form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="cancelCollaboratorForm()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="collaboratorSubmitButton">Salvar executor</button>
                     </div>
                 </form>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="text-h3">Equipe Executora</h3>
-                <button class="btn btn-primary btn-sm" onclick="openAddCollaboratorForm()">➕ Adicionar</button>
-            </div>
+            <section class="surface-card executors-list-shell">
+                <div class="executors-toolbar">
+                    <div>
+                        <p class="executors-eyebrow">Equipe atual</p>
+                        <h3 class="text-h3">Executores vinculados</h3>
+                        <p class="text-secondary">Visualize rapidamente dedicação, contato e observações de cada executor.</p>
+                    </div>
+                    <div class="executors-toolbar-badge" id="collaboratorsStatusBadge">0 ativos</div>
+                </div>
 
-            <table class="routines-table">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Dedicação</th>
-                        <th>Notas</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="collaboratorsTableBody">
-                    <!-- JS -->
-                </tbody>
-            </table>
+                <div id="collaboratorsList" class="executors-list"></div>
+
+                <div id="collaboratorsEmptyState" class="empty-state enhanced" style="display: none;">
+                    <div class="empty-state-icon">👥</div>
+                    <h4>Nenhum executor vinculado</h4>
+                    <p>Adicione colaboradores para distribuir a execução da rotina e melhorar a clareza operacional.</p>
+                    <button type="button" class="btn btn-primary" onclick="openAddCollaboratorForm()">Adicionar primeiro executor</button>
+                </div>
+            </section>
         </div>
     </div>
 </div>
@@ -396,12 +436,278 @@
     .form-control-compact[type=number] {
         -moz-appearance: textfield;
     }
+
+    .executors-overview,
+    .executors-list-shell {
+        margin-bottom: 1.5rem;
+    }
+
+    .executors-summary-card,
+    .executors-list-shell,
+    .executor-form-card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: var(--shadow-sm);
+        padding: 1.5rem;
+    }
+
+    .executors-summary-header,
+    .executor-form-header,
+    .executors-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .executors-eyebrow {
+        margin: 0 0 0.35rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .executors-summary-header .text-secondary,
+    .executors-toolbar .text-secondary,
+    .executor-form-header .text-secondary {
+        margin: 0.5rem 0 0;
+        max-width: 700px;
+    }
+
+    .executors-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .executor-metric-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        min-height: 120px;
+    }
+
+    .executor-metric-label,
+    .executor-metric-hint,
+    .executors-toolbar-badge,
+    .executor-card-email,
+    .executor-card-notes-label {
+        color: var(--text-secondary);
+    }
+
+    .executor-metric-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .executor-metric-value {
+        font-size: 1.8rem;
+        line-height: 1.1;
+        color: var(--text-primary);
+    }
+
+    .executor-metric-value--sm {
+        font-size: 1rem;
+        line-height: 1.4;
+    }
+
+    .executor-metric-hint {
+        font-size: 0.85rem;
+    }
+
+    .executors-toolbar {
+        margin-bottom: 1.25rem;
+    }
+
+    .executors-toolbar-badge {
+        padding: 0.6rem 0.9rem;
+        border-radius: 999px;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        font-size: 0.9rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .executor-form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+    }
+
+    .executors-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .executor-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface);
+        padding: 1.15rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .executor-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .executor-card-header,
+    .executor-card-meta,
+    .executor-card-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .executor-card-person {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        min-width: 0;
+    }
+
+    .executor-card-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .executor-card-name {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--text-primary);
+    }
+
+    .executor-card-email {
+        display: block;
+        font-size: 0.85rem;
+        margin-top: 0.2rem;
+        overflow-wrap: anywhere;
+    }
+
+    .executor-card-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: var(--primary-light);
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .executor-card-notes {
+        padding: 0.9rem 1rem;
+        border-radius: 12px;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+    }
+
+    .executor-card-notes-label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+    }
+
+    .executor-card-notes p {
+        margin: 0;
+        color: var(--text-primary);
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+    .executor-action-button {
+        border: 1px solid var(--border);
+        background: var(--surface-secondary);
+        color: var(--text-primary);
+        border-radius: 10px;
+        padding: 0.55rem 0.8rem;
+        cursor: pointer;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+
+    .executor-action-button:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .executor-action-button.danger:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+    }
+
+    @media (max-width: 992px) {
+        .executors-metrics-grid,
+        .executors-list {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .executors-metrics-grid,
+        .executors-list {
+            grid-template-columns: 1fr;
+        }
+
+        .executors-summary-card,
+        .executors-list-shell,
+        .executor-form-card,
+        .tab-content {
+            padding: 1.1rem;
+        }
+
+        .executor-card-header,
+        .executor-card-meta,
+        .executor-form-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
 </style>
 
 <script>
     const companyId = parseInt('{{ company.id if company else 0 }}') || null;
     const routineId = parseInt('{{ routine.id or "" }}') || null;
     const isNew = {{ 'true' if is_new else 'false' }};
+    const routineMeta = {
+        processCode: {{ (routine.process_code or '')|tojson }},
+        processName: {{ (routine.process_name or '')|tojson }},
+        scheduleType: {{ (routine.schedule_type or '')|tojson }},
+        scheduleValue: {{ (routine.schedule_value or '')|tojson }},
+        startTime: {{ (routine.start_time or '00:01')|tojson }}
+    };
 
     function switchTab(t) {
         console.log('Switching to tab:', t);
@@ -430,6 +736,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const activeTab = urlParams.get('tab');
+        updateCollaboratorsSummary();
         if (activeTab && (activeTab === 'routine' || (activeTab === 'collaborators' && !isNew))) {
             switchTab(activeTab);
         }
@@ -538,28 +845,108 @@
 
     let collaboratorsState = [];
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getInitials(name) {
+        const normalized = String(name || '').trim();
+        if (!normalized) return 'EX';
+        return normalized
+            .split(/\s+/)
+            .slice(0, 2)
+            .map(part => part[0]?.toUpperCase() || '')
+            .join('');
+    }
+
+    function formatHours(value) {
+        const numeric = Number(value || 0);
+        if (!Number.isFinite(numeric)) return '0h';
+        return `${numeric % 1 === 0 ? numeric.toFixed(0) : numeric.toFixed(1)}h`;
+    }
+
+    function formatScheduleSummary(meta = routineMeta) {
+        const type = meta.scheduleType || 'manual';
+        const value = meta.scheduleValue || '';
+        const start = meta.startTime || '00:01';
+        const scheduleLabels = {
+            daily: 'Diário',
+            weekly: 'Semanal',
+            monthly: 'Mensal',
+            quarterly: 'Trimestral',
+            yearly: 'Anual',
+            specific: 'Data específica'
+        };
+        if (type === 'weekly' && value) return `${value.split(',').join(', ')} • ${start}`;
+        if (type === 'daily') return `${scheduleLabels[type]} • ${start}`;
+        if (type === 'monthly' && value) return `Dia ${value} • ${start}`;
+        if (type === 'quarterly' && value) return `${value} • ${start}`;
+        if (type === 'yearly' && value) return `${value} • ${start}`;
+        if (type === 'specific' && value) return `${value} • ${start}`;
+        return `${scheduleLabels[type] || 'Manual'} • ${start}`;
+    }
+
+    function updateCollaboratorsSummary() {
+        const total = collaboratorsState.length;
+        const totalHours = collaboratorsState.reduce((sum, item) => sum + Number(item.hours_used || 0), 0);
+        document.getElementById('collaboratorCount').textContent = String(total);
+        document.getElementById('collaboratorsHours').textContent = formatHours(totalHours);
+        document.getElementById('routineScheduleSummary').textContent = formatScheduleSummary();
+        document.getElementById('collaboratorsStatusBadge').textContent = `${total} ativo${total === 1 ? '' : 's'}`;
+    }
+
+    function renderCollaborators() {
+        const list = document.getElementById('collaboratorsList');
+        const emptyState = document.getElementById('collaboratorsEmptyState');
+        updateCollaboratorsSummary();
+
+        if (!collaboratorsState.length) {
+            list.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        list.innerHTML = collaboratorsState.map(c => `
+            <article class="executor-card">
+                <div class="executor-card-header">
+                    <div class="executor-card-person">
+                        <div class="executor-card-avatar">${escapeHtml(getInitials(c.employee_name))}</div>
+                        <div>
+                            <h4 class="executor-card-name">${escapeHtml(c.employee_name || 'Executor')}</h4>
+                            <span class="executor-card-email">${escapeHtml(c.employee_email || 'Sem e-mail cadastrado')}</span>
+                        </div>
+                    </div>
+                    <span class="executor-card-badge">${escapeHtml(formatHours(c.hours_used))}</span>
+                </div>
+                <div class="executor-card-notes">
+                    <span class="executor-card-notes-label">Notas operacionais</span>
+                    <p>${escapeHtml(c.notes || 'Sem observações registradas.')}</p>
+                </div>
+                <div class="executor-card-actions">
+                    <button type="button" class="executor-action-button" onclick="editCollaboratorById(${c.id})">✏️ Editar</button>
+                    <button type="button" class="executor-action-button danger" onclick="deleteCollaborator(${c.id})">🗑️ Remover</button>
+                </div>
+            </article>
+        `).join('');
+    }
+
     async function loadCollaborators() {
         if (!routineId) return;
         const res = await fetch(`/api/routines/${routineId}/collaborators`);
         const result = await res.json();
-        const tbody = document.getElementById('collaboratorsTableBody');
-
         if (result.success) {
             collaboratorsState = result.collaborators || [];
-            tbody.innerHTML = collaboratorsState.map(c => `
-                <tr>
-                    <td>
-                        <div class="fw-bold">${c.employee_name}</div>
-                        <div class="text-tertiary small">${c.employee_email}</div>
-                    </td>
-                    <td><span class="badge bg-light text-dark border">${c.hours_used}h</span></td>
-                    <td><div class="text-tertiary small">${c.notes || '-'}</div></td>
-                    <td>
-                        <button class="btn btn-link btn-sm" onclick="editCollaboratorById(${c.id})">✏️</button>
-                        <button class="btn btn-link btn-sm text-danger" onclick="deleteCollaborator(${c.id})">🗑️</button>
-                    </td>
-                </tr>
-            `).join('');
+            renderCollaborators();
+        } else {
+            collaboratorsState = [];
+            renderCollaborators();
+            alert(result.message || 'Erro ao carregar executores.');
         }
     }
 
@@ -568,16 +955,27 @@
         if (c) editCollaborator(c);
     }
 
-    function openAddCollaboratorForm() {
+    async function openAddCollaboratorForm() {
         document.getElementById('collaboratorFormCard').style.display = 'block';
-        loadEmployees();
+        document.getElementById('collaboratorFormTitle').textContent = 'Adicionar executor';
+        document.getElementById('collaboratorFormDescription').textContent = 'Escolha um colaborador ativo da empresa e defina a dedicação prevista para esta rotina.';
+        document.getElementById('collaboratorSubmitButton').textContent = 'Salvar executor';
+        document.getElementById('collaboratorId').value = '';
+        document.getElementById('collaboratorForm').reset();
+        await loadEmployees();
     }
 
-    async function loadEmployees() {
+    async function loadEmployees(selectedEmployeeId = '') {
         const res = await fetch(`/api/companies/${companyId}/employees`);
         const result = await res.json();
         const select = document.getElementById('collaboratorEmployeeId');
-        select.innerHTML = result.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+        const employees = result.employees || [];
+        select.innerHTML = [`<option value="">Selecione um colaborador...</option>`]
+            .concat(employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`))
+            .join('');
+        if (selectedEmployeeId) {
+            select.value = String(selectedEmployeeId);
+        }
     }
 
     document.getElementById('collaboratorForm').addEventListener('submit', async function (e) {
@@ -592,29 +990,41 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if ((await res.json()).success) {
+        const result = await res.json();
+        if (result.success) {
             cancelCollaboratorForm();
             loadCollaborators();
+        } else {
+            alert(result.message || 'Não foi possível salvar o executor.');
         }
     });
 
     function cancelCollaboratorForm() {
         document.getElementById('collaboratorFormCard').style.display = 'none';
         document.getElementById('collaboratorForm').reset();
+        document.getElementById('collaboratorId').value = '';
     }
 
-    function editCollaborator(c) {
-        openAddCollaboratorForm();
+    async function editCollaborator(c) {
+        document.getElementById('collaboratorFormCard').style.display = 'block';
+        document.getElementById('collaboratorFormTitle').textContent = 'Editar executor';
+        document.getElementById('collaboratorFormDescription').textContent = 'Ajuste dedicação, notas ou substitua o colaborador vinculado à rotina.';
+        document.getElementById('collaboratorSubmitButton').textContent = 'Atualizar executor';
         document.getElementById('collaboratorId').value = c.id;
-        document.getElementById('collaboratorEmployeeId').value = c.employee_id;
         document.getElementById('hoursUsed').value = c.hours_used;
-        document.getElementById('collaboratorNotes').value = c.notes;
+        document.getElementById('collaboratorNotes').value = c.notes || '';
+        await loadEmployees(c.employee_id);
     }
 
     async function deleteCollaborator(id) {
         if (!confirm('Remover executor?')) return;
-        await fetch(`/api/routines/${routineId}/collaborators/${id}`, { method: 'DELETE' });
-        loadCollaborators();
+        const res = await fetch(`/api/routines/${routineId}/collaborators/${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        if (result.success) {
+            loadCollaborators();
+        } else {
+            alert(result.message || 'Não foi possível remover o executor.');
+        }
     }
 </script>
 {% endblock %}

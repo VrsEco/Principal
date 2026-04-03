@@ -5,6 +5,7 @@ PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o s
 
 from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort, flash
 from flask_login import current_user
+from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
@@ -45,6 +46,57 @@ def _get_current_company_employee(company_id: int):
     if not current_user.is_authenticated or not company_id:
         return None
     return Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+
+
+def _fetch_routine_scope(cursor, routine_id: int):
+    cursor.execute(
+        """
+        SELECT
+            r.id,
+            r.company_id,
+            r.process_id,
+            r.name,
+            r.schedule_type,
+            r.schedule_value,
+            r.start_time
+        FROM routines r
+        WHERE r.id = %s
+          AND (r.is_active = TRUE OR r.is_active IS NULL)
+        """,
+        (routine_id,),
+    )
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+
+def _validate_routine_collaborator_payload(data: dict):
+    if not isinstance(data, dict):
+        return None, "Payload inválido."
+
+    allowed_fields = {"employee_id", "hours_used", "notes"}
+    unknown_fields = sorted(set(data.keys()) - allowed_fields)
+    if unknown_fields:
+        return None, f"Campos não permitidos: {', '.join(unknown_fields)}"
+
+    try:
+        employee_id = int(data.get("employee_id"))
+    except (TypeError, ValueError):
+        return None, "Selecione um colaborador válido."
+
+    try:
+        hours_used = float(data.get("hours_used"))
+    except (TypeError, ValueError):
+        return None, "Informe uma dedicação válida."
+
+    if hours_used <= 0:
+        return None, "A dedicação deve ser maior que zero."
+
+    notes = _coerce_optional_text(data.get("notes")) or ""
+    return {
+        "employee_id": employee_id,
+        "hours_used": hours_used,
+        "notes": notes,
+    }, None
 
 
 def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
@@ -632,21 +684,35 @@ def api_get_routine_collaborators(routine_id):
         conn = pg._get_connection()
         cursor = conn.cursor()
 
+        routine = _fetch_routine_scope(cursor, routine_id)
+        if not routine:
+            conn.close()
+            return jsonify({"success": False, "message": "Rotina não encontrada."}), 404
+        if not has_permission(routine["company_id"], 'processes', 'view'):
+            conn.close()
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+        session['active_company_id'] = routine["company_id"]
+
         cursor.execute(
             """
             SELECT rc.*, e.name as employee_name, e.email as employee_email
             FROM routine_collaborators rc
             JOIN employees e ON rc.employee_id = e.id
+            JOIN routines r ON r.id = rc.routine_id
             WHERE rc.routine_id = %s
+              AND r.company_id = %s
+              AND e.company_id = r.company_id
             ORDER BY e.name
         """,
-            (routine_id,),
+            (routine_id, routine["company_id"]),
         )
 
         collaborators = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return jsonify({"success": True, "collaborators": collaborators})
 
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
@@ -660,6 +726,48 @@ def api_add_routine_collaborator(routine_id):
         conn = pg._get_connection()
         cursor = conn.cursor()
 
+        routine = _fetch_routine_scope(cursor, routine_id)
+        if not routine:
+            conn.close()
+            return jsonify({"success": False, "message": "Rotina não encontrada."}), 404
+        if not has_permission(routine["company_id"], 'processes', 'edit'):
+            conn.close()
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+
+        payload, error = _validate_routine_collaborator_payload(data)
+        if error:
+            conn.close()
+            return jsonify({"success": False, "message": error}), 400
+
+        cursor.execute(
+            """
+            SELECT 1
+            FROM employees
+            WHERE id = %s
+              AND company_id = %s
+              AND status = 'active'
+            """,
+            (payload["employee_id"], routine["company_id"]),
+        )
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"success": False, "message": "Colaborador inválido para esta empresa."}), 400
+
+        cursor.execute(
+            """
+            SELECT 1
+            FROM routine_collaborators
+            WHERE routine_id = %s
+              AND employee_id = %s
+            """,
+            (routine_id, payload["employee_id"]),
+        )
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({"success": False, "message": "Este colaborador já está vinculado à rotina."}), 409
+
+        session['active_company_id'] = routine["company_id"]
+
         cursor.execute(
             """
             INSERT INTO routine_collaborators (routine_id, employee_id, hours_used, notes)
@@ -668,9 +776,9 @@ def api_add_routine_collaborator(routine_id):
         """,
             (
                 routine_id,
-                data.get("employee_id"),
-                data.get("hours_used"),
-                data.get("notes", ""),
+                payload["employee_id"],
+                payload["hours_used"],
+                payload["notes"],
             ),
         )
 
@@ -679,6 +787,8 @@ def api_add_routine_collaborator(routine_id):
         conn.close()
         return jsonify({"success": True, "id": collaborator_id, "message": "Colaborador adicionado com sucesso"}), 201
 
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
@@ -692,6 +802,64 @@ def api_update_routine_collaborator(routine_id, collaborator_id):
         conn = pg._get_connection()
         cursor = conn.cursor()
 
+        routine = _fetch_routine_scope(cursor, routine_id)
+        if not routine:
+            conn.close()
+            return jsonify({"success": False, "message": "Rotina não encontrada."}), 404
+        if not has_permission(routine["company_id"], 'processes', 'edit'):
+            conn.close()
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+
+        payload, error = _validate_routine_collaborator_payload(data)
+        if error:
+            conn.close()
+            return jsonify({"success": False, "message": error}), 400
+
+        cursor.execute(
+            """
+            SELECT 1
+            FROM employees
+            WHERE id = %s
+              AND company_id = %s
+              AND status = 'active'
+            """,
+            (payload["employee_id"], routine["company_id"]),
+        )
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"success": False, "message": "Colaborador inválido para esta empresa."}), 400
+
+        cursor.execute(
+            """
+            SELECT 1
+            FROM routine_collaborators rc
+            JOIN routines r ON r.id = rc.routine_id
+            WHERE rc.id = %s
+              AND rc.routine_id = %s
+              AND r.company_id = %s
+            """,
+            (collaborator_id, routine_id, routine["company_id"]),
+        )
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"success": False, "message": "Executor não encontrado."}), 404
+
+        cursor.execute(
+            """
+            SELECT 1
+            FROM routine_collaborators
+            WHERE routine_id = %s
+              AND employee_id = %s
+              AND id <> %s
+            """,
+            (routine_id, payload["employee_id"], collaborator_id),
+        )
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({"success": False, "message": "Este colaborador já está vinculado à rotina."}), 409
+
+        session['active_company_id'] = routine["company_id"]
+
         cursor.execute(
             """
             UPDATE routine_collaborators
@@ -702,9 +870,9 @@ def api_update_routine_collaborator(routine_id, collaborator_id):
             WHERE id = %s AND routine_id = %s
         """,
             (
-                data.get("employee_id"),
-                data.get("hours_used"),
-                data.get("notes", ""),
+                payload["employee_id"],
+                payload["hours_used"],
+                payload["notes"],
                 collaborator_id,
                 routine_id,
             ),
@@ -714,6 +882,8 @@ def api_update_routine_collaborator(routine_id, collaborator_id):
         conn.close()
         return jsonify({"success": True, "message": "Colaborador atualizado com sucesso"})
 
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
@@ -726,15 +896,36 @@ def api_delete_routine_collaborator(routine_id, collaborator_id):
         conn = pg._get_connection()
         cursor = conn.cursor()
 
+        routine = _fetch_routine_scope(cursor, routine_id)
+        if not routine:
+            conn.close()
+            return jsonify({"success": False, "message": "Rotina não encontrada."}), 404
+        if not has_permission(routine["company_id"], 'processes', 'edit'):
+            conn.close()
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+        session['active_company_id'] = routine["company_id"]
+
         cursor.execute(
-            "DELETE FROM routine_collaborators WHERE id = %s AND routine_id = %s",
-            (collaborator_id, routine_id),
+            """
+            DELETE FROM routine_collaborators rc
+            USING routines r
+            WHERE rc.id = %s
+              AND rc.routine_id = %s
+              AND r.id = rc.routine_id
+              AND r.company_id = %s
+            """,
+            (collaborator_id, routine_id, routine["company_id"]),
         )
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({"success": False, "message": "Executor não encontrado."}), 404
 
         conn.commit()
         conn.close()
         return jsonify({"success": True, "message": "Colaborador removido com sucesso"})
 
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
