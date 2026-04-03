@@ -20,7 +20,7 @@ from .okr_area import OKRArea, KeyResultArea
 from .portfolio import Portfolio
 from .project import Project, ProjectTask, ProjectTaskDependency, ProjectActivityCollaborator
 from .process import ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator
-from .routine import Routine, RoutineCollaborator
+from .routine import Routine, RoutineCollaborator, RoutineJourneyBinding
 from .financial import (
     FinancialAccountCategory,
     FinancialAssetAccount,
@@ -101,7 +101,7 @@ __all__ = [
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator',
-    'Routine', 'RoutineCollaborator',
+    'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialClosing', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',
     'FinancialBudgetCycle', 'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',

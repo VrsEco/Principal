@@ -42,3 +42,37 @@ class RoutineCollaborator(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RoutineJourneyBinding(db.Model):
+    __tablename__ = 'routine_journey_bindings'
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'routine_id', 'employee_id', name='uq_routine_journey_binding'),
+        {'extend_existing': True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
+    routine_id = db.Column(db.Integer, db.ForeignKey('routines.id', ondelete='CASCADE'), nullable=False, index=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id', ondelete='CASCADE'), nullable=False, index=True)
+    block_id = db.Column(db.Integer, db.ForeignKey('work_journey_blocks.id', ondelete='SET NULL'), nullable=True, index=True)
+    notes = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    routine = db.relationship('Routine', backref=db.backref('journey_bindings', lazy='dynamic', cascade='all, delete-orphan'))
+    employee = db.relationship('Employee', foreign_keys=[employee_id])
+    block = db.relationship('WorkJourneyBlock', foreign_keys=[block_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'routine_id': self.routine_id,
+            'employee_id': self.employee_id,
+            'block_id': self.block_id,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }

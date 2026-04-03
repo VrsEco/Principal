@@ -17,6 +17,7 @@ from models import (
     WorkJourneyItem,
     WorkJourneyRule,
 )
+from services.routine_journey_binding_service import get_bound_block_id
 from services.work_journey_base import ACTIVE_ITEM_STATUSES, ensure_employee
 from services.work_journey_helpers import PRIORITY_ORDER, date_range, rule_matches_date
 
@@ -110,6 +111,7 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
             'source_url': f"/process-map/process/{instance.process_id}?tab=routines" if instance.process_id else None,
         }
         recurrence_type = getattr(instance.routine, 'schedule_type', None) if instance.routine else None
+        bound_block_id = get_bound_block_id(company_id, instance.routine_id, employee_id)
         upsert_source_item(
             company_id=company_id,
             employee_id=employee_id,
@@ -123,6 +125,7 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
             priority=str(instance.priority or 'normal'),
             status=normalize_source_status(instance.status),
             recurrence_type=recurrence_type,
+            bound_block_id=bound_block_id,
             metadata=metadata,
         )
 
@@ -210,6 +213,7 @@ def upsert_source_item(**kwargs) -> None:
     manual_assignment = bool((item.metadata_json or {}).get('manual_assignment')) or bool(kwargs['metadata'].get('manual_assignment'))
     if not manual_assignment:
         item.employee_id = kwargs['employee_id']
+    previous_binding_block_id = (item.metadata_json or {}).get('routine_binding_block_id')
     item.title = kwargs['title']
     item.description = kwargs['description']
     item.due_date = kwargs['due_date']
@@ -219,6 +223,14 @@ def upsert_source_item(**kwargs) -> None:
     item.status = kwargs['status']
     item.recurrence_type = kwargs['recurrence_type']
     item.metadata_json = dict(kwargs['metadata'] or {})
+    bound_block_id = kwargs.get('bound_block_id')
+    if not manual_assignment:
+        if item.block_id is None or item.block_id == previous_binding_block_id:
+            item.block_id = bound_block_id
+    if bound_block_id:
+        item.metadata_json['routine_binding_block_id'] = bound_block_id
+    else:
+        item.metadata_json.pop('routine_binding_block_id', None)
     if manual_assignment:
         item.metadata_json['manual_assignment'] = True
     item.last_synced_at = datetime.utcnow()

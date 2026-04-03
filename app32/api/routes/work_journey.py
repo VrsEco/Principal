@@ -18,6 +18,11 @@ from schemas.work_journey import (
     WorkJourneyTransferApprovalSchema,
     WorkJourneyTransferRequestCreateSchema,
 )
+from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
+from services.routine_journey_binding_service import (
+    list_employee_process_routines,
+    save_routine_binding,
+)
 from services.work_journey_admin_service import (
     approve_absence_request,
     approve_transfer_request,
@@ -165,6 +170,44 @@ def api_delete_rule(company_id: int, rule_id: int):
         delete_rule(company_id, rule_id)
         return jsonify({'success': True})
     except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/process-routines', methods=['GET'])
+@permission_required('processes', 'view')
+def api_list_process_routines_for_journey(company_id: int):
+    try:
+        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        if not employee_id or not _can_access_employee(company_id, employee_id):
+            return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
+        payload = list_employee_process_routines(company_id, employee_id)
+        return jsonify({'success': True, 'data': payload})
+    except ValueError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/process-routines/<int:routine_id>/binding', methods=['POST'])
+@permission_required('processes', 'view')
+def api_save_process_routine_binding(company_id: int, routine_id: int):
+    try:
+        payload = RoutineJourneyBindingUpsertSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        if not _can_manage_employee(company_id, payload['employee_id']):
+            return jsonify({'success': False, 'message': 'Você não pode editar o planejamento deste colaborador.'}), 403
+        binding = save_routine_binding(
+            company_id,
+            routine_id,
+            payload['employee_id'],
+            payload.get('block_id'),
+            payload.get('notes'),
+        )
+        return jsonify({'success': True, 'binding': binding})
+    except ValidationError as exc:
+        return jsonify({'success': False, 'message': exc.errors()}), 400
+    except ValueError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500

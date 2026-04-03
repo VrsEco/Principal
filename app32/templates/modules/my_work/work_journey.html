@@ -166,14 +166,25 @@
                         <button type="submit" class="btn btn-primary">Salvar bloco</button>
                     </div>
                 </form>
-                <div class="journey-list-card">
-                    <div class="journey-list-card__header">
-                        <div>
-                            <h3>Blocos cadastrados</h3>
-                            <p>Estrutura vigente para o colaborador selecionado.</p>
+                <div class="journey-stack">
+                    <div class="journey-list-card">
+                        <div class="journey-list-card__header">
+                            <div>
+                                <h3>Blocos cadastrados</h3>
+                                <p>Estrutura vigente para o colaborador selecionado.</p>
+                            </div>
                         </div>
+                        <div id="journeyBlocksList"></div>
                     </div>
-                    <div id="journeyBlocksList"></div>
+                    <div class="journey-list-card">
+                        <div class="journey-list-card__header">
+                            <div>
+                                <h3>Rotinas de processo do colaborador</h3>
+                                <p>Encaixe aqui as rotinas operacionais que irão gerar instâncias de processo.</p>
+                            </div>
+                        </div>
+                        <div id="journeyRoutineBindingsList"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -353,4 +364,5 @@
 </script>
 <script src="{{ url_for('static', filename='js/work-journey-utils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey.js') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey-routines.js') }}"></script>
 {% endblock %}

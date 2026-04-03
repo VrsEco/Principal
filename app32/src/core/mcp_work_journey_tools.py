@@ -15,6 +15,12 @@ from schemas.work_journey import (
     WorkJourneyTransferApprovalSchema,
     WorkJourneyTransferRequestCreateSchema,
 )
+from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
+from services.routine_journey_binding_service import (
+    list_employee_process_routines,
+    list_routine_bindings_context,
+    save_routine_binding,
+)
 from services.work_journey_admin_service import (
     approve_absence_request,
     approve_transfer_request,
@@ -126,6 +132,22 @@ def register_work_journey_tools(mcp) -> None:
     def list_work_journey_absences_tool(company_id: int, employee_id: Optional[int] = None) -> dict:
         """Lista solicitações de ausência da jornada operacional."""
         return {'absences': _run(list_absence_requests, company_id, employee_id)}
+
+    @mcp.tool()
+    def list_routine_journey_bindings_tool(company_id: int, routine_id: int) -> dict:
+        """Lista, por executor, os blocos elegíveis e o vínculo atual entre uma rotina e a jornada operacional."""
+        return {'data': _run(list_routine_bindings_context, company_id, routine_id)}
+
+    @mcp.tool()
+    def save_routine_journey_binding_tool(company_id: int, routine_id: int, payload: dict) -> dict:
+        """Cria, atualiza ou remove o vínculo entre rotina operacional, colaborador executor e bloco de jornada."""
+        data = RoutineJourneyBindingUpsertSchema.model_validate(payload).model_dump(exclude_unset=True)
+        return {'binding': _run(save_routine_binding, company_id, routine_id, data['employee_id'], data.get('block_id'), data.get('notes'))}
+
+    @mcp.tool()
+    def list_employee_process_routines_for_journey_tool(company_id: int, employee_id: int) -> dict:
+        """Lista as rotinas operacionais de processo que um colaborador precisa encaixar na jornada."""
+        return {'data': _run(list_employee_process_routines, company_id, employee_id)}
 
 
 WorkJourneyCreateSchema = WorkJourneyBlockCreateSchema

@@ -5,12 +5,14 @@ PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o s
 
 from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, session, redirect, url_for, abort, flash
 from flask_login import current_user
+from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
 from models import db, Company, Process, ProcessInstance, Employee, Indicator
+from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company
 
 processes_bp = Blueprint('processes', __name__)
@@ -927,6 +929,64 @@ def api_delete_routine_collaborator(routine_id, collaborator_id):
     except HTTPException:
         raise
     except Exception as e:
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@processes_bp.route('/api/routines/<int:routine_id>/journey-bindings', methods=['GET'])
+@permission_required('processes', 'view')
+def api_get_routine_journey_bindings(routine_id):
+    try:
+        from services.routine_journey_binding_service import list_routine_bindings_context
+
+        pg = get_db()
+        conn = pg._get_connection()
+        cursor = conn.cursor()
+        routine = _fetch_routine_scope(cursor, routine_id)
+        conn.close()
+        if not routine:
+            return jsonify({"success": False, "message": "Rotina não encontrada."}), 404
+        if not has_permission(routine["company_id"], 'processes', 'view'):
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+        session['active_company_id'] = routine["company_id"]
+        payload = list_routine_bindings_context(routine["company_id"], routine_id)
+        return jsonify({"success": True, "data": payload})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception:
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@processes_bp.route('/api/routines/<int:routine_id>/journey-bindings', methods=['POST'])
+@permission_required('processes', 'edit')
+def api_save_routine_journey_binding(routine_id):
+    try:
+        from services.routine_journey_binding_service import save_routine_binding
+
+        pg = get_db()
+        conn = pg._get_connection()
+        cursor = conn.cursor()
+        routine = _fetch_routine_scope(cursor, routine_id)
+        conn.close()
+        if not routine:
+            return jsonify({"success": False, "message": "Rotina não encontrada."}), 404
+        if not has_permission(routine["company_id"], 'processes', 'edit'):
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+        session['active_company_id'] = routine["company_id"]
+
+        payload = RoutineJourneyBindingUpsertSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        binding = save_routine_binding(
+            routine["company_id"],
+            routine_id,
+            payload["employee_id"],
+            payload.get("block_id"),
+            payload.get("notes"),
+        )
+        return jsonify({"success": True, "binding": binding})
+    except ValidationError as exc:
+        return jsonify({"success": False, "message": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 
