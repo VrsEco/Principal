@@ -17,6 +17,8 @@ def _build_app():
     projects_bp = Blueprint("projects", __name__)
     portfolios_bp = Blueprint("portfolios", __name__)
     meetings_bp = Blueprint("meetings", __name__)
+    work_journey_bp = Blueprint("work_journey", __name__)
+    main_bp = Blueprint("main", __name__)
 
     @processes_bp.route("/process-map")
     def process_map():
@@ -38,6 +40,10 @@ def _build_app():
     def process_occurrences_redirect():
         return "ok"
 
+    @processes_bp.route("/companies/<int:company_id>/process-routines/analysis")
+    def process_routines_analysis_page(company_id):
+        return "ok"
+
     @projects_bp.route("/projects")
     def projects_list():
         return "ok"
@@ -54,10 +60,20 @@ def _build_app():
     def meetings_manage_root():
         return "ok"
 
+    @work_journey_bp.route("/work-journey")
+    def work_journey_redirect():
+        return "ok"
+
+    @main_bp.route("/efficiency-analysis")
+    def efficiency_analysis():
+        return "ok"
+
     app.register_blueprint(processes_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(portfolios_bp)
     app.register_blueprint(meetings_bp, url_prefix="/meetings")
+    app.register_blueprint(work_journey_bp)
+    app.register_blueprint(main_bp)
     return app
 
 
@@ -83,8 +99,10 @@ def test_routine_menu_structure_matches_sidebar_tree():
     assert "Análise de Projetos" in html
     assert "Gestão de Reuniões" in html
     assert "Gestão de Ocorrências" in html
-    assert "Análise da Rotina" not in html
-    assert "Análise de Eficiência" not in html
+    assert "Jornada dos Colaboradores" in html
+    assert "Jornada do Colaborador" in html
+    assert "Análise das Jornadas" in html
+    assert "Análise da Eficiência" in html
 
 
 def test_process_routine_pages_keep_process_group_open():
@@ -109,3 +127,19 @@ def test_project_portfolio_page_opens_project_group():
     assert 'sidebar-group open' in html
     assert 'Portfólio de Projetos' in html
     assert '/project-portfolios' in html
+
+
+def test_work_journey_page_opens_journey_group():
+    app = _build_app()
+
+    with app.test_request_context("/companies/9/work-journey"):
+        from flask import session
+        session["active_company_id"] = 9
+        html = render_template_string("{% include 'partials/sidebar/_routine_management.html' %}")
+
+    assert "Jornada dos Colaboradores" in html
+    assert "Jornada do Colaborador" in html
+    assert "Análise das Jornadas" in html
+    assert "Análise da Eficiência" in html
+    assert "sidebar-group open" in html
+    assert "sidebar-subgroup open" in html

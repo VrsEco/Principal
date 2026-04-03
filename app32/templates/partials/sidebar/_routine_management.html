@@ -2,7 +2,8 @@
 {% set _routine_processes_active = '/process-map' in request.path or '/processes' in request.path or '/process-routines' in request.path or '/process-instances' in request.path or '/routines' in request.path %}
 {% set _routine_meetings_active = '/meetings' in request.path %}
 {% set _routine_occurrences_active = '/process-occurrences' in request.path %}
-{% set _routine_root_active = _routine_projects_active or _routine_processes_active or _routine_meetings_active or _routine_occurrences_active %}
+{% set _routine_journey_active = '/work-journey' in request.path or '/process-routines/analysis' in request.path or '/efficiency-analysis' in request.path %}
+{% set _routine_root_active = _routine_projects_active or _routine_processes_active or _routine_meetings_active or _routine_occurrences_active or _routine_journey_active %}
 
 <!-- Gestão da Rotina -->
 <div class="sidebar-group {{ 'open' if _routine_root_active }}">
@@ -98,6 +99,30 @@
                 <a href="{{ url_for('processes.process_occurrences_redirect') }}"
                     class="sub-nav-link {{ 'active' if '/process-occurrences' in request.path }}">
                     Gestão de Ocorrências
+                </a>
+            </div>
+        </div>
+
+        <div class="sidebar-subgroup {{ 'open' if _routine_journey_active }}">
+            <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                Jornada dos Colaboradores
+                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="subgroup-content">
+                <a href="{{ url_for('work_journey.work_journey_redirect') }}"
+                    class="sub-nav-link {{ 'active' if '/work-journey' in request.path }}">
+                    Jornada do Colaborador
+                </a>
+                <a href="{{ url_for('processes.process_routines_analysis_page', company_id=session.get('active_company_id')) if session.get('active_company_id') else url_for('processes.process_routines_redirect') }}"
+                    class="sub-nav-link {{ 'active' if '/process-routines/analysis' in request.path }}">
+                    Análise das Jornadas
+                </a>
+                <a href="{{ url_for('main.efficiency_analysis') }}"
+                    class="sub-nav-link {{ 'active' if '/efficiency-analysis' in request.path }}">
+                    Análise da Eficiência
                 </a>
             </div>
         </div>
