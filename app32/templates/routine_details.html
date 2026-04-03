@@ -250,6 +250,25 @@
                     <button type="button" class="btn btn-primary" onclick="openAddCollaboratorForm()">Adicionar primeiro executor</button>
                 </div>
             </section>
+
+            <section class="surface-card journey-planning-card">
+                <div class="journey-planning-header">
+                    <div>
+                        <p class="executors-eyebrow">Planejamento operacional</p>
+                        <h3 class="text-h3">Planejamento na Jornada</h3>
+                        <p class="text-secondary">Defina em qual bloco da jornada cada executor deve receber as instâncias desta rotina.</p>
+                    </div>
+                    <a href="/companies/{{ company.id }}/work-journey" class="btn btn-secondary">🧭 Abrir Jornada</a>
+                </div>
+
+                <div id="routineJourneyBindingsPanel">
+                    <div class="empty-state enhanced">
+                        <div class="empty-state-icon">🧭</div>
+                        <h4>Carregando vínculos da jornada</h4>
+                        <p>Aguarde enquanto buscamos os blocos compatíveis com instâncias de processo.</p>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 </div>
@@ -668,10 +687,77 @@
         color: #ef4444;
     }
 
+    .journey-planning-card {
+        margin-top: 1.5rem;
+    }
+
+    .journey-planning-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+
+    .journey-binding-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .journey-binding-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(240px, 320px) auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem 1.2rem;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+    }
+
+    .journey-binding-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        min-width: 0;
+    }
+
+    .journey-binding-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        overflow-wrap: anywhere;
+    }
+
+    .journey-binding-details {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .journey-binding-status {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: var(--primary-light);
+        color: var(--primary);
+        font-size: 0.8rem;
+        font-weight: 700;
+        border: 1px solid rgba(37, 99, 235, 0.15);
+    }
+
     @media (max-width: 992px) {
         .executors-metrics-grid,
         .executors-list {
             grid-template-columns: 1fr 1fr;
+        }
+
+        .journey-binding-row {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -693,6 +779,10 @@
         .executor-form-actions {
             flex-direction: column;
             align-items: stretch;
+        }
+
+        .journey-planning-header {
+            flex-direction: column;
         }
     }
 </style>
@@ -936,17 +1026,80 @@
         `).join('');
     }
 
+    function renderJourneyBindings(data = {}) {
+        const container = document.getElementById('routineJourneyBindingsPanel');
+        const collaborators = data.collaborators || [];
+
+        if (!collaborators.length) {
+            container.innerHTML = `
+                <div class="empty-state enhanced">
+                    <div class="empty-state-icon">🧭</div>
+                    <h4>Nenhum executor preparado para a jornada</h4>
+                    <p>Cadastre executores na rotina para selecionar o bloco da jornada em que as instâncias deverão cair.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="journey-binding-list">
+                ${collaborators.map(collab => `
+                    <article class="journey-binding-row">
+                        <div class="journey-binding-meta">
+                            <span class="journey-binding-name">${escapeHtml(collab.employee_name || 'Executor')}</span>
+                            <span class="journey-binding-details">${escapeHtml(formatHours(collab.hours_used || 0))} previstas nesta rotina</span>
+                            <span class="journey-binding-status">${escapeHtml(collab.binding?.block_name || 'Sem bloco vinculado')}</span>
+                        </div>
+                        <div>
+                            <select class="form-select-custom" data-journey-binding-select="${collab.employee_id}">
+                                <option value="">Não vincular agora</option>
+                                ${(collab.available_blocks || []).map(block => `
+                                    <option value="${block.id}" ${Number(collab.binding?.block_id) === Number(block.id) ? 'selected' : ''}>
+                                        ${escapeHtml(block.name)} · ${escapeHtml(block.start_time || '--:--')} → ${escapeHtml(block.end_time || '--:--')}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary" onclick="saveJourneyBinding(${collab.employee_id})">Salvar bloco</button>
+                        </div>
+                    </article>
+                `).join('')}
+            </div>
+        `;
+    }
+
     async function loadCollaborators() {
         if (!routineId) return;
-        const res = await fetch(`/api/routines/${routineId}/collaborators`);
-        const result = await res.json();
-        if (result.success) {
-            collaboratorsState = result.collaborators || [];
-            renderCollaborators();
-        } else {
+
+        try {
+            const [collaboratorsResponse, journeyResponse] = await Promise.all([
+                fetch(`/api/routines/${routineId}/collaborators`),
+                fetch(`/api/routines/${routineId}/journey-bindings`)
+            ]);
+
+            const result = await collaboratorsResponse.json();
+            const journeyResult = await journeyResponse.json();
+
+            if (result.success) {
+                collaboratorsState = result.collaborators || [];
+                renderCollaborators();
+            } else {
+                collaboratorsState = [];
+                renderCollaborators();
+                alert(result.message || 'Erro ao carregar executores.');
+            }
+
+            if (journeyResult.success) {
+                renderJourneyBindings(journeyResult.data || {});
+            } else {
+                renderJourneyBindings({ collaborators: [] });
+            }
+        } catch (error) {
             collaboratorsState = [];
             renderCollaborators();
-            alert(result.message || 'Erro ao carregar executores.');
+            renderJourneyBindings({ collaborators: [] });
+            alert('Não foi possível carregar os dados de planejamento na jornada.');
         }
     }
 
@@ -1024,6 +1177,31 @@
             loadCollaborators();
         } else {
             alert(result.message || 'Não foi possível remover o executor.');
+        }
+    }
+
+    async function saveJourneyBinding(employeeId) {
+        const select = document.querySelector(`[data-journey-binding-select="${employeeId}"]`);
+        const blockId = select && select.value ? parseInt(select.value, 10) : null;
+
+        try {
+            const response = await fetch(`/api/routines/${routineId}/journey-bindings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    employee_id: employeeId,
+                    block_id: blockId,
+                    notes: ''
+                })
+            });
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.message || 'Não foi possível salvar o vínculo da jornada.');
+            }
+            await loadCollaborators();
+            alert('✅ Bloco da jornada salvo com sucesso.');
+        } catch (error) {
+            alert(error.message || 'Erro ao salvar vínculo da jornada.');
         }
     }
 </script>

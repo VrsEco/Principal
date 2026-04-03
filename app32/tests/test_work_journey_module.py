@@ -115,11 +115,15 @@ def test_templates_expose_work_journey_entrypoints():
         journey_template = handle.read()
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'my_work_v2.html'), 'r', encoding='utf-8') as handle:
         my_work_template = handle.read()
+    with open(os.path.join(root, 'templates', 'routine_details.html'), 'r', encoding='utf-8') as handle:
+        routine_app32_template = handle.read()
     with open(os.path.join(root, 'templates', 'legacy', 'routine_details.html'), 'r', encoding='utf-8') as handle:
-        routine_template = handle.read()
+        routine_legacy_template = handle.read()
 
     assert 'Jornada Operacional por Blocos' in journey_template
     assert 'Rotinas de processo do colaborador' in journey_template
     assert 'data-tab="agenda"' in journey_template
     assert '/work-journey' in my_work_template
-    assert '/api/routines/${routineId}/journey-bindings' in routine_template
+    assert 'Planejamento na Jornada' in routine_app32_template
+    assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
+    assert '/api/routines/${routineId}/journey-bindings' in routine_legacy_template
