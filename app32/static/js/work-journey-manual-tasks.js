@@ -31,7 +31,7 @@
       <article class="journey-list-item">
         <div class="journey-list-item__top">
           <div>
-            <strong>${item.title}</strong>
+            <strong>${item.display_title || item.title}</strong>
             <div class="journey-manual-task-meta">Prazo ${item.due_date || '-'} · ${item.block_name || 'Sem bloco'} · Previsto ${formatMinutes(item.estimated_minutes || 0)} · Realizado ${formatMinutes(item.worked_minutes || 0)}</div>
           </div>
           <div class="journey-item-card__actions">

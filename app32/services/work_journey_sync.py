@@ -104,6 +104,7 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
     for instance in query:
         metadata = {
             'source_label': 'Instância de processo',
+            'source_code': instance.instance_code,
             'process_id': instance.process_id,
             'routine_id': instance.routine_id,
             'process_name': instance.process_rel.name if instance.process_rel else None,
@@ -148,6 +149,7 @@ def sync_project_tasks(company_id: int, employee_id: int, period_start: date, pe
         project = task.project
         metadata = {
             'source_label': 'Atividade de projeto',
+            'source_code': task.code,
             'project_id': task.project_id,
             'project_name': project.name if project else None,
             'project_code': project.code if project else None,
@@ -183,6 +185,7 @@ def sync_meetings(company_id: int, employee_id: int, period_start: date, period_
             continue
         metadata = {
             'source_label': 'Reunião',
+            'source_code': f'{meeting.company.client_code if meeting.company and meeting.company.client_code else "AA"}.R.{meeting.id}',
             'project_id': meeting.project_id,
             'manual_assignment': current_manual_assignment(company_id, 'meeting', meeting.id),
             'source_url': f'/meetings/company/{company_id}/meeting/{meeting.id}/report',

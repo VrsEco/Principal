@@ -91,7 +91,7 @@
       <article class="journey-item-card">
         <div class="journey-item-card__top">
           <div>
-            <div class="journey-item-card__title">${item.title}</div>
+            <div class="journey-item-card__title">${item.display_title || item.title}</div>
             <div class="journey-item-card__desc">${item.description || 'Sem descrição adicional.'}</div>
           </div>
           <div class="journey-item-card__badges">${itemBadges(item)}</div>
@@ -142,7 +142,7 @@
     periodContainer.innerHTML = periodItems.length ? periodItems.slice(0, 12).map((item) => `
       <div class="journey-list-item">
         <div class="journey-list-item__top">
-          <strong>${item.title}</strong>
+          <strong>${item.display_title || item.title}</strong>
           <span class="badge-pill">${item.due_date || item.occurrence_date || '-'}</span>
         </div>
         <div class="journey-badges">${itemBadges(item)}</div>
