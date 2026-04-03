@@ -730,24 +730,6 @@ class FinancialCounterpartyUpdateInput(BaseModel):
         return _digits_only(value)
 
 
-class FinancialClosingInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    company_id: int
-    period_start: date
-    period_end: date
-    status: str = Field("closed", pattern="^(draft|closed|reopened)$")
-    notes: Optional[str] = None
-    summary_json: Dict[str, Any] = Field(default_factory=dict)
-    closed_by_user_id: Optional[int] = None
-
-    @model_validator(mode="after")
-    def validate_period(self):
-        if self.period_start > self.period_end:
-            raise ValueError("period_start não pode ser maior que period_end.")
-        return self
-
-
 class FinancialScheduleCreateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

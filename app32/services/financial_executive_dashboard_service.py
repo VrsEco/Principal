@@ -3,9 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Dict, Optional, Sequence, Tuple
 
-from models.financial import FinancialClosing, FinancialImportBatch, FinancialReconciliationMatch
+from models.financial import FinancialImportBatch, FinancialReconciliationMatch
 from services.financial_classification_dashboard_service import FinancialClassificationDashboardService
-from services.financial_closing_service import FinancialClosingService
 from services.financial_dashboard_analytics import FinancialDashboardAnalytics
 from services.financial_service import FinancialService
 
@@ -50,13 +49,6 @@ class FinancialExecutiveDashboardService:
             company_id=company_id,
             allowed_company_ids=allowed_company_ids,
         )
-        closing_preview, _ = FinancialClosingService.preview_closing(
-            company_id=company_id,
-            period_start=start_date,
-            period_end=end_date,
-            allowed_company_ids=allowed_company_ids,
-        )
-
         processed_batches = FinancialImportBatch.query.filter(
             FinancialImportBatch.company_id == company_id,
             FinancialImportBatch.deleted_at.is_(None),
@@ -70,11 +62,6 @@ class FinancialExecutiveDashboardService:
             FinancialReconciliationMatch.created_at >= start_date,
             FinancialReconciliationMatch.created_at < (end_date + timedelta(days=1)),
         ).count()
-        last_closing = FinancialClosing.query.filter(
-            FinancialClosing.company_id == company_id,
-            FinancialClosing.deleted_at.is_(None),
-        ).order_by(FinancialClosing.period_end.desc(), FinancialClosing.id.desc()).first()
-
         return {
             "period_start": start_date.isoformat(),
             "period_end": end_date.isoformat(),
@@ -90,6 +77,4 @@ class FinancialExecutiveDashboardService:
             "dre_matrix": dre_matrix,
             "quick_actions": FinancialDashboardAnalytics.build_quick_actions(),
             "classification": classification,
-            "closing_preview": closing_preview,
-            "last_closing": last_closing.to_dict() if last_closing else None,
         }, None

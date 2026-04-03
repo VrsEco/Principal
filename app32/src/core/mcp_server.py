@@ -1205,54 +1205,6 @@ def run_mcp_server():
         return {"success": True, **result}
 
     @mcp.tool()
-    def preview_financial_closing(company_id: int, period_start: str, period_end: str) -> dict:
-        """
-        Gera conferência e prévia do fechamento financeiro para um período.
-        """
-        from datetime import datetime
-        from services.financial_closing_service import FinancialClosingService
-
-        result, error = _run_financial_action(
-            FinancialClosingService.preview_closing,
-            company_id=company_id,
-            period_start=datetime.strptime(period_start, "%Y-%m-%d").date(),
-            period_end=datetime.strptime(period_end, "%Y-%m-%d").date(),
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, **result}
-
-    @mcp.tool()
-    def list_financial_closings(company_id: int) -> dict:
-        """
-        Lista fechamentos financeiros registrados para a empresa.
-        """
-        from services.financial_closing_service import FinancialClosingService
-
-        result, error = _run_financial_action(
-            FinancialClosingService.list_closings,
-            company_id=company_id,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, "items": result, "count": len(result)}
-
-    @mcp.tool()
-    def create_financial_closing(payload: dict) -> dict:
-        """
-        Registra fechamento financeiro do período com snapshot de conferência.
-        """
-        from services.financial_closing_service import FinancialClosingService
-
-        result, error = _run_financial_action(
-            FinancialClosingService.create_closing,
-            payload=payload,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, "item": result}
-
-    @mcp.tool()
     def list_financial_report_types(company_id: int) -> dict:
         """
         Lista relatórios automáticos disponíveis no módulo financeiro.

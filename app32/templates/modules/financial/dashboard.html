@@ -219,11 +219,10 @@
 
     function renderControls(payload = {}) {
         const box = document.getElementById('dashboard-controls');
-        const lastClosing = payload.last_closing;
         box.innerHTML = `
             <article class="dash-metric">
-                <label>Último fechamento</label>
-                <strong>${lastClosing?.period_end || 'Sem fechamento registrado'}</strong>
+                <label>Período analisado</label>
+                <strong>${payload.period_start || '-'} até ${payload.period_end || '-'}</strong>
             </article>
             <article class="dash-metric">
                 <label>Lotes processados no período</label>

@@ -72,7 +72,6 @@ CLASSIFICATION_SUGGESTION_STATUS_VALUES = ("suggested", "confirmed", "rejected",
 IMPORT_SOURCE_VALUES = ("csv", "csc", "xlsx", "ofx", "api", "mcp")
 IMPORT_BATCH_STATUS_VALUES = ("uploaded", "parsed", "processed", "processed_with_errors", "cancelled")
 IMPORT_ROW_STATUS_VALUES = ("staged", "validated", "rejected", "imported")
-CLOSING_STATUS_VALUES = ("draft", "closed", "reopened")
 SCHEDULE_FREQUENCY_VALUES = ("one_time", "weekly", "monthly", "yearly")
 SCHEDULE_STATUS_VALUES = ("draft", "active", "paused", "completed", "cancelled")
 BORDERO_TYPE_VALUES = ("payable", "receivable")
@@ -481,45 +480,6 @@ class FinancialDomainEnablement(db.Model):
             "is_default_suggestion": self.is_default_suggestion,
             "notes": self.notes,
             "metadata_json": self.metadata_json or {},
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
-
-
-class FinancialClosing(db.Model):
-    __tablename__ = "financial_closings"
-    __table_args__ = (
-        db.UniqueConstraint("company_id", "period_start", "period_end", name="uq_financial_closings_period"),
-        db.CheckConstraint(
-            f"status IN {CLOSING_STATUS_VALUES}",
-            name="ck_financial_closings_status",
-        ),
-    )
-
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
-    period_start = db.Column(db.Date, nullable=False, index=True)
-    period_end = db.Column(db.Date, nullable=False, index=True)
-    status = db.Column(db.String(20), nullable=False, default="draft", index=True)
-    notes = db.Column(db.Text)
-    summary_json = db.Column(JSONB, nullable=False, default=dict)
-    closed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    closed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = db.Column(db.DateTime)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "company_id": self.company_id,
-            "period_start": self.period_start.isoformat() if self.period_start else None,
-            "period_end": self.period_end.isoformat() if self.period_end else None,
-            "status": self.status,
-            "notes": self.notes,
-            "summary_json": self.summary_json or {},
-            "closed_by_user_id": self.closed_by_user_id,
-            "closed_at": self.closed_at.isoformat() if self.closed_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

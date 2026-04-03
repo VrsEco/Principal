@@ -32,7 +32,6 @@ from services.financial_classification_service import FinancialClassificationSer
 from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 from services.financial_classification_dashboard_service import FinancialClassificationDashboardService
 from services.financial_catalog_service import FinancialCatalogService
-from services.financial_closing_service import FinancialClosingService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
 from services.financial_report_service import FinancialReportService
 from services.financial_schedule_service import FinancialScheduleService
@@ -1535,59 +1534,6 @@ class FinancialImportBatchAIRankingResource(Resource):
         result, error = FinancialAIClassificationService.rank_batch_with_ai(
             batch_id=batch_id,
             company_id=company_id,
-            allowed_company_ids=get_accessible_company_ids(),
-        )
-        if error:
-            return {"error": error}, 400
-        return result, 200
-
-
-class FinancialClosingListResource(Resource):
-    @permission_required("financial", "view")
-    def get(self):
-        company_id = get_request_company_id()
-        result, error = FinancialClosingService.list_closings(
-            company_id=company_id,
-            allowed_company_ids=get_accessible_company_ids(),
-        )
-        if error:
-            return {"error": error}, 400
-        return result, 200
-
-    @permission_required("financial", "create")
-    def post(self):
-        payload = request.get_json(silent=True) or {}
-        payload["company_id"] = get_request_company_id()
-        result, error = FinancialClosingService.create_closing(
-            payload=payload,
-            allowed_company_ids=get_accessible_company_ids(),
-        )
-        if error:
-            return {"error": error}, 400
-        return result, 201
-
-
-class FinancialClosingPreviewResource(Resource):
-    @permission_required("financial", "view")
-    def get(self):
-        company_id = get_request_company_id()
-        period_start = request.args.get("period_start")
-        period_end = request.args.get("period_end")
-        if not period_start or not period_end:
-            return {"error": "Informe period_start e period_end."}, 400
-
-        from datetime import datetime
-
-        try:
-            period_start_date = datetime.strptime(period_start, "%Y-%m-%d").date()
-            period_end_date = datetime.strptime(period_end, "%Y-%m-%d").date()
-        except ValueError:
-            return {"error": "Datas inválidas. Use YYYY-MM-DD."}, 400
-
-        result, error = FinancialClosingService.preview_closing(
-            company_id=company_id,
-            period_start=period_start_date,
-            period_end=period_end_date,
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:
