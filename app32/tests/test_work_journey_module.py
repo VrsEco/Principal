@@ -123,6 +123,8 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Jornada Operacional por Blocos' in journey_template
     assert 'Rotinas de processo do colaborador' in journey_template
     assert 'data-tab="agenda"' in journey_template
+    assert 'Tarefa Avulsa no Bloco' in journey_template
+    assert 'data-tab="rules"' not in journey_template
     assert '/work-journey' in my_work_template
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template

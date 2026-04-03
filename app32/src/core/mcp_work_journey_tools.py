@@ -9,6 +9,7 @@ from schemas.work_journey import (
     WorkJourneyAbsenceRequestCreateSchema,
     WorkJourneyBlockCreateSchema,
     WorkJourneyBlockUpdateSchema,
+    WorkJourneyManualTaskCreateSchema,
     WorkJourneyItemUpdateSchema,
     WorkJourneyRuleCreateSchema,
     WorkJourneyRuleUpdateSchema,
@@ -30,6 +31,8 @@ from services.work_journey_admin_service import (
     list_transfer_requests,
 )
 from services.work_journey_service import (
+    create_manual_task,
+    delete_work_item,
     delete_block,
     delete_rule,
     get_work_journey_board,
@@ -92,13 +95,25 @@ def register_work_journey_tools(mcp) -> None:
 
     @mcp.tool()
     def update_work_journey_item_tool(company_id: int, item_id: int, payload: dict) -> dict:
-        """Atualiza status, bloco ou esforço real de uma atividade da jornada."""
+        """Atualiza status, bloco ou esforço real de uma tarefa da jornada."""
         data = WorkJourneyItemUpdateSchema.model_validate(payload).model_dump(exclude_unset=True)
         return {'item': _run(update_work_item, company_id, item_id, data)}
 
     @mcp.tool()
+    def create_work_journey_manual_task_tool(company_id: int, payload: dict) -> dict:
+        """Cria uma tarefa avulsa diretamente na agenda do colaborador."""
+        data = WorkJourneyManualTaskCreateSchema.model_validate(payload).model_dump()
+        return {'item': _run(create_manual_task, company_id, data)}
+
+    @mcp.tool()
+    def delete_work_journey_manual_task_tool(company_id: int, item_id: int) -> dict:
+        """Exclui uma tarefa avulsa criada diretamente na jornada."""
+        _run(delete_work_item, company_id, item_id)
+        return {'success': True}
+
+    @mcp.tool()
     def create_work_journey_transfer_request_tool(company_id: int, item_id: int, to_employee_id: int, reason: Optional[str] = None, user_id: Optional[int] = None) -> dict:
-        """Solicita transferência de uma atividade da jornada para outro colaborador."""
+        """Solicita transferência de uma tarefa da jornada para outro colaborador."""
         data = WorkJourneyTransferRequestCreateSchema.model_validate({
             'to_employee_id': to_employee_id,
             'reason': reason,

@@ -12,6 +12,7 @@ from schemas.work_journey import (
     WorkJourneyAbsenceRequestCreateSchema,
     WorkJourneyBlockCreateSchema,
     WorkJourneyBlockUpdateSchema,
+    WorkJourneyManualTaskCreateSchema,
     WorkJourneyItemUpdateSchema,
     WorkJourneyRuleCreateSchema,
     WorkJourneyRuleUpdateSchema,
@@ -33,7 +34,9 @@ from services.work_journey_admin_service import (
 )
 from services.work_journey_service import (
     WorkJourneyError,
+    create_manual_task,
     delete_block,
+    delete_work_item,
     delete_rule,
     get_work_journey_board,
     list_employee_blocks,
@@ -219,14 +222,48 @@ def api_update_item(company_id: int, item_id: int):
     try:
         item = WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first()
         if not item:
-            return jsonify({'success': False, 'message': 'Atividade não encontrada.'}), 404
+            return jsonify({'success': False, 'message': 'Tarefa não encontrada.'}), 404
         if not _can_manage_employee(company_id, item.employee_id):
-            return jsonify({'success': False, 'message': 'Você não pode atualizar esta atividade.'}), 403
+            return jsonify({'success': False, 'message': 'Você não pode atualizar esta tarefa.'}), 403
         payload = WorkJourneyItemUpdateSchema.model_validate(request.get_json(silent=True) or {}).model_dump(exclude_unset=True)
         data = update_work_item(company_id, item_id, payload)
         return jsonify({'success': True, 'item': data})
     except ValidationError as exc:
         return jsonify({'success': False, 'message': exc.errors()}), 400
+    except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/items/manual', methods=['POST'])
+@permission_required('processes', 'view')
+def api_create_manual_task(company_id: int):
+    try:
+        payload = WorkJourneyManualTaskCreateSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        if not _can_manage_employee(company_id, payload['employee_id']):
+            return jsonify({'success': False, 'message': 'Você não pode criar tarefa avulsa para este colaborador.'}), 403
+        item = create_manual_task(company_id, payload)
+        return jsonify({'success': True, 'item': item}), 201
+    except ValidationError as exc:
+        return jsonify({'success': False, 'message': exc.errors()}), 400
+    except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/items/<int:item_id>', methods=['DELETE'])
+@permission_required('processes', 'view')
+def api_delete_item(company_id: int, item_id: int):
+    try:
+        item = WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first()
+        if not item:
+            return jsonify({'success': False, 'message': 'Tarefa não encontrada.'}), 404
+        if not _can_manage_employee(company_id, item.employee_id):
+            return jsonify({'success': False, 'message': 'Você não pode excluir esta tarefa.'}), 403
+        delete_work_item(company_id, item_id)
+        return jsonify({'success': True})
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -239,9 +276,9 @@ def api_create_transfer_request(company_id: int, item_id: int):
     try:
         item = WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first()
         if not item:
-            return jsonify({'success': False, 'message': 'Atividade não encontrada.'}), 404
+            return jsonify({'success': False, 'message': 'Tarefa não encontrada.'}), 404
         if not _can_manage_employee(company_id, item.employee_id):
-            return jsonify({'success': False, 'message': 'Você não pode transferir esta atividade.'}), 403
+            return jsonify({'success': False, 'message': 'Você não pode transferir esta tarefa.'}), 403
         payload = WorkJourneyTransferRequestCreateSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
         transfer = create_transfer_request(company_id, item_id, payload['to_employee_id'], payload.get('reason'), getattr(current_user, 'id', None))
         return jsonify({'success': True, 'transfer': transfer}), 201

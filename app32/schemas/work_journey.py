@@ -22,6 +22,7 @@ class WorkJourneyBlockCreateSchema(_StrictModel):
     description: str | None = None
     start_time: str
     end_time: str
+    block_mode: Literal['operational', 'reserved_full', 'buffer'] = 'operational'
     weekdays: list[int] = Field(default_factory=list)
     accepted_item_types: list[str] = Field(default_factory=list)
     order_index: int = 0
@@ -85,6 +86,23 @@ class WorkJourneyItemUpdateSchema(_StrictModel):
     status: Literal['pending', 'in_progress', 'completed', 'postponed', 'suspended'] | None = None
     worked_minutes: int | None = Field(default=None, ge=0, le=1440)
     notes: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    due_date: date | None = None
+    estimated_minutes: int | None = Field(default=None, ge=5, le=1440)
+    priority: Literal['low', 'normal', 'high', 'urgent'] | None = None
+
+
+class WorkJourneyManualTaskCreateSchema(_StrictModel):
+    employee_id: int
+    block_id: int | None = None
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = None
+    due_date: date
+    estimated_minutes: int = Field(default=60, ge=5, le=1440)
+    priority: Literal['low', 'normal', 'high', 'urgent'] = 'normal'
+    status: Literal['pending', 'in_progress', 'completed', 'postponed', 'suspended'] = 'pending'
+    worked_minutes: int = Field(default=0, ge=0, le=1440)
 
 
 class WorkJourneyTransferRequestCreateSchema(_StrictModel):

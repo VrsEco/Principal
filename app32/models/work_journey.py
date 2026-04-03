@@ -14,6 +14,7 @@ class WorkJourneyBlock(db.Model):
     description = db.Column(db.Text)
     start_time = db.Column(db.Time, nullable=False, default=time(8, 0))
     end_time = db.Column(db.Time, nullable=False, default=time(18, 0))
+    block_mode = db.Column(db.String(30), nullable=False, default='operational')
     weekdays_json = db.Column(db.JSON, nullable=False, default=list)
     accepted_item_types = db.Column(db.JSON, nullable=False, default=list)
     order_index = db.Column(db.Integer, nullable=False, default=0)
@@ -32,6 +33,7 @@ class WorkJourneyBlock(db.Model):
             'description': self.description,
             'start_time': self.start_time.strftime('%H:%M') if self.start_time else None,
             'end_time': self.end_time.strftime('%H:%M') if self.end_time else None,
+            'block_mode': self.block_mode,
             'weekdays': list(self.weekdays_json or []),
             'accepted_item_types': list(self.accepted_item_types or []),
             'order_index': self.order_index,

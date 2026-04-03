@@ -1,9 +1,9 @@
 (() => {
   const itemTypes = [
-    { value: 'manual', label: 'Manual' },
-    { value: 'process_instance', label: 'Instâncias de Processos' },
-    { value: 'project_task', label: 'Instâncias de Projetos' },
-    { value: 'meeting', label: 'Reuniões' },
+    { value: 'manual', label: 'Tarefa Avulsa' },
+    { value: 'process_instance', label: 'Instância de Processo' },
+    { value: 'project_task', label: 'Atividade de Projeto' },
+    { value: 'meeting', label: 'Reunião' },
   ];
 
   const weekdays = [
