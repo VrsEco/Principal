@@ -2,25 +2,61 @@
 
 {% block title %}Jornada por Blocos | Versus{% endblock %}
 
-{% block workspace_content %}
+{% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey.css') }}">
+{% endblock %}
 
-<div class="journey-page" data-company-id="{{ company.id }}" data-selected-employee-id="{{ selected_employee_id or '' }}" data-can-manage-all="{{ can_manage_all|tojson }}" data-today="{{ today }}">
-    <div class="workspace-header journey-header">
-        <div>
-            <h1 class="text-h1">🧭 Jornada Operacional por Blocos</h1>
-            <p class="text-secondary">Estruture horários do colaborador, aloque obrigações recorrentes e acompanhe a capacidade operacional.</p>
+{% block workspace_content %}
+<div class="journey-app fade-in" data-company-id="{{ company.id }}" data-selected-employee-id="{{ selected_employee_id or '' }}" data-can-manage-all="{{ can_manage_all|tojson }}" data-today="{{ today }}">
+    <section class="journey-hero">
+        <div class="journey-hero__content">
+            <div>
+                <span class="journey-hero__eyebrow">APP32 · Planejamento Operacional</span>
+                <h1 class="journey-hero__title">Jornada Operacional por Blocos</h1>
+                <p class="journey-hero__subtitle">Organize a jornada do colaborador em blocos, distribua obrigações recorrentes e acompanhe a capacidade operacional do período.</p>
+            </div>
+            <div class="journey-hero__actions">
+                <a class="btn btn-secondary" href="{{ url_for('my_work.my_work') }}">← Meu Trabalho</a>
+                <button id="journeyRefreshBtn" class="btn btn-primary">Atualizar visão</button>
+            </div>
         </div>
-        <div class="journey-header__actions">
-            <a class="btn btn-secondary" href="{{ url_for('my_work.my_work') }}">← Meu Trabalho</a>
-        </div>
-    </div>
 
-    <section class="surface-card journey-toolbar">
+        <div class="journey-hero__highlights">
+            <article class="journey-highlight-card">
+                <span class="journey-highlight-card__icon">🧭</span>
+                <div>
+                    <strong>Blocos por colaborador</strong>
+                    <p>Estruture a agenda com blocos de horário aderentes à operação real.</p>
+                </div>
+            </article>
+            <article class="journey-highlight-card">
+                <span class="journey-highlight-card__icon">⚙️</span>
+                <div>
+                    <strong>Obrigações recorrentes</strong>
+                    <p>Centralize atividades diárias, semanais, mensais, anuais e esporádicas.</p>
+                </div>
+            </article>
+            <article class="journey-highlight-card">
+                <span class="journey-highlight-card__icon">📈</span>
+                <div>
+                    <strong>Capacidade operacional</strong>
+                    <p>Visualize carga prevista, realizada, sobrecarga e itens pendentes.</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="surface-card journey-panel journey-toolbar-panel">
+        <div class="journey-panel__header">
+            <div>
+                <h2 class="journey-section-title">Filtro de contexto</h2>
+                <p class="journey-section-subtitle">Defina o colaborador, a data âncora e o escopo de análise da jornada.</p>
+            </div>
+        </div>
         <div class="journey-toolbar__grid">
             <div class="form-group">
                 <label class="form-label">Colaborador</label>
-                <select id="journeyEmployeeSelect" class="form-select-custom">
+                <select id="journeyEmployeeSelect" class="form-control">
                     {% for employee in employees %}
                     <option value="{{ employee.id }}" {{ 'selected' if selected_employee_id == employee.id else '' }}>{{ employee.name }}</option>
                     {% endfor %}
@@ -32,21 +68,22 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Escopo</label>
-                <select id="journeyScopeSelect" class="form-select-custom">
+                <select id="journeyScopeSelect" class="form-control">
                     <option value="day">Dia</option>
                     <option value="week">Semana</option>
                     <option value="month">Mês</option>
                 </select>
             </div>
-            <div class="journey-toolbar__buttons">
-                <button id="journeyRefreshBtn" class="btn btn-primary">Atualizar visão</button>
+            <div class="journey-toolbar__tip">
+                <strong>Uso recomendado</strong>
+                <span>Comece no escopo diário para validar encaixe dos blocos e depois avance para semana/mês.</span>
             </div>
         </div>
     </section>
 
     <section class="journey-summary" id="journeySummaryCards"></section>
 
-    <section class="surface-card journey-tabs">
+    <section class="surface-card journey-panel journey-tabs-shell">
         <div class="journey-tabs__header">
             <button class="journey-tab is-active" data-tab="agenda">Agenda</button>
             <button class="journey-tab" data-tab="blocks">Blocos</button>
@@ -56,6 +93,12 @@
         </div>
 
         <div class="journey-tabpanel is-active" data-panel="agenda">
+            <div class="journey-panel__header journey-panel__header--tab">
+                <div>
+                    <h2 class="journey-section-title">Agenda operacional</h2>
+                    <p class="journey-section-subtitle">Veja a distribuição das atividades nos blocos de jornada e os itens ainda não alocados.</p>
+                </div>
+            </div>
             <div class="journey-board">
                 <div class="journey-board__main">
                     <div id="journeyBlocksContainer" class="journey-blocks"></div>
@@ -70,7 +113,7 @@
                     </div>
                     <div class="journey-sidecard">
                         <div class="journey-sidecard__header">
-                            <h3>Período</h3>
+                            <h3>Itens do período</h3>
                         </div>
                         <div id="journeyPeriodContainer" class="journey-sidecard__content"></div>
                     </div>
@@ -79,10 +122,19 @@
         </div>
 
         <div class="journey-tabpanel" data-panel="blocks">
+            <div class="journey-panel__header journey-panel__header--tab">
+                <div>
+                    <h2 class="journey-section-title">Configuração dos blocos</h2>
+                    <p class="journey-section-subtitle">Cadastre os blocos que compõem a jornada operacional do colaborador.</p>
+                </div>
+            </div>
             <div class="journey-management-grid">
-                <form id="journeyBlockForm" class="surface-secondary journey-form-card">
+                <form id="journeyBlockForm" class="journey-form-card">
                     <input type="hidden" id="blockIdInput">
-                    <h3>Configurar bloco</h3>
+                    <div class="journey-card-heading">
+                        <h3>Bloco de jornada</h3>
+                        <p>Defina janela, contexto e tipos de item aceitos no bloco.</p>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Nome</label>
                         <input id="blockNameInput" class="form-control" required>
@@ -116,7 +168,10 @@
                 </form>
                 <div class="journey-list-card">
                     <div class="journey-list-card__header">
-                        <h3>Blocos cadastrados</h3>
+                        <div>
+                            <h3>Blocos cadastrados</h3>
+                            <p>Estrutura vigente para o colaborador selecionado.</p>
+                        </div>
                     </div>
                     <div id="journeyBlocksList"></div>
                 </div>
@@ -124,10 +179,19 @@
         </div>
 
         <div class="journey-tabpanel" data-panel="rules">
+            <div class="journey-panel__header journey-panel__header--tab">
+                <div>
+                    <h2 class="journey-section-title">Obrigações recorrentes</h2>
+                    <p class="journey-section-subtitle">Cadastre as atividades que devem nascer automaticamente ao longo do período.</p>
+                </div>
+            </div>
             <div class="journey-management-grid">
-                <form id="journeyRuleForm" class="surface-secondary journey-form-card">
+                <form id="journeyRuleForm" class="journey-form-card">
                     <input type="hidden" id="ruleIdInput">
-                    <h3>Nova obrigação recorrente</h3>
+                    <div class="journey-card-heading">
+                        <h3>Obrigação planejada</h3>
+                        <p>Defina prioridade, recorrência e bloco preferencial para a geração.</p>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Título</label>
                         <input id="ruleTitleInput" class="form-control" required>
@@ -139,7 +203,7 @@
                     <div class="journey-inline-grid">
                         <div class="form-group">
                             <label class="form-label">Tipo</label>
-                            <select id="ruleItemTypeInput" class="form-select-custom">
+                            <select id="ruleItemTypeInput" class="form-control">
                                 <option value="manual">Manual</option>
                                 <option value="process_instance">Instância de processo</option>
                                 <option value="project_task">Atividade de projeto</option>
@@ -148,7 +212,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Recorrência</label>
-                            <select id="ruleRecurrenceInput" class="form-select-custom">
+                            <select id="ruleRecurrenceInput" class="form-control">
                                 <option value="daily">Diária</option>
                                 <option value="weekly">Semanal</option>
                                 <option value="monthly">Mensal</option>
@@ -164,7 +228,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Prioridade</label>
-                            <select id="rulePriorityInput" class="form-select-custom">
+                            <select id="rulePriorityInput" class="form-control">
                                 <option value="low">Baixa</option>
                                 <option value="normal" selected>Normal</option>
                                 <option value="high">Alta</option>
@@ -184,7 +248,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Bloco preferencial</label>
-                        <select id="ruleBlockInput" class="form-select-custom"><option value="">Sem preferência</option></select>
+                        <select id="ruleBlockInput" class="form-control"><option value="">Sem preferência</option></select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Configuração da recorrência</label>
@@ -197,7 +261,10 @@
                 </form>
                 <div class="journey-list-card">
                     <div class="journey-list-card__header">
-                        <h3>Obrigações cadastradas</h3>
+                        <div>
+                            <h3>Obrigações cadastradas</h3>
+                            <p>Catálogo operacional usado para gerar cards e instâncias do período.</p>
+                        </div>
                     </div>
                     <div id="journeyRulesList"></div>
                 </div>
@@ -205,12 +272,21 @@
         </div>
 
         <div class="journey-tabpanel" data-panel="absences">
+            <div class="journey-panel__header journey-panel__header--tab">
+                <div>
+                    <h2 class="journey-section-title">Ausências e bloqueios</h2>
+                    <p class="journey-section-subtitle">Solicite férias, ausências ou licenças e trate a limpeza operacional antes da aprovação.</p>
+                </div>
+            </div>
             <div class="journey-management-grid">
-                <form id="journeyAbsenceForm" class="surface-secondary journey-form-card">
-                    <h3>Solicitar ausência</h3>
+                <form id="journeyAbsenceForm" class="journey-form-card">
+                    <div class="journey-card-heading">
+                        <h3>Solicitar ausência</h3>
+                        <p>O período deve estar limpo antes da aprovação final.</p>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Tipo</label>
-                        <select id="absenceTypeInput" class="form-select-custom">
+                        <select id="absenceTypeInput" class="form-control">
                             <option value="vacation">Férias</option>
                             <option value="absence">Ausência</option>
                             <option value="medical_leave">Licença médica</option>
@@ -236,7 +312,10 @@
                 </form>
                 <div class="journey-list-card">
                     <div class="journey-list-card__header">
-                        <h3>Solicitações</h3>
+                        <div>
+                            <h3>Solicitações</h3>
+                            <p>Histórico e aprovação das ausências do colaborador selecionado.</p>
+                        </div>
                     </div>
                     <div id="journeyAbsenceList"></div>
                 </div>
@@ -244,9 +323,18 @@
         </div>
 
         <div class="journey-tabpanel" data-panel="transfers">
+            <div class="journey-panel__header journey-panel__header--tab">
+                <div>
+                    <h2 class="journey-section-title">Transferências</h2>
+                    <p class="journey-section-subtitle">Gerencie pedidos de transferência entre colaboradores com rastreabilidade.</p>
+                </div>
+            </div>
             <div class="journey-list-card">
                 <div class="journey-list-card__header">
-                    <h3>Solicitações de transferência</h3>
+                    <div>
+                        <h3>Solicitações de transferência</h3>
+                        <p>Pedidos pendentes e aprovados vinculados às atividades da jornada.</p>
+                    </div>
                 </div>
                 <div id="journeyTransferList"></div>
             </div>
