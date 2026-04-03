@@ -13,7 +13,7 @@
             <div>
                 <span class="journey-hero__eyebrow">APP32 · Planejamento Operacional</span>
                 <h1 class="journey-hero__title">Jornada Operacional por Blocos</h1>
-                <p class="journey-hero__subtitle">Organize a jornada do colaborador em blocos, distribua obrigações recorrentes e acompanhe a capacidade operacional do período.</p>
+                <p class="journey-hero__subtitle">Organize a jornada do colaborador em blocos, distribua tarefas do período e acompanhe a capacidade operacional com clareza executiva.</p>
             </div>
             <div class="journey-hero__actions">
                 <a class="btn btn-secondary" href="{{ url_for('my_work.my_work') }}">← Meu Trabalho</a>
@@ -32,8 +32,8 @@
             <article class="journey-highlight-card">
                 <span class="journey-highlight-card__icon">⚙️</span>
                 <div>
-                    <strong>Obrigações recorrentes</strong>
-                    <p>Centralize atividades diárias, semanais, mensais, anuais e esporádicas.</p>
+                    <strong>Tarefas da jornada</strong>
+                    <p>Unifique instâncias de processo, atividades de projeto, reuniões e tarefas avulsas.</p>
                 </div>
             </article>
             <article class="journey-highlight-card">
@@ -87,7 +87,6 @@
         <div class="journey-tabs__header">
             <button class="journey-tab is-active" data-tab="agenda">Agenda</button>
             <button class="journey-tab" data-tab="blocks">Blocos</button>
-            <button class="journey-tab" data-tab="rules">Obrigações</button>
             <button class="journey-tab" data-tab="absences">Ausências</button>
             <button class="journey-tab" data-tab="transfers">Transferências</button>
         </div>
@@ -96,9 +95,70 @@
             <div class="journey-panel__header journey-panel__header--tab">
                 <div>
                     <h2 class="journey-section-title">Agenda operacional</h2>
-                    <p class="journey-section-subtitle">Veja a distribuição das atividades nos blocos de jornada e os itens ainda não alocados.</p>
+                    <p class="journey-section-subtitle">Veja a distribuição das tarefas nos blocos de jornada, acompanhe a capacidade e registre tarefas avulsas quando necessário.</p>
                 </div>
+                <button id="manualTaskStartBtn" class="btn btn-primary">➕ Tarefa Avulsa no Bloco</button>
             </div>
+            <form id="journeyManualTaskForm" class="journey-form-card journey-form-card--inline" style="display: none;">
+                <input type="hidden" id="manualTaskIdInput">
+                <div class="journey-card-heading">
+                    <div>
+                        <h3>Tarefa Avulsa no Bloco</h3>
+                        <p>Registre urgências, apoios pontuais ou qualquer trabalho fora de processos, projetos e reuniões.</p>
+                    </div>
+                </div>
+                <div class="journey-inline-grid">
+                    <div class="form-group">
+                        <label class="form-label">Título</label>
+                        <input id="manualTaskTitleInput" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bloco</label>
+                        <select id="manualTaskBlockInput" class="form-control">
+                            <option value="">Sem bloco</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="journey-inline-grid">
+                    <div class="form-group">
+                        <label class="form-label">Data</label>
+                        <input id="manualTaskDateInput" type="date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Minutos previstos</label>
+                        <input id="manualTaskMinutesInput" type="number" min="5" max="1440" class="form-control" value="60" required>
+                    </div>
+                </div>
+                <div class="journey-inline-grid">
+                    <div class="form-group">
+                        <label class="form-label">Prioridade</label>
+                        <select id="manualTaskPriorityInput" class="form-control">
+                            <option value="low">Baixa</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">Alta</option>
+                            <option value="urgent">Urgente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status inicial</label>
+                        <select id="manualTaskStatusInput" class="form-control">
+                            <option value="pending" selected>Pendente</option>
+                            <option value="in_progress">Em andamento</option>
+                            <option value="completed">Concluída</option>
+                            <option value="postponed">Adiada</option>
+                            <option value="suspended">Suspensa</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <textarea id="manualTaskDescriptionInput" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="journey-form-actions">
+                    <button type="button" class="btn btn-secondary" id="manualTaskCancelBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar tarefa avulsa</button>
+                </div>
+            </form>
             <div class="journey-board">
                 <div class="journey-board__main">
                     <div id="journeyBlocksContainer" class="journey-blocks"></div>
@@ -113,7 +173,7 @@
                     </div>
                     <div class="journey-sidecard">
                         <div class="journey-sidecard__header">
-                            <h3>Itens do período</h3>
+                            <h3>Tarefas do período</h3>
                         </div>
                         <div id="journeyPeriodContainer" class="journey-sidecard__content"></div>
                     </div>
@@ -154,6 +214,14 @@
                         <textarea id="blockDescriptionInput" class="form-control" rows="3"></textarea>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Comportamento do bloco</label>
+                        <select id="blockModeInput" class="form-control">
+                            <option value="operational">Operacional · recebe tarefas automaticamente</option>
+                            <option value="reserved_full">Capacidade ocupada · bloqueia o período</option>
+                            <option value="buffer">Vazio / Buffer · mantém janela livre para urgências</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Dias da semana</label>
                         <div class="journey-checkbox-grid" id="blockWeekdaysGroup"></div>
                     </div>
@@ -171,7 +239,7 @@
                         <div class="journey-list-card__header">
                             <div>
                                 <h3>Blocos cadastrados</h3>
-                                <p>Estrutura vigente para o colaborador selecionado.</p>
+                                <p>Estrutura vigente para o colaborador selecionado, com comportamento operacional configurável.</p>
                             </div>
                         </div>
                         <div id="journeyBlocksList"></div>
@@ -185,99 +253,6 @@
                         </div>
                         <div id="journeyRoutineBindingsList"></div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="journey-tabpanel" data-panel="rules">
-            <div class="journey-panel__header journey-panel__header--tab">
-                <div>
-                    <h2 class="journey-section-title">Obrigações recorrentes</h2>
-                    <p class="journey-section-subtitle">Cadastre as atividades que devem nascer automaticamente ao longo do período.</p>
-                </div>
-            </div>
-            <div class="journey-management-grid">
-                <form id="journeyRuleForm" class="journey-form-card">
-                    <input type="hidden" id="ruleIdInput">
-                    <div class="journey-card-heading">
-                        <h3>Obrigação planejada</h3>
-                        <p>Defina prioridade, recorrência e bloco preferencial para a geração.</p>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Título</label>
-                        <input id="ruleTitleInput" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Descrição</label>
-                        <textarea id="ruleDescriptionInput" class="form-control" rows="3"></textarea>
-                    </div>
-                    <div class="journey-inline-grid">
-                        <div class="form-group">
-                            <label class="form-label">Tipo</label>
-                            <select id="ruleItemTypeInput" class="form-control">
-                                <option value="manual">Manual</option>
-                                <option value="process_instance">Instância de processo</option>
-                                <option value="project_task">Atividade de projeto</option>
-                                <option value="meeting">Reunião</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Recorrência</label>
-                            <select id="ruleRecurrenceInput" class="form-control">
-                                <option value="daily">Diária</option>
-                                <option value="weekly">Semanal</option>
-                                <option value="monthly">Mensal</option>
-                                <option value="annual">Anual</option>
-                                <option value="sporadic">Esporádica</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="journey-inline-grid">
-                        <div class="form-group">
-                            <label class="form-label">Minutos previstos</label>
-                            <input id="ruleMinutesInput" type="number" min="5" max="720" class="form-control" value="60">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Prioridade</label>
-                            <select id="rulePriorityInput" class="form-control">
-                                <option value="low">Baixa</option>
-                                <option value="normal" selected>Normal</option>
-                                <option value="high">Alta</option>
-                                <option value="urgent">Urgente</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="journey-inline-grid">
-                        <div class="form-group">
-                            <label class="form-label">Data inicial</label>
-                            <input id="ruleStartDateInput" type="date" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Data final</label>
-                            <input id="ruleEndDateInput" type="date" class="form-control">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Bloco preferencial</label>
-                        <select id="ruleBlockInput" class="form-control"><option value="">Sem preferência</option></select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Configuração da recorrência</label>
-                        <div id="ruleConfigContainer"></div>
-                    </div>
-                    <div class="journey-form-actions">
-                        <button type="button" class="btn btn-secondary" id="ruleCancelBtn">Limpar</button>
-                        <button type="submit" class="btn btn-primary">Salvar obrigação</button>
-                    </div>
-                </form>
-                <div class="journey-list-card">
-                    <div class="journey-list-card__header">
-                        <div>
-                            <h3>Obrigações cadastradas</h3>
-                            <p>Catálogo operacional usado para gerar cards e instâncias do período.</p>
-                        </div>
-                    </div>
-                    <div id="journeyRulesList"></div>
                 </div>
             </div>
         </div>

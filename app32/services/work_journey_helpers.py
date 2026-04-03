@@ -14,10 +14,16 @@ WEEKDAY_LABELS = {
 }
 
 ITEM_TYPE_LABELS = {
-    'manual': 'Manual',
+    'manual': 'Tarefa Avulsa',
     'process_instance': 'Instância de Processo',
     'project_task': 'Atividade de Projeto',
     'meeting': 'Reunião',
+}
+
+BLOCK_MODE_LABELS = {
+    'operational': 'Operacional',
+    'reserved_full': 'Capacidade ocupada',
+    'buffer': 'Vazio / Buffer',
 }
 
 STATUS_LABELS = {

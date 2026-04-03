@@ -27,6 +27,7 @@ def load_period_items(company_id: int, employee_id: int, period_start: date, per
         WorkJourneyItem.query.filter(
             WorkJourneyItem.company_id == company_id,
             WorkJourneyItem.employee_id == employee_id,
+            WorkJourneyItem.rule_id.is_(None),
             or_(
                 WorkJourneyItem.occurrence_date.between(period_start, period_end),
                 WorkJourneyItem.due_date.between(period_start, period_end),

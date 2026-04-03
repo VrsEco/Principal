@@ -392,6 +392,10 @@
   margin-top: 0.9rem;
 }
 
+.journey-form-card--inline {
+  margin-bottom: 1rem;
+}
+
 .journey-board__aside {
   display: flex;
   flex-direction: column;
