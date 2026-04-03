@@ -1,0 +1,23 @@
+/* Overrides específicos da aba Agendas.
+   A base visual principal permanece em work-journey.css para reaproveitar a linguagem APP32. */
+
+.journey-tabpanel[data-panel="agendas"] .journey-panel {
+  border-color: rgba(37, 99, 235, 0.12);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-board-wrap {
+  scroll-margin-top: 1rem;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-board.no-scrollbar {
+  scrollbar-width: thin;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-board.no-scrollbar::-webkit-scrollbar {
+  height: 10px;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-board.no-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 235, 0.22);
+  border-radius: 999px;
+}
