@@ -154,7 +154,7 @@ def sync_project_tasks(company_id: int, employee_id: int, period_start: date, pe
             'project_name': project.name if project else None,
             'project_code': project.code if project else None,
             'manual_assignment': current_manual_assignment(company_id, 'project_task', task.id),
-            'source_url': f'/projects/{task.project_id}' if task.project_id else None,
+            'source_url': f'/projects/{task.project_id}/manage' if task.project_id else None,
         }
         upsert_source_item(
             company_id=company_id,
@@ -187,6 +187,8 @@ def sync_meetings(company_id: int, employee_id: int, period_start: date, period_
             'source_label': 'Reunião',
             'source_code': f'{meeting.company.client_code if meeting.company and meeting.company.client_code else "AA"}.R.{meeting.id}',
             'project_id': meeting.project_id,
+            'scheduled_time': meeting.scheduled_time,
+            'planned_duration_minutes': int(meeting.planned_duration_minutes or 0),
             'manual_assignment': current_manual_assignment(company_id, 'meeting', meeting.id),
             'source_url': f'/meetings/company/{company_id}/meeting/{meeting.id}/report',
         }

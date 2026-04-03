@@ -10,6 +10,7 @@ _ALLOWED_ITEM_TYPES = {'manual', 'process_instance', 'project_task', 'meeting'}
 _ALLOWED_PRIORITIES = {'low', 'normal', 'high', 'urgent'}
 _ALLOWED_ITEM_STATUSES = {'pending', 'in_progress', 'completed', 'postponed', 'suspended'}
 _ALLOWED_ABSENCE_TYPES = {'vacation', 'absence', 'medical_leave'}
+_ALLOWED_AGENDA_SCOPES = {'day', 'week'}
 
 
 class _StrictModel(BaseModel):
@@ -130,3 +131,21 @@ class WorkJourneyAbsenceRequestCreateSchema(_StrictModel):
 
 class WorkJourneyAbsenceApprovalSchema(_StrictModel):
     cleanup_notes: str | None = None
+
+
+class WorkJourneyAgendaGenerateSchema(_StrictModel):
+    employee_id: int
+    anchor_date: date
+    scope: Literal['day', 'week'] = 'week'
+    force: bool = False
+
+
+class WorkJourneyAgendaLockSchema(_StrictModel):
+    notes: str | None = None
+
+
+class WorkJourneyAgendaMoveSchema(_StrictModel):
+    target_date: date | None = None
+    target_block_id: int | None = None
+    confirm_date_change: bool = False
+    notes: str | None = None

@@ -228,3 +228,107 @@ class WorkJourneyTransferRequest(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class WorkJourneyAgenda(db.Model):
+    __tablename__ = 'work_journey_agendas'
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'employee_id', 'anchor_date', 'scope', name='uq_work_journey_agendas_scope'),
+        {'extend_existing': True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id', ondelete='CASCADE'), nullable=False, index=True)
+    anchor_date = db.Column(db.Date, nullable=False, index=True)
+    scope = db.Column(db.String(20), nullable=False, default='day', index=True)
+    status = db.Column(db.String(30), nullable=False, default='suggested', index=True)
+    engine_version = db.Column(db.String(30), nullable=False, default='agendas-v1')
+    summary_json = db.Column(db.JSON, nullable=False, default=dict)
+    generated_at = db.Column(db.DateTime, nullable=True)
+    locked_at = db.Column(db.DateTime, nullable=True)
+    locked_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    employee = db.relationship('Employee', backref=db.backref('work_journey_agendas', lazy='dynamic'))
+    locked_by_user = db.relationship('User', foreign_keys=[locked_by_user_id])
+    items = db.relationship('WorkJourneyAgendaItem', backref='agenda', cascade='all, delete-orphan', lazy='dynamic')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'employee_id': self.employee_id,
+            'anchor_date': self.anchor_date.isoformat() if self.anchor_date else None,
+            'scope': self.scope,
+            'status': self.status,
+            'engine_version': self.engine_version,
+            'summary_json': dict(self.summary_json or {}),
+            'generated_at': self.generated_at.isoformat() if self.generated_at else None,
+            'locked_at': self.locked_at.isoformat() if self.locked_at else None,
+            'locked_by_user_id': self.locked_by_user_id,
+            'locked_by_name': (
+                getattr(self.locked_by_user, 'name', None)
+                or getattr(self.locked_by_user, 'full_name', None)
+                or getattr(self.locked_by_user, 'username', None)
+                or getattr(self.locked_by_user, 'email', None)
+            ) if self.locked_by_user else None,
+            'locked': self.status == 'locked',
+            'is_locked': self.status == 'locked',
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class WorkJourneyAgendaItem(db.Model):
+    __tablename__ = 'work_journey_agenda_items'
+    __table_args__ = (
+        db.Index('ix_work_journey_agenda_items_agenda_day_position', 'agenda_id', 'planned_date', 'position_index'),
+        {'extend_existing': True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    agenda_id = db.Column(db.Integer, db.ForeignKey('work_journey_agendas.id', ondelete='CASCADE'), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id', ondelete='CASCADE'), nullable=False, index=True)
+    journey_item_id = db.Column(db.Integer, db.ForeignKey('work_journey_items.id', ondelete='SET NULL'), nullable=True, index=True)
+    block_id = db.Column(db.Integer, db.ForeignKey('work_journey_blocks.id', ondelete='SET NULL'), nullable=True, index=True)
+    planned_date = db.Column(db.Date, nullable=False, index=True)
+    position_index = db.Column(db.Integer, nullable=False, default=0)
+    allocated_minutes = db.Column(db.Integer, nullable=False, default=0)
+    planned_start_minutes = db.Column(db.Integer, nullable=True)
+    planned_end_minutes = db.Column(db.Integer, nullable=True)
+    overflow_minutes = db.Column(db.Integer, nullable=False, default=0)
+    is_fixed = db.Column(db.Boolean, nullable=False, default=False)
+    is_over_capacity = db.Column(db.Boolean, nullable=False, default=False)
+    manual_override = db.Column(db.Boolean, nullable=False, default=False)
+    metadata_json = db.Column(db.JSON, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    journey_item = db.relationship('WorkJourneyItem', foreign_keys=[journey_item_id])
+    block = db.relationship('WorkJourneyBlock', foreign_keys=[block_id])
+    employee = db.relationship('Employee', foreign_keys=[employee_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'agenda_id': self.agenda_id,
+            'company_id': self.company_id,
+            'employee_id': self.employee_id,
+            'journey_item_id': self.journey_item_id,
+            'block_id': self.block_id,
+            'planned_date': self.planned_date.isoformat() if self.planned_date else None,
+            'position_index': int(self.position_index or 0),
+            'allocated_minutes': int(self.allocated_minutes or 0),
+            'planned_start_minutes': self.planned_start_minutes,
+            'planned_end_minutes': self.planned_end_minutes,
+            'overflow_minutes': int(self.overflow_minutes or 0),
+            'is_fixed': bool(self.is_fixed),
+            'is_over_capacity': bool(self.is_over_capacity),
+            'manual_override': bool(self.manual_override),
+            'metadata_json': dict(self.metadata_json or {}),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
