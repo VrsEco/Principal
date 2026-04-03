@@ -69,9 +69,9 @@
     const blocks = days.flatMap((day) => day.blocks || []);
     const items = days.flatMap((day) => day.blocks || []).flatMap((block) => block.items || []).concat(days.flatMap((day) => day.unassigned_items || []));
     return {
-      daily_capacity_minutes: blocks.reduce((sum, block) => sum + Number(block.operational_capacity_minutes || block.capacity_minutes || 0), 0),
+      daily_capacity_minutes: blocks.reduce((sum, block) => sum + Number(block.block_mode === 'operational' ? (block.operational_capacity_minutes || block.capacity_minutes || 0) : 0), 0),
       reserved_minutes: blocks.reduce((sum, block) => sum + Number(block.fixed_reserved_minutes || 0), 0),
-      buffer_minutes: blocks.filter((block) => block.block_mode === 'buffer').reduce((sum, block) => sum + Number(block.operational_capacity_minutes || block.capacity_minutes || 0), 0),
+      buffer_minutes: blocks.reduce((sum, block) => sum + Number(block.block_mode === 'buffer' ? (block.buffer_minutes || block.capacity_minutes || 0) : 0), 0),
       planned_minutes: items.reduce((sum, item) => sum + Number(item.estimated_minutes || 0), 0),
       worked_minutes: items.reduce((sum, item) => sum + Number(item.worked_minutes || 0), 0),
       overload_minutes: blocks.reduce((sum, block) => sum + Number(block.overload_minutes || 0), 0),

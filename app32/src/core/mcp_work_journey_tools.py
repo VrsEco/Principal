@@ -7,6 +7,8 @@ from app import create_app
 from schemas.work_journey import (
     WorkJourneyAbsenceApprovalSchema,
     WorkJourneyAbsenceRequestCreateSchema,
+    WorkJourneyAgendaGenerateSchema,
+    WorkJourneyAgendaMoveSchema,
     WorkJourneyBlockCreateSchema,
     WorkJourneyBlockUpdateSchema,
     WorkJourneyManualTaskCreateSchema,
@@ -42,6 +44,12 @@ from services.work_journey_service import (
     save_block,
     save_rule,
     update_work_item,
+)
+from services.work_journey_agenda_service import (
+    get_work_journey_agenda,
+    lock_work_journey_agenda,
+    move_work_journey_agenda_item,
+    unlock_work_journey_agenda,
 )
 
 
@@ -153,6 +161,38 @@ def register_work_journey_tools(mcp) -> None:
     def list_work_journey_absences_tool(company_id: int, employee_id: Optional[int] = None) -> dict:
         """Lista solicitações de ausência da jornada operacional."""
         return {'absences': _run(list_absence_requests, company_id, employee_id)}
+
+    @mcp.tool()
+    def get_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week', force_regenerate: bool = False) -> dict:
+        """Retorna a agenda materializada diária ou semanal da jornada do colaborador."""
+        anchor = date.fromisoformat(anchor_date)
+        return {'data': _run(get_work_journey_agenda, company_id, employee_id, anchor, scope, force_regenerate)}
+
+    @mcp.tool()
+    def generate_work_journey_agenda_tool(company_id: int, payload: dict) -> dict:
+        """Gera ou regenera a agenda materializada da jornada do colaborador."""
+        data = WorkJourneyAgendaGenerateSchema.model_validate(payload).model_dump()
+        return {'data': _run(get_work_journey_agenda, company_id, data['employee_id'], data['anchor_date'], data['scope'], True)}
+
+    @mcp.tool()
+    def lock_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week', user_id: Optional[int] = None) -> dict:
+        """Trava a agenda da jornada para impedir novas alterações manuais."""
+        anchor = date.fromisoformat(anchor_date)
+        return {'data': _run(lock_work_journey_agenda, company_id, employee_id, anchor, scope, user_id)}
+
+    @mcp.tool()
+    def unlock_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week') -> dict:
+        """Cancela o travamento da agenda da jornada."""
+        anchor = date.fromisoformat(anchor_date)
+        return {'data': _run(unlock_work_journey_agenda, company_id, employee_id, anchor, scope)}
+
+    @mcp.tool()
+    def move_work_journey_agenda_item_tool(company_id: int, employee_id: int, anchor_date: str, scope: str, agenda_item_id: int, payload: dict) -> dict:
+        """Move uma tarefa entre blocos ou dias da agenda materializada."""
+        data = WorkJourneyAgendaMoveSchema.model_validate(payload).model_dump(exclude_unset=True)
+        data['target_date'] = data.get('target_date') or date.fromisoformat(anchor_date)
+        anchor = date.fromisoformat(anchor_date)
+        return {'data': _run(move_work_journey_agenda_item, company_id, employee_id, anchor, scope, agenda_item_id, data)}
 
     @mcp.tool()
     def list_routine_journey_bindings_tool(company_id: int, routine_id: int) -> dict:

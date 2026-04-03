@@ -208,7 +208,7 @@
     }
 
     const targetBlockId = zone.dataset.blockId ? Number(zone.dataset.blockId) : null;
-    const targetDay = zone.dataset.agendaDay || null;
+    const targetDay = zone.dataset.agendaDay || source.day?.date || source.item.agenda_date || source.item.due_date || selectedDate();
     const sourceDay = source.day?.date || source.item.agenda_date || source.item.due_date || selectedDate();
     const dayChanged = Boolean(targetDay && sourceDay && targetDay !== sourceDay);
 
@@ -218,11 +218,12 @@
     }
 
     try {
-      await api(`/api/companies/${companyId}/work-journey/items/${source.item.id}`, {
+      await api(`/api/companies/${companyId}/work-journey/agendas/items/${source.item.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           block_id: targetBlockId || null,
-          ...(dayChanged ? { due_date: targetDay } : {}),
+          target_date: targetDay,
+          confirm_date_change: dayChanged,
         }),
       });
       await loadAgenda(true);

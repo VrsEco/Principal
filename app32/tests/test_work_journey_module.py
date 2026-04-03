@@ -1,6 +1,6 @@
 import os
 import sys
-from datetime import date
+from datetime import date, time
 from types import SimpleNamespace
 
 from flask import Flask
@@ -8,6 +8,7 @@ from flask import Flask
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from api.routes import work_journey as work_journey_route
+from services import work_journey_agenda_presenter
 from services import work_journey_service
 from services.work_journey_helpers import block_chronology_key, clamp_period, rule_matches_date
 
@@ -197,6 +198,8 @@ def test_templates_expose_work_journey_entrypoints():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey.html'), 'r', encoding='utf-8') as handle:
         journey_template = handle.read()
+    with open(os.path.join(root, 'templates', 'modules', 'my_work', '_agendas_panel.html'), 'r', encoding='utf-8') as handle:
+        agendas_panel = handle.read()
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'my_work_v2.html'), 'r', encoding='utf-8') as handle:
         my_work_template = handle.read()
     with open(os.path.join(root, 'templates', 'routine_details.html'), 'r', encoding='utf-8') as handle:
@@ -204,13 +207,135 @@ def test_templates_expose_work_journey_entrypoints():
     with open(os.path.join(root, 'templates', 'legacy', 'routine_details.html'), 'r', encoding='utf-8') as handle:
         routine_legacy_template = handle.read()
 
-    assert 'Jornada Operacional por Blocos' in journey_template
-    assert 'Rotinas de processo do colaborador' in journey_template
-    assert 'data-tab="agenda"' in journey_template
-    assert 'data-tab="manual-tasks"' in journey_template
-    assert 'Tarefa Avulsa no Bloco' in journey_template
-    assert 'data-tab="rules"' not in journey_template
+    assert 'Agendas da Jornada' in journey_template
+    assert 'data-tab="agendas"' in journey_template
+    assert 'work-journey-agendas.js' in journey_template
+    assert 'work-journey-agendas-render.js' in journey_template
+    assert 'Kanban de agendas' in agendas_panel
+    assert 'agendaBoardContainer' in agendas_panel
+    assert 'agendaUnassignedContainer' in agendas_panel
+    assert 'agendaLockBtn' in agendas_panel
+    assert 'agendaPdfBtn' in agendas_panel
     assert '/work-journey' in my_work_template
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_legacy_template
+
+
+def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: 'AA.IP.1')
+
+    agenda = SimpleNamespace(
+        id=1,
+        company_id=9,
+        employee_id=3,
+        anchor_date=date(2026, 4, 6),
+        scope='week',
+        status='suggested',
+        engine_version='agendas-v1',
+        summary_json={},
+    )
+    employee = SimpleNamespace(name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'})
+    op_block = SimpleNamespace(
+        id=10,
+        name='Operacional',
+        description='Bloco operacional',
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+        block_mode='operational',
+        weekdays_json=[0],
+    )
+    reserved_block = SimpleNamespace(
+        id=11,
+        name='Meditação',
+        description='Bloco reservado',
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+        block_mode='reserved_full',
+        weekdays_json=[0],
+    )
+    source_item = SimpleNamespace(
+        id=21,
+        company_id=9,
+        item_type='process_instance',
+        source_id=77,
+        title='Checar rotina',
+        description='Descrição',
+        status='pending',
+        priority='normal',
+        due_date=date(2026, 4, 6),
+        occurrence_date=date(2026, 4, 6),
+        worked_minutes=0,
+        estimated_minutes=30,
+        metadata_json={'source_label': 'Rotina', 'source_url': '/x'},
+        block=None,
+    )
+    agenda_entry = SimpleNamespace(
+        id=1,
+        agenda_id=1,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=21,
+        block_id=10,
+        planned_date=date(2026, 4, 6),
+        position_index=0,
+        allocated_minutes=30,
+        planned_start_minutes=480,
+        planned_end_minutes=510,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=False,
+        metadata_json={},
+        block=op_block,
+        journey_item=source_item,
+    )
+    reserved_entry = SimpleNamespace(
+        id=2,
+        agenda_id=1,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=22,
+        block_id=11,
+        planned_date=date(2026, 4, 6),
+        position_index=1,
+        allocated_minutes=0,
+        planned_start_minutes=None,
+        planned_end_minutes=None,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=False,
+        metadata_json={},
+        block=reserved_block,
+        journey_item=SimpleNamespace(
+            id=22,
+            company_id=9,
+            item_type='manual',
+            source_id=None,
+            title='Meditar',
+            description='',
+            status='pending',
+            priority='normal',
+            due_date=date(2026, 4, 6),
+            occurrence_date=date(2026, 4, 6),
+            worked_minutes=0,
+            estimated_minutes=0,
+            metadata_json={},
+            block=None,
+        ),
+    )
+
+    payload = work_journey_agenda_presenter.serialize_agenda_payload(
+        agenda,
+        employee,
+        [op_block, reserved_block],
+        [agenda_entry, reserved_entry],
+    )
+
+    assert payload['employee_name'] == 'Ana'
+    assert payload['days'][0]['label'] == '06/04/2026'
+    assert payload['days'][0]['subtitle'] == 'Seg'
+    assert payload['days'][0]['blocks'][0]['planned_minutes'] == 30
+    assert payload['days'][0]['blocks'][1]['planned_minutes'] == 60
+    assert payload['unassigned_items'] == []

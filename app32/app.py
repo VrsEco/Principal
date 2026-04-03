@@ -760,6 +760,7 @@ def register_blueprints(app):
     from api.routes.okr import okr_bp
     from api.routes.my_work import my_work_bp
     from api.routes.work_journey import work_journey_bp
+    from api.routes.work_journey_agendas import work_journey_agendas_bp
     from api.routes.diag import diag_bp
     from api.routes.dev import dev_bp
     from api.notes import notes_bp
@@ -785,6 +786,7 @@ def register_blueprints(app):
     app.register_blueprint(okr_bp)
     app.register_blueprint(my_work_bp)
     app.register_blueprint(work_journey_bp)
+    app.register_blueprint(work_journey_agendas_bp)
     app.register_blueprint(diag_bp)
     app.register_blueprint(dev_bp)
     app.register_blueprint(notes_bp)
