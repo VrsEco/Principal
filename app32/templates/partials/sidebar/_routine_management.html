@@ -1,0 +1,105 @@
+{% set _routine_projects_active = '/project-portfolios' in request.path or '/projects' in request.path %}
+{% set _routine_processes_active = '/process-map' in request.path or '/processes' in request.path or '/process-routines' in request.path or '/process-instances' in request.path or '/routines' in request.path %}
+{% set _routine_meetings_active = '/meetings' in request.path %}
+{% set _routine_occurrences_active = '/process-occurrences' in request.path %}
+{% set _routine_root_active = _routine_projects_active or _routine_processes_active or _routine_meetings_active or _routine_occurrences_active %}
+
+<!-- Gestão da Rotina -->
+<div class="sidebar-group {{ 'open' if _routine_root_active }}">
+    <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        Gestão da Rotina
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="3">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </button>
+    <div class="sub-menu">
+        <div class="sidebar-subgroup {{ 'open' if _routine_processes_active }}">
+            <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                Gestão de Processos
+                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="subgroup-content">
+                <a href="{{ url_for('processes.process_map') }}"
+                    class="sub-nav-link {{ 'active' if '/process-map' in request.path }}">
+                    Arquitetura de Processos
+                </a>
+                <a href="{{ url_for('processes.processes_list') }}"
+                    class="sub-nav-link {{ 'active' if '/processes' in request.path and '/process-instances' not in request.path and '/process-occurrences' not in request.path }}">
+                    Modelagem de Processos
+                </a>
+                <a href="{{ url_for('processes.process_routines_redirect') }}"
+                    class="sub-nav-link {{ 'active' if '/process-routines' in request.path or '/routines' in request.path }}">
+                    Rotina de Processos
+                </a>
+                <a href="{{ url_for('processes.process_instances_redirect') }}"
+                    class="sub-nav-link {{ 'active' if '/process-instances' in request.path }}">
+                    Instâncias de Processos
+                </a>
+            </div>
+        </div>
+
+        <div class="sidebar-subgroup {{ 'open' if _routine_projects_active }}">
+            <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                Gestão de Projetos
+                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="subgroup-content">
+                <a href="{{ url_for('portfolios.portfolios_page_redirect') }}"
+                    class="sub-nav-link {{ 'active' if '/project-portfolios' in request.path }}">
+                    Portfólio de Projetos
+                </a>
+                <a href="{{ url_for('projects.projects_list') }}"
+                    class="sub-nav-link {{ 'active' if '/projects' in request.path and '/projects/analysis' not in request.path }}">
+                    Projetos
+                </a>
+                <a href="{{ url_for('projects.project_analysis') }}"
+                    class="sub-nav-link {{ 'active' if '/projects/analysis' in request.path }}">
+                    Análise de Projetos
+                </a>
+            </div>
+        </div>
+
+        <div class="sidebar-subgroup {{ 'open' if _routine_meetings_active }}">
+            <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                Gestão de Reuniões
+                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="subgroup-content">
+                <a href="{{ url_for('meetings.meetings_manage_root') }}"
+                    class="sub-nav-link {{ 'active' if '/meetings' in request.path }}">
+                    Gestão de Reuniões
+                </a>
+            </div>
+        </div>
+
+        <div class="sidebar-subgroup {{ 'open' if _routine_occurrences_active }}">
+            <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                Gestão de Ocorrências
+                <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="subgroup-content">
+                <a href="{{ url_for('processes.process_occurrences_redirect') }}"
+                    class="sub-nav-link {{ 'active' if '/process-occurrences' in request.path }}">
+                    Gestão de Ocorrências
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
