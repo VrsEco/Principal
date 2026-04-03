@@ -289,6 +289,7 @@
     try {
       await api(`/api/companies/${companyId}/work-journey/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(payload) });
       await Promise.all([loadBoard(), loadTransfers()]);
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
     } catch (error) {
       toast(error.message);
     }
@@ -318,6 +319,7 @@
       }
       resetManualTaskForm();
       await Promise.all([loadBoard(), loadTransfers()]);
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
       toast('Tarefa avulsa salva com sucesso.');
     } catch (error) {
       toast(error.message);
@@ -329,6 +331,7 @@
     try {
       await api(`/api/companies/${companyId}/work-journey/items/${itemId}`, { method: 'DELETE' });
       await Promise.all([loadBoard(), loadTransfers()]);
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
       toast('Tarefa avulsa excluída.');
     } catch (error) {
       toast(error.message);
@@ -479,5 +482,9 @@
   renderTabs();
   resetBlockForm();
   resetManualTaskForm();
+  window.WorkJourneyPage = {
+    openManualTaskForm,
+    deleteManualTask,
+  };
   refreshAll();
 })();

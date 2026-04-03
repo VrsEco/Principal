@@ -40,6 +40,7 @@ from services.work_journey_service import (
     delete_rule,
     get_work_journey_board,
     list_employee_blocks,
+    list_manual_tasks,
     list_employee_rules,
     save_block,
     save_rule,
@@ -172,6 +173,20 @@ def api_delete_rule(company_id: int, rule_id: int):
             return jsonify({'success': False, 'message': 'Você não pode excluir obrigações deste colaborador.'}), 403
         delete_rule(company_id, rule_id)
         return jsonify({'success': True})
+    except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/manual-tasks', methods=['GET'])
+@permission_required('processes', 'view')
+def api_list_manual_tasks(company_id: int):
+    try:
+        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        if not employee_id or not _can_access_employee(company_id, employee_id):
+            return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
+        return jsonify({'success': True, 'data': list_manual_tasks(company_id, employee_id)})
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:

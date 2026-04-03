@@ -498,6 +498,12 @@
   font-weight: 700;
 }
 
+.journey-manual-task-meta {
+  margin-top: 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 #ruleConfigContainer {
   display: flex;
   flex-direction: column;
