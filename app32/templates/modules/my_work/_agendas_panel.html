@@ -1,0 +1,172 @@
+<div class="journey-panel journey-agendas-shell surface-card">
+    <div class="journey-panel__header journey-panel__header--tab">
+        <div>
+            <h2 class="journey-section-title">Agendas</h2>
+            <p class="journey-section-subtitle">Monte a agenda diária ou semanal do colaborador, com blocos colapsáveis, tarefas coloridas por tipo, travamento e exportação em PDF.</p>
+        </div>
+        <div class="agenda-actions">
+            <button id="manualTaskStartBtn" class="btn btn-secondary">➕ Tarefa Avulsa</button>
+            <button id="agendaRefreshBtn" class="btn btn-secondary">Atualizar agenda</button>
+            <button id="agendaGenerateBtn" class="btn btn-primary">Gerar sugestão</button>
+            <button id="agendaLockBtn" class="btn btn-primary">Travar agenda</button>
+            <button id="agendaUnlockBtn" class="btn btn-secondary" style="display:none;">Cancelar travamento</button>
+            <a id="agendaPdfBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener">PDF</a>
+        </div>
+    </div>
+
+    <div class="agenda-toolbar">
+        <div class="agenda-toolbar__info">
+            <span class="agenda-toolbar__eyebrow">Visão operacional</span>
+            <strong id="agendaStatusLabel" class="agenda-status-pill agenda-status-pill--draft">Rascunho</strong>
+            <div id="agendaMetaLine" class="agenda-toolbar__meta">Sem agenda materializada ainda.</div>
+        </div>
+        <div class="agenda-toolbar__scope">
+            <label class="form-label">Visão</label>
+            <select id="agendaScopeSelect" class="form-control">
+                <option value="day">Diária</option>
+                <option value="week" selected>Semanal</option>
+            </select>
+        </div>
+        <div class="agenda-toolbar__tip">
+            <strong>Regras do kanban</strong>
+            <span>Arraste tarefas entre blocos e dias. Reuniões são fixas e devem ser alteradas no módulo de reuniões.</span>
+        </div>
+    </div>
+
+    <div class="agenda-legend">
+        <span class="agenda-legend__item agenda-legend__item--process">Instância de Processo</span>
+        <span class="agenda-legend__item agenda-legend__item--project">Atividade de Projeto</span>
+        <span class="agenda-legend__item agenda-legend__item--meeting">Reunião</span>
+        <span class="agenda-legend__item agenda-legend__item--manual">Tarefa Avulsa</span>
+        <span class="agenda-legend__item agenda-legend__item--buffer">Buffer</span>
+        <span class="agenda-legend__item agenda-legend__item--reserved">Capacidade ocupada</span>
+    </div>
+
+    <section class="journey-summary agenda-summary" id="agendaSummaryCards"></section>
+
+    <div class="agenda-layout">
+        <div class="agenda-main">
+            <div class="agenda-board-wrap">
+                <div class="agenda-board-header">
+                    <div>
+                        <h3 class="journey-section-title">Kanban de agendas</h3>
+                        <p class="journey-section-subtitle">Coluna = dia. Blocos internos podem ser recolhidos para organizar a leitura.</p>
+                    </div>
+                    <div class="agenda-board-header__actions">
+                        <span id="agendaLockBadge" class="agenda-status-pill agenda-status-pill--draft">Agenda não travada</span>
+                    </div>
+                </div>
+                <div id="agendaBoardContainer" class="agenda-board no-scrollbar"></div>
+            </div>
+        </div>
+
+        <aside class="agenda-aside">
+            <div class="journey-sidecard agenda-sidecard">
+                <div class="journey-sidecard__header">
+                    <h3>Não alocadas</h3>
+                    <span id="agendaUnassignedCount" class="badge-pill">0</span>
+                </div>
+                <div id="agendaUnassignedContainer" class="journey-sidecard__content" data-dropzone="unassigned"></div>
+            </div>
+            <div class="journey-sidecard agenda-sidecard">
+                <div class="journey-sidecard__header">
+                    <h3>Orientações</h3>
+                </div>
+                <div class="agenda-hints">
+                    <div class="agenda-hint-card agenda-hint-card--info">
+                        <strong>Movimentação entre dias</strong>
+                        <p>Ao mover uma tarefa entre dias, o sistema pedirá confirmação antes de atualizar a data.</p>
+                    </div>
+                    <div class="agenda-hint-card agenda-hint-card--warning">
+                        <strong>Reuniões</strong>
+                        <p>Reuniões não são arrastáveis. Use o módulo de reuniões para reprogramar.</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <form id="journeyManualTaskForm" class="journey-form-card journey-form-card--inline" style="display:none;">
+            <input type="hidden" id="manualTaskIdInput">
+            <div class="journey-card-heading">
+                <div>
+                    <h3>Tarefa Avulsa no Bloco</h3>
+                    <p>Registre urgências, apoios pontuais ou qualquer trabalho fora de processos, projetos e reuniões.</p>
+                </div>
+            </div>
+            <div class="journey-inline-grid">
+                <div class="form-group">
+                    <label class="form-label">Título</label>
+                    <input id="manualTaskTitleInput" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bloco</label>
+                    <select id="manualTaskBlockInput" class="form-control">
+                        <option value="">Sem bloco</option>
+                    </select>
+                </div>
+            </div>
+            <div class="journey-inline-grid">
+                <div class="form-group">
+                    <label class="form-label">Data</label>
+                    <input id="manualTaskDateInput" type="date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Minutos previstos</label>
+                    <input id="manualTaskMinutesInput" type="number" min="5" max="1440" class="form-control" value="60" required>
+                </div>
+            </div>
+            <div class="journey-inline-grid">
+                <div class="form-group">
+                    <label class="form-label">Prioridade</label>
+                    <select id="manualTaskPriorityInput" class="form-control">
+                        <option value="low">Baixa</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="high">Alta</option>
+                        <option value="urgent">Urgente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status inicial</label>
+                    <select id="manualTaskStatusInput" class="form-control">
+                        <option value="pending" selected>Pendente</option>
+                        <option value="in_progress">Em andamento</option>
+                        <option value="completed">Concluída</option>
+                        <option value="postponed">Adiada</option>
+                        <option value="suspended">Suspensa</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea id="manualTaskDescriptionInput" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="journey-form-actions">
+                <button type="button" class="btn btn-secondary" id="manualTaskCancelBtn">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar tarefa avulsa</button>
+            </div>
+    </form>
+
+    <div class="journey-legacy-agenda" hidden>
+        <div class="journey-board">
+            <div class="journey-board__main">
+                <div id="journeyBlocksContainer" class="journey-blocks"></div>
+            </div>
+            <aside class="journey-board__aside">
+                <div class="journey-sidecard">
+                    <div class="journey-sidecard__header">
+                        <h3>Não alocadas</h3>
+                        <span id="journeyUnassignedCount" class="badge-pill">0</span>
+                    </div>
+                    <div id="journeyUnassignedContainer" class="journey-sidecard__content"></div>
+                </div>
+                <div class="journey-sidecard">
+                    <div class="journey-sidecard__header">
+                        <h3>Tarefas do período</h3>
+                    </div>
+                    <div id="journeyPeriodContainer" class="journey-sidecard__content"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>

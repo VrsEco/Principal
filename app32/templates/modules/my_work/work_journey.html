@@ -1,9 +1,10 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Jornada por Blocos | Versus{% endblock %}
+{% block title %}Agendas da Jornada | Versus{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey-agendas.css') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -12,8 +13,8 @@
         <div class="journey-hero__content">
             <div>
                 <span class="journey-hero__eyebrow">APP32 · Planejamento Operacional</span>
-                <h1 class="journey-hero__title">Jornada Operacional por Blocos</h1>
-                <p class="journey-hero__subtitle">Organize a jornada do colaborador em blocos, distribua tarefas do período e acompanhe a capacidade operacional com clareza executiva.</p>
+                <h1 class="journey-hero__title">Agendas da Jornada</h1>
+                <p class="journey-hero__subtitle">Organize a jornada do colaborador em agendas diária e semanal, distribua tarefas por bloco e acompanhe a capacidade operacional com travamento e exportação.</p>
             </div>
             <div class="journey-hero__actions">
                 <a class="btn btn-secondary" href="{{ url_for('my_work.my_work') }}">← Meu Trabalho</a>
@@ -67,16 +68,15 @@
                 <input id="journeyDateInput" type="date" class="form-control" value="{{ today }}">
             </div>
             <div class="form-group">
-                <label class="form-label">Escopo</label>
+                <label class="form-label">Visão</label>
                 <select id="journeyScopeSelect" class="form-control">
                     <option value="day">Dia</option>
-                    <option value="week">Semana</option>
-                    <option value="month">Mês</option>
+                    <option value="week" selected>Semana</option>
                 </select>
             </div>
             <div class="journey-toolbar__tip">
                 <strong>Uso recomendado</strong>
-                <span>Comece no escopo diário para validar encaixe dos blocos e depois avance para semana/mês.</span>
+                <span>Comece no escopo semanal para organizar os blocos por dia e use a visão diária para o ajuste fino.</span>
             </div>
         </div>
     </section>
@@ -85,101 +85,15 @@
 
     <section class="surface-card journey-panel journey-tabs-shell">
         <div class="journey-tabs__header">
-            <button class="journey-tab is-active" data-tab="agenda">Agenda</button>
+            <button class="journey-tab is-active" data-tab="agendas">Agendas</button>
             <button class="journey-tab" data-tab="blocks">Blocos</button>
             <button class="journey-tab" data-tab="manual-tasks">Tarefas Avulsas</button>
             <button class="journey-tab" data-tab="absences">Ausências</button>
             <button class="journey-tab" data-tab="transfers">Transferências</button>
         </div>
 
-        <div class="journey-tabpanel is-active" data-panel="agenda">
-            <div class="journey-panel__header journey-panel__header--tab">
-                <div>
-                    <h2 class="journey-section-title">Agenda operacional</h2>
-                    <p class="journey-section-subtitle">Veja a distribuição das tarefas nos blocos de jornada, acompanhe a capacidade e registre tarefas avulsas quando necessário.</p>
-                </div>
-                <button id="manualTaskStartBtn" class="btn btn-primary">➕ Tarefa Avulsa no Bloco</button>
-            </div>
-            <form id="journeyManualTaskForm" class="journey-form-card journey-form-card--inline" style="display: none;">
-                <input type="hidden" id="manualTaskIdInput">
-                <div class="journey-card-heading">
-                    <div>
-                        <h3>Tarefa Avulsa no Bloco</h3>
-                        <p>Registre urgências, apoios pontuais ou qualquer trabalho fora de processos, projetos e reuniões.</p>
-                    </div>
-                </div>
-                <div class="journey-inline-grid">
-                    <div class="form-group">
-                        <label class="form-label">Título</label>
-                        <input id="manualTaskTitleInput" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Bloco</label>
-                        <select id="manualTaskBlockInput" class="form-control">
-                            <option value="">Sem bloco</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="journey-inline-grid">
-                    <div class="form-group">
-                        <label class="form-label">Data</label>
-                        <input id="manualTaskDateInput" type="date" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Minutos previstos</label>
-                        <input id="manualTaskMinutesInput" type="number" min="5" max="1440" class="form-control" value="60" required>
-                    </div>
-                </div>
-                <div class="journey-inline-grid">
-                    <div class="form-group">
-                        <label class="form-label">Prioridade</label>
-                        <select id="manualTaskPriorityInput" class="form-control">
-                            <option value="low">Baixa</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="high">Alta</option>
-                            <option value="urgent">Urgente</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Status inicial</label>
-                        <select id="manualTaskStatusInput" class="form-control">
-                            <option value="pending" selected>Pendente</option>
-                            <option value="in_progress">Em andamento</option>
-                            <option value="completed">Concluída</option>
-                            <option value="postponed">Adiada</option>
-                            <option value="suspended">Suspensa</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Descrição</label>
-                    <textarea id="manualTaskDescriptionInput" class="form-control" rows="3"></textarea>
-                </div>
-                <div class="journey-form-actions">
-                    <button type="button" class="btn btn-secondary" id="manualTaskCancelBtn">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar tarefa avulsa</button>
-                </div>
-            </form>
-            <div class="journey-board">
-                <div class="journey-board__main">
-                    <div id="journeyBlocksContainer" class="journey-blocks"></div>
-                </div>
-                <aside class="journey-board__aside">
-                    <div class="journey-sidecard">
-                        <div class="journey-sidecard__header">
-                            <h3>Não alocadas</h3>
-                            <span id="journeyUnassignedCount" class="badge-pill">0</span>
-                        </div>
-                        <div id="journeyUnassignedContainer" class="journey-sidecard__content"></div>
-                    </div>
-                    <div class="journey-sidecard">
-                        <div class="journey-sidecard__header">
-                            <h3>Tarefas do período</h3>
-                        </div>
-                        <div id="journeyPeriodContainer" class="journey-sidecard__content"></div>
-                    </div>
-                </aside>
-            </div>
+        <div class="journey-tabpanel is-active" data-panel="agendas">
+            {% include 'modules/my_work/_agendas_panel.html' %}
         </div>
 
         <div class="journey-tabpanel" data-panel="blocks">
@@ -360,6 +274,8 @@
 </script>
 <script src="{{ url_for('static', filename='js/work-journey-utils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey.js') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey-agendas-render.js') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey-agendas.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-routines.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-manual-tasks.js') }}"></script>
 {% endblock %}

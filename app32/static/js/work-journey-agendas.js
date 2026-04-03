@@ -1,0 +1,392 @@
+(() => {
+  const bootstrap = window.workJourneyBootstrap || {};
+  const companyId = bootstrap.companyId;
+  const renderer = window.WorkJourneyAgendasRenderer;
+  const utils = window.WorkJourneyUtils || {};
+  const { api, toast } = utils;
+
+  const employeeSelect = document.getElementById('journeyEmployeeSelect');
+  const dateInput = document.getElementById('journeyDateInput');
+  const refreshBtn = document.getElementById('agendaRefreshBtn');
+  const generateBtn = document.getElementById('agendaGenerateBtn');
+  const lockBtn = document.getElementById('agendaLockBtn');
+  const unlockBtn = document.getElementById('agendaUnlockBtn');
+  const pdfBtn = document.getElementById('agendaPdfBtn');
+  const scopeSelect = document.getElementById('agendaScopeSelect');
+  const boardContainer = document.getElementById('agendaBoardContainer');
+  const unassignedContainer = document.getElementById('agendaUnassignedContainer');
+  const unassignedCount = document.getElementById('agendaUnassignedCount');
+  const summaryContainer = document.getElementById('agendaSummaryCards');
+  const statusLabel = document.getElementById('agendaStatusLabel');
+  const statusBadge = document.getElementById('agendaLockBadge');
+  const metaLine = document.getElementById('agendaMetaLine');
+
+  const state = {
+    agenda: null,
+    loading: false,
+    collapsedBlocks: new Set(),
+    draggingItemId: null,
+    legacyFallback: false,
+  };
+
+  if (!renderer || !api) return;
+
+  function selectedEmployeeId() {
+    return parseInt(employeeSelect?.value, 10) || null;
+  }
+
+  function selectedDate() {
+    return dateInput?.value || bootstrap.today;
+  }
+
+  function currentScope() {
+    return scopeSelect?.value || 'week';
+  }
+
+  function setLoading(nextValue) {
+    state.loading = nextValue;
+    [refreshBtn, generateBtn, lockBtn, unlockBtn].forEach((btn) => {
+      if (btn) btn.disabled = nextValue;
+    });
+  }
+
+  function agendaTitle(item) {
+    return item.display_title || item.title || `Tarefa ${item.id}`;
+  }
+
+  function findItem(itemId) {
+    for (const day of state.agenda?.days || []) {
+      for (const block of day.blocks || []) {
+        const found = (block.items || []).find((item) => Number(item.id) === Number(itemId));
+        if (found) {
+          return { item: found, day, block };
+        }
+      }
+      const unassigned = (day.unassigned_items || []).find((item) => Number(item.id) === Number(itemId));
+      if (unassigned) {
+        return { item: unassigned, day, block: null };
+      }
+    }
+    return null;
+  }
+
+  function updateControls() {
+    const agenda = state.agenda;
+    const locked = Boolean(agenda?.locked);
+    const hasAgenda = Boolean(agenda?.id);
+
+    if (statusLabel) {
+      const status = locked ? 'Travada' : (agenda?.status === 'suggested' ? 'Sugerida' : 'Rascunho');
+      statusLabel.textContent = status;
+      statusLabel.className = `agenda-status-pill ${locked ? 'agenda-status-pill--locked' : agenda?.status === 'suggested' ? 'agenda-status-pill--suggested' : 'agenda-status-pill--draft'}`;
+    }
+
+    if (statusBadge) {
+      statusBadge.textContent = locked ? 'Agenda travada' : 'Agenda aberta';
+      statusBadge.className = `agenda-status-pill ${locked ? 'agenda-status-pill--locked' : 'agenda-status-pill--draft'}`;
+    }
+
+    if (lockBtn) lockBtn.style.display = !hasAgenda || locked ? 'none' : '';
+    if (unlockBtn) unlockBtn.style.display = hasAgenda && locked ? '' : 'none';
+
+    if (pdfBtn) {
+      pdfBtn.href = hasAgenda ? `/api/companies/${companyId}/work-journey/agendas/${agenda.id}/pdf` : '#';
+      pdfBtn.style.pointerEvents = hasAgenda ? 'auto' : 'none';
+      pdfBtn.style.opacity = hasAgenda ? '1' : '0.5';
+    }
+
+    if (metaLine) {
+      const parts = [];
+      if (agenda?.generated_at) parts.push(`Gerada em ${agenda.generated_at}`);
+      if (agenda?.locked_at) parts.push(`Travada em ${agenda.locked_at}`);
+      if (agenda?.locked_by_name) parts.push(`por ${agenda.locked_by_name}`);
+      if (agenda?.engine_version) parts.push(`Motor ${agenda.engine_version}`);
+      metaLine.textContent = parts.length ? parts.join(' · ') : (state.legacyFallback ? 'Fallback do board legado em uso.' : 'Sem agenda materializada ainda.');
+    }
+  }
+
+  function clearDropHighlights() {
+    document.querySelectorAll('.agenda-dropzone--over').forEach((zone) => zone.classList.remove('agenda-dropzone--over'));
+  }
+
+  function renderAgenda() {
+    updateControls();
+
+    const agenda = state.agenda;
+    const summary = agenda?.summary || renderer.buildSummaryFromDays(agenda?.days || []);
+
+    if (summaryContainer) {
+      summaryContainer.innerHTML = renderer.renderSummaryCards(summary);
+    }
+
+    if (!boardContainer || !unassignedContainer) return;
+
+    if (!agenda) {
+      boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhuma agenda disponível para o contexto selecionado.</div>';
+      unassignedContainer.innerHTML = '<div class="agenda-empty-state agenda-empty-state--compact">Nada para exibir.</div>';
+      if (unassignedCount) unassignedCount.textContent = '0';
+      return;
+    }
+
+    const html = renderer.renderAgendaHTML(agenda, state.collapsedBlocks, agenda.locked);
+    boardContainer.innerHTML = html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>';
+    unassignedContainer.innerHTML = html.unassignedHTML || '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa fora dos blocos.</div>';
+    if (unassignedCount) unassignedCount.textContent = String(agenda.unassigned_items?.length || 0);
+  }
+
+  function toggleBlock(toggleButton) {
+    const key = toggleButton?.dataset?.agendaToggle;
+    if (!key) return;
+    const block = toggleButton.closest('.agenda-block');
+    const content = block?.querySelector('.agenda-block__content');
+    const collapsed = state.collapsedBlocks.has(key);
+
+    if (collapsed) {
+      state.collapsedBlocks.delete(key);
+      block?.classList.remove('is-collapsed');
+      content?.classList.remove('is-hidden');
+      content?.setAttribute('aria-hidden', 'false');
+      toggleButton.setAttribute('aria-expanded', 'true');
+    } else {
+      state.collapsedBlocks.add(key);
+      block?.classList.add('is-collapsed');
+      content?.classList.add('is-hidden');
+      content?.setAttribute('aria-hidden', 'true');
+      toggleButton.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function onDragStart(event) {
+    const card = event.target.closest?.('.agenda-card');
+    if (!card || state.agenda?.locked) return;
+    if (card.dataset.itemType === 'meeting') {
+      toast('Reuniões não podem ser arrastadas. Ajuste no módulo de reuniões.');
+      event.preventDefault();
+      return;
+    }
+
+    state.draggingItemId = card.dataset.agendaItem;
+    card.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', state.draggingItemId);
+  }
+
+  function onDragEnd(event) {
+    const card = event.target.closest?.('.agenda-card');
+    card?.classList.remove('is-dragging');
+    state.draggingItemId = null;
+    clearDropHighlights();
+  }
+
+  function onDragOver(event) {
+    if (state.agenda?.locked) return;
+    const zone = event.target.closest?.('[data-dropzone]');
+    if (!zone) return;
+    const dragged = state.draggingItemId ? findItem(state.draggingItemId) : null;
+    if (!dragged || dragged.item.item_type === 'meeting') return;
+
+    event.preventDefault();
+    clearDropHighlights();
+    zone.classList.add('agenda-dropzone--over');
+    event.dataTransfer.dropEffect = 'move';
+  }
+
+  async function onDrop(event) {
+    if (state.agenda?.locked) return;
+    const zone = event.target.closest?.('[data-dropzone]');
+    if (!zone) return;
+    event.preventDefault();
+
+    const itemId = state.draggingItemId || event.dataTransfer.getData('text/plain');
+    const source = findItem(itemId);
+    clearDropHighlights();
+
+    if (!source) return;
+    if (source.item.item_type === 'meeting') {
+      toast('Reuniões não podem ser arrastadas. Ajuste no módulo de reuniões.');
+      return;
+    }
+
+    const targetBlockId = zone.dataset.blockId ? Number(zone.dataset.blockId) : null;
+    const targetDay = zone.dataset.agendaDay || null;
+    const sourceDay = source.day?.date || source.item.agenda_date || source.item.due_date || selectedDate();
+    const dayChanged = Boolean(targetDay && sourceDay && targetDay !== sourceDay);
+
+    if (dayChanged) {
+      const answer = confirm(`Mover ${agendaTitle(source.item)} de ${sourceDay} para ${targetDay} e atualizar a data?`);
+      if (!answer) return;
+    }
+
+    try {
+      await api(`/api/companies/${companyId}/work-journey/items/${source.item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          block_id: targetBlockId || null,
+          ...(dayChanged ? { due_date: targetDay } : {}),
+        }),
+      });
+      await loadAgenda(true);
+      toast('Tarefa reposicionada com sucesso.');
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+
+  function wireInteractions() {
+    boardContainer?.addEventListener('click', (event) => {
+      const toggleButton = event.target.closest('[data-agenda-toggle]');
+      if (toggleButton) toggleBlock(toggleButton);
+
+      const meetingHint = event.target.closest('[data-action="meeting-hint"]');
+      if (meetingHint) {
+        toast('Esta reunião deve ser ajustada no módulo de reuniões.');
+      }
+    });
+
+    [boardContainer, unassignedContainer].forEach((container) => {
+      if (!container) return;
+      container.addEventListener('dragstart', onDragStart);
+      container.addEventListener('dragend', onDragEnd);
+      container.addEventListener('dragover', onDragOver);
+      container.addEventListener('drop', onDrop);
+    });
+  }
+
+  async function loadAgenda(forceFallback = false) {
+    if (!companyId || !renderer) return;
+    const employeeId = selectedEmployeeId();
+    setLoading(true);
+
+    try {
+      const response = await api(`/api/companies/${companyId}/work-journey/agendas?employee_id=${employeeId}&date=${selectedDate()}&scope=${currentScope()}`);
+      state.agenda = renderer.normalizeAgenda(response, {
+        selectedDate: selectedDate(),
+        scope: currentScope(),
+        employeeId,
+        companyId,
+      });
+      state.legacyFallback = false;
+    } catch (error) {
+      if (!forceFallback) {
+        try {
+          const fallback = await api(`/api/companies/${companyId}/work-journey/board?employee_id=${employeeId}&date=${selectedDate()}&scope=${currentScope()}`);
+          state.agenda = renderer.normalizeAgenda({
+            agenda: {
+              id: null,
+              company_id: companyId,
+              employee_id: employeeId,
+              scope: currentScope(),
+              status: 'draft',
+              locked: false,
+              generated_at: null,
+              engine_version: 'board-fallback',
+              days: [{
+                date: selectedDate(),
+                label: renderer.formatDayLabel(selectedDate(), 0),
+                subtitle: 'Legado',
+                blocks: fallback.data.blocks || [],
+                unassigned_items: fallback.data.unassigned_items || [],
+              }],
+              unassigned_items: fallback.data.unassigned_items || [],
+              summary: {
+                ...(fallback.data.summary || {}),
+                unassigned_count: (fallback.data.unassigned_items || []).length,
+              },
+            },
+          }, {
+            selectedDate: selectedDate(),
+            scope: currentScope(),
+            employeeId,
+            companyId,
+          });
+          state.legacyFallback = true;
+        } catch (fallbackError) {
+          state.agenda = null;
+          state.legacyFallback = false;
+          toast(fallbackError.message || error.message);
+        }
+      }
+    } finally {
+      setLoading(false);
+      renderAgenda();
+    }
+  }
+
+  async function generateAgenda() {
+    try {
+      await api(`/api/companies/${companyId}/work-journey/agendas/generate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          employee_id: selectedEmployeeId(),
+          date: selectedDate(),
+          scope: currentScope(),
+        }),
+      });
+      await loadAgenda();
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
+      toast('Agenda sugerida gerada com sucesso.');
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+
+  async function lockAgenda() {
+    if (!state.agenda?.id) {
+      toast('Gere uma agenda antes de travar.');
+      return;
+    }
+
+    try {
+      await api(`/api/companies/${companyId}/work-journey/agendas/${state.agenda.id}/lock`, {
+        method: 'POST',
+        body: JSON.stringify({ employee_id: selectedEmployeeId() }),
+      });
+      await loadAgenda();
+      toast('Agenda travada.');
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+
+  async function unlockAgenda() {
+    if (!state.agenda?.id) return;
+
+    try {
+      await api(`/api/companies/${companyId}/work-journey/agendas/${state.agenda.id}/unlock`, {
+        method: 'POST',
+        body: JSON.stringify({ employee_id: selectedEmployeeId() }),
+      });
+      await loadAgenda();
+      toast('Travamento cancelado.');
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+
+  function wireControls() {
+    refreshBtn?.addEventListener('click', () => loadAgenda());
+    generateBtn?.addEventListener('click', generateAgenda);
+    lockBtn?.addEventListener('click', lockAgenda);
+    unlockBtn?.addEventListener('click', unlockAgenda);
+    scopeSelect?.addEventListener('change', () => loadAgenda());
+    employeeSelect?.addEventListener('change', () => loadAgenda());
+    dateInput?.addEventListener('change', () => loadAgenda());
+    document.addEventListener('workJourney:refreshed', () => loadAgenda(true));
+  }
+
+  function init() {
+    if (!boardContainer || !unassignedContainer) return;
+    wireControls();
+    wireInteractions();
+    loadAgenda();
+  }
+
+  window.WorkJourneyAgendas = {
+    refresh: loadAgenda,
+    generate: generateAgenda,
+    lock: lockAgenda,
+    unlock: unlockAgenda,
+  };
+
+  init();
+})();
