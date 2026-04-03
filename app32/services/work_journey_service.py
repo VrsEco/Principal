@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from models import db, Employee, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
+from models import Company, db, Employee, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
 from services.work_journey_base import WorkJourneyError, ensure_employee
 from services.work_journey_helpers import (
     BLOCK_MODE_LABELS,
@@ -359,13 +359,46 @@ def build_summary(employee: Employee, blocks: list[WorkJourneyBlock], items: lis
 
 def serialize_item(item: WorkJourneyItem) -> dict[str, Any]:
     payload = item.to_dict()
+    display_code = build_item_display_code(item)
     payload['item_type_label'] = ITEM_TYPE_LABELS.get(item.item_type, item.item_type)
     payload['status_label'] = STATUS_LABELS.get(item.status, item.status)
     payload['is_overdue'] = bool(item.due_date and item.due_date < date.today() and item.status != 'completed')
     payload['source_label'] = (item.metadata_json or {}).get('source_label')
     payload['source_url'] = (item.metadata_json or {}).get('source_url')
     payload['block_name'] = item.block.name if getattr(item, 'block', None) else None
+    payload['display_code'] = display_code
+    payload['display_title'] = f'{display_code} - {item.title}' if display_code else item.title
     return payload
+
+
+def build_item_display_code(item: WorkJourneyItem) -> str:
+    metadata = dict(item.metadata_json or {})
+    company_code = resolve_company_code(item.company_id)
+
+    if item.item_type == 'process_instance':
+        return str(metadata.get('source_code') or f'{company_code}.IP.{item.source_id or item.id}')
+
+    if item.item_type == 'project_task':
+        return str(metadata.get('source_code') or f'{company_code}.J.{item.source_id or item.id}')
+
+    if item.item_type == 'meeting':
+        return str(metadata.get('source_code') or f'{company_code}.R.{item.source_id or item.id}')
+
+    if item.item_type == 'manual' and not item.source_id and not item.rule_id:
+        return f'{company_code}.V.{item.id}'
+
+    return str(metadata.get('source_code') or f'{company_code}.T.{item.id}')
+
+
+def resolve_company_code(company_id: int) -> str:
+    company = Company.query.get(company_id)
+    if not company:
+        return 'AA'
+    code = str(company.client_code or '').strip().upper()
+    if code:
+        return code
+    fallback = ''.join(char for char in str(company.name or '').upper() if char.isalnum())
+    return (fallback[:2] or 'AA')
 
 
 def item_matches_anchor(item: WorkJourneyItem, anchor: date, scope: str) -> bool:

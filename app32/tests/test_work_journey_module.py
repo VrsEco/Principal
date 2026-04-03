@@ -64,6 +64,15 @@ class _FakeBlockQuery:
         return None
 
 
+class _FakeCompanyLookup:
+    def __init__(self, company):
+        self.company = company
+
+    def get(self, company_id):
+        assert company_id == self.company.id
+        return self.company
+
+
 
 def test_rule_matches_date_supports_weekly_monthly_and_annual_ranges():
     assert rule_matches_date('weekly', {'weekdays': [0, 2]}, date(2026, 4, 6)) is True
@@ -158,6 +167,30 @@ def test_save_block_respects_empty_accepted_item_types(monkeypatch):
     result = work_journey_service.save_block(9, payload)
 
     assert result['accepted_item_types'] == []
+
+
+def test_serialize_item_adds_app32_display_code(monkeypatch):
+    fake_company = SimpleNamespace(id=9, client_code='AA', name='Alpha')
+    monkeypatch.setattr(work_journey_service, 'Company', SimpleNamespace(query=_FakeCompanyLookup(fake_company)))
+
+    manual_item = SimpleNamespace(
+        id=1241,
+        company_id=9,
+        item_type='manual',
+        source_id=None,
+        rule_id=None,
+        title='Almoço com fulano de tal',
+        status='pending',
+        due_date=date(2026, 4, 3),
+        block=SimpleNamespace(name='Meditação'),
+        metadata_json={},
+        to_dict=lambda: {'id': 1241, 'title': 'Almoço com fulano de tal', 'status': 'pending', 'due_date': '2026-04-03', 'metadata_json': {}},
+    )
+
+    payload = work_journey_service.serialize_item(manual_item)
+
+    assert payload['display_code'] == 'AA.V.1241'
+    assert payload['display_title'] == 'AA.V.1241 - Almoço com fulano de tal'
 
 
 def test_templates_expose_work_journey_entrypoints():
