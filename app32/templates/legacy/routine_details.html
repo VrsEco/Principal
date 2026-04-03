@@ -277,6 +277,38 @@
     padding: 24px;
     margin-bottom: 24px;
   }
+
+  .journey-planning-card {
+    margin-top: 24px;
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 24px;
+  }
+
+  .journey-binding-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .journey-binding-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .journey-binding-row:first-child {
+    padding-top: 0;
+  }
+
+  .journey-binding-meta small {
+    display: block;
+    color: #6b7280;
+    margin-top: 4px;
+  }
 </style>
 {% endblock %}
 
@@ -514,6 +546,22 @@
           </tr>
         </tbody>
       </table>
+
+      <div class="journey-planning-card">
+        <div style="display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:16px;">
+          <div>
+            <h3 style="font-size:18px; font-weight:600; color:#0f172a;">Planejamento na Jornada</h3>
+            <p style="color:#64748b; font-size:14px; margin-top:4px;">Defina em qual bloco de jornada cada executor deverá receber as instâncias desta rotina.</p>
+          </div>
+          <a href="/companies/{{ company.id }}/work-journey" class="btn btn-secondary">🧭 Abrir Jornada</a>
+        </div>
+        <div id="routineJourneyBindingsPanel">
+          <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <div>Carregando vínculos da jornada...</div>
+          </div>
+        </div>
+      </div>
       {% endif %}
     </div>
   </div>
@@ -705,11 +753,18 @@
 
   async function loadCollaborators() {
     try {
-      const response = await fetch(`/api/routines/${routineId}/collaborators`);
-      const result = await response.json();
+      const [collabResponse, journeyResponse] = await Promise.all([
+        fetch(`/api/routines/${routineId}/collaborators`),
+        fetch(`/api/routines/${routineId}/journey-bindings`)
+      ]);
+      const result = await collabResponse.json();
+      const journeyResult = await journeyResponse.json();
       
       if (result.success) {
         renderCollaborators(result.collaborators || []);
+      }
+      if (journeyResult.success) {
+        renderJourneyBindings(journeyResult.data || {});
       }
     } catch (error) {
       console.error('Erro:', error);
@@ -780,6 +835,71 @@
       }
     } catch (error) {
       console.error('Erro:', error);
+    }
+  }
+
+  function renderJourneyBindings(data) {
+    const container = document.getElementById('routineJourneyBindingsPanel');
+    const collaborators = data.collaborators || [];
+
+    if (!collaborators.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🧭</div>
+          <div>Cadastre executores na rotina para poder planejar os blocos de jornada.</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = collaborators.map((collab) => `
+      <div class="journey-binding-row">
+        <div class="journey-binding-meta">
+          <div style="font-weight:600; color:#0f172a;">${collab.employee_name}</div>
+          <small>${collab.hours_used || 0}h previstas nesta rotina · ${collab.binding?.block_name || 'Sem bloco vinculado'}</small>
+        </div>
+        <div>
+          <select class="form-select" data-journey-binding-select="${collab.employee_id}">
+            <option value="">Não vincular agora</option>
+            ${(collab.available_blocks || []).map((block) => `
+              <option value="${block.id}" ${Number(collab.binding?.block_id) === Number(block.id) ? 'selected' : ''}>
+                ${block.name} · ${block.start_time} → ${block.end_time}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+        <div>
+          <button class="btn btn-primary" type="button" onclick="saveJourneyBinding(${collab.employee_id})">Salvar</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function saveJourneyBinding(employeeId) {
+    const select = document.querySelector(`[data-journey-binding-select="${employeeId}"]`);
+    const blockId = select && select.value ? parseInt(select.value, 10) : null;
+
+    try {
+      const response = await fetch(`/api/routines/${routineId}/journey-bindings`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          employee_id: employeeId,
+          block_id: blockId,
+          notes: ''
+        })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || 'Falha ao salvar vínculo.');
+      }
+
+      alert('✅ Vínculo de jornada salvo com sucesso!');
+      await loadCollaborators();
+    } catch (error) {
+      console.error('Erro ao salvar vínculo de jornada:', error);
+      alert(error.message || 'Erro ao salvar vínculo de jornada.');
     }
   }
 
@@ -887,4 +1007,3 @@
   });
 </script>
 {% endblock %}
-

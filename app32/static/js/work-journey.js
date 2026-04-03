@@ -360,6 +360,7 @@
       await api(`/api/companies/${companyId}/work-journey/blocks/${id}`, { method: 'DELETE' });
       resetBlockForm();
       await Promise.all([loadBlocks(), loadBoard()]);
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
     } catch (error) {
       toast(error.message);
     }
@@ -411,6 +412,7 @@
     try {
       await Promise.all([loadBlocks(), loadRules(), loadAbsences(), loadTransfers()]);
       await loadBoard();
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
     } catch (error) {
       toast(error.message);
     }
@@ -441,6 +443,7 @@
       await api(`/api/companies/${companyId}/work-journey/blocks${blockId ? `/${blockId}` : ''}`, { method: blockId ? 'PUT' : 'POST', body: JSON.stringify(payload) });
       resetBlockForm();
       await Promise.all([loadBlocks(), loadBoard()]);
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
     } catch (error) {
       toast(error.message);
     }

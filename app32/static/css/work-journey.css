@@ -31,7 +31,8 @@
 .journey-summary,
 .journey-toolbar__grid,
 .journey-inline-grid,
-.journey-management-grid {
+.journey-management-grid,
+.journey-stack {
   display: grid;
   gap: 1rem;
 }
@@ -431,6 +432,11 @@
   grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
 }
 
+.journey-stack {
+  grid-template-columns: 1fr;
+  align-content: start;
+}
+
 .journey-inline-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -466,6 +472,23 @@
   background: rgba(248, 250, 252, 0.6);
 }
 
+.journey-binding-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 240px) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.journey-binding-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.journey-binding-row__meta small {
+  color: var(--text-secondary);
+}
+
 .journey-overload {
   color: #b91c1c;
   font-weight: 700;
@@ -499,6 +522,10 @@
 
   .journey-hero__actions {
     justify-content: flex-start;
+  }
+
+  .journey-binding-row {
+    grid-template-columns: 1fr;
   }
 }
 
