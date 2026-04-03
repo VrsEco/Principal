@@ -239,7 +239,6 @@ class FinancialDashboardAnalytics:
             {"label": "Extrato Bancário", "href": "/financial/reports/extrato-bancario"},
             {"label": "DRE", "href": "/financial/reports/demonstrativo-resultados"},
             {"label": "Fluxo de Caixa", "href": "/financial/reports/fluxo-caixa"},
-            {"label": "Fechamentos", "href": "/financial/closings"},
             {"label": "Orçamento Matricial", "href": "/financial/budget"},
             {"label": "Cadastros", "href": "/financial/catalogs"},
         ]

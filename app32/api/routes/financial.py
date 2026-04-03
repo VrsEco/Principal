@@ -448,17 +448,6 @@ def financial_automation_audit_page():
     )
 
 
-@financial_bp.route("/financial/closings")
-@permission_required("financial", "view")
-def financial_closings_page():
-    company = get_active_company()
-    return render_template(
-        "modules/financial/closings.html",
-        company=company,
-        company_id=company.id if company else None,
-    )
-
-
 @financial_bp.route("/financial/budgets")
 @permission_required("financial", "view")
 def financial_budget_planning_page():

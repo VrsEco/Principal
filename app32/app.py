@@ -550,8 +550,6 @@ def register_api_resources(api):
         FinancialClassificationDashboardResource,
         FinancialClassificationAskUserResource,
         FinancialClassificationResolveAnswerResource,
-        FinancialClosingListResource,
-        FinancialClosingPreviewResource,
         FinancialReportTypeListResource,
         FinancialReportGenerateResource,
         FinancialExecutiveDashboardResource,
@@ -726,8 +724,6 @@ def register_api_resources(api):
     api.add_resource(FinancialClassificationDashboardResource, '/api/financial/classification-dashboard')
     api.add_resource(FinancialClassificationAskUserResource, '/api/financial/classification-pending/<int:import_row_id>/ask-user')
     api.add_resource(FinancialClassificationResolveAnswerResource, '/api/financial/classification-pending/<int:import_row_id>/resolve')
-    api.add_resource(FinancialClosingListResource, '/api/financial/closings')
-    api.add_resource(FinancialClosingPreviewResource, '/api/financial/closings/preview')
     api.add_resource(FinancialReportTypeListResource, '/api/financial/reports/types')
     api.add_resource(FinancialReportGenerateResource, '/api/financial/reports/generate')
     api.add_resource(FinancialExecutiveDashboardResource, '/api/financial/dashboard')
