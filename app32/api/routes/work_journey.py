@@ -57,6 +57,15 @@ work_journey_bp = Blueprint('work_journey', __name__)
 PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 
+def _format_validation_error(exc: ValidationError) -> str:
+    messages: list[str] = []
+    for error in exc.errors():
+        location = ' → '.join(str(part) for part in (error.get('loc') or []) if part not in {None, '__root__'})
+        message = str(error.get('msg') or 'Valor inválido.')
+        messages.append(f'{location}: {message}' if location else message)
+    return '; '.join(messages) or 'Dados inválidos.'
+
+
 @work_journey_bp.route('/work-journey')
 @permission_required('processes', 'view')
 def work_journey_redirect():
@@ -224,7 +233,7 @@ def api_save_process_routine_binding(company_id: int, routine_id: int):
         )
         return jsonify({'success': True, 'binding': binding})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except ValueError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -244,7 +253,7 @@ def api_update_item(company_id: int, item_id: int):
         data = update_work_item(company_id, item_id, payload)
         return jsonify({'success': True, 'item': data})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -261,7 +270,7 @@ def api_create_manual_task(company_id: int):
         item = create_manual_task(company_id, payload)
         return jsonify({'success': True, 'item': item}), 201
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -298,7 +307,7 @@ def api_create_transfer_request(company_id: int, item_id: int):
         transfer = create_transfer_request(company_id, item_id, payload['to_employee_id'], payload.get('reason'), getattr(current_user, 'id', None))
         return jsonify({'success': True, 'transfer': transfer}), 201
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -327,7 +336,7 @@ def api_approve_transfer(company_id: int, request_id: int):
         transfer = approve_transfer_request(company_id, request_id, getattr(current_user, 'id', None), payload.get('resolution_notes'))
         return jsonify({'success': True, 'transfer': transfer})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -356,7 +365,7 @@ def api_create_absence(company_id: int):
         absence = create_absence_request(company_id, payload, getattr(current_user, 'id', None))
         return jsonify({'success': True, 'absence': absence}), 201
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -373,7 +382,7 @@ def api_approve_absence(company_id: int, request_id: int):
         absence = approve_absence_request(company_id, request_id, getattr(current_user, 'id', None), payload.get('cleanup_notes'))
         return jsonify({'success': True, 'absence': absence})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -409,7 +418,7 @@ def _save_block(company_id: int, block_id: int | None = None):
         block = save_block(company_id, payload, block_id)
         return jsonify({'success': True, 'block': block})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -426,7 +435,7 @@ def _save_rule(company_id: int, rule_id: int | None = None):
         rule = save_rule(company_id, payload, rule_id)
         return jsonify({'success': True, 'rule': rule})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:

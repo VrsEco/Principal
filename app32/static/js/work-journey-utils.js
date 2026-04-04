@@ -16,6 +16,31 @@
     { value: 6, label: 'Dom' },
   ];
 
+  function normalizeErrorMessage(value) {
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) {
+      const messages = value
+        .map((item) => {
+          if (typeof item === 'string') return item;
+          if (!item || typeof item !== 'object') return '';
+          const location = Array.isArray(item.loc) ? item.loc.filter((part) => part !== '__root__').join(' → ') : '';
+          const message = item.msg || item.message || '';
+          return location ? `${location}: ${message}` : message;
+        })
+        .filter(Boolean);
+      return messages.join('; ');
+    }
+    if (value && typeof value === 'object') {
+      if (typeof value.message === 'string') return value.message;
+      try {
+        return JSON.stringify(value);
+      } catch (_error) {
+        return 'Falha na operação.';
+      }
+    }
+    return value ? String(value) : '';
+  }
+
   function api(path, options = {}) {
     return fetch(path, {
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
@@ -23,7 +48,11 @@
     }).then(async (res) => {
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.success === false) {
-        throw new Error(json.message || 'Falha na operação.');
+        throw new Error(
+          normalizeErrorMessage(json.message)
+          || normalizeErrorMessage(json.error)
+          || 'Falha na operação.'
+        );
       }
       return json;
     });

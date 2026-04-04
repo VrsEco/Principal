@@ -28,6 +28,15 @@ work_journey_agendas_bp = Blueprint('work_journey_agendas', __name__)
 PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 
+def _format_validation_error(exc: ValidationError) -> str:
+    messages: list[str] = []
+    for error in exc.errors():
+        location = ' → '.join(str(part) for part in (error.get('loc') or []) if part not in {None, '__root__'})
+        message = str(error.get('msg') or 'Valor inválido.')
+        messages.append(f'{location}: {message}' if location else message)
+    return '; '.join(messages) or 'Dados inválidos.'
+
+
 def _parse_date(raw_value: str | None) -> date | None:
     if not raw_value:
         return None
@@ -109,7 +118,7 @@ def api_generate_agenda(company_id: int):
         agenda = get_work_journey_agenda(company_id, employee_id, anchor, scope, True)
         return jsonify({'success': True, 'data': agenda})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -132,7 +141,7 @@ def api_lock_agenda(company_id: int, agenda_id: int):
             data.setdefault('agenda', {})['notes'] = payload['notes']
         return jsonify({'success': True, 'data': data})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
@@ -165,11 +174,14 @@ def api_move_agenda_item(company_id: int, agenda_item_id: int):
         if not _can_manage_employee(company_id, agenda_item.employee_id):
             return jsonify({'success': False, 'message': 'Você não pode mover itens desta agenda.'}), 403
 
-        raw_payload = request.get_json(silent=True) or {}
-        if not raw_payload.get('target_date'):
-            raw_payload['target_date'] = raw_payload.get('due_date') or raw_payload.get('agenda_date') or raw_payload.get('date')
-        if raw_payload.get('block_id') is not None and raw_payload.get('target_block_id') is None:
-            raw_payload['target_block_id'] = raw_payload['block_id']
+        raw_payload = dict(request.get_json(silent=True) or {})
+        legacy_target_date = raw_payload.pop('due_date', None) or raw_payload.pop('agenda_date', None) or raw_payload.pop('date', None)
+        legacy_block_id_present = 'block_id' in raw_payload
+        legacy_block_id = raw_payload.pop('block_id', None)
+        if not raw_payload.get('target_date') and legacy_target_date is not None:
+            raw_payload['target_date'] = legacy_target_date
+        if raw_payload.get('target_block_id') is None and legacy_block_id_present:
+            raw_payload['target_block_id'] = legacy_block_id
         payload = WorkJourneyAgendaMoveSchema.model_validate(raw_payload).model_dump(exclude_unset=True)
         if not payload.get('target_date'):
             return jsonify({'success': False, 'message': 'Informe a data de destino.'}), 400
@@ -190,7 +202,7 @@ def api_move_agenda_item(company_id: int, agenda_item_id: int):
         )
         return jsonify({'success': True, 'data': data})
     except ValidationError as exc:
-        return jsonify({'success': False, 'message': exc.errors()}), 400
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
     except WorkJourneyError as exc:
         return jsonify({'success': False, 'message': str(exc)}), 400
     except Exception:
