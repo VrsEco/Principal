@@ -74,6 +74,12 @@ class _FakeCompanyLookup:
         return self.company
 
 
+class _FixedDate(date):
+    @classmethod
+    def today(cls):
+        return cls(2026, 4, 4)
+
+
 
 def test_rule_matches_date_supports_weekly_monthly_and_annual_ranges():
     assert rule_matches_date('weekly', {'weekdays': [0, 2]}, date(2026, 4, 6)) is True
@@ -86,8 +92,8 @@ def test_rule_matches_date_supports_weekly_monthly_and_annual_ranges():
 
 def test_clamp_period_returns_expected_ranges():
     start, end = clamp_period('week', date(2026, 4, 8))
-    assert start.isoformat() == '2026-04-06'
-    assert end.isoformat() == '2026-04-12'
+    assert start.isoformat() == '2026-04-05'
+    assert end.isoformat() == '2026-04-11'
 
     start, end = clamp_period('month', date(2026, 4, 8))
     assert start.isoformat() == '2026-04-01'
@@ -265,6 +271,7 @@ def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypat
         priority='normal',
         due_date=date(2026, 4, 6),
         occurrence_date=date(2026, 4, 6),
+        is_overdue=False,
         worked_minutes=0,
         estimated_minutes=30,
         metadata_json={'source_label': 'Rotina', 'source_url': '/x'},
@@ -319,6 +326,7 @@ def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypat
             priority='normal',
             due_date=date(2026, 4, 6),
             occurrence_date=date(2026, 4, 6),
+            is_overdue=True,
             worked_minutes=0,
             estimated_minutes=0,
             metadata_json={},
@@ -334,8 +342,175 @@ def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypat
     )
 
     assert payload['employee_name'] == 'Ana'
-    assert payload['days'][0]['label'] == '06/04/2026'
-    assert payload['days'][0]['subtitle'] == 'Seg'
-    assert payload['days'][0]['blocks'][0]['planned_minutes'] == 30
-    assert payload['days'][0]['blocks'][1]['planned_minutes'] == 60
+    assert payload['days'][0]['label'] == '05/04/2026'
+    assert payload['days'][0]['subtitle'] == 'Dom'
+    assert payload['summary']['overdue_count'] == 1
+    monday_day = next(day for day in payload['days'] if day['date'] == '2026-04-06')
+    assert monday_day['blocks'][0]['planned_minutes'] == 30
+    assert monday_day['blocks'][1]['planned_minutes'] == 60
+    assert monday_day['overdue_count'] == 1
+    assert monday_day['overdue_items'][0]['id'] == 2
+    assert monday_day['blocks'][1]['items'][0]['is_overdue'] is True
+    assert payload['overdue_items'][0]['id'] == 2
     assert payload['unassigned_items'] == []
+
+
+def test_agenda_presenter_separates_overdue_and_unassigned_items(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: 'AA.IP.1')
+    monkeypatch.setattr(work_journey_agenda_presenter, 'date', _FixedDate)
+
+    agenda = SimpleNamespace(
+        id=2,
+        company_id=9,
+        employee_id=3,
+        anchor_date=date(2026, 4, 6),
+        scope='week',
+        status='suggested',
+        engine_version='agendas-v1',
+        summary_json={},
+    )
+    employee = SimpleNamespace(name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'})
+    monday_block = SimpleNamespace(
+        id=10,
+        name='Operacional',
+        description='Bloco operacional',
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+        block_mode='operational',
+        weekdays_json=[0],
+    )
+    overdue_item = SimpleNamespace(
+        id=31,
+        company_id=9,
+        item_type='manual',
+        source_id=None,
+        title='Tarefa atrasada',
+        description='',
+        status='pending',
+        priority='normal',
+        due_date=date(2026, 4, 3),
+        occurrence_date=date(2026, 4, 3),
+        is_overdue=True,
+        worked_minutes=0,
+        estimated_minutes=15,
+        metadata_json={},
+        block=None,
+    )
+    unassigned_item = SimpleNamespace(
+        id=32,
+        company_id=9,
+        item_type='manual',
+        source_id=None,
+        title='Tarefa sem alocação',
+        description='',
+        status='pending',
+        priority='normal',
+        due_date=date(2026, 4, 6),
+        occurrence_date=date(2026, 4, 6),
+        is_overdue=False,
+        worked_minutes=0,
+        estimated_minutes=20,
+        metadata_json={},
+        block=None,
+    )
+    overdue_entry = SimpleNamespace(
+        id=3,
+        agenda_id=2,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=31,
+        block_id=10,
+        planned_date=date(2026, 4, 6),
+        position_index=0,
+        allocated_minutes=15,
+        planned_start_minutes=480,
+        planned_end_minutes=495,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=False,
+        metadata_json={},
+        block=monday_block,
+        journey_item=overdue_item,
+    )
+    unassigned_entry = SimpleNamespace(
+        id=4,
+        agenda_id=2,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=32,
+        block_id=None,
+        planned_date=date(2026, 4, 6),
+        position_index=1,
+        allocated_minutes=20,
+        planned_start_minutes=None,
+        planned_end_minutes=None,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=False,
+        metadata_json={},
+        block=None,
+        journey_item=unassigned_item,
+    )
+
+    payload = work_journey_agenda_presenter.serialize_agenda_payload(
+        agenda,
+        employee,
+        [monday_block],
+        [overdue_entry, unassigned_entry],
+    )
+
+    monday_day = next(day for day in payload['days'] if day['date'] == '2026-04-06')
+
+    assert payload['overdue_items'][0]['id'] == 3
+    assert payload['unassigned_items'][0]['id'] == 4
+    assert monday_day['overdue_items'][0]['id'] == 3
+    assert monday_day['unassigned_items'][0]['id'] == 4
+    assert payload['summary']['overdue_count'] == 1
+
+
+def test_agenda_presenter_marks_item_overdue_from_due_date_without_explicit_flag(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: 'AA.V.99')
+    monkeypatch.setattr(work_journey_agenda_presenter, 'date', _FixedDate)
+
+    overdue_item = SimpleNamespace(
+        id=99,
+        company_id=9,
+        item_type='manual',
+        source_id=None,
+        title='Tarefa vencida',
+        description='',
+        status='pending',
+        priority='normal',
+        due_date=_FixedDate(2026, 4, 3),
+        occurrence_date=_FixedDate(2026, 4, 3),
+        worked_minutes=0,
+        estimated_minutes=30,
+        metadata_json={},
+        block=None,
+    )
+    entry = SimpleNamespace(
+        id=9,
+        agenda_id=2,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=99,
+        block_id=None,
+        planned_date=_FixedDate(2026, 4, 5),
+        position_index=0,
+        allocated_minutes=30,
+        planned_start_minutes=None,
+        planned_end_minutes=None,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=False,
+        metadata_json={},
+        block=None,
+        journey_item=overdue_item,
+    )
+
+    payload = work_journey_agenda_presenter.serialize_agenda_entry(entry)
+
+    assert payload['is_overdue'] is True

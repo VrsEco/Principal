@@ -20,8 +20,13 @@ def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, bloc
     period_start, period_end = clamp_period(agenda.scope, agenda.anchor_date)
     blocks_by_id = {block.id: block for block in blocks}
     entries_by_day_block: dict[tuple[date, int | None], list[WorkJourneyAgendaItem]] = defaultdict(list)
+    serialized_entries: dict[int, dict[str, Any]] = {}
     for entry in entries:
         entries_by_day_block[(entry.planned_date, entry.block_id)].append(entry)
+        serialized_entries[entry.id] = serialize_agenda_entry(entry)
+
+    overdue_entries = _unique_task_entries(entry for entry in entries if _entry_is_overdue(entry))
+    unassigned_entries = _unique_task_entries(entry for entry in entries if entry.block_id is None)
 
     days = []
     current = period_start
@@ -29,6 +34,7 @@ def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, bloc
         day_blocks = [block for block in sorted(blocks_by_id.values(), key=block_chronology_key) if current.weekday() in (block.weekdays_json or [])]
         block_payloads = []
         day_entries = [entry for entry in entries if entry.planned_date == current]
+        day_overdue_entries = _unique_task_entries(entry for entry in day_entries if _entry_is_overdue(entry))
         for block in day_blocks:
             block_entries = entries_by_day_block.get((current, block.id), [])
             block_capacity = duration_minutes(block.start_time, block.end_time)
@@ -55,7 +61,7 @@ def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, bloc
                     'worked_minutes': worked_minutes,
                     'overload_minutes': overload,
                     'overload_label': format_minutes_label(overload),
-                    'items': [serialize_agenda_entry(entry) for entry in block_entries],
+                    'items': [serialized_entries[entry.id] for entry in block_entries],
                 }
             )
         days.append(
@@ -68,8 +74,10 @@ def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, bloc
                 'day_number': current.day,
                 'is_today': current == date.today(),
                 'blocks': block_payloads,
-                'items': [serialize_agenda_entry(entry) for entry in day_entries],
-                'unassigned_items': [serialize_agenda_entry(entry) for entry in day_entries if entry.block_id is None],
+                'items': [serialized_entries[entry.id] for entry in day_entries],
+                'overdue_items': [serialized_entries[entry.id] for entry in day_overdue_entries],
+                'overdue_count': len(day_overdue_entries),
+                'unassigned_items': [serialized_entries[entry.id] for entry in _unique_task_entries(entry for entry in day_entries if entry.block_id is None)],
                 'day_capacity_minutes': sum(block['operational_capacity_minutes'] for block in block_payloads),
                 'day_planned_minutes': sum(block['planned_minutes'] for block in block_payloads),
                 'day_overload_minutes': sum(block['overload_minutes'] for block in block_payloads),
@@ -82,7 +90,8 @@ def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, bloc
     planned_minutes = sum(day['day_planned_minutes'] for day in days)
     overload_minutes = sum(int(entry.overflow_minutes or 0) for entry in entries)
     daily_capacity_minutes = sum(day['day_capacity_minutes'] for day in days)
-    unassigned_count = len([entry for entry in entries if entry.block_id is None])
+    unassigned_count = len(unassigned_entries)
+    overdue_count = len(overdue_entries)
     return {
         'id': agenda.id,
         'employee': employee.to_dict(),
@@ -111,9 +120,11 @@ def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, bloc
             'buffer_label': format_minutes_label(summary.get('buffer_minutes', 0)),
             'reserved_label': format_minutes_label(summary.get('reserved_minutes', 0)),
             'overload_label': format_minutes_label(overload_minutes),
+            'overdue_count': overdue_count,
         },
         'days': days,
-        'unassigned_items': [serialize_agenda_entry(entry) for entry in entries if entry.block_id is None],
+        'overdue_items': [serialized_entries[entry.id] for entry in overdue_entries],
+        'unassigned_items': [serialized_entries[entry.id] for entry in unassigned_entries],
     }
 
 
@@ -121,6 +132,7 @@ def serialize_agenda_entry(entry: WorkJourneyAgendaItem) -> dict[str, Any]:
     item = entry.journey_item
     metadata = dict(item.metadata_json or {}) if item else {}
     display_code = build_item_display_code(item) if item else ''
+    is_overdue = _item_is_overdue(item)
     return {
         'id': entry.id,
         'agenda_item_id': entry.id,
@@ -148,6 +160,7 @@ def serialize_agenda_entry(entry: WorkJourneyAgendaItem) -> dict[str, Any]:
         'status': item.status if item else 'pending',
         'status_label': STATUS_LABELS.get(item.status, item.status) if item else 'Pendente',
         'priority': item.priority if item else 'normal',
+        'is_overdue': is_overdue,
         'display_code': display_code,
         'display_title': f'{display_code} - {item.title}' if item and display_code else (item.title if item else 'Tarefa indisponível'),
         'source_label': metadata.get('source_label'),
@@ -164,6 +177,34 @@ def serialize_agenda_entry(entry: WorkJourneyAgendaItem) -> dict[str, Any]:
         'block_mode_label': BLOCK_MODE_LABELS.get(entry.block.block_mode if entry.block else '', entry.block.block_mode if entry.block else None),
         'block_name_snapshot': entry.block.name if entry.block else None,
     }
+
+
+def _entry_is_overdue(entry: WorkJourneyAgendaItem) -> bool:
+    return _item_is_overdue(getattr(entry, 'journey_item', None))
+
+
+def _item_is_overdue(item: Any) -> bool:
+    if not item or getattr(item, 'status', None) == 'completed':
+        return False
+    explicit_flag = getattr(item, 'is_overdue', None)
+    if explicit_flag is not None:
+        return bool(explicit_flag)
+    due_date = getattr(item, 'due_date', None)
+    return bool(due_date and due_date < date.today())
+
+
+def _unique_task_entries(entries: Any) -> list[WorkJourneyAgendaItem]:
+    unique: list[WorkJourneyAgendaItem] = []
+    seen: set[int | tuple[str, int]] = set()
+    for entry in entries:
+        task_key = getattr(entry, 'journey_item_id', None)
+        if task_key is None:
+            task_key = ('entry', int(getattr(entry, 'id', 0) or 0))
+        if task_key in seen:
+            continue
+        seen.add(task_key)
+        unique.append(entry)
+    return unique
 
 
 def planned_window_label(entry: WorkJourneyAgendaItem) -> str | None:

@@ -14,7 +14,9 @@
   const pdfBtn = document.getElementById('agendaPdfBtn');
   const scopeSelect = document.getElementById('agendaScopeSelect');
   const boardContainer = document.getElementById('agendaBoardContainer');
+  const overdueContainer = document.getElementById('agendaOverdueContainer');
   const unassignedContainer = document.getElementById('agendaUnassignedContainer');
+  const overdueCount = document.getElementById('agendaOverdueCount');
   const unassignedCount = document.getElementById('agendaUnassignedCount');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
@@ -25,8 +27,11 @@
     agenda: null,
     loading: false,
     collapsedBlocks: new Set(),
-    draggingItemId: null,
+    collapsedDays: new Set(),
+    collapsedPanels: new Set(),
     legacyFallback: false,
+    storageKey: null,
+    draggingItemId: null,
   };
 
   if (!renderer || !api) return;
@@ -41,6 +46,36 @@
 
   function currentScope() {
     return scopeSelect?.value || 'week';
+  }
+
+  function getStorageKeyBase() {
+    return [
+      'workJourney',
+      'agenda',
+      companyId || 'unknown',
+      selectedEmployeeId() || 'all',
+      currentScope(),
+      selectedDate(),
+    ].join(':');
+  }
+
+  function readPersistedSet(name) {
+    try {
+      const raw = localStorage.getItem(`${getStorageKeyBase()}:${name}`);
+      if (!raw) return new Set();
+      const values = JSON.parse(raw);
+      return new Set(Array.isArray(values) ? values : []);
+    } catch (_error) {
+      return new Set();
+    }
+  }
+
+  function writePersistedSet(name, setValue) {
+    try {
+      localStorage.setItem(`${getStorageKeyBase()}:${name}`, JSON.stringify(Array.from(setValue)));
+    } catch (_error) {
+      // silently ignore storage failures
+    }
   }
 
   function setLoading(nextValue) {
@@ -58,14 +93,10 @@
     for (const day of state.agenda?.days || []) {
       for (const block of day.blocks || []) {
         const found = (block.items || []).find((item) => Number(item.id) === Number(itemId));
-        if (found) {
-          return { item: found, day, block };
-        }
+        if (found) return { item: found, day, block };
       }
       const unassigned = (day.unassigned_items || []).find((item) => Number(item.id) === Number(itemId));
-      if (unassigned) {
-        return { item: unassigned, day, block: null };
-      }
+      if (unassigned) return { item: unassigned, day, block: null };
     }
     return null;
   }
@@ -105,6 +136,22 @@
     }
   }
 
+  function applyPanelCollapseState() {
+    document.querySelectorAll('[data-collapse-panel]').forEach((panel) => {
+      const key = panel.dataset.collapsePanel;
+      const collapsed = state.collapsedPanels.has(key);
+      const body = panel.querySelector('[data-collapse-body]');
+      const toggle = panel.querySelector(`[data-collapse-toggle="${key}"]`);
+      panel.classList.toggle('is-collapsed', collapsed);
+      body?.classList.toggle('is-hidden', collapsed);
+      if (body) body.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        toggle.setAttribute('aria-label', collapsed ? `Expandir ${panel.dataset.collapseLabel || key}` : `Colapsar ${panel.dataset.collapseLabel || key}`);
+      }
+    });
+  }
+
   function clearDropHighlights() {
     document.querySelectorAll('.agenda-dropzone--over').forEach((zone) => zone.classList.remove('agenda-dropzone--over'));
   }
@@ -119,19 +166,26 @@
       summaryContainer.innerHTML = renderer.renderSummaryCards(summary);
     }
 
-    if (!boardContainer || !unassignedContainer) return;
+    if (!boardContainer || !overdueContainer || !unassignedContainer) return;
 
     if (!agenda) {
       boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhuma agenda disponível para o contexto selecionado.</div>';
+      overdueContainer.innerHTML = '<div class="agenda-empty-state agenda-empty-state--compact">Nada para exibir.</div>';
       unassignedContainer.innerHTML = '<div class="agenda-empty-state agenda-empty-state--compact">Nada para exibir.</div>';
+      if (overdueCount) overdueCount.textContent = '0';
       if (unassignedCount) unassignedCount.textContent = '0';
+      applyPanelCollapseState();
       return;
     }
 
-    const html = renderer.renderAgendaHTML(agenda, state.collapsedBlocks, agenda.locked);
+    const html = renderer.renderAgendaHTML(agenda, state, agenda.locked);
     boardContainer.innerHTML = html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>';
+    overdueContainer.innerHTML = html.overdueHTML || '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa atrasada.</div>';
     unassignedContainer.innerHTML = html.unassignedHTML || '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa fora dos blocos.</div>';
+
+    if (overdueCount) overdueCount.textContent = String(agenda.overdue_items?.length || 0);
     if (unassignedCount) unassignedCount.textContent = String(agenda.unassigned_items?.length || 0);
+    applyPanelCollapseState();
   }
 
   function toggleBlock(toggleButton) {
@@ -154,6 +208,61 @@
       content?.setAttribute('aria-hidden', 'true');
       toggleButton.setAttribute('aria-expanded', 'false');
     }
+
+    writePersistedSet('collapsedBlocks', state.collapsedBlocks);
+  }
+
+  function toggleDay(toggleButton) {
+    const key = toggleButton?.dataset?.agendaDayToggle;
+    if (!key) return;
+    const column = toggleButton.closest('.agenda-day-column');
+    const body = column?.querySelector('.agenda-day-column__body');
+    const collapsed = state.collapsedDays.has(key);
+
+    if (collapsed) {
+      state.collapsedDays.delete(key);
+      column?.classList.remove('is-collapsed');
+      body?.classList.remove('is-hidden');
+      body?.setAttribute('aria-hidden', 'false');
+      toggleButton.setAttribute('aria-expanded', 'true');
+      toggleButton.setAttribute('aria-label', 'Colapsar dia');
+    } else {
+      state.collapsedDays.add(key);
+      column?.classList.add('is-collapsed');
+      body?.classList.add('is-hidden');
+      body?.setAttribute('aria-hidden', 'true');
+      toggleButton.setAttribute('aria-expanded', 'false');
+      toggleButton.setAttribute('aria-label', 'Expandir dia');
+    }
+
+    writePersistedSet('collapsedDays', state.collapsedDays);
+  }
+
+  function togglePanel(toggleButton) {
+    const key = toggleButton?.dataset?.collapseToggle;
+    if (!key) return;
+    const panel = toggleButton.closest('[data-collapse-panel]');
+    const body = panel?.querySelector('[data-collapse-body]');
+    const label = panel?.dataset?.collapseLabel || key;
+    const collapsed = state.collapsedPanels.has(key);
+
+    if (collapsed) {
+      state.collapsedPanels.delete(key);
+      panel?.classList.remove('is-collapsed');
+      body?.classList.remove('is-hidden');
+      body?.setAttribute('aria-hidden', 'false');
+      toggleButton.setAttribute('aria-expanded', 'true');
+      toggleButton.setAttribute('aria-label', `Colapsar ${label}`);
+    } else {
+      state.collapsedPanels.add(key);
+      panel?.classList.add('is-collapsed');
+      body?.classList.add('is-hidden');
+      body?.setAttribute('aria-hidden', 'true');
+      toggleButton.setAttribute('aria-expanded', 'false');
+      toggleButton.setAttribute('aria-label', `Expandir ${label}`);
+    }
+
+    writePersistedSet('collapsedPanels', state.collapsedPanels);
   }
 
   function onDragStart(event) {
@@ -235,8 +344,16 @@
 
   function wireInteractions() {
     boardContainer?.addEventListener('click', (event) => {
-      const toggleButton = event.target.closest('[data-agenda-toggle]');
-      if (toggleButton) toggleBlock(toggleButton);
+      const dayToggle = event.target.closest('[data-agenda-day-toggle]');
+      if (dayToggle) toggleDay(dayToggle);
+
+      const blockToggle = event.target.closest('[data-agenda-toggle]');
+      if (blockToggle) toggleBlock(blockToggle);
+    });
+
+    document.addEventListener('click', (event) => {
+      const panelToggle = event.target.closest('[data-collapse-toggle]');
+      if (panelToggle) togglePanel(panelToggle);
 
       const meetingHint = event.target.closest('[data-action="meeting-hint"]');
       if (meetingHint) {
@@ -244,7 +361,7 @@
       }
     });
 
-    [boardContainer, unassignedContainer].forEach((container) => {
+    [boardContainer, overdueContainer, unassignedContainer].forEach((container) => {
       if (!container) return;
       container.addEventListener('dragstart', onDragStart);
       container.addEventListener('dragend', onDragEnd);
@@ -257,6 +374,11 @@
     if (!companyId || !renderer) return;
     const employeeId = selectedEmployeeId();
     setLoading(true);
+
+    state.storageKey = getStorageKeyBase();
+    state.collapsedBlocks = readPersistedSet('collapsedBlocks');
+    state.collapsedDays = readPersistedSet('collapsedDays');
+    state.collapsedPanels = readPersistedSet('collapsedPanels');
 
     try {
       const response = await api(`/api/companies/${companyId}/work-journey/agendas?employee_id=${employeeId}&date=${selectedDate()}&scope=${currentScope()}`);
@@ -376,7 +498,7 @@
   }
 
   function init() {
-    if (!boardContainer || !unassignedContainer) return;
+    if (!boardContainer || !overdueContainer || !unassignedContainer) return;
     wireControls();
     wireInteractions();
     loadAgenda();
