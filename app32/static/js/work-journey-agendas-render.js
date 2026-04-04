@@ -286,6 +286,7 @@
     const blocks = day.blocks || [];
     const dayKey = day.key || day.date;
     const collapsed = collapsedState?.days?.has(dayKey);
+    const collapsedLabel = `${day.subtitle || 'Dia'} · ${blocks.length}`;
 
     return `
       <section class="agenda-day-column ${collapsed ? 'is-collapsed' : ''} ${day.is_today ? 'agenda-day-column--today' : ''}" data-agenda-day="${day.date}" data-agenda-day-key="${dayKey}">
@@ -294,6 +295,10 @@
             <span class="agenda-day-column__eyebrow">${day.subtitle || 'Dia'}</span>
             <h3 class="agenda-day-column__title">${day.label}</h3>
             <p class="agenda-day-column__meta">${day.date || ''}</p>
+          </div>
+          <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
+            <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
+            <span class="badge-pill agenda-day-column__collapsed-count">${blocks.length}</span>
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blocks.length} blocos</span>
