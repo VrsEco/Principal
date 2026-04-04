@@ -221,7 +221,7 @@
       await api(`/api/companies/${companyId}/work-journey/agendas/items/${source.item.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          block_id: targetBlockId || null,
+          target_block_id: targetBlockId || null,
           target_date: targetDay,
           confirm_date_change: dayChanged,
         }),
