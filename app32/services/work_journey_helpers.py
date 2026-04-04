@@ -59,7 +59,8 @@ def date_range(start: date, end: date) -> Iterable[date]:
 def clamp_period(scope: str, anchor: date) -> tuple[date, date]:
     scope = str(scope or 'day').strip().lower()
     if scope == 'week':
-        start = anchor - timedelta(days=anchor.weekday())
+        # Semana operacional alinhada ao calendário brasileiro: domingo → sábado.
+        start = anchor - timedelta(days=(anchor.weekday() + 1) % 7)
         return start, start + timedelta(days=6)
     if scope == 'month':
         start = anchor.replace(day=1)

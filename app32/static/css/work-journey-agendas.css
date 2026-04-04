@@ -21,3 +21,247 @@
   background: rgba(37, 99, 235, 0.22);
   border-radius: 999px;
 }
+
+.journey-tabpanel[data-panel="agendas"] .agenda-layout {
+  grid-template-columns: minmax(268px, 316px) minmax(0, 1fr) minmax(280px, 340px);
+  align-items: start;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-main {
+  min-width: 0;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard {
+  padding: 1rem;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard--overdue {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), #fff 64%);
+  border-color: rgba(239, 68, 68, 0.16);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard--unassigned {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.08), #fff 64%);
+  border-color: rgba(14, 165, 233, 0.16);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__header {
+  align-items: flex-start;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__toggle {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(248, 250, 252, 0.95);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__toggle:hover {
+  background: #fff;
+  border-color: rgba(37, 99, 235, 0.22);
+  color: var(--primary);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard.is-collapsed .agenda-sidecard__toggle {
+  transform: rotate(-90deg);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 120px;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__content--overdue {
+  min-height: 150px;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__content--unassigned {
+  min-height: 150px;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-sidecard.is-collapsed .agenda-sidecard__content {
+  display: none;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-card--side {
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-card--side-overdue {
+  border-left-color: #ef4444;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.06), #fff 22%);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-card--side-unassigned {
+  border-left-color: #0ea5e9;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.06), #fff 22%);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-card--side .agenda-card__warning {
+  background: rgba(254, 243, 199, 0.62);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column {
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--today {
+  border-color: rgba(37, 99, 235, 0.32);
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.09);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__heading {
+  min-width: 0;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__toggle {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(248, 250, 252, 0.95);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__toggle:hover {
+  background: #fff;
+  border-color: rgba(37, 99, 235, 0.22);
+  color: var(--primary);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__toggle {
+  transform: rotate(-90deg);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__body.is-hidden,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__body {
+  display: none;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__badge {
+  white-space: nowrap;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-rules-card {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), #fff 72%);
+  border-color: rgba(37, 99, 235, 0.14);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-rules__intro {
+  padding: 0.85rem 0.95rem;
+  border-radius: 16px;
+  border: 1px dashed rgba(37, 99, 235, 0.22);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-rules__intro strong {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: var(--primary);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-rules__intro p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-rules__list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-rules__list li {
+  line-height: 1.45;
+}
+
+@media (max-width: 1280px) {
+  .journey-tabpanel[data-panel="agendas"] .agenda-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-main {
+    order: 1;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-aside--left {
+    order: 2;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-aside--right {
+    order: 3;
+  }
+}
+
+@media (max-width: 1100px) {
+  .journey-tabpanel[data-panel="agendas"] .agenda-board {
+    gap: 0.75rem;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-day-column {
+    flex-basis: 320px;
+    min-width: 320px;
+  }
+}
+
+@media (max-width: 720px) {
+  .journey-tabpanel[data-panel="agendas"] .agenda-day-column {
+    flex-basis: 300px;
+    min-width: 300px;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-sidecard__header {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .journey-tabpanel[data-panel="agendas"] .agenda-day-column {
+    flex-basis: 280px;
+    min-width: 280px;
+  }
+}

@@ -29,7 +29,7 @@
         </div>
         <div class="agenda-toolbar__tip">
             <strong>Regras do kanban</strong>
-            <span>Arraste tarefas entre blocos e dias. Reuniões são fixas e devem ser alteradas no módulo de reuniões.</span>
+            <span>Arraste tarefas entre dias, blocos e a lista de não alocadas. A visualização semanal inicia no domingo.</span>
         </div>
     </div>
 
@@ -45,12 +45,30 @@
     <section class="journey-summary agenda-summary" id="agendaSummaryCards"></section>
 
     <div class="agenda-layout">
+        <aside class="agenda-aside agenda-aside--left">
+            <section class="journey-sidecard agenda-sidecard agenda-sidecard--overdue" data-collapse-panel="overdue" data-collapse-label="tarefas atrasadas">
+                <div class="journey-sidecard__header agenda-sidecard__header">
+                    <div>
+                        <h3>Tarefas atrasadas</h3>
+                        <p>Itens vencidos do contexto atual. Arraste para um dia ou bloco para reorganizar.</p>
+                    </div>
+                    <div class="agenda-sidecard__header-actions">
+                        <span id="agendaOverdueCount" class="badge-pill badge-pill--danger">0</span>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="overdue" aria-expanded="true" aria-label="Colapsar tarefas atrasadas">
+                            <span>▾</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="agendaOverdueContainer" class="journey-sidecard__content agenda-sidecard__content agenda-sidecard__content--overdue" data-collapse-body></div>
+            </section>
+        </aside>
+
         <div class="agenda-main">
             <div class="agenda-board-wrap">
                 <div class="agenda-board-header">
                     <div>
                         <h3 class="journey-section-title">Kanban de agendas</h3>
-                        <p class="journey-section-subtitle">Coluna = dia. Blocos internos podem ser recolhidos para organizar a leitura.</p>
+                        <p class="journey-section-subtitle">Coluna = dia. A semana é exibida com início no domingo e cada bloco pode ser recolhido para otimizar a leitura.</p>
                     </div>
                     <div class="agenda-board-header__actions">
                         <span id="agendaLockBadge" class="agenda-status-pill agenda-status-pill--draft">Agenda não travada</span>
@@ -60,29 +78,43 @@
             </div>
         </div>
 
-        <aside class="agenda-aside">
-            <div class="journey-sidecard agenda-sidecard">
-                <div class="journey-sidecard__header">
-                    <h3>Não alocadas</h3>
-                    <span id="agendaUnassignedCount" class="badge-pill">0</span>
-                </div>
-                <div id="agendaUnassignedContainer" class="journey-sidecard__content" data-dropzone="unassigned"></div>
-            </div>
-            <div class="journey-sidecard agenda-sidecard">
-                <div class="journey-sidecard__header">
-                    <h3>Orientações</h3>
-                </div>
-                <div class="agenda-hints">
-                    <div class="agenda-hint-card agenda-hint-card--info">
-                        <strong>Movimentação entre dias</strong>
-                        <p>Ao mover uma tarefa entre dias, o sistema pedirá confirmação antes de atualizar a data.</p>
+        <aside class="agenda-aside agenda-aside--right">
+            <section class="journey-sidecard agenda-sidecard agenda-sidecard--unassigned" data-collapse-panel="unassigned" data-collapse-label="não alocadas">
+                <div class="journey-sidecard__header agenda-sidecard__header">
+                    <div>
+                        <h3>Não alocadas</h3>
+                        <p>Itens sem bloco definido. Arraste para um dia ou bloco para organizar conforme a necessidade.</p>
                     </div>
-                    <div class="agenda-hint-card agenda-hint-card--warning">
-                        <strong>Reuniões</strong>
-                        <p>Reuniões não são arrastáveis. Use o módulo de reuniões para reprogramar.</p>
+                    <div class="agenda-sidecard__header-actions">
+                        <span id="agendaUnassignedCount" class="badge-pill">0</span>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="unassigned" aria-expanded="true" aria-label="Colapsar não alocadas">
+                            <span>▾</span>
+                        </button>
                     </div>
                 </div>
-            </div>
+                <div id="agendaUnassignedContainer" class="journey-sidecard__content agenda-sidecard__content agenda-sidecard__content--unassigned" data-collapse-body data-dropzone="unassigned"></div>
+            </section>
+
+            <section class="journey-sidecard agenda-sidecard agenda-rules-card">
+                <div class="journey-sidecard__header">
+                    <div>
+                        <h3>Regras do Kanban</h3>
+                        <p>Orientações operacionais e restrições de movimentação em um único card para consulta rápida.</p>
+                    </div>
+                </div>
+                <div class="agenda-rules">
+                    <div class="agenda-rules__intro">
+                        <strong>Orientações essenciais</strong>
+                        <p>Use o painel esquerdo para recuperar tarefas vencidas, mantenha a lista de não alocadas à direita e prefira o arraste para dias/blocos antes de abrir edição.</p>
+                    </div>
+                    <ul class="agenda-rules__list">
+                        <li>A semana visual começa no domingo.</li>
+                        <li>Tarefas podem ser movidas entre dias e blocos; a alteração de data pede confirmação.</li>
+                        <li>Reuniões não são arrastáveis e devem ser ajustadas no módulo próprio.</li>
+                        <li>Blocos e listas laterais podem ser colapsados para otimizar a visão.</li>
+                    </ul>
+                </div>
+            </section>
         </aside>
     </div>
 
