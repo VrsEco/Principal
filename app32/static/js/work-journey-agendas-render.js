@@ -187,9 +187,20 @@
     const collapseKey = `${day.date}:${blockId}`;
     const collapsed = collapsedBlocks?.has(collapseKey);
     const capacity = Number(block.operational_capacity_minutes || block.capacity_minutes || 0);
+    const fallbackCapacity = Number(block.capacity_minutes || 0);
+    const progressBase = capacity > 0 ? capacity : Math.max(fallbackCapacity, Number(block.planned_minutes || 0), 0);
     const planned = Number(block.planned_minutes || 0);
+    const worked = Number(block.worked_minutes || 0);
     const overload = Number(block.overload_minutes || Math.max(0, planned - capacity));
-    const fill = capacity > 0 ? Math.min(100, Math.round((planned / capacity) * 100)) : 0;
+    const fill = progressBase > 0 ? Math.min(100, Math.round((planned / progressBase) * 100)) : 0;
+    const rangeLabel = `${block.start_time || '--:--'} às ${block.end_time || '--:--'}`;
+    const occupancyLabel = capacity > 0 ? 'Cap. Ocup./Oper.' : 'Cap. Ocup./Bloco';
+    const occupancyValue = `${formatMinutes(worked)} / ${formatMinutes(progressBase)}`;
+    const blockStatus = block.block_mode === 'reserved_full'
+      ? 'Capacidade bloqueada'
+      : overload > 0
+        ? `Sobrec.: +${formatMinutes(overload)}`
+        : 'Dentro cap.';
     return `
       <article class="agenda-block ${collapsed ? 'is-collapsed' : ''} agenda-block--${block.block_mode || 'operational'}" data-agenda-block="${blockId}" data-agenda-day="${day.date}">
         <header class="agenda-block__header">
@@ -201,10 +212,17 @@
               <strong>${block.name}</strong>
               <span class="badge-pill ${block.block_mode === 'reserved_full' ? 'badge-pill--warning' : block.block_mode === 'buffer' ? 'badge-pill--success' : ''}">${block.block_mode_label || block.block_mode}</span>
             </div>
-            <div class="agenda-block__meta">${block.start_time} → ${block.end_time} · Capacidade ${formatMinutes(capacity)} · Planejado ${formatMinutes(planned)}</div>
-          </div>
-          <div class="agenda-block__badges">
-            ${overload > 0 ? `<span class="badge-pill badge-pill--danger">Sobrecarga +${formatMinutes(overload)}</span>` : '<span class="badge-pill badge-pill--success">Dentro da capacidade</span>'}
+            <div class="agenda-block__details">
+              <div class="agenda-block__detail-line">
+                <span class="agenda-block__detail-item agenda-block__detail-item--time">${rangeLabel}</span>
+                <span class="agenda-block__detail-item">${occupancyLabel}: ${occupancyValue}</span>
+              </div>
+              <div class="agenda-block__detail-line">
+                <span class="agenda-block__detail-item">Cap. Plan.: ${formatMinutes(planned)}</span>
+                <span class="agenda-block__detail-item">Ocup: ${formatMinutes(worked)}</span>
+                <span class="agenda-block__detail-item ${overload > 0 ? 'is-overload' : ''}">${blockStatus}</span>
+              </div>
+            </div>
           </div>
         </header>
         <div class="agenda-block__progress">
