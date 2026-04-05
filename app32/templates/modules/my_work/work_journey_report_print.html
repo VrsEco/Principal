@@ -289,6 +289,69 @@
             page-break-inside: avoid;
         }
 
+        .document-footer {
+            margin: 18px 30px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+        }
+
+        .document-footer__left {
+            font-size: 9pt;
+            font-weight: 700;
+            color: var(--navy);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .document-footer__right {
+            font-size: 8.5pt;
+            color: var(--muted);
+            text-align: right;
+        }
+
+        .print-footer-fixed {
+            display: none;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 5mm 11mm 4mm;
+            font-size: 8.5pt;
+            color: var(--navy);
+            background: rgba(255, 255, 255, 0.96);
+            border-top: 1px solid var(--line);
+            box-sizing: border-box;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .print-footer-fixed__left {
+            color: var(--muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .print-footer-fixed__right {
+            color: var(--navy);
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .page-counter::after {
+            content: "Página " counter(page) " de " counter(pages);
+        }
+
         .employee-header {
             display: flex;
             justify-content: space-between;
@@ -395,11 +458,19 @@
             body { background: #fff; }
             .toolbar { display: none !important; }
             .viewer { padding: 0; min-height: auto; }
+            .document-footer { display: none !important; }
+            .print-footer-fixed { display: flex !important; }
             .report {
                 width: 100%;
                 max-width: none;
                 border-radius: 0;
                 box-shadow: none;
+            }
+            .section:last-child {
+                padding-bottom: 20mm;
+            }
+            .employee-section:last-child {
+                margin-bottom: 16mm;
             }
         }
 
@@ -713,7 +784,21 @@
                     </div>
                 </section>
             {% endfor %}
+
+            <footer class="document-footer">
+                <div class="document-footer__left">Versus Gestão Corporativa - Todos os Direitos Reservados</div>
+                <div class="document-footer__right">
+                    Emitido em {{ generated_at }} · {{ company.name }} · Modo {{ 'Retrato compacto' if layout_mode == 'portrait' else 'Paisagem executiva' }}
+                </div>
+            </footer>
         </main>
+    </div>
+
+    <div class="print-footer-fixed" aria-hidden="true">
+        <div class="print-footer-fixed__left">Versus Gestão Corporativa - Todos os Direitos Reservados</div>
+        <div class="print-footer-fixed__right">
+            {{ company.name }} · Emitido em {{ generated_at }} · <span class="page-counter"></span>
+        </div>
     </div>
 
     <script>
