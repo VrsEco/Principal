@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Any
 
 from models import Company, db, Employee, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
-from services.work_journey_base import WorkJourneyError, ensure_employee
+from services.work_journey_base import WorkJourneyError, ensure_employee, is_actionable_status
 from services.work_journey_helpers import (
     BLOCK_MODE_LABELS,
     ITEM_TYPE_LABELS,
@@ -161,6 +161,7 @@ def get_work_journey_board(company_id: int, employee_id: int, anchor: date, scop
     active_blocks = [block for block in blocks if weekday in (block.weekdays_json or [])]
 
     items = load_period_items(company_id, employee_id, period_start, period_end)
+    items = [item for item in items if is_actionable_status(item.status)]
     suggest_blocks(active_blocks, items, anchor)
 
     board_blocks = []

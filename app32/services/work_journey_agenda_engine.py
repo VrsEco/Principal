@@ -14,6 +14,7 @@ from models import (
     WorkJourneyItem,
     db,
 )
+from services.work_journey_base import ACTIVE_ITEM_STATUSES
 from services.work_journey_helpers import block_chronology_key, clamp_period, duration_minutes, parse_time, time_to_minutes
 
 
@@ -24,6 +25,7 @@ def load_source_items(company_id: int, employee_id: int, period_start: date, per
             WorkJourneyItem.company_id == company_id,
             WorkJourneyItem.employee_id == employee_id,
             WorkJourneyItem.rule_id.is_(None),
+            WorkJourneyItem.status.in_(list(ACTIVE_ITEM_STATUSES)),
             or_(
                 and_(WorkJourneyItem.item_type == 'meeting', WorkJourneyItem.due_date.between(period_start, period_end)),
                 and_(WorkJourneyItem.item_type == 'manual', WorkJourneyItem.due_date.between(period_start, period_end)),
@@ -31,14 +33,14 @@ def load_source_items(company_id: int, employee_id: int, period_start: date, per
                     WorkJourneyItem.item_type == 'process_instance',
                     or_(
                         WorkJourneyItem.due_date.between(period_start, period_end),
-                        and_(WorkJourneyItem.due_date < period_start, WorkJourneyItem.status.in_(['pending', 'in_progress', 'postponed', 'suspended'])),
+                        and_(WorkJourneyItem.due_date < period_start, WorkJourneyItem.status.in_(list(ACTIVE_ITEM_STATUSES))),
                     ),
                 ),
                 and_(
                     WorkJourneyItem.item_type == 'project_task',
                     or_(
                         WorkJourneyItem.due_date.between(period_start, planning_limit),
-                        and_(WorkJourneyItem.due_date < period_start, WorkJourneyItem.status.in_(['pending', 'in_progress', 'postponed', 'suspended'])),
+                        and_(WorkJourneyItem.due_date < period_start, WorkJourneyItem.status.in_(list(ACTIVE_ITEM_STATUSES))),
                     ),
                 ),
             ),
