@@ -157,9 +157,45 @@ def _build_projects(employees, direct_tasks, collab_rows, project_items, blocks_
             row['block_names'] = sorted(row['block_names'])
             row['responsible_activities'] = sorted(row['responsible_activities'], key=lambda x: (x['due_date'] or '9999-12-31', x['title'].lower()))
             row['participating_activities'] = sorted(row['participating_activities'], key=lambda x: (x['due_date'] or '9999-12-31', x['title'].lower()))
+            row['summary'] = _summarize_project_row(row)
             rows.append(row)
         result[emp_id] = sorted(rows, key=lambda x: ((x.get('project_code') or ''), x['project_name'].lower()))
     return result
+
+
+def _summarize_project_row(row):
+    responsible = list(row.get('responsible_activities') or [])
+    participating = list(row.get('participating_activities') or [])
+    all_activities = responsible + participating
+
+    def _hours_sum(items):
+        return round(sum(float(item.get('estimated_hours') or 0) for item in items), 1)
+
+    def _next_due(items):
+        dated = sorted([item.get('due_date') for item in items if item.get('due_date')])
+        return dated[0] if dated else None
+
+    total_count = len({int(item['task_id']) for item in all_activities if item.get('task_id') is not None})
+    responsible_count = len({int(item['task_id']) for item in responsible if item.get('task_id') is not None})
+    participating_count = len({int(item['task_id']) for item in participating if item.get('task_id') is not None})
+    responsible_hours = _hours_sum(responsible)
+    participating_hours = _hours_sum(participating)
+    total_hours = round(responsible_hours + participating_hours, 1)
+    next_due = _next_due(all_activities)
+
+    return {
+        'responsible_count': responsible_count,
+        'participating_count': participating_count,
+        'total_count': total_count,
+        'responsible_hours': responsible_hours,
+        'participating_hours': participating_hours,
+        'total_hours': total_hours,
+        'next_due': next_due,
+        'next_due_label': _format_iso_date(next_due),
+        'blocks_label': ', '.join(row.get('block_names') or []) or 'Sem bloco mapeado',
+        'status_label': str(row.get('status') or 'ativo').replace('_', ' '),
+        'has_direct_responsibility': responsible_count > 0,
+    }
 
 
 def _init_blocks(blocks, week_start, week_end, month_start, month_end):
@@ -271,3 +307,13 @@ def _block_window(block):
 
 def _open_task(task):
     return str(task.status or '').strip().lower() not in CLOSED and str(task.stage or '').strip().lower() not in CLOSED
+
+
+def _format_iso_date(raw):
+    if not raw:
+        return 'Sem prazo definido'
+    try:
+        year, month, day = str(raw).split('-')[:3]
+        return f'{day}/{month}/{year}'
+    except ValueError:
+        return str(raw)

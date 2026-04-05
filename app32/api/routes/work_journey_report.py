@@ -32,6 +32,11 @@ def _hours(minutes: int | float | None) -> float:
     return round(float(minutes or 0) / 60, 2)
 
 
+def _parse_layout(raw: str | None) -> str:
+    value = str(raw or 'landscape').strip().lower()
+    return value if value in {'landscape', 'portrait'} else 'landscape'
+
+
 def _build_report_payload(company_id: int) -> tuple[object, dict, bool]:
     session['active_company_id'] = company_id
     company = Company.query.get_or_404(company_id)
@@ -143,17 +148,25 @@ def work_journey_report_redirect():
 @permission_required('processes', 'view')
 def work_journey_report_page(company_id: int):
     company, report, can_manage_all = _build_report_payload(company_id)
-    pdf_url = url_for(
+    current_args = request.args.to_dict()
+    pdf_landscape_url = url_for(
         'work_journey_report.work_journey_report_pdf',
         company_id=company_id,
-        **request.args.to_dict(),
+        **{**current_args, 'layout': 'landscape'},
+    )
+    pdf_portrait_url = url_for(
+        'work_journey_report.work_journey_report_pdf',
+        company_id=company_id,
+        **{**current_args, 'layout': 'portrait'},
     )
     return render_template(
         'modules/my_work/work_journey_report.html',
         company=company,
         report=report,
         can_manage_all=can_manage_all,
-        pdf_url=pdf_url,
+        pdf_url=pdf_landscape_url,
+        pdf_landscape_url=pdf_landscape_url,
+        pdf_portrait_url=pdf_portrait_url,
     )
 
 
@@ -170,10 +183,12 @@ def work_journey_report_pdf_redirect():
 @permission_required('processes', 'view')
 def work_journey_report_pdf(company_id: int):
     company, report, can_manage_all = _build_report_payload(company_id)
+    layout = _parse_layout(request.args.get('layout'))
     return render_template(
         'modules/my_work/work_journey_report_print.html',
         company=company,
         report=report,
         can_manage_all=can_manage_all,
         generated_at=datetime.now().strftime('%d/%m/%Y %H:%M'),
+        layout_mode=layout,
     )

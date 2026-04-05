@@ -14,6 +14,7 @@ from api.routes import work_journey_report as work_journey_report_route
 from services import work_journey_agenda_engine
 from services import work_journey_agenda_presenter
 from services import work_journey_agenda_service
+from services import work_journey_report_service
 from services import work_journey_service
 from services import work_journey_sync
 from services.work_journey_helpers import block_chronology_key, clamp_period, rule_matches_date
@@ -144,6 +145,32 @@ def test_clamp_period_returns_expected_ranges():
     assert end.isoformat() == '2026-04-30'
 
 
+def test_project_summary_aggregates_hours_counts_and_next_due():
+    row = {
+        'status': 'in_progress',
+        'block_names': ['Bloco A', 'Bloco B'],
+        'responsible_activities': [
+            {'task_id': 1, 'estimated_hours': 3, 'due_date': '2026-04-10'},
+            {'task_id': 2, 'estimated_hours': 2.5, 'due_date': '2026-04-08'},
+        ],
+        'participating_activities': [
+            {'task_id': 3, 'estimated_hours': 1.5, 'due_date': '2026-04-12'},
+        ],
+    }
+
+    summary = work_journey_report_service._summarize_project_row(row)
+
+    assert summary['responsible_count'] == 2
+    assert summary['participating_count'] == 1
+    assert summary['total_count'] == 3
+    assert summary['responsible_hours'] == 5.5
+    assert summary['participating_hours'] == 1.5
+    assert summary['total_hours'] == 7.0
+    assert summary['next_due'] == '2026-04-08'
+    assert summary['next_due_label'] == '08/04/2026'
+    assert summary['blocks_label'] == 'Bloco A, Bloco B'
+
+
 def test_block_chronology_key_prioritizes_weekday_then_time():
     blocks = [
         SimpleNamespace(id=3, name='Treinamento', weekdays_json=[4], start_time=SimpleNamespace(hour=9, minute=0), end_time=SimpleNamespace(hour=12, minute=0)),
@@ -223,7 +250,9 @@ def test_report_page_exposes_pdf_url(monkeypatch):
         response = work_journey_report_route.work_journey_report_page.__wrapped__(9)
 
     assert captured['template'] == 'modules/my_work/work_journey_report.html'
-    assert response['pdf_url'] == '/companies/9/work-journey/export-pdf?employee_id=3&date=2026-04-05'
+    assert response['pdf_url'] == '/companies/9/work-journey/export-pdf?employee_id=3&date=2026-04-05&layout=landscape'
+    assert response['pdf_landscape_url'] == '/companies/9/work-journey/export-pdf?employee_id=3&date=2026-04-05&layout=landscape'
+    assert response['pdf_portrait_url'] == '/companies/9/work-journey/export-pdf?employee_id=3&date=2026-04-05&layout=portrait'
 
 
 def test_report_pdf_page_renders_print_template(monkeypatch):
@@ -253,11 +282,12 @@ def test_report_pdf_page_renders_print_template(monkeypatch):
         lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx,
     )
 
-    with app.test_request_context('/companies/9/work-journey/export-pdf'):
+    with app.test_request_context('/companies/9/work-journey/export-pdf?layout=portrait'):
         response = work_journey_report_route.work_journey_report_pdf.__wrapped__(9)
 
     assert captured['template'] == 'modules/my_work/work_journey_report_print.html'
     assert response['company'].id == 9
+    assert response['layout_mode'] == 'portrait'
 
 
 def test_save_block_respects_empty_accepted_item_types(monkeypatch):
