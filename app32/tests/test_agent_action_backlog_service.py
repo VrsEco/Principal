@@ -104,3 +104,36 @@ def test_sync_backlog_task_for_action_marks_completed_without_duplicate_logs(mon
     assert action.payload["backlog_card"]["task_code"] == "AA.J.31.302"
     sync_logs = [log for log in fake_task.logs if log.get("type") == "agent_action_sync"]
     assert len(sync_logs) == 1
+
+
+def test_sync_backlog_task_for_action_marks_rejected_hitl_as_completed(monkeypatch):
+    fake_task = SimpleNamespace(
+        id=303,
+        code="AA.J.31.303",
+        notes="",
+        logs=[],
+        status="planned",
+        stage="waiting",
+        completion_date=None,
+    )
+    fake_link = SimpleNamespace(
+        task=fake_task,
+        backlog_project_code="AA.J.31",
+        link_type="workflow_approval_request",
+    )
+
+    monkeypatch.setattr(backlog_service, "find_backlog_link_by_action_id", lambda action_id: fake_link)
+    monkeypatch.setattr(backlog_service.db.session, "flush", lambda: None)
+
+    action = _build_action(
+        status="rejected",
+        resolved_at=datetime(2026, 4, 4, 10, 30, 0),
+        payload={**_build_action().payload, "approval_status": "rejected"},
+    )
+
+    backlog_service.sync_backlog_task_for_action(action, autocommit=False)
+
+    assert fake_task.status == "completed"
+    assert fake_task.stage == "completed"
+    assert fake_task.completion_date == datetime(2026, 4, 4, 10, 30, 0).date()
+    assert action.payload["backlog_card"]["task_code"] == "AA.J.31.303"

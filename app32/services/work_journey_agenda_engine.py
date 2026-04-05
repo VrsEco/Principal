@@ -156,12 +156,15 @@ def candidate_slots_for_item(
         block = meeting_block_for_time(blocks_by_day[meeting_date], item.item_type, scheduled_minutes)
         return [(meeting_date, block, scheduled_minutes)]
 
+    planning_start = resolve_planning_start(period_start, period_end)
     preferred_block_id = item.block_id if item.item_type == 'manual' and item.block_id else None
-    overdue = is_overdue_for_period(item, period_start)
+    overdue = is_overdue_for_period(item, period_start, period_end)
 
     if item.item_type == 'project_task':
-        schedule_start = period_start
+        schedule_start = planning_start
         schedule_end = period_end if overdue else min(item.due_date or period_end, period_end)
+        if schedule_end < schedule_start:
+            return []
         return expand_blocks_for_dates(
             item.item_type,
             blocks_by_day,
@@ -171,7 +174,7 @@ def candidate_slots_for_item(
         )
 
     preferred_date = item.occurrence_date or item.due_date or period_start
-    schedule_start = period_start if overdue else max(period_start, min(preferred_date, period_end))
+    schedule_start = planning_start if overdue else max(planning_start, min(preferred_date, period_end))
     return expand_blocks_for_dates(
         item.item_type,
         blocks_by_day,
@@ -207,13 +210,20 @@ def expand_blocks_for_dates(
     return slots
 
 
-def is_overdue_for_period(item: WorkJourneyItem, period_start: date) -> bool:
+def is_overdue_for_period(item: WorkJourneyItem, period_start: date, period_end: date) -> bool:
     if item.item_type == 'meeting':
         return False
     if item.status not in ACTIVE_ITEM_STATUSES:
         return False
     due_date = item.due_date or item.occurrence_date
-    return bool(due_date and due_date < period_start)
+    return bool(due_date and due_date < resolve_planning_start(period_start, period_end))
+
+
+def resolve_planning_start(period_start: date, period_end: date) -> date:
+    today = date.today()
+    if period_start <= today <= period_end:
+        return today
+    return period_start
 
 
 def meeting_block_for_time(blocks: list[WorkJourneyBlock], item_type: str, scheduled_minutes: int | None) -> WorkJourneyBlock | None:

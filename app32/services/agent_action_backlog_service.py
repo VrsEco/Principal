@@ -121,17 +121,30 @@ def _effective_action_status(action: Any) -> str:
     return status
 
 
+def _resolve_completion_date(action: Any) -> date:
+    resolved_at = getattr(action, "resolved_at", None)
+    if hasattr(resolved_at, "date"):
+        return resolved_at.date()
+
+    executed_at = getattr(action, "executed_at", None)
+    if hasattr(executed_at, "date"):
+        return executed_at.date()
+
+    return datetime.utcnow().date()
+
+
 def _resolve_backlog_task_state(action: Any) -> tuple[str, str, Optional[date]]:
     effective_status = _effective_action_status(action)
-    today = datetime.utcnow().date()
 
     if effective_status in {"pending", "awaiting_approval", "expired"}:
         return "planned", "waiting", None
     if effective_status == "approved":
         return "in_progress", "pending", None
     if effective_status == "executed":
-        return "completed", "completed", today
-    if effective_status in {"rejected", "failed", "rolled_back"}:
+        return "completed", "completed", _resolve_completion_date(action)
+    if effective_status == "rejected":
+        return "completed", "completed", _resolve_completion_date(action)
+    if effective_status in {"failed", "rolled_back"}:
         return "cancelled", "suspended", None
     return "planned", "inbox", None
 

@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Any
 
 from models import Company, db, Employee, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
-from services.work_journey_base import WorkJourneyError, ensure_employee
+from services.work_journey_base import WorkJourneyError, ensure_employee, is_actionable_status
 from services.work_journey_helpers import (
     BLOCK_MODE_LABELS,
     ITEM_TYPE_LABELS,
@@ -16,6 +16,7 @@ from services.work_journey_helpers import (
 )
 from services.work_journey_sync import (
     load_period_items,
+    prune_missing_source_items,
     propagate_item_status,
     sync_meetings,
     sync_process_instances,
@@ -150,7 +151,7 @@ def delete_rule(company_id: int, rule_id: int) -> None:
     db.session.commit()
 
 
-def get_work_journey_board(company_id: int, employee_id: int, anchor: date, scope: str = 'day') -> dict[str, Any]:
+def get_work_journey_board(company_id: int, employee_id: int, anchor: date, scope: str = 'week') -> dict[str, Any]:
     employee = ensure_employee(company_id, employee_id)
     period_start, period_end = clamp_period(scope, anchor)
     sync_work_journey_items(company_id, employee_id, period_start, period_end)
@@ -161,6 +162,7 @@ def get_work_journey_board(company_id: int, employee_id: int, anchor: date, scop
     active_blocks = [block for block in blocks if weekday in (block.weekdays_json or [])]
 
     items = load_period_items(company_id, employee_id, period_start, period_end)
+    items = [item for item in items if is_actionable_status(item.status)]
     suggest_blocks(active_blocks, items, anchor)
 
     board_blocks = []
@@ -203,6 +205,7 @@ def sync_work_journey_items(company_id: int, employee_id: int, period_start: dat
     sync_process_instances(company_id, employee_id, period_start, period_end)
     sync_project_tasks(company_id, employee_id, period_start, period_end)
     sync_meetings(company_id, employee_id, period_start, period_end)
+    prune_missing_source_items(company_id, employee_id)
     db.session.commit()
 
 

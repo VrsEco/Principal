@@ -58,3 +58,31 @@ def test_workflow_approval_service_syncs_backlog_after_approve(monkeypatch):
 
     assert outcome.success is True
     assert synced["action_status"] == "approved"
+
+
+def test_workflow_approval_service_syncs_backlog_after_reject(monkeypatch):
+    synced = {}
+
+    monkeypatch.setattr(
+        workflow_approval_service,
+        "sync_backlog_task_for_action",
+        lambda action: synced.setdefault("action_status", action.status),
+    )
+
+    service = WorkflowApprovalService(
+        resume_executor=lambda payload: DirectExecutionResult(executed=False),
+        now_factory=lambda: datetime(2026, 4, 4, 11, 0, 0),
+    )
+    action = _build_action()
+    action.created_at = datetime(2026, 4, 4, 10, 30, 0)
+
+    outcome = service.reject(
+        action=action,
+        approver_user_id=7,
+        approver_name="Fabiano Ferreira",
+        active_company_id=9,
+        feedback="Recusado pelo decisor.",
+    )
+
+    assert outcome.success is True
+    assert synced["action_status"] == "rejected"

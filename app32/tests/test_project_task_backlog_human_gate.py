@@ -184,6 +184,54 @@ def test_build_backlog_human_gate_context_exposes_operational_health_badges():
     assert any(badge["id"] == "reprocess" for badge in health["badges"])
 
 
+def test_build_backlog_human_gate_context_marks_rejected_hitl_as_completed_queue():
+    action = _build_workflow_action(
+        status="rejected",
+        payload={
+            "approval_status": "rejected",
+            "action_key": "project_task.complete",
+            "object_code": "AA.J.31.694",
+            "resume_payload": {"action_key": "project_task.complete"},
+        },
+        resolved_at=datetime(2026, 4, 4, 9, 15, 0),
+    )
+    task = _build_backlog_task(
+        status="completed",
+        stage="completed",
+        completion_date=date(2026, 4, 4),
+        logs=[
+            {
+                "timestamp": "2026-04-04T09:15:00Z",
+                "author": "Fabiano Ferreira",
+                "type": "backlog_human_gate_operation",
+                "operation": "reject",
+                "operation_label": "Rejeição",
+                "summary": "Solicitação rejeitada.",
+                "message": "Solicitação rejeitada.",
+                "success": True,
+                "status_before": "pending",
+                "status_after": "rejected",
+            }
+        ],
+    )
+    link = SimpleNamespace(
+        project_task_id=694,
+        backlog_project_code="AA.J.31",
+        link_type="workflow_approval_request",
+        action=action,
+        task=task,
+    )
+    task.agent_action_backlog_link = link
+
+    context = backlog_human_gate_service.build_backlog_human_gate_context(task)
+
+    assert context is not None
+    health = context["operational_health"]
+    assert health["queue_bucket"] == "completed"
+    assert health["sla"]["bucket"] == "closed"
+    assert context["effective_status"] == "rejected"
+
+
 def test_execute_backlog_human_gate_operation_applies_legacy_deadline_extension(monkeypatch):
     target_task = SimpleNamespace(
         id=205,

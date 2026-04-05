@@ -28,7 +28,7 @@ def get_work_journey_agenda(
     company_id: int,
     employee_id: int,
     anchor: date,
-    scope: str = 'day',
+    scope: str = 'week',
     force_regenerate: bool = False,
 ) -> dict[str, Any]:
     employee = ensure_employee(company_id, employee_id)
@@ -109,8 +109,8 @@ def move_work_journey_agenda_item(
 
 
 def _normalize_scope(scope: str) -> str:
-    normalized = str(scope or 'day').strip().lower()
-    return normalized if normalized in {'day', 'week'} else 'day'
+    normalized = str(scope or 'week').strip().lower()
+    return normalized if normalized in {'day', 'week'} else 'week'
 
 
 def _get_or_build_agenda(company_id: int, employee_id: int, anchor: date, scope: str, force_regenerate: bool) -> WorkJourneyAgenda:

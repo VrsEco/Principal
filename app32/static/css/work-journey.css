@@ -323,11 +323,11 @@
 
 .journey-item-card,
 .journey-list-item {
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 16px;
-  background: #fff;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
   padding: 0.95rem;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
 }
 
 .journey-item-card__top,
@@ -970,10 +970,10 @@
 
 .agenda-card {
   border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
   padding: 0.9rem;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
   position: relative;
   cursor: grab;
 }
@@ -1082,22 +1082,22 @@
 
 .agenda-card--process {
   border-left: 4px solid var(--primary);
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.06), #fff 18%);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.09), #f3f6fb 18%, #eef2f7 100%);
 }
 
 .agenda-card--project {
   border-left: 4px solid #7c3aed;
-  background: linear-gradient(90deg, rgba(124, 58, 237, 0.06), #fff 18%);
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.09), #f5f3ff 18%, #eef2f7 100%);
 }
 
 .agenda-card--meeting {
   border-left: 4px solid #f59e0b;
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.08), #fff 18%);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.11), #fffbeb 18%, #eef2f7 100%);
 }
 
 .agenda-card--manual {
   border-left: 4px solid #10b981;
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.06), #fff 18%);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.09), #ecfdf5 18%, #eef2f7 100%);
 }
 
 .agenda-empty-state {
@@ -1164,6 +1164,127 @@
   line-height: 1.45;
 }
 
+.journey-filters-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.journey-sidebar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.journey-sidebar-card--accent {
+  border-color: rgba(37, 99, 235, 0.18);
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.08) 52%, #ffffff 100%);
+}
+
+.journey-sidebar-card--muted {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.96) 100%);
+}
+
+.journey-sidebar-card__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.journey-sidebar-card__headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.journey-filters-sidebar__header,
+.journey-filters-sidebar__actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.journey-filters-sidebar__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.journey-filters-sidebar__actions {
+  flex-wrap: wrap;
+}
+
+.journey-filters-sidebar__actions .btn {
+  flex: 1 1 160px;
+}
+
+.journey-sidebar-hint {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.journey-sidebar-range {
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.journey-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.journey-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.42rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.journey-filter-pill--muted {
+  color: var(--text-secondary);
+}
+
+.journey-sidebar-checklist {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.journey-sidebar-checklist li::marker {
+  color: var(--primary);
+}
+
 .journey-legacy-agenda {
   display: none !important;
 }
@@ -1205,6 +1326,18 @@
 
   .agenda-actions {
     justify-content: flex-start;
+  }
+
+  .journey-filters-sidebar__header {
+    flex-direction: column;
+  }
+
+  .journey-sidebar-card__headline {
+    flex-direction: column;
+  }
+
+  .journey-filters-sidebar__actions .btn {
+    width: 100%;
   }
 }
 

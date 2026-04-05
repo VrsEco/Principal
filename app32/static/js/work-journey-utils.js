@@ -71,6 +71,38 @@
     return `${hours}h${String(remainder).padStart(2, '0')}`;
   }
 
+  function buildSearchHaystack(value) {
+    const chunks = [];
+    const stack = [value];
+
+    while (stack.length) {
+      const current = stack.pop();
+      if (current === null || current === undefined) continue;
+
+      if (Array.isArray(current)) {
+        current.forEach((entry) => stack.push(entry));
+        continue;
+      }
+
+      if (typeof current === 'object') {
+        Object.values(current).forEach((entry) => stack.push(entry));
+        continue;
+      }
+
+      if (typeof current === 'string' || typeof current === 'number' || typeof current === 'boolean') {
+        chunks.push(String(current));
+      }
+    }
+
+    return chunks.join(' ').toLowerCase();
+  }
+
+  function searchIncludes(value, term) {
+    const normalizedTerm = String(term || '').trim().toLowerCase();
+    if (!normalizedTerm) return true;
+    return buildSearchHaystack(value).includes(normalizedTerm);
+  }
+
 
   function renderTabs() {
     document.querySelectorAll('.journey-tab').forEach((btn) => {
@@ -99,6 +131,8 @@
     api,
     toast,
     formatMinutes,
+    buildSearchHaystack,
+    searchIncludes,
     renderTabs,
     renderCheckboxGrid,
     collectCheckedValues,

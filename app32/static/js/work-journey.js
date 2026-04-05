@@ -2,14 +2,21 @@
   const bootstrap = window.workJourneyBootstrap || {};
   const companyId = bootstrap.companyId;
   const employeeSelect = document.getElementById('journeyEmployeeSelect');
+  const defaultEmployeeId = String(bootstrap.selectedEmployeeId || employeeSelect?.value || '');
   const dateInput = document.getElementById('journeyDateInput');
-  const scopeSelect = document.getElementById('journeyScopeSelect');
+  const searchInput = document.getElementById('journeySearchInput');
+  const applyFiltersBtn = document.getElementById('journeyApplyFiltersBtn');
+  const clearFiltersBtn = document.getElementById('journeyClearFiltersBtn');
+  const filtersCount = document.getElementById('journeyFiltersCount');
+  const filtersSummary = document.getElementById('journeyFiltersSummary');
+  const anchorRange = document.getElementById('journeyAnchorRange');
   const manualTaskForm = document.getElementById('journeyManualTaskForm');
 
   const {
     api,
     toast,
     formatMinutes,
+    searchIncludes,
     renderTabs,
     renderCheckboxGrid,
     collectCheckedValues,
@@ -32,13 +39,93 @@
     return dateInput.value || bootstrap.today;
   }
 
+  function selectedScope() {
+    return 'week';
+  }
+
+  function currentSearchTerm() {
+    return searchInput?.value?.trim() || '';
+  }
+
+  function formatDateLabel(value) {
+    if (!value) return '-';
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+  }
+
+  function weekRangeFromAnchor(value) {
+    if (!value) return '';
+    const anchor = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(anchor.getTime())) return '';
+    const start = new Date(anchor);
+    start.setDate(anchor.getDate() - anchor.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const format = (date) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
+    return `${format(start)} → ${format(end)}`;
+  }
+
   function availableManualBlocks() {
     return state.blocks.filter((block) => block.block_mode !== 'reserved_full' && (block.accepted_item_types || []).includes('manual'));
   }
 
+  function renderFilterContext() {
+    const selectedEmployee = employeeSelect?.options?.[employeeSelect.selectedIndex]?.text || 'Colaborador não definido';
+    const searchTerm = currentSearchTerm();
+    const activeCount = [
+      employeeSelect?.value && employeeSelect.value !== defaultEmployeeId,
+      selectedDate() !== bootstrap.today,
+      Boolean(searchTerm),
+    ].filter(Boolean).length;
+
+    if (filtersCount) {
+      filtersCount.textContent = `${activeCount} ativos`;
+    }
+
+    if (anchorRange) {
+      anchorRange.textContent = `Semana de ${weekRangeFromAnchor(selectedDate()) || formatDateLabel(selectedDate())}`;
+    }
+
+    if (filtersSummary) {
+      const pills = [
+        `<span class="journey-filter-pill">Colaborador: ${selectedEmployee}</span>`,
+        `<span class="journey-filter-pill">Âncora: ${formatDateLabel(selectedDate())}</span>`,
+        searchTerm
+          ? `<span class="journey-filter-pill">Busca: ${searchTerm}</span>`
+          : '<span class="journey-filter-pill journey-filter-pill--muted">Sem busca livre</span>',
+      ];
+      filtersSummary.innerHTML = pills.join('');
+    }
+  }
+
+  function blockMatchesSearch(block) {
+    return searchIncludes({
+      ...block,
+      accepted_item_types: block.accepted_item_types || [],
+      weekdays: block.weekdays || block.weekdays_json || [],
+    }, currentSearchTerm());
+  }
+
+  function itemMatchesSearch(item, block = null) {
+    return searchIncludes({
+      ...item,
+      block_name: block?.name || item.block_name || '',
+      block_description: block?.description || '',
+      block_start_time: block?.start_time || '',
+      block_end_time: block?.end_time || '',
+      block_mode: block?.block_mode || '',
+      block_mode_label: block?.block_mode_label || '',
+    }, currentSearchTerm());
+  }
+
   function renderSummary() {
-    const summary = state.board?.summary;
     const container = document.getElementById('journeySummaryCards');
+    if (!container) {
+      return;
+    }
+
+    const summary = state.board?.summary;
     if (!summary) {
       container.innerHTML = '';
       return;
@@ -119,11 +206,24 @@
     const blocksContainer = document.getElementById('journeyBlocksContainer');
     const unassignedContainer = document.getElementById('journeyUnassignedContainer');
     const periodContainer = document.getElementById('journeyPeriodContainer');
-    const unassigned = state.board?.unassigned_items || [];
+    const searchTerm = currentSearchTerm();
+    const boardBlocks = state.board?.blocks || [];
+    const filteredBlocks = searchTerm
+      ? boardBlocks.map((block) => {
+        const includeWholeBlock = blockMatchesSearch(block);
+        const blockItems = includeWholeBlock
+          ? (block.items || [])
+          : (block.items || []).filter((item) => itemMatchesSearch(item, block));
+        if (!includeWholeBlock && !blockItems.length) return null;
+        return { ...block, items: blockItems };
+      }).filter(Boolean)
+      : boardBlocks;
+    const unassigned = searchTerm
+      ? (state.board?.unassigned_items || []).filter((item) => itemMatchesSearch(item))
+      : (state.board?.unassigned_items || []);
     document.getElementById('journeyUnassignedCount').textContent = unassigned.length;
 
-    const blocks = state.board?.blocks || [];
-    blocksContainer.innerHTML = blocks.length ? blocks.map((block) => `
+    blocksContainer.innerHTML = filteredBlocks.length ? filteredBlocks.map((block) => `
       <section class="journey-block">
         <div class="journey-block__header">
           <div>
@@ -134,11 +234,13 @@
         </div>
         <div class="journey-block__items">${(block.items || []).length ? block.items.map(itemCard).join('') : `<div class="journey-item-empty">${emptyBlockMessage(block)}</div>`}</div>
       </section>
-    `).join('') : '<div class="journey-item-empty">Nenhum bloco ativo para o dia selecionado.</div>';
+    `).join('') : `<div class="journey-item-empty">${searchTerm ? 'Nenhum bloco ou tarefa corresponde à busca aplicada.' : 'Nenhum bloco ativo para o dia selecionado.'}</div>`;
 
     unassignedContainer.innerHTML = unassigned.length ? unassigned.map(itemCard).join('') : '<div class="journey-item-empty">Sem tarefas fora dos blocos.</div>';
 
-    const periodItems = state.board?.period_items || [];
+    const periodItems = searchTerm
+      ? (state.board?.period_items || []).filter((item) => itemMatchesSearch(item))
+      : (state.board?.period_items || []);
     periodContainer.innerHTML = periodItems.length ? periodItems.slice(0, 12).map((item) => `
       <div class="journey-list-item">
         <div class="journey-list-item__top">
@@ -156,9 +258,15 @@
     const container = document.getElementById('journeyBlocksList');
     const manualBlockSelect = document.getElementById('manualTaskBlockInput');
     const manualOptions = ['<option value="">Sem bloco</option>', ...availableManualBlocks().map((block) => `<option value="${block.id}">${block.name} · ${block.start_time} → ${block.end_time}</option>`)].join('');
-    manualBlockSelect.innerHTML = manualOptions;
+    if (manualBlockSelect) {
+      manualBlockSelect.innerHTML = manualOptions;
+    }
 
-    container.innerHTML = state.blocks.length ? state.blocks.map((block) => `
+    const visibleBlocks = currentSearchTerm()
+      ? state.blocks.filter((block) => blockMatchesSearch(block))
+      : state.blocks;
+
+    container.innerHTML = visibleBlocks.length ? visibleBlocks.map((block) => `
       <div class="journey-list-item">
         <div class="journey-list-item__top">
           <div>
@@ -171,10 +279,23 @@
           </div>
         </div>
       </div>
-    `).join('') : '<div class="journey-item-empty">Nenhum bloco cadastrado.</div>';
+    `).join('') : `<div class="journey-item-empty">${currentSearchTerm() ? 'Nenhum bloco corresponde à busca aplicada.' : 'Nenhum bloco cadastrado.'}</div>`;
 
     container.querySelectorAll('[data-action="edit-block"]').forEach((btn) => btn.addEventListener('click', () => populateBlockForm(Number(btn.dataset.id))));
     container.querySelectorAll('[data-action="delete-block"]').forEach((btn) => btn.addEventListener('click', () => deleteBlock(Number(btn.dataset.id))));
+  }
+
+  function applyLocalFilters() {
+    renderFilterContext();
+    renderBoard();
+    renderBlocksList();
+    document.dispatchEvent(new CustomEvent('workJourney:filters-changed', {
+      detail: {
+        search: currentSearchTerm(),
+        employeeId: selectedEmployeeId(),
+        anchorDate: selectedDate(),
+      },
+    }));
   }
 
   function renderAbsences() {
@@ -385,7 +506,7 @@
   }
 
   async function loadBoard() {
-    const json = await api(`/api/companies/${companyId}/work-journey/board?employee_id=${selectedEmployeeId()}&date=${selectedDate()}&scope=${scopeSelect.value}`);
+    const json = await api(`/api/companies/${companyId}/work-journey/board?employee_id=${selectedEmployeeId()}&date=${selectedDate()}&scope=${selectedScope()}`);
     state.board = json.data;
     renderSummary();
     renderBoard();
@@ -425,16 +546,29 @@
   manualTaskForm.addEventListener('submit', saveManualTask);
   employeeSelect.addEventListener('change', () => {
     resetManualTaskForm();
+    renderFilterContext();
     refreshAll();
   });
   dateInput.addEventListener('change', () => {
     if (!document.getElementById('manualTaskIdInput').value) {
       document.getElementById('manualTaskDateInput').value = selectedDate();
     }
-    loadBoard();
+    renderFilterContext();
+    refreshAll();
   });
-  scopeSelect.addEventListener('change', loadBoard);
   document.getElementById('blockCancelBtn').addEventListener('click', resetBlockForm);
+  applyFiltersBtn?.addEventListener('click', () => {
+    renderFilterContext();
+    refreshAll();
+  });
+  clearFiltersBtn?.addEventListener('click', () => {
+    if (searchInput) searchInput.value = '';
+    if (employeeSelect && defaultEmployeeId) employeeSelect.value = defaultEmployeeId;
+    if (dateInput) dateInput.value = bootstrap.today;
+    renderFilterContext();
+    refreshAll();
+  });
+  searchInput?.addEventListener('input', applyLocalFilters);
 
   document.getElementById('journeyBlockForm').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -482,9 +616,11 @@
   renderTabs();
   resetBlockForm();
   resetManualTaskForm();
+  renderFilterContext();
   window.WorkJourneyPage = {
     openManualTaskForm,
     deleteManualTask,
+    getSearchTerm: currentSearchTerm,
   };
   refreshAll();
 })();

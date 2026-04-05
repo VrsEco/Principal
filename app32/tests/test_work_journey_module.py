@@ -124,6 +124,12 @@ class _FixedDate(date):
         return cls(2026, 4, 4)
 
 
+class _AgendaCurrentWeekDate(date):
+    @classmethod
+    def today(cls):
+        return cls(2026, 4, 9)
+
+
 class _FakeAgendaQuery:
     def filter_by(self, **_kwargs):
         return self
@@ -557,6 +563,117 @@ def test_overdue_manual_item_uses_first_compatible_slots_of_the_week(monkeypatch
     ]
 
 
+def test_overdue_manual_item_skips_full_block_and_uses_next_available_slot(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *args, **kwargs: 0)
+
+    sunday = date(2026, 4, 5)
+    monday = date(2026, 4, 6)
+    agenda = SimpleNamespace(id=12, company_id=9, employee_id=3, anchor_date=monday)
+    item = SimpleNamespace(
+        id=62,
+        item_type='manual',
+        block_id=None,
+        status='pending',
+        due_date=date(2026, 4, 1),
+        occurrence_date=date(2026, 4, 1),
+        estimated_minutes=30,
+        metadata_json={},
+    )
+    first_block = SimpleNamespace(
+        id=201,
+        block_mode='operational',
+        accepted_item_types=['manual'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    second_block = SimpleNamespace(
+        id=202,
+        block_mode='operational',
+        accepted_item_types=['manual'],
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {sunday: [first_block, second_block]},
+        defaultdict(int, {(sunday, 201): 60}),
+        sunday,
+        date(2026, 4, 11),
+    )
+
+    assert len(entries) == 1
+    assert entries[0].planned_date == sunday
+    assert entries[0].block_id == 202
+    assert entries[0].allocated_minutes == 30
+
+
+def test_overdue_item_inside_current_week_starts_from_today_blocks(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'date', _AgendaCurrentWeekDate)
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *args, **kwargs: 0)
+
+    sunday = date(2026, 4, 5)
+    monday = date(2026, 4, 6)
+    thursday = date(2026, 4, 9)
+    friday = date(2026, 4, 10)
+    agenda = SimpleNamespace(id=13, company_id=9, employee_id=3, anchor_date=thursday)
+    item = SimpleNamespace(
+        id=63,
+        item_type='process_instance',
+        block_id=None,
+        status='pending',
+        due_date=monday,
+        occurrence_date=monday,
+        estimated_minutes=180,
+        priority='high',
+        metadata_json={},
+    )
+    monday_block = SimpleNamespace(
+        id=301,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    thursday_block = SimpleNamespace(
+        id=302,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    friday_block = SimpleNamespace(
+        id=303,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(10, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {
+            sunday: [],
+            monday: [monday_block],
+            date(2026, 4, 7): [],
+            date(2026, 4, 8): [],
+            thursday: [thursday_block],
+            friday: [friday_block],
+            date(2026, 4, 11): [],
+        },
+        defaultdict(int),
+        sunday,
+        date(2026, 4, 11),
+    )
+
+    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
+        (thursday, 302, 60),
+        (friday, 303, 120),
+    ]
+
+
 def test_templates_expose_work_journey_entrypoints():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey.html'), 'r', encoding='utf-8') as handle:
@@ -578,7 +695,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'journeyApplyFiltersBtn' in journey_template
     assert 'journeyClearFiltersBtn' in journey_template
     assert 'journeyScopeSelect' not in journey_template
-    assert 'Kanban de agendas' in agendas_panel
+    assert 'Kanban de Agendas' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
@@ -587,6 +704,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Motor agendas-v1' not in agendas_panel
     assert 'Regras do kanban' not in agendas_panel
     assert 'lista de não alocadas' not in agendas_panel
+    assert 'A primeira coluna exibe tarefas atrasadas' not in agendas_panel
     assert 'Carga prevista' not in agendas_panel
     assert 'agendaSummaryCards' not in agendas_panel
     assert 'agenda-legend__item' not in agendas_panel

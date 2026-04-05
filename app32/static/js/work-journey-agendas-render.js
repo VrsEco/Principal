@@ -18,6 +18,8 @@
   function normalizeItem(item) {
     return {
       id: item.id,
+      agenda_item_id: item.agenda_item_id || item.id || null,
+      journey_item_id: item.journey_item_id || item.source_id || null,
       title: item.title,
       display_title: item.display_title || item.title,
       description: item.description || '',
@@ -148,6 +150,10 @@
       overdue_count: items.filter((item) => item.is_overdue).length,
       locked: false,
     };
+  }
+
+  function buildDaySummary(day) {
+    return buildSummaryFromDays([day]);
   }
 
   function normalizeAgenda(raw, options = {}) {
@@ -307,7 +313,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} atividades</span>
+            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} tarefas</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -352,7 +358,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} atividades</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -380,6 +386,12 @@
     const blockCount = blocks.length;
     const activityCount = blocks.reduce((sum, block) => sum + ((block.items || []).length), 0);
     const collapsedLabel = day.subtitle || 'Dia';
+    const daySummary = buildDaySummary(day);
+    const dayMeta = [
+      `Carga Prevista ${formatMinutes(daySummary.planned_minutes)}`,
+      `Carga Realizada ${formatMinutes(daySummary.worked_minutes)}`,
+      `Sobrecarga ${formatMinutes(daySummary.overload_minutes)}`,
+    ].join(' | ');
 
     return `
       <section class="agenda-day-column ${collapsed ? 'is-collapsed' : ''} ${day.is_today ? 'agenda-day-column--today' : ''}" data-agenda-day="${day.date}" data-agenda-day-key="${dayKey}">
@@ -387,7 +399,7 @@
           <div class="agenda-day-column__heading">
             <span class="agenda-day-column__eyebrow">${day.subtitle || 'Dia'}</span>
             <h3 class="agenda-day-column__title">${day.label}</h3>
-            <p class="agenda-day-column__meta">${day.date || ''}</p>
+            <p class="agenda-day-column__meta">${dayMeta}</p>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -398,7 +410,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} atividades</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
             <button
               type="button"
               class="agenda-day-column__toggle"

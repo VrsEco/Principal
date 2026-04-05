@@ -325,7 +325,7 @@ def _build_operational_health(action: Any, timeline: list[dict[str, Any]]) -> di
     elif effective_status in {"pending", "awaiting_approval", "expired"}:
         queue_bucket = "pending"
     elif effective_status in {"rejected", "rolled_back"}:
-        queue_bucket = "closed"
+        queue_bucket = "completed"
 
     return {
         "queue_bucket": queue_bucket,

@@ -139,6 +139,17 @@ class WorkJourneyAgendaGenerateSchema(_StrictModel):
     scope: Literal['day', 'week'] = 'week'
     force: bool = False
 
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_legacy_date_alias(cls, data: Any):
+        if not isinstance(data, dict):
+            return data
+        normalized = dict(data)
+        if normalized.get('date') and not normalized.get('anchor_date'):
+            normalized['anchor_date'] = normalized['date']
+        normalized.pop('date', None)
+        return normalized
+
 
 class WorkJourneyAgendaLockSchema(_StrictModel):
     notes: str | None = None

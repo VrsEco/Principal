@@ -42,6 +42,12 @@
         z-index: 1;
     }
 
+    .instance-card.is-focused-origin {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), var(--shadow-md);
+        background: rgba(239, 246, 255, 0.92);
+    }
+
     .compact-row {
         display: flex;
         align-items: center;
@@ -210,6 +216,37 @@
     const companyId = parseInt('{{ company.id if company else 0 }}') || null;
     const isCollaborator = {{ is_collaborator | tojson }};
     let allInstances = [];
+    const pageParams = new URLSearchParams(window.location.search);
+    let pendingInstanceFocusId = Number.parseInt(pageParams.get('instance_id'), 10);
+    if (!Number.isFinite(pendingInstanceFocusId)) {
+        pendingInstanceFocusId = null;
+    }
+
+    function clearShortcutParams() {
+        if (!window.history?.replaceState) return;
+        if (!pageParams.has('instance_id') && !pageParams.has('from')) return;
+
+        const nextParams = new URLSearchParams(window.location.search);
+        nextParams.delete('instance_id');
+        nextParams.delete('from');
+        const nextQuery = nextParams.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+        window.history.replaceState({}, document.title, nextUrl);
+    }
+
+    function focusPendingInstanceCard() {
+        if (!pendingInstanceFocusId) return;
+
+        const card = document.querySelector(`[data-instance-id="${pendingInstanceFocusId}"]`);
+        if (!card) return;
+
+        card.classList.add('is-focused-origin');
+        card.setAttribute('tabindex', '-1');
+        card.focus({ preventScroll: true });
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pendingInstanceFocusId = null;
+        clearShortcutParams();
+    }
 
     async function loadInstances() {
         try {
@@ -321,7 +358,7 @@
             }
 
             return `
-                <div class="instance-card">
+                <div class="instance-card" data-instance-id="${inst.id}">
                     <!-- Line 1: Code | Title | Process | Status | Priority -->
                     <div class="compact-row" style="margin-bottom: 2px;">
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -368,6 +405,8 @@
                 </div>
             `;
         }).join('');
+
+        focusPendingInstanceCard();
     }
 
     function summarizeNames(names) {
