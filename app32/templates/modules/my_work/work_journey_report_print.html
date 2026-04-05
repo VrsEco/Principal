@@ -348,10 +348,6 @@
             text-align: right;
         }
 
-        .page-counter::after {
-            content: "Página " counter(page) " de " counter(pages);
-        }
-
         .employee-header {
             display: flex;
             justify-content: space-between;
@@ -788,7 +784,7 @@
             <footer class="document-footer">
                 <div class="document-footer__left">Versus Gestão Corporativa - Todos os Direitos Reservados</div>
                 <div class="document-footer__right">
-                    Emitido em {{ generated_at }} · {{ company.name }} · Modo {{ 'Retrato compacto' if layout_mode == 'portrait' else 'Paisagem executiva' }}
+                    Emitido em {{ generated_at }} · Modo {{ 'Retrato compacto' if layout_mode == 'portrait' else 'Paisagem executiva' }}
                 </div>
             </footer>
         </main>
@@ -797,7 +793,7 @@
     <div class="print-footer-fixed" aria-hidden="true">
         <div class="print-footer-fixed__left">Versus Gestão Corporativa - Todos os Direitos Reservados</div>
         <div class="print-footer-fixed__right">
-            {{ company.name }} · Emitido em {{ generated_at }} · <span class="page-counter"></span>
+            Emitido em {{ generated_at }}
         </div>
     </div>
 
