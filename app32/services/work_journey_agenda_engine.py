@@ -15,12 +15,12 @@ from models import (
     db,
 )
 from services.work_journey_base import ACTIVE_ITEM_STATUSES
-from services.work_journey_helpers import PRIORITY_ORDER, block_chronology_key, clamp_period, date_range, duration_minutes, parse_time, time_to_minutes
+from services.work_journey_helpers import block_chronology_key, clamp_period, duration_minutes, parse_time, time_to_minutes
 
 
 def load_source_items(company_id: int, employee_id: int, period_start: date, period_end: date) -> list[WorkJourneyItem]:
     planning_limit = period_end + timedelta(days=7)
-    items = (
+    return (
         WorkJourneyItem.query.filter(
             WorkJourneyItem.company_id == company_id,
             WorkJourneyItem.employee_id == employee_id,
@@ -28,13 +28,7 @@ def load_source_items(company_id: int, employee_id: int, period_start: date, per
             WorkJourneyItem.status.in_(list(ACTIVE_ITEM_STATUSES)),
             or_(
                 and_(WorkJourneyItem.item_type == 'meeting', WorkJourneyItem.due_date.between(period_start, period_end)),
-                and_(
-                    WorkJourneyItem.item_type == 'manual',
-                    or_(
-                        WorkJourneyItem.due_date.between(period_start, period_end),
-                        and_(WorkJourneyItem.due_date < period_start, WorkJourneyItem.status.in_(list(ACTIVE_ITEM_STATUSES))),
-                    ),
-                ),
+                and_(WorkJourneyItem.item_type == 'manual', WorkJourneyItem.due_date.between(period_start, period_end)),
                 and_(
                     WorkJourneyItem.item_type == 'process_instance',
                     or_(
@@ -53,14 +47,6 @@ def load_source_items(company_id: int, employee_id: int, period_start: date, per
         )
         .order_by(WorkJourneyItem.due_date.asc().nulls_last(), WorkJourneyItem.id.asc())
         .all()
-    )
-    return sorted(
-        items,
-        key=lambda item: (
-            item.due_date or item.occurrence_date or date.max,
-            -PRIORITY_ORDER.get(str(item.priority or 'normal').lower(), PRIORITY_ORDER['normal']),
-            int(item.id or 0),
-        ),
     )
 
 
@@ -156,32 +142,25 @@ def candidate_slots_for_item(
         block = meeting_block_for_time(blocks_by_day[meeting_date], item.item_type, scheduled_minutes)
         return [(meeting_date, block, scheduled_minutes)]
 
-    planning_start = resolve_planning_start(period_start, period_end)
-    preferred_block_id = item.block_id if item.item_type == 'manual' and item.block_id else None
-    overdue = is_overdue_for_period(item, period_start, period_end)
+    if item.item_type == 'manual' and item.block_id:
+        manual_date = item.due_date or item.occurrence_date
+        if manual_date and manual_date in blocks_by_day:
+            block = next((candidate for candidate in blocks_by_day[manual_date] if candidate.id == item.block_id), None)
+            return [(manual_date, block, None)] if block else [(manual_date, None, None)]
 
     if item.item_type == 'project_task':
-        schedule_start = planning_start
-        schedule_end = period_end if overdue else min(item.due_date or period_end, period_end)
-        if schedule_end < schedule_start:
-            return []
-        return expand_blocks_for_dates(
-            item.item_type,
-            blocks_by_day,
-            list(date_range(schedule_start, schedule_end)),
-            reverse_within_day=False,
-            preferred_block_id=preferred_block_id,
-        )
+        due = item.due_date or period_end
+        target = min(due - timedelta(days=1), period_end) if due > period_start else period_start
+        dates: list[date] = []
+        current = target
+        while current >= period_start:
+            dates.append(current)
+            current -= timedelta(days=1)
+        return expand_blocks_for_dates(item.item_type, blocks_by_day, dates, reverse_within_day=True)
 
     preferred_date = item.occurrence_date or item.due_date or period_start
-    schedule_start = planning_start if overdue else max(planning_start, min(preferred_date, period_end))
-    return expand_blocks_for_dates(
-        item.item_type,
-        blocks_by_day,
-        list(date_range(schedule_start, period_end)),
-        reverse_within_day=False,
-        preferred_block_id=preferred_block_id,
-    )
+    preferred_date = max(period_start, min(preferred_date, period_end))
+    return expand_blocks_for_dates(item.item_type, blocks_by_day, [preferred_date], reverse_within_day=False)
 
 
 def expand_blocks_for_dates(
@@ -189,41 +168,18 @@ def expand_blocks_for_dates(
     blocks_by_day: dict[date, list[WorkJourneyBlock]],
     dates: list[date],
     reverse_within_day: bool,
-    preferred_block_id: int | None = None,
 ) -> list[tuple[date, WorkJourneyBlock | None, int | None]]:
     slots: list[tuple[date, WorkJourneyBlock | None, int | None]] = []
     for current in dates:
         compatible = [
             block
             for block in blocks_by_day.get(current, [])
-            if block.block_mode == 'operational'
-            and item_type in (block.accepted_item_types or [])
+            if block.block_mode == 'operational' and item_type in (block.accepted_item_types or [])
         ]
-        if preferred_block_id is not None:
-            compatible = sorted(
-                compatible,
-                key=lambda block: (0 if block.id == preferred_block_id else 1, block_chronology_key(block)),
-            )
         compatible = list(reversed(compatible)) if reverse_within_day else compatible
         for block in compatible:
             slots.append((current, block, None))
     return slots
-
-
-def is_overdue_for_period(item: WorkJourneyItem, period_start: date, period_end: date) -> bool:
-    if item.item_type == 'meeting':
-        return False
-    if item.status not in ACTIVE_ITEM_STATUSES:
-        return False
-    due_date = item.due_date or item.occurrence_date
-    return bool(due_date and due_date < resolve_planning_start(period_start, period_end))
-
-
-def resolve_planning_start(period_start: date, period_end: date) -> date:
-    today = date.today()
-    if period_start <= today <= period_end:
-        return today
-    return period_start
 
 
 def meeting_block_for_time(blocks: list[WorkJourneyBlock], item_type: str, scheduled_minutes: int | None) -> WorkJourneyBlock | None:

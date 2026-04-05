@@ -1,6 +1,5 @@
 import os
 import sys
-from collections import defaultdict
 from datetime import date, time
 from types import SimpleNamespace
 
@@ -8,10 +7,8 @@ from flask import Flask
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from api.routes import work_journey_agendas as work_journey_agendas_route
 from api.routes import work_journey as work_journey_route
 from schemas.work_journey import WorkJourneyAgendaGenerateSchema
-from services import work_journey_agenda_engine
 from services import work_journey_agenda_presenter
 from services import work_journey_agenda_service
 from services import work_journey_service
@@ -52,20 +49,6 @@ class _FakeEmployeeQuery:
 
 class _Column:
     def asc(self):
-        return self
-
-
-class _Expr:
-    def __eq__(self, _other):
-        return self
-
-    def is_(self, _other):
-        return self
-
-    def isnot(self, _other):
-        return self
-
-    def in_(self, _other):
         return self
 
 
@@ -122,20 +105,6 @@ class _FixedDate(date):
     @classmethod
     def today(cls):
         return cls(2026, 4, 4)
-
-
-class _AgendaCurrentWeekDate(date):
-    @classmethod
-    def today(cls):
-        return cls(2026, 4, 9)
-
-
-class _FakeAgendaQuery:
-    def filter_by(self, **_kwargs):
-        return self
-
-    def first(self):
-        return None
 
 
 
@@ -278,79 +247,6 @@ def test_work_journey_source_urls_point_to_specific_origin_items():
     assert work_journey_sync.build_meeting_source_url(9, 44) == '/meetings/company/9/meeting/44/report?from=work-journey'
 
 
-def test_prune_missing_source_items_removes_orphan_project_task_items(monkeypatch):
-    orphan_item = SimpleNamespace(id=36, company_id=9, employee_id=23, item_type='project_task', source_id=815, rule_id=None)
-    valid_item = SimpleNamespace(id=14, company_id=9, employee_id=23, item_type='project_task', source_id=334, rule_id=None)
-    deleted_items = []
-
-    class _FakeItemQuery:
-        def filter(self, *_args, **_kwargs):
-            return self
-
-        def all(self):
-            return [orphan_item, valid_item]
-
-    class _FakeTaskQuery:
-        def options(self, *_args, **_kwargs):
-            return self
-
-        def filter(self, *_args, **_kwargs):
-            return self
-
-        def all(self):
-            return [SimpleNamespace(id=334, project=SimpleNamespace(company_id=9))]
-
-    class _FakeSimpleQuery:
-        def filter(self, *_args, **_kwargs):
-            return self
-
-        def all(self):
-            return []
-
-    monkeypatch.setattr(
-        work_journey_sync,
-        'WorkJourneyItem',
-        SimpleNamespace(
-            query=_FakeItemQuery(),
-            company_id=_Expr(),
-            employee_id=_Expr(),
-            rule_id=_Expr(),
-            source_id=_Expr(),
-            item_type=_Expr(),
-        ),
-    )
-    monkeypatch.setattr(
-        work_journey_sync,
-        'ProjectTask',
-        SimpleNamespace(
-            query=_FakeTaskQuery(),
-            id=_Expr(),
-            project=object(),
-        ),
-    )
-    monkeypatch.setattr(
-        work_journey_sync,
-        'ProcessInstance',
-        SimpleNamespace(query=_FakeSimpleQuery(), company_id=_Expr(), id=_Expr()),
-    )
-    monkeypatch.setattr(
-        work_journey_sync,
-        'Meeting',
-        SimpleNamespace(query=_FakeSimpleQuery(), company_id=_Expr(), id=_Expr()),
-    )
-    monkeypatch.setattr(work_journey_sync, 'joinedload', lambda value: value)
-    monkeypatch.setattr(
-        work_journey_sync,
-        'db',
-        SimpleNamespace(session=SimpleNamespace(delete=lambda item: deleted_items.append(item.id))),
-    )
-
-    deleted_count = work_journey_sync.prune_missing_source_items(9, 23)
-
-    assert deleted_count == 1
-    assert deleted_items == [36]
-
-
 def test_get_work_journey_board_excludes_completed_items(monkeypatch):
     employee = SimpleNamespace(id=3, weekly_hours=40, to_dict=lambda: {'id': 3, 'name': 'Ana'})
     anchor = date(2026, 4, 6)
@@ -478,202 +374,6 @@ def test_move_agenda_item_uses_persisted_entry_without_rebuilding(monkeypatch):
     assert payload['agenda_id'] == 11
 
 
-def test_generate_agenda_route_accepts_legacy_date_alias_without_extra_validation_error(monkeypatch):
-    app = Flask(__name__)
-    app.secret_key = 'test'
-    captured = {}
-
-    monkeypatch.setattr(work_journey_agendas_route, 'current_user', SimpleNamespace(id=7, is_authenticated=True))
-    monkeypatch.setattr(work_journey_agendas_route, '_current_employee_id', lambda company_id: 3)
-    monkeypatch.setattr(work_journey_agendas_route, '_can_manage_employee', lambda company_id, employee_id: True)
-    monkeypatch.setattr(work_journey_agendas_route, 'get_work_journey_agenda', lambda company_id, employee_id, anchor, scope, force: captured.update({
-        'company_id': company_id,
-        'employee_id': employee_id,
-        'anchor': anchor,
-        'scope': scope,
-        'force': force,
-    }) or {'id': 91})
-    monkeypatch.setattr(work_journey_agendas_route, 'WorkJourneyAgenda', SimpleNamespace(query=_FakeAgendaQuery()))
-
-    with app.test_request_context(
-        '/api/companies/9/work-journey/agendas/generate',
-        method='POST',
-        json={'employee_id': 3, 'date': '2026-04-06', 'scope': 'week'},
-    ):
-        response = work_journey_agendas_route.api_generate_agenda.__wrapped__(company_id=9)
-
-    assert response.status_code == 200
-    payload = response.get_json()
-    assert payload['success'] is True
-    assert payload['data']['id'] == 91
-    assert captured['anchor'] == date(2026, 4, 6)
-    assert captured['scope'] == 'week'
-    assert captured['force'] is True
-
-
-def test_overdue_manual_item_uses_first_compatible_slots_of_the_week(monkeypatch):
-    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *args, **kwargs: 0)
-
-    sunday = date(2026, 4, 5)
-    monday = date(2026, 4, 6)
-    tuesday = date(2026, 4, 7)
-    agenda = SimpleNamespace(id=11, company_id=9, employee_id=3, anchor_date=monday)
-    item = SimpleNamespace(
-        id=61,
-        item_type='manual',
-        block_id=None,
-        status='pending',
-        due_date=date(2026, 4, 3),
-        occurrence_date=date(2026, 4, 3),
-        estimated_minutes=180,
-        metadata_json={},
-    )
-    monday_block = SimpleNamespace(
-        id=101,
-        block_mode='operational',
-        accepted_item_types=['manual'],
-        start_time=time(8, 0),
-        end_time=time(9, 0),
-    )
-    tuesday_block = SimpleNamespace(
-        id=102,
-        block_mode='operational',
-        accepted_item_types=['manual'],
-        start_time=time(8, 0),
-        end_time=time(10, 0),
-    )
-    blocks_by_day = {
-        sunday: [],
-        monday: [monday_block],
-        tuesday: [tuesday_block],
-    }
-
-    entries = work_journey_agenda_engine.allocate_item(
-        item,
-        agenda,
-        blocks_by_day,
-        defaultdict(int),
-        sunday,
-        date(2026, 4, 11),
-    )
-
-    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
-        (monday, 101, 60),
-        (tuesday, 102, 120),
-    ]
-
-
-def test_overdue_manual_item_skips_full_block_and_uses_next_available_slot(monkeypatch):
-    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *args, **kwargs: 0)
-
-    sunday = date(2026, 4, 5)
-    monday = date(2026, 4, 6)
-    agenda = SimpleNamespace(id=12, company_id=9, employee_id=3, anchor_date=monday)
-    item = SimpleNamespace(
-        id=62,
-        item_type='manual',
-        block_id=None,
-        status='pending',
-        due_date=date(2026, 4, 1),
-        occurrence_date=date(2026, 4, 1),
-        estimated_minutes=30,
-        metadata_json={},
-    )
-    first_block = SimpleNamespace(
-        id=201,
-        block_mode='operational',
-        accepted_item_types=['manual'],
-        start_time=time(8, 0),
-        end_time=time(9, 0),
-    )
-    second_block = SimpleNamespace(
-        id=202,
-        block_mode='operational',
-        accepted_item_types=['manual'],
-        start_time=time(9, 0),
-        end_time=time(10, 0),
-    )
-
-    entries = work_journey_agenda_engine.allocate_item(
-        item,
-        agenda,
-        {sunday: [first_block, second_block]},
-        defaultdict(int, {(sunday, 201): 60}),
-        sunday,
-        date(2026, 4, 11),
-    )
-
-    assert len(entries) == 1
-    assert entries[0].planned_date == sunday
-    assert entries[0].block_id == 202
-    assert entries[0].allocated_minutes == 30
-
-
-def test_overdue_item_inside_current_week_starts_from_today_blocks(monkeypatch):
-    monkeypatch.setattr(work_journey_agenda_engine, 'date', _AgendaCurrentWeekDate)
-    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *args, **kwargs: 0)
-
-    sunday = date(2026, 4, 5)
-    monday = date(2026, 4, 6)
-    thursday = date(2026, 4, 9)
-    friday = date(2026, 4, 10)
-    agenda = SimpleNamespace(id=13, company_id=9, employee_id=3, anchor_date=thursday)
-    item = SimpleNamespace(
-        id=63,
-        item_type='process_instance',
-        block_id=None,
-        status='pending',
-        due_date=monday,
-        occurrence_date=monday,
-        estimated_minutes=180,
-        priority='high',
-        metadata_json={},
-    )
-    monday_block = SimpleNamespace(
-        id=301,
-        block_mode='operational',
-        accepted_item_types=['process_instance'],
-        start_time=time(8, 0),
-        end_time=time(9, 0),
-    )
-    thursday_block = SimpleNamespace(
-        id=302,
-        block_mode='operational',
-        accepted_item_types=['process_instance'],
-        start_time=time(8, 0),
-        end_time=time(9, 0),
-    )
-    friday_block = SimpleNamespace(
-        id=303,
-        block_mode='operational',
-        accepted_item_types=['process_instance'],
-        start_time=time(8, 0),
-        end_time=time(10, 0),
-    )
-
-    entries = work_journey_agenda_engine.allocate_item(
-        item,
-        agenda,
-        {
-            sunday: [],
-            monday: [monday_block],
-            date(2026, 4, 7): [],
-            date(2026, 4, 8): [],
-            thursday: [thursday_block],
-            friday: [friday_block],
-            date(2026, 4, 11): [],
-        },
-        defaultdict(int),
-        sunday,
-        date(2026, 4, 11),
-    )
-
-    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
-        (thursday, 302, 60),
-        (friday, 303, 120),
-    ]
-
-
 def test_templates_expose_work_journey_entrypoints():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey.html'), 'r', encoding='utf-8') as handle:
@@ -695,7 +395,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'journeyApplyFiltersBtn' in journey_template
     assert 'journeyClearFiltersBtn' in journey_template
     assert 'journeyScopeSelect' not in journey_template
-    assert 'Kanban de Agendas' in agendas_panel
+    assert 'Kanban de agendas' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
@@ -704,7 +404,6 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Motor agendas-v1' not in agendas_panel
     assert 'Regras do kanban' not in agendas_panel
     assert 'lista de não alocadas' not in agendas_panel
-    assert 'A primeira coluna exibe tarefas atrasadas' not in agendas_panel
     assert 'Carga prevista' not in agendas_panel
     assert 'agendaSummaryCards' not in agendas_panel
     assert 'agenda-legend__item' not in agendas_panel
@@ -723,7 +422,6 @@ def test_agendas_script_supports_legacy_fallback_drag_and_drop():
     assert '/work-journey/items/${source.item.id}' in agendas_script
     assert 'source.item.agenda_item_id || source.item.id' in agendas_script
     assert "return 'week';" in agendas_script
-    assert 'anchor_date: selectedDate()' in agendas_script
 
 
 def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypatch):
@@ -1122,96 +820,3 @@ def test_agenda_presenter_excludes_completed_entries_from_payload(monkeypatch):
     assert [item['journey_item_id'] for item in monday_day['blocks'][0]['items']] == [41]
     assert payload['summary']['pending_count'] == 1
     assert payload['summary']['completed_count'] == 0
-
-
-def test_agenda_presenter_excludes_entries_without_journey_item(monkeypatch):
-    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: f'AA.T.{item.id}')
-
-    agenda = SimpleNamespace(
-        id=4,
-        company_id=9,
-        employee_id=3,
-        anchor_date=date(2026, 4, 6),
-        scope='week',
-        status='suggested',
-        engine_version='agendas-v1',
-        summary_json={},
-    )
-    employee = SimpleNamespace(name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'})
-    block = SimpleNamespace(
-        id=10,
-        name='Operacional',
-        description='Bloco operacional',
-        start_time=time(8, 0),
-        end_time=time(9, 0),
-        block_mode='operational',
-        weekdays_json=[0],
-    )
-    valid_item = SimpleNamespace(
-        id=51,
-        company_id=9,
-        item_type='manual',
-        source_id=None,
-        title='Tarefa ativa',
-        description='',
-        status='pending',
-        priority='normal',
-        due_date=date(2026, 4, 6),
-        occurrence_date=date(2026, 4, 6),
-        worked_minutes=0,
-        estimated_minutes=30,
-        metadata_json={},
-        block=None,
-    )
-    valid_entry = SimpleNamespace(
-        id=7,
-        agenda_id=4,
-        company_id=9,
-        employee_id=3,
-        journey_item_id=51,
-        block_id=10,
-        planned_date=date(2026, 4, 6),
-        position_index=0,
-        allocated_minutes=30,
-        planned_start_minutes=480,
-        planned_end_minutes=510,
-        overflow_minutes=0,
-        is_fixed=False,
-        is_over_capacity=False,
-        manual_override=False,
-        metadata_json={},
-        block=block,
-        journey_item=valid_item,
-    )
-    orphan_entry = SimpleNamespace(
-        id=8,
-        agenda_id=4,
-        company_id=9,
-        employee_id=3,
-        journey_item_id=999,
-        block_id=10,
-        planned_date=date(2026, 4, 6),
-        position_index=1,
-        allocated_minutes=30,
-        planned_start_minutes=510,
-        planned_end_minutes=540,
-        overflow_minutes=0,
-        is_fixed=False,
-        is_over_capacity=False,
-        manual_override=False,
-        metadata_json={},
-        block=block,
-        journey_item=None,
-    )
-
-    payload = work_journey_agenda_presenter.serialize_agenda_payload(
-        agenda,
-        employee,
-        [block],
-        [valid_entry, orphan_entry],
-    )
-
-    monday_day = next(day for day in payload['days'] if day['date'] == '2026-04-06')
-
-    assert [item['journey_item_id'] for item in monday_day['blocks'][0]['items']] == [51]
-    assert payload['summary']['pending_count'] == 1

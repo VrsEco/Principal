@@ -515,7 +515,7 @@
         method: 'POST',
         body: JSON.stringify({
           employee_id: selectedEmployeeId(),
-          anchor_date: selectedDate(),
+          date: selectedDate(),
           scope: currentScope(),
         }),
       });

@@ -19,7 +19,7 @@ ITEM_TYPE_COLORS = {
 
 def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, blocks: list[WorkJourneyBlock], entries: list[WorkJourneyAgendaItem]) -> dict[str, Any]:
     period_start, period_end = clamp_period(agenda.scope, agenda.anchor_date)
-    entries = [entry for entry in entries if entry.journey_item and is_actionable_status(entry.journey_item.status)]
+    entries = [entry for entry in entries if not entry.journey_item or is_actionable_status(entry.journey_item.status)]
     blocks_by_id = {block.id: block for block in blocks}
     entries_by_day_block: dict[tuple[date, int | None], list[WorkJourneyAgendaItem]] = defaultdict(list)
     serialized_entries: dict[int, dict[str, Any]] = {}
