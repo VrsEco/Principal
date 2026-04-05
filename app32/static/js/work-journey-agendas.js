@@ -14,10 +14,6 @@
   const pdfBtn = document.getElementById('agendaPdfBtn');
   const scopeSelect = document.getElementById('agendaScopeSelect');
   const boardContainer = document.getElementById('agendaBoardContainer');
-  const overdueContainer = document.getElementById('agendaOverdueContainer');
-  const unassignedContainer = document.getElementById('agendaUnassignedContainer');
-  const overdueCount = document.getElementById('agendaOverdueCount');
-  const unassignedCount = document.getElementById('agendaUnassignedCount');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
   const statusBadge = document.getElementById('agendaLockBadge');
@@ -166,25 +162,16 @@
       summaryContainer.innerHTML = renderer.renderSummaryCards(summary);
     }
 
-    if (!boardContainer || !overdueContainer || !unassignedContainer) return;
+    if (!boardContainer) return;
 
     if (!agenda) {
       boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhuma agenda disponível para o contexto selecionado.</div>';
-      overdueContainer.innerHTML = '<div class="agenda-empty-state agenda-empty-state--compact">Nada para exibir.</div>';
-      unassignedContainer.innerHTML = '<div class="agenda-empty-state agenda-empty-state--compact">Nada para exibir.</div>';
-      if (overdueCount) overdueCount.textContent = '0';
-      if (unassignedCount) unassignedCount.textContent = '0';
       applyPanelCollapseState();
       return;
     }
 
     const html = renderer.renderAgendaHTML(agenda, state, agenda.locked);
     boardContainer.innerHTML = html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>';
-    overdueContainer.innerHTML = html.overdueHTML || '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa atrasada.</div>';
-    unassignedContainer.innerHTML = html.unassignedHTML || '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa fora dos blocos.</div>';
-
-    if (overdueCount) overdueCount.textContent = String(agenda.overdue_items?.length || 0);
-    if (unassignedCount) unassignedCount.textContent = String(agenda.unassigned_items?.length || 0);
     applyPanelCollapseState();
   }
 
@@ -361,7 +348,7 @@
       }
     });
 
-    [boardContainer, overdueContainer, unassignedContainer].forEach((container) => {
+    [boardContainer].forEach((container) => {
       if (!container) return;
       container.addEventListener('dragstart', onDragStart);
       container.addEventListener('dragend', onDragEnd);
@@ -498,7 +485,7 @@
   }
 
   function init() {
-    if (!boardContainer || !overdueContainer || !unassignedContainer) return;
+    if (!boardContainer) return;
     wireControls();
     wireInteractions();
     loadAgenda();
