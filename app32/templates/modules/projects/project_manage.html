@@ -806,6 +806,51 @@
         border-top: 1px solid var(--border);
         background: var(--surface-secondary);
     }
+
+    .due-date-change-quick-access {
+        border: 1px solid #bfdbfe;
+        border-radius: 18px;
+        padding: 1rem 1.1rem;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+    }
+
+    .due-date-change-quick-access__header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
+    }
+
+    .due-date-change-quick-access__badges {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+
+    .due-date-change-quick-access__meta {
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+        line-height: 1.45;
+    }
+
+    .due-date-change-quick-access__footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 0.85rem;
+    }
+
+    @media (max-width: 768px) {
+        .due-date-change-quick-access__header,
+        .due-date-change-quick-access__footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -966,6 +1011,7 @@
                         <label class="form-label">Peso Score</label>
                         <input type="number" id="taskScoreWeight" class="form-input" step="0.1" min="0.1" value="1.0">
                     </div>
+                    <div class="form-group form-group--full" id="dueDateChangeQuickAccess" style="display: none;"></div>
                     <div class="form-group form-group--full">
                         <label class="form-label">Como? (Método/Processo)</label>
                         <textarea id="taskHow" class="form-textarea" rows="2"
@@ -1931,6 +1977,65 @@
         return true;
     }
 
+    function renderTaskModalDueDateChangeQuickAccess(task) {
+        const quickAccessEl = document.getElementById('dueDateChangeQuickAccess');
+        if (!quickAccessEl) return;
+
+        if (!task || !task.id) {
+            quickAccessEl.style.display = 'none';
+            quickAccessEl.innerHTML = '';
+            return;
+        }
+
+        const summary = task.postponement_summary || {};
+        const postponementCount = Number(summary.postponement_count || 0);
+        const hasPendingRequest = Boolean(summary.has_pending_request);
+        const isPostponed = Boolean(summary.is_postponed);
+        const badges = [];
+
+        if (hasPendingRequest) {
+            badges.push('<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.55rem;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:0.72rem;font-weight:800;">Adiamento pendente</span>');
+        }
+        if (isPostponed) {
+            badges.push(`<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.55rem;border-radius:999px;background:#fef3c7;color:#92400e;font-size:0.72rem;font-weight:800;">Adiada ${postponementCount}x</span>`);
+        }
+        if (!badges.length) {
+            badges.push('<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.55rem;border-radius:999px;background:#ecfeff;color:#155e75;font-size:0.72rem;font-weight:800;">Sem adiamentos registrados</span>');
+        }
+
+        quickAccessEl.style.display = 'block';
+        quickAccessEl.innerHTML = `
+            <div class="due-date-change-quick-access">
+                <div class="due-date-change-quick-access__header">
+                    <div>
+                        <div style="font-size:0.95rem;font-weight:800;color:var(--text-primary);">🗓️ Gestão de Adiamentos</div>
+                        <div class="due-date-change-quick-access__meta">
+                            Solicitação, aprovação e histórico formal de reprogramação ficam no cockpit detalhado da atividade.
+                        </div>
+                    </div>
+                    <div class="due-date-change-quick-access__badges">${badges.join('')}</div>
+                </div>
+                <div class="due-date-change-quick-access__footer">
+                    <div class="due-date-change-quick-access__meta">
+                        Prazo atual: <strong style="color:var(--text-primary);">${task.due_date ? parseLocalDate(task.due_date)?.toLocaleDateString('pt-BR') || task.due_date : 'Sem prazo'}</strong>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openDueDateChangeWorkspaceFromModal()">
+                        Abrir gestão de adiamentos
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function openDueDateChangeWorkspaceFromModal() {
+        const taskId = document.getElementById('taskId').value;
+        if (!taskId) {
+            alert('Salve a atividade antes de acessar a gestão de adiamentos.');
+            return;
+        }
+        window.location.href = `/my-work/project-task/${taskId}?from=project`;
+    }
+
     function openTaskModal(taskId = null, options = {}) {
         if (IS_COLLABORATOR && !taskId) {
             alert('Colaborador não pode criar novas atividades nesta tela.');
@@ -1969,6 +2074,7 @@
             if (!isHumanGateTask) {
                 loadTaskDependencies(currentTask.id);
             }
+            renderTaskModalDueDateChangeQuickAccess(currentTask);
         } else {
             title.textContent = 'Nova Atividade';
             idField.value = '';
@@ -1977,6 +2083,7 @@
             dependencySection.style.display = 'none';
             document.getElementById('taskScoreWeight').value = 1.0;
             mountBacklogHumanGateSection(null);
+            renderTaskModalDueDateChangeQuickAccess(null);
 
             if (draft) {
                 document.getElementById('taskWhat').value = draft.what || '';
@@ -1996,6 +2103,7 @@
 
     function closeTaskModal() {
         mountBacklogHumanGateSection(null);
+        renderTaskModalDueDateChangeQuickAccess(null);
         taskModal.classList.remove('open');
     }
 
