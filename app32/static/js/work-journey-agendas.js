@@ -12,7 +12,7 @@
   const lockBtn = document.getElementById('agendaLockBtn');
   const unlockBtn = document.getElementById('agendaUnlockBtn');
   const pdfBtn = document.getElementById('agendaPdfBtn');
-  const scopeSelect = document.getElementById('agendaScopeSelect');
+  const scopeSelect = document.getElementById('agendaScopeSelect') || document.getElementById('journeyScopeSelect');
   const boardContainer = document.getElementById('agendaBoardContainer');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
