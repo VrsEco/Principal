@@ -743,7 +743,7 @@
     // ============================================================
     async function loadDueDateChangeRequests() {
         try {
-            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests`);
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests?company_id=${COMPANY_ID}`);
             const data = await res.json();
             if (!res.ok) {
                 throw new Error(data.error || 'Erro ao carregar histórico de adiamentos.');
@@ -917,7 +917,7 @@
             return;
         }
         try {
-            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests`, {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests?company_id=${COMPANY_ID}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -977,7 +977,7 @@
             };
 
         try {
-            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests/${requestId}/${action}`, {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests/${requestId}/${action}?company_id=${COMPANY_ID}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

@@ -165,6 +165,24 @@ def _user_can_approve_due_date_change(company_id, project_id, task):
     return ProjectTaskDueDateChangeService.user_can_approve(project, company_id)
 
 
+def _resolve_due_date_change_company_id(project_id, task_id):
+    from .project import get_request_company_id
+
+    company_id = get_request_company_id()
+    if company_id:
+        return company_id
+
+    project = Project.query.filter_by(id=project_id).first()
+    if not project:
+        return None
+
+    task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first()
+    if not task:
+        return None
+
+    return project.company_id
+
+
 def _validate_limited_task_update_payload(data):
     allowed_fields = {'stage', 'status', 'completion_date', 'logs'}
     extra_fields = set((data or {}).keys()) - allowed_fields
@@ -457,9 +475,9 @@ class ProjectTaskStageResource(Resource):
 class ProjectTaskDueDateChangeRequestListResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id, task_id):
-        from .project import get_request_company_id
-
-        company_id = get_request_company_id()
+        company_id = _resolve_due_date_change_company_id(project_id, task_id)
+        if not company_id:
+            return {"error": "Contexto da empresa não identificado para a atividade."}, 400
         _, project, project_error = ProjectTaskDueDateChangeService.get_task_or_error(
             company_id=company_id,
             project_id=project_id,
@@ -492,9 +510,9 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
 
     @permission_required('projects', 'view')
     def post(self, project_id, task_id):
-        from .project import get_request_company_id
-
-        company_id = get_request_company_id()
+        company_id = _resolve_due_date_change_company_id(project_id, task_id)
+        if not company_id:
+            return {"error": "Contexto da empresa não identificado para a atividade."}, 400
         if not _user_can_update_task(company_id, project_id, task_id):
             return {"error": "Permission denied: edit on projects"}, 403
 
@@ -515,9 +533,9 @@ class ProjectTaskDueDateChangeRequestListResource(Resource):
 class ProjectTaskDueDateChangeRequestDecisionResource(Resource):
     @permission_required('projects', 'view')
     def post(self, project_id, task_id, request_id, action):
-        from .project import get_request_company_id
-
-        company_id = get_request_company_id()
+        company_id = _resolve_due_date_change_company_id(project_id, task_id)
+        if not company_id:
+            return {"error": "Contexto da empresa não identificado para a atividade."}, 400
         task, _, error = ProjectTaskDueDateChangeService.get_task_or_error(
             company_id=company_id,
             project_id=project_id,
