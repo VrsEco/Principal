@@ -185,6 +185,81 @@ def test_work_journey_page_renders_employee_payload(monkeypatch):
     assert response['employees_payload'][0]['name'] == 'Ana'
 
 
+def test_report_page_exposes_pdf_url(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    app.add_url_rule(
+        '/companies/<int:company_id>/work-journey/export-pdf',
+        endpoint='work_journey_report.work_journey_report_pdf',
+        view_func=lambda company_id: f'pdf-{company_id}',
+    )
+    captured = {}
+
+    monkeypatch.setattr(
+        work_journey_report_route,
+        '_build_report_payload',
+        lambda company_id: (
+            SimpleNamespace(id=company_id, name='Empresa Teste'),
+            {
+                'summary': {'scope_label': 'Empresa inteira'},
+                'period': {'week_label': '05/04 a 11/04', 'month_label': '04/2026'},
+                'filters': {'departments': [], 'department': None, 'employees': [], 'employee_id': None},
+                'charts': {},
+                'benchmarks': {},
+                'rankings': {'occupation': [], 'availability': [], 'block_pressure': []},
+                'insights': [],
+                'employees': [],
+            },
+            True,
+        ),
+    )
+    monkeypatch.setattr(
+        work_journey_report_route,
+        'render_template',
+        lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx,
+    )
+
+    with app.test_request_context('/companies/9/work-journey/report?employee_id=3&date=2026-04-05'):
+        response = work_journey_report_route.work_journey_report_page.__wrapped__(9)
+
+    assert captured['template'] == 'modules/my_work/work_journey_report.html'
+    assert response['pdf_url'] == '/companies/9/work-journey/export-pdf?employee_id=3&date=2026-04-05'
+
+
+def test_report_pdf_page_renders_print_template(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    captured = {}
+
+    monkeypatch.setattr(
+        work_journey_report_route,
+        '_build_report_payload',
+        lambda company_id: (
+            SimpleNamespace(id=company_id, name='Empresa Teste'),
+            {
+                'summary': {'scope_label': 'Empresa inteira'},
+                'period': {'week_label': '05/04 a 11/04', 'month_label': '04/2026'},
+                'employees': [],
+                'rankings': {'occupation': [], 'availability': [], 'block_pressure': []},
+                'insights': [],
+                'charts': {'scope_mix': {'values': [0, 0, 0, 0, 0, 0, 0]}},
+            },
+            True,
+        ),
+    )
+    monkeypatch.setattr(
+        work_journey_report_route,
+        'render_template',
+        lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx,
+    )
+
+    with app.test_request_context('/companies/9/work-journey/export-pdf'):
+        response = work_journey_report_route.work_journey_report_pdf.__wrapped__(9)
+
+    assert captured['template'] == 'modules/my_work/work_journey_report_print.html'
+    assert response['company'].id == 9
+
+
 def test_save_block_respects_empty_accepted_item_types(monkeypatch):
     fake_employee = SimpleNamespace(id=3)
 
@@ -1001,6 +1076,11 @@ def test_agenda_presenter_hides_manually_reprogrammed_overdue_item_from_side_lan
 def test_work_journey_report_page_renders_management_report(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'
+    app.add_url_rule(
+        '/companies/<int:company_id>/work-journey/export-pdf',
+        endpoint='work_journey_report.work_journey_report_pdf',
+        view_func=lambda company_id: f'pdf-{company_id}',
+    )
     company = SimpleNamespace(id=9, name='Empresa Teste')
     captured = {}
 

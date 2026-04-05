@@ -14,7 +14,7 @@
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <a class="btn btn-secondary" href="{{ url_for('work_journey.work_journey_page', company_id=company.id) }}">← Voltar à jornada</a>
-      <button class="btn btn-primary" onclick="window.print()">Imprimir / PDF</button>
+      <a class="btn btn-primary" href="{{ pdf_url }}" target="_blank" rel="noopener">Exportar PDF</a>
     </div>
   </section>
 

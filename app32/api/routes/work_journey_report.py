@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from flask import Blueprint, abort, current_app, render_template, request, session
+from flask import Blueprint, abort, current_app, render_template, request, session, url_for
 from flask_login import current_user
 
 from models import Company, Employee
@@ -30,6 +30,41 @@ def _current_employee_id(company_id: int) -> int | None:
 
 def _hours(minutes: int | float | None) -> float:
     return round(float(minutes or 0) / 60, 2)
+
+
+def _build_report_payload(company_id: int) -> tuple[object, dict, bool]:
+    session['active_company_id'] = company_id
+    company = Company.query.get_or_404(company_id)
+    selected_employee_id = request.args.get('employee_id', type=int)
+    selected_department = (request.args.get('department') or '').strip() or None
+    anchor = _parse_date(request.args.get('date'))
+
+    can_manage_all = has_company_full_access(company_id)
+    if not can_manage_all:
+        selected_employee_id = _current_employee_id(company_id)
+        selected_department = None
+        if not selected_employee_id:
+            abort(403)
+
+    try:
+        report = build_work_journey_management_report(
+            company_id,
+            anchor,
+            department=selected_department,
+            employee_id=selected_employee_id,
+        )
+        report = _enrich_report(report)
+    except ValueError as exc:
+        current_app.logger.warning(
+            'Falha no relatório gerencial da jornada: company_id=%s employee_id=%s department=%s error=%s',
+            company_id,
+            selected_employee_id,
+            selected_department,
+            exc,
+        )
+        abort(404, description=str(exc))
+
+    return company, report, can_manage_all
 
 
 def _enrich_report(report: dict) -> dict:
@@ -107,23 +142,38 @@ def work_journey_report_redirect():
 @work_journey_report_bp.route('/companies/<int:company_id>/work-journey/report')
 @permission_required('processes', 'view')
 def work_journey_report_page(company_id: int):
-    session['active_company_id'] = company_id
-    company = Company.query.get_or_404(company_id)
-    selected_employee_id = request.args.get('employee_id', type=int)
-    selected_department = (request.args.get('department') or '').strip() or None
-    anchor = _parse_date(request.args.get('date'))
+    company, report, can_manage_all = _build_report_payload(company_id)
+    pdf_url = url_for(
+        'work_journey_report.work_journey_report_pdf',
+        company_id=company_id,
+        **request.args.to_dict(),
+    )
+    return render_template(
+        'modules/my_work/work_journey_report.html',
+        company=company,
+        report=report,
+        can_manage_all=can_manage_all,
+        pdf_url=pdf_url,
+    )
 
-    if not has_company_full_access(company_id):
-        selected_employee_id = _current_employee_id(company_id)
-        selected_department = None
-        if not selected_employee_id:
-            abort(403)
 
-    try:
-        report = build_work_journey_management_report(company_id, anchor, department=selected_department, employee_id=selected_employee_id)
-        report = _enrich_report(report)
-    except ValueError as exc:
-        current_app.logger.warning('Falha no relatório gerencial da jornada: company_id=%s employee_id=%s department=%s error=%s', company_id, selected_employee_id, selected_department, exc)
-        abort(404, description=str(exc))
+@work_journey_report_bp.route('/work-journey/export-pdf')
+@permission_required('processes', 'view')
+def work_journey_report_pdf_redirect():
+    company_id = session.get('active_company_id') or get_default_company_id()
+    if not company_id:
+        abort(404)
+    return work_journey_report_pdf(company_id)
 
-    return render_template('modules/my_work/work_journey_report.html', company=company, report=report, can_manage_all=has_company_full_access(company_id))
+
+@work_journey_report_bp.route('/companies/<int:company_id>/work-journey/export-pdf')
+@permission_required('processes', 'view')
+def work_journey_report_pdf(company_id: int):
+    company, report, can_manage_all = _build_report_payload(company_id)
+    return render_template(
+        'modules/my_work/work_journey_report_print.html',
+        company=company,
+        report=report,
+        can_manage_all=can_manage_all,
+        generated_at=datetime.now().strftime('%d/%m/%Y %H:%M'),
+    )

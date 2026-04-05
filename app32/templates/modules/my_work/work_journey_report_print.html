@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relatório Gerencial da Jornada - {{ company.name }}</title>
+    <style>
+        :root {
+            --navy: #0f172a;
+            --blue: #2563eb;
+            --indigo: #4f46e5;
+            --purple: #7c3aed;
+            --green: #059669;
+            --amber: #d97706;
+            --red: #dc2626;
+            --slate: #475569;
+            --muted: #64748b;
+            --line: #dbe4f0;
+            --soft: #f8fafc;
+            --soft-blue: #eff6ff;
+            --soft-indigo: #eef2ff;
+            --soft-orange: #fff7ed;
+            --paper: #ffffff;
+            --shadow: 0 16px 50px rgba(15, 23, 42, 0.14);
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: "Inter", "Segoe UI", Arial, sans-serif;
+            background: #111827;
+            color: var(--navy);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 22px;
+            background: rgba(255, 255, 255, 0.98);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .toolbar__title { font-size: 14px; font-weight: 800; }
+        .toolbar__meta { font-size: 12px; color: var(--muted); }
+        .toolbar__actions { display: flex; gap: 10px; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--navy);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--blue), var(--indigo));
+            border-color: transparent;
+            color: #fff;
+        }
+
+        .viewer {
+            min-height: calc(100vh - 62px);
+            overflow: auto;
+            padding: 28px;
+        }
+
+        .report {
+            width: 1120px;
+            max-width: 100%;
+            margin: 0 auto;
+            background: var(--paper);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .hero {
+            padding: 28px 30px 24px;
+            background:
+                radial-gradient(circle at top right, rgba(124, 58, 237, 0.16), transparent 28%),
+                radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 26%),
+                linear-gradient(135deg, #f8fbff 0%, #eef4ff 52%, #f8f5ff 100%);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .tag {
+            display: inline-flex;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: var(--soft-blue);
+            color: var(--blue);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .hero h1 {
+            margin: 14px 0 10px;
+            font-size: 30px;
+            line-height: 1.05;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--slate);
+            line-height: 1.55;
+            font-size: 14px;
+        }
+
+        .meta-grid {
+            margin-top: 18px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .meta-card, .kpi, .panel, .employee-section {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: #fff;
+        }
+
+        .meta-card {
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .meta-card__label {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .meta-card__value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .section {
+            padding: 22px 30px 0;
+        }
+
+        .section:last-child {
+            padding-bottom: 28px;
+        }
+
+        .section-title {
+            margin: 0 0 14px;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--navy);
+        }
+
+        .section-subtitle {
+            margin: -6px 0 16px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .kpi { padding: 14px; background: linear-gradient(180deg, #fff, #f8fbff); }
+        .kpi__label { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 800; letter-spacing: .05em; }
+        .kpi__value { display: block; margin-top: 10px; font-size: 28px; font-weight: 800; line-height: 1; }
+        .kpi__helper { margin-top: 8px; font-size: 12px; color: var(--slate); }
+
+        .grid-2, .grid-3 {
+            display: grid;
+            gap: 14px;
+        }
+
+        .grid-2 { grid-template-columns: 1.2fr .8fr; }
+        .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+        .panel { padding: 16px; }
+        .panel h3 {
+            margin: 0 0 12px;
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .insights, .ranking-list, .bucket-list, .project-list, .block-list { display: grid; gap: 10px; }
+
+        .insight {
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: var(--soft-orange);
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .insight--ok {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+
+        .ranking-item, .bucket, .project-item, .block-item {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: var(--soft);
+        }
+
+        .ranking-item strong, .project-item strong, .block-item strong { display: block; margin-bottom: 6px; }
+        .mini { font-size: 12px; color: var(--slate); line-height: 1.45; }
+
+        .bar-group { display: grid; gap: 10px; }
+        .bar-item { display: grid; gap: 6px; }
+        .bar-label { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--slate); }
+        .bar-track {
+            height: 12px;
+            border-radius: 999px;
+            background: #e5edf7;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--blue), var(--purple));
+        }
+
+        .stack-track {
+            height: 14px;
+            border-radius: 999px;
+            background: #e5edf7;
+            overflow: hidden;
+            display: flex;
+        }
+        .seg-blue { background: #2563eb; }
+        .seg-purple { background: #7c3aed; }
+        .seg-green { background: #059669; }
+        .seg-amber { background: #d97706; }
+        .seg-cyan { background: #0891b2; }
+        .seg-slate { background: #94a3b8; }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--slate);
+        }
+
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+
+        .employee-section {
+            margin-top: 14px;
+            padding: 18px;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .employee-name { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+        .employee-sub { font-size: 13px; color: var(--muted); }
+
+        .chip {
+            display: inline-flex;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: var(--soft-indigo);
+            color: var(--indigo);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            vertical-align: top;
+            font-size: 12px;
+        }
+
+        th {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            font-size: 10.5px;
+        }
+
+        td strong { color: var(--navy); }
+        .text-good { color: var(--green); font-weight: 800; }
+        .text-alert { color: var(--red); font-weight: 800; }
+
+        .page-break {
+            break-before: page;
+            page-break-before: always;
+        }
+
+        @page {
+            size: A4 landscape;
+            margin: 11mm;
+        }
+
+        @media print {
+            body { background: #fff; }
+            .toolbar { display: none !important; }
+            .viewer { padding: 0; min-height: auto; }
+            .report {
+                width: 100%;
+                max-width: none;
+                border-radius: 0;
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .kpis, .meta-grid, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div>
+            <div class="toolbar__title">Relatório gerencial da jornada</div>
+            <div class="toolbar__meta">{{ company.name }} · gerado em {{ generated_at }}</div>
+        </div>
+        <div class="toolbar__actions">
+            <a class="btn" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id, **request.args.to_dict()) }}">Voltar ao painel</a>
+            <button class="btn btn-primary" onclick="window.print()">Imprimir / Salvar PDF</button>
+        </div>
+    </div>
+
+    <div class="viewer">
+        <main class="report">
+            <section class="hero">
+                <span class="tag">Gestão à vista</span>
+                <h1>Relatório gerencial da jornada do colaborador</h1>
+                <p>
+                    Visão executiva para leitura rápida da ocupação semanal e mensal, capacidade útil, rotinas recorrentes,
+                    projetos com responsabilidade direta e aderência dos blocos operacionais do time.
+                </p>
+
+                <div class="meta-grid">
+                    <div class="meta-card">
+                        <div class="meta-card__label">Empresa</div>
+                        <div class="meta-card__value">{{ company.name }}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-card__label">Escopo</div>
+                        <div class="meta-card__value">{{ report.summary.scope_label }}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-card__label">Semana analisada</div>
+                        <div class="meta-card__value">{{ report.period.week_label }}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-card__label">Mês analisado</div>
+                        <div class="meta-card__value">{{ report.period.month_label }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">Resumo executivo</h2>
+                <p class="section-subtitle">Indicadores consolidados para decisão rápida de capacidade, sobrecarga e espaço disponível.</p>
+                <div class="kpis">
+                    <div class="kpi">
+                        <div class="kpi__label">Horas acordadas / semana</div>
+                        <span class="kpi__value">{{ '%.1f'|format(report.summary.agreed_weekly_minutes/60) }}h</span>
+                        <div class="kpi__helper">{{ report.summary.employee_count }} colaborador(es) no recorte</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi__label">Semana ocupada</div>
+                        <span class="kpi__value">{{ '%.1f'|format(report.summary.occupied_weekly_minutes/60) }}h</span>
+                        <div class="kpi__helper">{{ report.summary.occupation_percent_week }}% da capacidade útil</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi__label">Semana livre</div>
+                        <span class="kpi__value">{{ '%.1f'|format(report.summary.free_weekly_minutes/60) }}h</span>
+                        <div class="kpi__helper">Janela disponível após alocação</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi__label">Mês ocupado</div>
+                        <span class="kpi__value">{{ '%.1f'|format(report.summary.occupied_monthly_minutes/60) }}h</span>
+                        <div class="kpi__helper">{{ report.summary.occupation_percent_month }}% da capacidade útil</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi__label">Rotinas fixas / semana</div>
+                        <span class="kpi__value">{{ '%.1f'|format(report.summary.routine_weekly_minutes/60) }}h</span>
+                        <div class="kpi__helper">Carga recorrente consolidada</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi__label">Itens sem bloco</div>
+                        <span class="kpi__value">{{ '%.1f'|format(report.summary.unassigned_weekly_minutes/60) }}h</span>
+                        <div class="kpi__helper">Pontos pedindo ajuste de jornada</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="grid-2">
+                    <article class="panel">
+                        <h3>Composição da ocupação semanal</h3>
+                        {% set scope_values = report.charts.scope_mix.values %}
+                        {% set scope_total = (scope_values|sum) or 1 %}
+                        <div class="stack-track">
+                            <div class="seg-blue" style="width:{{ (scope_values[0] / scope_total * 100)|round(1) }}%"></div>
+                            <div class="seg-purple" style="width:{{ (scope_values[1] / scope_total * 100)|round(1) }}%"></div>
+                            <div class="seg-green" style="width:{{ (scope_values[2] / scope_total * 100)|round(1) }}%"></div>
+                            <div class="seg-amber" style="width:{{ (scope_values[3] / scope_total * 100)|round(1) }}%"></div>
+                            <div class="seg-cyan" style="width:{{ (scope_values[4] / scope_total * 100)|round(1) }}%"></div>
+                            <div class="seg-slate" style="width:{{ ((scope_values[5] + scope_values[6]) / scope_total * 100)|round(1) }}%"></div>
+                        </div>
+                        <div class="legend">
+                            <span><i class="dot" style="background:#2563eb"></i> Rotinas: {{ '%.1f'|format(scope_values[0]) }}h</span>
+                            <span><i class="dot" style="background:#7c3aed"></i> Projetos: {{ '%.1f'|format(scope_values[1]) }}h</span>
+                            <span><i class="dot" style="background:#059669"></i> Processos: {{ '%.1f'|format(scope_values[2]) }}h</span>
+                            <span><i class="dot" style="background:#d97706"></i> Reuniões: {{ '%.1f'|format(scope_values[3]) }}h</span>
+                            <span><i class="dot" style="background:#0891b2"></i> Avulsas: {{ '%.1f'|format(scope_values[4]) }}h</span>
+                            <span><i class="dot" style="background:#94a3b8"></i> Reservas + sem bloco: {{ '%.1f'|format(scope_values[5] + scope_values[6]) }}h</span>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <h3>Alertas e direcionamentos</h3>
+                        <div class="insights">
+                            {% for insight in report.insights %}
+                                <div class="insight">{{ insight }}</div>
+                            {% else %}
+                                <div class="insight insight--ok">Sem alertas críticos no recorte atual. A distribuição está equilibrada para leitura gerencial.</div>
+                            {% endfor %}
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="grid-3">
+                    <article class="panel">
+                        <h3>Ranking de ocupação</h3>
+                        <div class="ranking-list">
+                            {% for item in report.rankings.occupation %}
+                                <div class="ranking-item">
+                                    <strong>{{ loop.index }}. {{ item.name }}</strong>
+                                    <div class="mini">{{ item.department }} · {{ item.value }}% ocupado · {{ item.occupied_hours }}h alocadas</div>
+                                </div>
+                            {% else %}
+                                <div class="ranking-item"><div class="mini">Sem dados.</div></div>
+                            {% endfor %}
+                        </div>
+                    </article>
+                    <article class="panel">
+                        <h3>Ranking de disponibilidade</h3>
+                        <div class="ranking-list">
+                            {% for item in report.rankings.availability %}
+                                <div class="ranking-item">
+                                    <strong>{{ loop.index }}. {{ item.name }}</strong>
+                                    <div class="mini">{{ item.department }} · {{ item.value }}h livres na semana</div>
+                                </div>
+                            {% else %}
+                                <div class="ranking-item"><div class="mini">Sem dados.</div></div>
+                            {% endfor %}
+                        </div>
+                    </article>
+                    <article class="panel">
+                        <h3>Blocos sob pressão</h3>
+                        <div class="ranking-list">
+                            {% for item in report.rankings.block_pressure %}
+                                <div class="ranking-item">
+                                    <strong>{{ item.block_name }}</strong>
+                                    <div class="mini">{{ item.employee_name }} · {{ item.value }}% de ocupação · {{ item.occupied_hours }}h ocupadas</div>
+                                </div>
+                            {% else %}
+                                <div class="ranking-item"><div class="mini">Sem dados.</div></div>
+                            {% endfor %}
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">Capacidade por colaborador</h2>
+                <p class="section-subtitle">Barras percentuais para leitura visual rápida da carga atual do time.</p>
+                <div class="panel">
+                    <div class="bar-group">
+                        {% for row in report.employees %}
+                            <div class="bar-item">
+                                <div class="bar-label">
+                                    <span><strong>{{ row.employee.name }}</strong> · {{ row.employee.department }}</span>
+                                    <span>{{ row.summary.occupation_percent_week }}% ocupado · {{ '%.1f'|format(row.summary.free_weekly_minutes/60) }}h livres</span>
+                                </div>
+                                <div class="bar-track">
+                                    <div class="bar-fill" style="width:{{ [row.summary.occupation_percent_week, 100]|min }}%"></div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="mini">Sem colaboradores no recorte atual.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            {% for row in report.employees %}
+                <section class="section {{ 'page-break' if loop.index > 1 else '' }}">
+                    <div class="employee-section">
+                        <div class="employee-header">
+                            <div>
+                                <h2 class="employee-name">{{ row.employee.name }}</h2>
+                                <div class="employee-sub">{{ row.employee.department }} · {{ '%.1f'|format(row.employee.weekly_hours) }}h contratadas por semana</div>
+                            </div>
+                            <div class="chip">Ocupação semanal {{ row.summary.occupation_percent_week }}%</div>
+                        </div>
+
+                        <div class="grid-2">
+                            <article class="panel">
+                                <h3>Resumo de capacidade</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Indicador</th>
+                                            <th>Semana</th>
+                                            <th>Mês</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Horas acordadas</strong></td>
+                                            <td>{{ '%.1f'|format(row.summary.agreed_weekly_minutes/60) }}h</td>
+                                            <td>{{ '%.1f'|format(row.summary.agreed_monthly_minutes/60) }}h</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Capacidade útil pelos blocos</strong></td>
+                                            <td>{{ '%.1f'|format(row.summary.effective_weekly_minutes/60) }}h</td>
+                                            <td>{{ '%.1f'|format(row.summary.effective_monthly_minutes/60) }}h</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Tempo ocupado</strong></td>
+                                            <td>{{ '%.1f'|format(row.summary.occupied_weekly_minutes/60) }}h</td>
+                                            <td>{{ '%.1f'|format(row.summary.occupied_monthly_minutes/60) }}h</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Tempo livre</strong></td>
+                                            <td class="{{ 'text-good' if row.summary.free_weekly_minutes > 0 else '' }}">{{ '%.1f'|format(row.summary.free_weekly_minutes/60) }}h</td>
+                                            <td>{{ '%.1f'|format(row.summary.free_monthly_minutes/60) }}h</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Sobrecarga</strong></td>
+                                            <td class="{{ 'text-alert' if row.summary.overload_weekly_minutes > 0 else '' }}">{{ '%.1f'|format(row.summary.overload_weekly_minutes/60) }}h</td>
+                                            <td>{{ '%.1f'|format(row.summary.overload_monthly_minutes/60) }}h</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Sem bloco</strong></td>
+                                            <td>{{ '%.1f'|format(row.summary.unassigned_weekly_minutes/60) }}h</td>
+                                            <td>-</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </article>
+
+                            <article class="panel">
+                                <h3>Blocos da jornada</h3>
+                                <div class="block-list">
+                                    {% for block in row.blocks %}
+                                        <div class="block-item">
+                                            <strong>{{ block.name }}</strong>
+                                            <div class="mini">{{ block.mode_label }} · {{ block.window_label or 'Sem janela' }} · {{ block.weekdays_label }}</div>
+                                            <div class="mini">Semana: {{ '%.1f'|format(block.occupied_week/60) }}h ocupadas / {{ '%.1f'|format(block.free_week/60) }}h livres</div>
+                                            <div class="mini">Mês: {{ '%.1f'|format(block.occupied_month/60) }}h ocupadas / {{ '%.1f'|format(block.free_month/60) }}h livres</div>
+                                            <div class="mini">Tipos aceitos: {{ block.accepted_types|join(', ') if block.accepted_types else 'Não informado' }}</div>
+                                        </div>
+                                    {% else %}
+                                        <div class="block-item"><div class="mini">Nenhum bloco cadastrado.</div></div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        </div>
+
+                        <div class="grid-2" style="margin-top:14px;">
+                            <article class="panel">
+                                <h3>Rotinas por frequência e bloco</h3>
+                                <div class="bucket-list">
+                                    {% for bucket, label in [('daily', 'Diárias'), ('weekly', 'Semanais'), ('monthly', 'Mensais'), ('other', 'Outras')] %}
+                                        <div class="bucket">
+                                            <strong>{{ label }}</strong>
+                                            {% for rt in row.routines[bucket] %}
+                                                <div class="mini" style="margin-top:8px;">
+                                                    <strong>{{ rt.routine_name }}</strong> · {{ rt.block_name }}<br />
+                                                    {{ rt.schedule_description }} · {{ rt.weekly_formula_label }}
+                                                </div>
+                                            {% else %}
+                                                <div class="mini" style="margin-top:8px;">Sem rotinas nesta faixa.</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+
+                            <article class="panel">
+                                <h3>Projetos e responsabilidades</h3>
+                                <div class="project-list">
+                                    {% for project in row.projects %}
+                                        <div class="project-item">
+                                            <strong>{{ project.project_code or 'PROJ' }} · {{ project.project_name }}</strong>
+                                            <div class="mini">Status: {{ project.status or 'ativo' }}</div>
+                                            <div class="mini">Blocos: {{ project.block_names|join(', ') if project.block_names else 'Sem bloco mapeado' }}</div>
+                                            <div class="mini">
+                                                <strong>Responsável:</strong>
+                                                {% if project.responsible_activities %}
+                                                    {% for act in project.responsible_activities %}
+                                                        {{ act.display_code }} · {{ act.title }}{% if not loop.last %}; {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    Sem atividades como responsável
+                                                {% endif %}
+                                            </div>
+                                            <div class="mini">
+                                                <strong>Participando:</strong>
+                                                {% if project.participating_activities %}
+                                                    {% for act in project.participating_activities %}
+                                                        {{ act.display_code }} · {{ act.title }}{% if not loop.last %}; {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    Sem outras participações
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <div class="project-item"><div class="mini">Sem projetos ativos no recorte.</div></div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </section>
+            {% endfor %}
+        </main>
+    </div>
+
+    <script>
+        window.onload = () => {
+            setTimeout(() => window.print(), 350);
+        };
+    </script>
+</body>
+</html>
