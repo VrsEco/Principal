@@ -1,0 +1,95 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Relatório Gerencial da Jornada | Versus{% endblock %}
+{% block workspace_content %}
+<style>
+:root{--r-blue:#2563eb;--r-indigo:#4f46e5;--r-purple:#7c3aed;--r-green:#059669;--r-orange:#d97706;--r-red:#dc2626;--r-slate:#64748b}.report-shell{display:grid;gap:18px}.hero,.card{background:#fff;border:1px solid #e2e8f0;border-radius:22px;padding:22px;box-shadow:0 10px 30px rgba(15,23,42,.06)}.hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;background:linear-gradient(135deg,#f8fbff 0%,#eef4ff 50%,#f8f5ff 100%)}.tag{display:inline-flex;padding:5px 10px;border-radius:999px;background:#eff6ff;color:var(--r-blue);font-size:.78rem;font-weight:700}.muted{color:var(--r-slate)}.sub{font-size:.92rem;color:#475569}.kpis,.charts,.grid-2,.grid-3,.employee-grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}.kpi{padding:16px;border-radius:18px;background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid #dbeafe}.kpi strong{display:block;font-size:1.85rem;line-height:1.05;margin-top:8px}.kpi small{color:var(--r-slate)}.executive-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:16px}.insight-list{display:grid;gap:10px}.insight{padding:12px 14px;border-radius:16px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}.mini-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.mini-kpi{padding:14px;border-radius:16px;background:#f8fafc;border:1px solid #e2e8f0}.mini-kpi strong{display:block;font-size:1.25rem}.charts{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}.chart-wrap{position:relative;min-height:290px}.grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}.grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.rank-list,.block-grid,.routine-grid,.project-grid{display:grid;gap:12px}.rank-item,.list-item{padding:14px;border:1px solid #e5e7eb;border-radius:16px;background:#fbfdff}.rank-item strong{display:block}.status-chip{display:inline-flex;padding:4px 10px;border-radius:999px;background:#eef2ff;color:var(--r-indigo);font-size:.76rem;font-weight:700}.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--r-blue),var(--r-purple))}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}th{font-size:.82rem;text-transform:uppercase;color:#475569}.employee-header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}.employee-card{scroll-margin-top:20px}.alert-over{color:var(--r-red);font-weight:700}.alert-good{color:var(--r-green);font-weight:700}@media (max-width:980px){.executive-grid{grid-template-columns:1fr}}@media print{.workspace-navbar,.workspace-sidebar,.workspace-sidebar-right,.ws-overlay{display:none!important}.workspace-container,.workspace-main{display:block!important;padding:0!important}.hero,.card{box-shadow:none;border-color:#cbd5e1;break-inside:avoid}.report-shell{gap:10px}}
+</style>
+<div class="report-shell">
+  <section class="hero">
+    <div>
+      <div class="tag">Gestão à vista</div>
+      <h1 class="text-h1" style="margin:10px 0 8px;">Relatório gerencial da jornada</h1>
+      <p class="muted">Painel executivo para leitura rápida da capacidade, rotinas, projetos e alocação dos blocos do colaborador, departamento ou empresa.</p>
+      <p class="sub"><strong>Escopo:</strong> {{ report.summary.scope_label }} · <strong>Semana:</strong> {{ report.period.week_label }} · <strong>Mês:</strong> {{ report.period.month_label }}</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="btn btn-secondary" href="{{ url_for('work_journey.work_journey_page', company_id=company.id) }}">← Voltar à jornada</a>
+      <button class="btn btn-primary" onclick="window.print()">Imprimir / PDF</button>
+    </div>
+  </section>
+
+  <form class="card" method="get" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:end;">
+    {% if can_manage_all %}
+    <div><label class="form-label">Departamento</label><select name="department" class="form-control"><option value="">Todos</option>{% for d in report.filters.departments %}<option value="{{ d }}" {{ 'selected' if report.filters.department==d else '' }}>{{ d }}</option>{% endfor %}</select></div>
+    <div><label class="form-label">Colaborador</label><select name="employee_id" class="form-control"><option value="">Todos</option>{% for e in report.filters.employees %}<option value="{{ e.id }}" {{ 'selected' if report.filters.employee_id==e.id else '' }}>{{ e.name }}</option>{% endfor %}</select></div>
+    {% endif %}
+    <div><label class="form-label">Data âncora</label><input type="date" name="date" class="form-control" value="{{ report.anchor_date }}"></div>
+    <div style="display:flex;gap:10px;"><button class="btn btn-primary" type="submit">Aplicar filtros</button><a class="btn btn-secondary" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id) }}">Limpar</a></div>
+  </form>
+
+  <section class="kpis">
+    <div class="kpi"><span class="muted">Horas semanais acordadas</span><strong>{{ '%.1f'|format(report.summary.agreed_weekly_minutes/60) }}h</strong><small>{{ report.summary.employee_count }} colaborador(es)</small></div>
+    <div class="kpi"><span class="muted">Semana ocupada</span><strong>{{ '%.1f'|format(report.summary.occupied_weekly_minutes/60) }}h</strong><small>{{ report.summary.occupation_percent_week }}% da capacidade útil</small></div>
+    <div class="kpi"><span class="muted">Semana livre</span><strong>{{ '%.1f'|format(report.summary.free_weekly_minutes/60) }}h</strong><small>Após blocos e alocações</small></div>
+    <div class="kpi"><span class="muted">Mês ocupado</span><strong>{{ '%.1f'|format(report.summary.occupied_monthly_minutes/60) }}h</strong><small>{{ report.summary.occupation_percent_month }}% da capacidade útil</small></div>
+    <div class="kpi"><span class="muted">Rotinas fixas / semana</span><strong>{{ '%.1f'|format(report.summary.routine_weekly_minutes/60) }}h</strong><small>Base recorrente</small></div>
+    <div class="kpi"><span class="muted">Sem bloco / semana</span><strong>{{ '%.1f'|format(report.summary.unassigned_weekly_minutes/60) }}h</strong><small>Itens que pedem ajuste</small></div>
+  </section>
+
+  <section class="executive-grid">
+    <article class="card">
+      <h2 style="margin-top:0;">Leitura executiva</h2>
+      <div class="mini-kpis">
+        <div class="mini-kpi"><span class="muted">Média de ocupação semanal</span><strong>{{ report.benchmarks.avg_week_occupation_percent }}%</strong></div>
+        <div class="mini-kpi"><span class="muted">Média de ocupação mensal</span><strong>{{ report.benchmarks.avg_month_occupation_percent }}%</strong></div>
+        <div class="mini-kpi"><span class="muted">Maior ocupação</span><strong>{{ report.benchmarks.highest_occupation.name if report.benchmarks.highest_occupation else '-' }}</strong><small>{{ report.benchmarks.highest_occupation.value if report.benchmarks.highest_occupation else 0 }}%</small></div>
+        <div class="mini-kpi"><span class="muted">Maior disponibilidade</span><strong>{{ report.benchmarks.highest_availability.name if report.benchmarks.highest_availability else '-' }}</strong><small>{{ report.benchmarks.highest_availability.value if report.benchmarks.highest_availability else 0 }}h livres</small></div>
+      </div>
+    </article>
+    <article class="card">
+      <h2 style="margin-top:0;">Alertas e direcionamentos</h2>
+      <div class="insight-list">{% for insight in report.insights %}<div class="insight">{{ insight }}</div>{% else %}<div class="insight" style="background:#ecfdf5;border-color:#a7f3d0;color:#065f46;">Sem alertas críticos no recorte atual.</div>{% endfor %}</div>
+    </article>
+  </section>
+
+  <section class="charts">
+    <article class="card"><h2>Semana ocupada x livre</h2><div class="chart-wrap"><canvas id="scopeCapacityChart"></canvas></div></article>
+    <article class="card"><h2>Composição da ocupação</h2><div class="chart-wrap"><canvas id="scopeMixChart"></canvas></div></article>
+    <article class="card"><h2>Capacidade por colaborador</h2><div class="chart-wrap"><canvas id="employeesChart"></canvas></div></article>
+    <article class="card"><h2>Blocos mais carregados</h2><div class="chart-wrap"><canvas id="blocksChart"></canvas></div></article>
+  </section>
+
+  <section class="grid-3">
+    <article class="card"><h2 style="margin-top:0;">Ranking de ocupação</h2><div class="rank-list">{% for item in report.rankings.occupation %}<div class="rank-item"><strong>{{ loop.index }}. {{ item.name }}</strong><div class="sub">{{ item.department }} · {{ item.value }}% ocupação · {{ item.occupied_hours }}h ocupadas</div></div>{% else %}<div class="rank-item">Sem dados.</div>{% endfor %}</div></article>
+    <article class="card"><h2 style="margin-top:0;">Ranking de disponibilidade</h2><div class="rank-list">{% for item in report.rankings.availability %}<div class="rank-item"><strong>{{ loop.index }}. {{ item.name }}</strong><div class="sub">{{ item.department }} · {{ item.value }}h livres</div></div>{% else %}<div class="rank-item">Sem dados.</div>{% endfor %}</div></article>
+    <article class="card"><h2 style="margin-top:0;">Blocos sob pressão</h2><div class="rank-list">{% for item in report.rankings.block_pressure %}<div class="rank-item"><strong>{{ item.block_name }}</strong><div class="sub">{{ item.employee_name }} · {{ item.value }}% · {{ item.occupied_hours }}h ocupadas</div></div>{% else %}<div class="rank-item">Sem dados.</div>{% endfor %}</div></article>
+  </section>
+
+  {% for row in report.employees %}
+  <section class="card employee-card">
+    <div class="employee-header">
+      <div><h2 style="margin:0;">{{ row.employee.name }}</h2><div class="sub">{{ row.employee.department }} · {{ '%.1f'|format(row.employee.weekly_hours) }}h contratadas/semana</div></div>
+      <div style="min-width:280px;flex:1;max-width:460px;"><div class="sub">Ocupação semanal {{ row.summary.occupation_percent_week }}%</div><div class="progress"><span style="width:{{ [row.summary.occupation_percent_week,100]|min }}%"></span></div></div>
+    </div>
+
+    <div class="grid-2" style="margin-top:16px;">
+      <div class="card" style="padding:16px;"><h3 style="margin-top:0;">Resumo de capacidade</h3><table><tr><th>Indicador</th><th>Semana</th><th>Mês</th></tr><tr><td>Horas acordadas</td><td>{{ '%.1f'|format(row.summary.agreed_weekly_minutes/60) }}h</td><td>{{ '%.1f'|format(row.summary.agreed_monthly_minutes/60) }}h</td></tr><tr><td>Capacidade útil pelos blocos</td><td>{{ '%.1f'|format(row.summary.effective_weekly_minutes/60) }}h</td><td>{{ '%.1f'|format(row.summary.effective_monthly_minutes/60) }}h</td></tr><tr><td>Ocupado</td><td>{{ '%.1f'|format(row.summary.occupied_weekly_minutes/60) }}h</td><td>{{ '%.1f'|format(row.summary.occupied_monthly_minutes/60) }}h</td></tr><tr><td>Livre</td><td class="{{ 'alert-good' if row.summary.free_weekly_minutes > 0 else '' }}">{{ '%.1f'|format(row.summary.free_weekly_minutes/60) }}h</td><td>{{ '%.1f'|format(row.summary.free_monthly_minutes/60) }}h</td></tr><tr><td>Sobrecarga</td><td class="{{ 'alert-over' if row.summary.overload_weekly_minutes > 0 else '' }}">{{ '%.1f'|format(row.summary.overload_weekly_minutes/60) }}h</td><td>{{ '%.1f'|format(row.summary.overload_monthly_minutes/60) }}h</td></tr><tr><td>Sem bloco</td><td>{{ '%.1f'|format(row.summary.unassigned_weekly_minutes/60) }}h</td><td>-</td></tr></table></div>
+      <div class="card" style="padding:16px;"><h3 style="margin-top:0;">Blocos e ocupação</h3><div class="block-grid">{% for block in row.blocks %}<div class="list-item"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><strong>{{ block.name }}</strong><span class="status-chip">{{ block.mode_label }}</span></div><div class="sub">{{ block.window_label or 'Sem janela' }} · {{ block.weekdays_label }}</div><div class="sub">Semana: {{ '%.1f'|format(block.occupied_week/60) }}h ocupadas / {{ '%.1f'|format(block.free_week/60) }}h livres</div><div class="sub">Mês: {{ '%.1f'|format(block.occupied_month/60) }}h ocupadas / {{ '%.1f'|format(block.free_month/60) }}h livres</div><div class="sub">Tipos aceitos: {{ block.accepted_types|join(', ') if block.accepted_types else 'Não informado' }}</div></div>{% else %}<div class="list-item">Nenhum bloco cadastrado.</div>{% endfor %}</div></div>
+    </div>
+
+    <div class="grid-2" style="margin-top:16px;">
+      <div class="card" style="padding:16px;"><h3 style="margin-top:0;">Rotinas por frequência e bloco</h3><div class="routine-grid">{% for bucket,label in [('daily','Diárias'),('weekly','Semanais'),('monthly','Mensais'),('other','Outras')] %}<div class="list-item"><strong>{{ label }}</strong><div class="rank-list" style="margin-top:8px;">{% for rt in row.routines[bucket] %}<div><div><strong>{{ rt.routine_name }}</strong> · {{ rt.block_name }}</div><div class="sub">{{ rt.schedule_description }} · {{ rt.weekly_formula_label }}</div></div>{% else %}<div class="sub">Sem rotinas nesta faixa.</div>{% endfor %}</div></div>{% endfor %}</div></div>
+      <div class="card" style="padding:16px;"><h3 style="margin-top:0;">Projetos e responsabilidades</h3><div class="project-grid">{% for project in row.projects %}<div class="list-item"><div style="display:flex;justify-content:space-between;gap:8px;"><strong>{{ project.project_code or 'PROJ' }} · {{ project.project_name }}</strong><span class="status-chip">{{ project.status or 'ativo' }}</span></div><div class="sub">Blocos: {{ project.block_names|join(', ') if project.block_names else 'Sem bloco mapeado' }}</div><div class="sub"><strong>Responsável:</strong> {% if project.responsible_activities %}{% for act in project.responsible_activities %}{{ act.display_code }} · {{ act.title }}{% if not loop.last %}; {% endif %}{% endfor %}{% else %}Sem atividades como responsável{% endif %}</div><div class="sub"><strong>Participando:</strong> {% if project.participating_activities %}{% for act in project.participating_activities %}{{ act.display_code }} · {{ act.title }}{% if not loop.last %}; {% endif %}{% endfor %}{% else %}Sem outras participações{% endif %}</div></div>{% else %}<div class="list-item">Sem projetos ativos no recorte.</div>{% endfor %}</div></div>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const charts={{ report.charts|tojson }};
+new Chart(document.getElementById('scopeCapacityChart'),{type:'doughnut',data:{labels:charts.scope_capacity.labels,datasets:[{data:charts.scope_capacity.values,backgroundColor:['#2563eb','#cbd5e1']}]},options:{plugins:{legend:{position:'bottom'}}}});
+new Chart(document.getElementById('scopeMixChart'),{type:'doughnut',data:{labels:charts.scope_mix.labels,datasets:[{data:charts.scope_mix.values,backgroundColor:['#1d4ed8','#7c3aed','#059669','#d97706','#0891b2','#dc2626','#64748b']}]},options:{plugins:{legend:{position:'bottom'}}}});
+new Chart(document.getElementById('employeesChart'),{type:'bar',data:{labels:charts.employees_capacity.labels,datasets:[{label:'Ocupado',data:charts.employees_capacity.occupied,backgroundColor:'#2563eb'},{label:'Livre',data:charts.employees_capacity.free,backgroundColor:'#cbd5e1'}]},options:{plugins:{legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true}}}});
+new Chart(document.getElementById('blocksChart'),{type:'bar',data:{labels:charts.blocks_capacity.labels,datasets:[{label:'Ocupado',data:charts.blocks_capacity.occupied,backgroundColor:'#7c3aed'},{label:'Livre',data:charts.blocks_capacity.free,backgroundColor:'#e2e8f0'}]},options:{indexAxis:'y',plugins:{legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true}}}});
+</script>
+{% endblock %}

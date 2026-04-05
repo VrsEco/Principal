@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from api.routes import work_journey_agendas as work_journey_agendas_route
 from api.routes import work_journey as work_journey_route
+from api.routes import work_journey_report as work_journey_report_route
 from services import work_journey_agenda_engine
 from services import work_journey_agenda_presenter
 from services import work_journey_agenda_service
@@ -995,3 +996,31 @@ def test_agenda_presenter_hides_manually_reprogrammed_overdue_item_from_side_lan
     assert payload['overdue_items'] == []
     assert monday_day['blocks'][0]['items'][0]['journey_item_id'] == 51
     assert monday_day['blocks'][0]['items'][0]['is_overdue'] is True
+
+
+def test_work_journey_report_page_renders_management_report(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    company = SimpleNamespace(id=9, name='Empresa Teste')
+    captured = {}
+
+    monkeypatch.setattr(work_journey_report_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery(company)))
+    monkeypatch.setattr(work_journey_report_route, 'has_company_full_access', lambda company_id: True)
+    monkeypatch.setattr(work_journey_report_route, 'build_work_journey_management_report', lambda *args, **kwargs: {'summary': {'scope_label': 'Empresa inteira'}, 'filters': {'department': None, 'employee_id': None, 'employees': [], 'departments': []}, 'period': {'week_label': '06/04 a 12/04', 'month_label': '04/2026'}, 'anchor_date': '2026-04-06', 'charts': {'scope_capacity': {'labels': [], 'values': []}, 'scope_mix': {'labels': [], 'values': []}, 'employees_capacity': {'labels': [], 'occupied': [], 'free': []}, 'blocks_capacity': {'labels': [], 'occupied': [], 'free': []}}, 'employees': []})
+    monkeypatch.setattr(work_journey_report_route, 'render_template', lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx)
+
+    with app.test_request_context('/companies/9/work-journey/report'):
+        response = work_journey_report_route.work_journey_report_page.__wrapped__(company_id=9)
+
+    assert captured['template'] == 'modules/my_work/work_journey_report.html'
+    assert response['report']['summary']['scope_label'] == 'Empresa inteira'
+
+
+
+def test_work_journey_template_exposes_report_link():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey.html'), 'r', encoding='utf-8') as handle:
+        template = handle.read()
+    assert 'Relatório gerencial' in template
+    assert 'work_journey_report.work_journey_report_page' in template
+

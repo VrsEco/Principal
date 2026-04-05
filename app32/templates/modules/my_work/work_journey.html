@@ -16,6 +16,7 @@
                 <p class="journey-hero__subtitle">Visão semanal padronizada, com filtros contextuais no menu lateral direito e busca livre sobre tarefas e blocos.</p>
             </div>
             <div class="journey-hero__actions">
+                <a class="btn btn-secondary" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id, employee_id=selected_employee_id) }}">Relatório gerencial</a>
                 <button id="journeyRefreshBtn" class="btn btn-primary">Atualizar visão</button>
             </div>
         </div>
