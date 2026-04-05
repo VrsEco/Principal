@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import sys
 from datetime import date, time
@@ -7,8 +8,9 @@ from flask import Flask
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from api.routes import work_journey_agendas as work_journey_agendas_route
 from api.routes import work_journey as work_journey_route
-from schemas.work_journey import WorkJourneyAgendaGenerateSchema
+from services import work_journey_agenda_engine
 from services import work_journey_agenda_presenter
 from services import work_journey_agenda_service
 from services import work_journey_service
@@ -92,6 +94,20 @@ class _FakeAgendaMoveQuery:
         return self.entry
 
 
+class _FakeAgendaQuery:
+    def filter_by(self, **_kwargs):
+        return self
+
+    def first(self):
+        return None
+
+
+class _AgendaCurrentWeekDate(date):
+    @classmethod
+    def today(cls):
+        return cls(2026, 4, 9)
+
+
 class _FakeCompanyLookup:
     def __init__(self, company):
         self.company = company
@@ -125,20 +141,6 @@ def test_clamp_period_returns_expected_ranges():
     start, end = clamp_period('month', date(2026, 4, 8))
     assert start.isoformat() == '2026-04-01'
     assert end.isoformat() == '2026-04-30'
-
-
-def test_work_journey_agenda_generate_schema_accepts_legacy_date_alias():
-    payload = WorkJourneyAgendaGenerateSchema.model_validate(
-        {
-            'employee_id': 3,
-            'date': '2026-04-08',
-            'scope': 'week',
-        }
-    ).model_dump()
-
-    assert payload['employee_id'] == 3
-    assert payload['anchor_date'] == date(2026, 4, 8)
-    assert 'date' not in payload
 
 
 def test_block_chronology_key_prioritizes_weekday_then_time():
@@ -374,6 +376,107 @@ def test_move_agenda_item_uses_persisted_entry_without_rebuilding(monkeypatch):
     assert payload['agenda_id'] == 11
 
 
+def test_generate_agenda_route_accepts_legacy_date_alias_without_extra_validation_error(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    captured = {}
+
+    monkeypatch.setattr(work_journey_agendas_route, 'current_user', SimpleNamespace(id=7, is_authenticated=True))
+    monkeypatch.setattr(work_journey_agendas_route, '_current_employee_id', lambda company_id: 3)
+    monkeypatch.setattr(work_journey_agendas_route, '_can_manage_employee', lambda company_id, employee_id: True)
+    monkeypatch.setattr(
+        work_journey_agendas_route,
+        'get_work_journey_agenda',
+        lambda company_id, employee_id, anchor, scope, force: captured.update({
+            'company_id': company_id,
+            'employee_id': employee_id,
+            'anchor': anchor,
+            'scope': scope,
+            'force': force,
+        }) or {'id': 91},
+    )
+    monkeypatch.setattr(work_journey_agendas_route, 'WorkJourneyAgenda', SimpleNamespace(query=_FakeAgendaQuery()))
+
+    with app.test_request_context(
+        '/api/companies/9/work-journey/agendas/generate',
+        method='POST',
+        json={'employee_id': 3, 'date': '2026-04-06', 'scope': 'week'},
+    ):
+        response = work_journey_agendas_route.api_generate_agenda.__wrapped__(company_id=9)
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['success'] is True
+    assert payload['data']['id'] == 91
+    assert captured['anchor'] == date(2026, 4, 6)
+    assert captured['scope'] == 'week'
+    assert captured['force'] is True
+
+
+def test_overdue_item_inside_current_week_starts_from_today_blocks(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'date', _AgendaCurrentWeekDate)
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *args, **kwargs: 0)
+
+    sunday = date(2026, 4, 5)
+    monday = date(2026, 4, 6)
+    thursday = date(2026, 4, 9)
+    friday = date(2026, 4, 10)
+    agenda = SimpleNamespace(id=13, company_id=9, employee_id=3, anchor_date=thursday)
+    item = SimpleNamespace(
+        id=63,
+        item_type='process_instance',
+        block_id=None,
+        status='pending',
+        due_date=monday,
+        occurrence_date=monday,
+        estimated_minutes=180,
+        metadata_json={},
+    )
+    monday_block = SimpleNamespace(
+        id=301,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    thursday_block = SimpleNamespace(
+        id=302,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    friday_block = SimpleNamespace(
+        id=303,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(10, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {
+            sunday: [],
+            monday: [monday_block],
+            date(2026, 4, 7): [],
+            date(2026, 4, 8): [],
+            thursday: [thursday_block],
+            friday: [friday_block],
+            date(2026, 4, 11): [],
+        },
+        defaultdict(int),
+        sunday,
+        date(2026, 4, 11),
+    )
+
+    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
+        (thursday, 302, 60),
+        (friday, 303, 120),
+    ]
+
+
 def test_templates_expose_work_journey_entrypoints():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey.html'), 'r', encoding='utf-8') as handle:
@@ -397,16 +500,11 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'journeyScopeSelect' not in journey_template
     assert 'Kanban de agendas' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
+    assert 'lista de não alocadas' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
     assert 'agendaScopeSelect' not in agendas_panel
-    assert 'Visão operacional' not in agendas_panel
-    assert 'Motor agendas-v1' not in agendas_panel
-    assert 'Regras do kanban' not in agendas_panel
-    assert 'lista de não alocadas' not in agendas_panel
-    assert 'Carga prevista' not in agendas_panel
-    assert 'agendaSummaryCards' not in agendas_panel
-    assert 'agenda-legend__item' not in agendas_panel
+    assert 'agenda-toolbar__scope-badge' in agendas_panel
     assert '/work-journey' in my_work_template
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
