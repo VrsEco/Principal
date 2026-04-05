@@ -447,7 +447,7 @@
                 <div class="grid-2">
                     <article class="panel">
                         <h3>Composição da ocupação semanal</h3>
-                        {% set scope_values = report.charts.scope_mix.values %}
+                        {% set scope_values = report.charts.scope_mix['values'] %}
                         {% set scope_total = (scope_values|sum) or 1 %}
                         <div class="stack-track">
                             <div class="seg-blue" style="width:{{ (scope_values[0] / scope_total * 100)|round(1) }}%"></div>
