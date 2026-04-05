@@ -270,23 +270,116 @@
     const days = agenda?.days || [];
     const overdueItems = agenda?.overdue_items || [];
     const unassignedItems = agenda?.unassigned_items || [];
+    const boardColumns = [];
+
+    if (agenda?.scope === 'week') {
+      boardColumns.push(renderOverdueColumn(overdueItems, locked, collapsedState));
+    }
+    boardColumns.push(...days.map((day) => renderDayColumn(day, locked, collapsedState)));
+    boardColumns.push(renderUnassignedColumn(unassignedItems, locked, collapsedState));
 
     return {
-      boardHTML: days.map((day) => renderDayColumn(day, locked, collapsedState)).join(''),
-      overdueHTML: overdueItems.length
-        ? overdueItems.map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: item.block_id || null }, locked, false, 'overdue')).join('')
-        : '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa atrasada no contexto selecionado.</div>',
-      unassignedHTML: unassignedItems.length
-        ? unassignedItems.map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: null }, locked, true, 'unassigned')).join('')
-        : '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa fora dos blocos.</div>',
+      boardHTML: boardColumns.join(''),
     };
+  }
+
+  function renderOverdueColumn(overdueItems, locked, collapsedState) {
+    const columnKey = 'overdue';
+    const collapsed = collapsedState?.days?.has(columnKey);
+    const blockCount = 0;
+    const activityCount = overdueItems.length;
+    const collapsedLabel = 'Atras.';
+
+    return `
+      <section class="agenda-day-column agenda-day-column--overdue ${collapsed ? 'is-collapsed' : ''}" data-agenda-day-key="${columnKey}">
+        <header class="agenda-day-column__header">
+          <div class="agenda-day-column__heading">
+            <span class="agenda-day-column__eyebrow">Prioridade</span>
+            <h3 class="agenda-day-column__title">Tarefas atrasadas</h3>
+            <p class="agenda-day-column__meta">Itens vencidos antes da semana atual.</p>
+          </div>
+          <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
+            <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
+            <div class="agenda-day-column__collapsed-metrics">
+              <span class="badge-pill agenda-day-column__collapsed-count">0B</span>
+              <span class="badge-pill badge-pill--danger agenda-day-column__collapsed-count">${activityCount}A</span>
+            </div>
+          </div>
+          <div class="agenda-day-column__actions">
+            <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
+            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} atividades</span>
+            <button
+              type="button"
+              class="agenda-day-column__toggle"
+              data-agenda-day-toggle="${columnKey}"
+              aria-label="${collapsed ? 'Expandir atrasadas' : 'Colapsar atrasadas'}"
+              aria-expanded="${collapsed ? 'false' : 'true'}"
+            >
+              <span class="agenda-block__chevron">▾</span>
+            </button>
+          </div>
+        </header>
+        <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" aria-hidden="${collapsed ? 'true' : 'false'}">
+          ${activityCount
+            ? overdueItems.map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: item.block_id || null }, locked, false, 'overdue')).join('')
+            : '<div class="agenda-empty-state">Nenhuma tarefa atrasada no contexto selecionado.</div>'}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderUnassignedColumn(unassignedItems, locked, collapsedState) {
+    const columnKey = 'unassigned';
+    const collapsed = collapsedState?.days?.has(columnKey);
+    const blockCount = 0;
+    const activityCount = unassignedItems.length;
+    const collapsedLabel = 'N. aloc.';
+
+    return `
+      <section class="agenda-day-column agenda-day-column--unassigned ${collapsed ? 'is-collapsed' : ''}" data-agenda-day-key="${columnKey}">
+        <header class="agenda-day-column__header">
+          <div class="agenda-day-column__heading">
+            <span class="agenda-day-column__eyebrow">Backlog</span>
+            <h3 class="agenda-day-column__title">Não alocadas</h3>
+            <p class="agenda-day-column__meta">Itens sem bloco definido. Arraste para um dia ou bloco conforme a necessidade.</p>
+          </div>
+          <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
+            <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
+            <div class="agenda-day-column__collapsed-metrics">
+              <span class="badge-pill agenda-day-column__collapsed-count">${blockCount}B</span>
+              <span class="badge-pill agenda-day-column__collapsed-count">${activityCount}A</span>
+            </div>
+          </div>
+          <div class="agenda-day-column__actions">
+            <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} atividades</span>
+            <button
+              type="button"
+              class="agenda-day-column__toggle"
+              data-agenda-day-toggle="${columnKey}"
+              aria-label="${collapsed ? 'Expandir não alocadas' : 'Colapsar não alocadas'}"
+              aria-expanded="${collapsed ? 'false' : 'true'}"
+            >
+              <span class="agenda-block__chevron">▾</span>
+            </button>
+          </div>
+        </header>
+        <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" data-dropzone="unassigned" aria-hidden="${collapsed ? 'true' : 'false'}">
+          ${activityCount
+            ? unassignedItems.map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: null }, locked, true, 'unassigned')).join('')
+            : '<div class="agenda-empty-state">Nenhuma tarefa fora dos blocos.</div>'}
+        </div>
+      </section>
+    `;
   }
 
   function renderDayColumn(day, locked, collapsedState) {
     const blocks = day.blocks || [];
     const dayKey = day.key || day.date;
     const collapsed = collapsedState?.days?.has(dayKey);
-    const collapsedLabel = `${day.subtitle || 'Dia'} · ${blocks.length}`;
+    const blockCount = blocks.length;
+    const activityCount = blocks.reduce((sum, block) => sum + ((block.items || []).length), 0);
+    const collapsedLabel = day.subtitle || 'Dia';
 
     return `
       <section class="agenda-day-column ${collapsed ? 'is-collapsed' : ''} ${day.is_today ? 'agenda-day-column--today' : ''}" data-agenda-day="${day.date}" data-agenda-day-key="${dayKey}">
@@ -298,10 +391,14 @@
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
-            <span class="badge-pill agenda-day-column__collapsed-count">${blocks.length}</span>
+            <div class="agenda-day-column__collapsed-metrics">
+              <span class="badge-pill agenda-day-column__collapsed-count">${blockCount}B</span>
+              <span class="badge-pill agenda-day-column__collapsed-count">${activityCount}A</span>
+            </div>
           </div>
           <div class="agenda-day-column__actions">
-            <span class="agenda-day-column__badge badge-pill">${blocks.length} blocos</span>
+            <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} atividades</span>
             <button
               type="button"
               class="agenda-day-column__toggle"

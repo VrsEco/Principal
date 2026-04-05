@@ -23,7 +23,9 @@
 }
 
 .journey-tabpanel[data-panel="agendas"] .agenda-layout {
-  grid-template-columns: minmax(268px, 316px) minmax(0, 1fr) minmax(280px, 340px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
   align-items: start;
 }
 
@@ -40,16 +42,6 @@
 
 .journey-tabpanel[data-panel="agendas"] .agenda-sidecard {
   padding: 1rem;
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-sidecard--overdue {
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), #fff 64%);
-  border-color: rgba(239, 68, 68, 0.16);
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-sidecard--unassigned {
-  background: linear-gradient(180deg, rgba(14, 165, 233, 0.08), #fff 64%);
-  border-color: rgba(14, 165, 233, 0.16);
 }
 
 .journey-tabpanel[data-panel="agendas"] .agenda-sidecard__header {
@@ -97,10 +89,6 @@
   min-height: 150px;
 }
 
-.journey-tabpanel[data-panel="agendas"] .agenda-sidecard__content--unassigned {
-  min-height: 150px;
-}
-
 .journey-tabpanel[data-panel="agendas"] .agenda-sidecard.is-collapsed .agenda-sidecard__content {
   display: none;
 }
@@ -135,6 +123,26 @@
   box-shadow: 0 8px 22px rgba(37, 99, 235, 0.09);
 }
 
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--overdue {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), rgba(255, 255, 255, 0.98));
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--overdue .agenda-day-column__eyebrow,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--overdue .agenda-day-column__collapsed-label {
+  color: #b91c1c;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--unassigned {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.08), rgba(255, 255, 255, 0.98));
+  border-color: rgba(14, 165, 233, 0.18);
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--unassigned .agenda-day-column__eyebrow,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--unassigned .agenda-day-column__collapsed-label {
+  color: #0369a1;
+}
+
 .journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed {
   flex: 0 0 92px;
   min-width: 92px;
@@ -151,6 +159,10 @@
   display: none;
   flex: 1;
   min-width: 0;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__collapsed-metrics {
+  display: none;
 }
 
 .journey-tabpanel[data-panel="agendas"] .agenda-day-column__collapsed-label {
@@ -216,6 +228,13 @@
   padding: 0.35rem 0;
 }
 
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__collapsed-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+}
+
 .journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__collapsed-count {
   min-width: 38px;
 }
@@ -245,49 +264,6 @@
   white-space: nowrap;
 }
 
-.journey-tabpanel[data-panel="agendas"] .agenda-rules-card {
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), #fff 72%);
-  border-color: rgba(37, 99, 235, 0.14);
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-rules {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-rules__intro {
-  padding: 0.85rem 0.95rem;
-  border-radius: 16px;
-  border: 1px dashed rgba(37, 99, 235, 0.22);
-  background: rgba(37, 99, 235, 0.04);
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-rules__intro strong {
-  display: block;
-  margin-bottom: 0.28rem;
-  color: var(--primary);
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-rules__intro p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-  line-height: 1.45;
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-rules__list {
-  margin: 0;
-  padding-left: 1.1rem;
-  color: var(--text-secondary);
-  display: grid;
-  gap: 0.45rem;
-}
-
-.journey-tabpanel[data-panel="agendas"] .agenda-rules__list li {
-  line-height: 1.45;
-}
-
 @media (max-width: 1280px) {
   .journey-tabpanel[data-panel="agendas"] .agenda-layout {
     grid-template-columns: 1fr;
@@ -295,14 +271,6 @@
 
   .journey-tabpanel[data-panel="agendas"] .agenda-main {
     order: 1;
-  }
-
-  .journey-tabpanel[data-panel="agendas"] .agenda-aside--left {
-    order: 2;
-  }
-
-  .journey-tabpanel[data-panel="agendas"] .agenda-aside--right {
-    order: 3;
   }
 }
 
