@@ -178,6 +178,10 @@
   min-width: 0;
 }
 
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__topline {
+  min-width: 0;
+}
+
 .journey-tabpanel[data-panel="agendas"] .agenda-day-column__collapsed-title {
   display: none;
   flex: 1;
@@ -202,6 +206,8 @@
 .journey-tabpanel[data-panel="agendas"] .agenda-day-column__actions {
   display: flex;
   align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.55rem;
 }
 
@@ -237,7 +243,16 @@
   border-bottom: none;
 }
 
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__topline {
+  display: flex;
+  justify-content: center;
+}
+
 .journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__heading {
+  display: none;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__summary {
   display: none;
 }
 
@@ -249,6 +264,7 @@
   justify-content: center;
   min-height: 120px;
   padding: 0.35rem 0;
+  order: -1;
 }
 
 .journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed .agenda-day-column__collapsed-metrics {
@@ -312,12 +328,28 @@
     min-width: 84px;
     max-width: 84px;
   }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-day-column__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
   .journey-tabpanel[data-panel="agendas"] .agenda-day-column {
     flex-basis: 300px;
     min-width: 300px;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-day-column__topline {
+    grid-template-columns: 1fr;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-day-column__actions {
+    justify-content: flex-start;
+  }
+
+  .journey-tabpanel[data-panel="agendas"] .agenda-day-column__summary {
+    grid-template-columns: 1fr;
   }
 
   .journey-tabpanel[data-panel="agendas"] .agenda-day-column.is-collapsed {

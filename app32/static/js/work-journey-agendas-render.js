@@ -150,6 +150,19 @@
     };
   }
 
+  function buildDaySummary(day) {
+    return buildSummaryFromDays([day]);
+  }
+
+  function formatCapacityMinutes(minutes) {
+    const total = Number(minutes || 0);
+    const hours = Math.floor(total / 60);
+    const remainder = total % 60;
+    if (!hours) return `${remainder} min`;
+    if (!remainder) return `${hours} h`;
+    return `${hours} h ${remainder} min`;
+  }
+
   function normalizeAgenda(raw, options = {}) {
     const agenda = raw?.agenda || raw?.data || raw || {};
     const selectedDate = options.selectedDate || agenda.date || agenda.agenda_date || new Date().toISOString().slice(0, 10);
@@ -266,6 +279,21 @@
     `).join('');
   }
 
+  function renderDaySummaryCards(summary) {
+    const metrics = [
+      ['Prevista', formatCapacityMinutes(summary.planned_minutes)],
+      ['Realizada', formatCapacityMinutes(summary.worked_minutes)],
+      ['Sobrecarga', formatCapacityMinutes(summary.overload_minutes)],
+    ];
+
+    return metrics.map(([label, value]) => `
+      <div class="agenda-day-column__summary-card ${label === 'Sobrecarga' && Number(summary.overload_minutes || 0) > 0 ? 'is-overload' : ''}">
+        <span class="agenda-day-column__summary-label">${label}</span>
+        <strong class="agenda-day-column__summary-value">${value}</strong>
+      </div>
+    `).join('');
+  }
+
   function renderAgendaHTML(agenda, collapsedState, locked) {
     const days = agenda?.days || [];
     const overdueItems = agenda?.overdue_items || [];
@@ -293,10 +321,24 @@
     return `
       <section class="agenda-day-column agenda-day-column--overdue ${collapsed ? 'is-collapsed' : ''}" data-agenda-day-key="${columnKey}">
         <header class="agenda-day-column__header">
-          <div class="agenda-day-column__heading">
-            <span class="agenda-day-column__eyebrow">Prioridade</span>
-            <h3 class="agenda-day-column__title">Tarefas atrasadas</h3>
-            <p class="agenda-day-column__meta">Itens vencidos antes da semana atual.</p>
+          <div class="agenda-day-column__topline">
+            <div class="agenda-day-column__heading">
+              <span class="agenda-day-column__eyebrow">Prioridade</span>
+              <h3 class="agenda-day-column__title">Tarefas atrasadas</h3>
+            </div>
+            <div class="agenda-day-column__actions">
+              <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
+              <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} tarefas</span>
+              <button
+                type="button"
+                class="agenda-day-column__toggle"
+                data-agenda-day-toggle="${columnKey}"
+                aria-label="${collapsed ? 'Expandir atrasadas' : 'Colapsar atrasadas'}"
+                aria-expanded="${collapsed ? 'false' : 'true'}"
+              >
+                <span class="agenda-block__chevron">▾</span>
+              </button>
+            </div>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -304,19 +346,6 @@
               <span class="badge-pill agenda-day-column__collapsed-count">0B</span>
               <span class="badge-pill badge-pill--danger agenda-day-column__collapsed-count">${activityCount}A</span>
             </div>
-          </div>
-          <div class="agenda-day-column__actions">
-            <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} atividades</span>
-            <button
-              type="button"
-              class="agenda-day-column__toggle"
-              data-agenda-day-toggle="${columnKey}"
-              aria-label="${collapsed ? 'Expandir atrasadas' : 'Colapsar atrasadas'}"
-              aria-expanded="${collapsed ? 'false' : 'true'}"
-            >
-              <span class="agenda-block__chevron">▾</span>
-            </button>
           </div>
         </header>
         <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" aria-hidden="${collapsed ? 'true' : 'false'}">
@@ -338,10 +367,25 @@
     return `
       <section class="agenda-day-column agenda-day-column--unassigned ${collapsed ? 'is-collapsed' : ''}" data-agenda-day-key="${columnKey}">
         <header class="agenda-day-column__header">
-          <div class="agenda-day-column__heading">
-            <span class="agenda-day-column__eyebrow">Backlog</span>
-            <h3 class="agenda-day-column__title">Não alocadas</h3>
-            <p class="agenda-day-column__meta">Itens sem bloco definido. Arraste para um dia ou bloco conforme a necessidade.</p>
+          <div class="agenda-day-column__topline">
+            <div class="agenda-day-column__heading">
+              <span class="agenda-day-column__eyebrow">Backlog</span>
+              <h3 class="agenda-day-column__title">Não alocadas</h3>
+              <p class="agenda-day-column__meta">Itens sem bloco definido. Arraste para um dia ou bloco conforme a necessidade.</p>
+            </div>
+            <div class="agenda-day-column__actions">
+              <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
+              <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
+              <button
+                type="button"
+                class="agenda-day-column__toggle"
+                data-agenda-day-toggle="${columnKey}"
+                aria-label="${collapsed ? 'Expandir não alocadas' : 'Colapsar não alocadas'}"
+                aria-expanded="${collapsed ? 'false' : 'true'}"
+              >
+                <span class="agenda-block__chevron">▾</span>
+              </button>
+            </div>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -349,19 +393,6 @@
               <span class="badge-pill agenda-day-column__collapsed-count">${blockCount}B</span>
               <span class="badge-pill agenda-day-column__collapsed-count">${activityCount}A</span>
             </div>
-          </div>
-          <div class="agenda-day-column__actions">
-            <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} atividades</span>
-            <button
-              type="button"
-              class="agenda-day-column__toggle"
-              data-agenda-day-toggle="${columnKey}"
-              aria-label="${collapsed ? 'Expandir não alocadas' : 'Colapsar não alocadas'}"
-              aria-expanded="${collapsed ? 'false' : 'true'}"
-            >
-              <span class="agenda-block__chevron">▾</span>
-            </button>
           </div>
         </header>
         <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" data-dropzone="unassigned" aria-hidden="${collapsed ? 'true' : 'false'}">
@@ -380,14 +411,32 @@
     const blockCount = blocks.length;
     const activityCount = blocks.reduce((sum, block) => sum + ((block.items || []).length), 0);
     const collapsedLabel = day.subtitle || 'Dia';
+    const daySummary = buildDaySummary(day);
 
     return `
       <section class="agenda-day-column ${collapsed ? 'is-collapsed' : ''} ${day.is_today ? 'agenda-day-column--today' : ''}" data-agenda-day="${day.date}" data-agenda-day-key="${dayKey}">
         <header class="agenda-day-column__header">
-          <div class="agenda-day-column__heading">
-            <span class="agenda-day-column__eyebrow">${day.subtitle || 'Dia'}</span>
-            <h3 class="agenda-day-column__title">${day.label}</h3>
-            <p class="agenda-day-column__meta">${day.date || ''}</p>
+          <div class="agenda-day-column__topline">
+            <div class="agenda-day-column__heading">
+              <span class="agenda-day-column__eyebrow">${day.subtitle || 'Dia'}</span>
+              <h3 class="agenda-day-column__title">${day.label}</h3>
+            </div>
+            <div class="agenda-day-column__actions">
+              <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
+              <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
+              <button
+                type="button"
+                class="agenda-day-column__toggle"
+                data-agenda-day-toggle="${dayKey}"
+                aria-label="${collapsed ? 'Expandir dia' : 'Colapsar dia'}"
+                aria-expanded="${collapsed ? 'false' : 'true'}"
+              >
+                <span class="agenda-block__chevron">▾</span>
+              </button>
+            </div>
+          </div>
+          <div class="agenda-day-column__summary" aria-hidden="${collapsed ? 'true' : 'false'}">
+            ${renderDaySummaryCards(daySummary)}
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -395,19 +444,6 @@
               <span class="badge-pill agenda-day-column__collapsed-count">${blockCount}B</span>
               <span class="badge-pill agenda-day-column__collapsed-count">${activityCount}A</span>
             </div>
-          </div>
-          <div class="agenda-day-column__actions">
-            <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} atividades</span>
-            <button
-              type="button"
-              class="agenda-day-column__toggle"
-              data-agenda-day-toggle="${dayKey}"
-              aria-label="${collapsed ? 'Expandir dia' : 'Colapsar dia'}"
-              aria-expanded="${collapsed ? 'false' : 'true'}"
-            >
-              <span class="agenda-block__chevron">▾</span>
-            </button>
           </div>
         </header>
         <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" data-dropzone="day" data-agenda-day="${day.date}" aria-hidden="${collapsed ? 'true' : 'false'}">

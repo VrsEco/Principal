@@ -1,9 +1,6 @@
 {
-  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_print_statements": true,
-  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_sql_string_concatenation": true,
-  "tests/governance/test_code_standards.py::TestForbiddenPatterns::test_no_bare_except": true,
-  "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs": true,
   "tests/test_sapiens_workflow_catalog_ui.py::test_sapiens_page_contains_workflow_catalog_panel": true,
-  "tests/test_email_service_templates.py::test_send_email_autowraps_corporate_html": true,
-  "tests/test_email_service_templates.py::test_send_email_preserves_explicit_html": true
+  "tests/conversation_regression/test_v6_backlog_sync.py::test_v6_apply_sync_payload_cria_card_quando_nao_existe": true,
+  "tests/test_financial_schedule_service_settlement_flow.py::test_create_settlement_from_schedule_forwards_entry_and_external_reference": true,
+  "tests/test_financial_schedule_service_settlement_flow.py::test_delete_schedule_soft_deletes_generated_entries_without_settlements": true
 }
