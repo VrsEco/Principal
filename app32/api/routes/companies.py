@@ -169,8 +169,14 @@ def update_performance_settings(company_id):
         db.session.add(settings)
     
     data = request.json
+    boolean_fields = {'allow_postpone_after_due_date'}
     for key, value in data.items():
         if hasattr(settings, key):
+            if key in boolean_fields:
+                if isinstance(value, str):
+                    value = value.strip().lower() in {'1', 'true', 'sim', 'yes', 'on'}
+                else:
+                    value = bool(value)
             setattr(settings, key, value)
     db.session.commit()
     return jsonify(settings.to_dict())

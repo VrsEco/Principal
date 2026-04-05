@@ -66,6 +66,7 @@ from .activity_work_log import ActivityWorkLog
 from .occurrence import Occurrence
 from .cadastro_session import CadastroSession
 from .company_performance_settings import CompanyPerformanceSettings
+from .project_due_date_change import ProjectTaskDueDateChangeRequest
 from .app_compliance_report import AppComplianceReport, AppComplianceReportItem
 from .ui_catalog import UiCatalog
 from .user_log import UserLog
@@ -108,6 +109,7 @@ __all__ = [
     'FinancialBudgetCycle', 'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
+    'ProjectTaskDueDateChangeRequest',
     'UiCatalog', 'UserLog',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog',

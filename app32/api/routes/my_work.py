@@ -1,6 +1,6 @@
 import json
 
-from flask import Blueprint, render_template, jsonify, request, send_file, url_for, session
+from flask import Blueprint, render_template, jsonify, request, send_file, url_for, session, abort
 from flask_login import login_required, current_user
 from datetime import datetime
 from models import db, User, Company, Employee, Project, ProjectTask, Process, ProcessInstance
@@ -508,12 +508,25 @@ def process_instance_view(instance_id):
 def project_task_view(task_id):
     """Detailed view of a project task execution (Hours and Info)"""
     from models import ProjectTask, Project
+    from services.project_task_due_date_change_service import (
+        ProjectTaskDueDateChangeService,
+    )
+
     task = ProjectTask.query.get_or_404(task_id)
     project = Project.query.get(task.project_id) if task.project_id else None
     company = Company.query.get(project.company_id) if project else None
+    if project and not _user_has_company_access(project.company_id):
+        abort(403)
+    task_data = task.to_dict()
+    task_data.update(
+        ProjectTaskDueDateChangeService.build_task_context(
+            task.id,
+            company_id=(project.company_id if project else None),
+        )
+    )
     return render_template('modules/projects/project_task_v2.html', 
                            task=task, 
-                           task_data=task.to_dict(),
+                           task_data=task_data,
                            project=project,
                            company=company)
 

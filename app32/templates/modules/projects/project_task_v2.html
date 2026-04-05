@@ -38,6 +38,7 @@
                     {{ task.stage }}
                 </span>
                 {% endif %}
+                <span id="dueDateChangeHeaderBadges" style="display: inline-flex; gap: 0.5rem; flex-wrap: wrap;"></span>
             </div>
             <h1 class="text-h1"><span style="color: var(--text-tertiary); font-weight: 500; font-size: 0.875em;">{{
                     task.code or '' }}</span> {{ task.what }}</h1>
@@ -68,10 +69,11 @@
     </div>
 
     <!-- Quick Stats Bar -->
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0;">
+    <div class="task-stats-bar" style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0;">
         <div class="stat-mini">
             <span class="stat-mini__label">Prazo</span>
             <span
+                id="taskDueDateValue"
                 class="stat-mini__value {{ 'text-danger' if task.due_date and task.status not in ['completed', 'done'] else '' }}">
                 {{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '—' }}
             </span>
@@ -89,6 +91,10 @@
             <span class="stat-mini__label">Peso (Score)</span>
             <span class="stat-mini__value">{{ task.score_weight or 1.0 }}</span>
         </div>
+        <div class="stat-mini">
+            <span class="stat-mini__label">Adiamentos</span>
+            <span class="stat-mini__value" id="postponementCountStat">{{ task_data.postponement_summary.postponement_count if task_data.postponement_summary else 0 }}</span>
+        </div>
         {% if task.amount %}
         <div class="stat-mini">
             <span class="stat-mini__label">Valor</span>
@@ -99,6 +105,21 @@
 
     <!-- Content Grid -->
     <div class="instance-content mt-4">
+
+        <!-- 0. Gestão de Adiamentos -->
+        <div class="surface-card mb-4 due-date-change-card">
+            <div class="card-header mb-4" style="display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+                <div>
+                    <h2 class="text-h3">🗓️ Gestão de Adiamentos</h2>
+                    <p class="text-secondary">Solicitações, aprovações e histórico formal de reprogramação de prazo.</p>
+                </div>
+                <div id="dueDateChangeActions" class="due-date-change-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;"></div>
+            </div>
+            <div id="dueDateChangePendingPanel" style="display: none; margin-bottom: 1rem;"></div>
+            <div id="dueDateChangeHistory" class="logs-history-list due-date-change-history">
+                <div class="text-tertiary text-center p-3">Carregando histórico de adiamentos...</div>
+            </div>
+        </div>
 
         <!-- 1. Lançamento de Horas (Card) -->
         <div class="surface-card mb-4">
@@ -269,7 +290,77 @@
         </div>
         {% endif %}
 
+</div>
+
+<!-- Modal: Solicitar Adiamento -->
+    <div id="dueDateChangeRequestModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content surface-card due-date-change-modal" style="max-width: 560px; width: 92%;">
+        <div class="modal-header mb-4">
+            <h2 class="text-h3">📝 Solicitar Alteração de Prazo</h2>
+            <p class="text-secondary">O prazo atual só será alterado após aprovação formal.</p>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Prazo Atual</label>
+            <input type="text" id="dueDateChangeCurrentDueDate" class="form-control" readonly>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Nova Data Solicitada</label>
+            <input type="date" id="dueDateChangeRequestedDate" class="form-control">
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Motivo</label>
+            <textarea id="dueDateChangeReason" class="form-control" rows="4" placeholder="Explique a razão da reprogramação..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDueDateChangeRequestModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="submitDueDateChangeRequest()">Solicitar</button>
+        </div>
     </div>
+</div>
+
+<!-- Modal: Aprovar Adiamento -->
+<div id="dueDateChangeApproveModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content surface-card due-date-change-modal" style="max-width: 560px; width: 92%;">
+        <div class="modal-header mb-4">
+            <h2 class="text-h3">✅ Aprovar Alteração de Prazo</h2>
+            <p class="text-secondary">Você pode aprovar com data diferente da solicitada.</p>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Data Solicitada</label>
+            <input type="text" id="dueDateChangeApproveRequestedDate" class="form-control" readonly>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Data Aprovada</label>
+            <input type="date" id="dueDateChangeApprovedDate" class="form-control">
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Observação da Aprovação</label>
+            <textarea id="dueDateChangeApprovalNote" class="form-control" rows="3" placeholder="Observação opcional..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDueDateChangeApproveModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="submitDueDateChangeDecision('approve')">Aprovar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Rejeitar Adiamento -->
+<div id="dueDateChangeRejectModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content surface-card due-date-change-modal" style="max-width: 560px; width: 92%;">
+        <div class="modal-header mb-4">
+            <h2 class="text-h3">⛔ Rejeitar Alteração de Prazo</h2>
+            <p class="text-secondary">O prazo atual será mantido.</p>
+        </div>
+        <div class="form-group mb-3">
+            <label class="form-label">Justificativa da Rejeição</label>
+            <textarea id="dueDateChangeRejectNote" class="form-control" rows="4" placeholder="Explique por que a solicitação foi rejeitada..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDueDateChangeRejectModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="submitDueDateChangeDecision('reject')">Rejeitar</button>
+        </div>
+    </div>
+</div>
 
     <!-- Modal de Finalização -->
     <div id="finalizarModal" class="modal-overlay" style="display: none;">
@@ -440,6 +531,48 @@
         z-index: 25000;
     }
 
+    .task-stats-bar .stat-mini {
+        flex: 1 1 160px;
+        min-width: 0;
+    }
+
+    .task-stats-bar .stat-mini__value {
+        word-break: break-word;
+    }
+
+    .due-date-change-card .card-header {
+        gap: 1rem;
+    }
+
+    .due-date-change-actions {
+        justify-content: flex-end;
+        align-items: flex-start;
+    }
+
+    .due-date-change-history .log-item {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface-secondary);
+        padding: 1rem;
+    }
+
+    .due-date-change-history .log-item + .log-item {
+        margin-top: 0.75rem;
+    }
+
+    .due-date-change-modal {
+        box-sizing: border-box;
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+    }
+
+    .due-date-change-modal .modal-footer {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
     @keyframes slideDown {
         from {
             opacity: 0;
@@ -459,6 +592,14 @@
             gap: 1rem;
         }
 
+        .task-stats-bar {
+            gap: 0.75rem;
+        }
+
+        .task-stats-bar .stat-mini {
+            flex-basis: calc(50% - 0.75rem);
+        }
+
         .log-input-box>div {
             flex-direction: column;
             align-items: stretch !important;
@@ -468,9 +609,35 @@
             flex: 1 1 auto;
             width: 100%;
         }
+
+        .due-date-change-card .card-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+
+        .due-date-change-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
     }
 
     @media (max-width: 600px) {
+        .task-stats-bar .stat-mini {
+            flex-basis: 100%;
+        }
+
+        .due-date-change-modal {
+            width: calc(100vw - 24px) !important;
+            max-width: none !important;
+        }
+
+        .due-date-change-modal .modal-footer {
+            flex-direction: column-reverse;
+        }
+
+        .due-date-change-modal .modal-footer .btn {
+            width: 100%;
+        }
 
         .simple-table th,
         .simple-table td {
@@ -537,6 +704,10 @@
     let workLogs = [];
     let diaryLogs = [];
     let currentLogId = null;
+    let dueDateChangeRequests = [];
+    let dueDateChangePermissions = { can_request: false, can_approve: false };
+    let projectOwnerName = "{{ project.owner if project else '' }}";
+    let selectedPendingDueDateChangeRequest = null;
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -553,6 +724,8 @@
         }
 
         renderDiaryLogs();
+        renderDueDateChangeUI();
+        await loadDueDateChangeRequests();
         await fetchWorkLogs();
         await loadEmployeesForSelect();
         await loadTaskDependencies();
@@ -562,6 +735,271 @@
         const actualEndDate = document.getElementById('actualEndDate');
         if (actualEndDate && !actualEndDate.value) {
             actualEndDate.value = today;
+        }
+    }
+
+    // ============================================================
+    // Due Date Change Requests
+    // ============================================================
+    async function loadDueDateChangeRequests() {
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests`);
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Erro ao carregar histórico de adiamentos.');
+            }
+            dueDateChangeRequests = data.requests || [];
+            dueDateChangePermissions = data.permissions || { can_request: false, can_approve: false };
+            projectOwnerName = data.project_owner_name || projectOwnerName || 'Sem responsável';
+            renderDueDateChangeUI();
+        } catch (error) {
+            console.error(error);
+            const historyEl = document.getElementById('dueDateChangeHistory');
+            if (historyEl) {
+                historyEl.innerHTML = `<div class="text-danger text-center p-3">${error.message}</div>`;
+            }
+        }
+    }
+
+    function getPendingDueDateChangeRequest() {
+        return (dueDateChangeRequests || []).find(item => item.status === 'pending') || null;
+    }
+
+    function getPostponementSummary() {
+        return taskData.postponement_summary || {
+            postponement_count: 0,
+            has_pending_request: false,
+            is_postponed: false
+        };
+    }
+
+    function renderDueDateChangeUI() {
+        const summary = getPostponementSummary();
+        const headerBadges = document.getElementById('dueDateChangeHeaderBadges');
+        const historyEl = document.getElementById('dueDateChangeHistory');
+        const actionsEl = document.getElementById('dueDateChangeActions');
+        const pendingPanelEl = document.getElementById('dueDateChangePendingPanel');
+        const countEl = document.getElementById('postponementCountStat');
+        const pendingRequest = getPendingDueDateChangeRequest();
+
+        selectedPendingDueDateChangeRequest = pendingRequest;
+
+        if (countEl) {
+            countEl.textContent = String(summary.postponement_count || 0);
+        }
+
+        if (headerBadges) {
+            const badges = [];
+            if (summary.is_postponed) {
+                badges.push(`<span class="badge" style="background:#fef3c7;color:#92400e;font-weight:700;">Adiada ${summary.postponement_count || 0}x</span>`);
+            }
+            if (summary.has_pending_request) {
+                badges.push(`<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-weight:700;">Adiamento pendente</span>`);
+            }
+            headerBadges.innerHTML = badges.join('');
+        }
+
+        if (actionsEl) {
+            const actionButtons = [];
+            if (dueDateChangePermissions.can_request && taskData.stage !== 'completed') {
+                actionButtons.push(`<button type="button" class="btn btn-outline btn-sm" onclick="openDueDateChangeRequestModal()">Solicitar adiamento</button>`);
+            }
+            if (pendingRequest && dueDateChangePermissions.can_approve) {
+                actionButtons.push(`<button type="button" class="btn btn-primary btn-sm" onclick="openDueDateChangeApproveModal(${pendingRequest.id})">Aprovar</button>`);
+                actionButtons.push(`<button type="button" class="btn btn-danger btn-sm" onclick="openDueDateChangeRejectModal(${pendingRequest.id})">Rejeitar</button>`);
+            }
+            actionsEl.innerHTML = actionButtons.join('');
+        }
+
+        if (pendingPanelEl) {
+            if (pendingRequest) {
+                pendingPanelEl.style.display = 'block';
+                pendingPanelEl.innerHTML = `
+                    <div style="padding:1rem;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;">
+                        <div style="font-weight:700;color:#1d4ed8;margin-bottom:0.35rem;">Solicitação pendente de aprovação</div>
+                        <div style="font-size:0.92rem;color:var(--text-secondary);">
+                            <strong>${pendingRequest.requested_by_name || 'Usuário'}</strong> solicitou
+                            <strong>${formatDatePtBr(pendingRequest.old_due_date) || 'sem prazo'}</strong>
+                            → <strong>${formatDatePtBr(pendingRequest.requested_due_date) || 'sem prazo'}</strong>.
+                        </div>
+                        <div style="margin-top:0.5rem;font-size:0.88rem;color:var(--text-secondary);">${escapeHtml(pendingRequest.reason || '')}</div>
+                        <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-tertiary);">Aprovador esperado: ${escapeHtml(projectOwnerName || 'Sem responsável')}</div>
+                    </div>
+                `;
+            } else {
+                pendingPanelEl.style.display = 'none';
+                pendingPanelEl.innerHTML = '';
+            }
+        }
+
+        if (!historyEl) return;
+        if (!dueDateChangeRequests || dueDateChangeRequests.length === 0) {
+            historyEl.innerHTML = '<div class="text-tertiary text-center p-3">Nenhum adiamento registrado.</div>';
+            return;
+        }
+
+        historyEl.innerHTML = dueDateChangeRequests.map(item => {
+            const statusMeta = getDueDateChangeStatusMeta(item.status);
+            return `
+                <div class="log-item" style="border-left:4px solid ${statusMeta.border};">
+                    <div class="log-meta" style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                        <div>
+                            <strong>${statusMeta.label}</strong>
+                            <span>• ${new Date(item.requested_at).toLocaleString('pt-BR')}</span>
+                        </div>
+                        <span class="badge" style="background:${statusMeta.bg};color:${statusMeta.color};font-weight:700;">${statusMeta.label}</span>
+                    </div>
+                    <div class="log-text" style="display:grid;gap:0.35rem;">
+                        <div><strong>Prazo:</strong> ${formatDatePtBr(item.old_due_date) || '—'} → ${formatDatePtBr(item.requested_due_date) || '—'}${item.status === 'approved' ? ` <span style="color:var(--text-secondary)">| aprovado em ${formatDatePtBr(item.approved_due_date) || '—'}</span>` : ''}</div>
+                        <div><strong>Solicitante:</strong> ${escapeHtml(item.requested_by_name || 'Usuário')}</div>
+                        <div><strong>Motivo:</strong> ${escapeHtml(item.reason || '—')}</div>
+                        ${item.approved_by_name ? `<div><strong>Avaliador:</strong> ${escapeHtml(item.approved_by_name)}${item.approved_at ? ` em ${new Date(item.approved_at).toLocaleString('pt-BR')}` : ''}</div>` : ''}
+                        ${item.approval_note ? `<div><strong>Parecer:</strong> ${escapeHtml(item.approval_note)}</div>` : ''}
+                        <div><strong>Pontuação:</strong> ${Number(item.penalty_points || 0) > 0 ? '+' : ''}${Number(item.penalty_points || 0).toFixed(1)} pts</div>
+                        ${item.was_after_due_date_when_requested ? `<div style="color:var(--warning-dark);"><strong>Observação:</strong> solicitação realizada após o vencimento vigente.</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function getDueDateChangeStatusMeta(status) {
+        switch (status) {
+            case 'approved':
+                return { label: 'Aprovado', bg: '#dcfce7', color: '#166534', border: '#22c55e' };
+            case 'rejected':
+                return { label: 'Rejeitado', bg: '#fee2e2', color: '#991b1b', border: '#ef4444' };
+            default:
+                return { label: 'Pendente', bg: '#dbeafe', color: '#1d4ed8', border: '#3b82f6' };
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatDatePtBr(value) {
+        if (!value) return '';
+        if (typeof value === 'string') {
+            const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+                return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+            }
+        }
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            return String(value);
+        }
+        return parsed.toLocaleDateString('pt-BR');
+    }
+
+    function openDueDateChangeRequestModal() {
+        document.getElementById('dueDateChangeCurrentDueDate').value = formatDatePtBr(taskData.due_date) || 'Sem prazo';
+        document.getElementById('dueDateChangeRequestedDate').value = taskData.due_date || '';
+        document.getElementById('dueDateChangeReason').value = '';
+        document.getElementById('dueDateChangeRequestModal').style.display = 'flex';
+    }
+
+    function closeDueDateChangeRequestModal() {
+        document.getElementById('dueDateChangeRequestModal').style.display = 'none';
+    }
+
+    async function submitDueDateChangeRequest() {
+        const requestedDate = document.getElementById('dueDateChangeRequestedDate').value || null;
+        const reason = document.getElementById('dueDateChangeReason').value.trim();
+        if (!reason) {
+            alert('Informe o motivo da alteração de prazo.');
+            return;
+        }
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requested_due_date: requestedDate,
+                    reason
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Erro ao solicitar adiamento.');
+            }
+            closeDueDateChangeRequestModal();
+            await loadDueDateChangeRequests();
+            showToast('Solicitação de adiamento registrada.', 'success');
+        } catch (error) {
+            console.error(error);
+            alert(error.message);
+        }
+    }
+
+    function openDueDateChangeApproveModal(requestId) {
+        const requestItem = (dueDateChangeRequests || []).find(item => item.id === requestId);
+        if (!requestItem) return;
+        selectedPendingDueDateChangeRequest = requestItem;
+        document.getElementById('dueDateChangeApproveRequestedDate').value = formatDatePtBr(requestItem.requested_due_date) || 'Sem prazo';
+        document.getElementById('dueDateChangeApprovedDate').value = requestItem.requested_due_date || '';
+        document.getElementById('dueDateChangeApprovalNote').value = '';
+        document.getElementById('dueDateChangeApproveModal').style.display = 'flex';
+    }
+
+    function closeDueDateChangeApproveModal() {
+        document.getElementById('dueDateChangeApproveModal').style.display = 'none';
+    }
+
+    function openDueDateChangeRejectModal(requestId) {
+        const requestItem = (dueDateChangeRequests || []).find(item => item.id === requestId);
+        if (!requestItem) return;
+        selectedPendingDueDateChangeRequest = requestItem;
+        document.getElementById('dueDateChangeRejectNote').value = '';
+        document.getElementById('dueDateChangeRejectModal').style.display = 'flex';
+    }
+
+    function closeDueDateChangeRejectModal() {
+        document.getElementById('dueDateChangeRejectModal').style.display = 'none';
+    }
+
+    async function submitDueDateChangeDecision(action) {
+        if (!selectedPendingDueDateChangeRequest) return;
+        const requestId = selectedPendingDueDateChangeRequest.id;
+        const payload = action === 'approve'
+            ? {
+                approved_due_date: document.getElementById('dueDateChangeApprovedDate').value || null,
+                approval_note: document.getElementById('dueDateChangeApprovalNote').value.trim()
+            }
+            : {
+                approval_note: document.getElementById('dueDateChangeRejectNote').value.trim()
+            };
+
+        try {
+            const res = await fetch(`/api/projects/${PROJECT_ID}/tasks/${TASK_ID}/due-date-change-requests/${requestId}/${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Erro ao processar solicitação.');
+            }
+            if (data.task) {
+                taskData = data.task;
+                const currentDueDateEl = document.getElementById('taskDueDateValue');
+                if (currentDueDateEl) {
+                    currentDueDateEl.textContent = formatDatePtBr(taskData.due_date) || '—';
+                }
+            }
+            closeDueDateChangeApproveModal();
+            closeDueDateChangeRejectModal();
+            await loadDueDateChangeRequests();
+            showToast(action === 'approve' ? 'Adiamento aprovado.' : 'Adiamento rejeitado.', 'success');
+        } catch (error) {
+            console.error(error);
+            alert(error.message);
         }
     }
 

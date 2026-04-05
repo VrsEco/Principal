@@ -7,7 +7,7 @@
 {% block content %}
 <div style="max-width: 1100px; margin: 0 auto; padding-bottom: 5rem;">
     <!-- Header -->
-    <div style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div class="company-page-header" style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <h1 class="text-h1" id="page-main-title">{{ 'Configurações da Unidade' if company_id else 'Cadastrar
                 Empresa' }}</h1>
@@ -46,7 +46,7 @@
                 <div class="card mb-4" style="border-radius: 24px;">
                     <div class="card-body">
                         <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Dados do Registro</h3>
-                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="company-grid company-grid--wide" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">Razão Social <span
                                         style="color: var(--danger);">*</span></label>
@@ -58,7 +58,7 @@
                                 <input type="text" id="client_code" class="form-control" placeholder="V1" required>
                             </div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">Nome Fantasia / Apelido</label>
                                 <input type="text" id="legal_name" class="form-control" placeholder="Ex: Gestão Versus">
@@ -94,7 +94,7 @@
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body">
                     <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Cadastro Econômico</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                         <div class="form-group">
                             <label class="form-label">CNPJ</label>
                             <input type="text" id="cnpj" class="form-control" placeholder="00.000.000/0000-00">
@@ -110,7 +110,7 @@
                             </select>
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div class="company-grid company-grid--3" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                         <div class="form-group">
                             <label class="form-label">Porte</label>
                             <select id="size" class="form-control">
@@ -223,7 +223,7 @@
                     <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Critérios de Pontuação (KIs)
                     </h3>
                     <form onsubmit="handlePerformanceSubmit(event)">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">Pontos - Entrega no Prazo</label>
                                 <input type="number" id="on_time_score" class="form-control" step="0.1">
@@ -233,7 +233,7 @@
                                 <input type="number" id="late_score" class="form-control" step="0.1">
                             </div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">Penalidade Diária (Atraso)</label>
                                 <input type="number" id="daily_delay_penalty" class="form-control" step="0.1">
@@ -241,6 +241,20 @@
                             <div class="form-group">
                                 <label class="form-label">Penalidade - Registro Tardio</label>
                                 <input type="number" id="late_registration_penalty" class="form-control" step="0.1">
+                            </div>
+                        </div>
+                        <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Penalidade por Adiamento</label>
+                                <input type="number" id="postpone_penalty_points" class="form-control" step="0.1">
+                                <small class="form-help">Aplicada apenas quando o adiamento for aprovado. Não conta como atraso.</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Adiamento após vencimento atual</label>
+                                <div style="display:flex; align-items:center; gap:0.75rem; min-height:42px; padding:0.75rem 1rem; border:1px solid var(--border-color); border-radius:14px; background:var(--surface-secondary);">
+                                    <input type="checkbox" id="allow_postpone_after_due_date" style="width:18px; height:18px;">
+                                    <span style="font-size:0.95rem; color:var(--text-secondary);">Permitir solicitação de adiamento após o prazo vigente vencer.</span>
+                                </div>
                             </div>
                         </div>
                         <button type="submit" class="btn btn-special">Salvar Critérios</button>
@@ -255,8 +269,8 @@
                 <div class="card-body">
                     <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 2rem;">Configurações de Instância
                     </h3>
-                    <div style="display: grid; gap: 1.5rem;">
-                        <div
+                    <div class="company-stack-grid" style="display: grid; gap: 1.5rem;">
+                        <div class="company-switch-card"
                             style="padding: 1.5rem; border: 1px solid var(--border); border-radius: 16px; display: flex; align-items: center; justify-content: space-between;">
                             <div>
                                 <h5 style="font-weight: 600;">Unidade Ativa</h5>
@@ -270,14 +284,14 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Logo da Unidade (Relatórios)</label>
-                            <div id="logo-upload-container" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.25rem; border: 2px dashed var(--border); border-radius: 20px; background: rgba(0,0,0,0.02); transition: all 0.2s;">
+                            <div id="logo-upload-container" class="company-logo-panel" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.25rem; border: 2px dashed var(--border); border-radius: 20px; background: rgba(0,0,0,0.02); transition: all 0.2s;">
                                 <div id="logo-preview-wrapper" style="width: 140px; height: 70px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                                     <img id="logo-preview" src="" alt="Logo" style="max-width: 90%; max-height: 90%; object-fit: contain; display: none;">
                                     <span id="logo-empty-text" style="font-size: 0.75rem; color: var(--text-tertiary); font-weight: 500;">Sem Logo</span>
                                 </div>
                                 <div style="flex: 1;">
                                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem; line-height: 1.4;">Carregue uma versão horizontal (PNG/SVG) para cabeçalhos de relatórios.</p>
-                                    <div style="display: flex; gap: 0.75rem;">
+                                    <div class="company-logo-actions" style="display: flex; gap: 0.75rem;">
                                         <button type="button" class="btn btn-sm btn-outline" style="font-size: 0.8rem; padding: 0.5rem 1rem;" onclick="document.getElementById('logo-file-input').click()">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                             Escolher Arquivo
@@ -342,7 +356,7 @@
                 </button>
             </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <div class="modal-actions-row" style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
                     onclick="hideAddUserModal()">Cancelar</button>
                 <button type="submit" class="btn btn-special" style="flex: 1;">Vincular Acesso</button>
@@ -379,7 +393,7 @@
                 </select>
             </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 2.5rem;">
+            <div class="modal-actions-row" style="display: flex; gap: 1rem; margin-top: 2.5rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
                     onclick="hideAddRoleModal()">Cancelar</button>
                 <button type="submit" id="btn-save-role" class="btn btn-special" style="flex: 1;">Criar Cargo</button>
@@ -421,7 +435,7 @@
                 <label class="form-label">Horas Semanais</label>
                 <input type="number" id="emp-weekly-hours" class="form-control" step="0.5" value="40" min="0">
             </div>
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <div class="modal-actions-row" style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
                     onclick="hideEmployeeModal()">Cancelar</button>
                 <button type="submit" class="btn btn-special" style="flex: 1;">Salvar</button>
@@ -445,7 +459,7 @@
                 <input type="date" id="remove-end-date" class="form-control" required>
             </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <div class="modal-actions-row" style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
                     onclick="hideRemoveAccessModal()">Cancelar</button>
                 <button type="submit" class="btn btn-danger"
@@ -675,6 +689,54 @@
         transform: translateX(20px);
     }
 
+    .company-page-header {
+        gap: 1rem;
+    }
+
+    .company-grid,
+    .company-stack-grid {
+        width: 100%;
+    }
+
+    .company-switch-card,
+    .company-logo-panel {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .company-grid--wide {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+
+    .company-grid--2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .company-grid--3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .company-stack-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-actions-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .company-logo-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .modal-actions-row .btn {
+        min-width: 0;
+    }
+
     .modal {
         position: fixed;
         z-index: 25000;
@@ -684,6 +746,71 @@
         height: 100%;
         background: rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(4px);
+    }
+
+    @media (max-width: 960px) {
+        .company-page-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+
+        .company-grid--wide,
+        .company-grid--2,
+        .company-grid--3,
+        .company-stack-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .company-switch-card,
+        .company-logo-panel {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+
+        .company-logo-panel > div {
+            width: 100%;
+        }
+
+        .company-logo-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .modal-actions-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .modal-actions-row .btn {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .tabs-list {
+            gap: 0.25rem !important;
+        }
+
+        .tab-btn {
+            padding: 0.7rem 0.9rem;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        .table-v2 th,
+        .table-v2 td {
+            padding: 0.85rem 0.7rem;
+            font-size: 0.9rem;
+        }
+
+        .company-logo-panel #logo-preview-wrapper {
+            width: 100%;
+            max-width: 180px;
+        }
     }
 </style>
 
@@ -977,6 +1104,8 @@
         document.getElementById('late_score').value = s.late_score;
         document.getElementById('daily_delay_penalty').value = s.daily_delay_penalty;
         document.getElementById('late_registration_penalty').value = s.late_registration_penalty;
+        document.getElementById('postpone_penalty_points').value = s.postpone_penalty_points ?? -1;
+        document.getElementById('allow_postpone_after_due_date').checked = Boolean(s.allow_postpone_after_due_date);
     }
 
     async function handleSubmit(e) {
@@ -1038,11 +1167,14 @@
 
     async function handlePerformanceSubmit(e) {
         e.preventDefault();
+        const postponePenaltyValue = document.getElementById('postpone_penalty_points').value;
         const data = {
             on_time_score: document.getElementById('on_time_score').value,
             late_score: document.getElementById('late_score').value,
             daily_delay_penalty: document.getElementById('daily_delay_penalty').value,
-            late_registration_penalty: document.getElementById('late_registration_penalty').value
+            late_registration_penalty: document.getElementById('late_registration_penalty').value,
+            postpone_penalty_points: postponePenaltyValue === '' ? null : Number(postponePenaltyValue),
+            allow_postpone_after_due_date: document.getElementById('allow_postpone_after_due_date').checked
         };
         const r = await fetch(`/api/companies/${companyId}/performance-settings`, {
             method: 'PUT',

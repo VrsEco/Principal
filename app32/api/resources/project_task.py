@@ -8,6 +8,9 @@ from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_task_schema, project_tasks_schema
 from utils.permissions import has_company_full_access, has_permission, permission_required
 from datetime import datetime
+from services.project_task_due_date_change_service import (
+    ProjectTaskDueDateChangeService,
+)
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
@@ -24,8 +27,14 @@ def _should_include_backlog_human_gate(project_id: int | None) -> bool:
     return bool(backlog_project_id and int(project_id or 0) == int(backlog_project_id))
 
 
-def _serialize_task(task, *, include_backlog_human_gate: bool = False):
+def _serialize_task(task, *, include_backlog_human_gate: bool = False, company_id: int | None = None):
     payload = project_task_schema.dump(task)
+    payload.update(
+        ProjectTaskDueDateChangeService.build_task_context(
+            getattr(task, "id", 0),
+            company_id=company_id,
+        )
+    )
     if not include_backlog_human_gate:
         return payload
 
@@ -37,8 +46,19 @@ def _serialize_task(task, *, include_backlog_human_gate: bool = False):
     return payload
 
 
-def _serialize_task_list(tasks, *, project_id: int | None = None):
+def _serialize_task_list(tasks, *, project_id: int | None = None, company_id: int | None = None):
     payload = project_tasks_schema.dump(tasks)
+    due_date_change_context_map = ProjectTaskDueDateChangeService.build_task_context_map(
+        [int(getattr(task, "id", 0) or 0) for task in tasks],
+        company_id=company_id,
+    )
+    for item in payload:
+        item.update(
+            due_date_change_context_map.get(
+                int(item.get("id", 0) or 0),
+                ProjectTaskDueDateChangeService.empty_context(),
+            )
+        )
     if not _should_include_backlog_human_gate(project_id):
         return payload
 
@@ -138,6 +158,13 @@ def _user_can_update_task(company_id, project_id, task_id):
     return query.first() is not None
 
 
+def _user_can_approve_due_date_change(company_id, project_id, task):
+    project = Project.query.filter_by(id=project_id, company_id=company_id).first()
+    if not project:
+        return False
+    return ProjectTaskDueDateChangeService.user_can_approve(project, company_id)
+
+
 def _validate_limited_task_update_payload(data):
     allowed_fields = {'stage', 'status', 'completion_date', 'logs'}
     extra_fields = set((data or {}).keys()) - allowed_fields
@@ -159,7 +186,7 @@ class ProjectTaskListResource(Resource):
         query = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc())
         query = apply_task_employee_filter(query, company_id)
         tasks = query.all()
-        dumped_tasks = _serialize_task_list(tasks, project_id=project_id)
+        dumped_tasks = _serialize_task_list(tasks, project_id=project_id, company_id=company_id)
         
         # Otimização: Busca todas as dependências do projeto de uma vez para evitar N+1 queries
         # Filtra por company_id para respeitar multi-tenancy no mapeamento de dependências
@@ -425,6 +452,109 @@ class ProjectTaskStageResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProjectTaskDueDateChangeRequestListResource(Resource):
+    @permission_required('projects', 'view')
+    def get(self, project_id, task_id):
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id()
+        _, project, project_error = ProjectTaskDueDateChangeService.get_task_or_error(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+        )
+        if project_error:
+            return {"error": project_error}, 404
+
+        can_request = _user_can_update_task(company_id, project_id, task_id)
+        can_approve = ProjectTaskDueDateChangeService.user_can_approve(project, company_id)
+        if not can_request and not can_approve:
+            return {"error": "Permission denied: edit on projects"}, 403
+
+        requests, project, error = ProjectTaskDueDateChangeService.list_requests(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+        )
+        if error:
+            return {"error": error}, 404
+
+        return {
+            "requests": [item.to_dict() for item in requests],
+            "permissions": {
+                "can_request": can_request,
+                "can_approve": can_approve,
+            },
+            "project_owner_name": getattr(project, "owner", None) if project else None,
+        }, 200
+
+    @permission_required('projects', 'view')
+    def post(self, project_id, task_id):
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id()
+        if not _user_can_update_task(company_id, project_id, task_id):
+            return {"error": "Permission denied: edit on projects"}, 403
+
+        data = request.get_json() or {}
+        request_obj, error = ProjectTaskDueDateChangeService.create_request(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+            requested_due_date=data.get("requested_due_date"),
+            reason=data.get("reason"),
+        )
+        if error:
+            return {"error": error}, 400
+
+        return {"request": request_obj.to_dict()}, 201
+
+
+class ProjectTaskDueDateChangeRequestDecisionResource(Resource):
+    @permission_required('projects', 'view')
+    def post(self, project_id, task_id, request_id, action):
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id()
+        task, _, error = ProjectTaskDueDateChangeService.get_task_or_error(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+        )
+        if error or not task:
+            return {"error": error or "Atividade não encontrada."}, 404
+
+        if not _user_can_approve_due_date_change(company_id, project_id, task):
+            return {
+                "error": "Somente o responsável do projeto pode aprovar ou rejeitar adiamentos."
+            }, 403
+
+        data = request.get_json() or {}
+        request_obj, error = ProjectTaskDueDateChangeService.decide_request(
+            company_id=company_id,
+            project_id=project_id,
+            task_id=task_id,
+            request_id=request_id,
+            action=action,
+            approved_due_date=data.get("approved_due_date"),
+            approval_note=data.get("approval_note"),
+        )
+        if error:
+            return {"error": error}, 400
+
+        refreshed_task = ProjectTask.query.filter_by(
+            id=task_id, project_id=project_id
+        ).first()
+        return {
+            "request": request_obj.to_dict(),
+            "task": _serialize_task(
+                refreshed_task or task,
+                include_backlog_human_gate=_should_include_backlog_human_gate(project_id),
+                company_id=company_id,
+            ),
+        }, 200
 
 class ProjectTaskCollaboratorListResource(Resource):
     @permission_required('projects', 'view')
