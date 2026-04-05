@@ -150,7 +150,7 @@ def delete_rule(company_id: int, rule_id: int) -> None:
     db.session.commit()
 
 
-def get_work_journey_board(company_id: int, employee_id: int, anchor: date, scope: str = 'day') -> dict[str, Any]:
+def get_work_journey_board(company_id: int, employee_id: int, anchor: date, scope: str = 'week') -> dict[str, Any]:
     employee = ensure_employee(company_id, employee_id)
     period_start, period_end = clamp_period(scope, anchor)
     sync_work_journey_items(company_id, employee_id, period_start, period_end)

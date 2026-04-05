@@ -13,39 +13,10 @@
         <div class="journey-hero__content">
             <div>
                 <h1 class="journey-hero__title">Agendas da Jornada</h1>
+                <p class="journey-hero__subtitle">Visão semanal padronizada, com filtros contextuais no menu lateral direito e busca livre sobre tarefas e blocos.</p>
             </div>
             <div class="journey-hero__actions">
                 <button id="journeyRefreshBtn" class="btn btn-primary">Atualizar visão</button>
-            </div>
-        </div>
-    </section>
-
-    <section class="surface-card journey-panel journey-toolbar-panel">
-        <div class="journey-panel__header">
-            <div>
-                <h2 class="journey-section-title">Filtro de contexto</h2>
-                <p class="journey-section-subtitle">Defina o colaborador, a data âncora e o escopo de análise da jornada.</p>
-            </div>
-        </div>
-        <div class="journey-toolbar__grid">
-            <div class="form-group">
-                <label class="form-label">Colaborador</label>
-                <select id="journeyEmployeeSelect" class="form-control">
-                    {% for employee in employees %}
-                    <option value="{{ employee.id }}" {{ 'selected' if selected_employee_id == employee.id else '' }}>{{ employee.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Data âncora</label>
-                <input id="journeyDateInput" type="date" class="form-control" value="{{ today }}">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Visão</label>
-                <select id="journeyScopeSelect" class="form-control">
-                    <option value="day">Dia</option>
-                    <option value="week" selected>Semana</option>
-                </select>
             </div>
         </div>
     </section>
@@ -230,6 +201,74 @@
     </section>
 </div>
 
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="journey-filters-sidebar">
+    <section class="journey-sidebar-card journey-sidebar-card--accent">
+        <div class="journey-sidebar-card__eyebrow">Contexto semanal</div>
+        <div class="journey-sidebar-card__headline">
+            <div>
+                <h2 class="journey-section-title">Filtros</h2>
+                <p class="journey-section-subtitle">Contexto operacional da semana e busca global sobre tarefas e blocos.</p>
+            </div>
+            <span id="journeyFiltersCount" class="badge-pill badge-pill--success">0 ativos</span>
+        </div>
+        <div id="journeyAnchorRange" class="journey-sidebar-range">Semana padrão da data âncora.</div>
+        <div id="journeyFiltersSummary" class="journey-filter-pills"></div>
+    </section>
+
+    <section class="journey-sidebar-card">
+        <div class="journey-filters-sidebar__header">
+            <div>
+                <h3 class="journey-section-title">Configurar filtros</h3>
+                <p class="journey-section-subtitle">Ajuste o colaborador, a data âncora e a busca textual.</p>
+            </div>
+            <span class="badge-pill badge-pill--success">Semanal</span>
+        </div>
+
+        <div class="journey-filters-sidebar__body">
+            <div class="form-group">
+                <label class="form-label">Colaborador</label>
+                <select id="journeyEmployeeSelect" class="form-control">
+                    {% for employee in employees %}
+                    <option value="{{ employee.id }}" {{ 'selected' if selected_employee_id == employee.id else '' }}>{{ employee.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Data âncora</label>
+                <input id="journeyDateInput" type="date" class="form-control" value="{{ today }}">
+                <small class="journey-sidebar-hint">A semana sempre será calculada a partir da data âncora selecionada.</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Busca livre</label>
+                <textarea id="journeySearchInput" class="form-control" rows="4" placeholder="Buscar por código, título, descrição, bloco, status, origem, datas ou qualquer outro campo..."></textarea>
+                <small class="journey-sidebar-hint">A busca percorre todos os campos textuais das tarefas e dos blocos carregados na tela.</small>
+            </div>
+        </div>
+
+        <div class="journey-filters-sidebar__actions">
+            <button type="button" id="journeyApplyFiltersBtn" class="btn btn-primary">Aplicar filtros</button>
+            <button type="button" id="journeyClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
+        </div>
+    </section>
+
+    <section class="journey-sidebar-card journey-sidebar-card--muted">
+        <h3 class="journey-section-title">Escopo da busca</h3>
+        <ul class="journey-sidebar-checklist">
+            <li>Títulos, descrições e códigos das tarefas</li>
+            <li>Nome, descrição e janela horária dos blocos</li>
+            <li>Status, origem, datas e metadados visíveis</li>
+        </ul>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
 <script>
     window.workJourneyBootstrap = {
         companyId: {{ company.id }},

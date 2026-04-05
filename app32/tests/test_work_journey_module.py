@@ -231,6 +231,7 @@ def test_work_journey_source_urls_point_to_specific_origin_items():
     assert work_journey_sync.build_process_instance_source_url(9, 310) == '/companies/9/process-instances?instance_id=310&from=work-journey'
     assert work_journey_sync.build_meeting_source_url(9, 44) == '/meetings/company/9/meeting/44/report?from=work-journey'
 
+
 def test_get_work_journey_board_excludes_completed_items(monkeypatch):
     employee = SimpleNamespace(id=3, weekly_hours=40, to_dict=lambda: {'id': 3, 'name': 'Ana'})
     anchor = date(2026, 4, 6)
@@ -375,11 +376,17 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
+    assert 'journeySearchInput' in journey_template
+    assert 'journeyApplyFiltersBtn' in journey_template
+    assert 'journeyClearFiltersBtn' in journey_template
+    assert 'journeyScopeSelect' not in journey_template
     assert 'Kanban de agendas' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
-    assert 'agendaUnassignedContainer' in agendas_panel
+    assert 'lista de não alocadas' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
+    assert 'agendaScopeSelect' not in agendas_panel
+    assert 'agenda-toolbar__scope-badge' in agendas_panel
     assert '/work-journey' in my_work_template
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
@@ -394,6 +401,7 @@ def test_agendas_script_supports_legacy_fallback_drag_and_drop():
     assert 'state.legacyFallback || !state.agenda?.id' in agendas_script
     assert '/work-journey/items/${source.item.id}' in agendas_script
     assert 'source.item.agenda_item_id || source.item.id' in agendas_script
+    assert "return 'week';" in agendas_script
 
 
 def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypatch):

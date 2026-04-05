@@ -5,7 +5,12 @@
   const listContainer = document.getElementById('journeyManualTasksList');
   const summaryContainer = document.getElementById('manualTasksSummary');
   const launchButton = document.getElementById('manualTaskTabStartBtn');
-  const { api, formatMinutes, toast } = window.WorkJourneyUtils;
+  const { api, formatMinutes, searchIncludes, toast } = window.WorkJourneyUtils;
+
+  const state = {
+    items: [],
+    summary: {},
+  };
 
   function selectedEmployeeId() {
     return parseInt(employeeSelect?.value || '', 10) || null;
@@ -21,9 +26,29 @@
     ].join('');
   }
 
+  function currentSearchTerm() {
+    return window.WorkJourneyPage?.getSearchTerm?.() || '';
+  }
+
+  function filteredItems() {
+    const searchTerm = currentSearchTerm();
+    if (!searchTerm) return [...state.items];
+    return state.items.filter((item) => searchIncludes(item, searchTerm));
+  }
+
+  function buildSummary(items = []) {
+    return {
+      total_count: items.length,
+      completed_count: items.filter((item) => item.status === 'completed').length,
+      pending_count: items.filter((item) => item.status !== 'completed').length,
+      planned_minutes: items.reduce((sum, item) => sum + Number(item.estimated_minutes || 0), 0),
+      worked_minutes: items.reduce((sum, item) => sum + Number(item.worked_minutes || 0), 0),
+    };
+  }
+
   function renderTasks(items = []) {
     if (!items.length) {
-      listContainer.innerHTML = '<div class="journey-item-empty">Nenhuma tarefa avulsa cadastrada para este colaborador.</div>';
+      listContainer.innerHTML = `<div class="journey-item-empty">${currentSearchTerm() ? 'Nenhuma tarefa avulsa corresponde à busca aplicada.' : 'Nenhuma tarefa avulsa cadastrada para este colaborador.'}</div>`;
       return;
     }
 
@@ -65,15 +90,23 @@
     if (!employeeId || !listContainer || !summaryContainer) return;
     try {
       const response = await api(`/api/companies/${companyId}/work-journey/manual-tasks?employee_id=${employeeId}`);
-      renderSummary(response.data?.summary || {});
-      renderTasks(response.data?.items || []);
+      state.items = response.data?.items || [];
+      state.summary = response.data?.summary || {};
+      renderSummary(currentSearchTerm() ? buildSummary(filteredItems()) : state.summary);
+      renderTasks(filteredItems());
     } catch (error) {
       toast(error.message || 'Não foi possível carregar as tarefas avulsas.');
     }
   }
 
+  function rerender() {
+    renderSummary(currentSearchTerm() ? buildSummary(filteredItems()) : state.summary);
+    renderTasks(filteredItems());
+  }
+
   launchButton?.addEventListener('click', () => window.WorkJourneyPage?.openManualTaskForm?.());
   employeeSelect?.addEventListener('change', loadManualTasks);
   document.addEventListener('workJourney:refreshed', loadManualTasks);
+  document.addEventListener('workJourney:filters-changed', rerender);
   loadManualTasks();
 })();

@@ -93,7 +93,7 @@ def api_get_work_journey_board(company_id: int):
         if not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
         anchor = _parse_date(request.args.get('date')) or date.today()
-        scope = str(request.args.get('scope') or 'day').strip().lower()
+        scope = str(request.args.get('scope') or 'week').strip().lower()
         payload = get_work_journey_board(company_id, employee_id, anchor, scope)
         return jsonify({'success': True, 'data': payload})
     except WorkJourneyError as exc:

@@ -2,7 +2,7 @@
     <div class="journey-panel__header journey-panel__header--tab">
         <div>
             <h2 class="journey-section-title">Agendas</h2>
-            <p class="journey-section-subtitle">Monte a agenda diária ou semanal do colaborador, com blocos colapsáveis, tarefas coloridas por tipo, travamento e exportação em PDF.</p>
+            <p class="journey-section-subtitle">Monte a agenda semanal do colaborador, com blocos colapsáveis, tarefas coloridas por tipo, travamento e exportação em PDF.</p>
         </div>
         <div class="agenda-actions">
             <button id="manualTaskStartBtn" class="btn btn-secondary">➕ Tarefa Avulsa</button>
@@ -13,6 +13,34 @@
             <a id="agendaPdfBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener">PDF</a>
         </div>
     </div>
+
+    <div class="agenda-toolbar">
+        <div class="agenda-toolbar__info">
+            <span class="agenda-toolbar__eyebrow">Visão operacional</span>
+            <strong id="agendaStatusLabel" class="agenda-status-pill agenda-status-pill--draft">Rascunho</strong>
+            <div id="agendaMetaLine" class="agenda-toolbar__meta">Sem agenda materializada ainda.</div>
+            <div id="agendaSearchStatus" class="agenda-toolbar__search-status" hidden></div>
+        </div>
+        <div class="agenda-toolbar__scope">
+            <label class="form-label">Visão</label>
+            <div class="agenda-toolbar__scope-badge">Semanal</div>
+        </div>
+        <div class="agenda-toolbar__tip">
+            <strong>Regras do kanban</strong>
+            <span>Arraste tarefas entre dias, blocos e a lista de não alocadas. A visualização semanal inicia no domingo.</span>
+        </div>
+    </div>
+
+    <div class="agenda-legend">
+        <span class="agenda-legend__item agenda-legend__item--process">Instância de Processo</span>
+        <span class="agenda-legend__item agenda-legend__item--project">Atividade de Projeto</span>
+        <span class="agenda-legend__item agenda-legend__item--meeting">Reunião</span>
+        <span class="agenda-legend__item agenda-legend__item--manual">Tarefa Avulsa</span>
+        <span class="agenda-legend__item agenda-legend__item--buffer">Buffer</span>
+        <span class="agenda-legend__item agenda-legend__item--reserved">Capacidade ocupada</span>
+    </div>
+
+    <section class="journey-summary agenda-summary" id="agendaSummaryCards"></section>
 
     <div class="agenda-layout">
         <div class="agenda-main">

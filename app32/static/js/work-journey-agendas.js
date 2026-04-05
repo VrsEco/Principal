@@ -12,12 +12,12 @@
   const lockBtn = document.getElementById('agendaLockBtn');
   const unlockBtn = document.getElementById('agendaUnlockBtn');
   const pdfBtn = document.getElementById('agendaPdfBtn');
-  const scopeSelect = document.getElementById('agendaScopeSelect') || document.getElementById('journeyScopeSelect');
   const boardContainer = document.getElementById('agendaBoardContainer');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
   const statusBadge = document.getElementById('agendaLockBadge');
   const metaLine = document.getElementById('agendaMetaLine');
+  const searchStatus = document.getElementById('agendaSearchStatus');
 
   const state = {
     agenda: null,
@@ -41,7 +41,11 @@
   }
 
   function currentScope() {
-    return scopeSelect?.value || 'week';
+    return 'week';
+  }
+
+  function currentSearchTerm() {
+    return window.WorkJourneyPage?.getSearchTerm?.() || '';
   }
 
   function getStorageKeyBase() {
@@ -155,11 +159,17 @@
   function renderAgenda() {
     updateControls();
 
-    const agenda = state.agenda;
+    const searchTerm = currentSearchTerm();
+    const agenda = filterAgendaBySearch(state.agenda, searchTerm);
     const summary = agenda?.summary || renderer.buildSummaryFromDays(agenda?.days || []);
 
     if (summaryContainer) {
       summaryContainer.innerHTML = renderer.renderSummaryCards(summary);
+    }
+
+    if (searchStatus) {
+      searchStatus.hidden = !searchTerm;
+      searchStatus.textContent = searchTerm ? `Busca ativa: "${searchTerm}"` : '';
     }
 
     if (!boardContainer) return;
@@ -170,9 +180,76 @@
       return;
     }
 
+    if (!agenda.days?.length && !(agenda.overdue_items || []).length && !(agenda.unassigned_items || []).length) {
+      boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhum bloco ou tarefa corresponde à busca aplicada.</div>';
+      applyPanelCollapseState();
+      return;
+    }
+
     const html = renderer.renderAgendaHTML(agenda, state, agenda.locked);
     boardContainer.innerHTML = html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>';
     applyPanelCollapseState();
+  }
+
+  function filterAgendaBySearch(agenda, searchTerm) {
+    if (!agenda || !searchTerm) return agenda;
+
+    const filteredDays = (agenda.days || []).map((day) => {
+      const blocks = (day.blocks || []).map((block) => {
+        const blockMatches = utils.searchIncludes({
+          ...block,
+          day_label: day.label,
+          day_subtitle: day.subtitle,
+          day_date: day.date,
+        }, searchTerm);
+        const items = blockMatches
+          ? [...(block.items || [])]
+          : (block.items || []).filter((item) => utils.searchIncludes({
+            ...item,
+            block_name: block.name,
+            block_description: block.description,
+            block_mode: block.block_mode,
+            block_mode_label: block.block_mode_label,
+            day_label: day.label,
+            day_subtitle: day.subtitle,
+            day_date: day.date,
+          }, searchTerm));
+
+        if (!blockMatches && !items.length) return null;
+        return { ...block, items };
+      }).filter(Boolean);
+
+      const unassignedItems = (day.unassigned_items || []).filter((item) => utils.searchIncludes({
+        ...item,
+        day_label: day.label,
+        day_subtitle: day.subtitle,
+        day_date: day.date,
+      }, searchTerm));
+
+      if (!blocks.length && !unassignedItems.length) {
+        return null;
+      }
+
+      return {
+        ...day,
+        blocks,
+        unassigned_items: unassignedItems,
+      };
+    }).filter(Boolean);
+
+    const overdueItems = renderer.sortAgendaItems((agenda.overdue_items || []).filter((item) => utils.searchIncludes(item, searchTerm)));
+    const unassignedItems = renderer.sortAgendaItems((agenda.unassigned_items || []).filter((item) => utils.searchIncludes(item, searchTerm)));
+    const summary = renderer.buildSummaryFromDays(filteredDays);
+    summary.unassigned_count = unassignedItems.length;
+    summary.overdue_count = overdueItems.length;
+
+    return {
+      ...agenda,
+      days: filteredDays,
+      overdue_items: overdueItems,
+      unassigned_items: unassignedItems,
+      summary,
+    };
   }
 
   function toggleBlock(toggleButton) {
@@ -314,14 +391,24 @@
     }
 
     try {
-      await api(`/api/companies/${companyId}/work-journey/agendas/items/${source.item.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          target_block_id: targetBlockId || null,
-          target_date: targetDay,
-          confirm_date_change: dayChanged,
-        }),
-      });
+      if (state.legacyFallback || !state.agenda?.id) {
+        await api(`/api/companies/${companyId}/work-journey/items/${source.item.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            block_id: targetBlockId || null,
+            due_date: targetDay,
+          }),
+        });
+      } else {
+        await api(`/api/companies/${companyId}/work-journey/agendas/items/${source.item.agenda_item_id || source.item.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            target_block_id: targetBlockId || null,
+            target_date: targetDay,
+            confirm_date_change: dayChanged,
+          }),
+        });
+      }
       await loadAgenda(true);
       toast('Tarefa reposicionada com sucesso.');
     } catch (error) {
@@ -478,10 +565,10 @@
     generateBtn?.addEventListener('click', generateAgenda);
     lockBtn?.addEventListener('click', lockAgenda);
     unlockBtn?.addEventListener('click', unlockAgenda);
-    scopeSelect?.addEventListener('change', () => loadAgenda());
     employeeSelect?.addEventListener('change', () => loadAgenda());
     dateInput?.addEventListener('change', () => loadAgenda());
     document.addEventListener('workJourney:refreshed', () => loadAgenda(true));
+    document.addEventListener('workJourney:filters-changed', renderAgenda);
   }
 
   function init() {
