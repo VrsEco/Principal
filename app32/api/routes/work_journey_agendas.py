@@ -99,6 +99,7 @@ def api_generate_agenda(company_id: int):
         raw_payload.setdefault('employee_id', _current_employee_id(company_id))
         if raw_payload.get('date') and not raw_payload.get('anchor_date'):
             raw_payload['anchor_date'] = raw_payload['date']
+        raw_payload.pop('date', None)
         payload = WorkJourneyAgendaGenerateSchema.model_validate(raw_payload).model_dump(exclude_unset=True)
         employee_id = payload['employee_id']
         if not _can_manage_employee(company_id, employee_id):

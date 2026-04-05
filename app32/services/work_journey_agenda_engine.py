@@ -28,7 +28,13 @@ def load_source_items(company_id: int, employee_id: int, period_start: date, per
             WorkJourneyItem.status.in_(list(ACTIVE_ITEM_STATUSES)),
             or_(
                 and_(WorkJourneyItem.item_type == 'meeting', WorkJourneyItem.due_date.between(period_start, period_end)),
-                and_(WorkJourneyItem.item_type == 'manual', WorkJourneyItem.due_date.between(period_start, period_end)),
+                and_(
+                    WorkJourneyItem.item_type == 'manual',
+                    or_(
+                        WorkJourneyItem.due_date.between(period_start, period_end),
+                        and_(WorkJourneyItem.due_date < period_start, WorkJourneyItem.status.in_(list(ACTIVE_ITEM_STATUSES))),
+                    ),
+                ),
                 and_(
                     WorkJourneyItem.item_type == 'process_instance',
                     or_(
@@ -133,6 +139,16 @@ def candidate_slots_for_item(
     period_start: date,
     period_end: date,
 ) -> list[tuple[date, WorkJourneyBlock | None, int | None]]:
+    if is_overdue_for_period(item, period_start):
+        preferred_block_id = item.block_id if item.item_type == 'manual' and item.block_id else None
+        return expand_blocks_for_dates(
+            item.item_type,
+            blocks_by_day,
+            sorted(blocks_by_day.keys()),
+            reverse_within_day=False,
+            preferred_block_id=preferred_block_id,
+        )
+
     if item.item_type == 'meeting':
         meeting_date = item.due_date or item.occurrence_date
         if not meeting_date or meeting_date not in blocks_by_day:
@@ -168,18 +184,30 @@ def expand_blocks_for_dates(
     blocks_by_day: dict[date, list[WorkJourneyBlock]],
     dates: list[date],
     reverse_within_day: bool,
+    preferred_block_id: int | None = None,
 ) -> list[tuple[date, WorkJourneyBlock | None, int | None]]:
     slots: list[tuple[date, WorkJourneyBlock | None, int | None]] = []
     for current in dates:
         compatible = [
             block
             for block in blocks_by_day.get(current, [])
-            if block.block_mode == 'operational' and item_type in (block.accepted_item_types or [])
+            if block.block_mode == 'operational'
+            and item_type in (block.accepted_item_types or [])
+            and (preferred_block_id is None or block.id == preferred_block_id)
         ]
         compatible = list(reversed(compatible)) if reverse_within_day else compatible
         for block in compatible:
             slots.append((current, block, None))
     return slots
+
+
+def is_overdue_for_period(item: WorkJourneyItem, period_start: date) -> bool:
+    if item.item_type == 'meeting':
+        return False
+    if item.status not in ACTIVE_ITEM_STATUSES:
+        return False
+    due_date = item.due_date or item.occurrence_date
+    return bool(due_date and due_date < period_start)
 
 
 def meeting_block_for_time(blocks: list[WorkJourneyBlock], item_type: str, scheduled_minutes: int | None) -> WorkJourneyBlock | None:
