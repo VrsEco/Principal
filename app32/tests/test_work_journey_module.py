@@ -500,11 +500,11 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'journeyScopeSelect' not in journey_template
     assert 'Kanban de agendas' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
-    assert 'lista de não alocadas' in agendas_panel
+    assert 'A primeira coluna exibe tarefas atrasadas' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
     assert 'agendaScopeSelect' not in agendas_panel
-    assert 'agenda-toolbar__scope-badge' in agendas_panel
+    assert 'agendaLockBadge' in agendas_panel
     assert '/work-journey' in my_work_template
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
