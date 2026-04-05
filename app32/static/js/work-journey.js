@@ -37,8 +37,12 @@
   }
 
   function renderSummary() {
-    const summary = state.board?.summary;
     const container = document.getElementById('journeySummaryCards');
+    if (!container) {
+      return;
+    }
+
+    const summary = state.board?.summary;
     if (!summary) {
       container.innerHTML = '';
       return;

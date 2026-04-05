@@ -12,38 +12,11 @@
     <section class="journey-hero">
         <div class="journey-hero__content">
             <div>
-                <span class="journey-hero__eyebrow">APP32 · Planejamento Operacional</span>
                 <h1 class="journey-hero__title">Agendas da Jornada</h1>
-                <p class="journey-hero__subtitle">Organize a jornada do colaborador em agendas diária e semanal, distribua tarefas por bloco e acompanhe a capacidade operacional com travamento e exportação.</p>
             </div>
             <div class="journey-hero__actions">
-                <a class="btn btn-secondary" href="{{ url_for('my_work.my_work') }}">← Meu Trabalho</a>
                 <button id="journeyRefreshBtn" class="btn btn-primary">Atualizar visão</button>
             </div>
-        </div>
-
-        <div class="journey-hero__highlights">
-            <article class="journey-highlight-card">
-                <span class="journey-highlight-card__icon">🧭</span>
-                <div>
-                    <strong>Blocos por colaborador</strong>
-                    <p>Estruture a agenda com blocos de horário aderentes à operação real.</p>
-                </div>
-            </article>
-            <article class="journey-highlight-card">
-                <span class="journey-highlight-card__icon">⚙️</span>
-                <div>
-                    <strong>Tarefas da jornada</strong>
-                    <p>Unifique instâncias de processo, atividades de projeto, reuniões e tarefas avulsas.</p>
-                </div>
-            </article>
-            <article class="journey-highlight-card">
-                <span class="journey-highlight-card__icon">📈</span>
-                <div>
-                    <strong>Capacidade operacional</strong>
-                    <p>Visualize carga prevista, realizada, sobrecarga e itens pendentes.</p>
-                </div>
-            </article>
         </div>
     </section>
 
@@ -74,14 +47,8 @@
                     <option value="week" selected>Semana</option>
                 </select>
             </div>
-            <div class="journey-toolbar__tip">
-                <strong>Uso recomendado</strong>
-                <span>Comece no escopo semanal para organizar os blocos por dia e use a visão diária para o ajuste fino.</span>
-            </div>
         </div>
     </section>
-
-    <section class="journey-summary" id="journeySummaryCards"></section>
 
     <section class="surface-card journey-panel journey-tabs-shell">
         <div class="journey-tabs__header">
