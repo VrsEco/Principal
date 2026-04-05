@@ -11,6 +11,7 @@ from api.routes import work_journey as work_journey_route
 from services import work_journey_agenda_presenter
 from services import work_journey_agenda_service
 from services import work_journey_service
+from services import work_journey_sync
 from services.work_journey_helpers import block_chronology_key, clamp_period, rule_matches_date
 
 
@@ -224,6 +225,11 @@ def test_serialize_item_adds_app32_display_code(monkeypatch):
     assert payload['display_code'] == 'AA.V.1241'
     assert payload['display_title'] == 'AA.V.1241 - Almoço com fulano de tal'
 
+
+def test_work_journey_source_urls_point_to_specific_origin_items():
+    assert work_journey_sync.build_project_task_source_url(77, 501) == '/projects/77/manage?activity_id=501&from=work-journey'
+    assert work_journey_sync.build_process_instance_source_url(9, 310) == '/companies/9/process-instances?instance_id=310&from=work-journey'
+    assert work_journey_sync.build_meeting_source_url(9, 44) == '/meetings/company/9/meeting/44/report?from=work-journey'
 
 def test_get_work_journey_board_excludes_completed_items(monkeypatch):
     employee = SimpleNamespace(id=3, weekly_hours=40, to_dict=lambda: {'id': 3, 'name': 'Ana'})

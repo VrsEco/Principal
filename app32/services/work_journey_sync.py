@@ -22,6 +22,24 @@ from services.work_journey_base import ACTIVE_ITEM_STATUSES, ensure_employee
 from services.work_journey_helpers import PRIORITY_ORDER, date_range, rule_matches_date
 
 
+def build_process_instance_source_url(company_id: int, instance_id: int | None) -> str | None:
+    if not company_id or not instance_id:
+        return None
+    return f'/companies/{company_id}/process-instances?instance_id={instance_id}&from=work-journey'
+
+
+def build_project_task_source_url(project_id: int | None, task_id: int | None) -> str | None:
+    if not project_id or not task_id:
+        return None
+    return f'/projects/{project_id}/manage?activity_id={task_id}&from=work-journey'
+
+
+def build_meeting_source_url(company_id: int, meeting_id: int | None) -> str | None:
+    if not meeting_id:
+        return None
+    return f'/meetings/company/{company_id}/meeting/{meeting_id}/report?from=work-journey'
+
+
 def load_period_items(company_id: int, employee_id: int, period_start: date, period_end: date) -> list[WorkJourneyItem]:
     return (
         WorkJourneyItem.query.filter(
@@ -111,7 +129,7 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
             'process_name': instance.process_rel.name if instance.process_rel else None,
             'process_code': instance.process_rel.code if instance.process_rel else None,
             'manual_assignment': current_manual_assignment(company_id, 'process_instance', instance.id),
-            'source_url': f"/process-map/process/{instance.process_id}?tab=routines" if instance.process_id else None,
+            'source_url': build_process_instance_source_url(company_id, instance.id),
         }
         recurrence_type = getattr(instance.routine, 'schedule_type', None) if instance.routine else None
         bound_block_id = get_bound_block_id(company_id, instance.routine_id, employee_id)
@@ -155,7 +173,7 @@ def sync_project_tasks(company_id: int, employee_id: int, period_start: date, pe
             'project_name': project.name if project else None,
             'project_code': project.code if project else None,
             'manual_assignment': current_manual_assignment(company_id, 'project_task', task.id),
-            'source_url': f'/projects/{task.project_id}/manage' if task.project_id else None,
+            'source_url': build_project_task_source_url(task.project_id, task.id),
         }
         upsert_source_item(
             company_id=company_id,
@@ -191,7 +209,7 @@ def sync_meetings(company_id: int, employee_id: int, period_start: date, period_
             'scheduled_time': meeting.scheduled_time,
             'planned_duration_minutes': int(meeting.planned_duration_minutes or 0),
             'manual_assignment': current_manual_assignment(company_id, 'meeting', meeting.id),
-            'source_url': f'/meetings/company/{company_id}/meeting/{meeting.id}/report',
+            'source_url': build_meeting_source_url(company_id, meeting.id),
         }
         upsert_source_item(
             company_id=company_id,
