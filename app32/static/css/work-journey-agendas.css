@@ -99,12 +99,12 @@
 
 .journey-tabpanel[data-panel="agendas"] .agenda-card--side-overdue {
   border-left-color: #ef4444;
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.06), #fff 22%);
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), #fef2f2 22%, #eef2f7 100%);
 }
 
 .journey-tabpanel[data-panel="agendas"] .agenda-card--side-unassigned {
   border-left-color: #0ea5e9;
-  background: linear-gradient(90deg, rgba(14, 165, 233, 0.06), #fff 22%);
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), #eff6ff 22%, #eef2f7 100%);
 }
 
 .journey-tabpanel[data-panel="agendas"] .agenda-card--side .agenda-card__warning {
