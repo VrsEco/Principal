@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from api.routes import work_journey as work_journey_route
 from services import work_journey_agenda_presenter
+from services import work_journey_agenda_service
 from services import work_journey_service
 from services.work_journey_helpers import block_chronology_key, clamp_period, rule_matches_date
 
@@ -63,6 +64,30 @@ class _FakeBlockQuery:
 
     def first(self):
         return None
+
+
+class _FakeAgendaMoveQuery:
+    def __init__(self, entry):
+        self.entry = entry
+        self.filters = {}
+
+    def options(self, *_args, **_kwargs):
+        return self
+
+    def filter_by(self, **kwargs):
+        self.filters = kwargs
+        return self
+
+    def first(self):
+        if not self.entry:
+            return None
+        if self.filters.get('company_id') != getattr(self.entry, 'company_id', None):
+            return None
+        if self.filters.get('employee_id') != getattr(self.entry, 'employee_id', None):
+            return None
+        if self.filters.get('id') != getattr(self.entry, 'id', None):
+            return None
+        return self.entry
 
 
 class _FakeCompanyLookup:
@@ -200,6 +225,67 @@ def test_serialize_item_adds_app32_display_code(monkeypatch):
     assert payload['display_title'] == 'AA.V.1241 - Almoço com fulano de tal'
 
 
+def test_move_agenda_item_uses_persisted_entry_without_rebuilding(monkeypatch):
+    employee = SimpleNamespace(id=3)
+    agenda = SimpleNamespace(id=11, status='suggested', anchor_date=date(2026, 4, 6), scope='week')
+    journey_item = SimpleNamespace(
+        id=91,
+        item_type='manual',
+        due_date=date(2026, 4, 6),
+        occurrence_date=date(2026, 4, 6),
+    )
+    entry = SimpleNamespace(
+        id=55,
+        company_id=9,
+        employee_id=3,
+        agenda_id=11,
+        agenda=agenda,
+        journey_item=journey_item,
+        planned_date=date(2026, 4, 6),
+        block_id=7,
+        position_index=2,
+        manual_override=False,
+        updated_at=None,
+    )
+    commits = []
+    captured = {}
+
+    class _Session:
+        def add(self, *_args, **_kwargs):
+            return None
+
+        def commit(self):
+            commits.append('commit')
+
+    monkeypatch.setattr(work_journey_agenda_service, 'ensure_employee', lambda company_id, employee_id: employee)
+    monkeypatch.setattr(
+        work_journey_agenda_service,
+        'WorkJourneyAgendaItem',
+        SimpleNamespace(query=_FakeAgendaMoveQuery(entry), journey_item=object(), agenda=object()),
+    )
+    monkeypatch.setattr(work_journey_agenda_service, 'joinedload', lambda value: value)
+    monkeypatch.setattr(work_journey_agenda_service, 'shift_positions_before_insert', lambda *args, **kwargs: captured.setdefault('shift', args))
+    monkeypatch.setattr(work_journey_agenda_service, 'apply_date_change_to_source', lambda item, target_date: captured.setdefault('target_date', target_date))
+    monkeypatch.setattr(work_journey_agenda_service, 'recompute_agenda_summary', lambda agenda_obj: captured.setdefault('agenda_id', agenda_obj.id))
+    monkeypatch.setattr(
+        work_journey_agenda_service,
+        '_serialize',
+        lambda agenda_obj, employee_obj: {'agenda_id': agenda_obj.id, 'planned_date': entry.planned_date.isoformat()},
+    )
+    monkeypatch.setattr(work_journey_agenda_service, 'db', SimpleNamespace(session=_Session()))
+
+    payload = work_journey_agenda_service.move_work_journey_agenda_item(9, 3, date(2026, 4, 6), 'week', 55, {'target_date': date(2026, 4, 7), 'block_id': None, 'confirm_date_change': True, 'position_index': 0})
+
+    assert entry.planned_date == date(2026, 4, 7)
+    assert entry.block_id is None
+    assert entry.position_index == 0
+    assert entry.manual_override is True
+    assert captured['target_date'] == date(2026, 4, 7)
+    assert captured['agenda_id'] == 11
+    assert commits == ['commit', 'commit']
+    assert payload['agenda_id'] == 11
+
+
 def test_templates_expose_work_journey_entrypoints():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey.html'), 'r', encoding='utf-8') as handle:
@@ -219,7 +305,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'work-journey-agendas-render.js' in journey_template
     assert 'Kanban de agendas' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
-    assert 'agendaUnassignedContainer' in agendas_panel
+    assert 'lista de não alocadas' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
     assert '/work-journey' in my_work_template

@@ -69,13 +69,19 @@ def move_work_journey_agenda_item(
     payload: dict[str, Any],
 ) -> dict[str, Any]:
     employee = ensure_employee(company_id, employee_id)
-    agenda = _get_or_build_agenda(company_id, employee.id, anchor, _normalize_scope(scope), False)
-    if agenda.status == 'locked':
-        raise WorkJourneyError('A agenda está travada. Cancele o travamento para continuar.')
-
-    entry = WorkJourneyAgendaItem.query.filter_by(company_id=company_id, agenda_id=agenda.id, id=agenda_item_id).first()
+    entry = (
+        WorkJourneyAgendaItem.query.options(joinedload(WorkJourneyAgendaItem.journey_item), joinedload(WorkJourneyAgendaItem.agenda))
+        .filter_by(company_id=company_id, employee_id=employee.id, id=agenda_item_id)
+        .first()
+    )
     if not entry:
         raise WorkJourneyError('Item da agenda não encontrado.')
+
+    agenda = entry.agenda
+    if not agenda:
+        raise WorkJourneyError('Agenda não encontrada para o item informado.')
+    if agenda.status == 'locked':
+        raise WorkJourneyError('A agenda está travada. Cancele o travamento para continuar.')
     if not entry.journey_item:
         raise WorkJourneyError('A origem da tarefa não está mais disponível.')
     if entry.journey_item.item_type == 'meeting':
