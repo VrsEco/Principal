@@ -296,7 +296,6 @@
           <div class="agenda-day-column__heading">
             <span class="agenda-day-column__eyebrow">Prioridade</span>
             <h3 class="agenda-day-column__title">Tarefas atrasadas</h3>
-            <p class="agenda-day-column__meta">Itens vencidos antes da semana atual.</p>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
