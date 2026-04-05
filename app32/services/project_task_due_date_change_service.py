@@ -111,6 +111,14 @@ class ProjectTaskDueDateChangeService:
         db.session.add(log)
 
     @staticmethod
+    def _persist_user_log_safely(**kwargs) -> None:
+        try:
+            ProjectTaskDueDateChangeService._build_user_log(**kwargs)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    @staticmethod
     def get_task_or_error(
         *, company_id: int, project_id: int, task_id: int
     ) -> tuple[Optional[ProjectTask], Optional[Project], Optional[str]]:
@@ -226,8 +234,8 @@ class ProjectTaskDueDateChangeService:
         )
         db.session.add(request_obj)
         db.session.flush()
-
-        ProjectTaskDueDateChangeService._build_user_log(
+        db.session.commit()
+        ProjectTaskDueDateChangeService._persist_user_log_safely(
             action="CREATE",
             entity_id=str(request_obj.id),
             entity_name=task.what,
@@ -240,7 +248,6 @@ class ProjectTaskDueDateChangeService:
             },
             new_values=request_obj.to_dict(),
         )
-        db.session.commit()
         return request_obj, None
 
     @staticmethod
@@ -318,26 +325,26 @@ class ProjectTaskDueDateChangeService:
 
             task.due_date = approved_date
 
-            ProjectTaskDueDateChangeService._build_user_log(
-                action="APPROVE",
-                entity_id=str(request_obj.id),
-                entity_name=task.what,
-                company_id=company_id,
-                description=(
+            log_payload = {
+                "action": "APPROVE",
+                "entity_id": str(request_obj.id),
+                "entity_name": task.what,
+                "company_id": company_id,
+                "description": (
                     f"Solicitação de alteração de prazo aprovada para atividade {task.id}."
                 ),
-                old_values={
+                "old_values": {
                     "task_due_date": old_task_due_date.isoformat()
                     if old_task_due_date
                     else None,
                     "request_status": "pending",
                 },
-                new_values={
+                "new_values": {
                     "task_due_date": approved_date.isoformat() if approved_date else None,
                     "request_status": "approved",
                     "penalty_points": float(request_obj.penalty_points or 0),
                 },
-            )
+            }
         else:
             request_obj.status = "rejected"
             request_obj.approved_by_user_id = getattr(current_user, "id", None)
@@ -350,19 +357,20 @@ class ProjectTaskDueDateChangeService:
             request_obj.approval_note = note_text
             request_obj.penalty_points = Decimal("0")
 
-            ProjectTaskDueDateChangeService._build_user_log(
-                action="REJECT",
-                entity_id=str(request_obj.id),
-                entity_name=task.what,
-                company_id=company_id,
-                description=(
+            log_payload = {
+                "action": "REJECT",
+                "entity_id": str(request_obj.id),
+                "entity_name": task.what,
+                "company_id": company_id,
+                "description": (
                     f"Solicitação de alteração de prazo rejeitada para atividade {task.id}."
                 ),
-                old_values={"request_status": "pending"},
-                new_values={"request_status": "rejected"},
-            )
+                "old_values": {"request_status": "pending"},
+                "new_values": {"request_status": "rejected"},
+            }
 
         db.session.commit()
+        ProjectTaskDueDateChangeService._persist_user_log_safely(**log_payload)
         return request_obj, None
 
     @staticmethod
