@@ -107,7 +107,7 @@
     <div class="instance-content mt-4">
 
         <!-- 0. Gestão de Adiamentos -->
-        <div class="surface-card mb-4 due-date-change-card">
+        <div class="surface-card section-card section-card--postponements mb-4 due-date-change-card">
             <div class="card-header mb-4" style="display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
                 <div>
                     <h2 class="text-h3">🗓️ Gestão de Adiamentos</h2>
@@ -122,7 +122,7 @@
         </div>
 
         <!-- 1. Lançamento de Horas (Card) -->
-        <div class="surface-card mb-4">
+        <div class="surface-card section-card section-card--hours mb-4">
             <div class="card-header mb-4">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -136,9 +136,9 @@
             </div>
 
             <!-- Add Hours Form -->
-            <div id="addHoursFormContainer" class="mb-4"
+            <div id="addHoursFormContainer" class="hours-form-panel mb-4"
                 style="background: var(--surface-secondary); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
-                <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                <div class="hours-form-grid" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
                     <div style="flex: 2; min-width: 160px;">
                         <label class="form-label small text-tertiary mb-1">Colaborador</label>
                         <select id="newLogEmployeeId" class="form-control form-control-sm">
@@ -160,7 +160,7 @@
                         <input type="text" id="newLogDesc" class="form-control form-control-sm"
                             placeholder="O que foi feito?">
                     </div>
-                    <div>
+                    <div class="hours-form-actions">
                         <button class="btn btn-primary btn-sm" onclick="saveNewWorkLog()" id="btnSaveNewLog"
                             style="height: 42px; padding: 0 1.5rem; white-space: nowrap;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -176,13 +176,13 @@
             </div>
 
             <!-- Edit Form (hidden) -->
-            <div id="editLogForm" class="log-input-box mb-4"
+            <div id="editLogForm" class="log-input-box hours-form-panel mb-4"
                 style="background: var(--surface-secondary); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--warning); display: none;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                     <h4 class="text-h4" style="color: var(--warning-dark);">✏️ Editando Lançamento</h4>
                     <button class="btn-icon-small" onclick="cancelEditLog()">&times;</button>
                 </div>
-                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                <div class="hours-form-grid" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
                     <input type="hidden" id="editLogId">
                     <div style="flex: 2; min-width: 200px;">
                         <label class="form-label small text-tertiary mb-1">Colaborador</label>
@@ -202,7 +202,7 @@
                         <label class="form-label small text-tertiary mb-1">Descrição</label>
                         <input type="text" class="form-control" id="editLogDesc">
                     </div>
-                    <div>
+                    <div class="hours-form-actions">
                         <button class="btn btn-warning" onclick="saveEditedLog()"
                             style="height: 42px; padding: 0 1.5rem; white-space: nowrap;">Salvar</button>
                     </div>
@@ -232,17 +232,17 @@
         </div>
 
         <!-- 2. Diário de Bordo (Card) -->
-        <div class="surface-card mb-4">
+        <div class="surface-card section-card section-card--journal mb-4">
             <div class="card-header mb-4">
                 <h2 class="text-h3">📖 Diário de Bordo</h2>
                 <p class="text-secondary">Histórico de observações e ocorrências desta atividade.</p>
             </div>
 
-            <div class="log-input-box mb-4" style="position: relative;">
-                <textarea class="form-control" id="logEntryText" rows="2"
+            <div class="log-input-box journal-input-box mb-4" style="position: relative;">
+                <textarea class="form-control journal-textarea" id="logEntryText" rows="2"
                     placeholder="Digite uma observação ou registro de progresso..."
                     style="padding-right: 120px;"></textarea>
-                <button class="btn btn-secondary btn-sm" onclick="addLogEntry()"
+                <button class="btn btn-secondary btn-sm journal-submit" onclick="addLogEntry()"
                     style="position: absolute; bottom: 10px; right: 10px;">
                     Adicionar
                 </button>
@@ -254,7 +254,7 @@
         </div>
 
         <!-- 3. Dependências (Card) -->
-        <div class="surface-card mb-4">
+        <div class="surface-card section-card section-card--dependencies mb-4">
             <div class="card-header mb-4">
                 <h2 class="text-h3">🔗 Dependências (Predecessoras)</h2>
                 <p class="text-secondary">Atividades que devem ser concluídas antes desta.</p>
@@ -262,7 +262,7 @@
             
             <div id="dependencySection">
                 <div style="position: relative; margin-bottom: 1.5rem;">
-                    <div style="display: flex; gap: 8px;">
+                    <div class="dependency-search-row" style="display: flex; gap: 8px;">
                         <input type="text" id="depSearchInput" class="form-control" style="flex: 1;" 
                             placeholder="Adicionar atividade como predecessora..."
                             onfocus="showDepResults()" onkeyup="filterDepResults(this.value)">
@@ -280,11 +280,11 @@
 
         <!-- 4. Notas da Atividade (Card) -->
         {% if task.notes %}
-        <div class="surface-card">
+        <div class="surface-card section-card section-card--notes">
             <div class="card-header mb-4">
                 <h2 class="text-h3">📝 Notas da Atividade</h2>
             </div>
-            <div
+            <div class="notes-panel"
                 style="background: var(--surface-secondary); padding: 1rem; border-radius: 8px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap;">
                 {{ task.notes }}</div>
         </div>
@@ -407,11 +407,100 @@
 </div>
 
 <style>
+    .workspace-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .workspace-header {
+        gap: 1.5rem;
+    }
+
+    .header-content,
+    .header-actions {
+        min-width: 0;
+    }
+
+    .instance-content {
+        display: grid;
+        gap: 1.25rem;
+    }
+
     .surface-card {
         background: var(--surface-primary);
         border: 1px solid var(--border);
         border-radius: 16px;
         padding: 1.5rem;
+        margin-bottom: 0 !important;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .section-card {
+        --section-accent: var(--primary);
+        --section-accent-soft: rgba(59, 130, 246, 0.1);
+        --section-border-strong: rgba(59, 130, 246, 0.2);
+        border-color: var(--section-border-strong);
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+    }
+
+    .section-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--section-accent) 0%, color-mix(in srgb, var(--section-accent) 62%, white) 100%);
+    }
+
+    .section-card .card-header {
+        margin: -1.5rem -1.5rem 1.25rem;
+        padding: 1.25rem 1.5rem 1rem;
+        background: linear-gradient(180deg, var(--section-accent-soft) 0%, rgba(255, 255, 255, 0.94) 100%);
+        border-bottom-color: color-mix(in srgb, var(--section-accent) 18%, white);
+    }
+
+    .section-card .card-header h2,
+    .section-card .card-header h3,
+    .section-card .card-header h4 {
+        color: color-mix(in srgb, var(--section-accent) 58%, #0f172a);
+    }
+
+    .section-card--postponements {
+        --section-accent: #7c3aed;
+        --section-accent-soft: rgba(124, 58, 237, 0.1);
+        --section-border-strong: rgba(124, 58, 237, 0.22);
+    }
+
+    .section-card--hours {
+        --section-accent: #2563eb;
+        --section-accent-soft: rgba(37, 99, 235, 0.1);
+        --section-border-strong: rgba(37, 99, 235, 0.2);
+    }
+
+    .section-card--journal {
+        --section-accent: #0f766e;
+        --section-accent-soft: rgba(15, 118, 110, 0.1);
+        --section-border-strong: rgba(15, 118, 110, 0.2);
+    }
+
+    .section-card--dependencies {
+        --section-accent: #d97706;
+        --section-accent-soft: rgba(217, 119, 6, 0.11);
+        --section-border-strong: rgba(217, 119, 6, 0.22);
+    }
+
+    .section-card--notes {
+        --section-accent: #475569;
+        --section-accent-soft: rgba(71, 85, 105, 0.1);
+        --section-border-strong: rgba(71, 85, 105, 0.2);
+    }
+
+    .task-stats-bar {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.875rem !important;
+        align-items: stretch;
     }
 
     .stat-mini {
@@ -419,9 +508,11 @@
         flex-direction: column;
         background: var(--surface-secondary);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 0.6rem 1rem;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
         min-width: 100px;
+        min-height: 84px;
+        justify-content: center;
     }
 
     .stat-mini__label {
@@ -439,8 +530,55 @@
         margin-top: 2px;
     }
 
+    .task-stats-bar .stat-mini {
+        min-width: 0;
+        height: 100%;
+    }
+
+    .task-stats-bar .stat-mini__value {
+        word-break: break-word;
+    }
+
+    .hours-form-panel {
+        background: color-mix(in srgb, var(--surface-secondary) 88%, white) !important;
+    }
+
+    .hours-form-grid {
+        display: grid !important;
+        grid-template-columns: minmax(150px, 1.7fr) minmax(130px, 1.1fr) minmax(100px, 0.8fr) minmax(220px, 2.4fr) auto;
+        gap: 0.75rem;
+        align-items: end !important;
+    }
+
+    .hours-form-grid > div {
+        min-width: 0 !important;
+        width: 100%;
+    }
+
+    .hours-form-actions {
+        width: auto !important;
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-end;
+    }
+
+    .journal-input-box {
+        position: relative;
+    }
+
+    .journal-textarea {
+        padding-right: 120px !important;
+    }
+
+    .journal-submit {
+        position: absolute !important;
+        right: 10px !important;
+        bottom: 10px !important;
+    }
+
     .simple-table {
         width: 100%;
+        min-width: 720px;
         border-collapse: collapse;
     }
 
@@ -470,6 +608,12 @@
         border-bottom: none;
     }
 
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .log-input-box {
         transition: all 0.2s;
     }
@@ -477,7 +621,7 @@
     .log-item {
         padding: 1rem;
         background: var(--surface-secondary);
-        border-radius: 8px;
+        border-radius: 12px;
         margin-bottom: 0.75rem;
         border-left: 3px solid var(--primary);
     }
@@ -485,6 +629,7 @@
     .log-meta {
         display: flex;
         justify-content: space-between;
+        gap: 0.75rem;
         font-size: 0.75rem;
         color: var(--text-tertiary);
         margin-bottom: 0.5rem;
@@ -531,15 +676,6 @@
         z-index: 25000;
     }
 
-    .task-stats-bar .stat-mini {
-        flex: 1 1 160px;
-        min-width: 0;
-    }
-
-    .task-stats-bar .stat-mini__value {
-        word-break: break-word;
-    }
-
     .due-date-change-card .card-header {
         gap: 1rem;
     }
@@ -573,6 +709,66 @@
         flex-wrap: wrap;
     }
 
+    .dependency-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .dependency-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.875rem 1rem;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        transition: var(--transition);
+    }
+
+    .dependency-item:hover {
+        border-color: var(--primary-light);
+    }
+
+    .dependency-item.completed {
+        border-left: 4px solid var(--success);
+    }
+
+    .dependency-item.pending {
+        border-left: 4px solid var(--warning);
+    }
+
+    .dependency-search-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .task-search-results {
+        position: absolute;
+        top: calc(100% + 0.375rem);
+        left: 0;
+        right: 0;
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: var(--shadow-xl);
+        z-index: 1000;
+        max-height: 250px;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .task-search-item {
+        padding: 0.75rem 1.25rem;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .task-search-item:hover {
+        background: var(--surface-secondary);
+    }
+
     @keyframes slideDown {
         from {
             opacity: 0;
@@ -592,20 +788,26 @@
             gap: 1rem;
         }
 
-        .task-stats-bar {
-            gap: 0.75rem;
+        .header-actions {
+            width: 100%;
+            justify-content: flex-start;
         }
 
-        .task-stats-bar .stat-mini {
-            flex-basis: calc(50% - 0.75rem);
+        .hours-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .log-input-box>div {
+        .hours-form-actions {
+            grid-column: 1 / -1;
+            justify-content: flex-start;
+        }
+
+        .log-input-box > div {
             flex-direction: column;
             align-items: stretch !important;
         }
 
-        .log-input-box>div>div {
+        .log-input-box > div > div {
             flex: 1 1 auto;
             width: 100%;
         }
@@ -622,8 +824,65 @@
     }
 
     @media (max-width: 600px) {
-        .task-stats-bar .stat-mini {
-            flex-basis: 100%;
+        .workspace-wrapper {
+            gap: 1rem;
+        }
+
+        .surface-card {
+            padding: 1rem;
+        }
+
+        .section-card .card-header {
+            margin: -1rem -1rem 1rem;
+            padding: 1rem 1rem 0.9rem;
+        }
+
+        .task-stats-bar {
+            grid-template-columns: 1fr;
+        }
+
+        .workspace-header .badge {
+            max-width: 100%;
+        }
+
+        .header-actions .btn,
+        .header-actions .badge {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .hours-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .hours-form-actions .btn {
+            width: 100%;
+        }
+
+        .journal-textarea {
+            padding-right: 1rem !important;
+            padding-bottom: 3.25rem !important;
+        }
+
+        .journal-submit {
+            position: static !important;
+            width: 100%;
+            margin-top: 0.75rem;
+        }
+
+        .dependency-search-row {
+            flex-direction: column;
+        }
+
+        .log-meta {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .dependency-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
         }
 
         .due-date-change-modal {
@@ -644,53 +903,6 @@
             padding: 0.75rem 0.5rem;
             font-size: 0.85rem;
         }
-    }
-/* Dependency Styles */
-    .dependency-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-    .dependency-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        background: var(--surface-secondary);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        transition: var(--transition);
-    }
-    .dependency-item:hover {
-        border-color: var(--primary-light);
-    }
-    .dependency-item.completed {
-        border-left: 4px solid var(--success);
-    }
-    .dependency-item.pending {
-        border-left: 4px solid var(--warning);
-    }
-    .task-search-results {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: var(--surface-primary);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        box-shadow: var(--shadow-xl);
-        z-index: 1000;
-        max-height: 250px;
-        overflow-y: auto;
-        display: none;
-    }
-    .task-search-item {
-        padding: 0.75rem 1.25rem;
-        cursor: pointer;
-        border-bottom: 1px solid var(--border-light);
-    }
-    .task-search-item:hover {
-        background: var(--surface-secondary);
     }
 </style>
 
