@@ -28,6 +28,7 @@
     legacyFallback: false,
     storageKey: null,
     draggingItemId: null,
+    draggingScope: null,
   };
 
   if (!renderer || !api) return;
@@ -339,6 +340,7 @@
     }
 
     state.draggingItemId = card.dataset.agendaItem;
+    state.draggingScope = card.dataset.listScope || 'block';
     card.classList.add('is-dragging');
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', state.draggingItemId);
@@ -348,6 +350,7 @@
     const card = event.target.closest?.('.agenda-card');
     card?.classList.remove('is-dragging');
     state.draggingItemId = null;
+    state.draggingScope = null;
     clearDropHighlights();
   }
 
@@ -405,6 +408,7 @@
           body: JSON.stringify({
             target_block_id: targetBlockId || null,
             target_date: targetDay,
+            source_scope: state.draggingScope || null,
             confirm_date_change: dayChanged,
           }),
         });

@@ -508,6 +508,7 @@
         class="agenda-card ${agendaTypeClass(item)} ${listScope === 'overdue' ? 'agenda-card--side agenda-card--side-overdue' : ''} ${listScope === 'unassigned' ? 'agenda-card--side agenda-card--side-unassigned' : ''}"
         data-agenda-item="${item.id}"
         data-item-type="${item.item_type}"
+        data-list-scope="${listScope}"
         data-source-day="${location.day || item.agenda_date || item.due_date || ''}"
         data-source-block="${location.blockId || item.block_id || ''}"
         draggable="${!locked && item.item_type !== 'meeting' ? 'true' : 'false'}"

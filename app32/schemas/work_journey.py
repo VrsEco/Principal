@@ -158,5 +158,6 @@ class WorkJourneyAgendaLockSchema(_StrictModel):
 class WorkJourneyAgendaMoveSchema(_StrictModel):
     target_date: date | None = None
     target_block_id: int | None = None
+    source_scope: Literal['overdue', 'block', 'unassigned'] | None = None
     confirm_date_change: bool = False
     notes: str | None = None

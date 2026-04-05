@@ -27,7 +27,7 @@ def serialize_agenda_payload(agenda: WorkJourneyAgenda, employee: Employee, bloc
         entries_by_day_block[(entry.planned_date, entry.block_id)].append(entry)
         serialized_entries[entry.id] = serialize_agenda_entry(entry)
 
-    overdue_entries = _unique_task_entries(entry for entry in entries if _entry_is_overdue(entry))
+    overdue_entries = _unique_task_entries(entry for entry in entries if _entry_is_overdue(entry) and not _entry_hidden_from_overdue_lane(entry))
     unassigned_entries = _unique_task_entries(entry for entry in entries if entry.block_id is None)
 
     days = []
@@ -183,6 +183,10 @@ def serialize_agenda_entry(entry: WorkJourneyAgendaItem) -> dict[str, Any]:
 
 def _entry_is_overdue(entry: WorkJourneyAgendaItem) -> bool:
     return _item_is_overdue(getattr(entry, 'journey_item', None))
+
+
+def _entry_hidden_from_overdue_lane(entry: WorkJourneyAgendaItem) -> bool:
+    return bool((getattr(entry, 'metadata_json', None) or {}).get('hide_from_overdue_lane'))
 
 
 def _item_is_overdue(item: Any) -> bool:

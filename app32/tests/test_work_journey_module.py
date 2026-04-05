@@ -361,6 +361,7 @@ def test_move_agenda_item_uses_persisted_entry_without_rebuilding(monkeypatch):
         {
             'target_date': date(2026, 4, 7),
             'block_id': None,
+            'source_scope': 'overdue',
             'confirm_date_change': True,
             'position_index': 0,
         },
@@ -370,6 +371,7 @@ def test_move_agenda_item_uses_persisted_entry_without_rebuilding(monkeypatch):
     assert entry.block_id is None
     assert entry.position_index == 0
     assert entry.manual_override is True
+    assert entry.metadata_json['hide_from_overdue_lane'] is True
     assert captured['target_date'] == date(2026, 4, 7)
     assert captured['agenda_id'] == 11
     assert commits == ['commit', 'commit']
@@ -918,3 +920,78 @@ def test_agenda_presenter_excludes_completed_entries_from_payload(monkeypatch):
     assert [item['journey_item_id'] for item in monday_day['blocks'][0]['items']] == [41]
     assert payload['summary']['pending_count'] == 1
     assert payload['summary']['completed_count'] == 0
+
+
+def test_agenda_presenter_hides_manually_reprogrammed_overdue_item_from_side_lane(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: f'AA.T.{item.id}')
+    monkeypatch.setattr(work_journey_agenda_presenter, 'date', _FixedDate)
+
+    agenda = SimpleNamespace(
+        id=4,
+        company_id=9,
+        employee_id=3,
+        anchor_date=date(2026, 4, 6),
+        scope='week',
+        status='suggested',
+        engine_version='agendas-v1',
+        summary_json={},
+    )
+    employee = SimpleNamespace(name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'})
+    block = SimpleNamespace(
+        id=10,
+        name='Operacional',
+        description='Bloco operacional',
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+        block_mode='operational',
+        weekdays_json=[0],
+    )
+    overdue_item = SimpleNamespace(
+        id=51,
+        company_id=9,
+        item_type='manual',
+        source_id=None,
+        title='Tarefa reprogramada',
+        description='',
+        status='pending',
+        priority='normal',
+        due_date=_FixedDate(2026, 4, 3),
+        occurrence_date=_FixedDate(2026, 4, 3),
+        worked_minutes=0,
+        estimated_minutes=30,
+        metadata_json={},
+        block=None,
+    )
+    entry = SimpleNamespace(
+        id=7,
+        agenda_id=4,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=51,
+        block_id=10,
+        planned_date=_FixedDate(2026, 4, 6),
+        position_index=0,
+        allocated_minutes=30,
+        planned_start_minutes=480,
+        planned_end_minutes=510,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=True,
+        metadata_json={'hide_from_overdue_lane': True},
+        block=block,
+        journey_item=overdue_item,
+    )
+
+    payload = work_journey_agenda_presenter.serialize_agenda_payload(
+        agenda,
+        employee,
+        [block],
+        [entry],
+    )
+
+    monday_day = next(day for day in payload['days'] if day['date'] == '2026-04-06')
+
+    assert payload['overdue_items'] == []
+    assert monday_day['blocks'][0]['items'][0]['journey_item_id'] == 51
+    assert monday_day['blocks'][0]['items'][0]['is_overdue'] is True

@@ -99,6 +99,7 @@ def move_work_journey_agenda_item(
     entry.block_id = target_block_id
     entry.position_index = int(payload.get('position_index') or 0)
     entry.manual_override = True
+    entry.metadata_json = _updated_entry_metadata(getattr(entry, 'metadata_json', None), payload.get('source_scope'))
     entry.updated_at = datetime.utcnow()
     db.session.add(entry)
     apply_date_change_to_source(entry.journey_item, target_date)
@@ -282,3 +283,10 @@ def _serialize(agenda: WorkJourneyAgenda, employee: Employee) -> dict[str, Any]:
     payload['summary'] = payload.get('summary') or dict(agenda.summary_json or {})
     payload['agenda']['summary_json'] = dict(agenda.summary_json or {})
     return payload
+
+
+def _updated_entry_metadata(current_metadata: Any, source_scope: str | None) -> dict[str, Any]:
+    metadata = dict(current_metadata or {})
+    if source_scope == 'overdue':
+        metadata['hide_from_overdue_lane'] = True
+    return metadata

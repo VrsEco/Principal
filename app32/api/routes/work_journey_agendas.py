@@ -196,6 +196,7 @@ def api_move_agenda_item(company_id: int, agenda_item_id: int):
             {
                 'target_date': payload['target_date'],
                 'block_id': payload.get('target_block_id'),
+                'source_scope': payload.get('source_scope'),
                 'confirm_date_change': bool(payload.get('confirm_date_change')),
                 'notes': payload.get('notes'),
                 'position_index': payload.get('position_index', 0),
