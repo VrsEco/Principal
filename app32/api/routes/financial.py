@@ -4,6 +4,15 @@ from flask import Blueprint, abort, redirect, render_template, request, send_fil
 from flask_login import current_user
 
 from models import Company, FinancialEntry, FinancialSchedule
+from models.financial import (
+    FinancialBankAccount,
+    FinancialChartAccount,
+    FinancialCostCenter,
+    FinancialCounterparty,
+    FinancialDomainEnablement,
+)
+from models.process import Process
+from models.project import Project
 from services.financial_import_service import FinancialImportService
 from services.financial_budget_import_service import FinancialBudgetImportService
 from utils.permissions import get_default_company_id, has_permission, permission_required
@@ -373,6 +382,123 @@ def financial_ingestions_page():
         "modules/financial/ingestions.html",
         company=company,
         company_id=company.id if company else None,
+    )
+
+
+@financial_bp.route("/financial/accountability")
+@permission_required("financial", "view")
+def financial_accountability_page():
+    company = get_active_company()
+    company_id = company.id if company else None
+    if not company_id:
+        abort(400, description="Empresa ativa não identificada para prestação de contas.")
+
+    can_create = has_permission(company_id, "financial", "create")
+
+    bank_accounts = (
+        FinancialBankAccount.query.filter(
+            FinancialBankAccount.company_id == company_id,
+            FinancialBankAccount.deleted_at.is_(None),
+            FinancialBankAccount.is_active.is_(True),
+        )
+        .order_by(FinancialBankAccount.name.asc())
+        .all()
+    )
+    chart_accounts = (
+        FinancialChartAccount.query.filter(
+            FinancialChartAccount.company_id == company_id,
+            FinancialChartAccount.deleted_at.is_(None),
+            FinancialChartAccount.is_active.is_(True),
+            FinancialChartAccount.accepts_posting.is_(True),
+        )
+        .order_by(FinancialChartAccount.code.asc(), FinancialChartAccount.name.asc())
+        .all()
+    )
+    cost_centers = (
+        FinancialCostCenter.query.filter(
+            FinancialCostCenter.company_id == company_id,
+            FinancialCostCenter.deleted_at.is_(None),
+            FinancialCostCenter.is_active.is_(True),
+            FinancialCostCenter.accepts_posting.is_(True),
+        )
+        .order_by(FinancialCostCenter.is_default_suggestion.desc(), FinancialCostCenter.name.asc())
+        .all()
+    )
+    counterparties = (
+        FinancialCounterparty.query.filter(
+            FinancialCounterparty.company_id == company_id,
+            FinancialCounterparty.deleted_at.is_(None),
+            FinancialCounterparty.is_active.is_(True),
+        )
+        .order_by(FinancialCounterparty.name.asc())
+        .all()
+    )
+    enabled_domains = (
+        FinancialDomainEnablement.query.filter(
+            FinancialDomainEnablement.company_id == company_id,
+            FinancialDomainEnablement.deleted_at.is_(None),
+            FinancialDomainEnablement.is_enabled.is_(True),
+        )
+        .order_by(
+            FinancialDomainEnablement.is_default_suggestion.desc(),
+            FinancialDomainEnablement.domain_type.asc(),
+            FinancialDomainEnablement.source_id.asc(),
+        )
+        .all()
+    )
+
+    project_ids = [item.source_id for item in enabled_domains if item.domain_type == "project"]
+    process_ids = [item.source_id for item in enabled_domains if item.domain_type == "process"]
+    project_lookup = {
+        row.id: row for row in Project.query.filter(Project.company_id == company_id, Project.id.in_(project_ids)).all()
+    } if project_ids else {}
+    process_lookup = {
+        row.id: row for row in Process.query.filter(Process.company_id == company_id, Process.id.in_(process_ids)).all()
+    } if process_ids else {}
+
+    domain_options = []
+    for item in enabled_domains:
+        if item.domain_type == "project":
+            project = project_lookup.get(item.source_id)
+            if not project:
+                continue
+            label = f"Projeto · {project.code} · {project.name}"
+        else:
+            process = process_lookup.get(item.source_id)
+            if not process:
+                continue
+            process_code = process.code or f"P.{process.id}"
+            label = f"Processo · {process_code} · {process.name}"
+
+        domain_options.append(
+            {
+                "domain_type": item.domain_type,
+                "source_id": item.source_id,
+                "label": label,
+                "is_default_suggestion": bool(item.is_default_suggestion),
+                "notes": item.notes,
+            }
+        )
+
+    default_bank_account = next((item for item in bank_accounts if (item.metadata_json or {}).get("is_default") or (item.metadata_json or {}).get("default_for_accountability")), None)
+    default_chart_account = next((item for item in chart_accounts if (item.metadata_json or {}).get("is_default") or (item.metadata_json or {}).get("default_for_accountability")), None)
+    default_cost_center = next((item for item in cost_centers if item.is_default_suggestion), None)
+    default_domain = next((item for item in domain_options if item.get("is_default_suggestion")), None)
+
+    return render_template(
+        "modules/financial/accountability.html",
+        company=company,
+        company_id=company_id,
+        can_create=can_create,
+        bank_accounts=bank_accounts,
+        chart_accounts=chart_accounts,
+        cost_centers=cost_centers,
+        counterparties=counterparties,
+        domain_options=domain_options,
+        default_bank_account_id=getattr(default_bank_account, "id", None),
+        default_chart_account_id=getattr(default_chart_account, "id", None),
+        default_cost_center_id=getattr(default_cost_center, "id", None),
+        default_domain_key=(f"{default_domain['domain_type']}:{default_domain['source_id']}" if default_domain else ""),
     )
 
 

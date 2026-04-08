@@ -1,6 +1,6 @@
 from langchain_core.messages import SystemMessage
 from src.intelligence.llm import llm_expert
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 
 def create_agent_node(agent_name: str, system_prompt: str):
     """

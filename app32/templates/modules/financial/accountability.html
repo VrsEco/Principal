@@ -1,0 +1,228 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Prestação de contas{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/operations">Operações Inteligentes</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Prestação de contas</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div class="acc-navbar-actions">
+    <a href="/financial/ingestions" class="acc-btn acc-btn--secondary">Entradas / Integrações</a>
+    <a href="/operations" class="acc-btn acc-btn--ghost">Voltar para central</a>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div
+    class="acc-page"
+    data-company-id="{{ company_id }}"
+    data-can-create="{{ 1 if can_create else 0 }}"
+    data-default-bank-account-id="{{ default_bank_account_id or '' }}"
+    data-default-chart-account-id="{{ default_chart_account_id or '' }}"
+    data-default-cost-center-id="{{ default_cost_center_id or '' }}"
+    data-default-domain-key="{{ default_domain_key or '' }}"
+>
+    <section class="acc-hero">
+        <div>
+            <span class="acc-eyebrow">Piloto financeiro</span>
+            <h1>Prestação de contas</h1>
+            <p>
+                Envie os dados do documento, aplique vínculos sugeridos e gere um registro de ingestão
+                financeira para revisão humana antes da conversão em lançamento ou agendamento.
+            </p>
+        </div>
+        <div class="acc-hero__meta">
+            <article class="acc-meta-card">
+                <span>Fluxo</span>
+                <strong>Upload → Sugestão → Revisão → Confirmação</strong>
+                <small>Padrão da Central de Operações Inteligentes</small>
+            </article>
+            <article class="acc-meta-card">
+                <span>Empresa ativa</span>
+                <strong>{{ company.client_code or 'VS' }}</strong>
+                <small>{{ company.name }}</small>
+            </article>
+        </div>
+    </section>
+
+    {% if not can_create %}
+    <div class="acc-alert acc-alert--warning">
+        Você possui acesso de visualização ao Financeiro, mas não tem permissão para criar registros de prestação de contas.
+    </div>
+    {% endif %}
+
+    <div class="acc-grid">
+        <section class="acc-card">
+            <div class="acc-card__header">
+                <span class="acc-card__eyebrow">Etapa 1</span>
+                <h2>Documento e dados extraídos</h2>
+            </div>
+            <form id="accountabilityForm" class="acc-form">
+                <div class="acc-field-grid">
+                    <label class="acc-field">
+                        <span>Título / referência</span>
+                        <input type="text" id="acc-reference" placeholder="Ex.: Prestação de contas - Viagem comercial abril">
+                    </label>
+                    <label class="acc-field">
+                        <span>Fornecedor / favorecido</span>
+                        <select id="acc-counterparty">
+                            <option value="">Selecionar depois</option>
+                            {% for item in counterparties %}
+                            <option value="{{ item.id }}" data-default-chart-account-id="{{ item.default_chart_account_id or '' }}" data-default-cost-center-id="{{ item.default_cost_center_id or '' }}">
+                                {{ item.code }} · {{ item.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="acc-field">
+                        <span>Valor</span>
+                        <input type="number" id="acc-amount" min="0" step="0.01" placeholder="0,00">
+                    </label>
+                    <label class="acc-field">
+                        <span>Data de competência</span>
+                        <input type="date" id="acc-competence-date">
+                    </label>
+                    <label class="acc-field">
+                        <span>Data de vencimento</span>
+                        <input type="date" id="acc-due-date">
+                    </label>
+                    <label class="acc-field">
+                        <span>Nº documento</span>
+                        <input type="text" id="acc-document-number" placeholder="Ex.: NF 12345">
+                    </label>
+                    <label class="acc-field">
+                        <span>Arquivo</span>
+                        <input type="file" id="acc-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.xls,.csv">
+                    </label>
+                    <label class="acc-field">
+                        <span>Tipo de entrada</span>
+                        <select id="acc-entry-type">
+                            <option value="payable" selected>Conta a pagar</option>
+                            <option value="receivable">Conta a receber</option>
+                            <option value="bank_movement">Movimentação bancária</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="acc-field">
+                    <span>Descrição</span>
+                    <textarea id="acc-description" rows="3" placeholder="Descreva o contexto do documento e do lançamento esperado."></textarea>
+                </label>
+
+                <div class="acc-actions acc-actions--inline">
+                    <button type="button" id="acc-upload" class="acc-btn acc-btn--secondary" {% if not can_create %}disabled{% endif %}>
+                        Upload + extração inicial
+                    </button>
+                    <span id="acc-upload-status" class="acc-upload-status">Nenhum arquivo processado ainda.</span>
+                </div>
+
+                <label class="acc-field">
+                    <span>Texto extraído / observações</span>
+                    <textarea id="acc-extracted-text" rows="8" placeholder="Cole aqui o texto OCR, resumo do documento ou observações da prestação de contas."></textarea>
+                </label>
+            </form>
+        </section>
+
+        <section class="acc-card">
+            <div class="acc-card__header">
+                <span class="acc-card__eyebrow">Etapa 2</span>
+                <h2>Revisão de vínculos e classificação</h2>
+            </div>
+
+            <div class="acc-field-grid">
+                <label class="acc-field">
+                    <span>Conta / caixa</span>
+                    <select id="acc-bank-account">
+                        <option value="">Selecionar conta</option>
+                        {% for item in bank_accounts %}
+                        <option value="{{ item.id }}" {{ 'selected' if default_bank_account_id == item.id else '' }}>
+                            {{ item.code }} · {{ item.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="acc-field">
+                    <span>Plano de contas</span>
+                    <select id="acc-chart-account">
+                        <option value="">Selecionar conta contábil</option>
+                        {% for item in chart_accounts %}
+                        <option value="{{ item.id }}" data-movement-nature="{{ item.movement_nature or '' }}" {{ 'selected' if default_chart_account_id == item.id else '' }}>
+                            {{ item.code }} · {{ item.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="acc-field">
+                    <span>Centro de resultado</span>
+                    <select id="acc-cost-center">
+                        <option value="">Selecionar centro</option>
+                        {% for item in cost_centers %}
+                        <option value="{{ item.id }}" {{ 'selected' if default_cost_center_id == item.id else '' }}>
+                            {{ item.code }} · {{ item.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="acc-field">
+                    <span>Projeto / processo</span>
+                    <select id="acc-domain">
+                        <option value="">Selecionar vínculo operacional</option>
+                        {% for item in domain_options %}
+                        <option value="{{ item.domain_type }}:{{ item.source_id }}" {{ 'selected' if default_domain_key == (item.domain_type ~ ':' ~ item.source_id) else '' }}>
+                            {{ item.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="acc-field">
+                    <span>Natureza do movimento</span>
+                    <select id="acc-movement-nature">
+                        <option value="debit" selected>Débito</option>
+                        <option value="credit">Crédito</option>
+                    </select>
+                </label>
+                <label class="acc-field">
+                    <span>Confiança da sugestão</span>
+                    <select id="acc-confidence-level">
+                        <option value="medium" selected>Média</option>
+                        <option value="high">Alta</option>
+                        <option value="low">Baixa</option>
+                    </select>
+                </label>
+            </div>
+
+            <label class="acc-field">
+                <span>Notas para revisão humana</span>
+                <textarea id="acc-review-notes" rows="5" placeholder="Explique o racional da classificação, dúvidas e pendências para quem vai revisar."></textarea>
+            </label>
+
+            <div class="acc-preview">
+                <div class="acc-preview__header">
+                    <h3>Preview do payload normalizado</h3>
+                    <button type="button" id="acc-refresh-preview" class="acc-btn acc-btn--ghost">Atualizar preview</button>
+                </div>
+                <pre id="acc-preview-box">{}</pre>
+            </div>
+
+            <div class="acc-actions">
+                <button type="button" id="acc-submit" class="acc-btn acc-btn--primary" {% if not can_create %}disabled{% endif %}>
+                    Criar registro para revisão
+                </button>
+                <a href="/financial/ingestions" class="acc-btn acc-btn--secondary">Abrir fila de entradas</a>
+            </div>
+
+            <div id="acc-result" class="acc-result hidden"></div>
+        </section>
+    </div>
+</div>
+
+<link rel="stylesheet" href="/static/css/financial_accountability.css">
+<script src="/static/js/financial_accountability.js"></script>
+{% endblock %}

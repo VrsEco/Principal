@@ -7,10 +7,7 @@ from typing import Any, Optional
 # Ensure src is in path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.intelligence.tools import consult_rules, query_database, get_my_work
-
-from src.intelligence.tools import tools as system_tools
-from src.core.mcp_work_journey_tools import register_work_journey_tools
+from src.intelligence.tool_catalog import catalog
 
 # Tenta importar MCP
 try:
@@ -27,24 +24,8 @@ def run_mcp_server():
     # Cria o servidor MCP
     mcp = FastMCP("GestaoVersus Core System")
 
-    # Registro dinâmico de ferramentas do LangGraph/Intelligence
-    # Isso garante que tanto o Agente interno quanto Agentes externos (MCP)
-    # usem exatamente a mesma lógica de negócio (Regra do Espelhamento).
-    for tool in system_tools:
-        # FastMCP usa introspecção da função Python (assinatura e docstring)
-        # Vamos passar a função original (tool.func) para gerar o Schema exato
-        if hasattr(tool, 'func'):
-            mcp.tool(name=tool.name, description=tool.description)(tool.func)
-        else:
-            # Caso não tenha func, fallback
-            def make_wrapper(t):
-                @mcp.tool(name=t.name, description=t.description)
-                def mcp_tool_wrapper(*args, **kwargs):
-                    return t.invoke(kwargs if kwargs else args[0] if args else {})
-                return mcp_tool_wrapper
-            make_wrapper(tool)
-
-    register_work_journey_tools(mcp)
+    # Registro unificado do catálogo compartilhado entre Sapiens e MCP.
+    catalog.register_mcp_tools(mcp)
 
     # Ferramentas Adicionais de Diagnóstico de Sistema
     @mcp.tool()

@@ -7,7 +7,7 @@ import logging
 from src.intelligence.state import AgentState
 from src.intelligence.llm import llm_router
 from src.intelligence.agents.specialists import fiscal_node, financeiro_node
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 from src.intelligence.memory import get_checkpointer
 
 logger = logging.getLogger(__name__)

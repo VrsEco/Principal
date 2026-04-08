@@ -30,6 +30,7 @@
   const rawBox = document.getElementById('ing-raw');
   const extractedBox = document.getElementById('ing-extracted');
   const reviewNotes = document.getElementById('ing-review-notes');
+  const focusId = Number(new URLSearchParams(window.location.search).get('focus_id') || 0);
 
   async function fetchJson(url, options) {
     const response = await fetch(url, options);
@@ -110,6 +111,13 @@
     if (reviewFilterEl.value) params.set('review_status', reviewFilterEl.value);
     items = await fetchJson(`/api/financial/ingestions?${params.toString()}`);
     renderList();
+    if (focusId) {
+      const focused = items.find((item) => item.id === focusId);
+      if (focused) {
+        renderDetail(focused);
+        return;
+      }
+    }
     if (selected) {
       const current = items.find((item) => item.id === selected.id);
       if (current) renderDetail(current);

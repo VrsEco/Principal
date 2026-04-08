@@ -6,7 +6,7 @@ from src.intelligence.state import AgentState
 from src.intelligence.agents.supervisor import supervisor_node
 from src.intelligence.agents.expert import expert_node
 from src.intelligence.agents.specialists import fiscal_node, financeiro_node
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 
 def create_agent_workflow():
     """

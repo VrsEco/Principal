@@ -31,5 +31,5 @@ llm_expert = ChatOpenAI(
     api_key=api_key
 )
 
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 model_with_tools = llm_expert.bind_tools(tools)

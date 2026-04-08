@@ -11,7 +11,7 @@ from langchain_core.messages import HumanMessage
 from src.intelligence.state import AgentState
 from src.intelligence.agents.supervisor import supervisor_node
 from src.intelligence.agents.expert import expert_node
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 from src.intelligence.memory import get_checkpointer
 
 def run_integration_test():

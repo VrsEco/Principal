@@ -8,7 +8,7 @@ from contextlib import contextmanager
 # Imports dos Agentes
 from src.intelligence.work_agents.state import WorkAgentState
 from src.intelligence.work_agents.agents import get_agent_node, SYSTEM_PROMPTS
-from src.intelligence.tools import tools  # Compartilha as ferramentas existentes por enquanto
+from src.intelligence.tool_catalog import tools  # Catálogo único compartilhado
 
 # Supervisor Atualizado
 from src.intelligence.agents.supervisor import supervisor_node
