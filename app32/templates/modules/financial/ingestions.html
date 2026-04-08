@@ -142,6 +142,90 @@
                         </label>
                     </article>
                 </section>
+
+                <section class="ing-columns">
+                    <article class="detail-card">
+                        <div class="guided-head">
+                            <div>
+                                <h3>Conversão guiada</h3>
+                                <p>Revise os campos finais antes de transformar a entrada em agendamento ou lançamento.</p>
+                            </div>
+                            <div class="guided-actions">
+                                <button type="button" class="btn btn-secondary" id="ing-save-draft">Salvar revisão</button>
+                                <button type="button" class="btn btn-primary" id="ing-save-convert">Salvar + converter</button>
+                            </div>
+                        </div>
+                        <div class="guided-grid">
+                            <label class="field">
+                                <span>Tipo de destino</span>
+                                <select id="guided-target-type">
+                                    <option value="schedule">Agendamento</option>
+                                    <option value="entry">Lançamento</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Descrição</span>
+                                <input type="text" id="guided-description" placeholder="Descrição final do documento">
+                            </label>
+                            <label class="field">
+                                <span>Tipo de entrada</span>
+                                <select id="guided-entry-type">
+                                    <option value="payable">Conta a pagar</option>
+                                    <option value="receivable">Conta a receber</option>
+                                    <option value="bank_movement">Movimentação bancária</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Natureza</span>
+                                <select id="guided-movement-nature">
+                                    <option value="debit">Débito</option>
+                                    <option value="credit">Crédito</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Valor</span>
+                                <input type="number" min="0" step="0.01" id="guided-amount" placeholder="0,00">
+                            </label>
+                            <label class="field">
+                                <span>Competência</span>
+                                <input type="date" id="guided-competence-date">
+                            </label>
+                            <label class="field">
+                                <span>Ocorrência</span>
+                                <input type="date" id="guided-occurred-on">
+                            </label>
+                            <label class="field">
+                                <span>Vencimento</span>
+                                <input type="date" id="guided-due-date">
+                            </label>
+                            <label class="field">
+                                <span>Favorecido</span>
+                                <select id="guided-counterparty"></select>
+                            </label>
+                            <label class="field">
+                                <span>Conta / caixa</span>
+                                <select id="guided-bank-account"></select>
+                            </label>
+                            <label class="field">
+                                <span>Plano de contas</span>
+                                <select id="guided-chart-account"></select>
+                            </label>
+                            <label class="field">
+                                <span>Centro de resultado</span>
+                                <select id="guided-cost-center"></select>
+                            </label>
+                            <label class="field guided-grid-span">
+                                <span>Projeto / processo</span>
+                                <select id="guided-domain"></select>
+                            </label>
+                            <label class="field guided-grid-span">
+                                <span>Notas finais</span>
+                                <textarea id="guided-notes" rows="4" placeholder="Observações finais para o lançamento ou agendamento."></textarea>
+                            </label>
+                        </div>
+                        <div id="guided-feedback" class="guided-feedback hidden"></div>
+                    </article>
+                </section>
             </div>
         </main>
     </section>

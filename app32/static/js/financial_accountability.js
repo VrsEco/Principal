@@ -255,7 +255,7 @@
       showResult(`
         <strong>Registro criado com sucesso.</strong><br>
         ID da ingestão: <strong>#${result.id}</strong><br><br>
-        <a href="/financial/ingestions?focus_id=${result.id}" class="acc-btn acc-btn--primary">Abrir fila de revisão</a>
+        <a href="/financial/ingestions?focus_id=${result.id}" class="acc-btn acc-btn--primary">Abrir conversão guiada</a>
       `);
     } catch (error) {
       showResult(error.message, true);

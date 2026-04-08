@@ -31,6 +31,34 @@
   const extractedBox = document.getElementById('ing-extracted');
   const reviewNotes = document.getElementById('ing-review-notes');
   const focusId = Number(new URLSearchParams(window.location.search).get('focus_id') || 0);
+  const guided = {
+    targetType: document.getElementById('guided-target-type'),
+    description: document.getElementById('guided-description'),
+    entryType: document.getElementById('guided-entry-type'),
+    movementNature: document.getElementById('guided-movement-nature'),
+    amount: document.getElementById('guided-amount'),
+    competenceDate: document.getElementById('guided-competence-date'),
+    occurredOn: document.getElementById('guided-occurred-on'),
+    dueDate: document.getElementById('guided-due-date'),
+    counterparty: document.getElementById('guided-counterparty'),
+    bankAccount: document.getElementById('guided-bank-account'),
+    chartAccount: document.getElementById('guided-chart-account'),
+    costCenter: document.getElementById('guided-cost-center'),
+    domain: document.getElementById('guided-domain'),
+    notes: document.getElementById('guided-notes'),
+    saveDraft: document.getElementById('ing-save-draft'),
+    saveConvert: document.getElementById('ing-save-convert'),
+    feedback: document.getElementById('guided-feedback'),
+  };
+
+  const conversionOptions = {
+    loaded: false,
+    counterparties: [],
+    bankAccounts: [],
+    chartAccounts: [],
+    costCenters: [],
+    enabledDomains: [],
+  };
 
   async function fetchJson(url, options) {
     const response = await fetch(url, options);
@@ -81,7 +109,135 @@
     container.innerHTML = `<a href="${href}">${text}</a>`;
   }
 
-  function renderDetail(item) {
+  function setGuidedFeedback(message, isError = false) {
+    if (!guided.feedback) return;
+    if (!message) {
+      guided.feedback.classList.add('hidden');
+      guided.feedback.classList.remove('is-error');
+      guided.feedback.textContent = '';
+      return;
+    }
+    guided.feedback.classList.remove('hidden');
+    guided.feedback.classList.toggle('is-error', Boolean(isError));
+    guided.feedback.textContent = message;
+  }
+
+  function buildOptionLabel(item) {
+    if (!item) return '-';
+    return item.display_label || item.label || [item.code, item.name || item.title].filter(Boolean).join(' · ') || String(item.id || '-');
+  }
+
+  function renderSelectOptions(select, items, selectedValue) {
+    if (!select) return;
+    const currentValue = selectedValue != null ? String(selectedValue) : '';
+    select.innerHTML = `<option value="">Selecionar</option>${(items || []).map((item) => {
+      const value = item.value != null ? item.value : item.id;
+      return `<option value="${value}">${buildOptionLabel(item)}</option>`;
+    }).join('')}`;
+    select.value = currentValue;
+  }
+
+  async function ensureConversionOptions() {
+    if (conversionOptions.loaded) return;
+    const options = await fetchJson(`/api/financial/schedules/options?company_id=${companyId}`);
+    conversionOptions.counterparties = options.counterparties || [];
+    conversionOptions.bankAccounts = options.bank_accounts || [];
+    conversionOptions.chartAccounts = options.chart_accounts || [];
+    conversionOptions.costCenters = options.cost_centers || [];
+    conversionOptions.enabledDomains = (options.enabled_domains || []).map((item) => ({
+      ...item,
+      value: `${item.domain_type}:${item.source_id}`,
+      label: item.display_label || item.domain_label || item.name || `${item.domain_type}:${item.source_id}`,
+    }));
+    conversionOptions.loaded = true;
+  }
+
+  function parseDomainValue(rawValue) {
+    const raw = String(rawValue || '');
+    if (!raw.includes(':')) return { domainType: null, domainSourceId: null };
+    const [domainType, sourceId] = raw.split(':');
+    return { domainType, domainSourceId: Number(sourceId || 0) || null };
+  }
+
+  function fillGuidedForm(item) {
+    const normalized = item.normalized_payload_json || {};
+    const metadata = normalized.metadata_json || {};
+    const domainType = metadata.linked_domain_type || item.metadata_json?.linked_domain_type || '';
+    const domainSourceId = metadata.linked_domain_source_id || item.metadata_json?.linked_domain_source_id || '';
+    const domainValue = domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '';
+
+    guided.description.value = normalized.description || '';
+    guided.entryType.value = normalized.entry_type || 'payable';
+    guided.movementNature.value = normalized.movement_nature || (guided.entryType.value === 'receivable' ? 'credit' : 'debit');
+    guided.amount.value = normalized.amount != null ? normalized.amount : '';
+    guided.competenceDate.value = normalized.competence_date || '';
+    guided.occurredOn.value = normalized.occurred_on || normalized.competence_date || '';
+    guided.dueDate.value = normalized.due_date || '';
+    guided.counterparty.value = normalized.counterparty_id != null ? String(normalized.counterparty_id) : '';
+    guided.bankAccount.value = normalized.bank_account_id != null ? String(normalized.bank_account_id) : '';
+    guided.chartAccount.value = normalized.chart_account_id != null ? String(normalized.chart_account_id) : '';
+    guided.costCenter.value = normalized.cost_center_id != null ? String(normalized.cost_center_id) : '';
+    guided.domain.value = domainValue;
+    guided.notes.value = normalized.notes || item.review_notes || '';
+  }
+
+  async function prepareGuidedForm(item) {
+    await ensureConversionOptions();
+    renderSelectOptions(guided.counterparty, conversionOptions.counterparties, item.normalized_payload_json?.counterparty_id);
+    renderSelectOptions(guided.bankAccount, conversionOptions.bankAccounts, item.normalized_payload_json?.bank_account_id);
+    renderSelectOptions(guided.chartAccount, conversionOptions.chartAccounts, item.normalized_payload_json?.chart_account_id);
+    renderSelectOptions(guided.costCenter, conversionOptions.costCenters, item.normalized_payload_json?.cost_center_id);
+    renderSelectOptions(guided.domain, conversionOptions.enabledDomains, null);
+    fillGuidedForm(item);
+    setGuidedFeedback('');
+  }
+
+  function buildNormalizedPayloadFromForm() {
+    const current = selected?.normalized_payload_json || {};
+    const { domainType, domainSourceId } = parseDomainValue(guided.domain.value);
+    return {
+      ...current,
+      description: String(guided.description.value || '').trim(),
+      entry_type: guided.entryType.value || 'payable',
+      movement_nature: guided.movementNature.value || 'debit',
+      amount: Number(guided.amount.value || 0),
+      competence_date: guided.competenceDate.value || null,
+      occurred_on: guided.occurredOn.value || guided.competenceDate.value || null,
+      due_date: guided.dueDate.value || null,
+      counterparty_id: Number(guided.counterparty.value || 0) || null,
+      bank_account_id: Number(guided.bankAccount.value || 0) || null,
+      chart_account_id: Number(guided.chartAccount.value || 0) || null,
+      cost_center_id: Number(guided.costCenter.value || 0) || null,
+      notes: String(guided.notes.value || '').trim() || null,
+      metadata_json: {
+        ...(current.metadata_json || {}),
+        linked_domain_type: domainType,
+        linked_domain_source_id: domainSourceId,
+      },
+    };
+  }
+
+  async function persistGuidedChanges() {
+    if (!selected) throw new Error('Selecione uma entrada para revisar.');
+    const normalizedPayload = buildNormalizedPayloadFromForm();
+    if (!normalizedPayload.description || !(normalizedPayload.amount > 0)) {
+      throw new Error('Informe ao menos descrição e valor válidos para concluir a revisão.');
+    }
+    const updated = await fetchJson(`/api/financial/ingestions/${selected.id}?company_id=${companyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        normalized_payload_json: normalizedPayload,
+        review_notes: guided.notes.value || reviewNotes.value || null,
+        completion_status: 'review_required',
+      }),
+    });
+    reviewNotes.value = updated.review_notes || guided.notes.value || '';
+    renderDetail(updated);
+    return updated;
+  }
+
+  async function renderDetail(item) {
     selected = item;
     emptyDetailEl.classList.add('hidden');
     detailEl.classList.remove('hidden');
@@ -101,6 +257,7 @@
     rawBox.textContent = pretty(item.raw_payload_json);
     extractedBox.textContent = item.extracted_text || pretty(item.llm_response_json);
     reviewNotes.value = item.review_notes || '';
+    await prepareGuidedForm(item);
     renderList();
   }
 
@@ -114,13 +271,13 @@
     if (focusId) {
       const focused = items.find((item) => item.id === focusId);
       if (focused) {
-        renderDetail(focused);
+        await renderDetail(focused);
         return;
       }
     }
     if (selected) {
       const current = items.find((item) => item.id === selected.id);
-      if (current) renderDetail(current);
+      if (current) await renderDetail(current);
     }
   }
 
@@ -132,7 +289,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ review_status: status, review_notes: reviewNotes.value || null, completion_status: status === 'rejected' ? 'rejected' : undefined }),
       });
-      renderDetail(result);
+      await renderDetail(result);
       await loadItems();
       alert('Revisão registrada com sucesso.');
     } catch (error) {
@@ -140,9 +297,12 @@
     }
   };
 
-  window.convertIngestion = async (targetType) => {
+  window.convertIngestion = async (targetType, options = {}) => {
     if (!selected) return;
     try {
+      if (!options.skipPersist) {
+        await persistGuidedChanges();
+      }
       const result = await fetchJson(`/api/financial/ingestions/${selected.id}/convert?company_id=${companyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -169,9 +329,29 @@
     if (!id) return;
     try {
       const item = await fetchJson(`/api/financial/ingestions/${id}?company_id=${companyId}`);
-      renderDetail(item);
+      await renderDetail(item);
     } catch (error) {
       alert(error.message);
+    }
+  });
+
+  guided.saveDraft?.addEventListener('click', async () => {
+    try {
+      await persistGuidedChanges();
+      setGuidedFeedback('Revisão salva com sucesso.');
+      await loadItems();
+    } catch (error) {
+      setGuidedFeedback(error.message, true);
+    }
+  });
+
+  guided.saveConvert?.addEventListener('click', async () => {
+    try {
+      setGuidedFeedback('');
+      await persistGuidedChanges();
+      await window.convertIngestion(guided.targetType.value || 'schedule', { skipPersist: true });
+    } catch (error) {
+      setGuidedFeedback(error.message, true);
     }
   });
 
