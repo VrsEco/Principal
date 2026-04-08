@@ -29,6 +29,7 @@
   const normalizedBox = document.getElementById('ing-normalized');
   const rawBox = document.getElementById('ing-raw');
   const extractedBox = document.getElementById('ing-extracted');
+  const auditTrailBox = document.getElementById('ing-audit-trail');
   const reviewNotes = document.getElementById('ing-review-notes');
   const focusId = Number(new URLSearchParams(window.location.search).get('focus_id') || 0);
   const guided = {
@@ -256,6 +257,7 @@
     normalizedBox.textContent = pretty(item.normalized_payload_json);
     rawBox.textContent = pretty(item.raw_payload_json);
     extractedBox.textContent = item.extracted_text || pretty(item.llm_response_json);
+    auditTrailBox.textContent = pretty(item.metadata_json?.guided_audit_trail || []);
     reviewNotes.value = item.review_notes || '';
     await prepareGuidedForm(item);
     renderList();

@@ -386,6 +386,20 @@ class FinancialAccountabilityUploadResource(Resource):
             company_id=company_id,
             payload=payload,
             allowed_company_ids=get_accessible_company_ids(),
+            audit_context={
+                "event_type": "guided_review_update",
+                "description": "Atualização da revisão guiada da ingestão financeira.",
+                "actor": {
+                    "user_id": getattr(current_user, "id", None),
+                    "user_email": getattr(current_user, "email", None),
+                    "user_name": getattr(current_user, "name", None),
+                    "endpoint": request.path,
+                    "method": request.method,
+                },
+                "metadata": {
+                    "channel": "financial_ingestions_ui",
+                },
+            },
         )
         if error:
             return {"error": error}, 400
@@ -405,6 +419,19 @@ class FinancialIngestionRecordReviewResource(Resource):
             completion_status=payload.get("completion_status"),
             reviewed_by_user_id=getattr(current_user, "id", None),
             allowed_company_ids=get_accessible_company_ids(),
+            audit_context={
+                "description": "Decisão de revisão humana da ingestão financeira.",
+                "actor": {
+                    "user_id": getattr(current_user, "id", None),
+                    "user_email": getattr(current_user, "email", None),
+                    "user_name": getattr(current_user, "name", None),
+                    "endpoint": request.path,
+                    "method": request.method,
+                },
+                "metadata": {
+                    "channel": "financial_ingestions_ui",
+                },
+            },
         )
         if error:
             return {"error": error}, 400
@@ -421,6 +448,18 @@ class FinancialIngestionRecordConvertResource(Resource):
             company_id=company_id,
             target_type=str(payload.get("target_type") or "schedule").strip().lower(),
             allowed_company_ids=get_accessible_company_ids(),
+            audit_context={
+                "actor": {
+                    "user_id": getattr(current_user, "id", None),
+                    "user_email": getattr(current_user, "email", None),
+                    "user_name": getattr(current_user, "name", None),
+                    "endpoint": request.path,
+                    "method": request.method,
+                },
+                "metadata": {
+                    "channel": "financial_ingestions_ui",
+                },
+            },
         )
         if error:
             return {"error": error}, 400

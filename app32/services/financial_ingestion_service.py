@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 from models import db
+from models.user_log import UserLog
 from models.financial import FinancialEntry, FinancialImportBatch, FinancialIngestionRecord, FinancialSchedule
 from schemas.financial import FinancialIngestionRecordInput, FinancialIngestionRecordUpdateInput
 from services.financial_service import FinancialService
@@ -12,6 +14,99 @@ from services.financial_schedule_service import FinancialScheduleService
 
 
 class FinancialIngestionService:
+    @staticmethod
+    def _snapshot_record_for_audit(record: FinancialIngestionRecord) -> Dict[str, Any]:
+        return {
+            "review_status": record.review_status,
+            "completion_status": record.completion_status,
+            "review_notes": record.review_notes,
+            "normalized_payload_json": FinancialIngestionService._sanitize_json(record.normalized_payload_json or {}),
+            "related_schedule_id": record.related_schedule_id,
+            "related_entry_id": record.related_entry_id,
+        }
+
+    @staticmethod
+    def _build_change_summary(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
+        changes: Dict[str, Any] = {}
+        for key in ("review_status", "completion_status", "review_notes", "related_schedule_id", "related_entry_id"):
+            if before.get(key) != after.get(key):
+                changes[key] = {"before": before.get(key), "after": after.get(key)}
+
+        before_normalized = before.get("normalized_payload_json") or {}
+        after_normalized = after.get("normalized_payload_json") or {}
+        normalized_changes: Dict[str, Any] = {}
+        all_keys = sorted(set(before_normalized.keys()) | set(after_normalized.keys()))
+        for key in all_keys:
+            if before_normalized.get(key) != after_normalized.get(key):
+                normalized_changes[key] = {
+                    "before": before_normalized.get(key),
+                    "after": after_normalized.get(key),
+                }
+        if normalized_changes:
+            changes["normalized_payload_json"] = normalized_changes
+        return changes
+
+    @staticmethod
+    def _append_audit_event(
+        *,
+        record: FinancialIngestionRecord,
+        event_type: str,
+        actor: Optional[Dict[str, Any]],
+        changes: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        metadata_json = dict(record.metadata_json or {})
+        trail = list(metadata_json.get("guided_audit_trail") or [])
+        event = {
+            "event_type": event_type,
+            "record_id": record.id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "actor": {
+                "user_id": (actor or {}).get("user_id"),
+                "user_email": (actor or {}).get("user_email"),
+                "user_name": (actor or {}).get("user_name"),
+            },
+            "changes": FinancialIngestionService._sanitize_json(changes or {}),
+            "metadata": FinancialIngestionService._sanitize_json(metadata or {}),
+        }
+        trail.append(event)
+        metadata_json["guided_audit_trail"] = trail[-50:]
+        record.metadata_json = metadata_json
+
+    @staticmethod
+    def _register_user_log(
+        *,
+        record: FinancialIngestionRecord,
+        action: str,
+        description: str,
+        actor: Optional[Dict[str, Any]],
+        old_values: Dict[str, Any],
+        new_values: Dict[str, Any],
+    ) -> None:
+        if not actor:
+            return
+        user_email = str(actor.get("user_email") or "").strip()
+        user_name = str(actor.get("user_name") or "").strip()
+        if not user_email or not user_name:
+            return
+
+        log_entry = UserLog(
+            user_id=actor.get("user_id"),
+            user_email=user_email,
+            user_name=user_name,
+            action=action,
+            entity_type="financial_ingestion_record",
+            entity_id=str(record.id),
+            entity_name=record.origin_reference or record.source_file_name or f"Registro {record.id}",
+            old_values=json.dumps(FinancialIngestionService._sanitize_json(old_values or {}), ensure_ascii=False),
+            new_values=json.dumps(FinancialIngestionService._sanitize_json(new_values or {}), ensure_ascii=False),
+            endpoint=actor.get("endpoint"),
+            method=actor.get("method"),
+            description=description,
+            company_id=record.company_id,
+        )
+        db.session.add(log_entry)
+
     @staticmethod
     def _serialize(record: FinancialIngestionRecord) -> Dict[str, Any]:
         payload = record.to_dict()
@@ -163,6 +258,7 @@ class FinancialIngestionService:
         company_id: int,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
+        audit_context: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         try:
             data = FinancialIngestionRecordUpdateInput.model_validate(payload or {})
@@ -180,6 +276,7 @@ class FinancialIngestionService:
         ).first()
         if not record:
             return None, "Registro de ingestão financeira não encontrado no escopo da empresa."
+        before_snapshot = FinancialIngestionService._snapshot_record_for_audit(record)
 
         merged = data.model_dump(exclude_unset=True)
         link_error = FinancialIngestionService._validate_related_links(
@@ -198,6 +295,25 @@ class FinancialIngestionService:
                 setattr(record, key, value)
             if "review_status" in merged and merged.get("review_status") in {"reviewed", "rejected"}:
                 record.reviewed_at = datetime.utcnow()
+            after_snapshot = FinancialIngestionService._snapshot_record_for_audit(record)
+            change_summary = FinancialIngestionService._build_change_summary(before_snapshot, after_snapshot)
+            if change_summary:
+                event_type = str((audit_context or {}).get("event_type") or "ingestion_update")
+                FinancialIngestionService._append_audit_event(
+                    record=record,
+                    event_type=event_type,
+                    actor=(audit_context or {}).get("actor"),
+                    changes=change_summary,
+                    metadata=(audit_context or {}).get("metadata"),
+                )
+                FinancialIngestionService._register_user_log(
+                    record=record,
+                    action="UPDATE",
+                    description=str((audit_context or {}).get("description") or "Atualização de revisão guiada da ingestão financeira."),
+                    actor=(audit_context or {}).get("actor"),
+                    old_values=before_snapshot,
+                    new_values=after_snapshot,
+                )
             db.session.commit()
             db.session.refresh(record)
             return FinancialIngestionService._serialize(record), None
@@ -215,6 +331,7 @@ class FinancialIngestionService:
         completion_status: Optional[str] = None,
         reviewed_by_user_id: Optional[int] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
+        audit_context: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         payload: Dict[str, Any] = {
             "review_status": review_status,
@@ -228,6 +345,10 @@ class FinancialIngestionService:
             company_id=company_id,
             payload=payload,
             allowed_company_ids=allowed_company_ids,
+            audit_context={
+                **(audit_context or {}),
+                "event_type": str((audit_context or {}).get("event_type") or "guided_review_decision"),
+            },
         )
 
     @staticmethod
@@ -237,6 +358,7 @@ class FinancialIngestionService:
         company_id: int,
         target_type: str,
         allowed_company_ids: Optional[Sequence[int]] = None,
+        audit_context: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -249,6 +371,7 @@ class FinancialIngestionService:
         ).first()
         if not record:
             return None, "Registro de ingestão financeira não encontrado no escopo da empresa."
+        before_snapshot = FinancialIngestionService._snapshot_record_for_audit(record)
 
         normalized = dict(record.normalized_payload_json or {})
         raw = dict(record.raw_payload_json or {})
@@ -263,6 +386,27 @@ class FinancialIngestionService:
             record.completion_status = "approved" if record.completion_status not in {"settled", "closed"} else record.completion_status
             record.review_status = "reviewed" if record.review_status == "pending_review" else record.review_status
             record.reviewed_at = record.reviewed_at or datetime.utcnow()
+            after_snapshot = FinancialIngestionService._snapshot_record_for_audit(record)
+            change_summary = FinancialIngestionService._build_change_summary(before_snapshot, after_snapshot)
+            FinancialIngestionService._append_audit_event(
+                record=record,
+                event_type="guided_conversion",
+                actor=(audit_context or {}).get("actor"),
+                changes=change_summary,
+                metadata={
+                    **((audit_context or {}).get("metadata") or {}),
+                    "target_type": "schedule",
+                    "target_id": result["id"],
+                },
+            )
+            FinancialIngestionService._register_user_log(
+                record=record,
+                action="UPDATE",
+                description="Conversão guiada da ingestão financeira em agendamento.",
+                actor=(audit_context or {}).get("actor"),
+                old_values=before_snapshot,
+                new_values=after_snapshot,
+            )
             db.session.commit()
             return {"target_type": "schedule", "schedule": result, "record": FinancialIngestionService._serialize(record)}, None
 
@@ -275,6 +419,27 @@ class FinancialIngestionService:
             record.completion_status = "approved" if record.completion_status not in {"settled", "closed"} else record.completion_status
             record.review_status = "reviewed" if record.review_status == "pending_review" else record.review_status
             record.reviewed_at = record.reviewed_at or datetime.utcnow()
+            after_snapshot = FinancialIngestionService._snapshot_record_for_audit(record)
+            change_summary = FinancialIngestionService._build_change_summary(before_snapshot, after_snapshot)
+            FinancialIngestionService._append_audit_event(
+                record=record,
+                event_type="guided_conversion",
+                actor=(audit_context or {}).get("actor"),
+                changes=change_summary,
+                metadata={
+                    **((audit_context or {}).get("metadata") or {}),
+                    "target_type": "entry",
+                    "target_id": entry.id,
+                },
+            )
+            FinancialIngestionService._register_user_log(
+                record=record,
+                action="UPDATE",
+                description="Conversão guiada da ingestão financeira em lançamento.",
+                actor=(audit_context or {}).get("actor"),
+                old_values=before_snapshot,
+                new_values=after_snapshot,
+            )
             db.session.commit()
             return {"target_type": "entry", "entry": FinancialService.serialize_entry(entry), "record": FinancialIngestionService._serialize(record)}, None
 
