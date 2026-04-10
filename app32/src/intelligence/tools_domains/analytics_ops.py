@@ -4,24 +4,31 @@ from src.intelligence.tools_support import sanitize_output
 from services.analytics_read_model_service import AnalyticsReadModelService
 
 
-def get_plan_diagnostics_read_model(company_id: int, plan_id: int):
+def get_plan_diagnostics_read_model(company_id: int, plan_id: int, accessible_company_ids: list[int] | None = None):
     """Retorna read model estruturado para diagnóstico de plano estratégico."""
     try:
         return AnalyticsReadModelService.get_plan_diagnostics_read_model(
             company_id=company_id,
             plan_id=plan_id,
+            accessible_company_ids=accessible_company_ids,
         )
     except Exception as exc:  # pragma: no cover - proteção defensiva compatível
         return sanitize_output(f"Erro ao montar read model do plano: {exc}")
 
 
-def get_team_workload_read_model(company_id: int, department: str | None = None, employee_id: int | None = None):
+def get_team_workload_read_model(
+    company_id: int,
+    department: str | None = None,
+    employee_id: int | None = None,
+    accessible_company_ids: list[int] | None = None,
+):
     """Retorna read model whitelisted de workload por empresa/departamento/colaborador."""
     try:
         return AnalyticsReadModelService.get_team_workload_read_model(
             company_id=company_id,
             department=department,
             employee_id=employee_id,
+            accessible_company_ids=accessible_company_ids,
         )
     except Exception as exc:  # pragma: no cover - proteção defensiva compatível
         return sanitize_output(f"Erro ao montar read model de workload: {exc}")
@@ -33,6 +40,7 @@ def get_projects_execution_risk_read_model(
     employee_id: int | None = None,
     status: str | None = None,
     limit: int = 50,
+    accessible_company_ids: list[int] | None = None,
 ):
     """Retorna read model whitelisted de risco de execução de projetos."""
     try:
@@ -42,6 +50,7 @@ def get_projects_execution_risk_read_model(
             employee_id=employee_id,
             status=status,
             limit=limit,
+            accessible_company_ids=accessible_company_ids,
         )
     except Exception as exc:  # pragma: no cover - proteção defensiva compatível
         return sanitize_output(f"Erro ao montar read model de risco de execução: {exc}")

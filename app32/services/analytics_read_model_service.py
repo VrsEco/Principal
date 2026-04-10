@@ -13,6 +13,23 @@ from models.project import Project, ProjectTask
 from services.plan_service import PlanService
 
 
+def _ensure_accessible_company(company_id: int, accessible_company_ids: list[int] | tuple[int, ...] | set[int] | None = None) -> int:
+    try:
+        normalized_company_id = int(company_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("company_id inválido para read model analítico.") from exc
+
+    if normalized_company_id <= 0:
+        raise ValueError("company_id inválido para read model analítico.")
+
+    if accessible_company_ids is not None:
+        allowed = {int(item) for item in accessible_company_ids if item is not None}
+        if normalized_company_id not in allowed:
+            raise PermissionError("company_id solicitado não pertence ao escopo analítico permitido.")
+
+    return normalized_company_id
+
+
 def _to_number(value: Any) -> float:
     if value is None:
         return 0.0
@@ -27,7 +44,13 @@ class AnalyticsReadModelService:
     """Read models whitelisted para analytics MCP, sempre tenant-safe."""
 
     @staticmethod
-    def get_plan_diagnostics_read_model(*, company_id: int, plan_id: int) -> dict[str, Any]:
+    def get_plan_diagnostics_read_model(
+        *,
+        company_id: int,
+        plan_id: int,
+        accessible_company_ids: list[int] | tuple[int, ...] | set[int] | None = None,
+    ) -> dict[str, Any]:
+        company_id = _ensure_accessible_company(company_id, accessible_company_ids)
         data = PlanService.get_plan_dashboard_data(plan_id, company_id)
         if not data:
             raise ValueError("Plano não encontrado para a empresa informada.")
@@ -56,7 +79,9 @@ class AnalyticsReadModelService:
         company_id: int,
         department: str | None = None,
         employee_id: int | None = None,
+        accessible_company_ids: list[int] | tuple[int, ...] | set[int] | None = None,
     ) -> dict[str, Any]:
+        company_id = _ensure_accessible_company(company_id, accessible_company_ids)
         filters = [Employee.company_id == company_id, Employee.status == "active"]
         if department:
             filters.append(Employee.department == department)
@@ -143,7 +168,9 @@ class AnalyticsReadModelService:
         employee_id: int | None = None,
         status: str | None = None,
         limit: int = 50,
+        accessible_company_ids: list[int] | tuple[int, ...] | set[int] | None = None,
     ) -> dict[str, Any]:
+        company_id = _ensure_accessible_company(company_id, accessible_company_ids)
         today = date.today()
         query = (
             db.session.query(
