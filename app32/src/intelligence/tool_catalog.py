@@ -21,6 +21,7 @@ from src.core.mcp_crud_contract_tools import register_crud_contract_tools
 from src.core.mcp_domain_example_tools import register_domain_example_tools
 from src.core.mcp_domain_playbook_tools import register_domain_playbook_tools
 from src.core.mcp_external_ai_onboarding_tools import register_external_ai_onboarding_tools
+from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_release_checklist_tools import register_release_checklist_tools
@@ -199,6 +200,7 @@ catalog = ToolCatalog(
         register_domain_example_tools,
         register_domain_playbook_tools,
         register_external_ai_onboarding_tools,
+        register_operational_readiness_tools,
         register_permission_matrix_tools,
         register_profile_contract_tools,
         register_release_checklist_tools,

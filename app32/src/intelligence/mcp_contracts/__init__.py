@@ -139,6 +139,15 @@ from .external_ai_onboarding import (
     ExternalAISurfaceAccessRule,
     build_external_ai_onboarding_manifest,
 )
+from .operational_readiness import (
+    APP32_OPERATIONAL_READINESS_MANIFEST,
+    OperationalReadinessEnvelope,
+    OperationalReadinessGate,
+    OperationalReadinessManifest,
+    ReadinessPhase,
+    ReadinessStatus,
+    build_operational_readiness_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -254,4 +263,11 @@ __all__ = [
     "ExternalAIProviderType",
     "ExternalAISurfaceAccessRule",
     "build_external_ai_onboarding_manifest",
+    "APP32_OPERATIONAL_READINESS_MANIFEST",
+    "OperationalReadinessEnvelope",
+    "OperationalReadinessGate",
+    "OperationalReadinessManifest",
+    "ReadinessPhase",
+    "ReadinessStatus",
+    "build_operational_readiness_manifest",
 ]
