@@ -27,6 +27,17 @@ from .crud_domains import (
     CRUDSurface,
     build_app32_crud_contracts_manifest,
 )
+from .playbooks import (
+    APP32_SURFACE_PLAYBOOKS_MANIFEST,
+    PlaybookRole,
+    PlaybookSurface,
+    SurfaceExampleFlow,
+    SurfaceInteractionRule,
+    SurfacePlaybook,
+    SurfacePlaybooksEnvelope,
+    SurfacePlaybooksManifest,
+    build_surface_playbooks_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -52,4 +63,13 @@ __all__ = [
     "CRUDRole",
     "CRUDSurface",
     "build_app32_crud_contracts_manifest",
+    "APP32_SURFACE_PLAYBOOKS_MANIFEST",
+    "PlaybookRole",
+    "PlaybookSurface",
+    "SurfaceExampleFlow",
+    "SurfaceInteractionRule",
+    "SurfacePlaybook",
+    "SurfacePlaybooksEnvelope",
+    "SurfacePlaybooksManifest",
+    "build_surface_playbooks_manifest",
 ]
