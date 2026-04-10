@@ -107,6 +107,16 @@ from .tool_freeze import (
     ToolFreezeTriggerRule,
     build_tool_freeze_manifest,
 )
+from .external_ai_onboarding import (
+    APP32_EXTERNAL_AI_ONBOARDING_MANIFEST,
+    ExternalAIOnboardingEnvelope,
+    ExternalAIOnboardingManifest,
+    ExternalAIOnboardingPhase,
+    ExternalAIOnboardingStep,
+    ExternalAIProviderType,
+    ExternalAISurfaceAccessRule,
+    build_external_ai_onboarding_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -196,4 +206,12 @@ __all__ = [
     "ToolFreezeTrigger",
     "ToolFreezeTriggerRule",
     "build_tool_freeze_manifest",
+    "APP32_EXTERNAL_AI_ONBOARDING_MANIFEST",
+    "ExternalAIOnboardingEnvelope",
+    "ExternalAIOnboardingManifest",
+    "ExternalAIOnboardingPhase",
+    "ExternalAIOnboardingStep",
+    "ExternalAIProviderType",
+    "ExternalAISurfaceAccessRule",
+    "build_external_ai_onboarding_manifest",
 ]
