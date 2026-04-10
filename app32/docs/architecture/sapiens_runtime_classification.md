@@ -82,3 +82,33 @@ O inventário executável fica em:
 - `src.intelligence.runtime_classification.RUNTIME_COMPONENTS`
 - `src.intelligence.runtime_classification.describe_runtime_topology()`
 - `src.intelligence.runtime_guard.require_legacy_runtime_access()`
+
+## Playbooks por domínio — AA.J.31.1319
+
+A consolidação de prompts e playbooks por domínio começa por um manifesto canônico consultável por IA/MCP, sem trocar o runtime imediatamente:
+
+- `src.intelligence.mcp_contracts.domain_playbooks.APP32_DOMAIN_PLAYBOOKS_MANIFEST`
+- tool MCP: `describe_app32_domain_playbooks_tool(domain: Optional[str] = None)`
+
+Domínios iniciais cobertos:
+
+- `routine` (`tasks`, `work`, `worklog`)
+- `processes` (`process`, `workflow`)
+- `projects`
+- `meetings`
+- `strategy`
+- `finance`
+- `analytics`
+- `workload` (`capacity`, `team_capacity`)
+- `identity` (`profiles`, `users`, `permissions`)
+- `operations`
+- `governance` (`policy`, `mcp_policy`)
+
+Regras de governança do manifesto:
+
+- `company_id` obrigatório no contexto de prompt de todo domínio;
+- `tenant_scope_required=True`;
+- `sql_freeform_allowed=False`;
+- `finance` restrito a `administrador` e `admin_tecnico`;
+- `operations` restrito a `admin_tecnico`;
+- `analytics` sempre por catálogo/read models/envelopes, sem mutação.

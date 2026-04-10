@@ -65,6 +65,15 @@ from .analysis_envelopes import (
     AnalyticsGrounding,
     build_analytics_ai_envelope,
 )
+from .domain_playbooks import (
+    APP32_DOMAIN_PLAYBOOKS_MANIFEST,
+    DomainPlaybook,
+    DomainPlaybookName,
+    DomainPlaybooksEnvelope,
+    DomainPlaybooksManifest,
+    DomainPromptPolicy,
+    build_domain_playbooks_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -120,4 +129,11 @@ __all__ = [
     "AnalyticsAIEnvelopeResponse",
     "AnalyticsGrounding",
     "build_analytics_ai_envelope",
+    "APP32_DOMAIN_PLAYBOOKS_MANIFEST",
+    "DomainPlaybook",
+    "DomainPlaybookName",
+    "DomainPlaybooksEnvelope",
+    "DomainPlaybooksManifest",
+    "DomainPromptPolicy",
+    "build_domain_playbooks_manifest",
 ]
