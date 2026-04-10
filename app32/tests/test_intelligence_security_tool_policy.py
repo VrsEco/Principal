@@ -128,3 +128,35 @@ def test_tool_policy_allows_admin_tecnico_on_ops_surface() -> None:
     )
 
     assert decision.allowed is True
+
+
+def test_tool_policy_allows_identity_self_service_on_user_surface() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 5, "company_id": 7, "role": "cliente"},
+        ToolPolicyRequest(
+            tool_name="list_my_companies",
+            surface="user",
+            domain="identity_self_service",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is True
+
+
+def test_tool_policy_blocks_identity_admin_on_user_surface() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 6, "company_id": 7, "role": "administrador"},
+        ToolPolicyRequest(
+            tool_name="list_system_users",
+            surface="user",
+            domain="identity_admin",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is False
+    assert "surface user não expõe domínio administrativo" in decision.reason
+    assert "surface_user_blocks_admin_domain" in decision.checks

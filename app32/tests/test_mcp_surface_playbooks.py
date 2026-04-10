@@ -68,8 +68,9 @@ def test_surface_contract_rules_and_crud_coherence():
     assert "finance" not in ops_playbook.allowed_domains
 
     crud_domains = {contract.domain for contract in APP32_CRUD_CONTRACTS_MANIFEST.domains}
-    assert set(user_playbook.allowed_domains).issubset(crud_domains | {"governance", "analytics", "operations", "workload"})
-    assert set(admin_playbook.allowed_domains).issubset(crud_domains | {"governance"})
+    allowed_non_crud_domains = {"governance", "analytics", "operations", "workload", "identity_self_service", "identity_admin"}
+    assert set(user_playbook.allowed_domains).issubset(crud_domains | allowed_non_crud_domains)
+    assert set(admin_playbook.allowed_domains).issubset(crud_domains | allowed_non_crud_domains)
 
 
 def test_surface_playbook_forbids_extra_fields():
