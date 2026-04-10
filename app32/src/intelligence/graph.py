@@ -6,6 +6,7 @@ from src.intelligence.state import AgentState
 from src.intelligence.agents.supervisor import supervisor_node
 from src.intelligence.agents.expert import expert_node
 from src.intelligence.agents.specialists import fiscal_node, financeiro_node
+from src.intelligence.runtime_guard import require_legacy_runtime_access
 from src.intelligence.tool_catalog import tools
 
 def create_agent_workflow():
@@ -13,6 +14,10 @@ def create_agent_workflow():
     Constrói a estrutura do grafo de agentes utilizando o padrão Supervisor-Worker.
     Retorna o objeto workflow (ainda não compilado).
     """
+    require_legacy_runtime_access(
+        module="src.intelligence.graph.create_agent_workflow",
+        operation="create_workflow",
+    )
     workflow = StateGraph(AgentState)
 
     # 1. Adição dos Nós
@@ -73,3 +78,4 @@ def create_agent_workflow():
 
 # Workflow base pronto para compilação
 agent_workflow = create_agent_workflow()
+
