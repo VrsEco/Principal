@@ -119,6 +119,16 @@ from .tool_freeze import (
     ToolFreezeTriggerRule,
     build_tool_freeze_manifest,
 )
+from .permission_matrix import (
+    APP32_PERMISSION_MATRIX_MANIFEST,
+    PermissionAction,
+    PermissionDomain,
+    PermissionDomainRule,
+    PermissionMatrixEnvelope,
+    PermissionMatrixManifest,
+    ProfilePermissionSurfaceMatrix,
+    build_permission_matrix_manifest,
+)
 from .external_ai_onboarding import (
     APP32_EXTERNAL_AI_ONBOARDING_MANIFEST,
     ExternalAIOnboardingEnvelope,
@@ -228,6 +238,14 @@ __all__ = [
     "ToolFreezeTrigger",
     "ToolFreezeTriggerRule",
     "build_tool_freeze_manifest",
+    "APP32_PERMISSION_MATRIX_MANIFEST",
+    "PermissionAction",
+    "PermissionDomain",
+    "PermissionDomainRule",
+    "PermissionMatrixEnvelope",
+    "PermissionMatrixManifest",
+    "ProfilePermissionSurfaceMatrix",
+    "build_permission_matrix_manifest",
     "APP32_EXTERNAL_AI_ONBOARDING_MANIFEST",
     "ExternalAIOnboardingEnvelope",
     "ExternalAIOnboardingManifest",
