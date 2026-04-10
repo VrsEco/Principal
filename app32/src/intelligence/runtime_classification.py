@@ -113,7 +113,7 @@ RUNTIME_COMPONENTS: tuple[RuntimeComponent, ...] = (
         status="legacy",
         responsibility="Grafo supervisor-worker antigo com expert/fiscal/financeiro e ToolNode legado.",
         allowed_for_new_work=False,
-        next_action="Não evoluir; manter apenas compatibilidade até validação da 1318.",
+        next_action="Não evoluir; protegido por guard rail warn-only na 1318.",
     ),
     RuntimeComponent(
         module="src.intelligence.graphs.main_graph.create_main_graph",
@@ -121,7 +121,7 @@ RUNTIME_COMPONENTS: tuple[RuntimeComponent, ...] = (
         status="legacy",
         responsibility="Grafo antigo fiscal/financeiro com roteador simples e execução direta.",
         allowed_for_new_work=False,
-        next_action="Não evoluir; preparar depreciação com guard rails na 1318.",
+        next_action="Não evoluir; protegido por guard rail warn-only na 1318.",
     ),
     RuntimeComponent(
         module="src.intelligence.test_agent",

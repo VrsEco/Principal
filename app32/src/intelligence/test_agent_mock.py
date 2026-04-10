@@ -13,10 +13,15 @@ from langchain_community.chat_models import FakeListChatModel
 from src.intelligence.state import AgentState
 from src.intelligence.agents.supervisor import supervisor_node
 from src.intelligence.agents.expert import expert_node
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 from src.intelligence.memory import get_checkpointer
+from src.intelligence.runtime_guard import require_legacy_runtime_access
 
 def run_mock_test():
+    require_legacy_runtime_access(
+        module="src.intelligence.test_agent_mock.run_mock_test",
+        operation="manual_test_harness",
+    )
     print("\n=== TESTE DE FLUXO (SIMULADO) - VALIDAÇÃO DE ARQUITETURA ===")
     
     # 1. Criamos mocks separados para cada papel

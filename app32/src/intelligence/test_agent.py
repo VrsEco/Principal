@@ -11,10 +11,15 @@ from langchain_core.messages import HumanMessage
 from src.intelligence.state import AgentState
 from src.intelligence.agents.supervisor import supervisor_node
 from src.intelligence.agents.expert import expert_node
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 from src.intelligence.memory import get_checkpointer
+from src.intelligence.runtime_guard import require_legacy_runtime_access
 
 def run_integration_test():
+    require_legacy_runtime_access(
+        module="src.intelligence.test_agent.run_integration_test",
+        operation="manual_test_harness",
+    )
     print("\n=== INICIANDO TESTE DE INTEGRAÇÃO DO AGENTE (SUPERVISOR-EXPERT) ===")
     
     # Pergunta que exige consulta ao RAG (conforme seed anterior)

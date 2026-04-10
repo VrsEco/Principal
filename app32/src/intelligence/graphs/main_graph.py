@@ -7,8 +7,9 @@ import logging
 from src.intelligence.state import AgentState
 from src.intelligence.llm import llm_router
 from src.intelligence.agents.specialists import fiscal_node, financeiro_node
-from src.intelligence.tools import tools
+from src.intelligence.tool_catalog import tools
 from src.intelligence.memory import get_checkpointer
+from src.intelligence.runtime_guard import require_legacy_runtime_access
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,10 @@ def route_decision(state: AgentState) -> Literal["fiscal", "financeiro"]:
 # --- Graph Construction ---
 
 def create_main_graph():
+    require_legacy_runtime_access(
+        module="src.intelligence.graphs.main_graph.create_main_graph",
+        operation="create_workflow",
+    )
     workflow = StateGraph(AgentState)
 
     # Adiciona os Nós
@@ -80,6 +85,10 @@ def run_agent_interaction(message: str, thread_id: str):
     """
     Executa uma interação com o agente, gerenciando o checkpointer.
     """
+    require_legacy_runtime_access(
+        module="src.intelligence.graphs.main_graph.run_agent_interaction",
+        operation="run_interaction",
+    )
     from langchain_core.messages import HumanMessage
     
     with get_checkpointer() as checkpointer:
