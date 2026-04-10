@@ -2,7 +2,7 @@ import os
 import sys
 from types import SimpleNamespace
 
-from flask import Flask
+from flask import Flask, render_template_string
 from flask_login import LoginManager
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -92,3 +92,38 @@ def test_operations_hub_renders_unified_menu(monkeypatch):
         for group in module["groups"]
         for item in group["items"]
     )
+
+
+
+def test_operations_hub_template_renders_real_jinja():
+    app = _build_app()
+    modules = [
+        {
+            "key": "technical",
+            "label": "Plataforma IA",
+            "description": "Governança de IA",
+            "groups": [
+                {
+                    "label": "Backoffice técnico",
+                    "items": [
+                        {
+                            "title": "Parâmetros gerais de IA",
+                            "description": "Configurar agentes.",
+                            "href": "/configs/ai",
+                            "mode": "Configuração IA",
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+
+    with app.test_request_context("/operations"):
+        html = render_template_string(
+            '{% extends "modules/operations/hub.html" %}{% block sidebar_left %}{% endblock %}',
+            active_company=SimpleNamespace(id=9, name="GanduInvest", client_code="GND"),
+            modules=modules,
+        )
+
+    assert "Parâmetros gerais de IA" in html
+    assert "/configs/ai" in html
