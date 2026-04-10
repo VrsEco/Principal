@@ -40,3 +40,17 @@ def test_ai_configuration_items_move_from_finance_base_to_sapiens_ia():
     assert "Auditoria e Observabilidade" in sapiens_block
     assert "Auditoria Operacional" in sapiens_block
     assert "Auditoria de Automação IA" in sapiens_block
+
+
+
+def test_integrations_and_ai_settings_live_under_sapiens_not_system():
+    sidebar = Path("templates/partials/sidebar_standard.html").read_text(encoding="utf-8")
+    sapiens_block = sidebar[sidebar.index("Sapiens & IA"):sidebar.index("Sistema")]
+    system_block = sidebar[sidebar.index("Sistema") : sidebar.index("Meu Perfil")]
+
+    assert "/configs/ai" in sapiens_block
+    assert "Parâmetros gerais de IA" in sapiens_block
+    assert "/integrations" in sapiens_block
+    assert "Tools / MCP / Integrações" in sapiens_block
+    assert "/integrations" not in system_block
+    assert ">Integrações</a>" not in system_block

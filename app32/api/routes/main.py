@@ -217,6 +217,12 @@ def operations_hub():
                             "mode": "Técnico",
                         },
                         {
+                            "title": "Parâmetros gerais de IA",
+                            "description": "Configurar agentes, chaves e parâmetros gerais da inteligência artificial.",
+                            "href": "/configs/ai",
+                            "mode": "Configuração IA",
+                        },
+                        {
                             "title": "Catálogo de tools / MCP",
                             "description": "Centralizar integrações, tools e pontos de conectividade do APP32.",
                             "href": "/integrations",

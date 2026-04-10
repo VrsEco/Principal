@@ -235,7 +235,7 @@
     {% endif %}
 
     <!-- IA Sapiens (Unificado) -->
-    <div class="sidebar-group {{ 'open' if '/sapiens' in request.path or '/agents/cadastro' in request.path or '/operations' in request.path or '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path or '/financial/automation-audit' in request.path }}">
+    <div class="sidebar-group {{ 'open' if '/sapiens' in request.path or '/agents/cadastro' in request.path or '/operations' in request.path or '/configs/ai' in request.path or '/integrations' in request.path or '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path or '/financial/automation-audit' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
@@ -255,7 +255,7 @@
             <a href="/operations" class="sub-nav-link {{ 'active' if request.path == '/operations' or '/operations/' in request.path }}">
                 Operações Inteligentes
             </a>
-            <div class="sidebar-subgroup {{ 'open' if '/operations/audit' in request.path or '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path or '/financial/automation-audit' in request.path }}">
+            <div class="sidebar-subgroup {{ 'open' if '/operations/audit' in request.path or '/configs/ai' in request.path or '/integrations' in request.path or '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path or '/financial/automation-audit' in request.path }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     Configurações de IA
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -264,6 +264,23 @@
                     </svg>
                 </button>
                 <div class="subgroup-content">
+                    <div class="sidebar-subgroup {{ 'open' if '/configs/ai' in request.path or '/integrations' in request.path }}">
+                        <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                            Plataforma
+                            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="3">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="subgroup-content">
+                            <a href="/configs/ai" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' }}">
+                                <span>Parâmetros gerais de IA</span>
+                            </a>
+                            <a href="/integrations" class="sub-nav-link {{ 'active' if '/integrations' in request.path }}">
+                                <span>Tools / MCP / Integrações</span>
+                            </a>
+                        </div>
+                    </div>
                     <div class="sidebar-subgroup {{ 'open' if '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path }}">
                         <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                             Financeiro
@@ -313,7 +330,7 @@
     <!-- Sistema -->
     {% if has_permission('companies', 'view') or has_permission('users', 'view') %}
     <div
-        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/integrations' in request.path or '/settings' in request.path }}">
+        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/settings' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -338,8 +355,6 @@
             {% endif %}
 
             {% if is_platform_admin() %}
-            <a href="{{ url_for('integrations.integrations_page') }}"
-                class="sub-nav-link {{ 'active' if '/integrations' in request.path }}">Integrações</a>
             <a href="{{ url_for('configs.system_settings') }}"
                 class="sub-nav-link {{ 'active' if '/configs/system' in request.path }}">Configurações</a>
             {% endif %}

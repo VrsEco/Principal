@@ -85,3 +85,10 @@ def test_operations_hub_renders_unified_menu(monkeypatch):
         for group in module["groups"]
         for item in group["items"]
     )
+
+    assert any(
+        item["href"] == "/configs/ai"
+        for module in modules
+        for group in module["groups"]
+        for item in group["items"]
+    )
