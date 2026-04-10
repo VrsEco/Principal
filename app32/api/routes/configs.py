@@ -1,9 +1,25 @@
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, abort
 from flask_login import login_required, current_user
 from models import db, AIAgent, AgentMessage
-from utils.permissions import permission_required
+from services.ai_mcp_console_service import AIMCPConsoleService
+from utils.permissions import permission_required, has_company_full_access, is_platform_admin
 
 configs_bp = Blueprint('configs', __name__)
+
+
+def _resolve_active_company():
+    from api.routes.main import _resolve_active_company as _main_resolve_active_company
+
+    return _main_resolve_active_company()
+
+
+def _can_access_ai_mcp_console(company_id=None):
+    if is_platform_admin():
+        return True
+    try:
+        return has_company_full_access(company_id)
+    except Exception:
+        return False
 
 @configs_bp.route('/configs/ai')
 @login_required
@@ -42,6 +58,22 @@ def system_settings():
                           users_count=users_count,
                           users_with_contacts=users_with_contacts)
 
+
+@configs_bp.route('/configs/ai/mcp')
+@login_required
+def ai_mcp_console():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        abort(403)
+
+    frontend_state = AIMCPConsoleService.build_frontend_state(active_company)
+    return render_template(
+        'modules/operations/ai_mcp_console.html',
+        active_company=active_company,
+        console=frontend_state,
+    )
+
 # API Endpoints
 
 @configs_bp.route('/api/configs/ai/agents', methods=['GET'])
@@ -79,4 +111,18 @@ def get_agent_logs():
     return jsonify({
         "success": True, 
         "logs": [l.to_dict() for l in logs]
+    })
+
+
+@configs_bp.route('/api/configs/ai/mcp/frontend-state', methods=['GET'])
+@login_required
+def get_ai_mcp_frontend_state():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao console operacional IA/MCP."}), 403
+
+    return jsonify({
+        "success": True,
+        "console": AIMCPConsoleService.build_frontend_state(active_company),
     })

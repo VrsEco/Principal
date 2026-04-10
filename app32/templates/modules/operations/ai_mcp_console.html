@@ -1,0 +1,408 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Console Operacional IA/MCP{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai_mcp_console.css') }}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/portal">Portal</a>
+<span class="sep">/</span>
+<a href="/operations">Operações Inteligentes</a>
+<span class="sep">/</span>
+<span class="current">Console IA/MCP</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div class="ai-mcp-navbar-actions">
+    <a href="/operations" class="ai-mcp-btn ai-mcp-btn--secondary">Voltar ao hub</a>
+    <a href="/integrations" class="ai-mcp-btn ai-mcp-btn--secondary">Integrações</a>
+    <a href="/sapiens" class="ai-mcp-btn ai-mcp-btn--primary">Abrir Sapiens</a>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div
+    class="ai-mcp-console-page"
+    id="aiMcpConsolePage"
+    data-default-tab="overview"
+    data-console='{{ console|tojson }}'
+>
+    <section class="ai-mcp-hero">
+        <div class="ai-mcp-hero__copy">
+            <span class="ai-mcp-eyebrow">Console operacional</span>
+            <h1>Console Operacional IA/MCP</h1>
+            <p>
+                Área única para governança MCP, contratos, permissões, onboarding, release, freeze,
+                observabilidade e links de configuração/cadastro necessários para colocar o APP32 em teste.
+            </p>
+            <div class="ai-mcp-hero__badges">
+                <span class="ai-mcp-badge">MCP First</span>
+                <span class="ai-mcp-badge">Tenant-safe</span>
+                <span class="ai-mcp-badge">Ponto de teste</span>
+            </div>
+        </div>
+        <div class="ai-mcp-hero__summary">
+            <article class="ai-mcp-stat-card">
+                <span>Empresa ativa</span>
+                <strong>{{ active_company.client_code if active_company and active_company.client_code else 'VS' }}</strong>
+                <small>{{ active_company.name if active_company else 'Selecione uma empresa' }}</small>
+            </article>
+            <article class="ai-mcp-stat-card">
+                <span>Tools catalogadas</span>
+                <strong>{{ console.summary.catalog_tools }}</strong>
+                <small>{{ console.summary.human_gate_tools }} com human gate</small>
+            </article>
+            <article class="ai-mcp-stat-card">
+                <span>Readiness</span>
+                <strong>{{ console.summary.readiness_gates }}</strong>
+                <small>gates oficiais de abertura controlada</small>
+            </article>
+        </div>
+    </section>
+
+    <section class="ai-mcp-toolbar">
+        <div class="ai-mcp-search">
+            <input id="aiMcpConsoleSearch" type="search" placeholder="Buscar seção, tool, domínio, perfil ou ação..." autocomplete="off">
+        </div>
+        <div class="ai-mcp-toolbar__stats">
+            <span class="ai-mcp-chip">{{ console.summary.profiles }} perfis</span>
+            <span class="ai-mcp-chip">{{ console.summary.surfaces }} surfaces</span>
+            <span class="ai-mcp-chip">{{ console.summary.domains }} domínios</span>
+            <span class="ai-mcp-chip">{{ console.summary.release_smokes }} smokes</span>
+        </div>
+    </section>
+
+    <nav class="ai-mcp-tabs" aria-label="Seções do console IA/MCP">
+        {% set sections = [
+            ('overview', 'Visão Geral'),
+            ('profiles', 'Perfis & Permissões'),
+            ('surfaces', 'Surfaces & Domínios'),
+            ('catalog', 'Catálogo'),
+            ('onboarding', 'Onboarding & Cadastros'),
+            ('release', 'Release & Freeze'),
+            ('dashboard', 'Dashboard & Readiness'),
+            ('governance', 'Governança')
+        ] %}
+        {% for key, label in sections %}
+        <button type="button" class="ai-mcp-tab {{ 'is-active' if loop.first }}" data-console-tab="{{ key }}">
+            {{ label }}
+        </button>
+        {% endfor %}
+    </nav>
+
+    <div class="ai-mcp-panels">
+        <section class="ai-mcp-panel is-active" data-console-panel="overview" data-searchable="visão geral resumo quick links links operacionais readiness">
+            <div class="ai-mcp-grid ai-mcp-grid--summary">
+                {% for label, value in [
+                    ('Perfis canônicos', console.summary.profiles),
+                    ('Matrizes de permissão', console.summary.permission_matrices),
+                    ('Triggers de freeze', console.summary.freeze_triggers),
+                    ('Checks de release', console.summary.release_checks),
+                    ('Etapas de onboarding', console.summary.onboarding_steps),
+                    ('Painéis de dashboard', console.summary.dashboard_panels)
+                ] %}
+                <article class="ai-mcp-kpi-card">
+                    <span>{{ label }}</span>
+                    <strong>{{ value }}</strong>
+                </article>
+                {% endfor %}
+            </div>
+
+            <div class="ai-mcp-columns">
+                <article class="ai-mcp-card">
+                    <header><h2>Configurações rápidas</h2><p>Entradas operacionais para configurar e validar o ecossistema.</p></header>
+                    <div class="ai-mcp-link-grid">
+                        {% for item in console.configuration_links %}
+                        <a class="ai-mcp-link-card" href="{{ item.href }}" data-searchable="{{ item.title }} {{ item.description }} {{ item.kind }}">
+                            <strong>{{ item.title }}</strong>
+                            <p>{{ item.description }}</p>
+                            <span>{{ item.kind }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Cadastros e contexto</h2><p>Pontos de cadastro necessários para operar a camada IA/MCP sem retrabalho.</p></header>
+                    <div class="ai-mcp-link-grid">
+                        {% for item in console.registration_links %}
+                        <a class="ai-mcp-link-card" href="{{ item.href }}" data-searchable="{{ item.title }} {{ item.description }} {{ item.kind }}">
+                            <strong>{{ item.title }}</strong>
+                            <p>{{ item.description }}</p>
+                            <span>{{ item.kind }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+
+            <article class="ai-mcp-card">
+                <header><h2>Readiness por fase</h2><p>Consolidação do que precisa estar verde para abertura controlada.</p></header>
+                <div class="ai-mcp-phase-grid">
+                    {% for phase in console.readiness_by_phase %}
+                    <div class="ai-mcp-phase-card" data-searchable="{{ phase.phase }} {{ phase.gate_count }}">
+                        <strong>{{ phase.phase|replace('_', ' ')|title }}</strong>
+                        <span>{{ phase.gate_count }} gates</span>
+                        <small>{{ phase.required_count }} obrigatórios</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="profiles" data-searchable="profiles permissões matrix roles colaborador cliente administrador admin técnico">
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Perfis MCP</h2><p>Contratos canônicos por perfil e limites de atuação.</p></header>
+                    <div class="ai-mcp-stack">
+                        {% for profile in console.profiles %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ profile.profile }} {{ profile.allowed_domains|join(' ') }} {{ profile.allowed_surfaces|join(' ') }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ profile.profile }}</strong>
+                                <span>{{ profile.default_surface }}</span>
+                            </div>
+                            <p>Surfaces: {{ profile.allowed_surfaces|join(', ') }}</p>
+                            <p>Domínios permitidos: {{ profile.allowed_domains|join(', ') }}</p>
+                            <small>Risco sem gate: {{ profile.max_risk_without_human_gate }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Matriz de permissões</h2><p>Permissões por perfil/surface/domínio com destaque para gate humano e escopo.</p></header>
+                    <div class="ai-mcp-stack">
+                        {% for matrix in console.permissions %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ matrix.profile }} {{ matrix.surface }} {{ matrix.title }} {{ matrix.summary }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ matrix.profile }} / {{ matrix.surface }}</strong>
+                                <span>{{ matrix.default_scope }}</span>
+                            </div>
+                            <p>{{ matrix.summary }}</p>
+                            <ul class="ai-mcp-inline-list">
+                                {% for domain in matrix.domains %}
+                                <li>{{ domain.domain }} · {{ domain.allowed_actions|join('/') }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="surfaces" data-searchable="surfaces domínios playbooks user admin analytics ops">
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Surfaces operacionais</h2><p>Playbooks por surface com discovery, checklist e ações proibidas.</p></header>
+                    <div class="ai-mcp-stack">
+                        {% for surface in console.surfaces %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ surface.surface }} {{ surface.title }} {{ surface.allowed_domains|join(' ') }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ surface.surface }}</strong>
+                                <span>{{ surface.default_scope }}</span>
+                            </div>
+                            <p>{{ surface.objective }}</p>
+                            <p>Discovery: {{ surface.discovery_tools|join(', ') }}</p>
+                            <small>Perfis: {{ surface.actor_roles|join(', ') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Domínios IA/MCP</h2><p>Explorador de domínio com tools canônicas, surfaces e perfis permitidos.</p></header>
+                    <div class="ai-mcp-stack ai-mcp-stack--scroll">
+                        {% for domain in console.domains %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ domain.domain }} {{ domain.aliases|join(' ') }} {{ domain.allowed_surfaces|join(' ') }} {{ domain.allowed_profiles|join(' ') }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ domain.domain }}</strong>
+                                <span>{{ domain.allowed_surfaces|join(', ') }}</span>
+                            </div>
+                            <p>{{ domain.objective }}</p>
+                            <ul class="ai-mcp-inline-list">
+                                <li>Tools: {{ domain.canonical_tools|join(', ') }}</li>
+                                <li>Perfis: {{ domain.allowed_profiles|join(', ') }}</li>
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="catalog" data-searchable="catálogo capabilities tools risks domains">
+            <article class="ai-mcp-card">
+                <header><h2>Catálogo MCP/Sapiens</h2><p>Ferramentas disponíveis, distribuição por risco e cobertura por surface.</p></header>
+                <div class="ai-mcp-grid ai-mcp-grid--summary">
+                    {% for item in console.catalog.risk_distribution %}
+                    <div class="ai-mcp-kpi-card">
+                        <span>Risco {{ item.risk }}</span>
+                        <strong>{{ item.count }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="ai-mcp-surface-grid">
+                    {% for surface in console.catalog.surfaces %}
+                    <div class="ai-mcp-surface-card">
+                        <strong>{{ surface.surface }}</strong>
+                        <span>{{ surface.tool_count }} tools</span>
+                        <small>{{ surface.human_gate_count }} com gate · {{ surface.critical_count }} críticas</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="ai-mcp-tools-grid" id="aiMcpCatalogGrid">
+                    {% for tool in console.catalog.tools %}
+                    <article class="ai-mcp-tool-card" data-searchable="{{ tool.name }} {{ tool.domain }} {{ tool.risk }} {{ tool.scopes|join(' ') }} {{ tool.permissions|join(' ') }}">
+                        <div class="ai-mcp-tool-card__head">
+                            <strong>{{ tool.name }}</strong>
+                            <span class="ai-mcp-risk ai-mcp-risk--{{ tool.risk }}">{{ tool.risk }}</span>
+                        </div>
+                        <p>{{ tool.description }}</p>
+                        <small>Domínio: {{ tool.domain }} · Scopes: {{ tool.scopes|join(', ') }}</small>
+                    </article>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="onboarding" data-searchable="onboarding cadastros configs provider user admin analytics ops">
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Onboarding de IAs externas</h2><p>Etapas, evidências e regras por surface.</p></header>
+                    <div class="ai-mcp-stack">
+                        {% for step in console.onboarding.steps %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ step.phase }} {{ step.title }} {{ step.instruction }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ step.phase|replace('_', ' ')|title }}</strong>
+                                <span>{{ step.step_id }}</span>
+                            </div>
+                            <p>{{ step.title }}</p>
+                            <small>{{ step.required_evidence }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Regras por surface</h2><p>Providers e perfis aceitos para cada superfície MCP.</p></header>
+                    <div class="ai-mcp-stack">
+                        {% for rule in console.onboarding.surface_access_rules %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ rule.surface }} {{ rule.allowed_provider_types|join(' ') }} {{ rule.allowed_profiles|join(' ') }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ rule.surface }}</strong>
+                                <span>{{ 'aprovação humana' if rule.human_approval_required else 'sem aprovação' }}</span>
+                            </div>
+                            <p>Providers: {{ rule.allowed_provider_types|join(', ') }}</p>
+                            <small>Perfis: {{ rule.allowed_profiles|join(', ') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="release" data-searchable="release freeze smoke rollback incidentes">
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Checklist de release</h2><p>Gates, evidências e smokes pós-deploy da camada IA/MCP.</p></header>
+                    <div class="ai-mcp-stack ai-mcp-stack--scroll">
+                        {% for item in console.release.checklist %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ item.gate }} {{ item.title }} {{ item.risk }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ item.title }}</strong>
+                                <span>{{ item.gate }}</span>
+                            </div>
+                            <p>{{ item.expected_evidence }}</p>
+                            <small>Risco: {{ item.risk }}{% if item.command_hint %} · {{ item.command_hint }}{% endif %}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Freeze & incidentes</h2><p>Triggers de congelamento e ação recomendada por severidade.</p></header>
+                    <div class="ai-mcp-stack">
+                        {% for trigger in console.freeze.triggers %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ trigger.trigger }} {{ trigger.severity }} {{ trigger.description }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ trigger.trigger }}</strong>
+                                <span>{{ trigger.severity }}</span>
+                            </div>
+                            <p>{{ trigger.description }}</p>
+                            <small>Ação recomendada: {{ trigger.recommended_action }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="dashboard" data-searchable="dashboard readiness alerts métricas telemetria">
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Painéis e métricas</h2><p>Especificação do dashboard operacional de uso IA/MCP.</p></header>
+                    <div class="ai-mcp-stack">
+                        {% for panel in console.dashboard.panels %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ panel.panel_id }} {{ panel.title }} {{ panel.objective }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ panel.title }}</strong>
+                                <span>{{ panel.default_visualization }}</span>
+                            </div>
+                            <p>{{ panel.objective }}</p>
+                            <small>Métricas: {{ panel.metrics|join(', ') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Gates de readiness</h2><p>Checklist macro para abrir a operação com menor privilégio e rollback pronto.</p></header>
+                    <div class="ai-mcp-stack ai-mcp-stack--scroll">
+                        {% for gate in console.readiness.gates %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ gate.phase }} {{ gate.gate_id }} {{ gate.title }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ gate.title }}</strong>
+                                <span>{{ gate.phase }}</span>
+                            </div>
+                            <p>{{ gate.instruction }}</p>
+                            <small>{{ gate.required_evidence }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="governance" data-searchable="governança drift bloqueios critérios abertura">
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Critérios de abertura</h2><p>O que precisa existir para testar a operação IA/MCP sem abrir risco estrutural.</p></header>
+                    <ul class="ai-mcp-bullet-list">
+                        {% for item in console.readiness.opening_criteria %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Condições de bloqueio</h2><p>Falhas que impedem abertura ampla e exigem correção imediata.</p></header>
+                    <ul class="ai-mcp-bullet-list">
+                        {% for item in console.readiness.blocking_conditions %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </article>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/ai_mcp_console.js') }}"></script>
+{% endblock %}

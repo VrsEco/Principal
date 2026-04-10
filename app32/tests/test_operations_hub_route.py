@@ -92,6 +92,12 @@ def test_operations_hub_renders_unified_menu(monkeypatch):
         for group in module["groups"]
         for item in group["items"]
     )
+    assert any(
+        item["href"] == "/configs/ai/mcp"
+        for module in modules
+        for group in module["groups"]
+        for item in group["items"]
+    )
 
 
 
@@ -126,4 +132,5 @@ def test_operations_hub_template_renders_real_jinja():
         )
 
     assert "Parâmetros gerais de IA" in html
+    assert "/configs/ai/mcp" in html
     assert "/configs/ai" in html

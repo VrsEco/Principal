@@ -211,6 +211,13 @@ def operations_hub():
                     "label": "Backoffice técnico",
                     "items": [
                         {
+                            "title": "Console Operacional IA/MCP",
+                            "description": "Governança MCP, perfis, permissões, onboarding, readiness e observabilidade em uma única área.",
+                            "href": "/configs/ai/mcp",
+                            "badge": "Novo console",
+                            "mode": "Console",
+                        },
+                        {
                             "title": "Sapiens",
                             "description": "Acesso direto ao agente conversacional e seus fluxos operacionais atuais.",
                             "href": "/sapiens",

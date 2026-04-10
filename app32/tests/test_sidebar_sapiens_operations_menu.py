@@ -49,6 +49,8 @@ def test_integrations_and_ai_settings_live_under_sapiens_not_system():
     system_block = sidebar[sidebar.index("Sistema") : sidebar.index("Meu Perfil")]
 
     assert "/configs/ai" in sapiens_block
+    assert "/configs/ai/mcp" in sapiens_block
+    assert "Console Operacional IA/MCP" in sapiens_block
     assert "Parâmetros gerais de IA" in sapiens_block
     assert "/integrations" in sapiens_block
     assert "Tools / MCP / Integrações" in sapiens_block
