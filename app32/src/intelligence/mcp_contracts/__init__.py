@@ -58,6 +58,13 @@ from .analysis_catalog import (
     AnalysisStatus,
     build_allowed_analysis_catalog_manifest,
 )
+from .analysis_envelopes import (
+    DEFAULT_ANALYTICS_NARRATIVE_RULES,
+    AnalyticsAIEnvelope,
+    AnalyticsAIEnvelopeResponse,
+    AnalyticsGrounding,
+    build_analytics_ai_envelope,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -108,4 +115,9 @@ __all__ = [
     "AnalysisOutputMode",
     "AnalysisStatus",
     "build_allowed_analysis_catalog_manifest",
+    "DEFAULT_ANALYTICS_NARRATIVE_RULES",
+    "AnalyticsAIEnvelope",
+    "AnalyticsAIEnvelopeResponse",
+    "AnalyticsGrounding",
+    "build_analytics_ai_envelope",
 ]
