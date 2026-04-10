@@ -1,250 +1,511 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Operações Inteligentes{% endblock %}
+{% block title %}Console IA/MCP{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ia_mcp_console.css') }}">
+{% endblock %}
 
 {% block breadcrumb %}
 <a href="/portal">Portal</a>
 <span class="sep">/</span>
-<span class="current">Operações Inteligentes</span>
+<a href="/operations">Operações Inteligentes</a>
+<span class="sep">/</span>
+<span class="current">Console IA/MCP</span>
 {% endblock %}
 
 {% block navbar_actions %}
-<div class="ops-navbar-actions">
-    <a href="/sapiens" class="ops-btn ops-btn--secondary">Conversar com Sapiens</a>
-    <a href="/financial/ingestions" class="ops-btn ops-btn--primary">Abrir piloto financeiro</a>
-</div>
-{% endblock %}
-
-{% block sidebar_left %}
-<div class="ops-sidebar">
-    <div class="ops-sidebar__header">
-        <a href="/portal" class="ops-sidebar__brand">Operações</a>
-        <span class="ops-sidebar__caption">Central inteligente</span>
-    </div>
-
-    <nav class="ops-sidebar__nav" aria-label="Navegação de operações">
-        <a href="/operations" class="ops-sidebar__link is-active">Visão geral</a>
-        <a href="/financial/accountability" class="ops-sidebar__link">Prestação de contas</a>
-        <a href="/financial/ingestions" class="ops-sidebar__link">Entradas / Integrações</a>
-        <a href="/projects" class="ops-sidebar__link">Projetos</a>
-        <a href="/processes/map" class="ops-sidebar__link">Processos</a>
-        <a href="/meetings/manage-v2" class="ops-sidebar__link">Reuniões</a>
-        <a href="/my-work" class="ops-sidebar__link">Meu Trabalho</a>
-        <a href="/sapiens" class="ops-sidebar__link">Sapiens</a>
-        <a href="/integrations" class="ops-sidebar__link">Integrações</a>
-    </nav>
+<div class="mcp-console-navbar-actions">
+    <a href="/sapiens" class="mcp-btn mcp-btn--secondary">Abrir Sapiens</a>
+    <a href="/route-audit/" class="mcp-btn mcp-btn--secondary">Auditoria</a>
+    <a href="/auth/users/page" class="mcp-btn mcp-btn--primary">Cadastros</a>
 </div>
 {% endblock %}
 
 {% block workspace_content %}
-<div class="ops-page" data-default-tab="{{ modules[0].key if modules else '' }}">
-    <section class="ops-hero">
-        <div class="ops-hero__copy">
-            <span class="ops-eyebrow">Central unificada</span>
-            <h1>Operações Inteligentes</h1>
+<div class="mcp-console-page" data-mcp-console>
+    <section class="mcp-console-hero">
+        <div class="mcp-console-hero__copy">
+            <span class="mcp-eyebrow">MCP first · multi-tenancy obrigatório · pronto para teste</span>
+            <h1>Console operacional IA/MCP</h1>
             <p>
-                Um ponto único para operações assistidas, importações, automações, execução com Sapiens
-                e revisão dos principais fluxos do APP32.
+                Visão central para perfis, permissões, surfaces, domínios, catálogo, onboarding,
+                release, freeze, dashboard, readiness e governança. O frontend já fica preparado
+                para receber dados reais do backend sem refatorar a estrutura visual.
             </p>
+            <div class="mcp-console-hero__actions">
+                <a href="/sapiens" class="mcp-btn mcp-btn--primary">Conversa com Sapiens</a>
+                <a href="/route-audit/" class="mcp-btn mcp-btn--secondary">Trilhas operacionais</a>
+                <a href="#governanca" class="mcp-btn mcp-btn--secondary">Governança</a>
+            </div>
         </div>
-        <div class="ops-hero__summary">
-            <article class="ops-stat-card">
-                <span>Módulos</span>
-                <strong>{{ modules|length }}</strong>
-                <small>Organizados por negócio</small>
-            </article>
-            <article class="ops-stat-card">
+
+        <div class="mcp-console-hero__stats" aria-label="Resumo operacional">
+            <article class="mcp-stat-card">
                 <span>Empresa ativa</span>
                 <strong>{{ active_company.client_code if active_company and active_company.client_code else 'VS' }}</strong>
                 <small>{{ active_company.name if active_company else 'Selecione uma empresa' }}</small>
             </article>
-            <article class="ops-stat-card">
-                <span>Próximo foco</span>
-                <strong>Prestação de contas</strong>
-                <small>Piloto Financeiro com revisão humana</small>
+            <article class="mcp-stat-card">
+                <span>Perfis oficiais</span>
+                <strong>4</strong>
+                <small>colaborador, cliente, administrador e admin técnico</small>
+            </article>
+            <article class="mcp-stat-card">
+                <span>Surfaces</span>
+                <strong>4</strong>
+                <small>user, admin, analytics e ops</small>
+            </article>
+            <article class="mcp-stat-card">
+                <span>Domínios</span>
+                <strong>12</strong>
+                <small>rotina, estratégia, finanças, identidade e governança</small>
             </article>
         </div>
     </section>
 
-    <section class="ops-toolbar">
-        <div class="ops-search">
-            <input id="opsSearchInput" type="search" placeholder="Buscar operação, módulo ou ação..." autocomplete="off">
-        </div>
-        <div class="ops-toolbar__chips">
-            <span class="ops-chip">Manual</span>
-            <span class="ops-chip">Assistida</span>
-            <span class="ops-chip">Automática</span>
-            <span class="ops-chip">Técnico</span>
+    <section class="mcp-console-toolbar">
+        <label class="mcp-search">
+            <span>Buscar seção, card, domínio ou perfil</span>
+            <input
+                type="search"
+                placeholder="Ex.: finance, readiness, admin, onboarding..."
+                autocomplete="off"
+                data-console-search
+            >
+        </label>
+
+        <div class="mcp-filter-chips" role="toolbar" aria-label="Filtros rápidos">
+            <button type="button" class="mcp-chip is-active" data-console-filter="all" aria-pressed="true">Tudo</button>
+            <button type="button" class="mcp-chip" data-console-filter="governanca" aria-pressed="false">Governança</button>
+            <button type="button" class="mcp-chip" data-console-filter="operacao" aria-pressed="false">Operação</button>
+            <button type="button" class="mcp-chip" data-console-filter="cadastros" aria-pressed="false">Cadastros</button>
+            <button type="button" class="mcp-chip" data-console-filter="observabilidade" aria-pressed="false">Observabilidade</button>
         </div>
     </section>
 
-    <nav class="ops-tabs" aria-label="Módulos operacionais">
-        {% for module in modules %}
-        <button
-            type="button"
-            class="ops-tab {{ 'is-active' if loop.first }}"
-            data-tab-target="{{ module.key }}"
-        >
-            {{ module.label }}
-        </button>
-        {% endfor %}
+    <nav class="mcp-console-nav" aria-label="Seções do console IA/MCP">
+        <button type="button" class="mcp-nav-pill is-active" data-console-nav="visao-geral">Visão geral</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="perfis">Perfis</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="permissoes">Permissões</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="surfaces">Surfaces</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="dominios">Domínios</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="catalogo">Catálogo</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="onboarding">Onboarding</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="release">Release</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="freeze">Freeze</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="dashboard">Dashboard</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="readiness">Readiness</button>
+        <button type="button" class="mcp-nav-pill" data-console-nav="governanca">Governança</button>
     </nav>
 
-    <div class="ops-panels">
-        {% for module in modules %}
-        <section
-            class="ops-panel {{ 'is-active' if loop.first }}"
-            data-tab-panel="{{ module.key }}"
-            data-searchable="{{ module.label }} {{ module.description }}"
-        >
-            <header class="ops-panel__header">
-                <div>
-                    <span class="ops-panel__eyebrow">Módulo</span>
-                    <h2>{{ module.label }}</h2>
-                    <p>{{ module.description }}</p>
-                </div>
-            </header>
-
-            <div class="ops-groups">
-                {% for group in module.groups %}
-                <article class="ops-group-card" data-searchable="{{ group.label }}">
-                    <div class="ops-group-card__header">
-                        <span class="ops-group-card__eyebrow">Grupo</span>
-                        <h3>{{ group.label }}</h3>
-                    </div>
-
-                    <div class="ops-action-grid">
-                        {% for item in group["items"] %}
-                        <a
-                            href="{{ item.href }}"
-                            class="ops-action-card"
-                            data-searchable="{{ item.title }} {{ item.description }} {{ item.mode }} {{ item.badge or '' }}"
-                        >
-                            <div class="ops-action-card__top">
-                                <strong>{{ item.title }}</strong>
-                                <span class="ops-mode-pill">{{ item.mode }}</span>
-                            </div>
-                            <p>{{ item.description }}</p>
-                            <div class="ops-action-card__footer">
-                                {% if item.badge %}
-                                <span class="ops-inline-badge">{{ item.badge }}</span>
-                                {% else %}
-                                <span class="ops-inline-link">Abrir operação</span>
-                                {% endif %}
-                            </div>
-                        </a>
-                        {% endfor %}
-                    </div>
-                </article>
-                {% endfor %}
+    <section class="mcp-section" id="visao-geral" data-console-section data-console-tags="governanca operacao observabilidade cadastros" data-searchable="Visão geral painel inicial resumo console IA MCP">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Painel inicial</span>
+                <h2>Visão geral</h2>
+                <p>Cockpit central com atalhos e blocos prontos para o bind de dados vindos do backend.</p>
             </div>
-        </section>
-        {% endfor %}
+            <span class="mcp-section__badge">Pronto para bind</span>
+        </div>
+
+        <div class="mcp-card-grid mcp-card-grid--4">
+            <article class="mcp-card mcp-card--accent" data-console-card data-console-tags="governanca readiness" data-searchable="Readiness status controlada contracts release onboarding operations go live">
+                <span class="mcp-card__badge">Readiness</span>
+                <h3>Status operacional</h3>
+                <p>Fluxo de abertura controlada com gates de contrato, release, onboarding e operação.</p>
+                <ul class="mcp-card__list">
+                    <li>contracts → release → onboarding → operations → go_live</li>
+                </ul>
+            </article>
+
+            <a class="mcp-card mcp-card--link" href="/auth/users/page" data-console-card data-console-tags="cadastros operacao" data-searchable="Cadastros usuários company profile identity configuration">
+                <span class="mcp-card__badge">Cadastros</span>
+                <h3>Contexto e acesso</h3>
+                <p>Usuários, empresa ativa, perfis e pontos de configuração operacional.</p>
+                <div class="mcp-card__footer">Abrir cadastros</div>
+            </a>
+
+            <a class="mcp-card mcp-card--link" href="/route-audit/" data-console-card data-console-tags="observabilidade operacao" data-searchable="Auditoria logs trilhas eventos sapiens agentes mcp">
+                <span class="mcp-card__badge">Observabilidade</span>
+                <h3>Auditoria e trilhas</h3>
+                <p>Eventos operacionais, Sapiens, workflows e ações de agentes.</p>
+                <div class="mcp-card__footer">Abrir auditoria</div>
+            </a>
+
+            <article class="mcp-card" data-console-card data-console-tags="governanca operacao" data-searchable="Governança drift policy rbac freeze runbook rollout">
+                <span class="mcp-card__badge">Governança</span>
+                <h3>Controle canônico</h3>
+                <p>Base para drift, RBAC, policy, freeze, runbook e decisões de rollout seguro.</p>
+                <ul class="mcp-card__list">
+                    <li>canônico vs enforcement</li>
+                    <li>multi-tenancy e gates humanos</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+
+    <section class="mcp-section" id="perfis" data-console-section data-console-tags="governanca perfis" data-searchable="Perfis colaborador cliente administrador admin tecnico">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Governança</span>
+                <h2>Perfis</h2>
+                <p>Mapeamento canônico dos perfis estabilizados para o console IA/MCP.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="perfil colaborador governanca" data-searchable="colaborador surfaces user analytics operations sem finanças">
+            <span class="mcp-card__badge">colaborador</span>
+            <h3>Operação assistida</h3>
+            <p>Execução orientada, com escopo controlado e sem exposição financeira.</p>
+            <ul class="mcp-card__list">
+                <li>Surface: user</li>
+                <li>Sem finanças e sem ações de alto risco</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="perfil cliente governanca" data-searchable="cliente leitura acompanhada company scope">
+            <span class="mcp-card__badge">cliente</span>
+            <h3>Acesso orientado ao negócio</h3>
+            <p>Leitura e uso assistido, respeitando a empresa ativa e surfaces liberadas.</p>
+            <ul class="mcp-card__list">
+                <li>Foco em consulta, acompanhamento e aprovação</li>
+                <li>Sem acesso irrestrito a operações críticas</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="perfil administrador governanca" data-searchable="administrador admin surface admin analytics ops rbac gate">
+            <span class="mcp-card__badge">administrador</span>
+            <h3>Gestão e supervisão</h3>
+            <p>Gestão de superfícies, permissões, releases e governança operacional.</p>
+            <ul class="mcp-card__list">
+                <li>Surfaces: admin, analytics, ops</li>
+                <li>Mutação controlada com gate quando aplicável</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="perfil admin tecnico governanca" data-searchable="admin tecnico diagnosticos operacao freeze oncall suporte">
+            <span class="mcp-card__badge">admin técnico</span>
+            <h3>Suporte e diagnóstico</h3>
+            <p>Perfil privilegiado para diagnóstico, manutenção e contingência com auditoria.</p>
+            <ul class="mcp-card__list">
+                <li>Diagnósticos, logs e incidentes</li>
+                <li>Uso sob trilha e rastreabilidade</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="permissoes" data-console-section data-console-tags="governanca permissoes policy rbac" data-searchable="Permissões allow deny gate human gate company_id">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Controle de acesso</span>
+                <h2>Permissões</h2>
+                <p>Espaço preparado para a matriz visual de allow / deny / gate humano e regras por company_id.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="permissao allow governanca" data-searchable="Ações permitidas leitura descoberta consulta operação segura">
+            <span class="mcp-card__badge">Permitido</span>
+            <h3>Ações seguras</h3>
+            <p>Consultas, descoberta, leitura e inspeção operacional com escopo válido.</p>
+            <ul class="mcp-card__list">
+                <li>Discovery</li>
+                <li>Consulta contextual</li>
+                <li>Auditoria</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="permissao gate governanca" data-searchable="Ações com gate humano mutação financeira risco alto aprovação">
+            <span class="mcp-card__badge">Gate humano</span>
+            <h3>Ações sensíveis</h3>
+            <p>Mutação, finanças e operações sensíveis exigem revisão humana ou papéis privilegiados.</p>
+            <ul class="mcp-card__list">
+                <li>Mutação financeira</li>
+                <li>Conflito cross-tenant</li>
+                <li>Risco acima do limite</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="permissao deny governanca" data-searchable="Ações bloqueadas rbac bypass cross tenant secret exposure unsafe mutation">
+            <span class="mcp-card__badge">Negado</span>
+            <h3>Regras de bloqueio</h3>
+            <p>Bloqueios padrão para bypass de RBAC, vazamento de segredo, mutação insegura e riscos de tenant.</p>
+            <ul class="mcp-card__list">
+                <li>Sem cross-tenant</li>
+                <li>Sem SQL livre</li>
+                <li>Sem acesso indevido a segredos</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="surfaces" data-console-section data-console-tags="governanca surfaces operacao" data-searchable="Surfaces user admin analytics ops playbooks discovery">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Canal operacional</span>
+                <h2>Surfaces</h2>
+                <p>Quatro superfícies oficiais, prontas para guiar agentes e operadores.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="surface user operacao" data-searchable="Surface user rotina processos projetos reuniões self service">
+            <span class="mcp-card__badge">user</span>
+            <h3>Uso assistido</h3>
+            <p>Interação para execução e consulta assistida, com foco em fluxo e produtividade.</p>
+            <ul class="mcp-card__list">
+                <li>Rotina, processos, projetos e reuniões</li>
+                <li>Discovery e CRUD sob contrato</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="surface admin governanca" data-searchable="Surface admin permissões cadastros release freeze policy">
+            <span class="mcp-card__badge">admin</span>
+            <h3>Administração</h3>
+            <p>Superfície de gestão para permissões, cadastros, configuração, release e governança.</p>
+            <ul class="mcp-card__list">
+                <li>Cadastros e configurações</li>
+                <li>Gates e operações críticas</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="surface analytics observabilidade" data-searchable="Surface analytics dashboard telemetria indicadores análises">
+            <span class="mcp-card__badge">analytics</span>
+            <h3>Análise e telemetria</h3>
+            <p>Consultas analíticas, dashboards, indicadores e leitura de sinais operacionais.</p>
+            <ul class="mcp-card__list">
+                <li>Uso, eficiência e tendências</li>
+                <li>Read models e métricas agregadas</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="surface ops observabilidade governanca" data-searchable="Surface ops incidentes workflows diagnostics freeze rollback">
+            <span class="mcp-card__badge">ops</span>
+            <h3>Operação avançada</h3>
+            <p>Diagnóstico, execução controlada, incidentes, rollback e suporte operacional.</p>
+            <ul class="mcp-card__list">
+                <li>Incident handling</li>
+                <li>Freeze / unfreeze / rollback</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="dominios" data-console-section data-console-tags="operacao governanca dominios" data-searchable="Domínios routine processes projects meetings strategy finance analytics workload identity operations governance">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Catálogo funcional</span>
+                <h2>Domínios</h2>
+                <p>Mapa canônico dos domínios que a IA e os agentes podem descobrir, consultar e cruzar.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="dominio rotina processes meetings operacao" data-searchable="routine processes meetings rotina processos reuniões">
+            <span class="mcp-card__badge">Rotina e execução</span>
+            <h3>Operação diária</h3>
+            <ul class="mcp-card__list">
+                <li>routine</li>
+                <li>processes</li>
+                <li>meetings</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="dominio strategy projects workload operacao" data-searchable="strategy projects workload estratégia projetos carga de trabalho">
+            <span class="mcp-card__badge">Estratégia e portfólio</span>
+            <h3>Direção e planejamento</h3>
+            <ul class="mcp-card__list">
+                <li>strategy</li>
+                <li>projects</li>
+                <li>workload</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="dominio finance analytics governanca" data-searchable="finance analytics finanças análise indicadores">
+            <span class="mcp-card__badge">Finanças e análise</span>
+            <h3>Visão econômica e dados</h3>
+            <ul class="mcp-card__list">
+                <li>finance</li>
+                <li>analytics</li>
+            </ul>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="dominio identity operations governance governanca" data-searchable="identity_self_service identity_admin operations governance identidade operações governança">
+            <span class="mcp-card__badge">Identity, ops e governança</span>
+            <h3>Controle de acesso e operação</h3>
+            <ul class="mcp-card__list">
+                <li>identity_self_service</li>
+                <li>identity_admin</li>
+                <li>operations</li>
+                <li>governance</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="catalogo" data-console-section data-console-tags="operacao governanca cadastros" data-searchable="Catálogo discovery tool catalog playbooks surfaces capabilities registries configurações">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Discovery</span>
+                <h2>Catálogo</h2>
+                <p>Blocos para catálogo de ferramentas, playbooks, capabilities, registros e configurações.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="catalogo discovery operacao" data-searchable="Tool catalog discovery canonical tools registry">
+            <span class="mcp-card__badge">Tool catalog</span>
+            <h3>Catálogo de tools</h3>
+            <p>Listagem de tools MCP por domínio, surface e risco.</p>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="catalogo operacao governanca" data-searchable="Playbooks surface domain guides rules examples">
+            <span class="mcp-card__badge">Playbooks</span>
+            <h3>Guia operacional</h3>
+            <p>Renderização dos contratos de surface e domínio com instruções e exemplos oficiais.</p>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="catalogo cadastros governanca" data-searchable="Capabilities registries profiles permissions surfaces">
+            <span class="mcp-card__badge">Cadastros</span>
+            <h3>Registros estruturados</h3>
+            <p>Base para cadastros de agentes, perfis, surfaces e vínculos com empresa.</p>
+        </article>
+
+        <article class="mcp-card" data-console-card data-console-tags="catalogo operacao governanca" data-searchable="Configurações IA MCP console operational settings feature flags">
+            <span class="mcp-card__badge">Configurações</span>
+            <h3>Ajustes operacionais</h3>
+            <p>Espaço reservado para flags do console, modos e parâmetros operacionais.</p>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="onboarding" data-console-section data-console-tags="operacao cadastros governanca" data-searchable="Onboarding external ai provider intake access design registration validation operation">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Entrada de agentes</span>
+                <h2>Onboarding</h2>
+                <p>Fluxo guiado para integrar IAs externas com segurança, escopo e validação antes de operar.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="onboarding intake access design registration validation operation" data-searchable="intake access design registration validation operation provider surface profile company">
+            <span class="mcp-card__badge">Wizard</span>
+            <h3>Integração em 4 fases</h3>
+            <ul class="mcp-card__list">
+                <li>1. intake</li>
+                <li>2. access design</li>
+                <li>3. registration / validation</li>
+                <li>4. operation</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="release" data-console-section data-console-tags="operacao governanca release" data-searchable="Release pre deploy post deploy rollback smoke checklist gates">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Entrega controlada</span>
+                <h2>Release</h2>
+                <p>Gates e checklist prontos para integrar pipeline de publicação e pós-deploy.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="release pre deploy post deploy rollback" data-searchable="pre_release deploy post_deploy rollback checklist smoke validation">
+            <span class="mcp-card__badge">Ciclo de release</span>
+            <h3>pre · deploy · post · rollback</h3>
+            <ul class="mcp-card__list">
+                <li>pré-checagem de contrato e dependências</li>
+                <li>publicação controlada</li>
+                <li>smoke pós-deploy</li>
+                <li>retorno seguro</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="freeze" data-console-section data-console-tags="operacao governanca freeze observabilidade" data-searchable="Freeze trigger unsafe mutation rbac bypass secrets exposure financial exposure">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Incidentes e bloqueio</span>
+                <h2>Freeze</h2>
+                <p>Bloqueios de tool e incidentes sensíveis com triggers claros para contenção imediata.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="freeze cross tenant rbac secrets financial" data-searchable="cross tenant risk rbac bypass secret exposure financial exposure unsafe mutation">
+            <span class="mcp-card__badge">Triggers principais</span>
+            <h3>Freeze preventivo</h3>
+            <ul class="mcp-card__list">
+                <li>cross_tenant_risk</li>
+                <li>rbac_bypass</li>
+                <li>secret_exposure</li>
+                <li>financial_exposure</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="dashboard" data-console-section data-console-tags="observabilidade dashboard analytics" data-searchable="Dashboard uso telemetria métricas blocos painéis alertas">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Observabilidade</span>
+                <h2>Dashboard</h2>
+                <p>Painéis prontos para leitura executiva e operacional do uso IA/MCP.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="dashboard usage alerts efficiency compliance observability" data-searchable="uso por surface domínio ferramenta alertas eficiência compliance">
+            <span class="mcp-card__badge">Métricas</span>
+            <h3>Leitura executiva</h3>
+            <ul class="mcp-card__list">
+                <li>uso por surface, domínio e tool</li>
+                <li>alertas e bloqueios</li>
+                <li>eficiência e compliance</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="readiness" data-console-section data-console-tags="governanca readiness operacao" data-searchable="Readiness contracts release onboarding operations go live blockers">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Abertura controlada</span>
+                <h2>Readiness</h2>
+                <p>Checklist visual para abrir uso controlado com visibilidade de bloqueadores.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="readiness contracts release onboarding operations go live" data-searchable="contracts release onboarding operations go live blockers">
+            <span class="mcp-card__badge">Fases</span>
+            <h3>Go-live com controle</h3>
+            <ul class="mcp-card__list">
+                <li>contracts</li>
+                <li>release</li>
+                <li>onboarding</li>
+                <li>operations</li>
+                <li>go_live</li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="mcp-section" id="governanca" data-console-section data-console-tags="governanca observabilidade operacao" data-searchable="Governança drift policy rbac runbook contract suite compliance">
+        <div class="mcp-section__head">
+            <div>
+                <span class="mcp-section__eyebrow">Controle final</span>
+                <h2>Governança</h2>
+                <p>Base para garantir consistência entre contratos, enforcement, catálogo e operação.</p>
+            </div>
+        </div>
+
+        <article class="mcp-card" data-console-card data-console-tags="governanca drift policy rbac runbook compliance" data-searchable="drift suite tenant rbac policy runbook evidence compliance">
+            <span class="mcp-card__badge">Governança viva</span>
+            <h3>Canônico versus enforcement</h3>
+            <ul class="mcp-card__list">
+                <li>drift suite</li>
+                <li>tenant_rbac e policy</li>
+                <li>runbook user/admin</li>
+                <li>evidências e auditoria</li>
+            </ul>
+        </article>
+    </section>
+
+    <div class="mcp-empty-state" data-console-empty hidden>
+        Nenhum card corresponde aos filtros atuais. Tente outro termo ou limpe os filtros rápidos.
     </div>
 </div>
+{% endblock %}
 
-<style>
-    .ops-sidebar { padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .ops-sidebar__header { display: flex; flex-direction: column; gap: .25rem; padding: 0 .35rem; }
-    .ops-sidebar__brand { font-size: 1rem; font-weight: 800; color: var(--text-primary); text-decoration: none; }
-    .ops-sidebar__caption { font-size: .82rem; color: var(--text-secondary); }
-    .ops-sidebar__nav { display: flex; flex-direction: column; gap: .35rem; }
-    .ops-sidebar__link { text-decoration: none; color: var(--text-secondary); padding: .8rem .9rem; border-radius: 14px; border: 1px solid transparent; transition: var(--transition); }
-    .ops-sidebar__link:hover, .ops-sidebar__link.is-active { background: var(--surface-secondary); color: var(--primary); border-color: var(--border); }
-    .ops-page { padding: 0 1.5rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
-    .ops-navbar-actions { display: flex; align-items: center; gap: .75rem; }
-    .ops-btn { text-decoration: none; border-radius: 12px; padding: .8rem 1rem; font-weight: 700; border: 1px solid transparent; }
-    .ops-btn--primary { background: var(--primary); color: #fff; }
-    .ops-btn--secondary { background: var(--surface-secondary); color: var(--text-primary); border-color: var(--border); }
-    .ops-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1rem; background: linear-gradient(135deg, rgba(37,99,235,.10), rgba(15,23,42,.02)); border: 1px solid var(--border); border-radius: 24px; padding: 1.4rem; box-shadow: var(--shadow-sm); }
-    .ops-eyebrow, .ops-panel__eyebrow, .ops-group-card__eyebrow { display: inline-block; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--primary); font-weight: 700; margin-bottom: .4rem; }
-    .ops-hero h1, .ops-panel__header h2, .ops-group-card__header h3 { margin: 0; }
-    .ops-hero p, .ops-panel__header p { color: var(--text-secondary); max-width: 72ch; }
-    .ops-hero__summary { display: grid; grid-template-columns: 1fr; gap: .85rem; }
-    .ops-stat-card { background: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.6); border-radius: 18px; padding: 1rem; backdrop-filter: blur(10px); }
-    .ops-stat-card span, .ops-stat-card small { color: var(--text-secondary); display: block; }
-    .ops-stat-card strong { display: block; font-size: 1.2rem; margin: .25rem 0; }
-    .ops-toolbar { display: flex; gap: 1rem; align-items: center; justify-content: space-between; }
-    .ops-search { flex: 1; }
-    .ops-search input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: .9rem 1rem; color: var(--text-primary); }
-    .ops-toolbar__chips { display: flex; flex-wrap: wrap; gap: .5rem; }
-    .ops-chip { border-radius: 999px; padding: .45rem .7rem; background: var(--surface-secondary); border: 1px solid var(--border); color: var(--text-secondary); font-size: .85rem; }
-    .ops-tabs { display: flex; flex-wrap: wrap; gap: .65rem; }
-    .ops-tab { border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); border-radius: 999px; padding: .78rem 1rem; font-weight: 700; cursor: pointer; }
-    .ops-tab.is-active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .ops-panel { display: none; flex-direction: column; gap: 1rem; }
-    .ops-panel.is-active { display: flex; }
-    .ops-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-    .ops-group-card { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow-sm); padding: 1.1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .ops-action-grid { display: grid; grid-template-columns: 1fr; gap: .85rem; }
-    .ops-action-card { border: 1px solid var(--border); border-radius: 18px; padding: 1rem; text-decoration: none; color: inherit; background: var(--surface-secondary); display: flex; flex-direction: column; gap: .75rem; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
-    .ops-action-card:hover { transform: translateY(-1px); border-color: rgba(37,99,235,.35); box-shadow: var(--shadow-sm); }
-    .ops-action-card__top { display: flex; align-items: start; justify-content: space-between; gap: .75rem; }
-    .ops-action-card p { margin: 0; color: var(--text-secondary); }
-    .ops-mode-pill, .ops-inline-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: .35rem .6rem; font-size: .76rem; font-weight: 700; }
-    .ops-mode-pill { background: rgba(37,99,235,.10); color: var(--primary); border: 1px solid rgba(37,99,235,.15); }
-    .ops-inline-badge { background: rgba(245,158,11,.12); color: #b45309; border: 1px solid rgba(245,158,11,.18); }
-    .ops-inline-link { color: var(--primary); font-weight: 700; }
-    .ops-action-card__footer { display: flex; justify-content: flex-start; }
-    .ops-empty-state { display: none; }
-    @media (max-width: 1100px) {
-        .ops-hero, .ops-groups { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 768px) {
-        .ops-page { padding: 0 1rem 1.5rem; }
-        .ops-toolbar, .ops-navbar-actions, .ops-action-card__top { flex-direction: column; align-items: stretch; }
-        .ops-btn { text-align: center; }
-    }
-</style>
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const root = document.querySelector('.ops-page');
-        if (!root) return;
-
-        const tabs = Array.from(root.querySelectorAll('[data-tab-target]'));
-        const panels = Array.from(root.querySelectorAll('[data-tab-panel]'));
-        const searchInput = document.getElementById('opsSearchInput');
-
-        function activateTab(target) {
-            tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.tabTarget === target));
-            panels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.tabPanel === target));
-        }
-
-        tabs.forEach((tab) => {
-            tab.addEventListener('click', () => activateTab(tab.dataset.tabTarget));
-        });
-
-        function normalize(value) {
-            return String(value || '')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase();
-        }
-
-        function applySearch(term) {
-            const needle = normalize(term);
-            panels.forEach((panel) => {
-                const groups = panel.querySelectorAll('.ops-group-card');
-                let panelVisible = false;
-                groups.forEach((group) => {
-                    const actions = group.querySelectorAll('.ops-action-card');
-                    let groupVisible = false;
-                    actions.forEach((action) => {
-                        const haystack = normalize(action.dataset.searchable || '');
-                        const match = !needle || haystack.includes(needle);
-                        action.style.display = match ? '' : 'none';
-                        if (match) groupVisible = true;
-                    });
-                    group.style.display = groupVisible ? '' : 'none';
-                    if (groupVisible) panelVisible = true;
-                });
-                panel.style.display = panelVisible ? '' : 'none';
-            });
-        }
-
-        searchInput?.addEventListener('input', (event) => applySearch(event.target.value));
-        activateTab(root.dataset.defaultTab || tabs[0]?.dataset.tabTarget || '');
-    });
-</script>
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/ia_mcp_console.js') }}" defer></script>
 {% endblock %}
