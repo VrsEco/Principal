@@ -1,0 +1,98 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Auditoria Operacional{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/operations_audit.css') }}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/operations">Operações Inteligentes</a>
+<span class="sep">/</span>
+<span class="current">Auditoria operacional</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div class="ops-audit-navbar-actions">
+    <a href="/operations" class="ops-audit-btn ops-audit-btn--secondary">Voltar para central</a>
+    <a href="/sapiens" class="ops-audit-btn ops-audit-btn--primary">Conversar com Sapiens</a>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div
+    class="ops-audit-page"
+    data-company-id="{{ active_company.id if active_company else '' }}"
+>
+    <section class="ops-audit-hero">
+        <div>
+            <span class="ops-audit-eyebrow">Observabilidade técnica</span>
+            <h1>Auditoria operacional</h1>
+            <p>
+                Painel unificado para trilhas MCP, Sapiens, ações de agentes e revisões humanas.
+                A consulta sempre respeita a empresa ativa e o mesmo RBAC usado pelas rotas do APP32.
+            </p>
+        </div>
+        <div class="ops-audit-company-card">
+            <span>Empresa ativa</span>
+            <strong>{{ active_company.client_code if active_company and active_company.client_code else 'VS' }}</strong>
+            <small>{{ active_company.name if active_company else 'Selecione uma empresa' }}</small>
+        </div>
+    </section>
+
+    <section class="ops-audit-toolbar" aria-label="Filtros de auditoria operacional">
+        <label>
+            <span>Fonte</span>
+            <select id="opsAuditSource">
+                <option value="">Todas</option>
+                <option value="human_review">Revisões humanas</option>
+                <option value="sapiens_workflow">Sapiens / workflows</option>
+                <option value="agent_action">Ações de agentes / MCP</option>
+            </select>
+        </label>
+        <label>
+            <span>Limite</span>
+            <input id="opsAuditLimit" type="number" min="1" max="200" value="50">
+        </label>
+        <button id="opsAuditRefresh" type="button">Atualizar auditoria</button>
+    </section>
+
+    <section class="ops-audit-summary" aria-label="Resumo da auditoria">
+        <article>
+            <span>Total</span>
+            <strong data-summary-total>0</strong>
+        </article>
+        <article>
+            <span>Revisões humanas</span>
+            <strong data-summary-source="human_review">0</strong>
+        </article>
+        <article>
+            <span>Sapiens / workflows</span>
+            <strong data-summary-source="sapiens_workflow">0</strong>
+        </article>
+        <article>
+            <span>Ações de agentes</span>
+            <strong data-summary-source="agent_action">0</strong>
+        </article>
+    </section>
+
+    <section class="ops-audit-card">
+        <div class="ops-audit-card__header">
+            <div>
+                <span class="ops-audit-eyebrow">Eventos</span>
+                <h2>Linha do tempo operacional</h2>
+            </div>
+            <span id="opsAuditStatus" class="ops-audit-status">Aguardando consulta</span>
+        </div>
+        <div id="opsAuditEvents" class="ops-audit-events" aria-live="polite"></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/operations_audit.js') }}" defer></script>
+{% endblock %}

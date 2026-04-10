@@ -557,6 +557,7 @@ def register_api_resources(api):
         FinancialReportGenerateResource,
         FinancialExecutiveDashboardResource,
     )
+    from api.resources.operational_audit import OperationalAuditPanelResource
     from api.resources.financial_budget import (
         FinancialBudgetVersionListResource,
         FinancialBudgetVersionResource,
@@ -674,6 +675,7 @@ def register_api_resources(api):
     api.add_resource(IncentiveCalculationResource, '/api/incentives/calculate')
     api.add_resource(IncentiveSpiderWebResource, '/api/incentives/spider-web-data')
     api.add_resource(IncentiveRuleResource, '/api/incentives/rule-sets/<int:rule_set_id>/rules')
+    api.add_resource(OperationalAuditPanelResource, '/api/operations/audit')
     api.add_resource(FinancialEntryListResource, '/api/financial/entries')
     api.add_resource(FinancialDirectEntryOptionsResource, '/api/financial/entries/direct/options')
     api.add_resource(FinancialDirectEntryCreateResource, '/api/financial/entries/direct')

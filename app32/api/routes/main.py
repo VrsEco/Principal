@@ -228,6 +228,12 @@ def operations_hub():
                             "href": "/configurations/ai",
                             "mode": "Técnico",
                         },
+                        {
+                            "title": "Auditoria operacional",
+                            "description": "Painel unificado de trilhas MCP, Sapiens, agentes e revisões humanas por empresa.",
+                            "href": "/operations/audit",
+                            "mode": "Técnico",
+                        },
                     ],
                 },
             ],
@@ -237,6 +243,17 @@ def operations_hub():
         'modules/operations/hub.html',
         active_company=active_company,
         modules=modules,
+    )
+
+
+@main_bp.route('/operations/audit')
+@login_required
+def operations_audit_panel():
+    """Painel unificado de auditoria operacional MCP/Sapiens/revisões humanas."""
+    active_company = _resolve_active_company()
+    return render_template(
+        'modules/operations/audit.html',
+        active_company=active_company,
     )
 
 @main_bp.route('/api/dashboard/stats')
