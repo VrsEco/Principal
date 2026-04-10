@@ -85,6 +85,17 @@ from .usage_dashboard import (
     UsageDashboardSurface,
     build_usage_dashboard_manifest,
 )
+from .release_checklist import (
+    APP32_RELEASE_CHECKLIST_MANIFEST,
+    ReleaseCheckStatus,
+    ReleaseChecklistEnvelope,
+    ReleaseChecklistItem,
+    ReleaseChecklistManifest,
+    ReleaseGate,
+    ReleaseRiskLevel,
+    ReleaseSmokeDefinition,
+    build_release_checklist_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -156,4 +167,13 @@ __all__ = [
     "UsageDashboardPanel",
     "UsageDashboardSurface",
     "build_usage_dashboard_manifest",
+    "APP32_RELEASE_CHECKLIST_MANIFEST",
+    "ReleaseCheckStatus",
+    "ReleaseChecklistEnvelope",
+    "ReleaseChecklistItem",
+    "ReleaseChecklistManifest",
+    "ReleaseGate",
+    "ReleaseRiskLevel",
+    "ReleaseSmokeDefinition",
+    "build_release_checklist_manifest",
 ]
