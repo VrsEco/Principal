@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple
 
+from src.intelligence.mcp_contracts import APP32_PROFILE_CONTRACTS_MANIFEST
 
 ROLE_ALIASES = {
     "admin": "administrador",
@@ -18,26 +19,62 @@ ROLE_ALIASES = {
 }
 
 ADMIN_ROLES = {"administrador", "administrador_tecnico"}
-READ_ACTIONS = {"read", "list", "search", "analyze", "export"}
-WRITE_ACTIONS = {"create", "update", "delete", "approve"}
+READ_ACTIONS = {"discover", "read", "list", "search", "analyze", "audit", "export"}
+WRITE_ACTIONS = {"create", "update", "delete", "approve", "execute"}
+ACTION_ALIASES = {
+    "list": "read",
+    "search": "discover",
+    "export": "read",
+    "approve": "update",
+}
 DOMAIN_MATRIX = {
     "routine": {
         "colaborador": READ_ACTIONS | {"create", "update"},
-        "cliente": {"read", "list", "search", "analyze"},
+        "cliente": {"discover", "read", "list", "search"},
+        "administrador": READ_ACTIONS | WRITE_ACTIONS,
+        "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
+    },
+    "projects": {
+        "colaborador": READ_ACTIONS | {"create", "update"},
+        "cliente": {"discover", "read", "list", "search"},
+        "administrador": READ_ACTIONS | WRITE_ACTIONS,
+        "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
+    },
+    "meetings": {
+        "colaborador": READ_ACTIONS | {"create", "update"},
+        "cliente": {"discover", "read", "list", "search"},
         "administrador": READ_ACTIONS | WRITE_ACTIONS,
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
     },
     "strategy": {
-        "colaborador": READ_ACTIONS,
-        "cliente": {"read", "list", "search", "analyze"},
+        "colaborador": {"discover", "read", "list", "search", "analyze"},
+        "cliente": {"discover", "read", "list", "search", "analyze"},
         "administrador": READ_ACTIONS | WRITE_ACTIONS,
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
     },
     "finance": {
-        "colaborador": {"read", "list", "search", "analyze"},
-        "cliente": {"read", "list", "search"},
+        "colaborador": set(),
+        "cliente": set(),
         "administrador": READ_ACTIONS | WRITE_ACTIONS,
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
+    },
+    "governance": {
+        "colaborador": set(),
+        "cliente": set(),
+        "administrador": READ_ACTIONS | WRITE_ACTIONS,
+        "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
+    },
+    "analytics": {
+        "colaborador": set(),
+        "cliente": set(),
+        "administrador": {"discover", "read", "list", "search", "analyze"},
+        "administrador_tecnico": {"discover", "read", "list", "search", "analyze"},
+    },
+    "operations": {
+        "colaborador": set(),
+        "cliente": set(),
+        "administrador": set(),
+        "administrador_tecnico": {"discover", "read", "list", "search", "create", "update", "audit"},
     },
     "admin": {
         "colaborador": set(),
@@ -46,10 +83,10 @@ DOMAIN_MATRIX = {
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
     },
     "diagnostics": {
-        "colaborador": {"read", "list"},
+        "colaborador": set(),
         "cliente": set(),
-        "administrador": READ_ACTIONS | WRITE_ACTIONS,
-        "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
+        "administrador": READ_ACTIONS,
+        "administrador_tecnico": READ_ACTIONS | {"create", "update"},
     },
 }
 
@@ -103,6 +140,13 @@ def _normalize_permissions(permissions: Any) -> frozenset[str]:
     return frozenset(normalized)
 
 
+def _normalize_action(action: Any) -> Optional[str]:
+    normalized = _normalize_text(action).lower()
+    if not normalized:
+        return None
+    return ACTION_ALIASES.get(normalized, normalized)
+
+
 @dataclass(frozen=True)
 class PrincipalContext:
     user_id: Optional[int] = None
@@ -115,7 +159,7 @@ class PrincipalContext:
     metadata: Optional[Mapping[str, Any]] = None
 
     def is_admin(self) -> bool:
-        return self.role in ADMIN_ROLES
+        return _normalize_role(self.role) in ADMIN_ROLES
 
 
 @dataclass(frozen=True)
@@ -295,9 +339,21 @@ def validate_permission(
     required_permissions: Optional[Sequence[str]] = None,
 ) -> PermissionDecision:
     normalized_domain = _normalize_text(domain).lower() or None
-    normalized_action = _normalize_text(action).lower() or None
+    normalized_action = _normalize_action(action)
+    normalized_role = _normalize_role(principal.role)
     required = {perm.lower() for perm in (required_permissions or ()) if _normalize_text(perm)}
     checks = ["normalize_domain", "normalize_action"]
+    profile_contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile(normalized_role)
+
+    if profile_contract is not None and normalized_domain in set(profile_contract.forbidden_domains):
+        return PermissionDecision(
+            allowed=False,
+            principal=principal,
+            domain=normalized_domain,
+            action=normalized_action,
+            reason=f"domínio '{normalized_domain}' não permitido para o perfil '{profile_contract.profile}'",
+            checks=(*checks, "domain_forbidden_by_profile_contract"),
+        )
 
     if required and required.issubset(principal.permissions):
         return PermissionDecision(
@@ -323,15 +379,6 @@ def validate_permission(
 
     domain_rules = DOMAIN_MATRIX.get(normalized_domain)
     if domain_rules is None:
-        if principal.is_admin():
-            return PermissionDecision(
-                allowed=True,
-                principal=principal,
-                domain=normalized_domain,
-                action=normalized_action,
-                reason="ok",
-                checks=(*checks, "unknown_domain_allowed_for_admin"),
-            )
         return PermissionDecision(
             allowed=False,
             principal=principal,
@@ -341,10 +388,10 @@ def validate_permission(
             checks=(*checks, "unknown_domain_rejected"),
         )
 
-    allowed_actions = domain_rules.get(principal.role, set())
+    allowed_actions = domain_rules.get(normalized_role, set())
     if normalized_action is None:
         allowed = bool(allowed_actions) or principal.is_admin()
-        reason = "ok" if allowed else f"role '{principal.role}' sem acesso ao domínio '{normalized_domain}'"
+        reason = "ok" if allowed else f"role '{normalized_role}' sem acesso ao domínio '{normalized_domain}'"
         return PermissionDecision(
             allowed=allowed,
             principal=principal,
@@ -379,7 +426,7 @@ def validate_permission(
         principal=principal,
         domain=normalized_domain,
         action=normalized_action,
-        reason=f"role '{principal.role}' sem permissão para '{normalized_action}' em '{normalized_domain}'",
+        reason=f"role '{normalized_role}' sem permissão para '{normalized_action}' em '{normalized_domain}'",
         checks=(*checks, "action_not_allowed"),
     )
 
@@ -450,4 +497,3 @@ def require_permission(
     if raise_on_deny and not decision.allowed:
         raise PermissionDeniedError(decision)
     return decision
-
