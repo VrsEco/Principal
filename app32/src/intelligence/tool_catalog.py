@@ -17,6 +17,7 @@ from typing import Callable, Iterable, List, Sequence
 from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_crud_contract_tools import register_crud_contract_tools
+from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
 from src.core.mcp_work_journey_tools import register_work_journey_tools
 from src.intelligence.tooling.registry import ToolCapabilityRegistry
 from src.intelligence.tooling.capabilities import ToolScope
@@ -185,6 +186,7 @@ catalog = ToolCatalog(
     langchain_tools=tuple(legacy_langchain_tools),
     mcp_registrars=(
         register_crud_contract_tools,
+        register_surface_playbook_tools,
         register_work_journey_tools,
     ),
     capability_registry=_legacy_tool_registry,
