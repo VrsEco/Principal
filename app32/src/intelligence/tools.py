@@ -56,6 +56,7 @@ from src.intelligence.tools_domains import meeting_ops as meeting_ops_domain
 from src.intelligence.tools_domains import process_ops as process_ops_domain
 from src.intelligence.tools_domains import work_ops as work_ops_domain
 from src.intelligence.tools_domains import strategy_ops as strategy_ops_domain
+from src.intelligence.tools_domains import analytics_ops as analytics_ops_domain
 from src.intelligence.tools_domains import system_ops as system_ops_domain
 from src.intelligence.tools_domains import company_ops as company_ops_domain
 from src.intelligence.tools_domains import user_ops as user_ops_domain
@@ -347,6 +348,15 @@ def get_plan_diagnostics(plan_id: int):
 
 
 @tool
+def get_plan_diagnostics_read_model(company_id: int, plan_id: int):
+    """
+    Retorna o read model whitelisted do diagnóstico de um plano estratégico.
+    Use para analytics MCP sem SQL livre.
+    """
+    return analytics_ops_domain.get_plan_diagnostics_read_model(company_id=company_id, plan_id=plan_id)
+
+
+@tool
 def update_plan_section(plan_id: int, section_key: str, status: str = 'completed'):
     """
     Atualiza o status de uma seção do plano (ex: 'participants', 'finance', 'projects').
@@ -561,6 +571,38 @@ def list_team_workload():
     return task_ops_domain.list_team_workload()
 
 
+@tool
+def get_team_workload_read_model(company_id: int, department: str = None, employee_id: int = None):
+    """
+    Retorna o read model whitelisted de workload por empresa/departamento/colaborador.
+    """
+    return analytics_ops_domain.get_team_workload_read_model(
+        company_id=company_id,
+        department=department,
+        employee_id=employee_id,
+    )
+
+
+@tool
+def get_projects_execution_risk_read_model(
+    company_id: int,
+    project_id: int = None,
+    employee_id: int = None,
+    status: str = None,
+    limit: int = 50,
+):
+    """
+    Retorna o read model whitelisted de risco de execução de projetos.
+    """
+    return analytics_ops_domain.get_projects_execution_risk_read_model(
+        company_id=company_id,
+        project_id=project_id,
+        employee_id=employee_id,
+        status=status,
+        limit=limit,
+    )
+
+
 # =============================================================================
 # LISTA DE FERRAMENTAS EXPORTADAS (FASE 1 + FASE 2)
 # =============================================================================
@@ -630,6 +672,7 @@ tools = [
     # Fase 1 — Planning
     list_plans,
     get_plan_diagnostics,
+    get_plan_diagnostics_read_model,
     update_plan_section,
     # Fase 1 — My Work & Users
     get_my_work,
@@ -650,5 +693,7 @@ tools = [
     log_work_hours,
     request_deadline_extension,
     list_team_workload,
+    get_team_workload_read_model,
+    get_projects_execution_risk_read_model,
 ]
 logger = logging.getLogger(__name__)

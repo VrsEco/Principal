@@ -34,6 +34,9 @@ def test_catalog_manifest_filters_by_scope():
     assert "query_database" not in admin_tool_names
     assert "query_database" in analytics_tool_names
     assert "query_database" not in user_tool_names
+    assert "get_plan_diagnostics_read_model" in analytics_tool_names
+    assert "get_team_workload_read_model" in analytics_tool_names
+    assert "get_projects_execution_risk_read_model" in analytics_tool_names
     assert "list_my_companies" in admin_tool_names
     assert "list_my_companies" in user_tool_names
 
