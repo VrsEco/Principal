@@ -213,6 +213,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("analytics", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Analytics é estritamente read-only."]),
                     _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Estratégia analítica usa read models whitelisted."]),
                     _rule("finance", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="medium", requires_explicit_company_id=True, human_gate_for_actions=["analyze"], notes=["Análises financeiras sensíveis podem exigir gate pela política vigente."]),
+                    _rule("workload", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Workload é leitura analítica com company_id explícito e sem replanejamento implícito."]),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(
@@ -225,6 +226,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("analytics", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Sem mutações em analytics."]),
                     _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Diagnóstico estratégico técnico continua read-only."]),
                     _rule("finance", ["discover", "read", "analyze"], denied=["create", "update", "delete"], max_risk_without_human_gate="medium", requires_explicit_company_id=True, human_gate_for_actions=["analyze"], notes=["Acesso financeiro técnico continua auditado e sem SQL livre."]),
+                    _rule("workload", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Workload técnico permanece read-only mesmo na analytics."]),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(
@@ -238,6 +240,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("routine", ["discover", "read", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Ajustes operacionais via ops são restritos e auditáveis."]),
                     _rule("projects", ["discover", "read", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Projetos em ops são intervenções pontuais, não gestão ampla."]),
                     _rule("meetings", ["discover", "read", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Reuniões em ops ocorrem apenas em contexto de incidente ou suporte."]),
+                    _rule("workload", ["discover", "read", "analyze"], denied=["create", "update", "delete"], notes=["Ops pode diagnosticar capacidade do time sem alterar alocação pela própria surface."]),
                 ],
             ),
         ]

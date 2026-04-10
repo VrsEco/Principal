@@ -204,3 +204,22 @@ def test_simulated_agent_blocks_identity_admin_on_user_surface():
 
     assert result.allowed is False
     assert "domínio identity_admin não permitido na surface user" in result.reason or "domínio administrativo" in result.reason
+
+
+def test_simulated_agent_allows_workload_on_ops_for_admin_tecnico():
+    result = evaluate_simulated_agent_scenario(
+        SimulatedAgentScenario(
+            scenario_id="ops-workload-admin-tecnico",
+            user_id=19,
+            role="admin_tecnico",
+            surface="ops",
+            tool_name="list_team_workload",
+            domain="workload",
+            action="analyze",
+            requested_company_id=21,
+            accessible_company_ids=(21,),
+        )
+    )
+
+    assert result.allowed is True
+    assert result.reason == "ok"

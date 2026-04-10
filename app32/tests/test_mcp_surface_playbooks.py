@@ -66,6 +66,8 @@ def test_surface_contract_rules_and_crud_coherence():
     assert any("nunca mutar dados" in item.lower() for item in analytics_playbook.forbidden_actions)
     assert any("gate humano" in rule.rule.lower() or "confirmação humana" in rule.rule.lower() for rule in admin_playbook.interaction_rules)
     assert "finance" not in ops_playbook.allowed_domains
+    assert "workload" in analytics_playbook.allowed_domains
+    assert "workload" in ops_playbook.allowed_domains
 
     crud_domains = {contract.domain for contract in APP32_CRUD_CONTRACTS_MANIFEST.domains}
     allowed_non_crud_domains = {"governance", "analytics", "operations", "workload", "identity_self_service", "identity_admin"}
