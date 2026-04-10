@@ -11,6 +11,7 @@ from models.employee import Employee
 from models.process import ProcessInstance
 from models.project import Project, ProjectTask
 from services.plan_service import PlanService
+from src.intelligence.mcp_contracts import build_analytics_ai_envelope
 
 
 def _ensure_accessible_company(company_id: int, accessible_company_ids: list[int] | tuple[int, ...] | set[int] | None = None) -> int:
@@ -59,19 +60,29 @@ class AnalyticsReadModelService:
         delayed_sections = [section for section in sections if section.get("status") == "pending"]
         in_progress_sections = [section for section in sections if section.get("status") == "in_progress"]
 
-        return {
-            "company_id": company_id,
-            "plan_id": plan_id,
-            "plan": data.get("plan") or {},
-            "stats": data.get("stats") or {},
-            "sections": sections,
-            "insights": {
+        envelope = build_analytics_ai_envelope(
+            analysis_id="strategy_plan_diagnostics",
+            read_model="strategy.plan_diagnostics",
+            company_id=company_id,
+            filters={"company_id": company_id, "plan_id": plan_id},
+            summary=data.get("stats") or {},
+            rows=sections,
+            dimensions={"plan": data.get("plan") or {}},
+            signals={
                 "pending_sections": len(delayed_sections),
                 "in_progress_sections": len(in_progress_sections),
                 "completed_sections": (data.get("stats") or {}).get("completed_sections", 0),
                 "completion_ratio": (data.get("stats") or {}).get("progress_pct", 0),
             },
-        }
+            capability_names=["get_plan_diagnostics", "get_plan_diagnostics_read_model"],
+            limitations=["Não inclui dados fora do plano e da empresa informados."],
+        )
+        payload = envelope.model_dump(mode="json")
+        payload["plan_id"] = plan_id
+        payload["plan"] = data.get("plan") or {}
+        payload["sections"] = sections
+        payload["insights"] = payload["signals"]
+        return payload
 
     @staticmethod
     def get_team_workload_read_model(
@@ -147,18 +158,31 @@ class AnalyticsReadModelService:
             total_capacity += weekly_hours
             total_estimated += estimated_hours
 
-        return {
-            "company_id": company_id,
-            "department": department,
-            "employee_id": employee_id,
-            "summary": {
+        envelope = build_analytics_ai_envelope(
+            analysis_id="workload_team_capacity",
+            read_model="workload.team_capacity",
+            company_id=company_id,
+            filters={"company_id": company_id, "department": department, "employee_id": employee_id},
+            summary={
                 "members": len(members),
                 "total_capacity_hours": round(total_capacity, 2),
                 "total_estimated_hours": round(total_estimated, 2),
                 "avg_utilization_pct": round((total_estimated / total_capacity) * 100, 2) if total_capacity else 0.0,
             },
-            "members": members,
-        }
+            rows=members,
+            dimensions={"department": department, "employee_id": employee_id},
+            signals={
+                "overloaded_members": len([member for member in members if member["risk_label"] == "overloaded"]),
+                "attention_members": len([member for member in members if member["risk_label"] == "attention"]),
+            },
+            capability_names=["list_team_workload", "get_team_workload_read_model"],
+            limitations=["Estimativas dependem de horas estimadas preenchidas; quando ausentes, usa heurística conservadora."],
+        )
+        payload = envelope.model_dump(mode="json")
+        payload["department"] = department
+        payload["employee_id"] = employee_id
+        payload["members"] = members
+        return payload
 
     @staticmethod
     def get_projects_execution_risk_read_model(
@@ -251,17 +275,44 @@ class AnalyticsReadModelService:
             .all()
         )
 
-        return {
-            "company_id": company_id,
-            "project_id": project_id,
-            "employee_id": employee_id,
-            "status": status,
-            "summary": {
+        envelope = build_analytics_ai_envelope(
+            analysis_id="projects_execution_risk",
+            read_model="projects.execution_risk",
+            company_id=company_id,
+            filters={
+                "company_id": company_id,
+                "project_id": project_id,
+                "employee_id": employee_id,
+                "status": status,
+                "limit": limit,
+            },
+            summary={
                 "risk_items": len(risk_items),
                 "overdue_items": overdue_count,
                 "projects_with_risk": len(project_summary_rows),
             },
-            "projects": [
+            rows=risk_items,
+            dimensions={
+                "projects": [
+                    {
+                        "project_id": row.project_id,
+                        "project_name": row.project_name,
+                        "open_tasks": int(row.open_tasks or 0),
+                        "overdue_tasks": int(row.overdue_tasks or 0),
+                    }
+                    for row in project_summary_rows
+                ],
+            },
+            signals={
+                "critical_items": len([item for item in risk_items if item["risk_label"] == "critical"]),
+                "high_items": len([item for item in risk_items if item["risk_label"] == "high"]),
+                "watch_items": len([item for item in risk_items if item["risk_label"] == "watch"]),
+            },
+            capability_names=["get_projects_execution_risk_read_model"],
+            limitations=["Primeira versão foca atividades de projeto abertas e não executa mutações."],
+        )
+        payload = envelope.model_dump(mode="json")
+        payload["projects"] = [
                 {
                     "project_id": row.project_id,
                     "project_name": row.project_name,
@@ -269,6 +320,6 @@ class AnalyticsReadModelService:
                     "overdue_tasks": int(row.overdue_tasks or 0),
                 }
                 for row in project_summary_rows
-            ],
-            "risk_items": risk_items,
-        }
+            ]
+        payload["risk_items"] = risk_items
+        return payload

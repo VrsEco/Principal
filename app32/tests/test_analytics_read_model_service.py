@@ -27,6 +27,10 @@ def test_plan_read_model_uses_plan_service(monkeypatch):
 
     assert result["company_id"] == 31
     assert result["plan_id"] == 8
+    assert result["version"] == "app32.analytics.envelope.v1"
+    assert result["analysis_id"] == "strategy_plan_diagnostics"
+    assert result["read_model"] == "strategy.plan_diagnostics"
+    assert result["grounding"]["row_count"] == 3
     assert result["insights"]["pending_sections"] == 1
     assert result["insights"]["in_progress_sections"] == 1
 
