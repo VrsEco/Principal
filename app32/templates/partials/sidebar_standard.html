@@ -27,16 +27,6 @@
         Meu Trabalho
     </a>
 
-    <a href="/operations" class="nav-link {{ 'active' if request.path == '/operations' }}">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 7h16"></path>
-            <path d="M7 12h10"></path>
-            <path d="M10 17h4"></path>
-            <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-        </svg>
-        Operações Inteligentes
-    </a>
-
 
     <span class="sidebar-section-title">Módulos</span>
 
@@ -278,7 +268,7 @@
     {% endif %}
 
     <!-- IA Sapiens (Unificado) -->
-    <div class="sidebar-group {{ 'open' if '/sapiens' in request.path or '/agents/cadastro' in request.path }}">
+    <div class="sidebar-group {{ 'open' if '/sapiens' in request.path or '/agents/cadastro' in request.path or '/operations' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
@@ -294,6 +284,9 @@
         <div class="sub-menu">
             <a href="/sapiens" class="sub-nav-link {{ 'active' if request.path == '/sapiens' }}">
                 Sapiens (Chat)
+            </a>
+            <a href="/operations" class="sub-nav-link {{ 'active' if request.path == '/operations' or '/operations/' in request.path }}">
+                Operações Inteligentes
             </a>
             <a href="/agents/cadastro" class="sub-nav-link {{ 'active' if request.path == '/agents/cadastro' }}">
                 Onboarding Assistido
