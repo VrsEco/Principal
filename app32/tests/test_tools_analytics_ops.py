@@ -9,13 +9,14 @@ def test_analytics_ops_plan_read_model_delegates_to_service(monkeypatch):
     monkeypatch.setattr(
         AnalyticsReadModelService,
         "get_plan_diagnostics_read_model",
-        staticmethod(lambda company_id, plan_id: {"company_id": company_id, "plan_id": plan_id, "summary": {"ok": True}}),
+        staticmethod(lambda company_id, plan_id, accessible_company_ids=None: {"company_id": company_id, "plan_id": plan_id, "accessible_company_ids": accessible_company_ids}),
     )
 
-    result = analytics_ops.get_plan_diagnostics_read_model(company_id=31, plan_id=9)
+    result = analytics_ops.get_plan_diagnostics_read_model(company_id=31, plan_id=9, accessible_company_ids=[31])
 
     assert result["company_id"] == 31
     assert result["plan_id"] == 9
+    assert result["accessible_company_ids"] == [31]
 
 
 def test_tools_analytics_wrappers_delegate_to_domain(monkeypatch):
