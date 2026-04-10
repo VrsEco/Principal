@@ -127,6 +127,20 @@ def test_validate_permission_supports_projects_meetings_and_canonical_actions():
     assert operations_audit.allowed is True
 
 
+def test_validate_permission_supports_workload_only_for_admin_profiles():
+    collaborator = PrincipalContext(user_id=6, company_id=12, role="colaborador")
+    admin = PrincipalContext(user_id=7, company_id=12, role="administrador")
+    admin_tecnico = PrincipalContext(user_id=8, company_id=12, role="admin_tecnico")
+
+    collaborator_workload = validate_permission(collaborator, domain="workload", action="read")
+    admin_workload = validate_permission(admin, domain="workload", action="analyze")
+    admin_tecnico_workload = validate_permission(admin_tecnico, domain="workload", action="audit")
+
+    assert collaborator_workload.allowed is False
+    assert admin_workload.allowed is True
+    assert admin_tecnico_workload.allowed is True
+
+
 def test_validate_permission_blocks_legacy_diagnostics_for_colaborador():
     collaborator = PrincipalContext(user_id=7, company_id=12, role="colaborador")
     admin_tecnico = PrincipalContext(user_id=8, company_id=12, role="admin_tecnico")

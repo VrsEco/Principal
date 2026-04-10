@@ -70,6 +70,12 @@ DOMAIN_MATRIX = {
         "administrador": {"discover", "read", "list", "search", "analyze"},
         "administrador_tecnico": {"discover", "read", "list", "search", "analyze"},
     },
+    "workload": {
+        "colaborador": set(),
+        "cliente": set(),
+        "administrador": {"discover", "read", "list", "search", "analyze"},
+        "administrador_tecnico": {"discover", "read", "list", "search", "analyze", "audit"},
+    },
     "identity_self_service": {
         "colaborador": {"discover", "read", "list", "search", "update"},
         "cliente": {"discover", "read", "list", "search", "update"},

@@ -59,6 +59,9 @@ def test_permission_matrix_boundaries_for_cliente_and_finance():
     finance_rule = next(rule for rule in finance_admin.domains if rule.domain == "finance")
     assert finance_rule.requires_explicit_company_id is True
     assert {"create", "update", "delete"} <= set(finance_rule.human_gate_for_actions)
+    workload_rule = next(rule for rule in admin_analytics.domains if rule.domain == "workload")
+    assert workload_rule.requires_explicit_company_id is True
+    assert set(workload_rule.allowed_actions) == {"discover", "read", "analyze"}
 
 
 def test_permission_matrix_ops_is_restricted_to_admin_tecnico():
@@ -67,6 +70,7 @@ def test_permission_matrix_ops_is_restricted_to_admin_tecnico():
     assert len(ops_matrices) == 1
     assert ops_matrices[0].profile == "admin_tecnico"
     assert any(rule.domain == "operations" for rule in ops_matrices[0].domains)
+    assert any(rule.domain == "workload" for rule in ops_matrices[0].domains)
 
 
 def test_permission_matrix_tool_returns_manifest_and_filters():

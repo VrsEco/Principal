@@ -57,16 +57,19 @@ def test_capability_scopes_match_expected_surfaces_by_profile():
     escalation_capability = catalog.get_tool_capability("escalate_technical_issue")
     plan_capability = catalog.get_tool_capability("get_plan_diagnostics")
     user_listing_capability = catalog.get_tool_capability("list_system_users")
+    workload_capability = catalog.get_tool_capability("get_team_workload_read_model")
 
     assert query_capability is not None
     assert escalation_capability is not None
     assert plan_capability is not None
     assert user_listing_capability is not None
+    assert workload_capability is not None
 
     assert query_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value)
     assert escalation_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_OPS.value)
     assert plan_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value)
     assert user_listing_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value)
+    assert workload_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value)
 
 
 def test_customer_profile_only_appears_in_read_or_operational_non_sensitive_contracts():

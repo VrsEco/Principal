@@ -160,3 +160,18 @@ def test_tool_policy_blocks_identity_admin_on_user_surface() -> None:
     assert decision.allowed is False
     assert "surface user não expõe domínio administrativo" in decision.reason
     assert "surface_user_blocks_admin_domain" in decision.checks
+
+
+def test_tool_policy_allows_workload_for_admin_on_analytics() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 7, "company_id": 7, "role": "administrador"},
+        ToolPolicyRequest(
+            tool_name="get_team_workload_read_model",
+            surface="analytics",
+            domain="workload",
+            action="analyze",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is True
