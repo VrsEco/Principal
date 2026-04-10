@@ -13,6 +13,8 @@ class DummyTool:
 
 def test_catalog_exposes_known_capability_metadata():
     capability = catalog.get_tool_capability("query_database")
+    self_service_capability = catalog.get_tool_capability("list_my_companies")
+    admin_identity_capability = catalog.get_tool_capability("list_system_users")
 
     assert capability is not None
     assert capability.domain == "analytics"
@@ -20,6 +22,10 @@ def test_catalog_exposes_known_capability_metadata():
     assert ToolScope.MCP_ANALYTICS.value in capability.scopes
     assert ToolScope.MCP_ADMIN.value not in capability.scopes
     assert capability.human_gate is True
+    assert self_service_capability is not None
+    assert self_service_capability.domain == "identity_self_service"
+    assert admin_identity_capability is not None
+    assert admin_identity_capability.domain == "identity_admin"
 
 
 def test_catalog_manifest_filters_by_scope():
@@ -39,6 +45,16 @@ def test_catalog_manifest_filters_by_scope():
     assert "get_projects_execution_risk_read_model" in analytics_tool_names
     assert "list_my_companies" in admin_tool_names
     assert "list_my_companies" in user_tool_names
+
+
+def test_catalog_manifest_supports_legacy_identity_domain_alias():
+    identity_manifest = catalog.get_capability_manifest(domain="identity", include_tools=True)
+    identity_tool_names = {tool["name"] for tool in identity_manifest["tools"]}
+
+    assert "list_my_companies" in identity_tool_names
+    assert "update_user_contacts" in identity_tool_names
+    assert "list_system_users" in identity_tool_names
+    assert "register_system_user" in identity_tool_names
 
 
 def test_registry_infers_capabilities_for_unknown_tools():

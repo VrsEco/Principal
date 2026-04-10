@@ -138,11 +138,16 @@ def test_validate_permission_blocks_legacy_diagnostics_for_colaborador():
     assert admin_read.allowed is True
 
 
-def test_validate_permission_blocks_unknown_domain_even_for_admin():
+def test_validate_permission_supports_identity_split_and_blocks_unknown_domain_even_for_admin():
+    collaborator = PrincipalContext(user_id=9, company_id=12, role="colaborador")
     admin = PrincipalContext(user_id=9, company_id=12, role="administrador")
 
-    decision = validate_permission(admin, domain="identity", action="read")
+    self_service = validate_permission(collaborator, domain="identity_self_service", action="update")
+    admin_identity = validate_permission(admin, domain="identity_admin", action="read")
+    decision = validate_permission(admin, domain="identity_legacy", action="read")
 
+    assert self_service.allowed is True
+    assert admin_identity.allowed is True
     assert decision.allowed is False
     assert "unknown_domain_rejected" in decision.checks
 

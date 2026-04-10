@@ -17,7 +17,8 @@ DomainPlaybookName = Literal[
     "finance",
     "analytics",
     "workload",
-    "identity",
+    "identity_self_service",
+    "identity_admin",
     "operations",
     "governance",
 ]
@@ -64,8 +65,8 @@ class DomainPlaybook(_StrictModel):
             raise ValueError("Playbook analytics deve permitir a surface analytics.")
         if self.domain == "operations" and self.allowed_profiles != ["admin_tecnico"]:
             raise ValueError("Playbook operations deve ficar restrito ao perfil admin_tecnico.")
-        if self.domain == "identity" and "user" in self.allowed_surfaces:
-            raise ValueError("Playbook identity não deve expor surface user.")
+        if self.domain == "identity_admin" and "user" in self.allowed_surfaces:
+            raise ValueError("Playbook identity_admin não deve expor surface user.")
         return self
 
 
@@ -268,15 +269,33 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 escalation_rules=["Escalar impacto produtivo para release/engenharia e registrar intervenção."],
             ),
             DomainPlaybook(
-                domain="identity",
-                aliases=["profiles", "users", "permissions"],
-                title="Playbook de Identidade e Acesso",
-                objective="Padronizar leitura de perfis, permissões e escopo de acesso de agentes externos.",
-                allowed_surfaces=["admin", "ops"],
+                domain="identity_self_service",
+                aliases=["identity", "my_profile", "my_companies", "my_contacts"],
+                title="Playbook de Identidade Self-Service",
+                objective="Padronizar leitura e atualização de dados próprios do usuário sem promover acesso administrativo.",
+                allowed_surfaces=["user", "admin"],
+                allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
+                canonical_tools=["list_user_app32_capabilities", "describe_app32_profile_contracts_tool"],
+                canonical_artifacts=["src.intelligence.mcp_contracts.profiles", "src.intelligence.security.tool_policy"],
+                discovery_sequence=["describe_app32_profile_contracts_tool", "list_user_app32_capabilities", "validar self-service do próprio usuário"],
+                prompt_policy=_prompt_policy(
+                    preamble="Você interpreta self-service de identidade do APP32 com foco em dados do próprio usuário, tenant obrigatório e menor privilégio.",
+                    output_contract="Responder com ação self-service, dados próprios envolvidos, escopo confirmado e limites administrativos aplicáveis.",
+                ),
+                analysis_rules=["Expor apenas dados do próprio usuário e de empresas já vinculadas ao principal."],
+                forbidden_shortcuts=["Não listar usuários do sistema por self-service.", "Não alterar perfil/permissão por surface user."],
+                escalation_rules=["Escalar para admin quando o pedido envolver gestão de acesso de terceiros ou mudança de perfil."],
+            ),
+            DomainPlaybook(
+                domain="identity_admin",
+                aliases=["identity_access", "profiles", "users", "permissions"],
+                title="Playbook de Identidade Administrativa",
+                objective="Padronizar leitura e mutação administrativa de perfis, permissões e acesso de usuários do sistema.",
+                allowed_surfaces=["admin"],
                 allowed_profiles=["administrador", "admin_tecnico"],
                 canonical_tools=["describe_app32_profile_contracts_tool", "list_admin_app32_capabilities"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.profiles", "src.intelligence.security.tool_policy"],
-                discovery_sequence=["describe_app32_profile_contracts_tool", "list_admin_app32_capabilities", "validar menor privilégio"],
+                discovery_sequence=["describe_app32_profile_contracts_tool", "list_admin_app32_capabilities", "validar menor privilégio administrativo"],
                 prompt_policy=_prompt_policy(
                     preamble="Você interpreta identidade e permissões do APP32 com menor privilégio, tenant obrigatório e auditoria.",
                     output_contract="Responder com perfil, surfaces permitidas, domínios autorizados, risco e bloqueios aplicáveis.",

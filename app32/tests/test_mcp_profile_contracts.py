@@ -31,6 +31,8 @@ def test_cliente_is_restricted_to_user_read_or_limited_actions():
     assert cliente.allowed_surfaces == ["user"]
     assert cliente.can_execute_financial_mutations is False
     assert "finance" in cliente.forbidden_domains
+    assert "identity_self_service" in cliente.allowed_domains
+    assert "identity_admin" in cliente.forbidden_domains
 
 
 def test_administrador_and_admin_tecnico_surface_matrix():
@@ -43,6 +45,9 @@ def test_administrador_and_admin_tecnico_surface_matrix():
     assert set(administrador.allowed_surfaces) == {"user", "admin", "analytics"}
     assert "ops" not in administrador.allowed_surfaces
     assert set(admin_tecnico.allowed_surfaces) == {"admin", "analytics", "ops"}
+    assert "identity_admin" in administrador.allowed_domains
+    assert "identity_self_service" in administrador.allowed_domains
+    assert "identity_admin" in admin_tecnico.allowed_domains
 
 
 def test_profile_contract_tool_returns_manifest_and_profile():

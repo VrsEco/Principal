@@ -62,8 +62,8 @@ class ToolCapability:
         if domain is None:
             return True
         if isinstance(domain, str):
-            return self.domain == domain
-        return self.domain in set(domain)
+            return self.domain in _expand_domain_aliases({domain})
+        return self.domain in _expand_domain_aliases(set(domain))
 
 
 _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
@@ -166,14 +166,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("personal", "read"),
     },
     "list_my_companies": {
-        "domain": "identity",
+        "domain": "identity_self_service",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.LOW,
         "permissions": ("identity.read",),
         "tags": ("read",),
     },
     "list_system_users": {
-        "domain": "identity",
+        "domain": "identity_admin",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("user.admin.read",),
@@ -182,7 +182,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("admin",),
     },
     "register_system_user": {
-        "domain": "identity",
+        "domain": "identity_admin",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.CRITICAL,
         "permissions": ("user.admin.create",),
@@ -191,7 +191,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("admin", "mutation"),
     },
     "update_user_contacts": {
-        "domain": "identity",
+        "domain": "identity_self_service",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("user.contacts.update",),
@@ -307,6 +307,10 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("query", "analytics"),
 )
 
+_DOMAIN_FILTER_ALIASES: dict[str, tuple[str, ...]] = {
+    "identity": ("identity_self_service", "identity_admin"),
+}
+
 
 def _normalize_scopes(scopes: Iterable[str | ToolScope]) -> tuple[str, ...]:
     normalized: list[str] = []
@@ -315,6 +319,13 @@ def _normalize_scopes(scopes: Iterable[str | ToolScope]) -> tuple[str, ...]:
         if value not in normalized:
             normalized.append(value)
     return tuple(normalized)
+
+
+def _expand_domain_aliases(domains: set[str]) -> set[str]:
+    expanded = {str(domain) for domain in domains}
+    for domain in tuple(expanded):
+        expanded.update(_DOMAIN_FILTER_ALIASES.get(domain, ()))
+    return expanded
 
 
 def infer_tool_capability(tool: Any) -> ToolCapability:
@@ -401,9 +412,9 @@ def _filter_capabilities(
     domain_values: set[str] | None = None
     if domain is not None:
         if isinstance(domain, str):
-            domain_values = {domain}
+            domain_values = _expand_domain_aliases({domain})
         else:
-            domain_values = set(domain)
+            domain_values = _expand_domain_aliases(set(domain))
 
     result: list[ToolCapability] = []
     for capability in capabilities:

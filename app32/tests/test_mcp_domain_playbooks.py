@@ -37,12 +37,14 @@ def test_domain_playbooks_cover_core_domains_and_aliases():
         "finance",
         "analytics",
         "workload",
-        "identity",
+        "identity_self_service",
+        "identity_admin",
         "operations",
         "governance",
     } <= domains
     assert APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("tasks").domain == "routine"
     assert APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("team_capacity").domain == "workload"
+    assert APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("identity").domain == "identity_self_service"
 
 
 def test_domain_playbooks_align_with_crud_and_analysis_catalogs():
@@ -60,6 +62,8 @@ def test_domain_playbook_security_boundaries():
     finance = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("finance")
     analytics = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("analytics")
     operations = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("operations")
+    identity_self_service = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("identity_self_service")
+    identity_admin = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("identity_admin")
 
     assert finance is not None
     assert set(finance.allowed_profiles) <= {"administrador", "admin_tecnico"}
@@ -69,6 +73,12 @@ def test_domain_playbook_security_boundaries():
     assert any("não gerar sql livre" in shortcut.lower() for shortcut in analytics.forbidden_shortcuts)
     assert operations is not None
     assert operations.allowed_profiles == ["admin_tecnico"]
+    assert identity_self_service is not None
+    assert "user" in identity_self_service.allowed_surfaces
+    assert "cliente" in identity_self_service.allowed_profiles
+    assert identity_admin is not None
+    assert "user" not in identity_admin.allowed_surfaces
+    assert set(identity_admin.allowed_profiles) == {"administrador", "admin_tecnico"}
 
 
 def test_describe_domain_playbooks_tool_returns_manifest_and_domain_payloads():

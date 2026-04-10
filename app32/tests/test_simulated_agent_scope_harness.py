@@ -166,3 +166,41 @@ def test_simulated_agent_summary_contains_policy_and_runtime_metadata():
     assert summary["policy"]["tool_name"] == "get_plan_diagnostics_read_model"
     assert summary["runtime_security"]["tenant_allowed"] is True
     assert summary["resolved_company_id"] == 21
+
+
+def test_simulated_agent_allows_identity_self_service_on_user_surface():
+    result = evaluate_simulated_agent_scenario(
+        SimulatedAgentScenario(
+            scenario_id="user-identity-self-service",
+            user_id=17,
+            role="cliente",
+            surface="user",
+            tool_name="list_my_companies",
+            domain="identity_self_service",
+            action="read",
+            requested_company_id=21,
+            accessible_company_ids=(21,),
+        )
+    )
+
+    assert result.allowed is True
+    assert result.reason == "ok"
+
+
+def test_simulated_agent_blocks_identity_admin_on_user_surface():
+    result = evaluate_simulated_agent_scenario(
+        SimulatedAgentScenario(
+            scenario_id="user-identity-admin-block",
+            user_id=18,
+            role="administrador",
+            surface="user",
+            tool_name="list_system_users",
+            domain="identity_admin",
+            action="read",
+            requested_company_id=21,
+            accessible_company_ids=(21,),
+        )
+    )
+
+    assert result.allowed is False
+    assert "domínio identity_admin não permitido na surface user" in result.reason or "domínio administrativo" in result.reason

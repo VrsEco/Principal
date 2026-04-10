@@ -72,7 +72,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 title="Playbook MCP User",
                 objective="Executar fluxos operacionais do usuário final com escopo tenant-safe e menor privilégio.",
                 actor_roles=["colaborador", "cliente", "administrador"],
-                allowed_domains=["routine", "projects", "meetings", "strategy"],
+                allowed_domains=["routine", "projects", "meetings", "strategy", "identity_self_service"],
                 default_scope="active_company",
                 discovery_tools=["list_user_app32_capabilities", "describe_app32_crud_contracts_tool"],
                 startup_checklist=[
@@ -110,7 +110,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 title="Playbook MCP Admin",
                 objective="Executar operações administrativas explícitas com governança, auditoria e gates humanos.",
                 actor_roles=["administrador", "admin_tecnico"],
-                allowed_domains=["routine", "projects", "meetings", "finance", "strategy", "governance"],
+                allowed_domains=["routine", "projects", "meetings", "finance", "strategy", "governance", "identity_self_service", "identity_admin"],
                 default_scope="explicit_company_id",
                 discovery_tools=["list_admin_app32_capabilities", "describe_app32_crud_contracts_tool"],
                 startup_checklist=[
