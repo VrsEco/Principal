@@ -74,6 +74,17 @@ from .domain_playbooks import (
     DomainPromptPolicy,
     build_domain_playbooks_manifest,
 )
+from .usage_dashboard import (
+    APP32_USAGE_DASHBOARD_MANIFEST,
+    UsageDashboardDataSource,
+    UsageDashboardEnvelope,
+    UsageDashboardManifest,
+    UsageDashboardMetric,
+    UsageDashboardMetricKind,
+    UsageDashboardPanel,
+    UsageDashboardSurface,
+    build_usage_dashboard_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -136,4 +147,13 @@ __all__ = [
     "DomainPlaybooksManifest",
     "DomainPromptPolicy",
     "build_domain_playbooks_manifest",
+    "APP32_USAGE_DASHBOARD_MANIFEST",
+    "UsageDashboardDataSource",
+    "UsageDashboardEnvelope",
+    "UsageDashboardManifest",
+    "UsageDashboardMetric",
+    "UsageDashboardMetricKind",
+    "UsageDashboardPanel",
+    "UsageDashboardSurface",
+    "build_usage_dashboard_manifest",
 ]

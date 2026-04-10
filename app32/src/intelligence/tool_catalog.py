@@ -21,6 +21,7 @@ from src.core.mcp_crud_contract_tools import register_crud_contract_tools
 from src.core.mcp_domain_playbook_tools import register_domain_playbook_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
+from src.core.mcp_usage_dashboard_tools import register_usage_dashboard_tools
 from src.core.mcp_work_journey_tools import register_work_journey_tools
 from src.intelligence.tooling.registry import ToolCapabilityRegistry
 from src.intelligence.tooling.capabilities import ToolScope
@@ -193,6 +194,7 @@ catalog = ToolCatalog(
         register_domain_playbook_tools,
         register_profile_contract_tools,
         register_surface_playbook_tools,
+        register_usage_dashboard_tools,
         register_work_journey_tools,
     ),
     capability_registry=_legacy_tool_registry,
