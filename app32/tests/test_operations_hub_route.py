@@ -65,4 +65,23 @@ def test_operations_hub_renders_unified_menu(monkeypatch):
         for group in module["groups"]
         for item in group["items"]
     )
-    assert any(module["label"] == "Administração técnica" for module in modules)
+    assert any(module["label"] == "Plataforma IA" for module in modules)
+
+    assert any(
+        item["href"] == "/financial/classification-dashboard"
+        for module in modules
+        for group in module["groups"]
+        for item in group["items"]
+    )
+    assert any(
+        item["href"] == "/financial/classification-rules"
+        for module in modules
+        for group in module["groups"]
+        for item in group["items"]
+    )
+    assert any(
+        item["href"] == "/financial/automation-rules"
+        for module in modules
+        for group in module["groups"]
+        for item in group["items"]
+    )
