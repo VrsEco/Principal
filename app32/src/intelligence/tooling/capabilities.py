@@ -143,6 +143,13 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "permissions": ("plan.diagnostics.read",),
         "tags": ("diagnostics",),
     },
+    "get_plan_diagnostics_read_model": {
+        "domain": "strategy",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("plan.diagnostics.read",),
+        "tags": ("read_model", "analytics", "whitelisted"),
+    },
     "update_plan_section": {
         "domain": "strategy",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
@@ -267,6 +274,20 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("workload.read",),
         "tags": ("analytics", "read"),
+    },
+    "get_team_workload_read_model": {
+        "domain": "workload",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("workload.read",),
+        "tags": ("analytics", "read_model", "whitelisted"),
+    },
+    "get_projects_execution_risk_read_model": {
+        "domain": "projects",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("projects.analytics.read",),
+        "tags": ("analytics", "read_model", "whitelisted"),
     },
 }
 

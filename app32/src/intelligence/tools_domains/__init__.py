@@ -2,6 +2,11 @@
 
 from .work_ops import get_my_work
 from .strategy_ops import get_plan_diagnostics, list_plans, update_plan_section
+from .analytics_ops import (
+    get_plan_diagnostics_read_model,
+    get_projects_execution_risk_read_model,
+    get_team_workload_read_model,
+)
 from .system_ops import consult_rules, escalate_technical_issue, query_database
 from .company_ops import list_my_companies, update_company_status
 from .user_ops import (
@@ -38,8 +43,11 @@ from .task_ops import (
 __all__ = [
     "get_my_work",
     "get_plan_diagnostics",
+    "get_plan_diagnostics_read_model",
     "list_plans",
     "update_plan_section",
+    "get_projects_execution_risk_read_model",
+    "get_team_workload_read_model",
     "consult_rules",
     "escalate_technical_issue",
     "query_database",

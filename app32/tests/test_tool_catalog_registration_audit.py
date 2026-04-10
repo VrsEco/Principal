@@ -25,8 +25,11 @@ def test_register_mcp_tools_exposes_discovery_and_keeps_callable_contract():
     catalog.register_mcp_tools(fake_mcp)
 
     assert "list_app32_capabilities" in fake_mcp.tools
+    assert "describe_app32_analysis_catalog_tool" in fake_mcp.tools
 
     manifest = fake_mcp.tools["list_app32_capabilities"](scope="mcp_user", include_tools=False)
+    analytics_manifest = fake_mcp.tools["list_app32_capabilities"](scope="mcp_analytics", include_tools=True)
 
     assert manifest["domains"]
     assert isinstance(manifest["domains"], dict)
+    assert "get_plan_diagnostics_read_model" in {tool["name"] for tool in analytics_manifest["tools"]}
