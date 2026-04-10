@@ -10,7 +10,7 @@ from .base import MCPSuccessEnvelope, _StrictModel
 CRUDDomain = Literal["routine", "projects", "meetings", "finance", "strategy"]
 CRUDAction = Literal["create", "read", "update", "delete", "list", "analyze", "execute"]
 CRUDRole = Literal["colaborador", "cliente", "administrador", "admin_tecnico"]
-CRUDSurface = Literal["mcp_user", "mcp_admin"]
+CRUDSurface = Literal["mcp_user", "mcp_admin", "mcp_analytics", "mcp_ops"]
 CRUDImplementationStatus = Literal["contract", "implemented", "partial"]
 CRUDRisk = Literal["low", "medium", "high", "critical"]
 
@@ -140,6 +140,7 @@ def _domain_contract(
 ) -> CRUDDomainContract:
     admin_roles: list[CRUDRole] = ["administrador", "admin_tecnico"]
     mutating_roles = admin_roles if finance_sensitive else mutation_roles
+    reading_roles = admin_roles if finance_sensitive else read_roles
     create_update_risk: CRUDRisk = "high" if finance_sensitive else "medium"
     delete_risk: CRUDRisk = "critical" if finance_sensitive else "high"
     surface: CRUDSurface = "mcp_admin" if finance_sensitive else "mcp_user"
@@ -150,7 +151,7 @@ def _domain_contract(
             action="list",
             entity=entity,
             description=f"Lista registros de {title} filtrados pelo company_id acessível ao ator.",
-            roles=read_roles,
+            roles=reading_roles,
             permission=f"{domain}.read",
             surface=surface,
             implementation_status="partial",
@@ -160,7 +161,7 @@ def _domain_contract(
             action="read",
             entity=entity,
             description=f"Lê um registro de {title} sem cruzar tenants.",
-            roles=read_roles,
+            roles=reading_roles,
             permission=f"{domain}.read",
             surface=surface,
             implementation_status="partial",
@@ -205,10 +206,10 @@ def _domain_contract(
             action="analyze",
             entity=entity,
             description=f"Cruza dados de {title} para análise read-only com filtros tenant-safe.",
-            roles=admin_roles if finance_sensitive else read_roles,
+            roles=admin_roles if finance_sensitive else reading_roles,
             permission=f"{domain}.analyze",
             risk="medium" if finance_sensitive else "low",
-            surface=surface,
+            surface="mcp_analytics" if finance_sensitive else surface,
         ),
     ]
     return CRUDDomainContract(

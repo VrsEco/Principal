@@ -3,7 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence
 
-from .tenant_rbac import ADMIN_ROLES, PrincipalContext, prepare_enforcement, resolve_identity_context
+from src.intelligence.mcp_contracts import APP32_PROFILE_CONTRACTS_MANIFEST
+from .tenant_rbac import (
+    ADMIN_ROLES,
+    PrincipalContext,
+    PermissionDecision,
+    TenantScopeDecision,
+    resolve_identity_context,
+    validate_company_id,
+    validate_permission,
+)
 
 SURFACE_ALIASES = {
     "mcp_user": "user",
@@ -108,51 +117,92 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
     action = (request.action or "").strip().lower() or None
     domain = (request.domain or "").strip().lower() or None
     checks: list[str] = ["normalize_surface", "normalize_risk", "resolve_principal"]
+    profile_contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile(principal.role)
+
+    if profile_contract is None:
+        return _deny(request, principal, surface, risk, None, "perfil MCP não suportado", (*checks, "profile_contract_missing"))
+
+    checks.append("resolve_profile_contract")
 
     if not request.tool_name.strip():
         return _deny(request, principal, surface, risk, None, "tool_name ausente", (*checks, "missing_tool_name"))
 
-    enforcement = prepare_enforcement(
+    tenant_decision: TenantScopeDecision = validate_company_id(
         principal,
-        requested_company_id=request.requested_company_id,
+        request.requested_company_id,
+        accessible_company_ids=request.accessible_company_ids,
+    )
+    checks.append("tenant_scope")
+
+    if not tenant_decision.allowed:
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, tenant_decision.reason, (*checks, *tenant_decision.checks))
+
+    if surface not in profile_contract.allowed_surfaces:
+        return _deny(
+            request,
+            principal,
+            surface,
+            risk,
+            tenant_decision.resolved_company_id,
+            f"surface {surface} não permitida para o perfil {profile_contract.profile}",
+            (*checks, "surface_not_allowed_for_profile"),
+        )
+
+    if domain and domain in set(profile_contract.forbidden_domains):
+        return _deny(
+            request,
+            principal,
+            surface,
+            risk,
+            tenant_decision.resolved_company_id,
+            f"domínio {domain} não permitido para o perfil {profile_contract.profile}",
+            (*checks, "domain_forbidden_for_profile"),
+        )
+
+    permission_decision: PermissionDecision = validate_permission(
+        principal,
         domain=domain,
         action=action,
-        accessible_company_ids=request.accessible_company_ids,
         required_permissions=request.required_permissions,
     )
-    checks.extend(("tenant_scope", "domain_rbac"))
+    checks.append("domain_rbac")
 
-    if not enforcement.tenant.allowed:
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, enforcement.tenant.reason, (*checks, *enforcement.tenant.checks))
-
-    if not enforcement.permission.allowed:
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, enforcement.permission.reason, (*checks, *enforcement.permission.checks))
+    if not permission_decision.allowed:
+        return _deny(
+            request,
+            principal,
+            surface,
+            risk,
+            tenant_decision.resolved_company_id,
+            permission_decision.reason,
+            (*checks, *permission_decision.checks),
+        )
 
     if surface == "admin" and not principal.is_admin():
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "surface admin exige perfil administrador", (*checks, "surface_admin_requires_admin"))
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "surface admin exige perfil administrador", (*checks, "surface_admin_requires_admin"))
 
-    if surface == "ops" and principal.role != "administrador_tecnico":
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "surface ops exige administrador técnico", (*checks, "surface_ops_requires_technical_admin"))
+    if surface == "ops" and principal.role not in {"administrador_tecnico", "admin_tecnico"}:
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "surface ops exige administrador técnico", (*checks, "surface_ops_requires_technical_admin"))
 
     if surface == "user" and domain in ADMIN_DOMAINS:
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "surface user não expõe domínio administrativo", (*checks, "surface_user_blocks_admin_domain"))
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "surface user não expõe domínio administrativo", (*checks, "surface_user_blocks_admin_domain"))
 
     if surface == "analytics" and action in MUTATING_ACTIONS:
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "surface analytics é somente leitura/análise", (*checks, "surface_analytics_read_only"))
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "surface analytics é somente leitura/análise", (*checks, "surface_analytics_read_only"))
 
     if surface == "analytics" and risk in {"high", "critical"} and not principal.is_admin():
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "analytics de alto risco exige administrador", (*checks, "surface_analytics_high_risk_admin_only"))
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "analytics de alto risco exige administrador", (*checks, "surface_analytics_high_risk_admin_only"))
 
     if risk == "critical" and not principal.is_admin():
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "risco crítico exige administrador", (*checks, "critical_risk_requires_admin"))
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "risco crítico exige administrador", (*checks, "critical_risk_requires_admin"))
 
     if action in DESTRUCTIVE_ACTIONS and not request.confirmed_mutation:
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "mutação destrutiva exige confirmação explícita", (*checks, "destructive_action_requires_confirmation"))
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "mutação destrutiva exige confirmação explícita", (*checks, "destructive_action_requires_confirmation"))
 
     if risk in {"high", "critical"} and action in MUTATING_ACTIONS and not request.confirmed_mutation:
-        return _deny(request, principal, surface, risk, enforcement.tenant.resolved_company_id, "mutação de alto risco exige confirmação explícita", (*checks, "high_risk_mutation_requires_confirmation"))
+        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, "mutação de alto risco exige confirmação explícita", (*checks, "high_risk_mutation_requires_confirmation"))
 
-    return _allow(request, principal, surface, risk, enforcement.tenant.resolved_company_id, (*checks, "policy_allowed"))
+    return _allow(request, principal, surface, risk, tenant_decision.resolved_company_id, (*checks, "policy_allowed"))
 
 
 def require_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyDecision:
