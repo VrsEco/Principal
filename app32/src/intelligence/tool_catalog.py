@@ -18,6 +18,7 @@ from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_exec
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
 from src.core.mcp_crud_contract_tools import register_crud_contract_tools
+from src.core.mcp_domain_playbook_tools import register_domain_playbook_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
 from src.core.mcp_work_journey_tools import register_work_journey_tools
@@ -189,6 +190,7 @@ catalog = ToolCatalog(
     mcp_registrars=(
         register_analysis_catalog_tools,
         register_crud_contract_tools,
+        register_domain_playbook_tools,
         register_profile_contract_tools,
         register_surface_playbook_tools,
         register_work_journey_tools,
