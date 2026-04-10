@@ -96,6 +96,17 @@ from .release_checklist import (
     ReleaseSmokeDefinition,
     build_release_checklist_manifest,
 )
+from .tool_freeze import (
+    APP32_TOOL_FREEZE_MANIFEST,
+    ToolFreezeAction,
+    ToolFreezeEnvelope,
+    ToolFreezeManifest,
+    ToolFreezeProcedureStep,
+    ToolFreezeSeverity,
+    ToolFreezeTrigger,
+    ToolFreezeTriggerRule,
+    build_tool_freeze_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -176,4 +187,13 @@ __all__ = [
     "ReleaseRiskLevel",
     "ReleaseSmokeDefinition",
     "build_release_checklist_manifest",
+    "APP32_TOOL_FREEZE_MANIFEST",
+    "ToolFreezeAction",
+    "ToolFreezeEnvelope",
+    "ToolFreezeManifest",
+    "ToolFreezeProcedureStep",
+    "ToolFreezeSeverity",
+    "ToolFreezeTrigger",
+    "ToolFreezeTriggerRule",
+    "build_tool_freeze_manifest",
 ]
