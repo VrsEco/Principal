@@ -85,7 +85,7 @@ def test_tool_policy_requires_confirmation_for_destructive_admin_action() -> Non
 
 
 def test_require_tool_policy_raises_permission_error_with_reason() -> None:
-    with pytest.raises(PermissionError, match="surface ops exige administrador técnico"):
+    with pytest.raises(PermissionError, match="surface ops não permitida para o perfil administrador"):
         require_tool_policy(
             {"user_id": 2, "company_id": 7, "role": "administrador"},
             ToolPolicyRequest(
@@ -96,3 +96,35 @@ def test_require_tool_policy_raises_permission_error_with_reason() -> None:
                 requested_company_id=7,
             ),
         )
+
+
+def test_tool_policy_blocks_cliente_from_admin_surface() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 3, "company_id": 7, "role": "cliente"},
+        ToolPolicyRequest(
+            tool_name="list_system_users",
+            surface="admin",
+            domain="admin",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is False
+    assert "surface admin não permitida" in decision.reason
+    assert "surface_not_allowed_for_profile" in decision.checks
+
+
+def test_tool_policy_allows_admin_tecnico_on_ops_surface() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 4, "company_id": 7, "role": "admin_tecnico"},
+        ToolPolicyRequest(
+            tool_name="escalate_technical_issue",
+            surface="ops",
+            domain="diagnostics",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is True

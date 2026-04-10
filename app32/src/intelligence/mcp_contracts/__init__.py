@@ -38,6 +38,26 @@ from .playbooks import (
     SurfacePlaybooksManifest,
     build_surface_playbooks_manifest,
 )
+from .profiles import (
+    APP32_PROFILE_CONTRACTS_MANIFEST,
+    MCPAllowedSurface,
+    MCPMutationRisk,
+    MCPProfileContract,
+    MCPProfileContractsEnvelope,
+    MCPProfileContractsManifest,
+    MCPProfileName,
+    build_app32_profile_contracts_manifest,
+)
+from .analysis_catalog import (
+    APP32_ALLOWED_ANALYSIS_CATALOG,
+    AllowedAnalysisCatalogEnvelope,
+    AllowedAnalysisCatalogManifest,
+    AllowedAnalysisContract,
+    AnalysisDomain,
+    AnalysisOutputMode,
+    AnalysisStatus,
+    build_allowed_analysis_catalog_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -72,4 +92,20 @@ __all__ = [
     "SurfacePlaybooksEnvelope",
     "SurfacePlaybooksManifest",
     "build_surface_playbooks_manifest",
+    "APP32_PROFILE_CONTRACTS_MANIFEST",
+    "MCPAllowedSurface",
+    "MCPMutationRisk",
+    "MCPProfileContract",
+    "MCPProfileContractsEnvelope",
+    "MCPProfileContractsManifest",
+    "MCPProfileName",
+    "build_app32_profile_contracts_manifest",
+    "APP32_ALLOWED_ANALYSIS_CATALOG",
+    "AllowedAnalysisCatalogEnvelope",
+    "AllowedAnalysisCatalogManifest",
+    "AllowedAnalysisContract",
+    "AnalysisDomain",
+    "AnalysisOutputMode",
+    "AnalysisStatus",
+    "build_allowed_analysis_catalog_manifest",
 ]

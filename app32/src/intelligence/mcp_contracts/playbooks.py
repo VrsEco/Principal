@@ -185,7 +185,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 surface="ops",
                 title="Playbook MCP Ops",
                 objective="Executar ações de suporte operacional, incidentes e orquestração de intervenção com mínimo escopo.",
-                actor_roles=["administrador", "admin_tecnico"],
+                actor_roles=["admin_tecnico"],
                 allowed_domains=["operations", "routine", "projects", "meetings"],
                 default_scope="active_company",
                 discovery_tools=["list_ops_app32_capabilities", "describe_app32_crud_contracts_tool"],
