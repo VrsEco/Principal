@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wizardSearch = document.getElementById('aiMcpWizardSearch');
     const wizardReset = document.getElementById('aiMcpWizardReset');
     const assistantActions = Array.from(root.querySelectorAll('[data-assistant-action]'));
+    const collapsibleCards = Array.from(root.querySelectorAll('.ai-mcp-panels .ai-mcp-card'));
 
     const helpTopics = {
         overview: {
@@ -172,6 +173,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 node.classList.toggle('ai-mcp-hidden', !nodeMatch);
             });
         });
+
+        collapsibleCards.forEach((card) => {
+            const toggle = card.querySelector(':scope > header .ai-mcp-card__toggle');
+            if (!toggle) return;
+
+            if (needle) {
+                const match = normalize(card.dataset.searchable || card.textContent || '').includes(needle);
+                card.classList.toggle('ai-mcp-card--collapsed', !match);
+                toggle.setAttribute('aria-expanded', String(match));
+                return;
+            }
+
+            const siblingCards = Array.from(card.parentElement?.children || []).filter((node) => node.classList?.contains('ai-mcp-card'));
+            const shouldStartCollapsed = siblingCards.indexOf(card) > 0;
+            card.classList.toggle('ai-mcp-card--collapsed', shouldStartCollapsed);
+            toggle.setAttribute('aria-expanded', String(!shouldStartCollapsed));
+        });
     }
 
     function updateHelp(topicKey) {
@@ -186,6 +204,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 helpSteps.appendChild(li);
             });
         }
+    }
+
+    function setupCollapsibleCards() {
+        collapsibleCards.forEach((card) => {
+            const header = card.querySelector(':scope > header');
+            if (!header || card.classList.contains('ai-mcp-card--wizard')) return;
+
+            const bodyNodes = Array.from(card.children).filter((node) => node !== header);
+            if (!bodyNodes.length) return;
+
+            card.classList.add('ai-mcp-card--collapsible');
+
+            let body = card.querySelector(':scope > .ai-mcp-card__body');
+            if (!body) {
+                body = document.createElement('div');
+                body.className = 'ai-mcp-card__body';
+                bodyNodes.forEach((node) => body.appendChild(node));
+                card.appendChild(body);
+            }
+
+            let toggle = header.querySelector('.ai-mcp-card__toggle');
+            if (!toggle) {
+                toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = 'ai-mcp-card__toggle';
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.setAttribute('title', 'Expandir ou recolher seção');
+                toggle.innerHTML = '<span class="ai-mcp-card__toggle-icon">⌄</span>';
+                header.appendChild(toggle);
+            }
+
+            const siblingCards = Array.from(card.parentElement?.children || []).filter((node) => node.classList?.contains('ai-mcp-card'));
+            const shouldStartCollapsed = siblingCards.indexOf(card) > 0;
+            card.classList.toggle('ai-mcp-card--collapsed', shouldStartCollapsed);
+            toggle.setAttribute('aria-expanded', String(!shouldStartCollapsed));
+
+            toggle.addEventListener('click', () => {
+                const collapsed = card.classList.toggle('ai-mcp-card--collapsed');
+                toggle.setAttribute('aria-expanded', String(!collapsed));
+            });
+        });
     }
 
     tabs.forEach((tab) => {
@@ -245,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    setupCollapsibleCards();
     wizardReset?.addEventListener('click', resetWizard);
     activateTab(root.dataset.defaultTab || tabs[0]?.dataset.consoleTab || 'overview');
     resetWizard();

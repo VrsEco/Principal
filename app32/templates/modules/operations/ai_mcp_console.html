@@ -153,64 +153,40 @@
         </div>
     </section>
 
-    <section class="ai-mcp-wizard" data-searchable="wizard assistente ajuda primeiro acesso onboarding configuração uso">
-        <article class="ai-mcp-card ai-mcp-card--wizard">
-            <header class="ai-mcp-wizard__header">
-                <div>
-                    <span class="ai-mcp-eyebrow">Comece por aqui</span>
-                    <h2>Wizard de uso e configuração</h2>
-                    <p>Se você está perdido, responda 3 passos rápidos e o console te leva para a área certa.</p>
-                </div>
-                <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small" id="aiMcpWizardReset">Reiniciar</button>
-            </header>
+    <section class="ai-mcp-shell">
+        <aside class="ai-mcp-sidebar">
+            <article class="ai-mcp-card ai-mcp-card--sidebar">
+                <header class="ai-mcp-sidebar__header">
+                    <span class="ai-mcp-eyebrow">Mapa do console</span>
+                    <h2>Navegação APP32</h2>
+                    <p>Escolha a camada de trabalho antes de descer para os detalhes operacionais.</p>
+                </header>
 
-            <div class="ai-mcp-wizard__progress">
-                {% for step in console.wizard_steps %}
-                <button type="button" class="ai-mcp-step-pill {{ 'is-active' if loop.first }}" data-wizard-step-pill="{{ step.step }}">
-                    {{ step.step }}. {{ step.title }}
-                </button>
-                {% endfor %}
-            </div>
+                <nav class="ai-mcp-tabs ai-mcp-tabs--stacked" aria-label="Seções do console IA/MCP">
+                    {% set sections = [
+                        ('overview', 'Visão Geral'),
+                        ('profiles', 'Perfis & Permissões'),
+                        ('surfaces', 'Surfaces & Domínios'),
+                        ('catalog', 'Catálogo'),
+                        ('onboarding', 'Onboarding & Cadastros'),
+                        ('release', 'Release & Freeze'),
+                        ('dashboard', 'Dashboard & Readiness'),
+                        ('governance', 'Governança')
+                    ] %}
+                    {% for key, label in sections %}
+                    <button type="button" class="ai-mcp-tab {{ 'is-active' if loop.first }}" data-console-tab="{{ key }}">
+                        {{ label }}
+                    </button>
+                    {% endfor %}
+                </nav>
+            </article>
 
-            <div class="ai-mcp-wizard__steps">
-                {% for step in console.wizard_steps %}
-                <section class="ai-mcp-wizard-step {{ 'is-active' if loop.first }}" data-wizard-step="{{ step.step }}">
-                    <div class="ai-mcp-wizard-step__copy">
-                        <strong>{{ step.title }}</strong>
-                        <p>{{ step.question }}</p>
-                    </div>
-                    <div class="ai-mcp-wizard-options">
-                        {% for option in step.options %}
-                        <button
-                            type="button"
-                            class="ai-mcp-choice-card"
-                            data-wizard-choice
-                            data-target-tab="{{ option.target_tab }}"
-                            data-target-selector="{{ option.target_selector }}"
-                            data-choice-label="{{ option.label }}"
-                        >
-                            <strong>{{ option.label }}</strong>
-                            <span>{{ option.description }}</span>
-                        </button>
-                        {% endfor %}
-                    </div>
-                </section>
-                {% endfor %}
-            </div>
-
-            <div class="ai-mcp-wizard__result" id="aiMcpWizardResult" hidden>
-                <strong id="aiMcpWizardResultTitle">Próximo passo sugerido</strong>
-                <p id="aiMcpWizardText"></p>
-                <div class="ai-mcp-wizard__result-actions">
-                    <button type="button" class="ai-mcp-btn ai-mcp-btn--primary" id="aiMcpWizardGo">Ir para a área recomendada</button>
-                    <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary" id="aiMcpWizardSearch">Aplicar busca sugerida</button>
-                </div>
-            </div>
-        </article>
-
-        <div class="ai-mcp-wizard-side">
-            <article class="ai-mcp-card">
-                <header><h2>Assistente rápido</h2><p>Clique em uma intenção pronta se já souber o que quer resolver.</p></header>
+            <article class="ai-mcp-card ai-mcp-card--sidebar">
+                <header class="ai-mcp-sidebar__header">
+                    <span class="ai-mcp-eyebrow">Assistente rápido</span>
+                    <h2>Atalhos de intenção</h2>
+                    <p>Acesse diretamente a área mais aderente ao objetivo do operador.</p>
+                </header>
                 <div class="ai-mcp-assistant-list">
                     {% for item in console.quick_assistant %}
                     <button
@@ -227,8 +203,12 @@
                 </div>
             </article>
 
-            <article class="ai-mcp-card">
-                <header><h2>Ajuda contextual</h2><p>Instruções curtas para não depender de manual longo.</p></header>
+            <article class="ai-mcp-card ai-mcp-card--sidebar">
+                <header class="ai-mcp-sidebar__header">
+                    <span class="ai-mcp-eyebrow">Ajuda operacional</span>
+                    <h2>Leitura guiada</h2>
+                    <p>Resumo curto para orientar a próxima ação sem depender de documentação longa.</p>
+                </header>
                 <div class="ai-mcp-help-list">
                     {% for item in console.contextual_help %}
                     <div class="ai-mcp-help-item">
@@ -238,28 +218,66 @@
                     {% endfor %}
                 </div>
             </article>
-        </div>
-    </section>
+        </aside>
 
-    <nav class="ai-mcp-tabs" aria-label="Seções do console IA/MCP">
-        {% set sections = [
-            ('overview', 'Visão Geral'),
-            ('profiles', 'Perfis & Permissões'),
-            ('surfaces', 'Surfaces & Domínios'),
-            ('catalog', 'Catálogo'),
-            ('onboarding', 'Onboarding & Cadastros'),
-            ('release', 'Release & Freeze'),
-            ('dashboard', 'Dashboard & Readiness'),
-            ('governance', 'Governança')
-        ] %}
-        {% for key, label in sections %}
-        <button type="button" class="ai-mcp-tab {{ 'is-active' if loop.first }}" data-console-tab="{{ key }}">
-            {{ label }}
-        </button>
-        {% endfor %}
-    </nav>
+        <div class="ai-mcp-content">
+            <section class="ai-mcp-wizard" data-searchable="wizard assistente ajuda primeiro acesso onboarding configuração uso">
+                <article class="ai-mcp-card ai-mcp-card--wizard">
+                    <header class="ai-mcp-wizard__header">
+                        <div>
+                            <span class="ai-mcp-eyebrow">Comece por aqui</span>
+                            <h2>Wizard de uso e configuração</h2>
+                            <p>Se você está perdido, responda 3 passos rápidos e o console te leva para a área certa.</p>
+                        </div>
+                        <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small" id="aiMcpWizardReset">Reiniciar</button>
+                    </header>
 
-    <div class="ai-mcp-panels">
+                    <div class="ai-mcp-wizard__progress">
+                        {% for step in console.wizard_steps %}
+                        <button type="button" class="ai-mcp-step-pill {{ 'is-active' if loop.first }}" data-wizard-step-pill="{{ step.step }}">
+                            {{ step.step }}. {{ step.title }}
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    <div class="ai-mcp-wizard__steps">
+                        {% for step in console.wizard_steps %}
+                        <section class="ai-mcp-wizard-step {{ 'is-active' if loop.first }}" data-wizard-step="{{ step.step }}">
+                            <div class="ai-mcp-wizard-step__copy">
+                                <strong>{{ step.title }}</strong>
+                                <p>{{ step.question }}</p>
+                            </div>
+                            <div class="ai-mcp-wizard-options">
+                                {% for option in step.options %}
+                                <button
+                                    type="button"
+                                    class="ai-mcp-choice-card"
+                                    data-wizard-choice
+                                    data-target-tab="{{ option.target_tab }}"
+                                    data-target-selector="{{ option.target_selector }}"
+                                    data-choice-label="{{ option.label }}"
+                                >
+                                    <strong>{{ option.label }}</strong>
+                                    <span>{{ option.description }}</span>
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </section>
+                        {% endfor %}
+                    </div>
+
+                    <div class="ai-mcp-wizard__result" id="aiMcpWizardResult" hidden>
+                        <strong id="aiMcpWizardResultTitle">Próximo passo sugerido</strong>
+                        <p id="aiMcpWizardText"></p>
+                        <div class="ai-mcp-wizard__result-actions">
+                            <button type="button" class="ai-mcp-btn ai-mcp-btn--primary" id="aiMcpWizardGo">Ir para a área recomendada</button>
+                            <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary" id="aiMcpWizardSearch">Aplicar busca sugerida</button>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <div class="ai-mcp-panels">
         <section class="ai-mcp-panel is-active" data-console-panel="overview" data-searchable="visão geral resumo quick links links operacionais readiness">
             <div class="ai-mcp-grid ai-mcp-grid--summary">
                 {% for label, value in [
@@ -564,7 +582,9 @@
                 </article>
             </div>
         </section>
-    </div>
+            </div>
+        </div>
+    </section>
 </div>
 {% endblock %}
 
