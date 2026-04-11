@@ -348,8 +348,27 @@
             </svg>
         </button>
         <div class="sub-menu">
-            {% if has_permission('companies', 'view') %}
-            <a href="/companies" class="sub-nav-link {{ 'active' if '/companies' in request.path }}">Empresas</a>
+            {% if has_permission('companies', 'view') or has_permission('companies', 'create') or has_permission('companies', 'edit') %}
+            <div class="sidebar-subgroup {{ 'open' if '/companies' in request.path }}">
+                <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                    Empresas
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    {% if has_permission('companies', 'view') %}
+                    <a href="/companies" class="sub-nav-link {{ 'active' if request.path == '/companies' }}">Lista de empresas</a>
+                    {% endif %}
+                    {% if has_permission('companies', 'create') %}
+                    <a href="/companies/new" class="sub-nav-link {{ 'active' if request.path == '/companies/new' }}">Nova empresa / Onboarding</a>
+                    {% endif %}
+                    {% if has_permission('companies', 'edit') %}
+                    {% set active_company_id = session.get('active_company_id') %}
+                    <a href="{{ '/companies/%s/edit' % active_company_id if active_company_id else '/companies' }}" class="sub-nav-link {{ 'active' if request.path.endswith('/edit') and '/companies/' in request.path }}">Configurações da unidade</a>
+                    {% endif %}
+                </div>
+            </div>
             {% endif %}
 
             {% if is_platform_admin() %}
