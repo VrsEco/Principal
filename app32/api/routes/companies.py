@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from models import db, Company, Employee, User, Role, CompanyPerformanceSettings
 from services.user_employee_service import UserEmployeeService
+from services.company_onboarding_service import CompanyOnboardingService
 from utils.permissions import can_access_company, is_platform_admin, permission_required
 from flask_login import login_required, current_user
 from utils.logo_processor import resize_and_save_logo, get_logo_url
@@ -19,14 +20,17 @@ def companies_list():
 @permission_required('companies', 'create')
 def company_new():
     """New company form"""
-    return render_template('modules/companies/company_form_v2.html')
+    tab = request.args.get('tab', 'dados')
+    onboarding = CompanyOnboardingService.build_view_model(None, tab)
+    return render_template('modules/companies/company_form_v2.html', active_tab=tab, onboarding=onboarding)
 
 @companies_bp.route('/companies/<int:company_id>/edit')
 @permission_required('companies', 'edit')
 def company_edit(company_id):
     """Edit company form with tab support"""
     tab = request.args.get('tab', 'dados')
-    return render_template('modules/companies/company_form_v2.html', company_id=company_id, active_tab=tab)
+    onboarding = CompanyOnboardingService.build_view_model(company_id, tab)
+    return render_template('modules/companies/company_form_v2.html', company_id=company_id, active_tab=tab, onboarding=onboarding)
 
 # Complex nested components logic goes to routes.
 # Core CRUD functionality should be exclusively in api/resources/company.py

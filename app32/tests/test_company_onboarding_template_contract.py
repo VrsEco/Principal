@@ -1,0 +1,135 @@
+import html as html_module
+import os
+import sys
+from pathlib import Path
+
+from flask import Flask, render_template_string, url_for as flask_url_for
+from werkzeug.routing import BuildError
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
+def _build_app():
+    app = Flask(
+        __name__,
+        template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates')),
+        static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static')),
+    )
+
+    def _safe_url_for(endpoint, **values):
+        try:
+            return flask_url_for(endpoint, **values)
+        except BuildError:
+            return f'/{endpoint.replace(".", "/")}'
+
+    app.jinja_env.globals['url_for'] = _safe_url_for
+    app.jinja_env.globals['has_permission'] = lambda *args, **kwargs: True
+    app.jinja_env.globals['is_platform_admin'] = lambda *args, **kwargs: True
+    app.jinja_env.globals['current_user'] = type('User', (), {'is_authenticated': True, 'name': 'Teste'})()
+    return app
+
+
+def _fake_onboarding(mode='create'):
+    return {
+        'mode': mode,
+        'active_tab': 'dados',
+        'header': {
+            'title': 'Crie uma nova empresa' if mode == 'create' else 'Ajuste a empresa existente',
+            'subtitle': 'Wizard guiado para criar ou alterar empresas sem perder o contexto de rotina, estratégia, finanças, Sapiens e IA/MCP.',
+            'mode_badge': 'Criação guiada' if mode == 'create' else 'Alteração assistida',
+        },
+        'steps': [
+            {'id': 'dados', 'number': 1, 'title': 'Quem é a empresa?', 'description': 'Nome, código, propósito e identidade.', 'status': 'available'},
+            {'id': 'economico', 'number': 2, 'title': 'Contexto', 'description': 'CNPJ, segmento, porte e cidade.', 'status': 'after_create' if mode == 'create' else 'available'},
+            {'id': 'config', 'number': 7, 'title': 'IA/MCP', 'description': 'Logo, ativação e preparo da unidade.', 'status': 'after_create' if mode == 'create' else 'available'},
+        ],
+        'domain_tracks': [
+            {'title': 'Rotina', 'summary': 'Time, cargos, acessos e operação do dia a dia.', 'create_tab': 'cargos', 'update_tab': 'colaboradores'},
+            {'title': 'Estratégico', 'summary': 'Missão, visão e leitura executiva.', 'create_tab': 'dados', 'update_tab': 'economico'},
+            {'title': 'Financeiro', 'summary': 'Contexto econômico e preparo para análises.', 'create_tab': 'economico', 'update_tab': 'economico'},
+            {'title': 'Sapiens / IA / MCP', 'summary': 'Console, integrações e readiness.', 'create_tab': 'config', 'update_tab': 'config'},
+        ],
+        'context_panel': {
+            'title': 'Quem é a empresa?',
+            'body': 'Comece pela identidade antes de seguir para as demais etapas.',
+            'items': ['Preencha razão social, código e propósito.', 'Salve antes de abrir IA/MCP.'],
+        },
+        'checklist': ['Salvar identidade da empresa.', 'Configurar IA/MCP e validar readiness básica.'],
+        'quick_links': [
+            {'title': 'Console Operacional IA/MCP', 'description': 'Governança e readiness.', 'href': '/configs/ai/mcp'},
+            {'title': 'Sapiens', 'description': 'Runtime conversacional.', 'href': '/sapiens'},
+        ],
+    }
+
+
+def test_company_onboarding_template_renders_guided_wizard_and_new_spectrum():
+    app = _build_app()
+    app.secret_key = 'test'
+
+    with app.test_request_context('/companies/new'):
+        rendered_html = render_template_string(
+            '{% extends "modules/companies/company_form_v2.html" %}{% block sidebar_left %}{% endblock %}',
+            company_id=None,
+            active_tab='dados',
+            onboarding=_fake_onboarding('create'),
+        )
+
+    html = html_module.unescape(rendered_html)
+
+    for expected in [
+        'Onboarding guiado de empresas',
+        'Crie uma nova empresa',
+        'Criação guiada',
+        'Quem é a empresa?',
+        'Contexto',
+        'IA/MCP',
+        'Criar empresa e continuar',
+        'Começar pelo básico',
+        'Ir para IA/MCP',
+        'Checklist do modo atual',
+        'Espectro coberto',
+        'Rotina',
+        'Estratégico',
+        'Financeiro',
+        'Sapiens / IA / MCP',
+        'Console Operacional IA/MCP',
+        'Sapiens',
+        'Vincular Novo',
+        'Salvar Configurações do Sistema',
+    ]:
+        assert expected in html
+
+    assert 'data-onboarding-step="dados"' in html
+    assert 'data-onboarding-step="config"' in html
+    assert 'data-status="after_create"' in html
+    assert 'data-wizard-goto="config"' in html
+    assert '/configs/ai/mcp' in html
+
+
+def test_company_onboarding_template_renders_edit_mode_language():
+    app = _build_app()
+    app.secret_key = 'test'
+
+    with app.test_request_context('/companies/31/edit?tab=config'):
+        rendered_html = render_template_string(
+            '{% extends "modules/companies/company_form_v2.html" %}{% block sidebar_left %}{% endblock %}',
+            company_id=31,
+            active_tab='config',
+            onboarding=_fake_onboarding('edit'),
+        )
+
+    html = html_module.unescape(rendered_html)
+
+    for expected in [
+        'Ajuste a empresa existente',
+        'Alteração assistida',
+        'Configurações da Unidade',
+        'IA/MCP e Sistema',
+        'Salvar alterações',
+        'Configurações de Instância',
+        'Console Operacional IA/MCP',
+    ]:
+        assert expected in html
+
+    assert 'data-company-id="31"' in html
+    assert 'data-onboarding-mode="edit"' in html

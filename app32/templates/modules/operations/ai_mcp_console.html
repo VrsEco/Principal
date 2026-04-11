@@ -63,15 +63,181 @@
         </div>
     </section>
 
+    <section class="ai-mcp-wizard" aria-labelledby="aiMcpWizardTitle">
+        <div class="ai-mcp-wizard__intro">
+            <span class="ai-mcp-section-label">Assistente inicial</span>
+            <h2 id="aiMcpWizardTitle">Comece pelo caminho certo, sem precisar decorar a arquitetura.</h2>
+            <p>
+                Se você está configurando ou apenas quer entender onde clicar, escolha uma trilha abaixo.
+                O console leva você para a área certa e explica o próximo passo em linguagem simples.
+            </p>
+            <div class="ai-mcp-wizard__flow" aria-label="Fluxo sugerido">
+                <span>1. Entenda</span>
+                <span>2. Configure</span>
+                <span>3. Teste</span>
+            </div>
+        </div>
+
+        <div class="ai-mcp-decision-grid" role="list" aria-label="Ações iniciais recomendadas">
+            {% set wizard_actions = [
+                {
+                    'tab': 'onboarding',
+                    'title': 'Quero configurar ou cadastrar',
+                    'description': 'Abra o fluxo guiado para perfis, integrações, empresa ativa e regras de acesso.',
+                    'cta': 'Ir para Onboarding'
+                },
+                {
+                    'tab': 'profiles',
+                    'title': 'Quero entender permissões',
+                    'description': 'Veja quem pode usar o quê, quais domínios existem e onde há gate humano.',
+                    'cta': 'Ver Perfis & Permissões'
+                },
+                {
+                    'tab': 'surfaces',
+                    'title': 'Quero localizar cada coisa',
+                    'description': 'Explore surfaces, domínios e tools para saber onde cada função mora.',
+                    'cta': 'Explorar Surfaces'
+                },
+                {
+                    'tab': 'release',
+                    'title': 'Quero deixar pronto para teste',
+                    'description': 'Confirme checklist, smokes, freeze e rollback antes de expor para uso real.',
+                    'cta': 'Validar Release'
+                },
+                {
+                    'tab': 'dashboard',
+                    'title': 'Quero ver uso e prontidão',
+                    'description': 'Acompanhe métricas, alertas e readiness para não operar no escuro.',
+                    'cta': 'Abrir Dashboard'
+                }
+            ] %}
+            {% for action in wizard_actions %}
+            <button
+                type="button"
+                class="ai-mcp-decision-card"
+                role="listitem"
+                data-console-go-tab="{{ action.tab }}"
+                data-searchable="{{ action.title }} {{ action.description }} {{ action.cta }}"
+            >
+                <span class="ai-mcp-decision-card__eyebrow">{{ action.cta }}</span>
+                <strong>{{ action.title }}</strong>
+                <p>{{ action.description }}</p>
+            </button>
+            {% endfor %}
+        </div>
+
+        <aside class="ai-mcp-context-help" id="aiMcpContextHelp" aria-live="polite">
+            <span class="ai-mcp-context-help__label">Ajuda contextual</span>
+            <h3 id="aiMcpContextHelpTitle">Visão geral</h3>
+            <p id="aiMcpContextHelpBody">
+                Este console foi desenhado para reduzir a complexidade. Comece pela visão geral,
+                depois escolha a trilha que faz mais sentido para seu objetivo atual.
+            </p>
+            <ul class="ai-mcp-context-help__steps" id="aiMcpContextHelpSteps">
+                <li>Use o wizard para pular direto para a seção certa.</li>
+                <li>Leia as cards de decisão para evitar navegação desnecessária.</li>
+                <li>Se estiver em dúvida, consulte a ajuda da seção ativa.</li>
+            </ul>
+        </aside>
+    </section>
+
     <section class="ai-mcp-toolbar">
         <div class="ai-mcp-search">
-            <input id="aiMcpConsoleSearch" type="search" placeholder="Buscar seção, tool, domínio, perfil ou ação..." autocomplete="off">
+            <input id="aiMcpConsoleSearch" type="search" placeholder="Buscar perfil, cadastro, domínio, tool ou ação..." autocomplete="off">
         </div>
         <div class="ai-mcp-toolbar__stats">
             <span class="ai-mcp-chip">{{ console.summary.profiles }} perfis</span>
             <span class="ai-mcp-chip">{{ console.summary.surfaces }} surfaces</span>
             <span class="ai-mcp-chip">{{ console.summary.domains }} domínios</span>
             <span class="ai-mcp-chip">{{ console.summary.release_smokes }} smokes</span>
+        </div>
+    </section>
+
+    <section class="ai-mcp-wizard" data-searchable="wizard assistente ajuda primeiro acesso onboarding configuração uso">
+        <article class="ai-mcp-card ai-mcp-card--wizard">
+            <header class="ai-mcp-wizard__header">
+                <div>
+                    <span class="ai-mcp-eyebrow">Comece por aqui</span>
+                    <h2>Wizard de uso e configuração</h2>
+                    <p>Se você está perdido, responda 3 passos rápidos e o console te leva para a área certa.</p>
+                </div>
+                <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small" id="aiMcpWizardReset">Reiniciar</button>
+            </header>
+
+            <div class="ai-mcp-wizard__progress">
+                {% for step in console.wizard_steps %}
+                <button type="button" class="ai-mcp-step-pill {{ 'is-active' if loop.first }}" data-wizard-step-pill="{{ step.step }}">
+                    {{ step.step }}. {{ step.title }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="ai-mcp-wizard__steps">
+                {% for step in console.wizard_steps %}
+                <section class="ai-mcp-wizard-step {{ 'is-active' if loop.first }}" data-wizard-step="{{ step.step }}">
+                    <div class="ai-mcp-wizard-step__copy">
+                        <strong>{{ step.title }}</strong>
+                        <p>{{ step.question }}</p>
+                    </div>
+                    <div class="ai-mcp-wizard-options">
+                        {% for option in step.options %}
+                        <button
+                            type="button"
+                            class="ai-mcp-choice-card"
+                            data-wizard-choice
+                            data-target-tab="{{ option.target_tab }}"
+                            data-target-selector="{{ option.target_selector }}"
+                            data-choice-label="{{ option.label }}"
+                        >
+                            <strong>{{ option.label }}</strong>
+                            <span>{{ option.description }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endfor %}
+            </div>
+
+            <div class="ai-mcp-wizard__result" id="aiMcpWizardResult" hidden>
+                <strong id="aiMcpWizardResultTitle">Próximo passo sugerido</strong>
+                <p id="aiMcpWizardText"></p>
+                <div class="ai-mcp-wizard__result-actions">
+                    <button type="button" class="ai-mcp-btn ai-mcp-btn--primary" id="aiMcpWizardGo">Ir para a área recomendada</button>
+                    <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary" id="aiMcpWizardSearch">Aplicar busca sugerida</button>
+                </div>
+            </div>
+        </article>
+
+        <div class="ai-mcp-wizard-side">
+            <article class="ai-mcp-card">
+                <header><h2>Assistente rápido</h2><p>Clique em uma intenção pronta se já souber o que quer resolver.</p></header>
+                <div class="ai-mcp-assistant-list">
+                    {% for item in console.quick_assistant %}
+                    <button
+                        type="button"
+                        class="ai-mcp-assistant-item"
+                        data-assistant-action
+                        data-target-tab="{{ item.target_tab }}"
+                        data-query="{{ item.query }}"
+                    >
+                        <strong>{{ item.label }}</strong>
+                        <span>{{ item.description }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="ai-mcp-card">
+                <header><h2>Ajuda contextual</h2><p>Instruções curtas para não depender de manual longo.</p></header>
+                <div class="ai-mcp-help-list">
+                    {% for item in console.contextual_help %}
+                    <div class="ai-mcp-help-item">
+                        <strong>{{ item.title }}</strong>
+                        <p>{{ item.body }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </article>
         </div>
     </section>
 
