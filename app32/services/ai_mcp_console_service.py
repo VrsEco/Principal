@@ -14,6 +14,7 @@ from src.intelligence.mcp_contracts.release_checklist import APP32_RELEASE_CHECK
 from src.intelligence.mcp_contracts.tool_freeze import APP32_TOOL_FREEZE_MANIFEST
 from src.intelligence.mcp_contracts.usage_dashboard import APP32_USAGE_DASHBOARD_MANIFEST
 from src.intelligence.tool_catalog import catalog
+from services.tool_first_catalog_service import ToolFirstCatalogService
 
 
 class AIMCPConsoleService:
@@ -418,6 +419,7 @@ class AIMCPConsoleService:
                 ],
                 "surfaces": surface_capabilities,
             },
+            "tool_first_catalog": ToolFirstCatalogService.build_catalog(active_company),
             "onboarding": onboarding,
             "release": release,
             "freeze": freeze,

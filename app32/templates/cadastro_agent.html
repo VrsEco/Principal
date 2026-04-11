@@ -273,6 +273,38 @@
   .validation-error.show {
     display: block;
   }
+
+  .agent-route-note {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--color-muted);
+  }
+
+  .agent-summary {
+    margin-top: 24px;
+    padding: 20px;
+    border-radius: 12px;
+    background: rgba(58, 241, 174, 0.05);
+    border: 1px solid rgba(58, 241, 174, 0.18);
+  }
+
+  .agent-summary h3 {
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+
+  .summary-group {
+    margin-bottom: 14px;
+  }
+
+  .summary-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .summary-group ul {
+    margin: 8px 0 0 18px;
+    color: var(--color-muted);
+  }
 </style>
 {% endblock %}
 
@@ -281,21 +313,24 @@
   <div class="agent-header">
     <h1>🤖 {{ agent_name|default('Agente de Cadastro') }}</h1>
     <p>{{ agent_description|default('Assistente inteligente para suporte à gestão') }}</p>
+    {% if canonical_company_route %}
+    <div class="agent-route-note">Fluxo canônico de criação: <strong>{{ canonical_company_route }}</strong></div>
+    {% endif %}
   </div>
 
 
   <!-- Seletor de Tipo -->
   <div id="tipo-selector" class="agent-card">
-    <h2 style="margin-bottom: 16px;">Escolha o tipo de cadastro:</h2>
+    <h2 style="margin-bottom: 16px;">Escolha como deseja iniciar o onboarding:</h2>
     <div class="tipo-selector">
-      <div class="tipo-option" onclick="selecionarTipo('real')">
+      <div class="tipo-option active" onclick="selecionarTipo('real', this)">
         <input type="radio" name="tipo" id="tipo-real" value="real" checked>
         <label for="tipo-real">
           <div style="font-size: 24px; margin-bottom: 8px;">🏢</div>
           <div>Empresa Real</div>
         </label>
       </div>
-      <div class="tipo-option" onclick="selecionarTipo('exemplo')">
+      <div class="tipo-option" onclick="selecionarTipo('exemplo', this)">
         <input type="radio" name="tipo" id="tipo-exemplo" value="exemplo">
         <label for="tipo-exemplo">
           <div style="font-size: 24px; margin-bottom: 8px;">📝</div>
@@ -336,6 +371,11 @@
       <h3>📋 Dados Coletados:</h3>
       <div id="dados-lista"></div>
     </div>
+
+    <div id="agent-summary" class="agent-summary" style="display: none;">
+      <h3>📡 Leitura do onboarding</h3>
+      <div id="summary-content"></div>
+    </div>
   </div>
 
   <!-- Loading -->
@@ -355,6 +395,7 @@
       <ul id="passos-lista" style="margin-top: 12px; padding-left: 24px;"></ul>
     </div>
     <div class="form-actions">
+      <button class="btn btn-primary" id="edit-company-btn" onclick="abrirEmpresaCriada()" style="display: none;">Abrir Configuração Completa</button>
       <button class="btn btn-primary" onclick="window.location.href='/companies'">Ver Empresas</button>
       <button class="btn btn-secondary" onclick="reiniciarCadastro()">Cadastrar Outra</button>
     </div>
@@ -368,11 +409,15 @@
   let tipoCadastro = 'real';
   let dadosColetados = {};
   let estadoAtual = null;
+  let sessionId = null;
+  let redirectUrl = null;
 
-  function selecionarTipo(tipo) {
+  function selecionarTipo(tipo, element) {
     tipoCadastro = tipo;
     document.querySelectorAll('.tipo-option').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    if (element) {
+      element.classList.add('active');
+    }
     document.getElementById(`tipo-${tipo}`).checked = true;
   }
 
@@ -396,6 +441,7 @@
       if (result.success) {
         estadoAtual = result.data;
         dadosColetados = estadoAtual.dados_coletados || {};
+        sessionId = estadoAtual.session_id || null;
 
         document.getElementById('tipo-selector').style.display = 'none';
         document.getElementById('interacao-area').style.display = 'block';
@@ -434,7 +480,7 @@
 
     if (estadoAtual.status === 'pronto_para_criar') {
       // Mostrar botão de finalizar
-      formGroup.innerHTML = '<p style="text-align: center; color: var(--color-muted);">Todos os dados obrigatórios foram coletados. Clique em "Finalizar" para criar a empresa.</p>';
+      formGroup.innerHTML = '<p style="text-align: center; color: var(--color-muted);">A base da empresa foi estruturada. Clique em "Finalizar cadastro" para criar a unidade, vincular seu acesso e liberar a continuidade no ecossistema.</p>';
       document.getElementById('submit-btn').textContent = 'Finalizar Cadastro';
       document.getElementById('submit-btn').onclick = finalizarCadastro;
     } else if (estadoAtual.proximo_campo) {
@@ -471,6 +517,7 @@
 
     // Atualizar dados coletados
     atualizarDadosColetados();
+    atualizarResumo();
   }
 
   function criarInputCampo(campo) {
@@ -547,7 +594,7 @@
 
   function obterLabelCampo(campo) {
     const labels = {
-      'name': 'Nome Fantasia *',
+      'name': 'Nome da Empresa *',
       'client_code': 'Código do Cliente *',
       'legal_name': 'Razão Social',
       'cnpj': 'CNPJ',
@@ -558,6 +605,7 @@
       'coverage_online': 'Presença Online',
       'experience_total': 'Experiência Total',
       'experience_segment': 'Experiência no Segmento',
+      'description': 'Descrição Estratégica',
       'mission': 'Missão',
       'vision': 'Visão',
       'values': 'Valores'
@@ -575,7 +623,8 @@
       'city': 'Ex: São Paulo',
       'state': 'Ex: SP',
       'experience_total': 'Ex: 12 anos',
-      'experience_segment': 'Ex: 8 anos'
+      'experience_segment': 'Ex: 8 anos',
+      'description': 'Resumo executivo da empresa'
     };
     return placeholders[campo] || '';
   }
@@ -629,7 +678,8 @@
           dados_coletados: dadosColetados,
           campo: campo,
           valor: valor,
-          tipo: tipoCadastro
+          tipo: tipoCadastro,
+          session_id: sessionId
         })
       });
 
@@ -638,6 +688,7 @@
       if (result.success) {
         estadoAtual = result.data;
         dadosColetados = estadoAtual.dados_coletados || {};
+        sessionId = estadoAtual.session_id || sessionId;
         atualizarInterface();
       } else {
         mostrarErro(result.error || 'Erro ao processar resposta');
@@ -750,7 +801,8 @@
         },
         body: JSON.stringify({
           dados: dadosColetados,
-          tipo: tipoCadastro
+          tipo: tipoCadastro,
+          session_id: sessionId
         })
       });
 
@@ -758,9 +810,11 @@
 
       if (result.success) {
         const data = result.data;
+        redirectUrl = data.redirect_url || null;
         document.getElementById('interacao-area').style.display = 'none';
         document.getElementById('sucesso-area').style.display = 'block';
         document.getElementById('sucesso-mensagem').textContent = data.mensagem;
+        document.getElementById('edit-company-btn').style.display = redirectUrl ? 'inline-flex' : 'none';
 
         const passosLista = document.getElementById('passos-lista');
         passosLista.innerHTML = '';
@@ -803,8 +857,38 @@
     });
   }
 
+  function atualizarResumo() {
+    const resumo = estadoAtual?.resumo;
+    const resumoEl = document.getElementById('agent-summary');
+    const contentEl = document.getElementById('summary-content');
+
+    if (!resumo) {
+      resumoEl.style.display = 'none';
+      return;
+    }
+
+    const obrigatorios = resumo.campos_faltantes?.obrigatorios || [];
+    const recomendadosAlta = resumo.campos_faltantes?.recomendados_alta || [];
+    const recomendadosMedia = resumo.campos_faltantes?.recomendados_media || [];
+
+    contentEl.innerHTML = `
+      <div class="summary-group"><strong>Completude atual:</strong> ${resumo.completude_percentual || 0}% (${resumo.status_completude || 'incompleto'})</div>
+      <div class="summary-group"><strong>Obrigatórios faltantes:</strong> ${obrigatorios.length ? obrigatorios.map(obterLabelCampo).join(', ') : 'nenhum'}</div>
+      <div class="summary-group"><strong>Alta prioridade:</strong> ${recomendadosAlta.length ? recomendadosAlta.map(obterLabelCampo).join(', ') : 'nenhum'}</div>
+      <div class="summary-group"><strong>Média prioridade:</strong> ${recomendadosMedia.length ? recomendadosMedia.map(obterLabelCampo).join(', ') : 'nenhum'}</div>
+    `;
+
+    resumoEl.style.display = 'block';
+  }
+
   function mostrarLoading(mostrar) {
     document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
+  }
+
+  function abrirEmpresaCriada() {
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+    }
   }
 
   function cancelarCadastro() {
@@ -817,11 +901,16 @@
     tipoCadastro = 'real';
     dadosColetados = {};
     estadoAtual = null;
+    sessionId = null;
+    redirectUrl = null;
 
     document.getElementById('tipo-selector').style.display = 'block';
     document.getElementById('interacao-area').style.display = 'none';
     document.getElementById('sucesso-area').style.display = 'none';
+    document.getElementById('edit-company-btn').style.display = 'none';
     document.getElementById('cadastro-form').reset();
+    document.querySelectorAll('.tipo-option').forEach(el => el.classList.remove('active'));
+    document.querySelector('.tipo-option')?.classList.add('active');
   }
 </script>
 {% endblock %}

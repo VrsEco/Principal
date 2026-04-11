@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, jsonify, request, abort
+from flask import Blueprint, render_template, jsonify, request, abort, current_app
 from flask_login import login_required, current_user
 from models import db, AIAgent, AgentMessage
+from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
+from services.tool_first_catalog_service import ToolFirstCatalogService
 from utils.permissions import permission_required, has_company_full_access, is_platform_admin
 
 configs_bp = Blueprint('configs', __name__)
@@ -21,13 +23,144 @@ def _can_access_ai_mcp_console(company_id=None):
     except Exception:
         return False
 
+
+def _require_ai_admin_access(company_id=None):
+    if not _can_access_ai_mcp_console(company_id):
+        abort(403)
+
 @configs_bp.route('/configs/ai')
 @login_required
 # @permission_required('admin', 'view') # Maybe restrict to admin?
 def ai_settings():
-    """AI Configuration Page"""
-    agents = AIAgent.query.all()
-    return render_template('configurations_ai.html', agents=agents)
+    """Hub arquitetural do frontend de IA."""
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    try:
+        hub = AIFrontendHubService.build_frontend_state(None)
+    except Exception:
+        current_app.logger.exception('Falha ao montar central de IA.')
+        console = AIMCPConsoleService.build_frontend_state(None)
+        hub = {
+            "summary": {
+                "active_agents": 0,
+                "total_agents": 0,
+                "integrations_total": 0,
+                "mcp_tools_total": int((console.get("summary") or {}).get("catalog_tools") or 0),
+                "human_gate_tools": int((console.get("summary") or {}).get("human_gate_tools") or 0),
+                "readiness_gates": int((console.get("summary") or {}).get("readiness_gates") or 0),
+                "logs_total": 0,
+                "audit_total": 0,
+                "workflow_recent_total": 0,
+                "pending_approvals": 0,
+                "workflow_gaps": 0,
+            },
+            "overview": {
+                "window_days": 30,
+                "hero_cards": [
+                    {
+                        "label": "Saúde operacional",
+                        "value": "Indisponível",
+                        "description": "A visão detalhada sofreu degradação controlada. Use os atalhos operacionais abaixo enquanto finalizamos a leitura completa.",
+                        "tone": "warning",
+                        "badge": "Fallback ativo",
+                    }
+                ],
+                "stats_cards": [],
+                "platform_cards": [],
+                "recent_workflows": [],
+                "alerts": [
+                    {
+                        "title": "Visão Geral em fallback seguro",
+                        "description": "A montagem completa do dashboard falhou, mas a página foi mantida funcional para não bloquear a operação.",
+                        "tone": "warning",
+                    }
+                ],
+                "quick_actions": [
+                    {
+                        "title": "Abrir console MCP",
+                        "href": "/configs/ai/mcp",
+                        "description": "Catálogo, readiness e governança técnica.",
+                    },
+                    {
+                        "title": "Gerir integrações",
+                        "href": "/integrations",
+                        "description": "Conexões, providers e segredos operacionais.",
+                    },
+                    {
+                        "title": "Ver auditoria",
+                        "href": "/operations/audit",
+                        "description": "Timeline operacional e eventos sensíveis.",
+                    },
+                ],
+                "duplicate_clusters": [],
+                "approvals_recent": [],
+                "executive": {
+                    "recent_executions": 0,
+                    "pending_approvals": 0,
+                    "workflow_gaps_recent": 0,
+                    "failed_executions": 0,
+                },
+                "communication": {"total_logs": 0, "recent_logs": 0},
+                "audit": {"recent_total": 0, "summary": {}, "events": []},
+                "workflow_metrics": {"by_status": [], "by_channel": [], "total": 0},
+                "gap_metrics": {"duplicate_clusters": [], "total": 0},
+            },
+            "agents": [],
+            "pillars": [
+                {
+                    "key": "overview",
+                    "title": "Visão Geral",
+                    "eyebrow": "Entrada recomendada",
+                    "description": "Central para entender operação, cobertura MCP, governança e pontos críticos reais.",
+                    "accent": "primary",
+                    "items": [],
+                },
+                {
+                    "key": "configuration",
+                    "title": "Configuração",
+                    "eyebrow": "Administração",
+                    "description": "Parâmetros, conexões e agentes.",
+                    "accent": "blue",
+                    "items": [],
+                },
+                {
+                    "key": "integrations",
+                    "title": "Integrações",
+                    "eyebrow": "Interoperabilidade",
+                    "description": "MCP, APIs e provedores externos.",
+                    "accent": "violet",
+                    "items": [],
+                },
+                {
+                    "key": "orchestration",
+                    "title": "Orquestração",
+                    "eyebrow": "Execução",
+                    "description": "Agentes, workflows e automações.",
+                    "accent": "emerald",
+                    "items": [],
+                },
+                {
+                    "key": "governance",
+                    "title": "Governança",
+                    "eyebrow": "Controle e evidência",
+                    "description": "Logs, auditoria e uso.",
+                    "accent": "amber",
+                    "items": [],
+                },
+            ],
+            "console_summary": console.get("summary") or {},
+            "audit_summary": {},
+        }
+    return render_template(
+        'configurations_ai.html',
+        agents=hub["agents"],
+        ai_hub=hub,
+        summary=hub["summary"],
+        console_summary=hub["console_summary"],
+        overview=hub["overview"],
+        pillars=hub["pillars"],
+        active_company=None,
+    )
 
 @configs_bp.route('/configs/system')
 @login_required
@@ -79,13 +212,17 @@ def ai_mcp_console():
 @configs_bp.route('/api/configs/ai/agents', methods=['GET'])
 @login_required
 def get_agents_config():
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
     agents = AIAgent.query.all()
     return jsonify({"success": True, "agents": [a.to_dict() for a in agents]})
 
 @configs_bp.route('/api/configs/ai/agents/<string:agent_id>', methods=['PUT'])
 @login_required
 def update_agent_config(agent_id):
-    data = request.get_json()
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    data = request.get_json(silent=True) or {}
     agent = AIAgent.query.get_or_404(agent_id)
     
     # Update fields
@@ -105,8 +242,14 @@ def update_agent_config(agent_id):
 @login_required
 def get_agent_logs():
     """Retrieve communication logs"""
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, "id", None)
+    _require_ai_admin_access(company_id)
     limit = request.args.get('limit', 50, type=int)
-    logs = AgentMessage.query.order_by(AgentMessage.created_at.desc()).limit(limit).all()
+    logs_query = AgentMessage.query.order_by(AgentMessage.created_at.desc())
+    if company_id:
+        logs_query = logs_query.filter(AgentMessage.company_id == company_id)
+    logs = logs_query.limit(limit).all()
     
     return jsonify({
         "success": True, 
@@ -125,4 +268,35 @@ def get_ai_mcp_frontend_state():
     return jsonify({
         "success": True,
         "console": AIMCPConsoleService.build_frontend_state(active_company),
+    })
+
+
+@configs_bp.route('/api/configs/ai/mcp/tool-first-catalog', methods=['GET'])
+@login_required
+def get_tool_first_catalog():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao catálogo tool-first IA/MCP."}), 403
+
+    domain = request.args.getlist('domain')
+    status = request.args.getlist('status')
+    surface = request.args.getlist('surface')
+    if not domain:
+        domain = request.args.get('domain')
+    if not status:
+        status = request.args.get('status')
+    if not surface:
+        surface = request.args.get('surface')
+    include_backlog = (request.args.get('include_backlog', 'true') or 'true').strip().lower() != 'false'
+
+    return jsonify({
+        "success": True,
+        "catalog": ToolFirstCatalogService.build_catalog(
+            active_company,
+            domain=domain,
+            status=status,
+            surface=surface,
+            include_backlog=include_backlog,
+        ),
     })

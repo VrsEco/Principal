@@ -62,6 +62,47 @@ def _fake_console_state():
             "risk_distribution": [],
             "surfaces": [],
         },
+        "tool_first_catalog": {
+            "summary": {
+                "domains": 2,
+                "canonical_domains": 1,
+                "wrapper_domains": 1,
+                "ready_rest_contracts": 4,
+                "ready_mcp_entries": 3,
+            },
+            "discovery": {
+                "rest_endpoint": "/api/configs/ai/mcp/tool-first-catalog",
+                "frontend_state_endpoint": "/api/configs/ai/mcp/frontend-state",
+                "mcp_tool": "list_app32_capabilities",
+                "console_url": "/configs/ai/mcp",
+            },
+            "domains": [
+                {
+                    "key": "engineering",
+                    "title": "Squad de Engenharia",
+                    "status": "canonical",
+                    "surface": "engineering",
+                    "description": "Canal técnico principal.",
+                    "entrypoint": "/sapiens?contact=engineering",
+                    "legacy_routes": ["/agents/engineering"],
+                    "canonical_routes": ["/sapiens?contact=engineering"],
+                    "summary": {"ready_rest_contracts": 2, "published_mcp_tools": 1, "ready_mcp_entries": 2},
+                    "planned_tools": [{"name": "run_operational_audit", "status": "planned"}],
+                },
+                {
+                    "key": "strategy",
+                    "title": "Planejamento Estratégico",
+                    "status": "wrapper",
+                    "surface": "sapiens",
+                    "description": "Domínio convergido para o Sapiens.",
+                    "entrypoint": "/sapiens?surface=planejamento",
+                    "legacy_routes": ["/agents/planejamento"],
+                    "canonical_routes": ["/sapiens"],
+                    "summary": {"ready_rest_contracts": 2, "published_mcp_tools": 0, "ready_mcp_entries": 1},
+                    "planned_tools": [{"name": "suggest_okrs", "status": "planned"}],
+                },
+            ],
+        },
         "onboarding": {"steps": [], "surface_access_rules": []},
         "release": {"checklist": [], "smokes": []},
         "freeze": {"triggers": []},
@@ -278,6 +319,9 @@ def test_ai_mcp_console_template_renders_wizard_steps_ctas_and_contextual_help()
     assert "Perfis & Permissões" in html
     assert "Surfaces & Domínios" in html
     assert 'id="aiMcpContextHelp"' in html
+    assert "Catálogo tool-first por domínio" in html
+    assert "/api/configs/ai/mcp/tool-first-catalog" in html
+    assert "Squad de Engenharia" in html
     assert 'id="aiMcpContextHelpTitle"' in html
     assert 'id="aiMcpContextHelpBody"' in html
     assert 'id="aiMcpContextHelpSteps"' in html

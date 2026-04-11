@@ -1155,6 +1155,7 @@
     let chatHistory = [];
     let contacts = [];
     let currentActionId = null;
+    let activeSurface = null;
 
     const chatMessages = document.getElementById('chatMessages');
     const contactsList = document.getElementById('contactsList');
@@ -1209,6 +1210,49 @@
     };
 
     marked.setOptions({ gfm: true, breaks: true });
+
+    function getSurfaceMeta(surface) {
+        const map = {
+            planejamento: {
+                name: 'Planejamento',
+                status: 'contexto estratégico carregado',
+                preset: 'Quero apoio em planejamento estratégico. Analise o contexto da empresa, identifique lacunas e proponha próximos passos executáveis.'
+            },
+            processos: {
+                name: 'Processos',
+                status: 'contexto de processos carregado',
+                preset: 'Quero ajuda com processos. Identifique gargalos, processos críticos e sugira melhorias com base no contexto atual.'
+            },
+            rotina: {
+                name: 'Rotina',
+                status: 'contexto operacional carregado',
+                preset: 'Quero ajuda com rotina operacional. Liste prioridades, pendências e ações de follow-up para a semana.'
+            },
+            performance: {
+                name: 'Performance',
+                status: 'contexto de indicadores carregado',
+                preset: 'Quero analisar performance. Leia os indicadores da empresa, aponte riscos, tendências e ações recomendadas.'
+            },
+            estrategico: {
+                name: 'Estratégico',
+                status: 'contexto executivo carregado',
+                preset: 'Quero uma leitura estratégica da empresa. Compare estratégia e execução, mostre riscos e prioridades executivas.'
+            },
+            cadastro: {
+                name: 'Onboarding',
+                status: 'contexto de onboarding carregado',
+                preset: 'Quero ajuda com onboarding da empresa e configuração inicial dos dados mestres.'
+            }
+        };
+        return map[surface] || null;
+    }
+
+    function applyPresetMessage(presetText) {
+        if (!presetText) return;
+        userInput.value = presetText;
+        userInput.style.height = 'auto';
+        userInput.style.height = (userInput.scrollHeight) + 'px';
+    }
     function shouldShowOperationalPanels() {
         return ['sapiens', 'engineering'].includes(activeContact);
     }
@@ -1747,7 +1791,8 @@
         activeUserId = contact.type === 'user' ? contact.id : null;
 
         document.getElementById('activeName').innerText = contact.name;
-        document.getElementById('activeStatus').innerText = contact.status === 'online' ? 'agente online' : 'visto recentemente';
+        const surfaceMeta = getSurfaceMeta(activeSurface);
+        document.getElementById('activeStatus').innerText = surfaceMeta?.status || (contact.status === 'online' ? 'agente online' : 'visto recentemente');
 
         renderContacts();
         await loadChatHistory();
@@ -1956,8 +2001,30 @@
         loadContacts();
         const params = new URLSearchParams(window.location.search);
         const contactParam = params.get('contact');
-        if (contactParam) selectContact({ id: contactParam, name: contactParam.toUpperCase(), type: 'bot' });
-        else selectContact({ id: 'sapiens', name: 'Versus Sapiens', status: 'online', avatar: '🧭', type: 'bot' });
+        const surfaceParam = params.get('surface');
+        const presetParam = params.get('preset');
+        activeSurface = surfaceParam || null;
+        const surfaceMeta = getSurfaceMeta(surfaceParam);
+
+        const baseContact = contactParam || 'sapiens';
+        const defaultContactName = baseContact === 'engineering'
+            ? 'Squad Engenharia'
+            : (surfaceMeta ? `Sapiens • ${surfaceMeta.name}` : 'Versus Sapiens');
+
+        if (contactParam) {
+            selectContact({
+                id: contactParam,
+                name: defaultContactName,
+                status: 'online',
+                avatar: contactParam === 'engineering' ? '🛠️' : '🧭',
+                type: 'bot'
+            });
+        }
+        else {
+            selectContact({ id: 'sapiens', name: defaultContactName, status: 'online', avatar: '🧭', type: 'bot' });
+        }
+
+        applyPresetMessage(presetParam || surfaceMeta?.preset);
 
         setInterval(checkActions, 30000);
         setInterval(() => {

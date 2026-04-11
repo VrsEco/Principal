@@ -1,0 +1,206 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+  .agent-surface-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  .surface-hero {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .surface-card {
+    background: var(--color-bg-secondary);
+    border-radius: 18px;
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
+
+  .surface-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--color-muted);
+    margin-bottom: 14px;
+  }
+
+  .surface-title {
+    font-size: 34px;
+    line-height: 1.1;
+    margin-bottom: 14px;
+  }
+
+  .surface-title strong {
+    background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .surface-copy {
+    color: var(--color-muted);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+
+  .surface-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .surface-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    font-weight: 700;
+    transition: .2s ease;
+  }
+
+  .surface-btn.primary {
+    background: linear-gradient(135deg, #3af1ae 0%, #10b981 100%);
+    color: #04210f;
+  }
+
+  .surface-btn.secondary {
+    background: var(--color-bg);
+    color: var(--color-text);
+    border-color: var(--color-border);
+  }
+
+  .surface-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .surface-list {
+    display: grid;
+    gap: 12px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .surface-list li {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(58, 241, 174, 0.05);
+    border: 1px solid rgba(58, 241, 174, 0.12);
+  }
+
+  .surface-list strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .surface-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .surface-grid h3 {
+    margin-bottom: 12px;
+  }
+
+  .surface-note {
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 900px) {
+    .surface-hero,
+    .surface-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="agent-surface-shell">
+  <section class="surface-hero">
+    <article class="surface-card">
+      <div class="surface-eyebrow">{{ icon }} {{ eyebrow }}</div>
+      <h1 class="surface-title"><strong>{{ title }}</strong></h1>
+      <p class="surface-copy">{{ description }}</p>
+      <div class="surface-actions">
+        <a class="surface-btn primary" href="{{ sapiens_url }}">Abrir no Sapiens</a>
+        <a class="surface-btn secondary" href="{{ engineering_url }}">Abrir Squad Engenharia</a>
+      </div>
+      <p class="surface-note">
+        Esta superfície foi convertida para um wrapper do hub IA. A lógica especializada deve evoluir via
+        <strong>REST + MCP Tools</strong>, não por novos agentes de tela.
+      </p>
+    </article>
+
+    <aside class="surface-card">
+      <h3>Como usar agora</h3>
+      <ul class="surface-list">
+        {% for item in quick_steps %}
+        <li>
+          <strong>{{ item.title }}</strong>
+          <span>{{ item.body }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </aside>
+  </section>
+
+  <section class="surface-grid">
+    <article class="surface-card">
+      <h3>Ferramentas-alvo</h3>
+      <ul class="surface-list">
+        {% for item in tool_targets %}
+        <li>
+          <strong>{{ item.name }}</strong>
+          <span>{{ item.description }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+
+    <article class="surface-card">
+      <h3>Prompts recomendados</h3>
+      <ul class="surface-list">
+        {% for item in suggested_prompts %}
+        <li>
+          <strong>{{ item.title }}</strong>
+          <span>{{ item.body }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+
+    <article class="surface-card">
+      <h3>Governança</h3>
+      <ul class="surface-list">
+        {% for item in governance_notes %}
+        <li>
+          <strong>{{ item.title }}</strong>
+          <span>{{ item.body }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+  </section>
+</div>
+{% endblock %}

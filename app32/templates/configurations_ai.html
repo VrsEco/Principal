@@ -1,474 +1,663 @@
-{% extends "base.html" %}
-{% block title %}Configurações de IA{% endblock %}
+{% extends "layouts/workspace.html" %}
 
-{% block extra_head %}
-{{ super() }}
-<style>
-    .ai-config-page {
-        --bali-blue: #00a3ad;
-        --bali-blue-strong: #008a92;
-        --bali-blue-light: #e6f7f9;
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 32px 0 64px;
-        display: flex;
-        flex-direction: column;
-        gap: 32px;
-    }
+{% block title %}Central de IA{% endblock %}
 
-    .ai-header {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .ai-header h1 {
-        margin: 0;
-    }
-
-    .ai-header p {
-        color: var(--color-muted);
-        max-width: 700px;
-        margin: 0;
-    }
-
-    /* Tabs */
-    .ai-tabs {
-        display: flex;
-        gap: 24px;
-        border-bottom: 1px solid var(--color-border);
-        margin-bottom: 16px;
-    }
-
-    .ai-tab {
-        padding: 12px 0;
-        background: none;
-        border: none;
-        color: var(--color-muted);
-        font-weight: 500;
-        cursor: pointer;
-        position: relative;
-        font-size: 15px;
-    }
-
-    .ai-tab.active {
-        color: var(--bali-blue);
-    }
-
-    .ai-tab.active::after {
-        content: '';
-        position: absolute;
-        bottom: -1px;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: var(--bali-blue);
-    }
-
-    /* Cards Grid */
-    .agents-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 24px;
-    }
-
-    .agent-card {
-        background: #fff;
-        border: 1px solid var(--color-border);
-        border-radius: 12px;
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        transition: all 0.2s;
-    }
-
-    .agent-card:hover {
-        border-color: var(--bali-blue);
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .agent-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .agent-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
-        background: var(--bali-blue-light);
-        color: var(--bali-blue);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-    }
-
-    .agent-info h3 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-    }
-
-    .agent-info span {
-        font-size: 12px;
-        color: var(--color-muted);
-    }
-
-    .agent-status {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: auto;
-        padding-top: 16px;
-        border-top: 1px solid var(--color-border);
-    }
-
-    .status-badge {
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .status-badge.active {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .status-badge.inactive {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-
-    /* Logs Table */
-    .logs-container {
-        background: #fff;
-        border: 1px solid var(--color-border);
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    .logs-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 14px;
-    }
-
-    .logs-table th,
-    .logs-table td {
-        padding: 12px 24px;
-        text-align: left;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .logs-table th {
-        background: #f8fafc;
-        font-weight: 600;
-        color: #475569;
-    }
-
-    .logs-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    .log-direction {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    .dir-in {
-        background: #eff6ff;
-        color: #1e40af;
-    }
-
-    /* Inbound */
-    .dir-out {
-        background: #f0fdf4;
-        color: #166534;
-    }
-
-    /* Outbound */
-    .tab-content-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 0 0 12px;
-        margin-bottom: 16px;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .tab-content-toolbar h2 {
-        margin: 0;
-        font-size: 18px;
-    }
-
-    .tab-content-toggle {
-        min-width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        border: 1px solid var(--color-border);
-        background: #fff;
-        color: var(--color-muted);
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-    }
-
-    .tab-content-toggle:hover {
-        border-color: var(--bali-blue);
-        color: var(--bali-blue);
-    }
-
-    .tab-content-toggle span {
-        transition: transform 0.2s;
-    }
-
-    .tab-content.is-collapsed .tab-content-toggle span {
-        transform: rotate(-90deg);
-    }
-
-    .tab-content.is-collapsed > :not(.tab-content-toolbar) {
-        display: none !important;
-    }
-</style>
+{% block breadcrumb %}
+<a href="/portal">Portal</a>
+<span class="sep">/</span>
+<a href="/configs/system">Sistema</a>
+<span class="sep">/</span>
+<span>IA Corporativa</span>
+<span class="sep">/</span>
+<span class="current">Central de IA</span>
 {% endblock %}
 
-{% block body %}
-{% set active_nav = 'dashboard' %}
-{{ super() }}
-{% endblock %}
-
-{% block content %}
-<section class="ai-config-page">
-    <header class="ai-header">
-        <span class="section-eyebrow">Configurações</span>
-        <h1>Inteligência Artificial</h1>
-        <p>Gerencie os agentes inteligentes, monitore logs de conversação e configure integrações de modelos.</p>
-    </header>
-
-    <!-- Tabs Navigation -->
-    <div class="ai-tabs">
-        <button class="ai-tab active" onclick="switchTab('agents')">Agentes</button>
-        <button class="ai-tab" onclick="switchTab('logs')">Logs de Comunicação</button>
-        <button class="ai-tab" onclick="switchTab('settings')">Configurações Globais</button>
+{% block sidebar_right %}
+<div class="ai-hub-filters-sidebar">
+    <div class="sidebar-header-ws">
+        <h3>Filtros</h3>
+        <p>Use a busca para localizar telas, cards e capacidades da Central de IA.</p>
     </div>
 
-    <!-- Tab Content: Agents -->
-    <div id="tab-agents" class="tab-content" data-title="Agentes disponíveis">
-        <div class="agents-grid">
-            <!-- Simulated Standard Agents -->
-            {% if not agents %}
-            <!-- Fallback if DB is empty -->
-            {% set default_agents = [
-            {'name': 'Agente PEV', 'icon': '📈', 'desc': 'Planejamento Estratégico e Mercado', 'status': 'active'},
-            {'name': 'Agente de Processos', 'icon': '⚙️', 'desc': 'Otimização e Mapeamento', 'status': 'active'},
-            {'name': 'Agente de Rotina', 'icon': '📅', 'desc': 'Gestão Diária e Cobrança', 'status': 'inactive'},
-            {'name': 'Agente de Performance', 'icon': '📊', 'desc': 'Análise de Indicadores', 'status': 'active'},
-            {'name': 'Agente de Cadastro', 'icon': '📝', 'desc': 'Wizard de Entrada de Dados', 'status': 'active'}
-            ] %}
-            {% for agent in default_agents %}
-            <article class="agent-card">
-                <div class="agent-header">
-                    <div class="agent-icon">{{ agent.icon }}</div>
-                    <div class="agent-info">
-                        <h3>{{ agent.name }}</h3>
-                        <span>{{ agent.desc }}</span>
-                    </div>
+    <div class="ai-hub-filters-sidebar__body">
+        <div class="ai-hub-filter-card">
+            <label class="ai-hub-filter-label" for="aiHubSearch">Busca geral</label>
+            <input id="aiHubSearch" type="search" placeholder="Buscar tela, capability, rota ou card..." autocomplete="off">
+            <small>O filtro atua sobre as seções e cards exibidos nesta tela.</small>
+        </div>
+
+        <div class="ai-hub-filter-card">
+            <span class="ai-hub-filter-label">Pilares</span>
+            <div class="ai-hub-filter-shortcuts">
+                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="overview">Visão Geral</button>
+                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="configuration">Configuração</button>
+                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="integrations">Integrações</button>
+                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="orchestration">Orquestração</button>
+                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="governance">Governança</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+{% set hub = ai_hub|default({}, true) %}
+{% set summary = summary|default(hub.get('summary', {
+    'active_agents': 0,
+    'total_agents': 0,
+    'workflow_recent_total': 0,
+    'pending_approvals': 0,
+    'workflow_gaps': 0
+}), true) %}
+{% set console_summary = console_summary|default(hub.get('console_summary', {}), true) %}
+{% set overview = overview|default(hub.get('overview', {
+    'window_days': 30,
+    'hero_cards': [],
+    'stats_cards': [],
+    'platform_cards': [],
+    'recent_workflows': [],
+    'alerts': [],
+    'quick_actions': []
+}), true) %}
+{% set pillars = pillars|default(hub.get('pillars', []), true) %}
+{% set agents_list = agents|default(hub.get('agents', []), true) %}
+<div class="ai-hub-page" data-default-tab="{{ request.args.get('section', 'overview') }}">
+    <section class="ai-hub-hero">
+        <div class="ai-hub-hero__copy">
+            <span class="ai-hub-eyebrow">Sistema · IA Corporativa</span>
+            <h1>Central de IA</h1>
+            <p>Configuração corporativa da camada de IA do sistema.</p>
+        </div>
+    </section>
+
+    <div class="ai-hub-panels">
+        <section class="ai-hub-panel is-active" data-tab-panel="overview" data-searchable="visao geral dashboard ia corporativa operacao plataforma mcp governanca approvals workflow gaps integracoes">
+            <header class="ai-hub-panel__header">
+                <div>
+                    <span class="ai-hub-eyebrow">Visão Geral</span>
+                    <h2>Leitura executiva da IA corporativa</h2>
                 </div>
-                <div class="agent-status">
-                    <span class="status-badge {{ agent.status }}">{{ 'Ativo' if agent.status == 'active' else 'Inativo'
-                        }}</span>
-                    <label class="switch">
-                        <input type="checkbox" {{ 'checked' if agent.status=='active' }}>
-                        <span class="slider round"></span>
-                    </label>
+            </header>
+
+            {% if overview.hero_cards %}
+            <section class="ai-hub-overview-banner" aria-label="Resumo executivo da IA corporativa">
+                <div class="ai-hub-overview-banner__stats">
+                    {% for card in overview.hero_cards %}
+                    <article class="ai-hub-stat-card ai-hub-stat-card--accent ai-hub-stat-card--{{ card.tone }}">
+                        <span>{{ card.label }}</span>
+                        <strong>{{ card.value }}</strong>
+                        <small>{{ card.description }}</small>
+                        <span class="ai-hub-status-pill is-{{ card.tone }}">{{ card.badge }}</span>
+                    </article>
+                    {% endfor %}
                 </div>
-            </article>
-            {% endfor %}
-            {% else %}
-            {% for agent in agents %}
-            <article class="agent-card">
-                <div class="agent-header">
-                    <div class="agent-icon">🤖</div>
-                    <div class="agent-info">
-                        <h3>{{ agent.name }}</h3>
-                        <span>{{ agent.description }}</span>
-                    </div>
-                </div>
-                <div class="agent-status">
-                    <span class="status-badge {{ 'active' if agent.status == 'active' else 'inactive' }}">
-                        {{ agent.status|upper }}
-                    </span>
-                    <button class="btn btn-sm btn-outline-secondary"
-                        onclick="editAgent('{{ agent.id }}')">Configurar</button>
-                </div>
-            </article>
-            {% endfor %}
+            </section>
             {% endif %}
-        </div>
-    </div>
 
-    <!-- Tab Content: Logs -->
-    <div id="tab-logs" class="tab-content" style="display: none;" data-title="Logs de comunicação">
-        <div class="logs-container">
-            <div class="table-actions"
-                style="padding: 16px; border-bottom: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
-                <button class="btn btn-sm btn-outline-primary" onclick="loadLogs()">Atualizar</button>
-            </div>
-            <div class="table-responsive">
-                <table class="logs-table">
-                    <thead>
-                        <tr>
-                            <th>Data/Hora</th>
-                            <th>Agente</th>
-                            <th>Usuário</th>
-                            <th>Canal</th>
-                            <th>Direção</th>
-                            <th>Mensagem</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logs-tbody">
-                        <tr>
-                            <td colspan="6" style="text-align: center; color: var(--color-muted);">Carregando logs...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+            <section class="ai-hub-kpi-grid" aria-label="Indicadores rápidos">
+                {% for card in overview.stats_cards %}
+                <article class="ai-hub-surface-card ai-hub-metric-card ai-hub-metric-card--{{ card.tone }}" data-searchable="{{ card.label }} {{ card.detail }}">
+                    <span class="ai-hub-section-label">Indicador</span>
+                    <strong>{{ card.value }}</strong>
+                    <h3>{{ card.label }}</h3>
+                    <p>{{ card.detail }}</p>
+                </article>
+                {% endfor %}
+            </section>
 
-    <!-- Tab Content: Global Settings -->
-    <div id="tab-settings" class="tab-content" style="display: none;" data-title="Configurações globais">
-        <div class="card" style="max-width: 800px;">
-            <div class="card-body">
-                <h3>Chaves de API e Modelos</h3>
-                <form>
-                    <div class="form-group mb-4">
-                        <label>Modelo Padrão (LLM)</label>
-                        <select class="form-control">
-                            <option>GPT-4o (OpenAI)</option>
-                            <option>Claude 3.5 Sonnet (Anthropic)</option>
-                            <option>Gemini 1.5 Pro (Google)</option>
-                        </select>
-                        <small class="form-text text-muted">Modelo utilizado para agentes que não possuem override
-                            específico.</small>
+            {% if overview.platform_cards %}
+            <section class="ai-hub-surface-card ai-hub-overview-card ai-hub-surface-card--featured" data-searchable="saude da plataforma operacao governanca gaps capacidade corporativa">
+                <header class="ai-hub-surface-card__header">
+                    <div>
+                        <span class="ai-hub-inline-note">Saúde da plataforma</span>
+                        <h3>Capacidade corporativa da plataforma</h3>
+                        <p>Os blocos abaixo consolidam infraestrutura, governança e sinais operacionais em nível sistêmico.</p>
                     </div>
+                    <span class="ai-hub-inline-note ai-hub-inline-note--accent">4 blocos de leitura</span>
+                </header>
 
-                    <div class="form-group mb-4">
-                        <label>Log de Auditoria</label>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="logEmails" checked>
-                            <label class="form-check-label" for="logEmails">Salvar cópia de e-mails enviados</label>
+                <div class="ai-hub-card-grid ai-hub-card-grid--overview">
+                    {% for card in overview.platform_cards %}
+                    <article class="ai-hub-health-card ai-hub-health-card--{{ card.tone }}">
+                        <div class="ai-hub-health-card__top">
+                            <div>
+                                <span class="ai-hub-section-label">{{ card.status_label }}</span>
+                                <h3>{{ card.title }}</h3>
+                            </div>
+                            <span class="ai-hub-status-pill is-{{ card.tone }}">{{ card.status_label }}</span>
                         </div>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="logChats" checked>
-                            <label class="form-check-label" for="logChats">Salvar histórico de chat
-                                (Messenger/Web)</label>
+                        <strong class="ai-hub-health-card__headline">{{ card.headline }}</strong>
+                        <ul class="ai-hub-list ai-hub-list--dense">
+                            {% for item in card["items"] %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <div class="ai-hub-overview-grid ai-hub-overview-grid--split">
+                <article class="ai-hub-surface-card ai-hub-overview-card" data-searchable="execucoes recentes workflows plataforma canais status">
+                    <header class="ai-hub-surface-card__header">
+                        <div>
+                            <span class="ai-hub-inline-note">Operação recente</span>
+                            <h3>Últimas execuções</h3>
+                            <p>Exibe usuário, canal, tool/menu acionada, data/hora e resultado da execução.</p>
                         </div>
+                        <a href="/operations/audit" class="ai-hub-link-btn">Ver auditoria</a>
+                    </header>
+
+                    <div class="ai-hub-table-wrap">
+                        <table class="ai-hub-table ai-hub-table--executions">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Canal</th>
+                                    <th>Tool/Menu</th>
+                                    <th>Data/Hora</th>
+                                    <th>Resultado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        {% for item in overview.recent_workflows %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.user_label }}</strong>
+                                        {% if item.description %}
+                                        <small class="ai-hub-table-note" title="{{ item.description }}">{{ item.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.channel_label }}</td>
+                                    <td>{{ item.tool_label }}</td>
+                                    <td>{{ item.timestamp }}</td>
+                                    <td>
+                                        <span class="ai-hub-status-pill ai-hub-status-pill--result is-{{ item.tone }}">
+                                            <span class="ai-hub-status-dot"></span>
+                                            {{ item.result_label }}
+                                        </span>
+                                    </td>
+                                </tr>
+                        {% else %}
+                                <tr>
+                                    <td colspan="5" class="ai-hub-empty-row">Nenhuma execução encontrada para a janela consultada.</td>
+                                </tr>
+                        {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </article>
 
-                    <button type="button" class="btn btn-primary">Salvar Alterações</button>
-                </form>
+                <div class="ai-hub-overview-side">
+                    {% if overview.alerts %}
+                    <article class="ai-hub-surface-card ai-hub-overview-card" data-searchable="alertas approvals gaps falhas baixa atividade logs recentes">
+                        <header class="ai-hub-surface-card__header">
+                            <div>
+                                <span class="ai-hub-inline-note">Atenções</span>
+                                <h3>Alertas e inconsistências</h3>
+                            </div>
+                        </header>
+
+                        <div class="ai-hub-event-list">
+                            {% for alert in overview.alerts %}
+                            <article class="ai-hub-event-card ai-hub-event-card--{{ alert.tone }}">
+                                <div class="ai-hub-event-card__top">
+                                    <div>
+                                        <h4>{{ alert.title }}</h4>
+                                        <p>{{ alert.description }}</p>
+                                    </div>
+                                    <span class="ai-hub-status-pill is-{{ alert.tone }}">{{ 'Crítico' if alert.tone == 'danger' else 'Atenção' if alert.tone == 'warning' else 'Info' if alert.tone == 'neutral' else 'OK' }}</span>
+                                </div>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </article>
+                    {% endif %}
+
+                    <article class="ai-hub-surface-card ai-hub-overview-card" data-searchable="acoes rapidas console integracoes agentes auditoria">
+                        <header class="ai-hub-surface-card__header">
+                            <div>
+                                <span class="ai-hub-inline-note">Ações rápidas</span>
+                                <h3>Próximos movimentos</h3>
+                                <p>Entradas já operacionais para agir sem criar rotas artificiais.</p>
+                            </div>
+                        </header>
+
+                        <div class="ai-hub-actions-grid">
+                            {% for action in overview.quick_actions %}
+                            <a href="{{ action.href }}" class="ai-hub-shortcut">
+                                <strong>{{ action.title }}</strong>
+                                <span>{{ action.description }}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </article>
+                </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-</section>
+        {% for pillar in pillars if pillar.key != 'overview' %}
+        <section class="ai-hub-panel" data-tab-panel="{{ pillar.key }}" data-searchable="{{ pillar.title }} {{ pillar.description }}">
+            <header class="ai-hub-panel__header">
+                <div>
+                    <span class="ai-hub-eyebrow">{{ pillar.eyebrow }}</span>
+                    <h2>{{ pillar.title }}</h2>
+                    <p>{{ pillar.description }}</p>
+                </div>
+            </header>
+
+            <div class="ai-hub-card-grid">
+                {% for item in pillar["items"] %}
+                <article class="ai-hub-surface-card" data-searchable="{{ item.title }} {{ item.description }} {{ item.status }} {{ item.badge or '' }}">
+                    <header class="ai-hub-surface-card__header">
+                        <div>
+                            <h3>{{ item.title }}</h3>
+                            <p>{{ item.description }}</p>
+                        </div>
+                        <span class="ai-hub-status-pill is-{{ item.status }}">{{ item.status|capitalize }}</span>
+                    </header>
+                    <footer class="ai-hub-surface-card__footer">
+                        {% if item.badge %}
+                        <span class="ai-hub-inline-note">{{ item.badge }}</span>
+                        {% endif %}
+                        {% if item.available %}
+                            {% if item.local %}
+                            <button type="button" class="ai-hub-link-btn" data-local-link="{{ item.href }}">Abrir</button>
+                            {% else %}
+                            <a href="{{ item.href }}" class="ai-hub-link-btn">Abrir</a>
+                            {% endif %}
+                        {% else %}
+                        <span class="ai-hub-muted">Sem rota dedicada ainda</span>
+                        {% endif %}
+                    </footer>
+                </article>
+                {% endfor %}
+            </div>
+
+            {% if pillar.key == 'configuration' %}
+            <article class="ai-hub-surface-card" id="configuration-agents" data-searchable="agentes catalogo configuracao cadastro">
+                <header class="ai-hub-surface-card__header">
+                    <div>
+                        <h3>Agentes cadastrados no APP32</h3>
+                        <p>Catálogo atual preservado para não perder o que já existe em produção.</p>
+                    </div>
+                    <span class="ai-hub-inline-note">{{ summary.total_agents }} itens</span>
+                </header>
+                <div class="ai-hub-agent-grid">
+                    {% for agent in agents_list %}
+                    <article class="ai-hub-agent-card" data-searchable="{{ agent.name }} {{ agent.description }} {{ agent.status }}">
+                        <div class="ai-hub-agent-card__top">
+                            <div class="ai-hub-agent-card__identity">
+                                <div class="ai-hub-agent-card__icon">🤖</div>
+                                <div>
+                                    <h4>{{ agent.name }}</h4>
+                                    <p>{{ agent.description or 'Agente sem descrição operacional registrada.' }}</p>
+                                </div>
+                            </div>
+                            <span class="ai-hub-status-pill is-{{ agent.status }}">{{ 'Ativo' if agent.status == 'active' else 'Inativo' }}</span>
+                        </div>
+                        <div class="ai-hub-agent-card__footer">
+                            <span class="ai-hub-inline-note">ID {{ agent.id }}</span>
+                            <button type="button" class="ai-hub-link-btn" data-agent-id="{{ agent.id }}">Configurar</button>
+                        </div>
+                    </article>
+                    {% else %}
+                    <p class="ai-hub-empty">Nenhum agente cadastrado.</p>
+                    {% endfor %}
+                </div>
+            </article>
+            {% endif %}
+
+            {% if pillar.key == 'governance' %}
+            <article class="ai-hub-surface-card" id="governance-logs" data-searchable="logs comunicacao auditoria mensagens agentes canais">
+                <header class="ai-hub-surface-card__header">
+                    <div>
+                        <h3>Logs de comunicação</h3>
+                        <p>Superfície reaproveitada da tela anterior, agora reposicionada dentro do pilar de governança.</p>
+                    </div>
+                    <button type="button" class="ai-hub-btn ai-hub-btn--secondary ai-hub-btn--compact" id="refreshLogsBtn">Atualizar logs</button>
+                </header>
+
+                <div class="ai-hub-table-wrap">
+                    <table class="ai-hub-table">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Agente</th>
+                                <th>Usuário</th>
+                                <th>Canal</th>
+                                <th>Direção</th>
+                                <th>Mensagem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <tr>
+                                <td colspan="6" class="ai-hub-empty-row">Carregando logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+            {% endif %}
+        </section>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .ai-hub-page { padding: 0 1.5rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
+    .ai-hub-btn { text-decoration: none; border-radius: 12px; padding: .8rem 1rem; font-weight: 700; border: 1px solid transparent; cursor: pointer; }
+    .ai-hub-btn--primary { background: var(--primary); color: #fff; }
+    .ai-hub-btn--secondary { background: var(--surface-secondary); color: var(--text-primary); border-color: var(--border); }
+    .ai-hub-btn--compact { padding: .7rem .9rem; }
+
+    .ai-hub-hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1rem; background: linear-gradient(135deg, rgba(37,99,235,.10), rgba(15,23,42,.03)); border: 1px solid var(--border); border-radius: 24px; padding: 1.4rem; box-shadow: var(--shadow-sm); }
+    .ai-hub-eyebrow, .ai-hub-section-label { display: inline-block; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--primary); font-weight: 700; margin-bottom: .4rem; }
+    .ai-hub-hero h1, .ai-hub-panel__header h2, .ai-hub-pillar-card h3, .ai-hub-surface-card h3, .ai-hub-agent-card h4 { margin: 0; }
+    .ai-hub-hero p, .ai-hub-panel__header p, .ai-hub-pillar-card p, .ai-hub-surface-card p, .ai-hub-agent-card p { color: var(--text-secondary); }
+    .ai-hub-hero__badges { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .ai-hub-hero__badges { margin-top: 1rem; }
+    .ai-hub-badge, .ai-hub-status-pill, .ai-hub-inline-note { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700; }
+    .ai-hub-badge { padding: .42rem .68rem; background: rgba(37,99,235,.10); color: var(--primary); border: 1px solid rgba(37,99,235,.18); }
+    .ai-hub-inline-note--accent { background: rgba(37,99,235,.12); color: var(--primary); border-color: rgba(37,99,235,.2); }
+    .ai-hub-hero__summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+    .ai-hub-stat-card, .ai-hub-pillar-card, .ai-hub-surface-card, .ai-hub-agent-card { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow-sm); }
+    .ai-hub-stat-card { padding: 1rem; }
+    .ai-hub-stat-card span, .ai-hub-stat-card small { color: var(--text-secondary); display: block; }
+    .ai-hub-stat-card strong { display: block; font-size: 1.2rem; margin: .25rem 0; }
+    .ai-hub-stat-card--accent { background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.92)); border-color: rgba(37,99,235,.16); }
+
+    .ai-hub-panel { display: none; flex-direction: column; gap: 1rem; }
+    .ai-hub-panel.is-active { display: flex; }
+    .ai-hub-panel__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .ai-hub-filters-sidebar { height: 100%; display: flex; flex-direction: column; background: var(--surface); }
+    .ai-hub-filters-sidebar__body { display: flex; flex-direction: column; gap: 1rem; padding: 1rem; }
+    .ai-hub-filter-card { background: var(--surface-secondary); border: 1px solid var(--border); border-radius: 18px; padding: 1rem; display: flex; flex-direction: column; gap: .75rem; }
+    .ai-hub-filter-label { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--primary); }
+    .ai-hub-filter-card input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: .9rem 1rem; color: var(--text-primary); }
+    .ai-hub-filter-card small { color: var(--text-secondary); line-height: 1.45; }
+    .ai-hub-filter-shortcuts { display: grid; gap: .55rem; }
+    .ai-hub-filter-shortcut { width: 100%; text-align: left; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); border-radius: 14px; padding: .8rem .9rem; font-weight: 700; cursor: pointer; transition: var(--transition); }
+    .ai-hub-filter-shortcut:hover { border-color: rgba(37,99,235,.24); color: var(--primary); background: rgba(37,99,235,.05); }
+
+    .ai-hub-overview-banner,
+    .ai-hub-overview-grid { display: grid; gap: 1rem; }
+    .ai-hub-overview-banner {
+        grid-template-columns: minmax(0, 1.25fr) minmax(320px, .95fr);
+        padding: 1.2rem;
+        background: linear-gradient(135deg, rgba(37,99,235,.09), rgba(124,58,237,.07), rgba(15,23,42,.02));
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        box-shadow: var(--shadow-sm);
+    }
+    .ai-hub-overview-banner__copy { display: flex; flex-direction: column; gap: .8rem; }
+    .ai-hub-overview-banner__copy h3 { margin: 0; font-size: 1.25rem; color: var(--text-primary); }
+    .ai-hub-overview-banner__copy p { margin: 0; color: var(--text-secondary); line-height: 1.55; max-width: 72ch; }
+    .ai-hub-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: .15rem; }
+    .ai-hub-shortcut {
+        display: flex;
+        flex-direction: column;
+        gap: .2rem;
+        padding: .9rem 1rem;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.86);
+        text-decoration: none;
+        transition: var(--transition);
+        min-height: 84px;
+    }
+    .ai-hub-shortcut:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); border-color: rgba(37,99,235,.22); }
+    .ai-hub-shortcut strong { color: var(--text-primary); font-size: .93rem; }
+    .ai-hub-shortcut span { color: var(--text-secondary); font-size: .8rem; line-height: 1.35; }
+    .ai-hub-overview-banner__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; align-content: start; }
+    .ai-hub-overview-grid { grid-template-columns: minmax(0, 1.35fr) minmax(320px, .95fr); align-items: start; }
+    .ai-hub-overview-side { display: grid; gap: 1rem; }
+    .ai-hub-overview-card { padding: 1.15rem; }
+    .ai-hub-surface-card--featured { background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.92)); }
+    .ai-hub-status-legend { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .ai-hub-status-legend .ai-hub-status-pill { cursor: default; }
+
+    .ai-hub-pillars-grid, .ai-hub-kpi-grid, .ai-hub-card-grid, .ai-hub-agent-grid { display: grid; gap: 1rem; }
+    .ai-hub-pillars-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ai-hub-kpi-grid, .ai-hub-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ai-hub-agent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ai-hub-pillar-card, .ai-hub-surface-card { padding: 1.1rem; }
+    .ai-hub-pillar-card { transition: var(--transition); }
+    .ai-hub-pillar-card:hover, .ai-hub-surface-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .ai-hub-pillar-card__top, .ai-hub-surface-card__header, .ai-hub-surface-card__footer, .ai-hub-agent-card__top, .ai-hub-agent-card__footer { display: flex; align-items: flex-start; justify-content: space-between; gap: .85rem; }
+    .ai-hub-pillar-card__items { display: grid; gap: .75rem; margin-top: 1rem; }
+    .ai-hub-pillar-card__items--compact { gap: .55rem; }
+    .ai-hub-pillar-card__footer { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .9rem; }
+    .ai-hub-mini-item { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .8rem .9rem; border-radius: 16px; background: var(--surface-secondary); border: 1px solid var(--border); }
+    .ai-hub-mini-item span { color: var(--text-secondary); font-size: .8rem; }
+    .ai-hub-pillar-card--primary { border-color: rgba(37,99,235,.18); }
+    .ai-hub-pillar-card--blue { border-color: rgba(59,130,246,.18); }
+    .ai-hub-pillar-card--violet { border-color: rgba(124,58,237,.18); }
+    .ai-hub-pillar-card--emerald { border-color: rgba(16,185,129,.18); }
+    .ai-hub-pillar-card--amber { border-color: rgba(245,158,11,.18); }
+
+    .ai-hub-list { margin: 0; padding-left: 1rem; color: var(--text-secondary); display: grid; gap: .45rem; }
+    .ai-hub-list--dense { gap: .35rem; }
+    .ai-hub-inline-note { padding: .32rem .58rem; font-size: .75rem; background: var(--surface-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+    .ai-hub-status-pill { padding: .38rem .7rem; font-size: .76rem; border: 1px solid transparent; white-space: nowrap; }
+    .ai-hub-status-pill.is-existente, .ai-hub-status-pill.is-active { background: rgba(22,163,74,.12); color: #166534; border-color: rgba(22,163,74,.18); }
+    .ai-hub-status-pill.is-success { background: rgba(22,163,74,.12); color: #166534; border-color: rgba(22,163,74,.18); }
+    .ai-hub-status-pill.is-warning { background: rgba(245,158,11,.12); color: #92400e; border-color: rgba(245,158,11,.2); }
+    .ai-hub-status-pill.is-danger { background: rgba(239,68,68,.12); color: #991b1b; border-color: rgba(239,68,68,.18); }
+    .ai-hub-status-pill.is-neutral { background: rgba(148,163,184,.15); color: #475569; border-color: rgba(148,163,184,.2); }
+    .ai-hub-status-pill.is-primary { background: rgba(37,99,235,.10); color: var(--primary); border-color: rgba(37,99,235,.18); }
+    .ai-hub-status-pill.is-consolidado { background: rgba(37,99,235,.10); color: var(--primary); border-color: rgba(37,99,235,.18); }
+    .ai-hub-status-pill.is-parcial { background: rgba(245,158,11,.12); color: #92400e; border-color: rgba(245,158,11,.2); }
+    .ai-hub-status-pill.is-planejado, .ai-hub-status-pill.is-inactive { background: rgba(148,163,184,.15); color: #475569; border-color: rgba(148,163,184,.2); }
+    .ai-hub-link-btn { border: none; background: transparent; color: var(--primary); font-weight: 700; cursor: pointer; padding: 0; text-decoration: none; }
+    .ai-hub-muted, .ai-hub-empty, .ai-hub-empty-row { color: var(--text-tertiary); }
+
+    .ai-hub-agent-card { padding: 1rem; display: flex; flex-direction: column; gap: .9rem; }
+    .ai-hub-agent-card__identity { display: flex; align-items: flex-start; gap: .85rem; min-width: 0; }
+    .ai-hub-agent-card__icon { width: 52px; height: 52px; border-radius: 16px; background: rgba(37,99,235,.10); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; font-size: 1.45rem; flex-shrink: 0; }
+
+    .ai-hub-table-wrap { overflow-x: auto; }
+    .ai-hub-table { width: 100%; border-collapse: collapse; }
+    .ai-hub-table th, .ai-hub-table td { padding: .9rem 1rem; border-bottom: 1px solid var(--border); text-align: left; }
+    .ai-hub-table th { font-size: .76rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+    .ai-hub-table tr:last-child td { border-bottom: none; }
+    .ai-hub-table--executions td strong { display: block; color: var(--text-primary); }
+    .ai-hub-table-note { display: -webkit-box; margin-top: .3rem; color: var(--text-secondary); line-height: 1.4; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; max-width: 28ch; }
+    .ai-hub-status-pill--result { gap: .45rem; align-items: center; }
+    .ai-hub-status-dot { width: .5rem; height: .5rem; border-radius: 999px; background: currentColor; display: inline-block; }
+    .ai-hub-log-direction { display: inline-flex; align-items: center; justify-content: center; padding: .25rem .55rem; border-radius: 999px; font-size: .74rem; font-weight: 700; }
+    .ai-hub-log-direction.is-inbound { background: rgba(37,99,235,.10); color: var(--primary); }
+    .ai-hub-log-direction.is-outbound { background: rgba(22,163,74,.12); color: #166534; }
+
+    @media (max-width: 1200px) {
+        .ai-hub-hero,
+        .ai-hub-overview-banner,
+        .ai-hub-overview-grid,
+        .ai-hub-pillars-grid,
+        .ai-hub-kpi-grid,
+        .ai-hub-card-grid,
+        .ai-hub-agent-grid { grid-template-columns: 1fr; }
+        .ai-hub-shortcuts { grid-template-columns: 1fr; }
+        .ai-hub-pillars-grid--overview { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+        .ai-hub-page { padding: 0 1rem 1.5rem; }
+        .ai-hub-panel__header,
+        .ai-hub-pillar-card__top,
+        .ai-hub-surface-card__header,
+        .ai-hub-surface-card__footer,
+        .ai-hub-agent-card__top,
+        .ai-hub-agent-card__footer { flex-direction: column; align-items: stretch; }
+        .ai-hub-hero__summary { grid-template-columns: 1fr; }
+        .ai-hub-overview-banner__stats { grid-template-columns: 1fr; }
+        .ai-hub-btn { text-align: center; }
+    }
+
+    .ai-hub-chip-row { display: flex; flex-wrap: wrap; gap: .55rem; }
+    .ai-hub-chip-row--tight { gap: .45rem; }
+    .ai-hub-stat-card--success { border-color: rgba(22,163,74,.18); }
+    .ai-hub-stat-card--warning { border-color: rgba(245,158,11,.18); }
+    .ai-hub-stat-card--danger { border-color: rgba(239,68,68,.18); }
+    .ai-hub-stat-card--neutral { border-color: rgba(148,163,184,.2); }
+    .ai-hub-metric-card { padding: 1rem; }
+    .ai-hub-metric-card strong { font-size: 1.9rem; color: var(--text-primary); line-height: 1; display: block; margin: .35rem 0; }
+    .ai-hub-metric-card h3 { margin: 0; font-size: 1rem; }
+    .ai-hub-metric-card p { margin: .35rem 0 0; }
+    .ai-hub-metric-card--primary { border-color: rgba(37,99,235,.18); }
+    .ai-hub-metric-card--warning { border-color: rgba(245,158,11,.18); }
+    .ai-hub-metric-card--neutral { border-color: rgba(148,163,184,.18); }
+    .ai-hub-card-grid--overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ai-hub-health-card { padding: 1rem; border-radius: 18px; border: 1px solid var(--border); background: var(--surface); }
+    .ai-hub-health-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+    .ai-hub-health-card__headline { display: block; margin: .7rem 0 .8rem; font-size: 1.05rem; color: var(--text-primary); }
+    .ai-hub-health-card--primary { border-color: rgba(37,99,235,.18); }
+    .ai-hub-health-card--success { border-color: rgba(22,163,74,.18); }
+    .ai-hub-health-card--warning { border-color: rgba(245,158,11,.18); }
+    .ai-hub-health-card--danger { border-color: rgba(239,68,68,.18); }
+    .ai-hub-overview-grid--split { grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr); }
+    .ai-hub-event-list { display: grid; gap: .8rem; }
+    .ai-hub-event-card { padding: 1rem; border-radius: 18px; border: 1px solid var(--border); background: var(--surface-secondary); }
+    .ai-hub-event-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+    .ai-hub-event-card h4 { margin: 0 0 .25rem; }
+    .ai-hub-event-card p { margin: 0; color: var(--text-secondary); }
+    .ai-hub-event-card--danger { border-color: rgba(239,68,68,.18); }
+    .ai-hub-event-card--warning { border-color: rgba(245,158,11,.18); }
+    .ai-hub-event-card--success { border-color: rgba(22,163,74,.18); }
+    .ai-hub-event-card--neutral { border-color: rgba(148,163,184,.18); }
+    .ai-hub-actions-grid { display: grid; gap: .75rem; }
+
+</style>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-    function setupCollapsibleTabs() {
-        document.querySelectorAll('.tab-content').forEach((content, index) => {
-            if (content.querySelector('.tab-content-toolbar')) return;
+    document.addEventListener('DOMContentLoaded', () => {
+        const root = document.querySelector('.ai-hub-page');
+        if (!root) return;
 
-            const toolbar = document.createElement('div');
-            toolbar.className = 'tab-content-toolbar';
-            toolbar.innerHTML = `
-                <h2>${content.dataset.title || 'Seção'}</h2>
-                <button type="button" class="tab-content-toggle" aria-expanded="${index === 0 ? 'true' : 'false'}" title="Expandir ou recolher seção">
-                    <span>⌄</span>
-                </button>
-            `;
-            content.prepend(toolbar);
+        const tabs = Array.from(root.querySelectorAll('[data-tab-target]'));
+        const panels = Array.from(root.querySelectorAll('[data-tab-panel]'));
+        const searchInput = document.getElementById('aiHubSearch');
+        const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+        const logsTbody = document.getElementById('logs-tbody');
 
-            if (index > 0) {
-                content.classList.add('is-collapsed');
-            }
-
-            const toggle = toolbar.querySelector('.tab-content-toggle');
-            toggle.addEventListener('click', () => {
-                const collapsed = content.classList.toggle('is-collapsed');
-                toggle.setAttribute('aria-expanded', String(!collapsed));
-            });
-        });
-    }
-
-    function switchTab(tabName) {
-        // Hide all tabs
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.ai-tab').forEach(el => el.classList.remove('active'));
-
-        // Show selected
-        document.getElementById('tab-' + tabName).style.display = 'block';
-        event.target.classList.add('active');
-
-        if (tabName === 'logs') {
-            loadLogs();
+        function normalize(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase();
         }
-    }
 
-    function loadLogs() {
-        fetch('/api/configs/ai/logs?limit=50')
-            .then(res => res.json())
-            .then(data => {
-                const tbody = document.getElementById('logs-tbody');
-                tbody.innerHTML = '';
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
-                if (data.logs.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Nenhum registro encontrado.</td></tr>';
+        function activateTab(target) {
+            const validTargets = new Set(['overview', 'configuration', 'integrations', 'orchestration', 'governance']);
+            const normalizedTarget = validTargets.has(target) ? target : 'overview';
+            tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.tabTarget === normalizedTarget));
+            panels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.tabPanel === normalizedTarget));
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('section', normalizedTarget);
+            window.history.replaceState({}, '', url.toString());
+
+            if (normalizedTarget === 'governance') {
+                loadLogs();
+            }
+        }
+
+        function applySearch(term) {
+            const needle = normalize(term);
+
+            panels.forEach((panel) => {
+                const panelNeedle = normalize(panel.dataset.searchable || panel.textContent || '');
+                const cards = panel.querySelectorAll('.ai-hub-pillar-card, .ai-hub-surface-card, .ai-hub-agent-card');
+                let visible = !needle || panelNeedle.includes(needle);
+
+                cards.forEach((card) => {
+                    const haystack = normalize(card.dataset.searchable || card.textContent || '');
+                    const match = !needle || haystack.includes(needle) || panelNeedle.includes(needle);
+                    card.style.display = match ? '' : 'none';
+                    if (match) visible = true;
+                });
+
+                if (needle && visible) {
+                    activateTab(panel.dataset.tabPanel);
+                }
+            });
+        }
+
+        async function loadLogs() {
+            if (!logsTbody) return;
+            logsTbody.innerHTML = '<tr><td colspan="6" class="ai-hub-empty-row">Carregando logs...</td></tr>';
+            try {
+                const response = await fetch('/api/configs/ai/logs?limit=50');
+                if (!response.ok) throw new Error('Falha ao carregar logs');
+                const data = await response.json();
+                const logs = Array.isArray(data.logs) ? data.logs : [];
+
+                if (!logs.length) {
+                    logsTbody.innerHTML = '<tr><td colspan="6" class="ai-hub-empty-row">Nenhum registro encontrado.</td></tr>';
                     return;
                 }
 
-                data.logs.forEach(log => {
-                    const row = `
+                logsTbody.innerHTML = logs.map((log) => {
+                    const content = String(log.content || '');
+                    const preview = content.length > 100 ? `${content.slice(0, 100)}...` : content;
+                    const inbound = log.direction === 'inbound';
+                    const dateValue = log.created_at ? new Date(log.created_at) : null;
+                    const renderedDate = dateValue && !Number.isNaN(dateValue.getTime())
+                        ? dateValue.toLocaleString('pt-BR')
+                        : '-';
+
+                    return `
                         <tr>
-                            <td>${new Date(log.created_at).toLocaleString('pt-BR')}</td>
-                            <td>${log.agent_name || log.agent_type}</td>
-                            <td>${log.user_id || 'Sistema'}</td>
-                            <td>${log.channel}</td>
-                            <td><span class="log-direction ${log.direction === 'inbound' ? 'dir-in' : 'dir-out'}">${log.direction}</span></td>
-                            <td title="${log.content}">${log.content.substring(0, 60)}${log.content.length > 60 ? '...' : ''}</td>
+                            <td>${escapeHtml(renderedDate)}</td>
+                            <td>${escapeHtml(log.agent_name || log.agent_type || '-')}</td>
+                            <td>${escapeHtml(log.user_id || 'Sistema')}</td>
+                            <td>${escapeHtml(log.channel || '-')}</td>
+                            <td><span class="ai-hub-log-direction ${inbound ? 'is-inbound' : 'is-outbound'}">${inbound ? 'Inbound' : 'Outbound'}</span></td>
+                            <td title="${escapeHtml(content)}">${escapeHtml(preview)}</td>
                         </tr>
                     `;
-                    tbody.innerHTML += row;
-                });
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="6" style="color: red;">Erro ao carregar logs.</td></tr>';
-            });
-    }
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                logsTbody.innerHTML = '<tr><td colspan="6" class="ai-hub-empty-row">Erro ao carregar logs.</td></tr>';
+            }
+        }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        setupCollapsibleTabs();
+        tabs.forEach((tab) => tab.addEventListener('click', () => activateTab(tab.dataset.tabTarget)));
+        root.querySelectorAll('[data-tab-jump]').forEach((button) => {
+            button.addEventListener('click', () => activateTab(button.dataset.tabJump));
+        });
+        root.querySelectorAll('[data-local-link]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const target = document.querySelector(button.dataset.localLink);
+                activateTab('governance');
+                target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+        root.querySelectorAll('[data-agent-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                window.location.href = '/agents/cadastro';
+            });
+        });
+
+        searchInput?.addEventListener('input', (event) => applySearch(event.target.value));
+        refreshLogsBtn?.addEventListener('click', loadLogs);
+        activateTab(root.dataset.defaultTab || 'overview');
     });
 </script>
 {% endblock %}
+
+

@@ -422,6 +422,42 @@
             <article class="ai-mcp-card">
                 <header><h2>Catálogo MCP/Sapiens</h2><p>Ferramentas disponíveis, distribuição por risco e cobertura por surface.</p></header>
                 <div class="ai-mcp-grid ai-mcp-grid--summary">
+                    <div class="ai-mcp-kpi-card">
+                        <span>Domínios tool-first</span>
+                        <strong>{{ console.tool_first_catalog.summary.domains }}</strong>
+                    </div>
+                    <div class="ai-mcp-kpi-card">
+                        <span>Canônicos</span>
+                        <strong>{{ console.tool_first_catalog.summary.canonical_domains }}</strong>
+                    </div>
+                    <div class="ai-mcp-kpi-card">
+                        <span>Wrappers</span>
+                        <strong>{{ console.tool_first_catalog.summary.wrapper_domains }}</strong>
+                    </div>
+                    <div class="ai-mcp-kpi-card">
+                        <span>REST prontos</span>
+                        <strong>{{ console.tool_first_catalog.summary.ready_rest_contracts }}</strong>
+                    </div>
+                    <div class="ai-mcp-kpi-card">
+                        <span>MCP entries prontas</span>
+                        <strong>{{ console.tool_first_catalog.summary.ready_mcp_entries }}</strong>
+                    </div>
+                </div>
+                <div class="ai-mcp-stack">
+                    <div class="ai-mcp-entity-card" data-searchable="tool-first catalogo rest mcp discovery backlog wrappers canonico">
+                        <div class="ai-mcp-entity-card__head">
+                            <strong>Catálogo tool-first por domínio</strong>
+                            <span>{{ console.tool_first_catalog.discovery.mcp_tool }}</span>
+                        </div>
+                        <p>
+                            Publicação canônica via REST em
+                            <code>{{ console.tool_first_catalog.discovery.rest_endpoint }}</code>
+                            e discovery MCP por <code>{{ console.tool_first_catalog.discovery.mcp_tool }}</code>.
+                        </p>
+                        <small>Console: {{ console.tool_first_catalog.discovery.console_url }} · Frontend state: {{ console.tool_first_catalog.discovery.frontend_state_endpoint }}</small>
+                    </div>
+                </div>
+                <div class="ai-mcp-grid ai-mcp-grid--summary">
                     {% for item in console.catalog.risk_distribution %}
                     <div class="ai-mcp-kpi-card">
                         <span>Risco {{ item.risk }}</span>
@@ -448,6 +484,27 @@
                         <p>{{ tool.description }}</p>
                         <small>Domínio: {{ tool.domain }} · Scopes: {{ tool.scopes|join(', ') }}</small>
                     </article>
+                    {% endfor %}
+                </div>
+                <div class="ai-mcp-stack ai-mcp-stack--scroll">
+                    {% for domain in console.tool_first_catalog.domains %}
+                    <div class="ai-mcp-entity-card" data-searchable="{{ domain.key }} {{ domain.title }} {{ domain.status }} {{ domain.surface }} {{ domain.legacy_routes|join(' ') }} {{ domain.canonical_routes|join(' ') }}">
+                        <div class="ai-mcp-entity-card__head">
+                            <strong>{{ domain.title }}</strong>
+                            <span>{{ domain.status }} · {{ domain.surface }}</span>
+                        </div>
+                        <p>{{ domain.description }}</p>
+                        <p>Entrada: <code>{{ domain.entrypoint }}</code></p>
+                        <small>
+                            Legado: {{ domain.legacy_routes|join(', ') or '—' }} ·
+                            Canônico: {{ domain.canonical_routes|join(', ') or '—' }}
+                        </small>
+                        <ul class="ai-mcp-inline-list">
+                            <li>REST prontos: {{ domain.summary.ready_rest_contracts }}</li>
+                            <li>MCP publicados: {{ domain.summary.published_mcp_tools }}</li>
+                            <li>Backlog: {{ domain.planned_tools|length }}</li>
+                        </ul>
+                    </div>
                     {% endfor %}
                 </div>
             </article>

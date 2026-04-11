@@ -9,6 +9,8 @@ from models import db
 from models.cadastro_session import CadastroSession
 from models.company import Company
 from models.user import User
+from models.role import Role
+from models.employee import Employee
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +110,259 @@ class CadastroAgentService:
     def __init__(self):
         """Inicializa o serviço"""
         pass
+
+    def iniciar_fluxo_empresa(self, user_id: int, tipo_cadastro: str = 'real') -> Dict[str, Any]:
+        """Inicia ou reinicia um fluxo assistido de cadastro de empresa."""
+        tipo_normalizado = 'exemplo' if str(tipo_cadastro).strip().lower() == 'exemplo' else 'real'
+
+        try:
+            sessao_ativa = CadastroSession.buscar_sessao_ativa(user_id, tipo_normalizado)
+            if sessao_ativa and not sessao_ativa.is_deleted:
+                sessao_ativa.is_deleted = True
+                db.session.commit()
+
+            sessao = CadastroSession.criar_sessao(
+                user_id=user_id,
+                tipo_cadastro=tipo_normalizado,
+            )
+
+            if tipo_normalizado == 'real':
+                payload = {
+                    'mensagem': 'Vamos iniciar o onboarding assistido da empresa. Primeiro, informe o CNPJ para tentarmos preencher os dados automaticamente.',
+                    'proximo_campo': 'cnpj',
+                    'progresso': 5,
+                    'dados_coletados': {},
+                    'session_id': sessao.id,
+                    'status': 'aguardando_campo',
+                    'resumo': self._montar_resumo_fluxo({}, None),
+                }
+            else:
+                payload = {
+                    'mensagem': 'Vamos criar uma empresa modelo para acelerar o setup. Qual é o nome da empresa?',
+                    'proximo_campo': 'name',
+                    'progresso': 5,
+                    'dados_coletados': {},
+                    'session_id': sessao.id,
+                    'status': 'aguardando_campo',
+                    'resumo': self._montar_resumo_fluxo({}, None),
+                }
+
+            sessao.estado = payload['status']
+            sessao.campo_atual = payload['proximo_campo']
+            sessao.progresso = payload['progresso']
+            db.session.commit()
+            return payload
+        except Exception as exc:
+            logger.exception("Erro ao iniciar fluxo assistido de cadastro")
+            db.session.rollback()
+            raise exc
+
+    def processar_fluxo_empresa(
+        self,
+        *,
+        user_id: int,
+        campo: str,
+        valor: Any,
+        dados_coletados: Optional[Dict[str, Any]] = None,
+        tipo_cadastro: str = 'real',
+        session_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Processa uma etapa do onboarding assistido de empresa."""
+        dados = dict(dados_coletados or {})
+        tipo_normalizado = 'exemplo' if str(tipo_cadastro).strip().lower() == 'exemplo' else 'real'
+        campo = str(campo or '').strip()
+        valor_normalizado = valor.strip() if isinstance(valor, str) else valor
+
+        if not campo:
+            raise ValueError('Campo não informado para processamento do fluxo.')
+
+        sessao = self._obter_sessao_fluxo(user_id=user_id, tipo_cadastro=tipo_normalizado, session_id=session_id)
+        if sessao:
+            dados = {**(sessao.dados_coletados or {}), **dados}
+
+        validacao = self._validar_campo(campo, valor_normalizado)
+        if not validacao.get('valido'):
+            payload = {
+                'mensagem': validacao.get('mensagem', 'Valor inválido para o campo informado.'),
+                'proximo_campo': campo,
+                'progresso': self._calcular_progresso_fluxo(dados),
+                'dados_coletados': dados,
+                'session_id': sessao.id if sessao else session_id,
+                'status': 'erro_validacao',
+                'resumo': self._montar_resumo_fluxo(dados, None),
+            }
+            self._persistir_sessao_fluxo(sessao, payload)
+            return payload
+
+        dados[campo] = valor_normalizado
+
+        if campo == 'cnpj' and tipo_normalizado == 'real':
+            dados_api = self._buscar_dados_cnpj(self._limpar_cnpj(str(valor_normalizado)) or '')
+            if dados_api:
+                for chave, valor_api in dados_api.items():
+                    if valor_api:
+                        dados[chave] = valor_api
+                if not dados.get('client_code'):
+                    dados['client_code'] = self._gerar_codigo_alfanumerico()
+
+        if not dados.get('client_code') and dados.get('name'):
+            dados['client_code'] = self._gerar_codigo_alfanumerico()
+
+        proximo_campo = self._identificar_proximo_campo(dados)
+        progresso = self._calcular_progresso_fluxo(dados)
+
+        if proximo_campo:
+            mensagem = self._obter_mensagem_proximo_campo(proximo_campo, dados, tipo_normalizado)
+            payload = {
+                'mensagem': mensagem,
+                'proximo_campo': proximo_campo,
+                'progresso': progresso,
+                'dados_coletados': dados,
+                'session_id': sessao.id if sessao else session_id,
+                'status': 'aguardando_campo',
+                'resumo': self._montar_resumo_fluxo(dados, None),
+            }
+        else:
+            payload = {
+                'mensagem': 'Base da empresa preenchida. Revise o resumo abaixo e finalize o cadastro para criar a unidade com contexto inicial completo.',
+                'progresso': 100,
+                'dados_coletados': dados,
+                'session_id': sessao.id if sessao else session_id,
+                'status': 'pronto_para_criar',
+                'resumo': self._montar_resumo_fluxo(dados, None),
+            }
+
+        self._persistir_sessao_fluxo(sessao, payload)
+        return payload
+
+    def finalizar_fluxo_empresa(
+        self,
+        *,
+        user,
+        dados_coletados: Optional[Dict[str, Any]] = None,
+        tipo_cadastro: str = 'real',
+        session_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Finaliza o onboarding da empresa e vincula o usuário atual como administrador."""
+        dados = dict(dados_coletados or {})
+        tipo_normalizado = 'exemplo' if str(tipo_cadastro).strip().lower() == 'exemplo' else 'real'
+
+        if not dados.get('name'):
+            raise ValueError('Nome da empresa é obrigatório.')
+
+        client_code = (dados.get('client_code') or '').strip().upper()
+        if not client_code:
+            client_code = self._gerar_codigo_alfanumerico()
+        client_code = self._garantir_client_code_unico(client_code)
+        dados['client_code'] = client_code
+
+        cnpj_limpo = self._limpar_cnpj(dados.get('cnpj')) if dados.get('cnpj') else None
+        if cnpj_limpo:
+            empresa_existente = Company.query.filter_by(cnpj=cnpj_limpo).first()
+            if empresa_existente:
+                raise ValueError('Já existe uma empresa cadastrada com este CNPJ.')
+
+        sessao = self._obter_sessao_fluxo(
+            user_id=getattr(user, 'id', None),
+            tipo_cadastro=tipo_normalizado,
+            session_id=session_id,
+        )
+        if sessao:
+            dados = {**(sessao.dados_coletados or {}), **dados}
+
+        company = Company(
+            name=dados.get('name'),
+            client_code=client_code,
+            legal_name=dados.get('legal_name') or dados.get('name'),
+            cnpj=cnpj_limpo,
+            description=dados.get('description') or None,
+            segment=dados.get('segment') or None,
+            size=dados.get('size') or None,
+            city=dados.get('city') or None,
+            state=(dados.get('state') or '').upper() or None,
+            coverage_physical=dados.get('coverage_physical') or None,
+            coverage_online=dados.get('coverage_online') or None,
+            experience_total=dados.get('experience_total') or None,
+            experience_segment=dados.get('experience_segment') or None,
+            mission=dados.get('mission') or None,
+            vision=dados.get('vision') or None,
+            values=dados.get('values') or None,
+            is_active=True,
+        )
+
+        try:
+            db.session.add(company)
+            db.session.flush()
+
+            role = Role.query.filter_by(company_id=company.id, title='Administrador').first()
+            if not role:
+                role = Role(
+                    company_id=company.id,
+                    title='Administrador',
+                    permissions={
+                        "projects": ["view", "create", "edit", "delete"],
+                        "indicators": ["view", "create", "edit", "delete"],
+                        "processes": ["view", "create", "edit", "delete"],
+                        "companies": ["view", "create", "edit"],
+                        "okrs": ["view", "create", "edit", "delete"],
+                    },
+                )
+                db.session.add(role)
+                db.session.flush()
+
+            existing_employee = Employee.query.filter_by(
+                user_id=getattr(user, 'id', None),
+                company_id=company.id,
+            ).first()
+
+            if not existing_employee:
+                db.session.add(
+                    Employee(
+                        user_id=getattr(user, 'id', None),
+                        company_id=company.id,
+                        role_id=role.id if role else None,
+                        name=getattr(user, 'name', None) or getattr(user, 'email', 'Administrador'),
+                        email=getattr(user, 'email', None),
+                        status='active',
+                    )
+                )
+
+            if sessao:
+                sessao.is_deleted = True
+                sessao.estado = 'concluido'
+                sessao.campo_atual = None
+                sessao.progresso = 100
+                sessao.dados_coletados = dados
+
+            db.session.commit()
+
+            analise = self.analisar_completude(company.id)
+            return {
+                'company_id': company.id,
+                'mensagem': f"Empresa '{company.name}' criada com sucesso. Você já está vinculado como administrador da unidade.",
+                'proximos_passos': self._sugerir_proximos_passos(company.id, dados),
+                'analise_completude': analise,
+                'redirect_url': f'/companies/{company.id}/edit',
+            }
+        except Exception as exc:
+            logger.exception("Erro ao finalizar onboarding assistido da empresa")
+            db.session.rollback()
+            raise exc
+
+    def _garantir_client_code_unico(self, client_code: str) -> str:
+        """Garante unicidade do client_code durante criação assistida."""
+        codigo_base = (client_code or '').strip().upper()[:50] or self._gerar_codigo_alfanumerico()
+        if not Company.query.filter_by(client_code=codigo_base).first():
+            return codigo_base
+
+        indice = 1
+        while indice < 1000:
+            candidato = f"{codigo_base[:47]}{indice:03d}"[:50]
+            if not Company.query.filter_by(client_code=candidato).first():
+                return candidato
+            indice += 1
+
+        return self._gerar_codigo_alfanumerico()
 
     def processar_conversa(self, mensagem: str, contexto: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -1167,6 +1422,114 @@ class CadastroAgentService:
         
         return None
 
+    def _obter_sessao_fluxo(
+        self,
+        *,
+        user_id: Optional[int],
+        tipo_cadastro: str,
+        session_id: Optional[int] = None,
+    ) -> Optional[CadastroSession]:
+        """Busca a sessão ativa do fluxo atual."""
+        if session_id:
+            sessao = CadastroSession.query.get(session_id)
+            if sessao and not sessao.is_deleted:
+                return sessao
+
+        if not user_id:
+            return None
+
+        return CadastroSession.buscar_sessao_ativa(user_id, tipo_cadastro)
+
+    def _persistir_sessao_fluxo(self, sessao: Optional[CadastroSession], payload: Dict[str, Any]) -> None:
+        """Persiste estado resumido do fluxo assistido."""
+        if not sessao:
+            return
+
+        sessao.estado = payload.get('status') or sessao.estado
+        sessao.campo_atual = payload.get('proximo_campo')
+        sessao.progresso = payload.get('progresso') or sessao.progresso
+        sessao.dados_coletados = payload.get('dados_coletados') or {}
+        db.session.commit()
+
+    def _calcular_progresso_fluxo(self, dados_coletados: Dict[str, Any]) -> int:
+        """Calcula progresso visual do fluxo com base nos campos do agente."""
+        todos_campos = (
+            self.CAMPOS_OBRIGATORIOS
+            + self.CAMPOS_RECOMENDADOS_ALTA
+            + self.CAMPOS_RECOMENDADOS_MEDIA
+            + self.CAMPOS_RECOMENDADOS_BAIXA
+            + self.CAMPOS_OPCIONAIS
+        )
+        preenchidos = 0
+        for campo in todos_campos:
+            valor = dados_coletados.get(campo)
+            if valor and (not isinstance(valor, str) or valor.strip()):
+                preenchidos += 1
+
+        if not todos_campos:
+            return 0
+
+        progresso = int((preenchidos / len(todos_campos)) * 100)
+        return max(5, min(progresso, 100))
+
+    def _obter_mensagem_proximo_campo(self, campo: str, dados_coletados: Dict[str, Any], tipo_cadastro: str) -> str:
+        """Gera a pergunta contextual para o próximo campo do fluxo."""
+        nome_empresa = dados_coletados.get('name')
+        prefixo = f"Ótimo. Vamos continuar o onboarding de {nome_empresa}. " if nome_empresa else ""
+        perguntas = {
+            'name': 'Qual é o nome da empresa?',
+            'client_code': 'Qual código curto de identificação deseja usar para a empresa? Se preferir, posso manter o código gerado automaticamente.',
+            'legal_name': 'Qual é a razão social completa?',
+            'cnpj': 'Informe o CNPJ para buscar e validar os dados públicos.',
+            'segment': 'Qual é o segmento principal de atuação?',
+            'city': 'Em qual cidade fica a sede principal?',
+            'state': 'Qual é a UF da sede?',
+            'coverage_physical': 'Qual é o alcance físico da operação?',
+            'coverage_online': 'Como está a presença online da empresa?',
+            'experience_total': 'Há quanto tempo a empresa existe ou opera?',
+            'experience_segment': 'Qual é a experiência da empresa neste segmento?',
+            'mission': 'Qual é a missão da empresa?',
+            'vision': 'Qual visão de futuro a empresa quer sustentar?',
+            'values': 'Quais valores principais orientam a empresa?',
+        }
+        if campo == 'client_code' and tipo_cadastro == 'real' and dados_coletados.get('client_code'):
+            return f"{prefixo}Gerei o código {dados_coletados.get('client_code')} automaticamente. Deseja mantê-lo ou informar outro?"
+        return prefixo + perguntas.get(campo, f'Informe o campo {campo}.')
+
+    def _montar_resumo_fluxo(self, dados_coletados: Dict[str, Any], company_id: Optional[int]) -> Dict[str, Any]:
+        """Monta resumo de faltantes e impactos para o front-end."""
+        faltantes = {
+            'obrigatorios': [
+                campo for campo in self.CAMPOS_OBRIGATORIOS
+                if not dados_coletados.get(campo)
+            ],
+            'recomendados_alta': [
+                campo for campo in self.CAMPOS_RECOMENDADOS_ALTA
+                if not dados_coletados.get(campo)
+            ],
+            'recomendados_media': [
+                campo for campo in self.CAMPOS_RECOMENDADOS_MEDIA
+                if not dados_coletados.get(campo)
+            ],
+            'recomendados_baixa': [
+                campo for campo in self.CAMPOS_RECOMENDADOS_BAIXA
+                if not dados_coletados.get(campo)
+            ],
+            'opcionais': [
+                campo for campo in self.CAMPOS_OPCIONAIS
+                if not dados_coletados.get(campo)
+            ],
+        }
+        impactos = self._analisar_impactos(faltantes)
+        percentual = self._calcular_progresso_fluxo(dados_coletados)
+        return {
+            'company_id': company_id,
+            'completude_percentual': percentual,
+            'status_completude': 'completo' if not faltantes['obrigatorios'] else 'incompleto',
+            'campos_faltantes': faltantes,
+            'impactos': impactos,
+        }
+
     def _validar_campo(self, campo: str, valor: Any) -> Dict[str, Any]:
         """Valida valor de um campo específico"""
         if not valor or (isinstance(valor, str) and not valor.strip()):
@@ -1468,4 +1831,3 @@ class CadastroAgentService:
         if not cnpj:
             return None
         return re.sub(r'[^0-9]', '', str(cnpj))
-

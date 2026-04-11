@@ -11,6 +11,7 @@ from src.intelligence.mcp_contracts import (
 from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
 from src.intelligence.tool_catalog import catalog
 from src.intelligence.tooling.capabilities import ToolScope
+from services.tool_first_catalog_service import ToolFirstCatalogService
 
 
 @dataclass(frozen=True)
@@ -166,3 +167,14 @@ def test_contract_drift_workload_and_identity_have_matrix_coverage_on_expected_s
     assert any(rule.domain == "workload" for rule in tech_analytics.domains)
     assert any(rule.domain == "workload" for rule in tech_ops.domains)
     assert all(rule.domain != "identity_admin" for matrix in APP32_PERMISSION_MATRIX_MANIFEST.matrices for rule in matrix.domains)
+
+
+def test_contract_drift_tool_first_catalog_references_only_published_capabilities_or_planned_backlog():
+    payload = ToolFirstCatalogService.build_catalog(None)
+    published_capability_names = {tool["name"] for tool in catalog.get_capability_manifest(include_tools=True).get("tools", [])}
+
+    for domain in payload["domains"]:
+        for tool in domain["published_tools"]:
+            assert tool["name"] in published_capability_names
+        for planned in domain["planned_tools"]:
+            assert planned["name"] not in {tool["name"] for tool in domain["published_tools"]}

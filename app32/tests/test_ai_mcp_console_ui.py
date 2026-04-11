@@ -10,6 +10,8 @@ def test_ai_mcp_console_template_declares_expected_sections():
         "aiMcpConsoleSearch",
         "data-console-tab",
         "data-console-panel",
+        "Catálogo tool-first por domínio",
+        "console.tool_first_catalog.discovery.rest_endpoint",
         "Perfis & Permissões",
         "Onboarding & Cadastros",
         "Release & Freeze",

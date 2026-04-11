@@ -19,10 +19,14 @@ def companies_list():
 @companies_bp.route('/companies/new')
 @permission_required('companies', 'create')
 def company_new():
-    """New company form"""
-    tab = request.args.get('tab', 'dados')
-    onboarding = CompanyOnboardingService.build_view_model(None, tab)
-    return render_template('modules/companies/company_form_v2.html', active_tab=tab, onboarding=onboarding)
+    """Novo onboarding assistido de empresa."""
+    return render_template(
+        'cadastro_agent.html',
+        agent_type='cadastro',
+        agent_name='Onboarding Assistido de Empresa',
+        agent_description='Criação guiada da empresa com contexto operacional, estratégico e readiness para IA/MCP.',
+        canonical_company_route='/companies/new',
+    )
 
 @companies_bp.route('/companies/<int:company_id>/edit')
 @permission_required('companies', 'edit')

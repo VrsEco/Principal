@@ -7,6 +7,69 @@ agents_bp = Blueprint('agents', __name__)
 cadastro_service = CadastroAgentService()
 PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
+AGENT_SURFACE_CONFIG = {
+    'planejamento': {
+        'icon': '🧭',
+        'eyebrow': 'Wrapper Sapiens',
+        'title': 'Planejamento Estratégico',
+        'description': 'Esta antiga tela de agente agora funciona como entrada guiada para o Sapiens. O objetivo é concentrar a inteligência em um hub único e mover capacidades para tools REST + MCP.',
+        'preset': 'Quero apoio em planejamento estratégico. Analise o contexto da empresa, identifique lacunas e proponha próximos passos executáveis.',
+        'tool_targets': [
+            {'name': 'generate_strategy_snapshot', 'description': 'Leitura executiva do contexto estratégico e situação atual.'},
+            {'name': 'suggest_okrs', 'description': 'Sugestão de objetivos e indicadores coerentes com o momento da empresa.'},
+            {'name': 'list_strategic_gaps', 'description': 'Gap analysis para orientar priorização de execução.'},
+        ],
+    },
+    'processos': {
+        'icon': '⚙️',
+        'eyebrow': 'Wrapper Sapiens',
+        'title': 'Processos',
+        'description': 'Em vez de manter um agente isolado para processos, esta superfície orienta o usuário a operar via Sapiens com catálogo de tools específico.',
+        'preset': 'Quero ajuda com processos. Identifique gargalos, processos críticos e sugira melhorias com base no contexto atual.',
+        'tool_targets': [
+            {'name': 'list_processes', 'description': 'Consulta estruturada dos processos disponíveis por empresa.'},
+            {'name': 'analyze_process_bottlenecks', 'description': 'Leitura de gargalos e pontos de ruptura operacional.'},
+            {'name': 'map_process', 'description': 'Estruturação guiada de fluxos e macroprocessos.'},
+        ],
+    },
+    'rotina': {
+        'icon': '📅',
+        'eyebrow': 'Wrapper Sapiens',
+        'title': 'Rotina Operacional',
+        'description': 'A rotina agora deve ser dirigida pelo Sapiens usando tools operacionais. Isso reduz código duplicado e melhora a consistência omnichannel.',
+        'preset': 'Quero ajuda com rotina operacional. Liste prioridades, pendências e ações de follow-up para a semana.',
+        'tool_targets': [
+            {'name': 'list_pending_tasks', 'description': 'Consulta de atividades abertas por empresa, pessoa ou período.'},
+            {'name': 'summarize_team_workload', 'description': 'Leitura rápida de carga do time e gargalos de execução.'},
+            {'name': 'generate_followup_actions', 'description': 'Próximas ações sugeridas para cobrança e acompanhamento.'},
+        ],
+    },
+    'performance': {
+        'icon': '📈',
+        'eyebrow': 'Wrapper Sapiens',
+        'title': 'Performance',
+        'description': 'A camada de performance deixa de ser um agente de tela independente e passa a ser uma jornada do Sapiens sobre indicadores e risco.',
+        'preset': 'Quero analisar performance. Leia os indicadores da empresa, aponte riscos, tendências e ações recomendadas.',
+        'tool_targets': [
+            {'name': 'list_indicators', 'description': 'Catálogo e leitura de indicadores por empresa.'},
+            {'name': 'analyze_indicator_trends', 'description': 'Interpretação de tendência, desvio e estabilidade.'},
+            {'name': 'detect_performance_risk', 'description': 'Sinalização de risco de performance e impacto operacional.'},
+        ],
+    },
+    'estrategico': {
+        'icon': '🏛️',
+        'eyebrow': 'Wrapper Sapiens',
+        'title': 'Leitura Estratégica',
+        'description': 'Esta superfície agora encaminha o usuário para uma leitura estratégica consolidada do Sapiens, com foco em execução, risco e coerência do negócio.',
+        'preset': 'Quero uma leitura estratégica da empresa. Compare estratégia e execução, mostre riscos e prioridades executivas.',
+        'tool_targets': [
+            {'name': 'generate_executive_summary', 'description': 'Resumo executivo para diretoria e tomada de decisão.'},
+            {'name': 'compare_strategy_vs_execution', 'description': 'Leitura entre intenção estratégica e operação real.'},
+            {'name': 'list_strategic_risks', 'description': 'Riscos e tensões relevantes para alta gestão.'},
+        ],
+    },
+}
+
 
 def _has_operational_full_access(company_id=None):
     role = str(getattr(current_user, 'role', '')).strip().lower()
@@ -48,6 +111,65 @@ def _log_workflow_approval_message(action, message: str, metadata=None):
                 **({'workflow_approval': approval_metadata} if approval_metadata else {}),
             },
         )
+    )
+
+
+def _render_company_onboarding_agent():
+    """Renderiza o onboarding assistido de empresa com UX de agente."""
+    return render_template(
+        'cadastro_agent.html',
+        agent_type='cadastro',
+        agent_name='Onboarding Assistido de Empresa',
+        agent_description='Criação guiada da empresa com contexto operacional, estratégico e readiness para IA/MCP.',
+        canonical_company_route='/companies/new',
+    )
+
+
+def _build_sapiens_url(surface_key: str, preset: str, contact: str = 'sapiens') -> str:
+    from urllib.parse import urlencode
+
+    return f"/sapiens?{urlencode({'contact': contact, 'surface': surface_key, 'preset': preset})}"
+
+
+def _render_agent_surface_wrapper(surface_key: str):
+    config = AGENT_SURFACE_CONFIG[surface_key]
+    return render_template(
+        'agent_surface_wrapper.html',
+        icon=config['icon'],
+        eyebrow=config['eyebrow'],
+        title=config['title'],
+        description=config['description'],
+        quick_steps=[
+            {
+                'title': '1. Abra no Sapiens',
+                'body': 'A superfície já entrega um prompt inicial focado no domínio para acelerar a conversa.',
+            },
+            {
+                'title': '2. Valide o contexto da empresa',
+                'body': 'O hub usa o contexto ativo da unidade e deve operar com segurança multi-tenant.',
+            },
+            {
+                'title': '3. Evolua por tools',
+                'body': 'A próxima camada não é novo agente de tela; é tool REST + MCP com contrato claro.',
+            },
+        ],
+        suggested_prompts=[
+            {'title': 'Prompt guiado', 'body': config['preset']},
+            {'title': 'Exploração controlada', 'body': 'Peça diagnóstico, lacunas, próximos passos e evidências antes de executar qualquer ação sensível.'},
+            {'title': 'Escalonamento técnico', 'body': 'Se houver falha estrutural, use o Squad de Engenharia com contexto do domínio atual.'},
+        ],
+        governance_notes=[
+            {'title': 'MCP First', 'body': 'Toda capacidade nova deste domínio deve nascer em service + REST + MCP Tool.'},
+            {'title': 'Sem novos agentes de tela', 'body': 'A superfície atual é um wrapper temporário; a especialização deve ficar no catálogo de tools.'},
+            {'title': 'Custo sob controle', 'body': 'A inferência pesada pode migrar para runtimes externos do cliente via MCP quando apropriado.'},
+        ],
+        tool_targets=config['tool_targets'],
+        sapiens_url=_build_sapiens_url(surface_key, config['preset']),
+        engineering_url=_build_sapiens_url(
+            surface_key,
+            f"Analise tecnicamente a convergência tool-first do domínio {surface_key} no APP32 e aponte riscos arquiteturais.",
+            contact='engineering',
+        ),
     )
 
 @agents_bp.route('/sapiens')
@@ -1213,236 +1335,87 @@ def rollback_action(action_id):
 @agents_bp.route('/agents/planejamento')
 @login_required
 def agent_planejamento():
-    return render_template('cadastro_agent.html', 
-                           agent_type='planejamento', 
-                           agent_name='Agente de Planejamento',
-                           agent_description='Assistente especializado em Planejamento Estratégico e análises de mercado.')
+    return _render_agent_surface_wrapper('planejamento')
 
 @agents_bp.route('/agents/processos')
 @login_required
 def agent_processos():
-    return render_template('cadastro_agent.html', 
-                           agent_type='processos', 
-                           agent_name='Agente de Processos',
-                           agent_description='Especialista em mapeamento, análise e otimização de processos operacionais.')
+    return _render_agent_surface_wrapper('processos')
 
 @agents_bp.route('/agents/rotina')
 @login_required
 def agent_rotina():
-    return render_template('cadastro_agent.html', 
-                           agent_type='rotina', 
-                           agent_name='Agente de Rotina',
-                           agent_description='Focado em monitoramento, cobrança e follow-up de atividades diárias.')
+    return _render_agent_surface_wrapper('rotina')
 
 @agents_bp.route('/agents/performance')
 @login_required
 def agent_performance():
-    return render_template('cadastro_agent.html', 
-                           agent_type='performance', 
-                           agent_name='Agente de Performance',
-                           agent_description='Análise profunda de indicadores de desempenho e resultados organizacionais.')
+    return _render_agent_surface_wrapper('performance')
 
 @agents_bp.route('/agents/estrategico')
 @login_required
 def agent_estrategico():
-    return render_template('cadastro_agent.html', 
-                           agent_type='estrategico', 
-                           agent_name='Agente Estratégico',
-                           agent_description='Suporte à alta gestão no monitoramento da execução da estratégia.')
+    return _render_agent_surface_wrapper('estrategico')
 
 @agents_bp.route('/agents/cadastro')
 @login_required
 def agent_cadastro():
-    return render_template('cadastro_agent.html', 
-                           agent_type='cadastro', 
-                           agent_name='Agente de Cadastro',
-                           agent_description='Assistente inteligente para cadastro e configuração de empresas e dados mestres.')
+    return _render_company_onboarding_agent()
 
 # API Routes for Agent
 @agents_bp.route('/api/cadastro-agent/empresa/iniciar', methods=['POST'])
 @login_required
 def iniciar_cadastro():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     tipo = data.get('tipo', 'real')
-    
-    if tipo == 'real':
-        return jsonify({
-            'success': True,
-            'data': {
-                'mensagem': 'Ótimo! Para começar o cadastro da empresa real, por favor, me informe o CNPJ:',
-                'proximo_campo': 'cnpj',
-                'progresso': 5,
-                'dados_coletados': {}
-            }
-        })
-    else:
-        return jsonify({
-            'success': True,
-            'data': {
-                'mensagem': 'Vamos criar uma empresa exemplo. Qual nome deseja dar a ela?',
-                'proximo_campo': 'name',
-                'progresso': 5,
-                'dados_coletados': {}
-            }
-        })
+
+    try:
+        payload = cadastro_service.iniciar_fluxo_empresa(
+            user_id=current_user.id,
+            tipo_cadastro=tipo,
+        )
+        return jsonify({'success': True, 'data': payload})
+    except Exception:
+        return jsonify({'success': False, 'error': PUBLIC_ERROR_MESSAGE}), 500
 
 @agents_bp.route('/api/cadastro-agent/empresa/processar', methods=['POST'])
 @login_required
 def processar_cadastro():
-    data = request.get_json()
-    campo = data.get('campo')
-    valor = data.get('valor')
-    dados_coletados = data.get('dados_coletados', {})
-    tipo = data.get('tipo', 'real')
-    
-    # Atualizar dados
-    dados_coletados[campo] = valor
-    
-    # Se for CNPJ, buscar dados
-    if campo == 'cnpj' and tipo == 'real':
-        # Remove special chars for search
-        cnpj_clean = "".join(filter(str.isdigit, valor))
-        dados_api = cadastro_service._buscar_dados_cnpj(cnpj_clean)
-        if dados_api:
-            # Merge API data
-            for k, v in dados_api.items():
-                if v: dados_coletados[k] = v
-            
-            return jsonify({
-                'success': True,
-                'data': {
-                    'mensagem': f"Encontrei os dados da empresa {dados_api.get('name')}! Algumas informações foram preenchidas automaticamente. Podemos continuar?",
-                    'proximo_campo': 'segment' if 'segment' not in dados_coletados else 'city',
-                    'progresso': 60,
-                    'dados_coletados': dados_coletados
-                }
-            })
+    data = request.get_json(silent=True) or {}
 
-    # Sequence of fields
-    sequence = ['name', 'client_code', 'cnpj', 'segment', 'city', 'state']
-    if tipo == 'exemplo':
-        sequence = ['name', 'segment']
-        
     try:
-        current_idx = sequence.index(campo)
-        if current_idx + 1 < len(sequence):
-            proximo = sequence[current_idx + 1]
-            # Skip if already filled (from API)
-            while proximo in dados_coletados and current_idx + 1 < len(sequence):
-                current_idx += 1
-                if current_idx + 1 < len(sequence):
-                    proximo = sequence[current_idx + 1]
-                else:
-                    proximo = None
-                    break
-        else:
-            proximo = None
-    except ValueError:
-        proximo = None
-
-    if proximo:
-        prompts = {
-            'name': 'Qual o nome fantasia da empresa?',
-            'client_code': 'Qual o código curto (3 letras/números) para identificação?',
-            'segment': 'Qual o segmento de atuação?',
-            'city': 'Em qual cidade fica a sede?',
-            'state': 'E o estado (UF)?'
-        }
-        return jsonify({
-            'success': True,
-            'data': {
-                'mensagem': prompts.get(proximo, f"Qual o {proximo}?"),
-                'proximo_campo': proximo,
-                'progresso': int((sequence.index(proximo) / len(sequence)) * 100),
-                'dados_coletados': dados_coletados
-            }
-        })
-    else:
-        return jsonify({
-            'success': True,
-            'data': {
-                'mensagem': "Tudo pronto! Já tenho os dados necessários. Podemos finalizar o cadastro?",
-                'status': 'pronto_para_criar',
-                'progresso': 100,
-                'dados_coletados': dados_coletados
-            }
-        })
+        payload = cadastro_service.processar_fluxo_empresa(
+            user_id=current_user.id,
+            campo=data.get('campo'),
+            valor=data.get('valor'),
+            dados_coletados=data.get('dados_coletados', {}),
+            tipo_cadastro=data.get('tipo', 'real'),
+            session_id=data.get('session_id'),
+        )
+        return jsonify({'success': True, 'data': payload})
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'error': PUBLIC_ERROR_MESSAGE}), 500
 
 @agents_bp.route('/api/cadastro-agent/empresa/finalizar', methods=['POST'])
 @login_required
 def finalizar_cadastro():
-    from models import db, Company, Role, Employee
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     dados = data.get('dados', {})
-    
-    try:
-        # Avoid duplicate client code
-        client_code = dados.get('client_code')
-        if not client_code:
-            client_code = dados.get('name', 'EMP')[:3].upper()
-            
-        existing = Company.query.filter_by(client_code=client_code).first()
-        if existing:
-            import time
-            client_code = f"{client_code[:2]}{int(time.time()) % 10}"
 
-        company = Company(
-            name=dados.get('name'),
-            client_code=client_code,
-            legal_name=dados.get('legal_name', dados.get('name')),
-            cnpj=dados.get('cnpj'),
-            segment=dados.get('segment'),
-            city=dados.get('city'),
-            state=dados.get('state')
+    try:
+        payload = cadastro_service.finalizar_fluxo_empresa(
+            user=current_user,
+            dados_coletados=dados,
+            tipo_cadastro=data.get('tipo', 'real'),
+            session_id=data.get('session_id'),
         )
-        db.session.add(company)
-        db.session.commit()
-        
-        # Create Admin Role
-        role = Role.query.filter_by(company_id=company.id, title='Administrador').first()
-        if not role:
-            role = Role(
-                company_id=company.id, 
-                title='Administrador', 
-                permissions={
-                    "projects": ["view", "create", "edit", "delete"],
-                    "indicators": ["view", "create", "edit", "delete"],
-                    "processes": ["view", "create", "edit", "delete"],
-                    "companies": ["view", "edit"],
-                    "okrs": ["view", "create", "edit", "delete"]
-                }
-            )
-            db.session.add(role)
-            db.session.commit()
-            
-        emp = Employee(
-            user_id=current_user.id,
-            company_id=company.id,
-            role_id=role.id,
-            name=current_user.name,
-            email=current_user.email,
-            status='active'
-        )
-        db.session.add(emp)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'mensagem': f"Empresa '{company.name}' criada com sucesso! Você agora é o administrador desta unidade.",
-                'proximos_passos': [
-                    "Acessar o módulo de 'Planejamento' para definir OKRs.",
-                    "Configurar os primeiros 'Indicadores' de desempenho.",
-                    "Mapear os 'Processos' críticos da operação."
-                ]
-            }
-        })
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'error': PUBLIC_ERROR_MESSAGE
-        }), 500
+        return jsonify({'success': True, 'data': payload})
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'error': PUBLIC_ERROR_MESSAGE}), 500
 
 
 @agents_bp.route('/api/agents/actions/reject/<int:action_id>', methods=['POST'])
