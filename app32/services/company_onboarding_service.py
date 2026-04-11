@@ -255,6 +255,70 @@ class CompanyOnboardingService:
             ],
         }
 
+        next_steps = {step["id"]: steps[index + 1]["id"] if index + 1 < len(steps) else "config" for index, step in enumerate(steps)}
+        compact_guidance = {
+            "dados": {
+                "title": "Faça isso agora",
+                "body": "Preencha nome, código e propósito. Quando terminar, salve para liberar o restante.",
+                "primary_label": "Salvar e continuar",
+                "primary_action": "save",
+                "secondary_label": "Próxima etapa: Contexto",
+                "secondary_target": next_steps["dados"],
+            },
+            "economico": {
+                "title": "Faça isso agora",
+                "body": "Complete CNPJ, segmento, porte e cidade para dar contexto à empresa.",
+                "primary_label": "Salvar contexto",
+                "primary_action": "save",
+                "secondary_label": "Próxima etapa: Estrutura",
+                "secondary_target": next_steps["economico"],
+            },
+            "cargos": {
+                "title": "Faça isso agora",
+                "body": "Cadastre pelo menos os cargos principais antes de puxar o time.",
+                "primary_label": "Adicionar cargo",
+                "primary_action": "custom",
+                "primary_target": "showAddRoleModal",
+                "secondary_label": "Próxima etapa: Time",
+                "secondary_target": next_steps["cargos"],
+            },
+            "colaboradores": {
+                "title": "Faça isso agora",
+                "body": "Inclua as pessoas da operação e mantenha o vínculo da unidade organizado.",
+                "primary_label": "Novo colaborador",
+                "primary_action": "custom",
+                "primary_target": "showEmployeeModal",
+                "secondary_label": "Próxima etapa: Acessos",
+                "secondary_target": next_steps["colaboradores"],
+            },
+            "usuarios": {
+                "title": "Faça isso agora",
+                "body": "Vincule quem realmente vai entrar no sistema e operar a unidade.",
+                "primary_label": "Vincular acesso",
+                "primary_action": "custom",
+                "primary_target": "showAddUserModal",
+                "secondary_label": "Próxima etapa: Regras",
+                "secondary_target": next_steps["usuarios"],
+            },
+            "pontuacao": {
+                "title": "Faça isso agora",
+                "body": "Defina as regras mínimas de prazo e atraso para não deixar a empresa solta.",
+                "primary_label": "Salvar regras",
+                "primary_action": "custom",
+                "primary_target": "submitPerformanceForm",
+                "secondary_label": "Próxima etapa: IA/MCP",
+                "secondary_target": next_steps["pontuacao"],
+            },
+            "config": {
+                "title": "Faça isso agora",
+                "body": "Revise status ativo, logo e atalhos de IA/MCP antes de começar os testes.",
+                "primary_label": "Salvar sistema",
+                "primary_action": "save",
+                "secondary_label": "Abrir Console IA/MCP",
+                "secondary_href": "/configs/ai/mcp",
+            },
+        }
+
         return {
             "mode": mode,
             "active_tab": active_tab,
@@ -268,5 +332,12 @@ class CompanyOnboardingService:
             "domain_tracks": domain_tracks,
             "quick_links": quick_links,
             "context_panel": cls.HELP_BY_TAB.get(active_tab, cls.HELP_BY_TAB["dados"]),
+            "compact_guidance": compact_guidance.get(active_tab, compact_guidance["dados"]),
+            "mode_selector": [
+                {"id": "create", "label": "Criar nova", "description": "Começar do zero.", "target": "dados"},
+                {"id": "update", "label": "Alterar existente", "description": "Ajustar sem se perder.", "target": active_tab if company_id else "dados"},
+                {"id": "configure", "label": "Configurar IA/MCP", "description": "Ir direto ao sistema e integrações.", "target": "config" if company_id else "dados"},
+                {"id": "test", "label": "Preparar teste", "description": "Fechar o setup para uso controlado.", "target": "config" if company_id else "dados"},
+            ],
             "checklist": checklists[mode],
         }

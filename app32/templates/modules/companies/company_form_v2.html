@@ -60,6 +60,46 @@
         </aside>
     </section>
 
+    <section class="onboarding-decision-strip" aria-label="Entrada simplificada">
+        <div class="onboarding-decision-strip__header">
+            <strong>Escolha rápida</strong>
+            <span>Se quiser, pule direto para o que precisa agora.</span>
+        </div>
+        <div class="onboarding-mode-selector">
+            {% for item in (onboarding.mode_selector if onboarding else []) %}
+            <button type="button" class="onboarding-mode-selector__item" data-wizard-goto="{{ item.target }}">
+                <strong>{{ item.label }}</strong>
+                <span>{{ item.description }}</span>
+            </button>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="onboarding-now-card" id="onboarding-now-card">
+        <div>
+            <span class="onboarding-now-card__eyebrow">Próximo passo</span>
+            <h3 id="onboarding-now-title">{{ onboarding.compact_guidance.title if onboarding else 'Faça isso agora' }}</h3>
+            <p id="onboarding-now-body">{{ onboarding.compact_guidance.body if onboarding else 'Comece pela identidade e avance um passo por vez.' }}</p>
+        </div>
+        <div class="onboarding-now-card__actions">
+            <button type="button" class="btn btn-special" id="onboardingPrimaryAction"
+                data-action-kind="{{ onboarding.compact_guidance.primary_action if onboarding else 'save' }}"
+                data-action-target="{{ onboarding.compact_guidance.primary_target if onboarding and onboarding.compact_guidance.primary_target is defined else '' }}">
+                {{ onboarding.compact_guidance.primary_label if onboarding else 'Salvar e continuar' }}
+            </button>
+            {% if onboarding and onboarding.compact_guidance.secondary_href is defined %}
+            <a class="btn btn-secondary" id="onboardingSecondaryAction" href="{{ onboarding.compact_guidance.secondary_href }}">
+                {{ onboarding.compact_guidance.secondary_label }}
+            </a>
+            {% else %}
+            <button type="button" class="btn btn-secondary" id="onboardingSecondaryAction"
+                data-wizard-goto="{{ onboarding.compact_guidance.secondary_target if onboarding and onboarding.compact_guidance.secondary_target is defined else 'economico' }}">
+                {{ onboarding.compact_guidance.secondary_label if onboarding else 'Próxima etapa' }}
+            </button>
+            {% endif %}
+        </div>
+    </section>
+
     <div class="onboarding-stepper" id="company-onboarding-stepper" style="margin-bottom: 0.75rem;">
         {% for step in (onboarding.steps if onboarding else []) %}
         <button type="button" class="onboarding-step tab-btn {{ 'active' if loop.first }}" data-onboarding-step="{{ step.id }}" data-status="{{ step.status }}">

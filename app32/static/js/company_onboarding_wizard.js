@@ -46,6 +46,16 @@
     }
   };
 
+  const actionMeta = {
+    dados: { primaryLabel: 'Salvar e continuar', primaryKind: 'save', secondaryLabel: 'Próxima etapa: Contexto', secondaryTarget: 'economico' },
+    economico: { primaryLabel: 'Salvar contexto', primaryKind: 'save', secondaryLabel: 'Próxima etapa: Estrutura', secondaryTarget: 'cargos' },
+    cargos: { primaryLabel: 'Adicionar cargo', primaryKind: 'custom', primaryTarget: 'showAddRoleModal', secondaryLabel: 'Próxima etapa: Time', secondaryTarget: 'colaboradores' },
+    colaboradores: { primaryLabel: 'Novo colaborador', primaryKind: 'custom', primaryTarget: 'showEmployeeModal', secondaryLabel: 'Próxima etapa: Acessos', secondaryTarget: 'usuarios' },
+    usuarios: { primaryLabel: 'Vincular acesso', primaryKind: 'custom', primaryTarget: 'showAddUserModal', secondaryLabel: 'Próxima etapa: Regras', secondaryTarget: 'pontuacao' },
+    pontuacao: { primaryLabel: 'Salvar regras', primaryKind: 'custom', primaryTarget: 'submitPerformanceForm', secondaryLabel: 'Próxima etapa: IA/MCP', secondaryTarget: 'config' },
+    config: { primaryLabel: 'Salvar sistema', primaryKind: 'save', secondaryLabel: 'Abrir Console IA/MCP', secondaryHref: '/configs/ai/mcp' }
+  };
+
   function getCompanyId() {
     return String(window.companyId || '').trim();
   }
@@ -76,6 +86,51 @@
     `;
   }
 
+  function updateNowCard(tabId) {
+    const title = document.getElementById('onboarding-now-title');
+    const body = document.getElementById('onboarding-now-body');
+    const primary = document.getElementById('onboardingPrimaryAction');
+    const secondary = document.getElementById('onboardingSecondaryAction');
+    const meta = stepMeta[tabId] || stepMeta.dados;
+    const action = actionMeta[tabId] || actionMeta.dados;
+
+    if (title) title.textContent = 'Faça isso agora';
+    if (body) body.textContent = `${meta.description} ${meta.next}`;
+    if (primary) {
+      primary.textContent = action.primaryLabel;
+      primary.dataset.actionKind = action.primaryKind || 'save';
+      primary.dataset.actionTarget = action.primaryTarget || '';
+    }
+    if (secondary) {
+      if (secondary.tagName === 'A') {
+        secondary.textContent = action.secondaryLabel;
+        if (action.secondaryHref) secondary.setAttribute('href', action.secondaryHref);
+      } else {
+        secondary.textContent = action.secondaryLabel;
+        if (action.secondaryTarget) secondary.dataset.wizardGoto = action.secondaryTarget;
+      }
+    }
+  }
+
+  function runPrimaryAction() {
+    const primary = document.getElementById('onboardingPrimaryAction');
+    if (!primary) return;
+    const kind = primary.dataset.actionKind || 'save';
+    const target = primary.dataset.actionTarget || '';
+    if (kind === 'save') {
+      if (typeof window.handleSubmit === 'function') window.handleSubmit();
+      return;
+    }
+    if (kind === 'custom') {
+      if (target === 'submitPerformanceForm') {
+        document.querySelector('#content-pontuacao form')?.requestSubmit();
+        return;
+      }
+      const fn = window[target];
+      if (typeof fn === 'function') fn();
+    }
+  }
+
   function setActiveStep(tabId) {
     const steps = document.querySelectorAll('[data-onboarding-step]');
     const progress = document.querySelector('.onboarding-progress-bar');
@@ -93,6 +148,7 @@
     }
 
     setHelpPanel(tabId);
+    updateNowCard(tabId);
   }
 
   function bindWizardStepper() {
@@ -230,6 +286,8 @@
     bindDraftPersistence();
     updateModeCopy();
     syncFromActiveTab();
+
+    document.getElementById('onboardingPrimaryAction')?.addEventListener('click', runPrimaryAction);
 
     document.querySelectorAll('[data-wizard-skip]').forEach((btn) => {
       btn.addEventListener('click', () => {

@@ -330,7 +330,16 @@
   .wizard-domain-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .onboarding-mode-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .onboarding-now-card {
+    grid-template-columns: 1fr;
+  }
 }
+
 
 @media (max-width: 720px) {
   .onboarding-hero {
@@ -343,6 +352,12 @@
 
   .wizard-domain-grid {
     grid-template-columns: 1fr;
+  }
+
+  .onboarding-mode-selector,
+  .onboarding-now-card__actions {
+    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .wizard-advanced-actions {
@@ -385,4 +400,80 @@
 
 .onboarding-step[data-status="after_create"] {
   opacity: 0.72;
+}
+
+
+.onboarding-decision-strip,
+.onboarding-now-card {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-primary);
+}
+
+.onboarding-decision-strip__header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.onboarding-decision-strip__header strong,
+.onboarding-now-card h3 {
+  color: var(--text-primary);
+}
+
+.onboarding-decision-strip__header span,
+.onboarding-now-card p,
+.onboarding-mode-selector__item span {
+  color: var(--text-secondary);
+}
+
+.onboarding-mode-selector {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.onboarding-mode-selector__item {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
+  border-radius: 16px;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.onboarding-mode-selector__item:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.onboarding-now-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: linear-gradient(145deg, rgba(37, 99, 235, 0.08), rgba(124, 58, 237, 0.05));
+  border-color: rgba(37, 99, 235, 0.16);
+}
+
+.onboarding-now-card__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.55rem;
+}
+
+.onboarding-now-card__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
