@@ -149,7 +149,13 @@
     .ops-panel.is-active { display: flex; }
     .ops-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
     .ops-group-card { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow-sm); padding: 1.1rem; display: flex; flex-direction: column; gap: 1rem; }
+    .ops-group-card.is-collapsed .ops-action-grid { display: none; }
     .ops-action-grid { display: grid; grid-template-columns: 1fr; gap: .85rem; }
+    .ops-group-card__header { display: flex; align-items: start; justify-content: space-between; gap: .75rem; }
+    .ops-group-card__toggle { flex-shrink: 0; min-width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-secondary); color: var(--text-secondary); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .16s ease, border-color .16s ease, color .16s ease; }
+    .ops-group-card__toggle:hover { border-color: rgba(37,99,235,.28); color: var(--primary); }
+    .ops-group-card__toggle-icon { font-size: 1rem; line-height: 1; transition: transform .16s ease; }
+    .ops-group-card.is-collapsed .ops-group-card__toggle-icon { transform: rotate(-90deg); }
     .ops-action-card { border: 1px solid var(--border); border-radius: 18px; padding: 1rem; text-decoration: none; color: inherit; background: var(--surface-secondary); display: flex; flex-direction: column; gap: .75rem; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
     .ops-action-card:hover { transform: translateY(-1px); border-color: rgba(37,99,235,.35); box-shadow: var(--shadow-sm); }
     .ops-action-card__top { display: flex; align-items: start; justify-content: space-between; gap: .75rem; }
@@ -184,6 +190,35 @@
             panels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.tabPanel === target));
         }
 
+        function setupCollapsibleGroups() {
+            panels.forEach((panel) => {
+                const groups = Array.from(panel.querySelectorAll('.ops-group-card'));
+                groups.forEach((group, index) => {
+                    const header = group.querySelector('.ops-group-card__header');
+                    if (!header) return;
+
+                    let toggle = header.querySelector('.ops-group-card__toggle');
+                    if (!toggle) {
+                        toggle = document.createElement('button');
+                        toggle.type = 'button';
+                        toggle.className = 'ops-group-card__toggle';
+                        toggle.setAttribute('title', 'Expandir ou recolher grupo');
+                        toggle.innerHTML = '<span class="ops-group-card__toggle-icon">⌄</span>';
+                        header.appendChild(toggle);
+                    }
+
+                    const shouldStartCollapsed = index > 0;
+                    group.classList.toggle('is-collapsed', shouldStartCollapsed);
+                    toggle.setAttribute('aria-expanded', String(!shouldStartCollapsed));
+
+                    toggle.addEventListener('click', () => {
+                        const collapsed = group.classList.toggle('is-collapsed');
+                        toggle.setAttribute('aria-expanded', String(!collapsed));
+                    });
+                });
+            });
+        }
+
         tabs.forEach((tab) => {
             tab.addEventListener('click', () => activateTab(tab.dataset.tabTarget));
         });
@@ -203,6 +238,7 @@
                 groups.forEach((group) => {
                     const actions = group.querySelectorAll('.ops-action-card');
                     let groupVisible = false;
+                    const toggle = group.querySelector('.ops-group-card__toggle');
                     actions.forEach((action) => {
                         const haystack = normalize(action.dataset.searchable || '');
                         const match = !needle || haystack.includes(needle);
@@ -210,6 +246,17 @@
                         if (match) groupVisible = true;
                     });
                     group.style.display = groupVisible ? '' : 'none';
+                    if (toggle) {
+                        if (needle) {
+                            group.classList.toggle('is-collapsed', !groupVisible);
+                            toggle.setAttribute('aria-expanded', String(groupVisible));
+                        } else {
+                            const siblingGroups = Array.from(panel.querySelectorAll('.ops-group-card')).filter((node) => node.style.display !== 'none');
+                            const shouldStartCollapsed = siblingGroups.indexOf(group) > 0;
+                            group.classList.toggle('is-collapsed', shouldStartCollapsed);
+                            toggle.setAttribute('aria-expanded', String(!shouldStartCollapsed));
+                        }
+                    }
                     if (groupVisible) panelVisible = true;
                 });
                 panel.style.display = panelVisible ? '' : 'none';
@@ -217,6 +264,7 @@
         }
 
         searchInput?.addEventListener('input', (event) => applySearch(event.target.value));
+        setupCollapsibleGroups();
         activateTab(root.dataset.defaultTab || tabs[0]?.dataset.tabTarget || '');
     });
 </script>

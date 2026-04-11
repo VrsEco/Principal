@@ -200,6 +200,51 @@
     }
 
     /* Outbound */
+    .tab-content-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 0 12px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .tab-content-toolbar h2 {
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .tab-content-toggle {
+        min-width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        border: 1px solid var(--color-border);
+        background: #fff;
+        color: var(--color-muted);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .tab-content-toggle:hover {
+        border-color: var(--bali-blue);
+        color: var(--bali-blue);
+    }
+
+    .tab-content-toggle span {
+        transition: transform 0.2s;
+    }
+
+    .tab-content.is-collapsed .tab-content-toggle span {
+        transform: rotate(-90deg);
+    }
+
+    .tab-content.is-collapsed > :not(.tab-content-toolbar) {
+        display: none !important;
+    }
 </style>
 {% endblock %}
 
@@ -224,7 +269,7 @@
     </div>
 
     <!-- Tab Content: Agents -->
-    <div id="tab-agents" class="tab-content">
+    <div id="tab-agents" class="tab-content" data-title="Agentes disponíveis">
         <div class="agents-grid">
             <!-- Simulated Standard Agents -->
             {% if not agents %}
@@ -279,7 +324,7 @@
     </div>
 
     <!-- Tab Content: Logs -->
-    <div id="tab-logs" class="tab-content" style="display: none;">
+    <div id="tab-logs" class="tab-content" style="display: none;" data-title="Logs de comunicação">
         <div class="logs-container">
             <div class="table-actions"
                 style="padding: 16px; border-bottom: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
@@ -309,7 +354,7 @@
     </div>
 
     <!-- Tab Content: Global Settings -->
-    <div id="tab-settings" class="tab-content" style="display: none;">
+    <div id="tab-settings" class="tab-content" style="display: none;" data-title="Configurações globais">
         <div class="card" style="max-width: 800px;">
             <div class="card-body">
                 <h3>Chaves de API e Modelos</h3>
@@ -350,6 +395,32 @@
 {% block scripts %}
 {{ super() }}
 <script>
+    function setupCollapsibleTabs() {
+        document.querySelectorAll('.tab-content').forEach((content, index) => {
+            if (content.querySelector('.tab-content-toolbar')) return;
+
+            const toolbar = document.createElement('div');
+            toolbar.className = 'tab-content-toolbar';
+            toolbar.innerHTML = `
+                <h2>${content.dataset.title || 'Seção'}</h2>
+                <button type="button" class="tab-content-toggle" aria-expanded="${index === 0 ? 'true' : 'false'}" title="Expandir ou recolher seção">
+                    <span>⌄</span>
+                </button>
+            `;
+            content.prepend(toolbar);
+
+            if (index > 0) {
+                content.classList.add('is-collapsed');
+            }
+
+            const toggle = toolbar.querySelector('.tab-content-toggle');
+            toggle.addEventListener('click', () => {
+                const collapsed = content.classList.toggle('is-collapsed');
+                toggle.setAttribute('aria-expanded', String(!collapsed));
+            });
+        });
+    }
+
     function switchTab(tabName) {
         // Hide all tabs
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
@@ -395,5 +466,9 @@
                 document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="6" style="color: red;">Erro ao carregar logs.</td></tr>';
             });
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setupCollapsibleTabs();
+    });
 </script>
 {% endblock %}
