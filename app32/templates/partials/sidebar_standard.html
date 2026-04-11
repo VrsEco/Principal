@@ -234,15 +234,15 @@
     </div>
     {% endif %}
 
-    <!-- IA Sapiens (Unificado) -->
-    <div class="sidebar-group {{ 'open' if '/sapiens' in request.path or '/agents/cadastro' in request.path or '/operations' in request.path or '/configs/ai' in request.path or '/configs/ai/mcp' in request.path or '/integrations' in request.path or '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path or '/financial/automation-audit' in request.path }}">
+    <!-- Sapiens -->
+    <div class="sidebar-group {{ 'open' if '/sapiens' in request.path or '/operations' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
                 <path d="M12 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"></path>
                 <path d="M11 10h2v8h-2z"></path>
             </svg>
-            Sapiens & IA
+            Sapiens
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="3">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -255,77 +255,6 @@
             <a href="/operations" class="sub-nav-link {{ 'active' if request.path == '/operations' or '/operations/' in request.path }}">
                 Operações Inteligentes
             </a>
-            <div class="sidebar-subgroup {{ 'open' if '/operations/audit' in request.path or '/configs/ai' in request.path or '/configs/ai/mcp' in request.path or '/integrations' in request.path or '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path or '/financial/automation-audit' in request.path }}">
-                <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                    Configurações de IA
-                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="3">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-                <div class="subgroup-content">
-                    <div class="sidebar-subgroup {{ 'open' if '/configs/ai' in request.path or '/configs/ai/mcp' in request.path or '/integrations' in request.path }}">
-                        <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                            Plataforma
-                            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="3">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                        </button>
-                        <div class="subgroup-content">
-                            <a href="/configs/ai/mcp" class="sub-nav-link {{ 'active' if '/configs/ai/mcp' in request.path }}">
-                                <span>Console Operacional IA/MCP</span>
-                            </a>
-                            <a href="/configs/ai" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' }}">
-                                <span>Parâmetros gerais de IA</span>
-                            </a>
-                            <a href="/integrations" class="sub-nav-link {{ 'active' if '/integrations' in request.path }}">
-                                <span>Tools / MCP / Integrações</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="sidebar-subgroup {{ 'open' if '/financial/classification-rules' in request.path or '/financial/classification-memories' in request.path or '/financial/automation-rules' in request.path }}">
-                        <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                            Financeiro
-                            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="3">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                        </button>
-                        <div class="subgroup-content">
-                            <a href="/financial/classification-rules" class="sub-nav-link {{ 'active' if request.path == '/financial/classification-rules' }}">
-                                <span>Regras de Classificação</span>
-                            </a>
-                            <a href="/financial/classification-memories" class="sub-nav-link {{ 'active' if request.path == '/financial/classification-memories' }}">
-                                <span>Memórias de Classificação</span>
-                            </a>
-                            <a href="/financial/automation-rules" class="sub-nav-link {{ 'active' if request.path == '/financial/automation-rules' }}">
-                                <span>Regras de Automação</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="sidebar-subgroup {{ 'open' if '/operations/audit' in request.path or '/financial/automation-audit' in request.path }}">
-                        <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                            Auditoria e Observabilidade
-                            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="3">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                        </button>
-                        <div class="subgroup-content">
-                            <a href="/operations/audit" class="sub-nav-link {{ 'active' if request.path == '/operations/audit' }}">
-                                <span>Auditoria Operacional</span>
-                            </a>
-                            <a href="/financial/automation-audit" class="sub-nav-link {{ 'active' if request.path == '/financial/automation-audit' }}">
-                                <span>Auditoria de Automação IA</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <a href="/agents/cadastro" class="sub-nav-link {{ 'active' if request.path == '/agents/cadastro' }}">
-                Onboarding Assistido
-            </a>
         </div>
     </div>
 
@@ -333,7 +262,7 @@
     <!-- Sistema -->
     {% if has_permission('companies', 'view') or has_permission('users', 'view') %}
     <div
-        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/settings' in request.path }}">
+        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/settings' in request.path or '/configs/ai' in request.path or '/configs/ai/mcp' in request.path or '/integrations' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -348,6 +277,33 @@
             </svg>
         </button>
         <div class="sub-menu">
+            {% set ai_section = request.args.get('section', 'overview') if request.path == '/configs/ai' else '' %}
+            <div class="sidebar-subgroup {{ 'open' if '/configs/ai' in request.path }}">
+                <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                    IA Corporativa
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/configs/ai?section=overview" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'overview' }}">
+                        Visão Geral
+                    </a>
+                    <a href="/configs/ai?section=configuration" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'configuration' }}">
+                        Configuração
+                    </a>
+                    <a href="/configs/ai?section=integrations" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'integrations' }}">
+                        Integrações
+                    </a>
+                    <a href="/configs/ai?section=orchestration" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'orchestration' }}">
+                        Orquestração
+                    </a>
+                    <a href="/configs/ai?section=governance" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'governance' }}">
+                        Governança
+                    </a>
+                </div>
+            </div>
+
             {% if has_permission('companies', 'view') or has_permission('companies', 'create') or has_permission('companies', 'edit') %}
             <div class="sidebar-subgroup {{ 'open' if '/companies' in request.path }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
