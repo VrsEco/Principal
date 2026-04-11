@@ -86,6 +86,43 @@
     `;
   }
 
+
+  function updateFocusCard(tabId) {
+    const question = document.getElementById('onboarding-focus-question');
+    const confirm = document.getElementById('onboardingFocusConfirm');
+    const focusMeta = {
+      dados: { question: 'Você já preencheu quem é a empresa e o código dela?', label: 'Sim, ir para Contexto', target: 'economico' },
+      economico: { question: 'O contexto econômico já está claro o suficiente para continuar?', label: 'Sim, ir para Estrutura', target: 'cargos' },
+      cargos: { question: 'Você já definiu os cargos principais da empresa?', label: 'Sim, ir para Time', target: 'colaboradores' },
+      colaboradores: { question: 'O time principal já está cadastrado?', label: 'Sim, ir para Acessos', target: 'usuarios' },
+      usuarios: { question: 'Quem precisa entrar no sistema já foi vinculado?', label: 'Sim, ir para Regras', target: 'pontuacao' },
+      pontuacao: { question: 'As regras mínimas já estão definidas?', label: 'Sim, ir para IA/MCP', target: 'config' },
+      config: { question: 'A empresa já está pronta para entrar em teste controlado?', label: 'Abrir Console IA/MCP', href: '/configs/ai/mcp' }
+    };
+    const meta = focusMeta[tabId] || focusMeta.dados;
+    if (question) question.textContent = meta.question;
+    if (confirm) {
+      confirm.textContent = meta.label;
+      if (confirm.tagName === 'A') {
+        if (meta.href) confirm.setAttribute('href', meta.href);
+      } else if (meta.target) {
+        confirm.dataset.wizardGoto = meta.target;
+      }
+    }
+  }
+
+  function setAdvancedVisibility(visible) {
+    const advancedActions = document.getElementById('companyAdvancedActions');
+    const advancedSide = document.getElementById('companyAdvancedSide');
+    const toggle = document.getElementById('onboardingToggleAdvanced');
+    if (advancedActions) advancedActions.style.display = visible ? 'flex' : 'none';
+    if (advancedSide) advancedSide.style.display = visible ? 'grid' : 'none';
+    if (toggle) {
+      toggle.dataset.advancedVisible = visible ? 'true' : 'false';
+      toggle.textContent = visible ? 'Esconder opções avançadas' : 'Mostrar opções avançadas';
+    }
+  }
+
   function updateNowCard(tabId) {
     const title = document.getElementById('onboarding-now-title');
     const body = document.getElementById('onboarding-now-body');
@@ -149,6 +186,7 @@
 
     setHelpPanel(tabId);
     updateNowCard(tabId);
+    updateFocusCard(tabId);
   }
 
   function bindWizardStepper() {
@@ -286,8 +324,16 @@
     bindDraftPersistence();
     updateModeCopy();
     syncFromActiveTab();
+    setAdvancedVisibility(false);
 
     document.getElementById('onboardingPrimaryAction')?.addEventListener('click', runPrimaryAction);
+    document.getElementById('onboardingToggleAdvanced')?.addEventListener('click', () => {
+      const visible = document.getElementById('onboardingToggleAdvanced')?.dataset.advancedVisible === 'true';
+      setAdvancedVisibility(!visible);
+    });
+    document.getElementById('onboardingFocusStay')?.addEventListener('click', () => {
+      document.getElementById('tab-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 
     document.querySelectorAll('[data-wizard-skip]').forEach((btn) => {
       btn.addEventListener('click', () => {

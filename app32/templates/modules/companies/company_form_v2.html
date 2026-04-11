@@ -100,6 +100,23 @@
         </div>
     </section>
 
+    <section class="onboarding-focus-card" id="onboardingFocusCard">
+        <div class="onboarding-focus-card__copy">
+            <span class="onboarding-focus-card__eyebrow">Modo assistido</span>
+            <h3 id="onboarding-focus-question">{{ onboarding.focus_lane.question if onboarding else 'Siga um passo por vez.' }}</h3>
+            <p>Se quiser simplificar ainda mais, use só estes botões e deixe o avançado escondido.</p>
+        </div>
+        <div class="onboarding-focus-card__actions">
+            {% if onboarding and onboarding.focus_lane.confirm_href is defined %}
+            <a class="btn btn-special" id="onboardingFocusConfirm" href="{{ onboarding.focus_lane.confirm_href }}">{{ onboarding.focus_lane.confirm_label }}</a>
+            {% else %}
+            <button type="button" class="btn btn-special" id="onboardingFocusConfirm" data-wizard-goto="{{ onboarding.focus_lane.confirm_target if onboarding else 'economico' }}">{{ onboarding.focus_lane.confirm_label if onboarding else 'Continuar' }}</button>
+            {% endif %}
+            <button type="button" class="btn btn-secondary" id="onboardingFocusStay">{{ onboarding.focus_lane.skip_label if onboarding else 'Continuar aqui' }}</button>
+            <button type="button" class="btn btn-secondary" id="onboardingToggleAdvanced" data-advanced-visible="false">Mostrar opções avançadas</button>
+        </div>
+    </section>
+
     <div class="onboarding-stepper" id="company-onboarding-stepper" style="margin-bottom: 0.75rem;">
         {% for step in (onboarding.steps if onboarding else []) %}
         <button type="button" class="onboarding-step tab-btn {{ 'active' if loop.first }}" data-onboarding-step="{{ step.id }}" data-status="{{ step.status }}">
@@ -116,7 +133,7 @@
 
     <div class="wizard-grid">
         <div>
-            <div class="wizard-advanced-actions" style="margin-bottom: 1rem;">
+            <div class="wizard-advanced-actions" id="companyAdvancedActions" style="margin-bottom: 1rem; display: none;">
                 <button type="button" class="btn btn-secondary" data-wizard-goto="dados">Ir para Identidade</button>
                 <button type="button" class="btn btn-secondary" data-wizard-goto="economico">Ir para Contexto</button>
                 <button type="button" class="btn btn-secondary" data-wizard-goto="cargos">Ir para Estrutura</button>
@@ -465,7 +482,7 @@
         </div>
         </div>
 
-        <aside class="wizard-side-card">
+        <aside class="wizard-side-card" id="companyAdvancedSide" style="display: none;">
             <div class="wizard-note-card">
                 <h4>Se você está perdido</h4>
                 <p>Comece em <strong>Quem é a empresa?</strong>. Depois avance para contexto, estrutura, time e acessos. O restante é ajuste fino.</p>

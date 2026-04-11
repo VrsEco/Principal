@@ -335,10 +335,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .onboarding-now-card {
+  .onboarding-now-card,
+  .onboarding-focus-card {
     grid-template-columns: 1fr;
   }
 }
+
 
 
 @media (max-width: 720px) {
@@ -355,7 +357,8 @@
   }
 
   .onboarding-mode-selector,
-  .onboarding-now-card__actions {
+  .onboarding-now-card__actions,
+  .onboarding-focus-card__actions {
     grid-template-columns: 1fr;
     flex-direction: column;
   }
@@ -476,4 +479,42 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+
+.onboarding-focus-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  background: linear-gradient(145deg, rgba(37, 99, 235, 0.08), rgba(14, 165, 233, 0.05));
+  align-items: center;
+}
+
+.onboarding-focus-card__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.55rem;
+}
+
+.onboarding-focus-card__copy p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
+.onboarding-focus-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }

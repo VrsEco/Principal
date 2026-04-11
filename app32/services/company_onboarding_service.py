@@ -319,6 +319,51 @@ class CompanyOnboardingService:
             },
         }
 
+        focus_lane = {
+            "dados": {
+                "question": "Você já preencheu quem é a empresa e o código dela?",
+                "confirm_label": "Sim, ir para Contexto",
+                "confirm_target": "economico",
+                "skip_label": "Ainda estou preenchendo",
+            },
+            "economico": {
+                "question": "O contexto econômico já está claro o suficiente para continuar?",
+                "confirm_label": "Sim, ir para Estrutura",
+                "confirm_target": "cargos",
+                "skip_label": "Ainda falta revisar",
+            },
+            "cargos": {
+                "question": "Você já definiu os cargos principais da empresa?",
+                "confirm_label": "Sim, ir para Time",
+                "confirm_target": "colaboradores",
+                "skip_label": "Ainda vou estruturar",
+            },
+            "colaboradores": {
+                "question": "O time principal já está cadastrado?",
+                "confirm_label": "Sim, ir para Acessos",
+                "confirm_target": "usuarios",
+                "skip_label": "Ainda vou cadastrar",
+            },
+            "usuarios": {
+                "question": "Quem precisa entrar no sistema já foi vinculado?",
+                "confirm_label": "Sim, ir para Regras",
+                "confirm_target": "pontuacao",
+                "skip_label": "Ainda vou vincular",
+            },
+            "pontuacao": {
+                "question": "As regras mínimas já estão definidas?",
+                "confirm_label": "Sim, ir para IA/MCP",
+                "confirm_target": "config",
+                "skip_label": "Ainda vou revisar",
+            },
+            "config": {
+                "question": "A empresa já está pronta para entrar em teste controlado?",
+                "confirm_label": "Abrir Console IA/MCP",
+                "confirm_href": "/configs/ai/mcp",
+                "skip_label": "Ainda vou finalizar",
+            },
+        }
+
         return {
             "mode": mode,
             "active_tab": active_tab,
@@ -333,6 +378,7 @@ class CompanyOnboardingService:
             "quick_links": quick_links,
             "context_panel": cls.HELP_BY_TAB.get(active_tab, cls.HELP_BY_TAB["dados"]),
             "compact_guidance": compact_guidance.get(active_tab, compact_guidance["dados"]),
+            "focus_lane": focus_lane.get(active_tab, focus_lane["dados"]),
             "mode_selector": [
                 {"id": "create", "label": "Criar nova", "description": "Começar do zero.", "target": "dados"},
                 {"id": "update", "label": "Alterar existente", "description": "Ajustar sem se perder.", "target": active_tab if company_id else "dados"},

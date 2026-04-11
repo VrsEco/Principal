@@ -62,6 +62,12 @@ def _fake_onboarding(mode='create'):
             'secondary_label': 'Próxima etapa: Contexto',
             'secondary_target': 'economico',
         },
+        'focus_lane': {
+            'question': 'Você já preencheu quem é a empresa e o código dela?',
+            'confirm_label': 'Sim, ir para Contexto',
+            'confirm_target': 'economico',
+            'skip_label': 'Ainda estou preenchendo',
+        },
         'mode_selector': [
             {'id': 'create', 'label': 'Criar nova', 'description': 'Começar do zero.', 'target': 'dados'},
             {'id': 'update', 'label': 'Alterar existente', 'description': 'Ajustar sem se perder.', 'target': 'dados'},
@@ -75,6 +81,12 @@ def _fake_onboarding(mode='create'):
             'primary_action': 'save',
             'secondary_label': 'Próxima etapa: Contexto',
             'secondary_target': 'economico',
+        },
+        'focus_lane': {
+            'question': 'Você já preencheu quem é a empresa e o código dela?',
+            'confirm_label': 'Sim, ir para Contexto',
+            'confirm_target': 'economico',
+            'skip_label': 'Ainda estou preenchendo',
         },
         'mode_selector': [
             {'id': 'create', 'label': 'Criar nova', 'description': 'Começar do zero.', 'target': 'dados'},
@@ -119,6 +131,10 @@ def test_company_onboarding_template_renders_guided_wizard_and_new_spectrum():
         'Alterar existente',
         'Configurar IA/MCP',
         'Preparar teste',
+        'Modo assistido',
+        'Você já preencheu quem é a empresa e o código dela?',
+        'Ainda estou preenchendo',
+        'Mostrar opções avançadas',
         'Próximo passo',
         'Salvar e continuar',
         'Próxima etapa: Contexto',
@@ -139,6 +155,8 @@ def test_company_onboarding_template_renders_guided_wizard_and_new_spectrum():
     assert 'data-onboarding-step="config"' in html
     assert 'data-status="after_create"' in html
     assert 'data-wizard-goto="config"' in html
+    assert 'id="companyAdvancedActions"' in html
+    assert 'id="companyAdvancedSide"' in html
     assert '/configs/ai/mcp' in html
 
 
