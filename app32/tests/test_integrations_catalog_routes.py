@@ -31,7 +31,7 @@ def test_integrations_page_receives_catalog(monkeypatch):
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
     monkeypatch.setattr(
         integrations_route.IntegrationCatalogService,
-        "build_catalog",
+        "build_api_mcp_catalog",
         lambda: {"summary": {"total": 2}, "integrations": [{"key": "open_finance", "title": "Open Finance"}]},
     )
     monkeypatch.setattr(
@@ -62,8 +62,8 @@ def test_integrations_admin_page_renders(monkeypatch):
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
     monkeypatch.setattr(
         integrations_route.IntegrationCatalogService,
-        "build_catalog",
-        lambda: {"summary": {"total": 1}, "integrations": [{"key": "messaging_channels"}]},
+        "build_channel_catalog",
+        lambda: {"summary": {"total": 1}, "integrations": [{"key": "service_whatsapp"}]},
     )
     monkeypatch.setattr(
         integrations_route,

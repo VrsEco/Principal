@@ -1,13 +1,13 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Central de Integrações | Versus{% endblock %}
+{% block title %}API / MCP | Versus{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
 <a href="/configurations">Configurações</a>
 <span class="sep">/</span>
-<span class="current">Integrações</span>
+<span class="current">API / MCP</span>
 {% endblock %}
 
 {% block workspace_content %}
@@ -16,7 +16,8 @@
   <header class="int-header">
     <div>
       <span class="int-eyebrow">AI-Readable</span>
-      <h1>Central de Integrações</h1>
+      <h1>API / MCP</h1>
+      <p class="muted mb-0">Integrações de negócio, contratos de interoperabilidade e backlog de evolução via API/MCP.</p>
     </div>
   </header>
 
@@ -26,7 +27,7 @@
         <div class="int-card-head">
           <div>
             <h2>Integrações em funcionamento</h2>
-            <small>Visão rápida das conexões atuais</small>
+            <small>Endpoints e contratos já disponíveis</small>
           </div>
         </div>
         <div class="int-integrations-list" id="integrationsList">
@@ -50,7 +51,7 @@
         <div class="int-card-head">
           <div>
             <h2 id="integrationTitle">Selecione uma integração</h2>
-            <p id="integrationSummary" class="muted">No centro exibimos apenas as informações essenciais combinadas.</p>
+            <p id="integrationSummary" class="muted">No centro exibimos os contratos e requisitos essenciais das integrações API/MCP.</p>
           </div>
         </div>
 

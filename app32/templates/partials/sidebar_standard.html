@@ -315,9 +315,9 @@
                     </svg>
                 </button>
                 <div class="subgroup-content">
-                    <a href="/integrations" class="sub-nav-link {{ 'active' if request.path == '/integrations' }}">Central de Integrações</a>
+                    <a href="/integrations" class="sub-nav-link {{ 'active' if request.path == '/integrations' }}">API / MCP</a>
                     {% if is_platform_admin() %}
-                    <a href="/integrations/admin" class="sub-nav-link {{ 'active' if request.path == '/integrations/admin' }}">Configuração Técnica</a>
+                    <a href="/integrations/admin" class="sub-nav-link {{ 'active' if request.path == '/integrations/admin' }}">Configurações de Canais</a>
                     {% endif %}
                 </div>
             </div>

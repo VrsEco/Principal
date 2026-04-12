@@ -830,9 +830,9 @@ def _build_integration_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str,
 def integrations_page():
     active_company = _safe_active_company()
     try:
-        catalog = IntegrationCatalogService.build_catalog()
+        catalog = IntegrationCatalogService.build_api_mcp_catalog()
     except Exception:
-        current_app.logger.exception("Falha ao montar catálogo da Central de Integrações.")
+        current_app.logger.exception("Falha ao montar catálogo API / MCP.")
         catalog = {"summary": {"total": 0, "available": 0, "planned": 0, "discovery": 0}, "integrations": []}
 
     try:
@@ -842,12 +842,12 @@ def integrations_page():
             integration_catalog=catalog,
         )
     except Exception:
-        current_app.logger.exception("Falha ao renderizar Central de Integrações.")
+        current_app.logger.exception("Falha ao renderizar tela API / MCP.")
         return _fallback_integrations_shell(
-            "Central de Integrações",
-            "A interface completa está em contingência. Você ainda pode acessar a configuração técnica e a central principal enquanto concluímos a estabilização.",
+            "API / MCP",
+            "A interface de integrações de negócio está em contingência. Você ainda pode acessar as configurações de canais enquanto concluímos a estabilização.",
             links=[
-                ("Configuração Técnica", "/integrations/admin"),
+                ("Configurações de Canais", "/integrations/admin"),
                 ("IA Corporativa", "/configs/ai"),
             ],
         )
@@ -864,9 +864,9 @@ def integration_requests_page():
 def integrations_admin_page():
     active_company = _safe_active_company()
     try:
-        catalog = IntegrationCatalogService.build_catalog()
+        catalog = IntegrationCatalogService.build_channel_catalog()
     except Exception:
-        current_app.logger.exception("Falha ao montar catálogo da Configuração Técnica de Integrações.")
+        current_app.logger.exception("Falha ao montar catálogo de canais.")
         catalog = {"summary": {"total": 0, "available": 0, "planned": 0, "discovery": 0}, "integrations": []}
 
     try:
@@ -876,12 +876,12 @@ def integrations_admin_page():
             integration_catalog=catalog,
         )
     except Exception:
-        current_app.logger.exception("Falha ao renderizar Configuração Técnica de Integrações.")
+        current_app.logger.exception("Falha ao renderizar Configurações de Canais.")
         return _fallback_integrations_shell(
-            "Configuração Técnica de Integrações",
-            "A console técnica está em contingência. Use a Central de Integrações enquanto estabilizamos a tela administrativa.",
+            "Configurações de Canais",
+            "A console de canais está em contingência. Use a tela API / MCP enquanto estabilizamos a administração técnica.",
             links=[
-                ("Central de Integrações", "/integrations"),
+                ("API / MCP", "/integrations"),
             ],
         )
 

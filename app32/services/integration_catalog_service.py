@@ -285,15 +285,18 @@ class IntegrationCatalogService:
         items = [cls._decorate_item(deepcopy(item)) for item in cls._ITEMS]
         items = cls._merge_items(items, cls._build_service_items())
         items = cls._merge_items(items, cls._build_db_items(items))
-        return {
-            "summary": {
-                "total": len(items),
-                "available": sum(1 for item in items if item["status"] == "available"),
-                "planned": sum(1 for item in items if item["status"] == "planned"),
-                "discovery": sum(1 for item in items if item["status"] == "discovery"),
-            },
-            "integrations": items,
-        }
+        return cls._build_catalog_payload(items)
+
+    @classmethod
+    def build_api_mcp_catalog(cls) -> dict[str, Any]:
+        items = [cls._decorate_item(deepcopy(item)) for item in cls._ITEMS]
+        return cls._build_catalog_payload(items)
+
+    @classmethod
+    def build_channel_catalog(cls) -> dict[str, Any]:
+        items = cls._build_service_items()
+        items = cls._merge_items(items, cls._build_db_items(items))
+        return cls._build_catalog_payload(items)
 
     @classmethod
     def get_integration(cls, key: str) -> dict[str, Any] | None:
@@ -344,6 +347,18 @@ class IntegrationCatalogService:
                 )
             )
         return items
+
+    @classmethod
+    def _build_catalog_payload(cls, items: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "summary": {
+                "total": len(items),
+                "available": sum(1 for item in items if item["status"] == "available"),
+                "planned": sum(1 for item in items if item["status"] == "planned"),
+                "discovery": sum(1 for item in items if item["status"] == "discovery"),
+            },
+            "integrations": items,
+        }
 
     @classmethod
     def _build_db_items(cls, existing_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
