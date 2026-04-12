@@ -1,10 +1,10 @@
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
-from urllib.parse import quote_plus
 from pathlib import Path
 
 from utils.env_helpers import normalize_database_url
+from utils.security import env_csv, env_flag, get_or_create_dev_secret
 
 # Força o carregamento do .env local da pasta base 'app32' (impede problemas no wsgi root)
 env_path = Path(__file__).resolve().parent / ".env"
@@ -13,32 +13,40 @@ load_dotenv(dotenv_path=env_path)
 class Config:
     """Base configuration class"""
 
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
-    # IMPORTANTE: PostgreSQL como padrão (conforme APP30 migrado)
-    # ✅ FIX: URL encoding na senha para evitar problemas com caracteres especiais (*)
-    _default_password = quote_plus("*Paraiso1978")
+    SECRET_KEY = get_or_create_dev_secret()
     _env_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
-    SQLALCHEMY_DATABASE_URI = (
-        _env_database_url
-        or f"postgresql://postgres:{_default_password}@localhost:5432/bdversusv2"
-    )
+    SQLALCHEMY_DATABASE_URI = _env_database_url or "postgresql://postgres@localhost:5432/bdversusv2"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Authentication
-    LOGIN_DISABLED = os.environ.get("LOGIN_DISABLED", "False").lower() == "true"
+    LOGIN_DISABLED = env_flag("LOGIN_DISABLED", default=False)
     REMEMBER_COOKIE_DURATION = timedelta(
         days=7
     )  # Reduzido de 30 para 7 dias por segurança
 
     # Session Configuration (Segurança)
-    SESSION_COOKIE_SECURE = (
-        os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
-    )  # True em produção com HTTPS
+    SESSION_COOKIE_SECURE = env_flag("SESSION_COOKIE_SECURE", default=False)
     SESSION_COOKIE_HTTPONLY = True  # Previne acesso via JavaScript (XSS protection)
     SESSION_COOKIE_SAMESITE = "Lax"  # Proteção contra CSRF
+    SESSION_COOKIE_NAME = os.environ.get("SESSION_COOKIE_NAME", "gv_session")
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_SECURE = env_flag("REMEMBER_COOKIE_SECURE", default=False)
     PERMANENT_SESSION_LIFETIME = timedelta(
         hours=24
     )  # Sessão expira em 24h se não marcar "lembrar-me"
+    SECURITY_ENFORCE_CSRF_SAME_ORIGIN = env_flag("SECURITY_ENFORCE_CSRF_SAME_ORIGIN", default=True)
+    SECURITY_ALLOWED_HOSTS = env_csv("SECURITY_ALLOWED_HOSTS")
+    SECURITY_TRUSTED_ORIGINS = env_csv("SECURITY_TRUSTED_ORIGINS")
+    SECURITY_HSTS_SECONDS = int(os.environ.get("SECURITY_HSTS_SECONDS") or 31536000)
+    SECURITY_PROXY_FIX_X_FOR = int(os.environ.get("SECURITY_PROXY_FIX_X_FOR") or 1)
+    SECURITY_PROXY_FIX_X_PROTO = int(os.environ.get("SECURITY_PROXY_FIX_X_PROTO") or 1)
+    SECURITY_PROXY_FIX_X_HOST = int(os.environ.get("SECURITY_PROXY_FIX_X_HOST") or 1)
+    DEV_ROUTES_ENABLED = env_flag("DEV_ROUTES_ENABLED", default=False)
+    WEBHOOK_SHARED_SECRET = os.environ.get("WEBHOOK_SHARED_SECRET")
+    WHATSAPP_WEBHOOK_SECRET = os.environ.get("WHATSAPP_WEBHOOK_SECRET")
+    TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET")
+    EMAIL_WEBHOOK_SECRET = os.environ.get("EMAIL_WEBHOOK_SECRET")
 
     # Email Configuration
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
@@ -118,7 +126,7 @@ class Config:
 
     # Telegram Webhook
     EXTERNAL_URL = os.environ.get("EXTERNAL_URL")
-    TELEGRAM_SETUP_WEBHOOK = os.environ.get("TELEGRAM_SETUP_WEBHOOK", "false").lower() == "true"
+    TELEGRAM_SETUP_WEBHOOK = env_flag("TELEGRAM_SETUP_WEBHOOK", default=False)
 
 
 class DevelopmentConfig(Config):
@@ -127,14 +135,13 @@ class DevelopmentConfig(Config):
     DEBUG = True
     TEMPLATES_AUTO_RELOAD = True  # Recarregar templates automaticamente
     SEND_FILE_MAX_AGE_DEFAULT = 0  # Sem cache de arquivos estáticos
-    # IMPORTANTE: PostgreSQL como padrão (conforme APP30 migrado)
-    # ✅ FIX: URL encoding na senha para evitar problemas com caracteres especiais (*)
-    _dev_password = quote_plus("*Paraiso1978")
     _dev_database_url = normalize_database_url(os.environ.get("DEV_DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = (
         _dev_database_url
-        or f"postgresql://postgres:{_dev_password}@localhost:5432/bdversusv2"
+        or Config._env_database_url
+        or "postgresql://postgres@localhost:5432/bdversusv2"
     )
+    DEV_ROUTES_ENABLED = env_flag("DEV_ROUTES_ENABLED", default=True)
 
 
 class ProductionConfig(Config):
@@ -142,8 +149,11 @@ class ProductionConfig(Config):
 
     DEBUG = False
     SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
     _prod_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = _prod_database_url
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    DEV_ROUTES_ENABLED = False
 
 
 class TestingConfig(Config):
@@ -153,6 +163,8 @@ class TestingConfig(Config):
     # For testing, use a separate test database or mock
     SQLALCHEMY_DATABASE_URI = "postgresql://postgres:password@localhost:5432/bd_app_versus_test"
     WTF_CSRF_ENABLED = False
+    SECURITY_ENFORCE_CSRF_SAME_ORIGIN = False
+    DEV_ROUTES_ENABLED = True
 
 
 config = {

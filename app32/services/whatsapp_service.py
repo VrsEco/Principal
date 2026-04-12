@@ -3,6 +3,7 @@ import os
 import requests
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from utils.integration_settings import resolve_service_config
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +17,18 @@ class WhatsAppService:
         self.webhook_url = None
         self.instance_id = None
         self.client_token = None
+        self.auth_token = None
         self._load_env_config()
 
     def _load_env_config(self) -> None:
-        self.provider = os.environ.get("WHATSAPP_PROVIDER", "z-api")
-        self.api_key = os.environ.get("WHATSAPP_API_KEY")
-        self.webhook_url = os.environ.get("WHATSAPP_WEBHOOK_URL")
-        self.instance_id = os.environ.get("WHATSAPP_INSTANCE_ID")
-        self.client_token = os.environ.get("WHATSAPP_CLIENT_TOKEN")
+        resolved = resolve_service_config("whatsapp")
+        config = resolved.get("config") or {}
+        self.provider = resolved.get("provider") or "z-api"
+        self.api_key = config.get("api_key") or config.get("account_sid")
+        self.webhook_url = config.get("webhook_url")
+        self.instance_id = config.get("instance_id") or config.get("whatsapp_number")
+        self.client_token = config.get("client_token")
+        self.auth_token = config.get("auth_token")
 
     def _load_db_config_fallback(self) -> None:
         """
@@ -31,9 +36,8 @@ class WhatsAppService:
         Mantém compatibilidade com a tela de integrações do sistema.
         """
         try:
-            from database.postgresql_db import get_integration
-
-            record = get_integration("whatsapp_integration")
+            resolved = resolve_service_config("whatsapp")
+            record = {"provider": resolved.get("provider"), "config": resolved.get("config") or {}}
             if not record:
                 return
 
@@ -46,6 +50,7 @@ class WhatsAppService:
             self.instance_id = self.instance_id or config.get("instance_id") or config.get("whatsapp_number")
             self.client_token = self.client_token or config.get("client_token")
             self.webhook_url = self.webhook_url or config.get("webhook_url")
+            self.auth_token = getattr(self, "auth_token", None) or config.get("auth_token")
         except Exception as err:
             logger.debug("Falha ao carregar configuracao WhatsApp do DB: %s", err)
 
@@ -192,7 +197,7 @@ class WhatsAppService:
             response = requests.post(
                 url,
                 data=payload,
-                auth=(self.api_key, os.environ.get("TWILIO_AUTH_TOKEN")),
+                auth=(self.api_key, getattr(self, "auth_token", None)),
                 timeout=30,
             )
             return response.status_code == 201
@@ -322,8 +327,9 @@ class WhatsAppService:
 
     def _test_twilio_connection(self) -> Dict[str, Any]:
         """Testa conexÃ£o com Twilio"""
-        account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-        auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+        self._reload_runtime_config()
+        account_sid = self.api_key
+        auth_token = getattr(self, "auth_token", None)
 
         if not all([account_sid, auth_token]):
             return {

@@ -5,22 +5,25 @@ from typing import Any, Dict, Optional
 import requests
 
 logger = logging.getLogger(__name__)
+from utils.integration_settings import resolve_service_config
 
 
 class InstagramService:
     """Service for Instagram integration and connection checks."""
 
     def __init__(self):
-        self.provider = os.environ.get("INSTAGRAM_PROVIDER", "meta").strip().lower()
-        self.access_token = os.environ.get("INSTAGRAM_ACCESS_TOKEN")
-        self.business_account_id = os.environ.get("INSTAGRAM_BUSINESS_ACCOUNT_ID")
-        self.webhook_url = os.environ.get("INSTAGRAM_WEBHOOK_URL")
-        self.graph_api_base = os.environ.get(
-            "INSTAGRAM_GRAPH_API_BASE", "https://graph.facebook.com/v21.0"
+        resolved = resolve_service_config("instagram")
+        config = resolved.get("config") or {}
+        self.provider = str(resolved.get("provider") or "meta").strip().lower()
+        self.access_token = config.get("access_token")
+        self.business_account_id = config.get("business_account_id")
+        self.webhook_url = config.get("webhook_url")
+        self.graph_api_base = str(
+            config.get("graph_api_base") or "https://graph.facebook.com/v21.0"
         ).rstrip("/")
-        self.app_id = os.environ.get("INSTAGRAM_APP_ID")
-        self.app_secret = os.environ.get("INSTAGRAM_APP_SECRET")
-        self.verify_token = os.environ.get("INSTAGRAM_VERIFY_TOKEN")
+        self.app_id = config.get("app_id")
+        self.app_secret = config.get("app_secret")
+        self.verify_token = config.get("verify_token")
 
     def send_message(self, recipient_id: str, message: str) -> bool:
         try:

@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, login_required, current_user
 from pydantic import ValidationError
@@ -6,9 +8,15 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import joinedload
 from services.auth_service import auth_service
 from schemas.user_pydantic import UserProfileUpdateSchema, UserPasswordChangeSchema
+from utils.error_handling import (
+    extract_validation_error_message,
+    log_and_build_public_error_response,
+)
 from utils.permissions import can_access_company, get_default_company_id, is_platform_admin
+from utils.security import consume_rate_limit, get_request_ip, rate_limit_exceeded_response
 
 auth_bp = Blueprint('auth', __name__)
+logger = logging.getLogger(__name__)
 
 SUMMARY_CHANNEL_OPTIONS = {'telegram', 'whatsapp', 'email'}
 
@@ -31,14 +39,20 @@ def _normalize_summary_delivery_channels(raw_channels):
 def login():
     """Login page"""
     if request.method == 'POST':
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
+        data = request.get_json(silent=True) or {}
+        email = str(data.get('email') or '').strip().lower()
+        password = str(data.get('password') or '')
+
+        if not consume_rate_limit("auth.login", f"{get_request_ip()}:{email or 'anonymous'}", limit=8, window_seconds=300):
+            return rate_limit_exceeded_response("Muitas tentativas de login. Aguarde alguns minutos.")
+        if not email or not password:
+            return jsonify({"success": False, "message": "Credenciais inválidas"}), 400
         
         user = User.query.filter_by(email=email).first()
-        
-        # Simple auth for demo
-        if user and (user.check_password(password) or password == '123456'):
+
+        is_active = getattr(user, "is_active", True) if user else False
+        if user and is_active and user.check_password(password):
+            session.clear()
             login_user(user)
             
             # Check companies this user has access to
@@ -59,7 +73,7 @@ def login():
                 return jsonify({"success": True, "redirect": "/portal"})
             else:
                 return jsonify({"success": False, "message": "Usuário não possui empresas vinculadas."}), 403
-            
+             
         return jsonify({"success": False, "message": "Credenciais inválidas"}), 401
     
     return render_template('auth/login_v2.html')
@@ -224,11 +238,18 @@ def profile():
             "user": current_user.to_dict(),
         })
     except ValidationError as exc:
-        first_error = exc.errors()[0] if exc.errors() else {}
-        message = first_error.get('msg') or 'Dados inválidos para atualização do perfil'
+        message = extract_validation_error_message(
+            exc,
+            fallback_message='Dados inválidos para atualização do perfil',
+        )
         return jsonify({"success": False, "message": message}), 400
     except Exception as exc:
-        return jsonify({"success": False, "message": f"Erro ao salvar: {str(exc)}"}), 500
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao atualizar perfil do usuário autenticado',
+            success=False,
+        )
 
 
 @auth_bp.route('/auth/change-password', methods=['POST'])
@@ -253,11 +274,18 @@ def change_password():
 
         return jsonify({"success": True, "message": "Senha alterada com sucesso"})
     except ValidationError as exc:
-        first_error = exc.errors()[0] if exc.errors() else {}
-        message = first_error.get('msg') or 'Dados inválidos para alteração de senha'
+        message = extract_validation_error_message(
+            exc,
+            fallback_message='Dados inválidos para alteração de senha',
+        )
         return jsonify({"success": False, "message": message}), 400
     except Exception as exc:
-        return jsonify({"success": False, "message": f"Erro ao alterar senha: {str(exc)}"}), 500
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao alterar senha do usuário autenticado',
+            success=False,
+        )
 
 @auth_bp.route('/logout')
 @login_required
