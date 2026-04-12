@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request, abort, current_app
 from flask_login import login_required, current_user
 from models import db, AIAgent, AgentMessage
-from services.ai_configuration_pages_service import AIConfigurationPagesService
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
 from services.tool_first_catalog_service import ToolFirstCatalogService
@@ -28,104 +27,6 @@ def _can_access_ai_mcp_console(company_id=None):
 def _require_ai_admin_access(company_id=None):
     if not _can_access_ai_mcp_console(company_id):
         abort(403)
-
-
-def _build_ai_config_fallback_page(page_key: str) -> dict:
-    titles = {
-        "mcp": "MCP",
-        "tools": "Tools",
-        "permissions": "Permissões e Configurações",
-        "monitoring": "Monitoramento e Auditoria",
-    }
-    title = titles.get(page_key, "IA Corporativa")
-    return {
-        "title": title,
-        "eyebrow": "Configurações",
-        "search_terms": f"{page_key} ia configuracoes fallback",
-        "intro": (
-            "A leitura completa desta página falhou, mas a operação foi mantida "
-            "disponível em modo degradado para não bloquear o administrador."
-        ),
-        "hero_metrics": [
-            {"label": "Status", "value": "Fallback"},
-            {"label": "Página", "value": title},
-            {"label": "Ação", "value": "Revisar logs"},
-        ],
-        "shortcuts": [
-            {"label": "Conexões", "href": "/integrations"},
-            {"label": "MCP", "href": "/configs/ai/mcp"},
-            {"label": "Tools", "href": "/configs/ai/tools"},
-            {"label": "Permissões e Configurações", "href": "/configs/ai/permissions"},
-            {"label": "Monitoramento e Auditoria", "href": "/configs/ai/monitoring"},
-        ],
-        "wizard": {
-            "title": "Assistente de recuperação",
-            "intro": "Use os atalhos abaixo enquanto finalizamos a leitura completa.",
-            "steps": [
-                {
-                    "step": 1,
-                    "question": "O que você precisa fazer agora?",
-                    "options": [
-                        {
-                            "label": "Abrir integrações",
-                            "description": "Revisar providers, segredos e conectividade.",
-                            "result_title": "Ir para integrações",
-                            "result_body": "Abra a área de integrações para revisar conexões externas.",
-                            "target_section": "links",
-                        },
-                        {
-                            "label": "Ver auditoria",
-                            "description": "Inspecionar trilhas e evidências operacionais.",
-                            "result_title": "Ir para auditoria",
-                            "result_body": "Abra a auditoria operacional para investigar o incidente.",
-                            "target_section": "links",
-                        },
-                    ],
-                }
-            ],
-        },
-        "sections": [
-            {
-                "id": "links",
-                "title": "Atalhos operacionais",
-                "summary": "Continue a operação enquanto a página completa é restabelecida.",
-                "items": [
-                    {
-                        "title": "Integrações",
-                        "meta": "/integrations",
-                        "description": "Revisar conexões, providers, segredos e saúde de comunicação.",
-                        "href": "/integrations",
-                    },
-                    {
-                        "title": "Auditoria operacional",
-                        "meta": "/operations/audit",
-                        "description": "Investigar trilhas MCP, Sapiens, gates humanos e eventos sensíveis.",
-                        "href": "/operations/audit",
-                    },
-                    {
-                        "title": "Hub IA Corporativa",
-                        "meta": "/configs/ai?section=configuration",
-                        "description": "Voltar para a central principal de administração da IA corporativa.",
-                        "href": "/configs/ai?section=configuration",
-                    },
-                ],
-            }
-        ],
-    }
-
-
-def _render_ai_config_page(page_key: str, active_company):
-    try:
-        page_state = AIConfigurationPagesService.build_page(page_key, active_company)
-    except Exception:
-        current_app.logger.exception("Falha ao montar página de configuração IA: %s", page_key)
-        page_state = _build_ai_config_fallback_page(page_key)
-
-    return render_template(
-        'modules/operations/ai_config_simple_page.html',
-        active_company=active_company,
-        page=page_state,
-    )
 
 @configs_bp.route('/configs/ai')
 @login_required
@@ -176,24 +77,14 @@ def ai_settings():
                 ],
                 "quick_actions": [
                     {
-                        "title": "Abrir MCP",
+                        "title": "Abrir console MCP",
                         "href": "/configs/ai/mcp",
-                        "description": "Surface, domínio e liberação.",
+                        "description": "Catálogo, readiness e governança técnica.",
                     },
                     {
                         "title": "Gerir integrações",
                         "href": "/integrations",
                         "description": "Conexões, providers e segredos operacionais.",
-                    },
-                    {
-                        "title": "Abrir Tools",
-                        "href": "/configs/ai/tools",
-                        "description": "Catálogo, risco e gate humano.",
-                    },
-                    {
-                        "title": "Abrir monitoramento",
-                        "href": "/configs/ai/monitoring",
-                        "description": "Regras, saúde e auditoria.",
                     },
                     {
                         "title": "Ver auditoria",
@@ -220,21 +111,37 @@ def ai_settings():
                     "key": "overview",
                     "title": "Visão Geral",
                     "eyebrow": "Entrada recomendada",
-                    "description": "Central para entender operação, cobertura MCP, conexões e pontos críticos reais.",
+                    "description": "Central para entender operação, cobertura MCP, governança e pontos críticos reais.",
                     "accent": "primary",
                     "items": [],
                 },
                 {
                     "key": "configuration",
-                    "title": "Configurações",
+                    "title": "Configuração",
                     "eyebrow": "Administração",
-                    "description": "Conexões, MCP, tools e permissões.",
+                    "description": "Parâmetros, conexões e agentes.",
                     "accent": "blue",
                     "items": [],
                 },
                 {
-                    "key": "monitoring_audit",
-                    "title": "Monitoramento e Auditoria",
+                    "key": "integrations",
+                    "title": "Integrações",
+                    "eyebrow": "Interoperabilidade",
+                    "description": "MCP, APIs e provedores externos.",
+                    "accent": "violet",
+                    "items": [],
+                },
+                {
+                    "key": "orchestration",
+                    "title": "Orquestração",
+                    "eyebrow": "Execução",
+                    "description": "Agentes, workflows e automações.",
+                    "accent": "emerald",
+                    "items": [],
+                },
+                {
+                    "key": "governance",
+                    "title": "Governança",
                     "eyebrow": "Controle e evidência",
                     "description": "Logs, auditoria e uso.",
                     "accent": "amber",
@@ -286,46 +193,6 @@ def system_settings():
 
 
 @configs_bp.route('/configs/ai/mcp')
-@login_required
-def ai_mcp_page():
-    active_company = _resolve_active_company()
-    company_id = getattr(active_company, 'id', None)
-    if not _can_access_ai_mcp_console(company_id):
-        abort(403)
-    return _render_ai_config_page("mcp", active_company)
-
-
-@configs_bp.route('/configs/ai/tools')
-@login_required
-def ai_tools_page():
-    active_company = _resolve_active_company()
-    company_id = getattr(active_company, 'id', None)
-    if not _can_access_ai_mcp_console(company_id):
-        abort(403)
-    return _render_ai_config_page("tools", active_company)
-
-
-@configs_bp.route('/configs/ai/permissions')
-@login_required
-def ai_permissions_page():
-    active_company = _resolve_active_company()
-    company_id = getattr(active_company, 'id', None)
-    if not _can_access_ai_mcp_console(company_id):
-        abort(403)
-    return _render_ai_config_page("permissions", active_company)
-
-
-@configs_bp.route('/configs/ai/monitoring')
-@login_required
-def ai_monitoring_page():
-    active_company = _resolve_active_company()
-    company_id = getattr(active_company, 'id', None)
-    if not _can_access_ai_mcp_console(company_id):
-        abort(403)
-    return _render_ai_config_page("monitoring", active_company)
-
-
-@configs_bp.route('/configs/ai/mcp/console')
 @login_required
 def ai_mcp_console():
     active_company = _resolve_active_company()

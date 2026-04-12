@@ -23,56 +23,6 @@
 </div>
 {% endblock %}
 
-
-{% block sidebar_right %}
-<div class="ai-mcp-filters-sidebar">
-    <div class="sidebar-header-ws">
-        <h3>Filtros</h3>
-        <p>Use a busca para localizar seções, superfícies, tools e cadastros do console IA/MCP.</p>
-    </div>
-
-    <div class="ai-mcp-filters-sidebar__body">
-        <article class="ai-mcp-filter-card">
-            <label class="ai-mcp-filter-label" for="aiMcpConsoleSearch">Busca geral</label>
-            <input id="aiMcpConsoleSearch" type="search" placeholder="Buscar perfil, cadastro, domínio, tool ou ação..." autocomplete="off">
-            <small>O filtro atua sobre cards, seções e atalhos exibidos nesta tela.</small>
-        </article>
-
-        <article class="ai-mcp-filter-card">
-            <span class="ai-mcp-filter-label">Atalhos rápidos</span>
-            <div class="ai-mcp-filter-shortcuts">
-                <button type="button" class="ai-mcp-filter-shortcut" data-console-go-tab="overview">Visão geral</button>
-                <button type="button" class="ai-mcp-filter-shortcut" data-console-go-tab="catalog">Catálogo</button>
-                <button type="button" class="ai-mcp-filter-shortcut" data-console-go-tab="onboarding">Onboarding</button>
-                <button type="button" class="ai-mcp-filter-shortcut" data-console-go-tab="release">Release</button>
-            </div>
-        </article>
-
-        <article class="ai-mcp-filter-card">
-            <span class="ai-mcp-filter-label">Resumo do console</span>
-            <div class="ai-mcp-filter-metrics">
-                <div class="ai-mcp-filter-metric">
-                    <strong>{{ console.summary.profiles }}</strong>
-                    <span>Perfis</span>
-                </div>
-                <div class="ai-mcp-filter-metric">
-                    <strong>{{ console.summary.surfaces }}</strong>
-                    <span>Surfaces</span>
-                </div>
-                <div class="ai-mcp-filter-metric">
-                    <strong>{{ console.summary.domains }}</strong>
-                    <span>Domínios</span>
-                </div>
-                <div class="ai-mcp-filter-metric">
-                    <strong>{{ console.summary.release_smokes }}</strong>
-                    <span>Smokes</span>
-                </div>
-            </div>
-        </article>
-    </div>
-</div>
-{% endblock %}
-
 {% block workspace_content %}
 <div
     class="ai-mcp-console-page"
@@ -80,149 +30,129 @@
     data-default-tab="overview"
     data-console='{{ console|tojson }}'
 >
-    <section class="ai-mcp-wizard-stages" aria-labelledby="aiMcpWizardTitle">
-        <article class="ai-mcp-stage ai-mcp-stage--entenda is-expanded" data-wizard-stage data-searchable="entenda visão geral ajuda contextual leitura guiada arquitetura navegação">
-            <header class="ai-mcp-stage__header">
-                <div>
-                    <span class="ai-mcp-stage__eyebrow">Sessão 1</span>
-                    <h2 id="aiMcpWizardTitle">Entenda</h2>
-                    <p>Primeiro bloco para o usuário se localizar, entender a arquitetura e saber por onde começar.</p>
-                </div>
-                <button type="button" class="ai-mcp-stage__toggle" data-stage-toggle aria-expanded="true" title="Expandir ou recolher sessão">
-                    <span class="ai-mcp-stage__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-stage__body">
-                <section class="ai-mcp-wizard ai-mcp-wizard--entenda">
-                    <div class="ai-mcp-wizard__intro">
-                        <span class="ai-mcp-section-label">Assistente inicial</span>
-                        <h3>Comece pelo caminho certo, sem precisar decorar a arquitetura.</h3>
-                        <p>
-                            Se você está configurando ou apenas quer entender onde clicar, use as três sessões abaixo.
-                            Elas separam claramente o momento de aprender, configurar e validar o ambiente.
-                        </p>
-                        <div class="ai-mcp-wizard__flow" aria-label="Fluxo sugerido">
-                            <span>1. Entenda</span>
-                            <span>2. Configure</span>
-                            <span>3. Teste</span>
-                        </div>
-                    </div>
-
-                    <aside class="ai-mcp-context-help" id="aiMcpContextHelp" aria-live="polite">
-                        <span class="ai-mcp-context-help__label">Ajuda contextual</span>
-                        <h3 id="aiMcpContextHelpTitle">Visão geral</h3>
-                        <p id="aiMcpContextHelpBody">
-                            Este console foi desenhado para reduzir a complexidade. Comece pela visão geral,
-                            depois avance para configuração e por fim valide a abertura para teste.
-                        </p>
-                        <ul class="ai-mcp-context-help__steps" id="aiMcpContextHelpSteps">
-                            <li>Use a navegação lateral para localizar a camada correta.</li>
-                            <li>Leia os cards de decisão antes de executar qualquer mudança.</li>
-                            <li>Se houver dúvida, use esta sessão como base de orientação.</li>
-                        </ul>
-                    </aside>
-                </section>
+    <section class="ai-mcp-hero">
+        <div class="ai-mcp-hero__copy">
+            <span class="ai-mcp-eyebrow">Console operacional</span>
+            <h1>Console Operacional IA/MCP</h1>
+            <p>
+                Área única para governança MCP, contratos, permissões, onboarding, release, freeze,
+                observabilidade e links de configuração/cadastro necessários para colocar o APP32 em teste.
+            </p>
+            <div class="ai-mcp-hero__badges">
+                <span class="ai-mcp-badge">MCP First</span>
+                <span class="ai-mcp-badge">Tenant-safe</span>
+                <span class="ai-mcp-badge">Ponto de teste</span>
             </div>
-        </article>
-
-        <article class="ai-mcp-stage ai-mcp-stage--configure is-expanded" data-wizard-stage data-searchable="configure cadastro configuração onboarding perfis permissões superfícies">
-            <header class="ai-mcp-stage__header">
-                <div>
-                    <span class="ai-mcp-stage__eyebrow">Sessão 2</span>
-                    <h2>Configure</h2>
-                    <p>Bloco para cadastro, configuração operacional e direcionamento rápido para a área correta.</p>
-                </div>
-                <button type="button" class="ai-mcp-stage__toggle" data-stage-toggle aria-expanded="true" title="Expandir ou recolher sessão">
-                    <span class="ai-mcp-stage__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-stage__body">
-                <div class="ai-mcp-decision-grid" role="list" aria-label="Ações de configuração e cadastro">
-                    {% set configure_actions = [
-                        {
-                            'tab': 'onboarding',
-                            'title': 'Quero configurar ou cadastrar',
-                            'description': 'Abra o fluxo guiado para perfis, integrações, empresa ativa e regras de acesso.',
-                            'cta': 'Ir para Onboarding'
-                        },
-                        {
-                            'tab': 'profiles',
-                            'title': 'Quero entender permissões',
-                            'description': 'Veja quem pode usar o quê, quais domínios existem e onde há gate humano.',
-                            'cta': 'Ver Perfis & Permissões'
-                        },
-                        {
-                            'tab': 'surfaces',
-                            'title': 'Quero localizar cada coisa',
-                            'description': 'Explore surfaces, domínios e tools para saber onde cada função mora.',
-                            'cta': 'Explorar Surfaces'
-                        }
-                    ] %}
-                    {% for action in configure_actions %}
-                    <button
-                        type="button"
-                        class="ai-mcp-decision-card ai-mcp-decision-card--configure"
-                        role="listitem"
-                        data-console-go-tab="{{ action.tab }}"
-                        data-searchable="{{ action.title }} {{ action.description }} {{ action.cta }}"
-                    >
-                        <span class="ai-mcp-decision-card__eyebrow">{{ action.cta }}</span>
-                        <strong>{{ action.title }}</strong>
-                        <p>{{ action.description }}</p>
-                    </button>
-                    {% endfor %}
-                </div>
-            </div>
-        </article>
-
-        <article class="ai-mcp-stage ai-mcp-stage--teste is-expanded" data-wizard-stage data-searchable="teste release readiness validação smoke dashboard prontidão">
-            <header class="ai-mcp-stage__header">
-                <div>
-                    <span class="ai-mcp-stage__eyebrow">Sessão 3</span>
-                    <h2>Teste</h2>
-                    <p>Bloco para validar readiness, rodar smokes e confirmar se a abertura está segura.</p>
-                </div>
-                <button type="button" class="ai-mcp-stage__toggle" data-stage-toggle aria-expanded="true" title="Expandir ou recolher sessão">
-                    <span class="ai-mcp-stage__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-stage__body">
-                <div class="ai-mcp-decision-grid ai-mcp-decision-grid--test" role="list" aria-label="Ações de validação e teste">
-                    {% set test_actions = [
-                        {
-                            'tab': 'release',
-                            'title': 'Quero deixar pronto para teste',
-                            'description': 'Confirme checklist, smokes, freeze e rollback antes de expor para uso real.',
-                            'cta': 'Validar Release'
-                        },
-                        {
-                            'tab': 'dashboard',
-                            'title': 'Quero ver uso e prontidão',
-                            'description': 'Acompanhe métricas, alertas e readiness para não operar no escuro.',
-                            'cta': 'Abrir Dashboard'
-                        }
-                    ] %}
-                    {% for action in test_actions %}
-                    <button
-                        type="button"
-                        class="ai-mcp-decision-card ai-mcp-decision-card--test"
-                        role="listitem"
-                        data-console-go-tab="{{ action.tab }}"
-                        data-searchable="{{ action.title }} {{ action.description }} {{ action.cta }}"
-                    >
-                        <span class="ai-mcp-decision-card__eyebrow">{{ action.cta }}</span>
-                        <strong>{{ action.title }}</strong>
-                        <p>{{ action.description }}</p>
-                    </button>
-                    {% endfor %}
-                </div>
-                <div class="ai-mcp-stage__note">
-                    <strong>Sequência recomendada:</strong>
-                    <span>faça onboarding, valide permissões, execute smokes e só então acompanhe o dashboard de readiness.</span>
-                </div>
-            </div>
-        </article>
+        </div>
+        <div class="ai-mcp-hero__summary">
+            <article class="ai-mcp-stat-card">
+                <span>Empresa ativa</span>
+                <strong>{{ active_company.client_code if active_company and active_company.client_code else 'VS' }}</strong>
+                <small>{{ active_company.name if active_company else 'Selecione uma empresa' }}</small>
+            </article>
+            <article class="ai-mcp-stat-card">
+                <span>Tools catalogadas</span>
+                <strong>{{ console.summary.catalog_tools }}</strong>
+                <small>{{ console.summary.human_gate_tools }} com human gate</small>
+            </article>
+            <article class="ai-mcp-stat-card">
+                <span>Readiness</span>
+                <strong>{{ console.summary.readiness_gates }}</strong>
+                <small>gates oficiais de abertura controlada</small>
+            </article>
+        </div>
     </section>
+
+    <section class="ai-mcp-wizard" aria-labelledby="aiMcpWizardTitle">
+        <div class="ai-mcp-wizard__intro">
+            <span class="ai-mcp-section-label">Assistente inicial</span>
+            <h2 id="aiMcpWizardTitle">Comece pelo caminho certo, sem precisar decorar a arquitetura.</h2>
+            <p>
+                Se você está configurando ou apenas quer entender onde clicar, escolha uma trilha abaixo.
+                O console leva você para a área certa e explica o próximo passo em linguagem simples.
+            </p>
+            <div class="ai-mcp-wizard__flow" aria-label="Fluxo sugerido">
+                <span>1. Entenda</span>
+                <span>2. Configure</span>
+                <span>3. Teste</span>
+            </div>
+        </div>
+
+        <div class="ai-mcp-decision-grid" role="list" aria-label="Ações iniciais recomendadas">
+            {% set wizard_actions = [
+                {
+                    'tab': 'onboarding',
+                    'title': 'Quero configurar ou cadastrar',
+                    'description': 'Abra o fluxo guiado para perfis, integrações, empresa ativa e regras de acesso.',
+                    'cta': 'Ir para Onboarding'
+                },
+                {
+                    'tab': 'profiles',
+                    'title': 'Quero entender permissões',
+                    'description': 'Veja quem pode usar o quê, quais domínios existem e onde há gate humano.',
+                    'cta': 'Ver Perfis & Permissões'
+                },
+                {
+                    'tab': 'surfaces',
+                    'title': 'Quero localizar cada coisa',
+                    'description': 'Explore surfaces, domínios e tools para saber onde cada função mora.',
+                    'cta': 'Explorar Surfaces'
+                },
+                {
+                    'tab': 'release',
+                    'title': 'Quero deixar pronto para teste',
+                    'description': 'Confirme checklist, smokes, freeze e rollback antes de expor para uso real.',
+                    'cta': 'Validar Release'
+                },
+                {
+                    'tab': 'dashboard',
+                    'title': 'Quero ver uso e prontidão',
+                    'description': 'Acompanhe métricas, alertas e readiness para não operar no escuro.',
+                    'cta': 'Abrir Dashboard'
+                }
+            ] %}
+            {% for action in wizard_actions %}
+            <button
+                type="button"
+                class="ai-mcp-decision-card"
+                role="listitem"
+                data-console-go-tab="{{ action.tab }}"
+                data-searchable="{{ action.title }} {{ action.description }} {{ action.cta }}"
+            >
+                <span class="ai-mcp-decision-card__eyebrow">{{ action.cta }}</span>
+                <strong>{{ action.title }}</strong>
+                <p>{{ action.description }}</p>
+            </button>
+            {% endfor %}
+        </div>
+
+        <aside class="ai-mcp-context-help" id="aiMcpContextHelp" aria-live="polite">
+            <span class="ai-mcp-context-help__label">Ajuda contextual</span>
+            <h3 id="aiMcpContextHelpTitle">Visão geral</h3>
+            <p id="aiMcpContextHelpBody">
+                Este console foi desenhado para reduzir a complexidade. Comece pela visão geral,
+                depois escolha a trilha que faz mais sentido para seu objetivo atual.
+            </p>
+            <ul class="ai-mcp-context-help__steps" id="aiMcpContextHelpSteps">
+                <li>Use o wizard para pular direto para a seção certa.</li>
+                <li>Leia as cards de decisão para evitar navegação desnecessária.</li>
+                <li>Se estiver em dúvida, consulte a ajuda da seção ativa.</li>
+            </ul>
+        </aside>
+    </section>
+
+    <section class="ai-mcp-toolbar">
+        <div class="ai-mcp-search">
+            <input id="aiMcpConsoleSearch" type="search" placeholder="Buscar perfil, cadastro, domínio, tool ou ação..." autocomplete="off">
+        </div>
+        <div class="ai-mcp-toolbar__stats">
+            <span class="ai-mcp-chip">{{ console.summary.profiles }} perfis</span>
+            <span class="ai-mcp-chip">{{ console.summary.surfaces }} surfaces</span>
+            <span class="ai-mcp-chip">{{ console.summary.domains }} domínios</span>
+            <span class="ai-mcp-chip">{{ console.summary.release_smokes }} smokes</span>
+        </div>
+    </section>
+
     <section class="ai-mcp-shell">
         <aside class="ai-mcp-sidebar">
             <article class="ai-mcp-card ai-mcp-card--sidebar">
@@ -291,63 +221,49 @@
         </aside>
 
         <div class="ai-mcp-content">
-            <section class="ai-mcp-wizard" data-searchable="wizard assistente ajuda primeiro acesso onboarding configuração uso pergunta resposta">
+            <section class="ai-mcp-wizard" data-searchable="wizard assistente ajuda primeiro acesso onboarding configuração uso">
                 <article class="ai-mcp-card ai-mcp-card--wizard">
                     <header class="ai-mcp-wizard__header">
                         <div>
                             <span class="ai-mcp-eyebrow">Comece por aqui</span>
-                            <h2>Conversa guiada de uso e configuração</h2>
-                            <p>O console pergunta, você responde e a próxima ação aparece no formato de onboarding assistido do APP32.</p>
+                            <h2>Wizard de uso e configuração</h2>
+                            <p>Se você está perdido, responda 3 passos rápidos e o console te leva para a área certa.</p>
                         </div>
                         <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small" id="aiMcpWizardReset">Reiniciar</button>
                     </header>
 
-                    <div class="ai-mcp-wizard-chat">
-                        <div class="ai-mcp-agent-message">
-                            <strong>Console IA/MCP</strong>
-                            <p>Vou te conduzir por perguntas curtas. Responda uma por vez para eu te levar direto ao ponto certo do APP32.</p>
-                        </div>
+                    <div class="ai-mcp-wizard__progress">
+                        {% for step in console.wizard_steps %}
+                        <button type="button" class="ai-mcp-step-pill {{ 'is-active' if loop.first }}" data-wizard-step-pill="{{ step.step }}">
+                            {{ step.step }}. {{ step.title }}
+                        </button>
+                        {% endfor %}
+                    </div>
 
-                        <div class="ai-mcp-wizard__progress" aria-label="Andamento da conversa">
-                            {% for step in console.wizard_steps %}
-                            <button type="button" class="ai-mcp-step-pill {{ 'is-active' if loop.first }}" data-wizard-step-pill="{{ step.step }}">
-                                {{ step.step }}. {{ step.title }}
-                            </button>
-                            {% endfor %}
-                        </div>
-
-                        <div class="ai-mcp-wizard__steps">
-                            {% for step in console.wizard_steps %}
-                            <section class="ai-mcp-wizard-step {{ 'is-active' if loop.first }}" data-wizard-step="{{ step.step }}">
-                                <div class="ai-mcp-agent-question">
-                                    <span class="ai-mcp-agent-question__label">Pergunta {{ step.step }}</span>
-                                    <strong>{{ step.title }}</strong>
-                                    <p>{{ step.question }}</p>
-                                </div>
-                                <div class="ai-mcp-wizard-options">
-                                    {% for option in step.options %}
-                                    <button
-                                        type="button"
-                                        class="ai-mcp-choice-card"
-                                        data-wizard-choice
-                                        data-target-tab="{{ option.target_tab }}"
-                                        data-target-selector="{{ option.target_selector }}"
-                                        data-choice-label="{{ option.label }}"
-                                        data-step-title="{{ step.title }}"
-                                    >
-                                        <strong>{{ option.label }}</strong>
-                                        <span>{{ option.description }}</span>
-                                    </button>
-                                    {% endfor %}
-                                </div>
-                            </section>
-                            {% endfor %}
-                        </div>
-
-                        <div class="ai-mcp-wizard-transcript" id="aiMcpWizardTranscript" hidden>
-                            <span class="ai-mcp-wizard-transcript__label">Suas respostas</span>
-                            <div class="ai-mcp-wizard-transcript__list" id="aiMcpWizardTranscriptList"></div>
-                        </div>
+                    <div class="ai-mcp-wizard__steps">
+                        {% for step in console.wizard_steps %}
+                        <section class="ai-mcp-wizard-step {{ 'is-active' if loop.first }}" data-wizard-step="{{ step.step }}">
+                            <div class="ai-mcp-wizard-step__copy">
+                                <strong>{{ step.title }}</strong>
+                                <p>{{ step.question }}</p>
+                            </div>
+                            <div class="ai-mcp-wizard-options">
+                                {% for option in step.options %}
+                                <button
+                                    type="button"
+                                    class="ai-mcp-choice-card"
+                                    data-wizard-choice
+                                    data-target-tab="{{ option.target_tab }}"
+                                    data-target-selector="{{ option.target_selector }}"
+                                    data-choice-label="{{ option.label }}"
+                                >
+                                    <strong>{{ option.label }}</strong>
+                                    <span>{{ option.description }}</span>
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </section>
+                        {% endfor %}
                     </div>
 
                     <div class="ai-mcp-wizard__result" id="aiMcpWizardResult" hidden>
@@ -362,18 +278,7 @@
             </section>
 
             <div class="ai-mcp-panels">
-        <section class="ai-mcp-panel ai-mcp-panel--overview is-active" data-console-panel="overview" data-searchable="visão geral resumo quick links links operacionais readiness">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 1</span>
-                    <h2>Visão Geral</h2>
-                    <p>Resumo executivo, links rápidos e readiness por fase para abertura controlada.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel is-active" data-console-panel="overview" data-searchable="visão geral resumo quick links links operacionais readiness">
             <div class="ai-mcp-grid ai-mcp-grid--summary">
                 {% for label, value in [
                     ('Perfis canônicos', console.summary.profiles),
@@ -430,21 +335,9 @@
                     {% endfor %}
                 </div>
             </article>
-            </div>
         </section>
 
-        <section class="ai-mcp-panel ai-mcp-panel--profiles" data-console-panel="profiles" data-searchable="profiles permissões matrix roles colaborador cliente administrador admin técnico">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 2</span>
-                    <h2>Perfis & Permissões</h2>
-                    <p>Contratos por perfil, superfície e domínio com foco em risco, escopo e gate humano.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel" data-console-panel="profiles" data-searchable="profiles permissões matrix roles colaborador cliente administrador admin técnico">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
                     <header><h2>Perfis MCP</h2><p>Contratos canônicos por perfil e limites de atuação.</p></header>
@@ -483,21 +376,9 @@
                     </div>
                 </article>
             </div>
-            </div>
         </section>
 
-        <section class="ai-mcp-panel ai-mcp-panel--surfaces" data-console-panel="surfaces" data-searchable="surfaces domínios playbooks user admin analytics ops">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 3</span>
-                    <h2>Surfaces & Domínios</h2>
-                    <p>Mapa funcional das superfícies MCP e dos domínios operacionais disponíveis no APP32.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel" data-console-panel="surfaces" data-searchable="surfaces domínios playbooks user admin analytics ops">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
                     <header><h2>Surfaces operacionais</h2><p>Playbooks por surface com discovery, checklist e ações proibidas.</p></header>
@@ -535,21 +416,9 @@
                     </div>
                 </article>
             </div>
-            </div>
         </section>
 
-        <section class="ai-mcp-panel ai-mcp-panel--catalog" data-console-panel="catalog" data-searchable="catálogo capabilities tools risks domains">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 4</span>
-                    <h2>Catálogo</h2>
-                    <p>Discovery central do APP32 com tools, riscos, cobertura por surface e visão tool-first por domínio.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel" data-console-panel="catalog" data-searchable="catálogo capabilities tools risks domains">
             <article class="ai-mcp-card">
                 <header><h2>Catálogo MCP/Sapiens</h2><p>Ferramentas disponíveis, distribuição por risco e cobertura por surface.</p></header>
                 <div class="ai-mcp-grid ai-mcp-grid--summary">
@@ -639,21 +508,9 @@
                     {% endfor %}
                 </div>
             </article>
-            </div>
         </section>
 
-        <section class="ai-mcp-panel ai-mcp-panel--onboarding" data-console-panel="onboarding" data-searchable="onboarding cadastros configs provider user admin analytics ops">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 5</span>
-                    <h2>Onboarding & Cadastros</h2>
-                    <p>Entrada para configuração, onboarding técnico e regras de acesso por superfície.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel" data-console-panel="onboarding" data-searchable="onboarding cadastros configs provider user admin analytics ops">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
                     <header><h2>Onboarding de IAs externas</h2><p>Etapas, evidências e regras por surface.</p></header>
@@ -687,21 +544,9 @@
                     </div>
                 </article>
             </div>
-            </div>
         </section>
 
-        <section class="ai-mcp-panel ai-mcp-panel--release" data-console-panel="release" data-searchable="release freeze smoke rollback incidentes">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 6</span>
-                    <h2>Release & Freeze</h2>
-                    <p>Checklist, smokes e gatilhos de contenção para liberar uso com segurança.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel" data-console-panel="release" data-searchable="release freeze smoke rollback incidentes">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
                     <header><h2>Checklist de release</h2><p>Gates, evidências e smokes pós-deploy da camada IA/MCP.</p></header>
@@ -735,21 +580,9 @@
                     </div>
                 </article>
             </div>
-            </div>
         </section>
 
-        <section class="ai-mcp-panel ai-mcp-panel--dashboard" data-console-panel="dashboard" data-searchable="dashboard readiness alerts métricas telemetria">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 7</span>
-                    <h2>Dashboard & Readiness</h2>
-                    <p>Painéis, métricas e gates macro para avaliação de prontidão e observabilidade.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel" data-console-panel="dashboard" data-searchable="dashboard readiness alerts métricas telemetria">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
                     <header><h2>Painéis e métricas</h2><p>Especificação do dashboard operacional de uso IA/MCP.</p></header>
@@ -783,21 +616,9 @@
                     </div>
                 </article>
             </div>
-            </div>
         </section>
 
-        <section class="ai-mcp-panel ai-mcp-panel--governance" data-console-panel="governance" data-searchable="governança drift bloqueios critérios abertura">
-            <header class="ai-mcp-panel__hero">
-                <div>
-                    <span class="ai-mcp-panel__eyebrow">Seção 8</span>
-                    <h2>Governança</h2>
-                    <p>Critérios de abertura, bloqueios e disciplina de controle para evitar drift estrutural.</p>
-                </div>
-                <button type="button" class="ai-mcp-panel__toggle" data-panel-toggle aria-expanded="true" title="Expandir ou recolher seção">
-                    <span class="ai-mcp-panel__toggle-icon">⌄</span>
-                </button>
-            </header>
-            <div class="ai-mcp-panel__body">
+        <section class="ai-mcp-panel" data-console-panel="governance" data-searchable="governança drift bloqueios critérios abertura">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
                     <header><h2>Critérios de abertura</h2><p>O que precisa existir para testar a operação IA/MCP sem abrir risco estrutural.</p></header>
@@ -816,7 +637,6 @@
                         {% endfor %}
                     </ul>
                 </article>
-            </div>
             </div>
         </section>
             </div>
