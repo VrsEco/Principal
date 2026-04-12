@@ -99,13 +99,13 @@
 <div id="integrationRequestModal" class="modal fade" style="z-index: 25000;">
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="card test-modal-content shadow-lg w-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header modal-header-block">
         <div class="modal-title-block">
           <span class="int-eyebrow">Assistente</span>
           <h3 class="text-h3 mb-0">Nova Integração</h3>
           <small class="text-secondary">Coleta os dados e abre um card no backlog AA.J.31.</small>
         </div>
-        <button class="btn btn-icon btn-ghost" type="button" onclick="closeIntegrationRequestModal()"><i class="fas fa-times"></i></button>
+        <button class="btn btn-icon btn-ghost modal-close" type="button" onclick="closeIntegrationRequestModal()"><i class="fas fa-times"></i></button>
       </div>
       <div class="card-body">
         <form id="integrationRequestForm" class="integration-request-form">
@@ -224,14 +224,18 @@
 .muted { color:var(--text-secondary); }
 .modal { display:none; }
 .modal.show { display:flex; position:fixed; inset:0; align-items:center; justify-content:center; padding:1.5rem; background:rgba(15,23,42,.45); }
-.modal-dialog { width:100%; max-width:980px; }
-.test-modal-content { border-radius:20px; }
-.modal-title-block { display:flex; flex-direction:column; gap:.25rem; }
-.vs-form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.2rem; }
+.modal-dialog { width:100%; max-width:840px; margin:0 auto; }
+.test-modal-content { border-radius:22px; overflow:hidden; }
+.modal-header-block { background:linear-gradient(180deg, rgba(59,130,246,.12), rgba(255,255,255,0)); padding:1.4rem 1.6rem 1.2rem; border-bottom:1px solid var(--border); position:relative; }
+.modal-title-block { display:flex; flex-direction:column; gap:.35rem; }
+.modal-title-block h3 { font-size:1.2rem; }
+.modal-close { position:absolute; top:1rem; right:1rem; }
+.card-body { padding:1.4rem 1.6rem 1.6rem; }
+.vs-form-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:1rem; }
 .vs-control label { display:block; font-size:.72rem; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; }
 .vs-input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.65rem .8rem; font-size:.9rem; color:var(--text-primary); width:100%; transition:all .15s ease; }
 .vs-input:focus { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.2); background:var(--surface); }
-.vs-control-wide { grid-column: span 2; }
+.vs-control-wide { grid-column: span 3; }
 
 @media (max-width: 1200px) {
   .int-shell { grid-template-columns: minmax(260px, 300px) minmax(0,1fr); }
@@ -242,6 +246,8 @@
   .int-header { flex-direction:column; }
   .int-shell { grid-template-columns:1fr; }
   .int-rail { position:static; }
+  .modal-dialog { max-width:95vw; }
+  .vs-form-grid { grid-template-columns:1fr; }
   .vs-control-wide { grid-column: span 1; }
 }
 </style>
