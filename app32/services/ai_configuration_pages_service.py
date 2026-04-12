@@ -29,7 +29,7 @@ class AIConfigurationPagesService:
             "shortcuts": [
                 {"label": "Integrações", "href": "/integrations"},
                 {"label": "MCP", "href": "/configs/ai/mcp"},
-                {"label": "Tools", "href": "/configs/ai/tools"},
+                {"label": "Tools", "href": "/integrations/tools"},
                 {"label": "Permissões e Configurações", "href": "/configs/ai/permissions"},
                 {"label": "Monitoramento e Auditoria", "href": "/configs/ai/monitoring"},
             ],

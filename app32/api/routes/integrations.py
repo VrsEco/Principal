@@ -18,6 +18,7 @@ from services.integration_catalog_service import IntegrationCatalogService
 from services.integration_request_service import IntegrationRequestService
 from services.instagram_service import InstagramService
 from services.telegram_service import TelegramService
+from services.tool_first_catalog_service import ToolFirstCatalogService
 from services.whatsapp_service import WhatsAppService
 from utils.integration_settings import resolve_service_config
 
@@ -882,6 +883,39 @@ def integrations_admin_page():
             "A console de canais está em contingência. Use a tela API / MCP enquanto estabilizamos a administração técnica.",
             links=[
                 ("API / MCP", "/integrations"),
+            ],
+        )
+
+
+@integrations_bp.route("/integrations/tools")
+@login_required
+def integrations_tools_page():
+    active_company = _safe_active_company()
+    try:
+        catalog = ToolFirstCatalogService.build_catalog(active_company)
+    except Exception:
+        current_app.logger.exception("Falha ao montar catálogo de tools.")
+        catalog = {
+            "summary": {"domains": 0, "canonical_domains": 0, "wrapper_domains": 0},
+            "domains": [],
+            "discovery": {"rest_endpoint": "/api/configs/ai/mcp/tool-first-catalog"},
+        }
+
+    try:
+        return render_template(
+            "modules/operations/ai_tools_catalog.html",
+            active_company=active_company,
+            tool_catalog=catalog,
+        )
+    except Exception:
+        current_app.logger.exception("Falha ao renderizar tela de Tools.")
+        return _fallback_integrations_shell(
+            "Tools",
+            "A interface operacional de tools está em contingência. Use a API do catálogo enquanto concluímos a estabilização.",
+            links=[
+                ("API / MCP", "/integrations"),
+                ("Configurações de Canais", "/integrations/admin"),
+                ("API do catálogo", "/api/configs/ai/mcp/tool-first-catalog"),
             ],
         )
 

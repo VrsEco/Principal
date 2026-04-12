@@ -78,6 +78,32 @@ def test_integrations_admin_page_renders(monkeypatch):
     assert captured["context"]["integration_catalog"]["summary"]["total"] == 1
 
 
+def test_integrations_tools_page_renders(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(
+        integrations_route.ToolFirstCatalogService,
+        "build_catalog",
+        lambda company=None: {
+            "summary": {"domains": 2, "canonical_domains": 1, "wrapper_domains": 1},
+            "domains": [{"key": "engineering", "title": "Engenharia"}],
+            "discovery": {"rest_endpoint": "/api/configs/ai/mcp/tool-first-catalog"},
+        },
+    )
+    monkeypatch.setattr(
+        integrations_route,
+        "render_template",
+        lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
+    )
+
+    response = app.test_client().get("/integrations/tools")
+
+    assert response.status_code == 200
+    assert captured["template"] == "modules/operations/ai_tools_catalog.html"
+    assert captured["context"]["tool_catalog"]["summary"]["domains"] == 2
+
+
 def test_integrations_catalog_api_returns_payload(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(

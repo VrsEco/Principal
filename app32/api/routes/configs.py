@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, abort, current_app
+from flask import Blueprint, render_template, jsonify, request, abort, current_app, redirect, url_for
 from flask_login import login_required, current_user
 from models import db, AIAgent, AgentMessage
 from services.ai_configuration_pages_service import AIConfigurationPagesService
@@ -54,7 +54,7 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
         "shortcuts": [
             {"label": "Integrações", "href": "/integrations"},
             {"label": "MCP", "href": "/configs/ai/mcp"},
-            {"label": "Tools", "href": "/configs/ai/tools"},
+            {"label": "Tools", "href": "/integrations/tools"},
             {"label": "Permissões e Configurações", "href": "/configs/ai/permissions"},
             {"label": "Monitoramento e Auditoria", "href": "/configs/ai/monitoring"},
         ],
@@ -187,7 +187,7 @@ def ai_settings():
                     },
                     {
                         "title": "Abrir Tools",
-                        "href": "/configs/ai/tools",
+                        "href": "/integrations/tools",
                         "description": "Catálogo, risco e gate humano.",
                     },
                     {
@@ -298,21 +298,7 @@ def ai_mcp_page():
 @configs_bp.route('/configs/ai/tools')
 @login_required
 def ai_tools_page():
-    active_company = _resolve_active_company()
-    company_id = getattr(active_company, 'id', None)
-    if not _can_access_ai_mcp_console(company_id):
-        abort(403)
-    try:
-        tool_catalog = ToolFirstCatalogService.build_catalog(active_company)
-    except Exception:
-        current_app.logger.exception("Falha ao montar catálogo visual de tools IA/MCP.")
-        tool_catalog = {"summary": {"domains": 0, "canonical_domains": 0, "wrapper_domains": 0}, "domains": [], "discovery": {}}
-
-    return render_template(
-        'modules/operations/ai_tools_catalog.html',
-        active_company=active_company,
-        tool_catalog=tool_catalog,
-    )
+    return redirect("/integrations/tools")
 
 
 @configs_bp.route('/configs/ai/permissions')
