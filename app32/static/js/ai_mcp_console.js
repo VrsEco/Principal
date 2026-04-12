@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const assistantActions = Array.from(root.querySelectorAll('[data-assistant-action]'));
     const collapsibleCards = Array.from(root.querySelectorAll('.ai-mcp-panels .ai-mcp-card'));
     const panelToggles = Array.from(root.querySelectorAll('[data-panel-toggle]'));
+    const wizardStages = Array.from(root.querySelectorAll('[data-wizard-stage]'));
+    const stageToggles = Array.from(root.querySelectorAll('[data-stage-toggle]'));
 
     const helpTopics = {
         overview: {
@@ -109,6 +111,17 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingAction: null,
     };
 
+
+
+    function setStageExpanded(stage, expanded) {
+        if (!stage) return;
+        const toggle = stage.querySelector('[data-stage-toggle]');
+        stage.classList.toggle('is-collapsed', !expanded);
+        stage.classList.toggle('is-expanded', expanded);
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', String(expanded));
+        }
+    }
 
     function updateTranscript() {
         if (!wizardTranscript || !wizardTranscriptList) return;
@@ -206,6 +219,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const match = !needle || normalize(card.dataset.searchable || card.textContent || '').includes(needle);
             card.classList.toggle('ai-mcp-hidden', !match);
         });
+        wizardStages.forEach((stage) => {
+            const stageMatch = !needle || normalize(stage.dataset.searchable || stage.textContent || '').includes(needle);
+            stage.classList.toggle('ai-mcp-hidden', !stageMatch);
+            if (needle && stageMatch) {
+                setStageExpanded(stage, true);
+            }
+        });
         panels.forEach((panel) => {
             const haystack = normalize(panel.dataset.searchable || panel.textContent || '');
             const panelMatch = !needle || haystack.includes(needle);
@@ -293,6 +313,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
+    stageToggles.forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const stage = toggle.closest('[data-wizard-stage]');
+            const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+            setStageExpanded(stage, expanded);
+        });
+    });
 
     panelToggles.forEach((toggle) => {
         toggle.addEventListener('click', () => {
