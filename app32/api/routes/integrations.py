@@ -917,6 +917,8 @@ def list_integration_requests():
             "requests": IntegrationRequestService.list_requests(
                 company_id=getattr(company, "id", None),
                 limit=request.args.get("limit", default=20, type=int),
+                requester_user_id=int(current_user.id),
+                requester_name=getattr(current_user, "name", None),
             ),
         }
     )

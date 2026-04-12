@@ -30,7 +30,7 @@
           </div>
         </div>
         <div class="int-integrations-list" id="integrationsList">
-          {% for item in catalog.integrations %}
+          {% for item in catalog.integrations if item.status == 'available' %}
           <button type="button" class="int-list-item" data-integration-key="{{ item.key }}">
             <div>
               <strong>{{ item.title }}</strong>
@@ -83,8 +83,8 @@
       <div class="int-card">
         <div class="int-card-head">
           <div>
-            <h2>Solicitações pendentes</h2>
-            <small>AA.J.31 (Produção)</small>
+            <h2>Backlog aberto de integrações</h2>
+            <small>AA.J.31 · status pela lista atual</small>
           </div>
           <button type="button" class="btn btn-primary btn-sm" id="openIntegrationRequestAssistant">Solicitar nova integração</button>
         </div>
@@ -292,14 +292,13 @@
       if (!response.ok) throw new Error(data.message || 'Erro ao carregar');
 
       const STATUS_LABELS = {
+        inbox: 'Caixa de Entrada',
+        waiting: 'Aguardando',
+        executing: 'Executando',
+        pending: 'Pendências',
+        suspended: 'Suspensos',
+        completed: 'Concluídos',
         requested: 'Solicitada',
-        triage: 'Em triagem',
-        approved: 'Aprovada',
-        implementing: 'Em implementação',
-        validated: 'Validada',
-        published: 'Publicada',
-        rejected: 'Recusada',
-        completed: 'Concluída',
       };
 
       if (!data.requests || data.requests.length === 0) {
@@ -322,7 +321,7 @@
             ${items.map(req => `
               <div class="int-request-item">
                 <strong>${req.title}</strong>
-                <span class="muted">${req.external_system || 'Sistema externo'} · ${req.integration_mode || '-'}</span>
+                <span class="muted">${req.external_system || 'Sistema externo'} · ${req.integration_mode || '-'} · ${req.backlog_task_code || ('AA.J.31.' + (req.backlog_task_id || '-'))}</span>
               </div>
             `).join('')}
           </div>

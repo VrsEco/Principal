@@ -94,6 +94,28 @@ def test_integrations_catalog_api_returns_payload(monkeypatch):
     assert payload["catalog"]["summary"]["total"] == 4
 
 
+def test_list_integration_requests_uses_current_user_context(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "current_user", SimpleNamespace(id=9, name="Fabiano"))
+    captured = {}
+    monkeypatch.setattr(
+        integrations_route.IntegrationRequestService,
+        "list_requests",
+        lambda **kwargs: captured.update(kwargs) or [{"id": 1, "title": "Open Finance"}],
+    )
+
+    response = app.test_client().get("/api/integrations/requests")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["requests"][0]["title"] == "Open Finance"
+    assert captured["company_id"] == 31
+    assert captured["requester_user_id"] == 9
+    assert captured["requester_name"] == "Fabiano"
+
+
 def test_create_integration_request_uses_active_company_and_current_user(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))

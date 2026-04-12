@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import unicodedata
 from typing import Any
@@ -8,7 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from models import db
 from models.integration_request import IntegrationRequest
+from models.project import ProjectTask
 from services.project_task_service import ProjectTaskService
+
+logger = logging.getLogger(__name__)
 
 
 class IntegrationRequestPayload(BaseModel):
@@ -32,6 +36,19 @@ class IntegrationRequestPayload(BaseModel):
 
 class IntegrationRequestService:
     BACKLOG_PROJECT_CODE = "AA.J.31"
+    CATALOG_REQUEST_KEYS = ("open_finance", "financial_data_api", "erp_accounting_bridge")
+    BACKLOG_STAGE_LABELS = {
+        "inbox": "Caixa de Entrada",
+        "waiting": "Aguardando",
+        "executing": "Executando",
+        "pending": "Pendências",
+        "suspended": "Suspensos",
+        "completed": "Concluídos",
+    }
+    CATALOG_STATUS_TO_STAGE = {
+        "planned": "pending",
+        "discovery": "inbox",
+    }
 
     @staticmethod
     def _slugify(value: str) -> str:
@@ -87,6 +104,8 @@ class IntegrationRequestService:
         company_id: int,
         requester_user_id: int,
         requester_name: str | None = None,
+        initial_status: str = "requested",
+        initial_stage: str = "inbox",
     ) -> IntegrationRequest:
         payload = IntegrationRequestPayload.model_validate(raw_payload)
 
@@ -99,7 +118,7 @@ class IntegrationRequestService:
             integration_mode=payload.integration_mode,
             technical_channel=payload.technical_channel,
             source_channel=payload.source_channel,
-            status="requested",
+            status=initial_status,
             external_system=payload.external_system,
             objective=payload.objective,
             data_summary=payload.data_summary,
@@ -127,7 +146,7 @@ class IntegrationRequestService:
                 requester_user_id=int(requester_user_id),
             ),
             status="planned",
-            stage="inbox",
+            stage=initial_stage,
             priority="high" if payload.urgency in {"high", "critical"} else "normal",
             notes=(
                 f"integration_request_id={record.id}\n"
@@ -144,9 +163,183 @@ class IntegrationRequestService:
         db.session.commit()
         return record
 
-    @staticmethod
-    def list_requests(*, company_id: int | None = None, limit: int = 20) -> list[dict[str, Any]]:
+    @classmethod
+    def _build_catalog_seed_payload(cls, item: dict[str, Any]) -> dict[str, Any]:
+        use_cases = item.get("use_cases") or []
+        requirements = item.get("activation_requirements") or []
+        return {
+            "title": item.get("title") or "Nova integração",
+            "business_domain": item.get("category") or "Integrações",
+            "integration_mode": item.get("integration_mode") or "bidirectional",
+            "technical_channel": item.get("technical_channel") or "api",
+            "source_channel": "catalog_seed",
+            "external_system": item.get("title") or "Backlog APP32",
+            "objective": item.get("summary") or item.get("description") or "Planejamento de integração no backlog corporativo.",
+            "data_summary": " ; ".join(use_cases[:3]) or "Backlog consultivo de integração em evolução.",
+            "notes": "\n".join(requirements[:3]) if requirements else None,
+        }
+
+    @classmethod
+    def _build_catalog_seed_description(cls, item: dict[str, Any]) -> str:
+        lines = [
+            "Integração canônica do catálogo consultivo sincronizada com o backlog AA.J.31.",
+            "",
+            f"Chave do catálogo: {item.get('key')}",
+            f"Status consultivo original: {item.get('status')}",
+            f"Título: {item.get('title')}",
+            f"Categoria: {item.get('category')}",
+            f"Modo: {item.get('integration_mode')}",
+            f"Canal técnico: {item.get('technical_channel')}",
+            "",
+            "Resumo:",
+            item.get("summary") or item.get("description") or "Sem resumo.",
+        ]
+        use_cases = item.get("use_cases") or []
+        if use_cases:
+            lines.extend(["", "Casos de uso:"] + [f"- {entry}" for entry in use_cases[:5]])
+        return "\n".join(lines).strip()
+
+    @classmethod
+    def _find_catalog_backlog_task(cls, catalog_key: str) -> ProjectTask | None:
+        project, error = ProjectTaskService.resolve_project_by_code(cls.BACKLOG_PROJECT_CODE, allowed_company_ids=None)
+        if error or project is None:
+            return None
+        marker = f"integration_catalog_key={catalog_key}"
+        task = (
+            ProjectTask.query.filter(
+                ProjectTask.project_id == project.id,
+                ProjectTask.notes.isnot(None),
+                ProjectTask.notes.contains(marker),
+            )
+            .order_by(ProjectTask.id.asc())
+            .first()
+        )
+        return task
+
+    @classmethod
+    def ensure_catalog_backlog_tasks(
+        cls,
+        *,
+        requester_user_id: int,
+        requester_name: str | None = None,
+    ) -> list[dict[str, Any]]:
+        from services.integration_catalog_service import IntegrationCatalogService
+
+        seeded: list[dict[str, Any]] = []
+        for key in cls.CATALOG_REQUEST_KEYS:
+            item = IntegrationCatalogService.get_integration(key)
+            if not item or item.get("status") == "available":
+                continue
+
+            task = cls._find_catalog_backlog_task(key)
+            if task is None:
+                seed_payload = cls._build_catalog_seed_payload(item)
+                stage = cls.CATALOG_STATUS_TO_STAGE.get(str(item.get("status") or "").strip().lower(), "inbox")
+                result, error = ProjectTaskService.create_project_task(
+                    project_code=cls.BACKLOG_PROJECT_CODE,
+                    task_name=f"[Integração Catálogo] {seed_payload['title']}",
+                    user_id=int(requester_user_id),
+                    allowed_company_ids=None,
+                    responsible_name=requester_name,
+                    description=cls._build_catalog_seed_description(item),
+                    status="planned",
+                    stage=stage,
+                    priority="normal",
+                    notes=(
+                        f"integration_catalog_key={key}\n"
+                        "source_channel=integration_catalog\n"
+                        f"catalog_status={item.get('status')}\n"
+                        f"technical_channel={item.get('technical_channel')}\n"
+                        f"integration_mode={item.get('integration_mode')}"
+                    ),
+                )
+                if error:
+                    logger.warning("Falha ao sincronizar backlog canônico de integração %s: %s", key, error)
+                    continue
+                task = (result or {}).get("task")
+
+            if task is not None:
+                seeded.append(cls._serialize_catalog_backlog_item(item, task))
+        return seeded
+
+    @classmethod
+    def _serialize_catalog_backlog_item(cls, item: dict[str, Any], task: ProjectTask) -> dict[str, Any]:
+        stage = str(getattr(task, "stage", None) or "inbox").strip().lower()
+        return {
+            "id": f"catalog:{item.get('key')}",
+            "company_id": None,
+            "requester_user_id": None,
+            "title": item.get("title"),
+            "slug": cls._slugify(item.get("title") or item.get("key") or "integracao-catalogo"),
+            "business_domain": item.get("category"),
+            "integration_mode": item.get("integration_mode"),
+            "technical_channel": item.get("technical_channel"),
+            "source_channel": "integration_catalog",
+            "status": stage,
+            "status_label": cls.BACKLOG_STAGE_LABELS.get(stage, stage or "-"),
+            "external_system": item.get("title"),
+            "objective": item.get("summary"),
+            "data_summary": item.get("description"),
+            "frequency": None,
+            "urgency": "medium",
+            "compliance_level": "internal",
+            "provider_contact": None,
+            "provider_docs_url": None,
+            "notes": getattr(task, "notes", None),
+            "payload": {"integration_catalog_key": item.get("key"), "catalog_status": item.get("status")},
+            "backlog_task_id": getattr(task, "id", None),
+            "backlog_task_code": getattr(task, "code", None),
+            "backlog_stage": stage,
+            "backlog_stage_label": cls.BACKLOG_STAGE_LABELS.get(stage, stage or "-"),
+            "created_at": getattr(task, "created_at", None).isoformat() if getattr(task, "created_at", None) else None,
+            "updated_at": getattr(task, "updated_at", None).isoformat() if getattr(task, "updated_at", None) else None,
+        }
+
+    @classmethod
+    def _load_backlog_task_map(cls, task_ids: list[int]) -> dict[int, ProjectTask]:
+        normalized_ids = [int(task_id) for task_id in task_ids if task_id]
+        if not normalized_ids:
+            return {}
+        tasks = ProjectTask.query.filter(ProjectTask.id.in_(normalized_ids)).all()
+        return {task.id: task for task in tasks}
+
+    @classmethod
+    def _serialize_request_record(cls, record: IntegrationRequest, task_map: dict[int, ProjectTask]) -> dict[str, Any]:
+        payload = record.to_dict()
+        task = task_map.get(int(record.backlog_task_id)) if record.backlog_task_id else None
+        if task is not None:
+            stage = str(getattr(task, "stage", None) or payload.get("status") or "inbox").strip().lower()
+            payload["status"] = stage
+            payload["status_label"] = cls.BACKLOG_STAGE_LABELS.get(stage, stage)
+            payload["backlog_stage"] = stage
+            payload["backlog_stage_label"] = cls.BACKLOG_STAGE_LABELS.get(stage, stage)
+            payload["backlog_task_code"] = getattr(task, "code", None)
+            payload["created_at"] = getattr(task, "created_at", None).isoformat() if getattr(task, "created_at", None) else payload.get("created_at")
+            payload["updated_at"] = getattr(task, "updated_at", None).isoformat() if getattr(task, "updated_at", None) else payload.get("updated_at")
+        return payload
+
+    @classmethod
+    def list_requests(
+        cls,
+        *,
+        company_id: int | None = None,
+        limit: int = 20,
+        requester_user_id: int | None = None,
+        requester_name: str | None = None,
+    ) -> list[dict[str, Any]]:
+        seeded = []
+        if requester_user_id:
+            seeded = cls.ensure_catalog_backlog_tasks(
+                requester_user_id=int(requester_user_id),
+                requester_name=requester_name,
+            )
+
         query = IntegrationRequest.query.order_by(IntegrationRequest.created_at.desc())
         if company_id is not None:
             query = query.filter(IntegrationRequest.company_id == int(company_id))
-        return [item.to_dict() for item in query.limit(limit).all()]
+        records = query.limit(limit).all()
+        task_map = cls._load_backlog_task_map([int(item.backlog_task_id) for item in records if item.backlog_task_id])
+        merged = [cls._serialize_request_record(item, task_map) for item in records]
+        merged.extend(seeded)
+        merged.sort(key=lambda item: item.get("updated_at") or item.get("created_at") or "", reverse=True)
+        return merged[:limit]
