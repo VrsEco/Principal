@@ -17,21 +17,6 @@
     <div>
       <span class="int-eyebrow">AI-Readable</span>
       <h1>Central de Integrações</h1>
-      <p>Visualize integrações em funcionamento, acompanhe solicitações e consulte instruções essenciais para cada conexão.</p>
-    </div>
-    <div class="int-header-meta">
-      <div class="int-meta-card">
-        <span>Canal técnico</span>
-        <strong id="integrationChannelLabel">Selecione uma integração</strong>
-      </div>
-      <div class="int-meta-card">
-        <span>Tipo</span>
-        <strong id="integrationModeLabel">-</strong>
-      </div>
-      <div class="int-meta-card">
-        <span>Status</span>
-        <strong id="integrationStatusLabel">-</strong>
-      </div>
     </div>
   </header>
 
@@ -161,12 +146,7 @@
 .int-page { padding:0 2rem 2rem; }
 .int-header { display:flex; justify-content:space-between; align-items:flex-start; gap:2rem; margin-bottom:1.5rem; }
 .int-header h1 { margin:0 0 .3rem; }
-.int-header p { margin:0; color:var(--text-secondary); }
 .int-eyebrow { display:inline-flex; padding:.25rem .7rem; border-radius:999px; font-size:.75rem; font-weight:700; background:rgba(59,130,246,.12); color:#2563eb; margin-bottom:.5rem; }
-.int-header-meta { display:grid; gap:.75rem; min-width:260px; }
-.int-meta-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:.75rem 1rem; display:flex; flex-direction:column; gap:.2rem; box-shadow:var(--shadow-sm); }
-.int-meta-card span { color:var(--text-tertiary); font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
-.int-meta-card strong { font-size:.95rem; }
 .int-shell { display:grid; grid-template-columns: minmax(280px, 320px) minmax(0,1fr) minmax(280px, 320px); gap:1rem; align-items:start; }
 .int-rail { position:sticky; top:1rem; }
 .int-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem; }
@@ -193,6 +173,10 @@
 .int-detail-block strong { font-size:.95rem; }
 .int-empty { text-align:center; color:var(--text-tertiary); padding:1.2rem .6rem; }
 .muted { color:var(--text-secondary); }
+.modal { display:none; }
+.modal.show { display:flex; position:fixed; inset:0; align-items:center; justify-content:center; padding:1.5rem; background:rgba(15,23,42,.45); }
+.modal-dialog { width:100%; max-width:980px; }
+.test-modal-content { border-radius:20px; }
 
 @media (max-width: 1200px) {
   .int-shell { grid-template-columns: minmax(260px, 300px) minmax(0,1fr); }
@@ -217,9 +201,6 @@
     document.getElementById('integrationSummary').textContent = item.summary || item.description || '';
     document.getElementById('integrationType').textContent = item.integration_mode_label || item.integration_mode || '-';
     document.getElementById('integrationChannel').textContent = item.technical_channel_label || item.technical_channel || '-';
-    document.getElementById('integrationModeLabel').textContent = item.integration_mode_label || item.integration_mode || '-';
-    document.getElementById('integrationChannelLabel').textContent = item.technical_channel_label || item.technical_channel || '-';
-    document.getElementById('integrationStatusLabel').textContent = item.status_label || item.status || '-';
 
     const steps = item.configuration_steps || [];
     const requirements = item.activation_requirements || [];
