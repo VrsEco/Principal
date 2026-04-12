@@ -1,13 +1,15 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required
 from flask_restful import Api
 import os
 from sqlalchemy import inspect, or_, text
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db
 from schemas import ma
 from utils.error_handling import register_global_error_handlers
+from utils.security import normalize_relative_upload_path, same_origin_verified
 
 
 def _env_flag(name: str, default: bool) -> bool:
@@ -109,8 +111,6 @@ def create_app(config_name=None):
         from utils.jinja_filters import format_currency_br
         return format_currency_br(value)
 
-    CORS(app)
-
     # Configuration
     from config import config as app_configs
     if config_name is None:
@@ -121,6 +121,30 @@ def create_app(config_name=None):
         config_name = 'default'
     
     app.config.from_object(app_configs[config_name])
+    app.config["FLASK_CONFIG"] = config_name
+
+    if config_name == "production":
+        if not app.config.get("SECRET_KEY"):
+            raise RuntimeError("SECRET_KEY é obrigatório em produção.")
+        if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+            raise RuntimeError("DATABASE_URL é obrigatório em produção.")
+
+    trusted_origins = app.config.get("SECURITY_TRUSTED_ORIGINS") or []
+    if trusted_origins:
+        CORS(
+            app,
+            resources={r"/api/*": {"origins": trusted_origins}},
+            supports_credentials=True,
+        )
+    elif config_name != "production":
+        CORS(app)
+
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=app.config.get("SECURITY_PROXY_FIX_X_FOR", 1),
+        x_proto=app.config.get("SECURITY_PROXY_FIX_X_PROTO", 1),
+        x_host=app.config.get("SECURITY_PROXY_FIX_X_HOST", 1),
+    )
 
     # Ensure Upload Dirs (keep hardcoded if not in config)
     app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
@@ -379,7 +403,9 @@ def create_app(config_name=None):
         log_path = os.path.join(base_dir, 'request_debug.log')
         
         # Public endpoints that don't require authentication
-        public_endpoints = ['auth.login', 'static', 'dev.seed_demo', 'dev.debug_routes', 'telegram.telegram_webhook']
+        public_endpoints = ['auth.login', 'static', 'telegram.telegram_webhook']
+        if app.config.get("DEV_ROUTES_ENABLED"):
+            public_endpoints.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
         
         try:
             with open(log_path, 'a') as f:
@@ -387,6 +413,28 @@ def create_app(config_name=None):
                 f.write(f"  Auth: {current_user.is_authenticated}, Active Company: {session.get('active_company_id')}\n")
         except:
             pass
+
+        allowed_hosts = app.config.get("SECURITY_ALLOWED_HOSTS") or []
+        if allowed_hosts:
+            request_host = (request.host or "").split(":")[0].lower()
+            normalized_allowed_hosts = {host.split(":")[0].strip().lower() for host in allowed_hosts if host.strip()}
+            if request_host and request_host not in normalized_allowed_hosts:
+                return jsonify({"error": "Host não permitido"}), 400
+
+        csrf_exempt_prefixes = ("/webhook/",)
+        csrf_exempt_endpoints = {
+            "auth.login",
+            "auth.portal",
+        }
+        if (
+            current_user.is_authenticated
+            and app.config.get("SECURITY_ENFORCE_CSRF_SAME_ORIGIN", True)
+            and request.method in {"POST", "PUT", "PATCH", "DELETE"}
+            and not request.path.startswith(csrf_exempt_prefixes)
+            and request.endpoint not in csrf_exempt_endpoints
+            and not same_origin_verified()
+        ):
+            return jsonify({"error": "Origem não permitida"}), 403
 
         # 1. Check if user is authenticated
         if not current_user.is_authenticated:
@@ -407,10 +455,10 @@ def create_app(config_name=None):
                 'auth.change_password',
                 'auth.logout',
                 'static',
-                'dev.seed_demo',
-                'dev.debug_routes',
                 'integrations.integrations_page',
             ]
+            if app.config.get("DEV_ROUTES_ENABLED"):
+                allowed_post_login.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
             
             active_company_id = session.get('active_company_id')
             # Normalize 'null' and 'undefined' strings that might come from frontend/session issues
@@ -426,6 +474,26 @@ def create_app(config_name=None):
                                 f.write(f"  No active company, redirecting UI to portal\n")
                         except: pass
                         return redirect(url_for('auth.portal'))
+
+    @app.after_request
+    def apply_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if request.path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-store")
+        if request.is_secure:
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                f"max-age={app.config.get('SECURITY_HSTS_SECONDS', 31536000)}; includeSubDomains",
+            )
+        csp_parts = ["default-src 'self'"]
+        if app.config.get("SECURITY_TRUSTED_ORIGINS"):
+            origins = " ".join(app.config["SECURITY_TRUSTED_ORIGINS"])
+            csp_parts.append(f"connect-src 'self' {origins}")
+        response.headers.setdefault("Content-Security-Policy", "; ".join(csp_parts))
+        return response
     
     if _should_run_runtime_bootstrap(config_name):
         print("DEBUG: Starting Engineering Service worker...")
@@ -761,9 +829,17 @@ def register_api_resources(api):
 def register_blueprints(app):
     # Route to serve uploaded files
     @app.route('/uploads/<path:filename>')
+    @login_required
     def serve_uploaded_file(filename):
-        from flask import send_from_directory
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        from flask import abort, send_from_directory
+        from utils.storage import user_can_access_upload
+
+        normalized_filename = normalize_relative_upload_path(filename)
+        if not normalized_filename:
+            abort(404)
+        if not user_can_access_upload(normalized_filename):
+            abort(403)
+        return send_from_directory(app.config['UPLOAD_FOLDER'], normalized_filename)
 
     from api.routes.main import main_bp
     from api.routes.auth import auth_bp
@@ -804,7 +880,8 @@ def register_blueprints(app):
     app.register_blueprint(work_journey_agendas_bp)
     app.register_blueprint(work_journey_report_bp)
     app.register_blueprint(diag_bp)
-    app.register_blueprint(dev_bp)
+    if app.config.get("DEV_ROUTES_ENABLED"):
+        app.register_blueprint(dev_bp)
     app.register_blueprint(notes_bp)
     app.register_blueprint(agents_bp)
     app.register_blueprint(configs_bp)

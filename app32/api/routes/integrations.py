@@ -17,6 +17,7 @@ from services.email_service import EmailService
 from services.instagram_service import InstagramService
 from services.telegram_service import TelegramService
 from services.whatsapp_service import WhatsAppService
+from utils.integration_settings import resolve_service_config
 
 integrations_bp = Blueprint("integrations", __name__)
 
@@ -323,136 +324,10 @@ def _find_service_integration(service: str) -> Optional[Dict[str, Any]]:
 
 
 def _default_service_config(service: str) -> Dict[str, Any]:
-    if service == "ai":
-        provider = (os.environ.get("AI_PROVIDER") or "openai").strip().lower()
-        return {
-            "provider": provider,
-            "config": {
-                "provider": provider,
-                "api_key": os.environ.get("AI_API_KEY"),
-                "url": os.environ.get("AI_WEBHOOK_URL"),
-                "base_url": os.environ.get("AI_BASE_URL"),
-            },
-            "source": "environment",
-            "integration_id": None,
-        }
-
-    if service == "email":
-        provider = (os.environ.get("EMAIL_PROVIDER") or "smtp").strip().lower()
-        return {
-            "provider": provider,
-            "config": {
-                "provider": provider,
-                "server": os.environ.get("MAIL_SERVER"),
-                "port": os.environ.get("MAIL_PORT"),
-                "username": os.environ.get("MAIL_USERNAME"),
-                "password": os.environ.get("MAIL_PASSWORD"),
-                "webhook_url": os.environ.get("EMAIL_WEBHOOK_URL"),
-                "use_tls": os.environ.get("MAIL_USE_TLS", "true").lower() == "true",
-                "inbound_protocol": os.environ.get("EMAIL_INBOUND_PROTOCOL", "pop3"),
-                "inbound_host": os.environ.get("EMAIL_INBOUND_HOST"),
-                "inbound_port": os.environ.get("EMAIL_INBOUND_PORT"),
-                "inbound_username": os.environ.get("EMAIL_INBOUND_USERNAME"),
-                "inbound_password": os.environ.get("EMAIL_INBOUND_PASSWORD"),
-                "inbound_use_ssl": os.environ.get(
-                    "EMAIL_INBOUND_USE_SSL", "true"
-                ).lower()
-                == "true",
-            },
-            "source": "environment",
-            "integration_id": None,
-        }
-
-    if service == "whatsapp":
-        provider = (os.environ.get("WHATSAPP_PROVIDER") or "z-api").strip().lower()
-        account_sid = _coalesce(
-            os.environ.get("TWILIO_ACCOUNT_SID"),
-            os.environ.get("WHATSAPP_API_KEY"),
-        )
-        return {
-            "provider": provider,
-            "config": {
-                "provider": provider,
-                "api_key": os.environ.get("WHATSAPP_API_KEY"),
-                "instance_id": os.environ.get("WHATSAPP_INSTANCE_ID"),
-                "client_token": os.environ.get("WHATSAPP_CLIENT_TOKEN"),
-                "webhook_url": os.environ.get("WHATSAPP_WEBHOOK_URL"),
-                "account_sid": account_sid,
-                "auth_token": os.environ.get("TWILIO_AUTH_TOKEN"),
-                "whatsapp_number": os.environ.get("WHATSAPP_INSTANCE_ID"),
-            },
-            "source": "environment",
-            "integration_id": None,
-        }
-
-    if service == "telegram":
-        provider = (os.environ.get("TELEGRAM_PROVIDER") or "bot_api").strip().lower()
-        token = _coalesce(
-            os.environ.get("TELEGRAM_BOT_TOKEN"),
-            os.environ.get("TELEGRAM_BOT_TOKEN_PROD"),
-            os.environ.get("TELEGRAM_BOT_TOKEN_DEV"),
-        )
-        return {
-            "provider": provider,
-            "config": {
-                "provider": provider,
-                "bot_token": token,
-                "bot_token_dev": os.environ.get("TELEGRAM_BOT_TOKEN_DEV"),
-                "bot_token_prod": os.environ.get("TELEGRAM_BOT_TOKEN_PROD"),
-                "telegram_env": os.environ.get("TELEGRAM_ENV"),
-                "webhook_url": os.environ.get("TELEGRAM_WEBHOOK_URL"),
-                "external_url": os.environ.get("EXTERNAL_URL"),
-                "setup_webhook": os.environ.get(
-                    "TELEGRAM_SETUP_WEBHOOK", "false"
-                ).lower()
-                == "true",
-                "webhook_path": os.environ.get(
-                    "TELEGRAM_WEBHOOK_PATH", "/webhook/telegram"
-                ),
-            },
-            "source": "environment",
-            "integration_id": None,
-        }
-
-    if service == "instagram":
-        provider = (os.environ.get("INSTAGRAM_PROVIDER") or "meta").strip().lower()
-        return {
-            "provider": provider,
-            "config": {
-                "provider": provider,
-                "access_token": os.environ.get("INSTAGRAM_ACCESS_TOKEN"),
-                "business_account_id": os.environ.get("INSTAGRAM_BUSINESS_ACCOUNT_ID"),
-                "webhook_url": os.environ.get("INSTAGRAM_WEBHOOK_URL"),
-                "graph_api_base": os.environ.get(
-                    "INSTAGRAM_GRAPH_API_BASE",
-                    "https://graph.facebook.com/v21.0",
-                ),
-                "app_id": os.environ.get("INSTAGRAM_APP_ID"),
-                "app_secret": os.environ.get("INSTAGRAM_APP_SECRET"),
-                "verify_token": os.environ.get("INSTAGRAM_VERIFY_TOKEN"),
-            },
-            "source": "environment",
-            "integration_id": None,
-        }
-
-    return {"provider": "disabled", "config": {}, "source": "environment", "integration_id": None}
+    return resolve_service_config(service)
 
 
 def _resolve_service_config(service: str) -> Dict[str, Any]:
-    service = _normalize_service(service)
-    db_record = _find_service_integration(service)
-    if db_record:
-        config = _normalize_config(db_record.get("config"))
-        provider = str(
-            _coalesce(config.get("provider"), db_record.get("provider"), "disabled")
-        ).strip().lower()
-        config = {**config, "provider": provider}
-        return {
-            "provider": provider,
-            "config": config,
-            "source": "database",
-            "integration_id": db_record.get("id"),
-        }
     return _default_service_config(service)
 
 
@@ -786,17 +661,19 @@ def _temporary_env(overrides: Dict[str, Any]):
 
 def _env_overrides_for_test(service: str, config: Dict[str, Any]) -> Dict[str, Any]:
     provider = (config.get("provider") or "disabled").strip().lower()
+    overrides: Dict[str, Any] = {"APP32_INTEGRATIONS_TEST_MODE": "true"}
 
     if service == "ai":
-        return {
+        overrides.update({
             "AI_PROVIDER": provider,
             "AI_API_KEY": config.get("api_key"),
             "AI_WEBHOOK_URL": _coalesce(config.get("url"), config.get("webhook_url")),
             "AI_BASE_URL": config.get("base_url"),
-        }
+        })
+        return overrides
 
     if service == "email":
-        return {
+        overrides.update({
             "EMAIL_PROVIDER": provider,
             "MAIL_SERVER": config.get("server"),
             "MAIL_PORT": config.get("port"),
@@ -812,12 +689,13 @@ def _env_overrides_for_test(service: str, config: Dict[str, Any]) -> Dict[str, A
             "EMAIL_INBOUND_USE_SSL": "true"
             if config.get("inbound_use_ssl", True)
             else "false",
-        }
+        })
+        return overrides
 
     if service == "whatsapp":
         account_sid = _coalesce(config.get("account_sid"), config.get("api_key"))
         whatsapp_number = _coalesce(config.get("whatsapp_number"), config.get("instance_id"))
-        return {
+        overrides.update({
             "WHATSAPP_PROVIDER": provider,
             "WHATSAPP_API_KEY": config.get("api_key") if provider != "twilio" else account_sid,
             "WHATSAPP_INSTANCE_ID": config.get("instance_id") if provider != "twilio" else whatsapp_number,
@@ -825,10 +703,11 @@ def _env_overrides_for_test(service: str, config: Dict[str, Any]) -> Dict[str, A
             "WHATSAPP_WEBHOOK_URL": config.get("webhook_url"),
             "TWILIO_ACCOUNT_SID": account_sid,
             "TWILIO_AUTH_TOKEN": config.get("auth_token"),
-        }
+        })
+        return overrides
 
     if service == "telegram":
-        return {
+        overrides.update({
             "TELEGRAM_PROVIDER": provider,
             "TELEGRAM_BOT_TOKEN": config.get("bot_token"),
             "TELEGRAM_BOT_TOKEN_DEV": config.get("bot_token_dev"),
@@ -840,10 +719,11 @@ def _env_overrides_for_test(service: str, config: Dict[str, Any]) -> Dict[str, A
             if config.get("setup_webhook")
             else "false",
             "TELEGRAM_WEBHOOK_PATH": config.get("webhook_path"),
-        }
+        })
+        return overrides
 
     if service == "instagram":
-        return {
+        overrides.update({
             "INSTAGRAM_PROVIDER": provider,
             "INSTAGRAM_ACCESS_TOKEN": config.get("access_token"),
             "INSTAGRAM_BUSINESS_ACCOUNT_ID": config.get("business_account_id"),
@@ -852,9 +732,10 @@ def _env_overrides_for_test(service: str, config: Dict[str, Any]) -> Dict[str, A
             "INSTAGRAM_APP_ID": config.get("app_id"),
             "INSTAGRAM_APP_SECRET": config.get("app_secret"),
             "INSTAGRAM_VERIFY_TOKEN": config.get("verify_token"),
-        }
+        })
+        return overrides
 
-    return {}
+    return overrides
 
 
 def _execute_test(service: str, config: Dict[str, Any]) -> Dict[str, Any]:
