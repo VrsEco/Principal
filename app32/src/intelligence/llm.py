@@ -1,14 +1,11 @@
 import os
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from utils.integration_settings import resolve_ai_runtime_config
 
 load_dotenv()
 
-# Tenta carregar a chave da tela de integrações e mantém fallback legado
-runtime = resolve_ai_runtime_config()
-api_key = runtime.get("api_key")
-default_model = runtime.get("model") or "gpt-4o-mini"
+# Tenta carregar a chave de várias fontes
+api_key = os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")
 
 if not api_key:
     try:
@@ -22,7 +19,7 @@ if api_key:
 
 # Instância para roteamento e tarefas simples (Rápida e Barata)
 llm_router = ChatOpenAI(
-    model=default_model,
+    model="gpt-4o-mini",
     temperature=0,
     api_key=api_key
 )

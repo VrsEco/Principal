@@ -10,8 +10,6 @@ from flask import Blueprint, request, jsonify, current_app
 from services.whatsapp_service import whatsapp_service
 from services.instagram_service import instagram_service
 from models import db
-from utils.integration_settings import resolve_webhook_secret
-from utils.security import consume_rate_limit, get_request_ip, webhook_secret_verified
 
 whatsapp_webhook_bp = Blueprint('whatsapp_webhook', __name__)
 logger = logging.getLogger(__name__)
@@ -427,16 +425,6 @@ def handle_whatsapp():
     Webhook para recebimento de mensagens do WhatsApp (Z-API).
     Suporta também Instagram Direct se vier pelo mesmo provedor.
     """
-    if not webhook_secret_verified(
-        expected_secret=resolve_webhook_secret("whatsapp"),
-        header_names=["X-Webhook-Secret", "X-WhatsApp-Secret", "X-Hub-Signature-256", "X-API-Key"],
-        query_names=["secret", "token"],
-    ):
-        return jsonify({"status": "forbidden"}), 403
-
-    if not consume_rate_limit("webhook.whatsapp", get_request_ip(), limit=120, window_seconds=60):
-        return jsonify({"status": "rate_limited"}), 429
-
     data = _load_whatsapp_request_payload()
     if not data:
         raw_body = (request.get_data(cache=True, as_text=True) or "")[:500]
@@ -497,16 +485,6 @@ def handle_instagram():
     )
     from src.intelligence.menu_engine import handle_menu_message
     from models.agent_message import AgentMessage
-
-    if not webhook_secret_verified(
-        expected_secret=resolve_webhook_secret("instagram"),
-        header_names=["X-Webhook-Secret", "X-Instagram-Secret", "X-Hub-Signature-256", "X-API-Key"],
-        query_names=["secret", "token"],
-    ):
-        return jsonify({"status": "forbidden"}), 403
-
-    if not consume_rate_limit("webhook.instagram", get_request_ip(), limit=120, window_seconds=60):
-        return jsonify({"status": "rate_limited"}), 429
 
     data = request.json
     if not data:

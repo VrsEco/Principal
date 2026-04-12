@@ -5,8 +5,6 @@ from flask import Blueprint, jsonify, request
 
 from services.email_service import email_service
 from src.intelligence.email_monitor import process_incoming_email
-from utils.integration_settings import resolve_webhook_secret
-from utils.security import consume_rate_limit, get_request_ip, webhook_secret_verified
 
 email_webhook_bp = Blueprint("email_webhook", __name__)
 logger = logging.getLogger(__name__)
@@ -28,16 +26,6 @@ def handle_email_webhook():
       - subject
       - body / text / plain
     """
-    if not webhook_secret_verified(
-        expected_secret=resolve_webhook_secret("email"),
-        header_names=["X-Webhook-Secret", "X-Email-Secret", "X-API-Key"],
-        query_names=["secret", "token"],
-    ):
-        return jsonify({"success": False, "error": "Webhook não autorizado"}), 403
-
-    if not consume_rate_limit("webhook.email", get_request_ip(), limit=60, window_seconds=60):
-        return jsonify({"success": False, "error": "Rate limit excedido"}), 429
-
     payload = request.get_json(silent=True) or {}
     if not payload:
         return jsonify({"success": False, "error": "Payload vazio"}), 400

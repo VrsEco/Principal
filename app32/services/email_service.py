@@ -15,7 +15,6 @@ from email.utils import formataddr
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from src.core.theme_tokens import get_summary_email_theme
-from utils.integration_settings import resolve_service_config
 
 logger = logging.getLogger(__name__)
 
@@ -24,24 +23,28 @@ class EmailService:
     """Service for email integration with multiple providers"""
 
     def __init__(self):
-        resolved = resolve_service_config("email")
-        config = resolved.get("config") or {}
-        self.provider = resolved.get("provider") or "smtp"
-        self.smtp_server = config.get("server")
-        self.smtp_port = int(config.get("port") or 587)
-        self.smtp_use_tls = bool(config.get("use_tls", True))
-        self.smtp_use_ssl = bool(config.get("use_ssl", False))
-        self.smtp_username = config.get("username")
-        self.smtp_secret = config.get("password")
-        self.default_sender = config.get("default_sender") or os.environ.get("MAIL_DEFAULT_SENDER")
-        self.from_name = config.get("from_name") or "Sapiens (Versus Gestão Corporativa)"
-        self.webhook_url = config.get("webhook_url")
-        self.inbound_protocol = str(config.get("inbound_protocol") or "").strip().lower()
-        self.inbound_host = config.get("inbound_host")
-        self.inbound_port = int(config.get("inbound_port") or 0)
-        self.inbound_username = config.get("inbound_username")
-        self.inbound_password = config.get("inbound_password")
-        self.inbound_use_ssl = bool(config.get("inbound_use_ssl", True))
+        self.provider = os.environ.get("EMAIL_PROVIDER", "smtp")
+        self.smtp_server = os.environ.get("MAIL_SERVER")
+        self.smtp_port = int(os.environ.get("MAIL_PORT") or 587)
+        self.smtp_use_tls = os.environ.get("MAIL_USE_TLS", "true").strip().lower() == "true"
+        self.smtp_use_ssl = os.environ.get("MAIL_USE_SSL", "false").strip().lower() == "true"
+        self.smtp_username = os.environ.get("MAIL_USERNAME")
+        self.smtp_secret = os.environ.get("MAIL_PASSWORD")
+        self.default_sender = os.environ.get("MAIL_DEFAULT_SENDER")
+        self.from_name = os.environ.get(
+            "MAIL_FROM_NAME", "Sapiens (Versus Gestão Corporativa)"
+        )
+        self.webhook_url = os.environ.get("EMAIL_WEBHOOK_URL")
+        self.inbound_protocol = (
+            os.environ.get("EMAIL_INBOUND_PROTOCOL", "").strip().lower()
+        )
+        self.inbound_host = os.environ.get("EMAIL_INBOUND_HOST")
+        self.inbound_port = int(os.environ.get("EMAIL_INBOUND_PORT") or 0)
+        self.inbound_username = os.environ.get("EMAIL_INBOUND_USERNAME")
+        self.inbound_password = os.environ.get("EMAIL_INBOUND_PASSWORD")
+        self.inbound_use_ssl = (
+            os.environ.get("EMAIL_INBOUND_USE_SSL", "true").strip().lower() == "true"
+        )
 
     def _load_db_config_fallback(self) -> None:
         """
@@ -49,8 +52,9 @@ class EmailService:
         Mantém compatibilidade com a tela de integrações do sistema.
         """
         try:
-            resolved = resolve_service_config("email")
-            record = {"provider": resolved.get("provider"), "config": resolved.get("config") or {}}
+            from database.postgresql_db import get_integration
+
+            record = get_integration("email_integration")
             if not record:
                 return
 

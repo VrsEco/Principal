@@ -10,8 +10,6 @@ from threading import Thread
 # Import LangGraph
 from src.intelligence.work_agents.graph import work_agent_graph
 from src.intelligence.tools import escalate_technical_issue
-from utils.integration_settings import resolve_telegram_bot_token, resolve_webhook_secret
-from utils.security import consume_rate_limit, get_request_ip, webhook_secret_verified
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +136,21 @@ def _resolve_telegram_token():
     - DEV: usa EXCLUSIVAMENTE TELEGRAM_BOT_TOKEN_DEV.
     - PROD: usa TELEGRAM_BOT_TOKEN_PROD ou fallback TELEGRAM_BOT_TOKEN.
     """
-    return resolve_telegram_bot_token()
+    telegram_env = (os.environ.get("TELEGRAM_ENV") or "").strip().lower()
+    flask_env = (os.environ.get("FLASK_ENV") or os.environ.get("FLASK_CONFIG") or "").strip().lower()
+    is_prod = telegram_env in {"prod", "production", "live"} or flask_env in {"prod", "production"}
+    if is_prod:
+        prod_token = os.environ.get("TELEGRAM_BOT_TOKEN_PROD") or os.environ.get("TELEGRAM_BOT_TOKEN")
+        return prod_token, "PROD"
+
+    is_dev = telegram_env in {"dev", "development", "local", "test"} or flask_env in {"dev", "development", "default", "testing"}
+
+    if is_dev:
+        dev_token = os.environ.get("TELEGRAM_BOT_TOKEN_DEV")
+        return dev_token, "DEV"
+
+    prod_token = os.environ.get("TELEGRAM_BOT_TOKEN_PROD") or os.environ.get("TELEGRAM_BOT_TOKEN")
+    return prod_token, "PROD"
 
 
 TOKEN, TOKEN_CONTEXT = _resolve_telegram_token()
@@ -435,16 +447,6 @@ def process_telegram_message(app, message: telebot.types.Message):
 @telegram_bp.route('/telegram', methods=['POST'])
 def telegram_webhook():
     try:
-        if not webhook_secret_verified(
-            expected_secret=resolve_webhook_secret("telegram"),
-            header_names=["X-Telegram-Bot-Api-Secret-Token", "X-Webhook-Secret", "X-Telegram-Secret"],
-            query_names=["secret", "token"],
-        ):
-            return "Forbidden", 403
-
-        if not consume_rate_limit("webhook.telegram", get_request_ip(), limit=120, window_seconds=60):
-            return "Too Many Requests", 429
-
         if not bot:
             logger.warning("Webhook Telegram recebido, mas bot esta inativo para este ambiente.")
             return '', 200

@@ -3,7 +3,6 @@ import logging
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from dotenv import load_dotenv
-from utils.integration_settings import resolve_openai_api_key
 
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "FALSE")
 os.environ.setdefault("CHROMA_ANONYMIZED_TELEMETRY", "FALSE")
@@ -12,7 +11,7 @@ load_dotenv()
 
 # Tenta carregar a chave de várias fontes possíveis
 logger = logging.getLogger(__name__)
-api_key = resolve_openai_api_key()
+api_key = os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")
 
 if not api_key:
     # Se não encontrar, tenta carregar do config legado caso esteja disponível

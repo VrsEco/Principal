@@ -16,7 +16,6 @@ from models.financial import (
 )
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_service import FinancialService
-from utils.integration_settings import resolve_ai_runtime_config
 
 
 class FinancialAISuggestionItem(BaseModel):
@@ -47,14 +46,13 @@ class FinancialAIClassificationService:
 
     @staticmethod
     def _get_llm():
-        runtime = resolve_ai_runtime_config()
-        api_key = runtime.get("api_key")
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")
         if not api_key:
             return None
         from langchain_openai import ChatOpenAI
 
         return ChatOpenAI(
-            model=runtime.get("model") or os.getenv("FINANCIAL_CLASSIFIER_MODEL", "gpt-4o-mini"),
+            model=os.getenv("FINANCIAL_CLASSIFIER_MODEL", "gpt-4o-mini"),
             temperature=0,
             api_key=api_key,
         ).with_structured_output(FinancialAISuggestionDecision)

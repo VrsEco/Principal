@@ -5,7 +5,6 @@ import re
 from typing import Any, Callable, Dict, Optional, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
-from utils.integration_settings import resolve_openai_api_key
 
 from .contracts import WorkflowDiscoveryRequest, WorkflowMatch
 from .matcher import WorkflowMatchReranker
@@ -143,7 +142,7 @@ class LLMWorkflowReranker(WorkflowMatchReranker):
         from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_openai import ChatOpenAI
 
-        api_key = resolve_openai_api_key()
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")
         llm = ChatOpenAI(
             model=self._model,
             temperature=0,

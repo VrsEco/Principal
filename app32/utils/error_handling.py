@@ -2,7 +2,6 @@ import logging
 from typing import Any
 
 from flask import jsonify, request
-from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
 
 DEFAULT_PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
@@ -48,15 +47,6 @@ def build_public_error_response(
     return jsonify(build_public_error_payload(message=message, success=success, **extra)), status_code
 
 
-def extract_validation_error_message(
-    exc: ValidationError,
-    *,
-    fallback_message: str,
-) -> str:
-    first_error = exc.errors()[0] if exc.errors() else {}
-    return str(first_error.get("msg") or fallback_message)
-
-
 def log_exception_with_context(logger: logging.Logger, exc: Exception, *, context: str) -> None:
     from flask_login import current_user
 
@@ -73,25 +63,6 @@ def log_exception_with_context(logger: logging.Logger, exc: Exception, *, contex
         user_id,
         request.remote_addr,
         exc,
-    )
-
-
-def log_and_build_public_error_response(
-    logger: logging.Logger,
-    exc: Exception,
-    *,
-    context: str,
-    message: str = DEFAULT_PUBLIC_ERROR_MESSAGE,
-    status_code: int = 500,
-    success: bool = False,
-    **extra: Any,
-):
-    log_exception_with_context(logger, exc, context=context)
-    return build_public_error_response(
-        message=message,
-        status_code=status_code,
-        success=success,
-        **extra,
     )
 
 

@@ -6,7 +6,6 @@ from typing import Dict, Any, Optional
 from string import Formatter
 from datetime import datetime
 from dotenv import load_dotenv
-from utils.integration_settings import resolve_ai_runtime_config
 
 # Utilities to fetch agent-linked integrations and their configs
 from database.postgresql_db import (
@@ -24,11 +23,10 @@ class AIService:
     """Service for AI integration with multiple providers"""
 
     def __init__(self):
-        runtime = resolve_ai_runtime_config()
-        self.provider = runtime.get("provider") or "openai"
-        self.api_key = runtime.get("api_key")
-        self.webhook_url = runtime.get("webhook_url")
-        self.base_url = runtime.get("base_url") or "https://api.openai.com/v1"
+        self.provider = os.environ.get("AI_PROVIDER", "openai")
+        self.api_key = os.environ.get("AI_API_KEY")
+        self.webhook_url = os.environ.get("AI_WEBHOOK_URL")
+        self.base_url = os.environ.get("AI_BASE_URL", "https://api.openai.com/v1")
 
         # Inicializa serviÃ§os auxiliares (nenhum serviÃ§o fixo necessÃ¡rio)
 
@@ -895,7 +893,6 @@ _AnÃ¡lise baseada em dados de reputaÃ§Ã£o online e inteligÃªncia estrat�
             Resultado do teste de conexÃ£o
         """
         try:
-            self.__init__()
             if self.provider == "openai":
                 return self._test_openai_connection()
             elif self.provider == "anthropic":

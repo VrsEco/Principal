@@ -5,27 +5,26 @@ from typing import Any, Dict, Optional
 import requests
 
 logger = logging.getLogger(__name__)
-from utils.integration_settings import resolve_service_config, resolve_telegram_bot_token
 
 
 class TelegramService:
     """Service for Telegram integration and connectivity checks."""
 
     def __init__(self):
-        resolved = resolve_service_config("telegram")
-        config = resolved.get("config") or {}
-        self.provider = str(resolved.get("provider") or "bot_api").strip().lower()
-        self.bot_token = config.get("bot_token")
-        self.bot_token_dev = config.get("bot_token_dev")
-        self.bot_token_prod = config.get("bot_token_prod")
-        self.telegram_env = str(config.get("telegram_env") or "").strip().lower()
+        self.provider = os.environ.get("TELEGRAM_PROVIDER", "bot_api").strip().lower()
+        self.bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        self.bot_token_dev = os.environ.get("TELEGRAM_BOT_TOKEN_DEV")
+        self.bot_token_prod = os.environ.get("TELEGRAM_BOT_TOKEN_PROD")
+        self.telegram_env = (os.environ.get("TELEGRAM_ENV") or "").strip().lower()
         self.flask_env = (
             os.environ.get("FLASK_ENV") or os.environ.get("FLASK_CONFIG") or ""
         ).strip().lower()
-        self.webhook_url = config.get("webhook_url")
-        self.external_url = config.get("external_url")
-        self.webhook_path = config.get("webhook_path") or "/webhook/telegram"
-        self.setup_webhook = bool(config.get("setup_webhook"))
+        self.webhook_url = os.environ.get("TELEGRAM_WEBHOOK_URL")
+        self.external_url = os.environ.get("EXTERNAL_URL")
+        self.webhook_path = os.environ.get("TELEGRAM_WEBHOOK_PATH", "/webhook/telegram")
+        self.setup_webhook = (
+            os.environ.get("TELEGRAM_SETUP_WEBHOOK", "false").strip().lower() == "true"
+        )
 
     def send_message(
         self, chat_id: str, message: str, parse_mode: str = "HTML"
@@ -206,8 +205,26 @@ class TelegramService:
         }
 
     def _resolve_bot_token(self) -> Optional[str]:
-        token, _ = resolve_telegram_bot_token()
-        return token
+        if self.bot_token:
+            return self.bot_token
+
+        is_prod = self.telegram_env in {"prod", "production", "live"} or self.flask_env in {
+            "prod",
+            "production",
+        }
+        if is_prod:
+            return self.bot_token_prod
+
+        is_dev = self.telegram_env in {
+            "dev",
+            "development",
+            "local",
+            "test",
+        } or self.flask_env in {"dev", "development", "default", "testing"}
+        if is_dev:
+            return self.bot_token_dev
+
+        return self.bot_token_prod or self.bot_token_dev
 
     @staticmethod
     def _telegram_api_url(token: str, method: str) -> str:
