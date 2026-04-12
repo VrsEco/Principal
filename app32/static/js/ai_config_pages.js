@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetButton = document.getElementById('aiConfigWizardReset');
     const transcript = document.getElementById('aiConfigTranscript');
     const toggles = Array.from(root.querySelectorAll('[data-config-toggle]'));
+    const chatCard = root.querySelector('[data-config-chat-card]');
+    const chatToggle = root.querySelector('[data-config-chat-toggle]');
 
     let answers = [];
     let currentTarget = null;
@@ -86,6 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
             section?.classList.toggle('is-collapsed', expanded);
             section?.classList.toggle('is-expanded', !expanded);
         });
+    });
+
+    chatToggle?.addEventListener('click', () => {
+        if (!chatCard) return;
+        const expanded = chatToggle.getAttribute('aria-expanded') === 'true';
+        chatToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        chatCard.classList.toggle('is-collapsed', expanded);
+        chatCard.classList.toggle('is-expanded', !expanded);
     });
 
     resetWizard();

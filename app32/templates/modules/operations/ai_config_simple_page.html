@@ -48,16 +48,22 @@
         </div>
     </section>
 
-    <section class="ai-config-chat-card" data-config-searchable="{{ page.search_terms }}">
+    <section class="ai-config-chat-card is-expanded" data-config-searchable="{{ page.search_terms }}" data-config-chat-card>
         <header class="ai-config-chat-card__header">
             <div>
                 <span class="ai-config-eyebrow">Comece por aqui</span>
                 <h2>{{ page.wizard.title }}</h2>
                 <p>{{ page.wizard.intro }}</p>
             </div>
-            <button type="button" class="ai-config-link-btn" id="aiConfigWizardReset">Reiniciar</button>
+            <div class="ai-config-chat-card__actions">
+                <button type="button" class="ai-config-link-btn" id="aiConfigWizardReset">Reiniciar</button>
+                <button type="button" class="ai-config-section__toggle" data-config-chat-toggle aria-expanded="true" aria-label="Expandir ou recolher assistente MCP">
+                    <span>⌄</span>
+                </button>
+            </div>
         </header>
 
+        <div class="ai-config-chat-card__body">
         <div class="ai-config-chat">
             <div class="ai-config-chat__bubble ai-config-chat__bubble--agent">
                 <strong>{{ page.title }}</strong>
@@ -100,6 +106,7 @@
                     <button type="button" class="ai-config-btn ai-config-btn--primary" id="aiConfigGo">Ir para a seção</button>
                 </div>
             </div>
+        </div>
         </div>
     </section>
 

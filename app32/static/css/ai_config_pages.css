@@ -10,6 +10,9 @@
 .ai-config-metric strong { display: block; font-size: 1.2rem; margin-top: .25rem; }
 .ai-config-chat-card { padding: 1.1rem; }
 .ai-config-chat-card__header, .ai-config-card__head, .ai-config-section__header, .ai-config-result__actions { display: flex; justify-content: space-between; gap: .75rem; align-items: flex-start; }
+.ai-config-chat-card__actions { display: flex; gap: .75rem; align-items: center; justify-content: flex-end; }
+.ai-config-chat-card.is-collapsed .ai-config-chat-card__body { display: none; }
+.ai-config-chat-card.is-collapsed [data-config-chat-toggle] span { display: inline-block; transform: rotate(-90deg); }
 .ai-config-chat { display: grid; gap: 1rem; margin-top: 1rem; }
 .ai-config-chat__bubble { max-width: 680px; border-radius: 18px; padding: .9rem 1rem; }
 .ai-config-chat__bubble--agent { background: var(--surface-secondary); border: 1px solid var(--border); }
@@ -57,4 +60,5 @@
   .ai-config-chat-card__header,
   .ai-config-section__header,
   .ai-config-card__head { flex-direction: column; align-items: stretch; }
+  .ai-config-chat-card__actions { justify-content: flex-start; }
 }
