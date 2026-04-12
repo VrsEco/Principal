@@ -47,21 +47,13 @@ def test_integrations_page_receives_catalog(monkeypatch):
     assert captured["context"]["integration_catalog"]["summary"]["total"] == 2
 
 
-def test_integrations_requests_page_renders(monkeypatch):
+def test_integrations_requests_page_redirects_to_catalog(monkeypatch):
     app = _build_app()
-    captured = {}
-    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
-    monkeypatch.setattr(
-        integrations_route,
-        "render_template",
-        lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
-    )
 
     response = app.test_client().get("/integrations/requests")
 
-    assert response.status_code == 200
-    assert captured["template"] == "integration_requests.html"
-    assert captured["context"]["active_company"].id == 31
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/integrations")
 
 
 def test_integrations_admin_page_renders(monkeypatch):

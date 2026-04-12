@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from typing import Any, Dict, Optional, Tuple
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from database.postgresql_db import (
@@ -845,9 +845,8 @@ def integrations_page():
         current_app.logger.exception("Falha ao renderizar Central de Integrações.")
         return _fallback_integrations_shell(
             "Central de Integrações",
-            "A interface completa está em contingência. Você ainda pode acessar as solicitações e a configuração técnica enquanto concluímos a estabilização.",
+            "A interface completa está em contingência. Você ainda pode acessar a configuração técnica e a central principal enquanto concluímos a estabilização.",
             links=[
-                ("Solicitações", "/integrations/requests"),
                 ("Configuração Técnica", "/integrations/admin"),
                 ("IA Corporativa", "/configs/ai"),
             ],
@@ -857,21 +856,7 @@ def integrations_page():
 @integrations_bp.route("/integrations/requests")
 @login_required
 def integration_requests_page():
-    try:
-        return render_template(
-            "integration_requests.html",
-            active_company=_safe_active_company(),
-        )
-    except Exception:
-        current_app.logger.exception("Falha ao renderizar página de solicitações de integração.")
-        return _fallback_integrations_shell(
-            "Solicitações de Integração",
-            "A lista detalhada está em contingência. Tente novamente em instantes ou volte para a Central de Integrações.",
-            links=[
-                ("Central de Integrações", "/integrations"),
-                ("Configuração Técnica", "/integrations/admin"),
-            ],
-        )
+    return redirect(url_for("integrations.integrations_page"))
 
 
 @integrations_bp.route("/integrations/admin")
@@ -897,7 +882,6 @@ def integrations_admin_page():
             "A console técnica está em contingência. Use a Central de Integrações enquanto estabilizamos a tela administrativa.",
             links=[
                 ("Central de Integrações", "/integrations"),
-                ("Solicitações", "/integrations/requests"),
             ],
         )
 
