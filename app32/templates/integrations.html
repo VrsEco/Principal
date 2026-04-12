@@ -100,37 +100,86 @@
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="card test-modal-content shadow-lg w-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <div>
-          <h3 class="text-h3 mb-0">Assistente de Nova Integração</h3>
+        <div class="modal-title-block">
+          <span class="int-eyebrow">Assistente</span>
+          <h3 class="text-h3 mb-0">Nova Integração</h3>
           <small class="text-secondary">Coleta os dados e abre um card no backlog AA.J.31.</small>
         </div>
         <button class="btn btn-icon btn-ghost" type="button" onclick="closeIntegrationRequestModal()"><i class="fas fa-times"></i></button>
       </div>
       <div class="card-body">
         <form id="integrationRequestForm" class="integration-request-form">
-          <div class="row">
-            <div class="col-md-6"><div class="form-group"><label class="form-label">Nome da integração</label><input type="text" class="form-control" name="title" required></div></div>
-            <div class="col-md-6"><div class="form-group"><label class="form-label">Sistema externo / parceiro</label><input type="text" class="form-control" name="external_system" required></div></div>
+          <div class="vs-form-grid">
+            <div class="vs-control">
+              <label>Nome da integração</label>
+              <input type="text" class="vs-input" name="title" required>
+            </div>
+            <div class="vs-control">
+              <label>Sistema externo / parceiro</label>
+              <input type="text" class="vs-input" name="external_system" required>
+            </div>
+            <div class="vs-control">
+              <label>Domínio</label>
+              <input type="text" class="vs-input" name="business_domain" required>
+            </div>
+            <div class="vs-control">
+              <label>Modo</label>
+              <select class="vs-input" name="integration_mode" required>
+                <option value="consume">Consumo de dados</option>
+                <option value="provide">Fornecimento de dados</option>
+                <option value="bidirectional">Bidirecional</option>
+              </select>
+            </div>
+            <div class="vs-control">
+              <label>Canal técnico</label>
+              <select class="vs-input" name="technical_channel" required>
+                <option value="api">API</option>
+                <option value="mcp">MCP</option>
+                <option value="api_mcp">API + MCP</option>
+              </select>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Objetivo de negócio</label>
+              <textarea class="vs-input" name="objective" rows="4" required></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Dados envolvidos</label>
+              <textarea class="vs-input" name="data_summary" rows="4" required></textarea>
+            </div>
+            <div class="vs-control">
+              <label>Frequência</label>
+              <input type="text" class="vs-input" name="frequency">
+            </div>
+            <div class="vs-control">
+              <label>Urgência</label>
+              <select class="vs-input" name="urgency">
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+                <option value="critical">Crítica</option>
+                <option value="low">Baixa</option>
+              </select>
+            </div>
+            <div class="vs-control">
+              <label>Sensibilidade</label>
+              <select class="vs-input" name="compliance_level">
+                <option value="internal">Interno</option>
+                <option value="restricted">Restrito</option>
+                <option value="sensitive">Sensível</option>
+              </select>
+            </div>
+            <div class="vs-control">
+              <label>Contato do fornecedor</label>
+              <input type="text" class="vs-input" name="provider_contact">
+            </div>
+            <div class="vs-control">
+              <label>Documentação</label>
+              <input type="url" class="vs-input" name="provider_docs_url">
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Observações</label>
+              <textarea class="vs-input" name="notes" rows="3"></textarea>
+            </div>
           </div>
-          <div class="row">
-            <div class="col-md-4"><div class="form-group"><label class="form-label">Domínio</label><input type="text" class="form-control" name="business_domain" required></div></div>
-            <div class="col-md-4"><div class="form-group"><label class="form-label">Modo</label><select class="form-control" name="integration_mode" required><option value="consume">Consumo de dados</option><option value="provide">Fornecimento de dados</option><option value="bidirectional">Bidirecional</option></select></div></div>
-            <div class="col-md-4"><div class="form-group"><label class="form-label">Canal técnico</label><select class="form-control" name="technical_channel" required><option value="api">API</option><option value="mcp">MCP</option><option value="api_mcp">API + MCP</option></select></div></div>
-          </div>
-          <div class="row">
-            <div class="col-md-6"><div class="form-group"><label class="form-label">Objetivo de negócio</label><textarea class="form-control" name="objective" rows="4" required></textarea></div></div>
-            <div class="col-md-6"><div class="form-group"><label class="form-label">Dados envolvidos</label><textarea class="form-control" name="data_summary" rows="4" required></textarea></div></div>
-          </div>
-          <div class="row">
-            <div class="col-md-4"><div class="form-group"><label class="form-label">Frequência</label><input type="text" class="form-control" name="frequency"></div></div>
-            <div class="col-md-4"><div class="form-group"><label class="form-label">Urgência</label><select class="form-control" name="urgency"><option value="medium">Média</option><option value="high">Alta</option><option value="critical">Crítica</option><option value="low">Baixa</option></select></div></div>
-            <div class="col-md-4"><div class="form-group"><label class="form-label">Sensibilidade</label><select class="form-control" name="compliance_level"><option value="internal">Interno</option><option value="restricted">Restrito</option><option value="sensitive">Sensível</option></select></div></div>
-          </div>
-          <div class="row">
-            <div class="col-md-6"><div class="form-group"><label class="form-label">Contato do fornecedor</label><input type="text" class="form-control" name="provider_contact"></div></div>
-            <div class="col-md-6"><div class="form-group"><label class="form-label">Documentação</label><input type="url" class="form-control" name="provider_docs_url"></div></div>
-          </div>
-          <div class="form-group"><label class="form-label">Observações</label><textarea class="form-control" name="notes" rows="3"></textarea></div>
           <input type="hidden" name="source_channel" value="ui_integrations_catalog">
           <div class="d-flex justify-content-end gap-2 mt-3">
             <button type="button" class="btn btn-outline-secondary" onclick="closeIntegrationRequestModal()">Cancelar</button>
@@ -177,6 +226,12 @@
 .modal.show { display:flex; position:fixed; inset:0; align-items:center; justify-content:center; padding:1.5rem; background:rgba(15,23,42,.45); }
 .modal-dialog { width:100%; max-width:980px; }
 .test-modal-content { border-radius:20px; }
+.modal-title-block { display:flex; flex-direction:column; gap:.25rem; }
+.vs-form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.2rem; }
+.vs-control label { display:block; font-size:.72rem; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; }
+.vs-input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.65rem .8rem; font-size:.9rem; color:var(--text-primary); width:100%; transition:all .15s ease; }
+.vs-input:focus { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.2); background:var(--surface); }
+.vs-control-wide { grid-column: span 2; }
 
 @media (max-width: 1200px) {
   .int-shell { grid-template-columns: minmax(260px, 300px) minmax(0,1fr); }
@@ -187,6 +242,7 @@
   .int-header { flex-direction:column; }
   .int-shell { grid-template-columns:1fr; }
   .int-rail { position:static; }
+  .vs-control-wide { grid-column: span 1; }
 }
 </style>
 
