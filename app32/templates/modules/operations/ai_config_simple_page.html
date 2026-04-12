@@ -1,0 +1,150 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ page.title }} | IA Corporativa{% endblock %}
+
+{% block breadcrumb %}
+<a href="/portal">Portal</a>
+<span class="sep">/</span>
+<a href="/configs/system">Sistema</a>
+<span class="sep">/</span>
+<a href="/configs/ai?section=configuration">IA Corporativa</a>
+<span class="sep">/</span>
+<span class="current">{{ page.title }}</span>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="ai-config-sidebar">
+    <div class="sidebar-header-ws">
+        <h3>Atalhos</h3>
+        <p>Abra direto a página certa.</p>
+    </div>
+    <div class="ai-config-sidebar__body">
+        {% for item in page.shortcuts %}
+        <a href="{{ item.href }}" class="ai-config-sidebar__link {% if item.label == page.title %}is-active{% endif %}">
+            {{ item.label }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai_config_pages.css') }}">
+
+<div class="ai-config-page" id="aiConfigPage" data-page-title="{{ page.title }}">
+    <section class="ai-config-hero">
+        <div>
+            <span class="ai-config-eyebrow">{{ page.eyebrow }}</span>
+            <h1>{{ page.title }}</h1>
+            <p>{{ page.intro }}</p>
+        </div>
+        <div class="ai-config-metrics">
+            {% for metric in page.hero_metrics %}
+            <article class="ai-config-metric">
+                <span>{{ metric.label }}</span>
+                <strong>{{ metric.value }}</strong>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="ai-config-chat-card" data-config-searchable="{{ page.search_terms }}">
+        <header class="ai-config-chat-card__header">
+            <div>
+                <span class="ai-config-eyebrow">Comece por aqui</span>
+                <h2>{{ page.wizard.title }}</h2>
+                <p>{{ page.wizard.intro }}</p>
+            </div>
+            <button type="button" class="ai-config-link-btn" id="aiConfigWizardReset">Reiniciar</button>
+        </header>
+
+        <div class="ai-config-chat">
+            <div class="ai-config-chat__bubble ai-config-chat__bubble--agent">
+                <strong>{{ page.title }}</strong>
+                <p>Responda uma pergunta por vez.</p>
+            </div>
+
+            <div class="ai-config-chat__steps">
+                {% for step in page.wizard.steps %}
+                <section class="ai-config-step {% if loop.first %}is-active{% endif %}" data-config-step="{{ step.step }}">
+                    <div class="ai-config-chat__bubble ai-config-chat__bubble--agent">
+                        <span class="ai-config-chat__label">Pergunta {{ step.step }}</span>
+                        <p>{{ step.question }}</p>
+                    </div>
+                    <div class="ai-config-options">
+                        {% for option in step.options %}
+                        <button
+                            type="button"
+                            class="ai-config-option"
+                            data-config-choice
+                            data-result-title="{{ option.result_title }}"
+                            data-result-body="{{ option.result_body }}"
+                            data-target-section="{{ option.target_section }}"
+                            data-choice-label="{{ option.label }}"
+                        >
+                            <strong>{{ option.label }}</strong>
+                            <span>{{ option.description }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endfor %}
+            </div>
+
+            <div class="ai-config-chat__transcript" id="aiConfigTranscript" hidden></div>
+
+            <div class="ai-config-result" id="aiConfigResult" hidden>
+                <strong id="aiConfigResultTitle"></strong>
+                <p id="aiConfigResultBody"></p>
+                <div class="ai-config-result__actions">
+                    <button type="button" class="ai-config-btn ai-config-btn--primary" id="aiConfigGo">Ir para a seção</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ai-config-sections">
+        {% for section in page.sections %}
+        <article class="ai-config-section {% if loop.first %}is-expanded{% else %}is-collapsed{% endif %}" data-config-section="{{ section.id }}">
+            <header class="ai-config-section__header">
+                <div>
+                    <span class="ai-config-eyebrow">Sessão {{ loop.index }}</span>
+                    <h2>{{ section.title }}</h2>
+                    <p>{{ section.summary }}</p>
+                </div>
+                <button type="button" class="ai-config-section__toggle" data-config-toggle aria-expanded="{{ 'true' if loop.first else 'false' }}">
+                    <span>⌄</span>
+                </button>
+            </header>
+            <div class="ai-config-section__body">
+                <div class="ai-config-card-grid">
+                    {% for item in section["items"] %}
+                    <article class="ai-config-card">
+                        <div class="ai-config-card__head">
+                            <strong>{{ item.title }}</strong>
+                            <span>{{ item.meta }}</span>
+                        </div>
+                        <p>{{ item.description }}</p>
+                        {% if item.href %}
+                        <a href="{{ item.href }}" class="ai-config-link-btn">Abrir</a>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                    {% if not section["items"] %}
+                    <article class="ai-config-card ai-config-card--empty">
+                        <strong>Sem itens</strong>
+                        <p>Nada para mostrar agora.</p>
+                    </article>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/ai_config_pages.js') }}"></script>
+{% endblock %}
