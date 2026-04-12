@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlparse
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, login_required, current_user
@@ -19,6 +20,26 @@ auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
 
 SUMMARY_CHANNEL_OPTIONS = {'telegram', 'whatsapp', 'email'}
+
+
+def _resolve_safe_post_login_redirect() -> str | None:
+    candidate = (
+        request.args.get('next')
+        or (request.get_json(silent=True) or {}).get('next')
+        or request.form.get('next')
+        or session.get('post_login_redirect')
+    )
+    target = str(candidate or '').strip()
+    if not target:
+        return None
+    parsed = urlparse(target)
+    if parsed.scheme or parsed.netloc:
+        return None
+    if not target.startswith('/'):
+        return None
+    if target.startswith('//'):
+        return None
+    return target
 
 def _normalize_summary_delivery_channels(raw_channels):
     if raw_channels is None:
@@ -42,6 +63,7 @@ def login():
         data = request.get_json(silent=True) or {}
         email = str(data.get('email') or '').strip().lower()
         password = str(data.get('password') or '')
+        next_target = _resolve_safe_post_login_redirect()
 
         if not consume_rate_limit("auth.login", f"{get_request_ip()}:{email or 'anonymous'}", limit=8, window_seconds=300):
             return rate_limit_exceeded_response("Muitas tentativas de login. Aguarde alguns minutos.")
@@ -54,6 +76,8 @@ def login():
         if user and is_active and user.check_password(password):
             session.clear()
             login_user(user)
+            if next_target:
+                session['post_login_redirect'] = next_target
             
             # Check companies this user has access to
             employee_records = Employee.query.filter_by(user_id=user.id, status='active').all()
@@ -67,10 +91,12 @@ def login():
             # para evitar bloqueio operacional no portal de seleção.
             if len(active_company_ids) == 1 and not is_platform_admin():
                 session['active_company_id'] = active_company_ids[0]
-                return jsonify({"success": True, "redirect": "/my-work"})
+                final_redirect = session.pop('post_login_redirect', None) or next_target or "/my-work"
+                return jsonify({"success": True, "redirect": final_redirect})
 
             if len(employee_records) > 0 or is_platform_admin():
-                return jsonify({"success": True, "redirect": "/portal"})
+                final_redirect = session.pop('post_login_redirect', None) or next_target or "/portal"
+                return jsonify({"success": True, "redirect": final_redirect})
             else:
                 return jsonify({"success": False, "message": "Usuário não possui empresas vinculadas."}), 403
              

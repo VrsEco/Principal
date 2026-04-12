@@ -403,6 +403,7 @@
         const form = document.getElementById('loginForm');
         const alert = document.getElementById('alert');
         const submitBtn = document.getElementById('submitBtn');
+        const nextTarget = new URLSearchParams(window.location.search).get('next');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -417,14 +418,14 @@
                 const response = await fetch('/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ email, password, next: nextTarget })
                 });
                 const data = await response.json();
                 if (data.success) {
                     alert.textContent = 'Sucesso! Redirecionando...';
                     alert.className = 'alert alert-success';
                     alert.style.display = 'block';
-                    setTimeout(() => window.location.href = data.redirect || '/dashboard', 600);
+                    setTimeout(() => window.location.href = data.redirect || nextTarget || '/dashboard', 600);
                 } else {
                     throw new Error(data.message || 'Erro no login');
                 }

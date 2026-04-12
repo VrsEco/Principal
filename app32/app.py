@@ -39,6 +39,8 @@ def _should_run_runtime_bootstrap(config_name: str) -> bool:
         return _env_flag("APP_BOOTSTRAP_RUNTIME_SERVICES", default=True)
     if _is_migration_command():
         return False
+    if config_name == "production":
+        return False
     return True
 
 
@@ -161,6 +163,17 @@ def create_app(config_name=None):
     login_manager = LoginManager()
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
+
+    @login_manager.unauthorized_handler
+    def _handle_unauthorized():
+        from flask import redirect, session, url_for
+        if '/api/' in (request.path or ''):
+            return {"error": "Authentication required"}, 401
+        next_target = request.full_path if request.query_string else request.path
+        if next_target.endswith('?'):
+            next_target = next_target[:-1]
+        session['post_login_redirect'] = next_target
+        return redirect(url_for('auth.login', next=next_target))
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -444,7 +457,11 @@ def create_app(config_name=None):
                 if '/api/' in request.path:
                     return jsonify({"error": "Authentication required"}), 401
                 # Otherwise redirect to login
-                return redirect(url_for('auth.login'))
+                next_target = request.full_path if request.query_string else request.path
+                if next_target.endswith('?'):
+                    next_target = next_target[:-1]
+                session['post_login_redirect'] = next_target
+                return redirect(url_for('auth.login', next=next_target))
         
         # 2. If authenticated, ensure company is selected
         else:
@@ -456,6 +473,8 @@ def create_app(config_name=None):
                 'auth.logout',
                 'static',
                 'integrations.integrations_page',
+                'integrations.integration_requests_page',
+                'integrations.integrations_admin_page',
             ]
             if app.config.get("DEV_ROUTES_ENABLED"):
                 allowed_post_login.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
@@ -488,10 +507,18 @@ def create_app(config_name=None):
                 "Strict-Transport-Security",
                 f"max-age={app.config.get('SECURITY_HSTS_SECONDS', 31536000)}; includeSubDomains",
             )
-        csp_parts = ["default-src 'self'"]
+        csp_parts = [
+            "default-src 'self'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+            "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+            "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+            "img-src 'self' data: blob: https:",
+        ]
         if app.config.get("SECURITY_TRUSTED_ORIGINS"):
             origins = " ".join(app.config["SECURITY_TRUSTED_ORIGINS"])
             csp_parts.append(f"connect-src 'self' {origins}")
+        else:
+            csp_parts.append("connect-src 'self' https:")
         response.headers.setdefault("Content-Security-Policy", "; ".join(csp_parts))
         return response
     

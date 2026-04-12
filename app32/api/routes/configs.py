@@ -52,7 +52,7 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
             {"label": "Ação", "value": "Revisar logs"},
         ],
         "shortcuts": [
-            {"label": "Conexões", "href": "/integrations"},
+            {"label": "Integrações", "href": "/integrations"},
             {"label": "MCP", "href": "/configs/ai/mcp"},
             {"label": "Tools", "href": "/configs/ai/tools"},
             {"label": "Permissões e Configurações", "href": "/configs/ai/permissions"},
@@ -68,9 +68,9 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
                     "options": [
                         {
                             "label": "Abrir integrações",
-                            "description": "Revisar providers, segredos e conectividade.",
+                            "description": "Revisar catálogo, credenciais e ativação das integrações.",
                             "result_title": "Ir para integrações",
-                            "result_body": "Abra a área de integrações para revisar conexões externas.",
+                            "result_body": "Abra a área de integrações para revisar o catálogo e a operação externa.",
                             "target_section": "links",
                         },
                         {
@@ -93,7 +93,7 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
                     {
                         "title": "Integrações",
                         "meta": "/integrations",
-                        "description": "Revisar conexões, providers, segredos e saúde de comunicação.",
+                        "description": "Revisar catálogo, providers, segredos e saúde das integrações.",
                         "href": "/integrations",
                     },
                     {
@@ -183,7 +183,7 @@ def ai_settings():
                     {
                         "title": "Gerir integrações",
                         "href": "/integrations",
-                        "description": "Conexões, providers e segredos operacionais.",
+                        "description": "Integrações, providers e segredos operacionais.",
                     },
                     {
                         "title": "Abrir Tools",
@@ -220,7 +220,7 @@ def ai_settings():
                     "key": "overview",
                     "title": "Visão Geral",
                     "eyebrow": "Entrada recomendada",
-                    "description": "Central para entender operação, cobertura MCP, conexões e pontos críticos reais.",
+                    "description": "Central para entender operação, cobertura MCP, integrações e pontos críticos reais.",
                     "accent": "primary",
                     "items": [],
                 },
@@ -228,7 +228,7 @@ def ai_settings():
                     "key": "configuration",
                     "title": "Configurações",
                     "eyebrow": "Administração",
-                    "description": "Conexões, MCP, tools e permissões.",
+                    "description": "Integrações, MCP, tools e permissões.",
                     "accent": "blue",
                     "items": [],
                 },

@@ -79,6 +79,7 @@ from .agent_action_backlog_link import AgentActionBacklogLink
 from .agent_menu import AgentMenuOption, AgentMenuSession
 from .workflow_gap import WorkflowGapCandidate
 from .workflow_usage import WorkflowExecutionLog
+from .integration_request import IntegrationRequest
 from .work_journey import (
     WorkJourneyBlock,
     WorkJourneyAgenda,
@@ -112,7 +113,7 @@ __all__ = [
     'ProjectTaskDueDateChangeRequest',
     'UiCatalog', 'UserLog',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
-    'WorkflowGapCandidate', 'WorkflowExecutionLog',
+    'WorkflowGapCandidate', 'WorkflowExecutionLog', 'IntegrationRequest',
     'WorkJourneyBlock', 'WorkJourneyAgenda', 'WorkJourneyAgendaItem', 'WorkJourneyRule', 'WorkJourneyItem', 'WorkJourneyAbsenceRequest', 'WorkJourneyTransferRequest',
     'IncentiveRuleSet', 'IncentiveRule',
     'IncentiveGovernabilityMatrix', 'IncentiveCalculation',

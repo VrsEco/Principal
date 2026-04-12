@@ -2,8 +2,8 @@ import os
 from contextlib import contextmanager
 from typing import Any, Dict, Optional, Tuple
 
-from flask import Blueprint, jsonify, render_template, request
-from flask_login import login_required
+from flask import Blueprint, current_app, jsonify, render_template, request
+from flask_login import current_user, login_required
 
 from database.postgresql_db import (
     create_integration,
@@ -14,12 +14,54 @@ from database.postgresql_db import (
 )
 from services.ai_service import AIService
 from services.email_service import EmailService
+from services.integration_catalog_service import IntegrationCatalogService
+from services.integration_request_service import IntegrationRequestService
 from services.instagram_service import InstagramService
 from services.telegram_service import TelegramService
 from services.whatsapp_service import WhatsAppService
 from utils.integration_settings import resolve_service_config
 
 integrations_bp = Blueprint("integrations", __name__)
+
+
+def _resolve_active_company():
+    from api.routes.main import _resolve_active_company as _main_resolve_active_company
+
+    return _main_resolve_active_company()
+
+
+def _safe_active_company():
+    try:
+        return _resolve_active_company()
+    except Exception:
+        current_app.logger.exception("Falha ao resolver empresa ativa em integrações.")
+        return None
+
+
+def _fallback_integrations_shell(title: str, body: str, *, links: list[tuple[str, str]] | None = None) -> str:
+    safe_links = links or []
+    links_html = "".join(
+        f'<a href="{href}" style="display:inline-flex;padding:10px 14px;border-radius:10px;border:1px solid #cbd5e1;text-decoration:none;color:#0f172a;font-weight:600;margin-right:8px;margin-top:8px;">{label}</a>'
+        for label, href in safe_links
+    )
+    return f"""
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{title}</title>
+      </head>
+      <body style="font-family:Inter,Arial,sans-serif;background:#f8fafc;color:#0f172a;margin:0;padding:32px;">
+        <div style="max-width:960px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:24px;box-shadow:0 10px 30px rgba(15,23,42,.08);">
+          <span style="display:inline-flex;padding:6px 12px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:700;font-size:12px;">Modo de contingência</span>
+          <h1 style="margin:16px 0 8px;">{title}</h1>
+          <p style="margin:0 0 16px;color:#475569;">{body}</p>
+          <div>{links_html}</div>
+        </div>
+      </body>
+    </html>
+    """
 
 SUPPORTED_SERVICES = {"ai", "email", "whatsapp", "telegram", "instagram"}
 SECRET_KEY_HINTS = ("password", "token", "secret", "api_key", "auth")
@@ -786,7 +828,136 @@ def _build_integration_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str,
 @integrations_bp.route("/integrations")
 @login_required
 def integrations_page():
-    return render_template("integrations.html")
+    active_company = _safe_active_company()
+    try:
+        catalog = IntegrationCatalogService.build_catalog()
+    except Exception:
+        current_app.logger.exception("Falha ao montar catálogo da Central de Integrações.")
+        catalog = {"summary": {"total": 0, "available": 0, "planned": 0, "discovery": 0}, "integrations": []}
+
+    try:
+        return render_template(
+            "integrations.html",
+            active_company=active_company,
+            integration_catalog=catalog,
+        )
+    except Exception:
+        current_app.logger.exception("Falha ao renderizar Central de Integrações.")
+        return _fallback_integrations_shell(
+            "Central de Integrações",
+            "A interface completa está em contingência. Você ainda pode acessar as solicitações e a configuração técnica enquanto concluímos a estabilização.",
+            links=[
+                ("Solicitações", "/integrations/requests"),
+                ("Configuração Técnica", "/integrations/admin"),
+                ("IA Corporativa", "/configs/ai"),
+            ],
+        )
+
+
+@integrations_bp.route("/integrations/requests")
+@login_required
+def integration_requests_page():
+    try:
+        return render_template(
+            "integration_requests.html",
+            active_company=_safe_active_company(),
+        )
+    except Exception:
+        current_app.logger.exception("Falha ao renderizar página de solicitações de integração.")
+        return _fallback_integrations_shell(
+            "Solicitações de Integração",
+            "A lista detalhada está em contingência. Tente novamente em instantes ou volte para a Central de Integrações.",
+            links=[
+                ("Central de Integrações", "/integrations"),
+                ("Configuração Técnica", "/integrations/admin"),
+            ],
+        )
+
+
+@integrations_bp.route("/integrations/admin")
+@login_required
+def integrations_admin_page():
+    active_company = _safe_active_company()
+    try:
+        catalog = IntegrationCatalogService.build_catalog()
+    except Exception:
+        current_app.logger.exception("Falha ao montar catálogo da Configuração Técnica de Integrações.")
+        catalog = {"summary": {"total": 0, "available": 0, "planned": 0, "discovery": 0}, "integrations": []}
+
+    try:
+        return render_template(
+            "integrations_admin.html",
+            active_company=active_company,
+            integration_catalog=catalog,
+        )
+    except Exception:
+        current_app.logger.exception("Falha ao renderizar Configuração Técnica de Integrações.")
+        return _fallback_integrations_shell(
+            "Configuração Técnica de Integrações",
+            "A console técnica está em contingência. Use a Central de Integrações enquanto estabilizamos a tela administrativa.",
+            links=[
+                ("Central de Integrações", "/integrations"),
+                ("Solicitações", "/integrations/requests"),
+            ],
+        )
+
+
+@integrations_bp.route("/api/integrations/catalog", methods=["GET"])
+@login_required
+def integrations_catalog():
+    try:
+        catalog = IntegrationCatalogService.build_catalog()
+    except Exception:
+        current_app.logger.exception("Falha ao montar payload do catálogo de integrações.")
+        return jsonify({"success": False, "error": "Não foi possível carregar o catálogo agora."}), 500
+
+    return jsonify({"success": True, "catalog": catalog})
+
+
+@integrations_bp.route("/api/integrations/catalog/<string:integration_key>", methods=["GET"])
+@login_required
+def integrations_catalog_detail(integration_key: str):
+    item = IntegrationCatalogService.get_integration(integration_key)
+    if item is None:
+        return jsonify({"success": False, "error": "Integração não encontrada."}), 404
+    return jsonify({"success": True, "integration": item})
+
+
+@integrations_bp.route("/api/integrations/requests", methods=["GET"])
+@login_required
+def list_integration_requests():
+    company = _safe_active_company()
+    return jsonify(
+        {
+            "success": True,
+            "requests": IntegrationRequestService.list_requests(
+                company_id=getattr(company, "id", None),
+                limit=request.args.get("limit", default=20, type=int),
+            ),
+        }
+    )
+
+
+@integrations_bp.route("/api/integrations/requests", methods=["POST"])
+@login_required
+def create_integration_request():
+    company = _safe_active_company()
+    company_id = getattr(company, "id", None)
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para solicitar integração."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        record = IntegrationRequestService.create_request(
+            payload,
+            company_id=int(company_id),
+            requester_user_id=int(current_user.id),
+            requester_name=getattr(current_user, "name", None),
+        )
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    return jsonify({"success": True, "request": record.to_dict()}), 201
 
 
 @integrations_bp.route("/api/integrations/status", methods=["GET"])

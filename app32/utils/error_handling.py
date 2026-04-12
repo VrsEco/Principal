@@ -1,4 +1,6 @@
 import logging
+import os
+import traceback
 from typing import Any
 
 from flask import jsonify, request
@@ -74,6 +76,21 @@ def log_exception_with_context(logger: logging.Logger, exc: Exception, *, contex
         request.remote_addr,
         exc,
     )
+    try:
+        from flask import current_app
+
+        log_dir = os.path.join(current_app.root_path, "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "unhandled_exceptions.log")
+        with open(log_path, "a", encoding="utf-8") as handle:
+            handle.write(
+                f"context={context} method={request.method} path={request.path} "
+                f"user_id={user_id} remote_addr={request.remote_addr} error={exc}\n"
+            )
+            handle.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+            handle.write("\n---\n")
+    except Exception:
+        logger.exception("Falha ao persistir exceção em log de arquivo.")
 
 
 def log_and_build_public_error_response(

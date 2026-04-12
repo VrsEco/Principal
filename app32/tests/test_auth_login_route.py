@@ -91,3 +91,87 @@ def test_login_keeps_portal_flow_for_multi_company_user(monkeypatch):
 
     with client.session_transaction() as sess:
         assert 'active_company_id' not in sess
+
+
+def test_login_preserves_next_target_for_single_company_user(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=34,
+        email='redirect@empresa.com.br',
+        check_password=lambda password: password == 'SenhaSegura123',
+    )
+    fake_employee = SimpleNamespace(company_id=9)
+
+    monkeypatch.setattr(auth_route, 'User', SimpleNamespace(query=_FakeUserQuery(fake_user)))
+    monkeypatch.setattr(auth_route, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery([fake_employee])))
+    monkeypatch.setattr(auth_route, 'is_platform_admin', lambda: False)
+    monkeypatch.setattr(auth_route, 'login_user', lambda user: True)
+
+    client = app.test_client()
+    response = client.post(
+        '/login?next=/integrations',
+        json={
+            'email': 'redirect@empresa.com.br',
+            'password': 'SenhaSegura123',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {'success': True, 'redirect': '/integrations'}
+
+
+def test_login_ignores_external_next_target(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=35,
+        email='seguranca@empresa.com.br',
+        check_password=lambda password: password == 'SenhaSegura123',
+    )
+    fake_employee = SimpleNamespace(company_id=9)
+
+    monkeypatch.setattr(auth_route, 'User', SimpleNamespace(query=_FakeUserQuery(fake_user)))
+    monkeypatch.setattr(auth_route, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery([fake_employee])))
+    monkeypatch.setattr(auth_route, 'is_platform_admin', lambda: False)
+    monkeypatch.setattr(auth_route, 'login_user', lambda user: True)
+
+    client = app.test_client()
+    response = client.post(
+        '/login?next=https://malicioso.exemplo',
+        json={
+            'email': 'seguranca@empresa.com.br',
+            'password': 'SenhaSegura123',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {'success': True, 'redirect': '/my-work'}
+
+
+def test_login_uses_session_post_login_redirect_when_query_is_missing(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=36,
+        email='session-redirect@empresa.com.br',
+        check_password=lambda password: password == 'SenhaSegura123',
+    )
+    fake_employee = SimpleNamespace(company_id=11)
+
+    monkeypatch.setattr(auth_route, 'User', SimpleNamespace(query=_FakeUserQuery(fake_user)))
+    monkeypatch.setattr(auth_route, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery([fake_employee])))
+    monkeypatch.setattr(auth_route, 'is_platform_admin', lambda: False)
+    monkeypatch.setattr(auth_route, 'login_user', lambda user: True)
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess['post_login_redirect'] = '/integrations'
+
+    response = client.post(
+        '/login',
+        json={
+            'email': 'session-redirect@empresa.com.br',
+            'password': 'SenhaSegura123',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {'success': True, 'redirect': '/integrations'}

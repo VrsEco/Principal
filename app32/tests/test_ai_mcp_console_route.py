@@ -52,7 +52,11 @@ def test_ai_mcp_console_route_renders_console_with_frontend_state(monkeypatch):
 
     monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
     monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
-    monkeypatch.setattr(configs_route.AIMCPConsoleService, "build_frontend_state", lambda company=None: fake_console)
+    monkeypatch.setattr(
+        configs_route.AIConfigurationPagesService,
+        "build_page",
+        lambda page_key, active_company=None: {"title": "MCP", "sections": [], "wizard": {"title": "Assistente", "intro": "", "steps": []}, "hero_metrics": [], "shortcuts": [], "intro": ""},
+    )
     monkeypatch.setattr(
         configs_route,
         "render_template",
@@ -62,10 +66,9 @@ def test_ai_mcp_console_route_renders_console_with_frontend_state(monkeypatch):
     response = app.test_client().get("/configs/ai/mcp")
 
     assert response.status_code == 200
-    assert captured["template_name"] == "modules/operations/ai_mcp_console.html"
+    assert captured["template_name"] == "modules/operations/ai_config_simple_page.html"
     assert captured["context"]["active_company"].id == 31
-    assert captured["context"]["console"]["summary"]["profiles"] == 4
-    assert captured["context"]["console"]["configuration_links"][0]["href"] == "/configs/ai/mcp"
+    assert captured["context"]["page"]["title"] == "MCP"
 
 
 def test_ai_mcp_console_frontend_state_api_returns_payload(monkeypatch):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.integration_catalog_service import IntegrationCatalogService
 from services.ai_mcp_console_service import AIMCPConsoleService
 
 
@@ -26,7 +27,7 @@ class AIConfigurationPagesService:
             "eyebrow": eyebrow,
             "search_terms": search_terms,
             "shortcuts": [
-                {"label": "Conexões", "href": "/integrations"},
+                {"label": "Integrações", "href": "/integrations"},
                 {"label": "MCP", "href": "/configs/ai/mcp"},
                 {"label": "Tools", "href": "/configs/ai/tools"},
                 {"label": "Permissões e Configurações", "href": "/configs/ai/permissions"},
@@ -41,6 +42,9 @@ class AIConfigurationPagesService:
         domains = console.get("domains") or []
         onboarding = (console.get("onboarding") or {}).get("steps") or []
         readiness = console.get("readiness_by_phase") or []
+        integration_catalog = IntegrationCatalogService.build_catalog()
+        integration_cards = integration_catalog.get("integrations") or []
+        integration_summary = integration_catalog.get("summary") or {}
 
         page = cls._base_shell("MCP", "Configurações", "mcp superfícies domínios readiness onboarding")
         page.update(
@@ -72,6 +76,13 @@ class AIConfigurationPagesService:
                                     "result_title": "Veja liberação",
                                     "result_body": "Abra a seção Liberação para revisar onboarding e gates.",
                                     "target_section": "release",
+                                },
+                                {
+                                    "label": "Integrações",
+                                    "description": "Catálogo e solicitação assistida.",
+                                    "result_title": "Abra integrações",
+                                    "result_body": "Abra a seção Integrações para ver o catálogo e solicitar uma nova integração.",
+                                    "target_section": "integrations",
                                 },
                             ],
                         },
@@ -145,6 +156,32 @@ class AIConfigurationPagesService:
                                 "description": f"{phase.get('required_count', 0)} obrigatórios.",
                             }
                             for phase in readiness[:5]
+                        ],
+                    },
+                    {
+                        "id": "integrations",
+                        "title": "Integrações",
+                        "summary": "Catálogo consultivo e assistente de novas integrações.",
+                        "items": [
+                            {
+                                "title": "Central de Integrações",
+                                "meta": f"{integration_summary.get('total', 0)} integrações mapeadas",
+                                "description": "Abra os cards com descrição, modo de operação e instruções de configuração.",
+                                "href": "/integrations",
+                            },
+                            {
+                                "title": "Assistente de Nova Integração",
+                                "meta": "Backlog automático",
+                                "description": "Coleta briefing e cria card em AA.J.31 com solicitante, canal e contexto.",
+                                "href": "/integrations#new-integration-assistant",
+                            },
+                        ] + [
+                            {
+                                "title": item.get("title") or "Integração",
+                                "meta": f"{item.get('category') or '-'} · {item.get('technical_channel') or '-'}",
+                                "description": item.get("summary") or "-",
+                            }
+                            for item in integration_cards[:4]
                         ],
                     },
                 ],
