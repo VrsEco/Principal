@@ -25,13 +25,22 @@
       <div class="int-card">
         <div class="int-card-head">
           <div>
-            <h2>Solicitações pendentes</h2>
-            <small>AA.J.31 (Produção)</small>
+            <h2>Integrações em funcionamento</h2>
+            <small>Visão rápida das conexões atuais</small>
           </div>
-          <button type="button" class="btn btn-primary btn-sm" id="openIntegrationRequestAssistant">Solicitar nova integração</button>
         </div>
-        <div id="integrationRequestsList" class="int-requests-list">
-          <div class="int-empty">Carregando solicitações...</div>
+        <div class="int-integrations-list" id="integrationsList">
+          {% for item in catalog.integrations %}
+          <button type="button" class="int-list-item" data-integration-key="{{ item.key }}">
+            <div>
+              <strong>{{ item.title }}</strong>
+              <span class="muted">{{ item.integration_mode_label or item.integration_mode }} · {{ item.technical_channel_label or item.technical_channel }}</span>
+            </div>
+            <span class="int-badge {{ 'enabled' if item.status == 'available' else 'disabled' }}">
+              {{ 'Habilitada' if item.status == 'available' else item.status_label or item.status }}
+            </span>
+          </button>
+          {% endfor %}
         </div>
       </div>
     </aside>
@@ -74,22 +83,13 @@
       <div class="int-card">
         <div class="int-card-head">
           <div>
-            <h2>Integrações em funcionamento</h2>
-            <small>Visão rápida das conexões atuais</small>
+            <h2>Solicitações pendentes</h2>
+            <small>AA.J.31 (Produção)</small>
           </div>
+          <button type="button" class="btn btn-primary btn-sm" id="openIntegrationRequestAssistant">Solicitar nova integração</button>
         </div>
-        <div class="int-integrations-list" id="integrationsList">
-          {% for item in catalog.integrations %}
-          <button type="button" class="int-list-item" data-integration-key="{{ item.key }}">
-            <div>
-              <strong>{{ item.title }}</strong>
-              <span class="muted">{{ item.integration_mode_label or item.integration_mode }} · {{ item.technical_channel_label or item.technical_channel }}</span>
-            </div>
-            <span class="int-badge {{ 'enabled' if item.status == 'available' else 'disabled' }}">
-              {{ 'Habilitada' if item.status == 'available' else item.status_label or item.status }}
-            </span>
-          </button>
-          {% endfor %}
+        <div id="integrationRequestsList" class="int-requests-list">
+          <div class="int-empty">Carregando solicitações...</div>
         </div>
       </div>
     </aside>
