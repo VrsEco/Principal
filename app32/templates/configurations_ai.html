@@ -60,7 +60,6 @@
     'quick_actions': []
 }), true) %}
 {% set pillars = pillars|default(hub.get('pillars', []), true) %}
-{% set agents_list = agents|default(hub.get('agents', []), true) %}
 <div class="ai-hub-page" data-default-tab="{{ request.args.get('section', 'overview') }}">
     <section class="ai-hub-hero">
         <div class="ai-hub-hero__copy">
@@ -274,40 +273,6 @@
                 </article>
                 {% endfor %}
             </div>
-
-            {% if pillar.key == 'configuration' %}
-            <article class="ai-hub-surface-card" id="configuration-agents" data-searchable="agentes catalogo configuracao cadastro">
-                <header class="ai-hub-surface-card__header">
-                    <div>
-                        <h3>Agentes cadastrados no APP32</h3>
-                        <p>Catálogo atual preservado para não perder o que já existe em produção.</p>
-                    </div>
-                    <span class="ai-hub-inline-note">{{ summary.total_agents }} itens</span>
-                </header>
-                <div class="ai-hub-agent-grid">
-                    {% for agent in agents_list %}
-                    <article class="ai-hub-agent-card" data-searchable="{{ agent.name }} {{ agent.description }} {{ agent.status }}">
-                        <div class="ai-hub-agent-card__top">
-                            <div class="ai-hub-agent-card__identity">
-                                <div class="ai-hub-agent-card__icon">🤖</div>
-                                <div>
-                                    <h4>{{ agent.name }}</h4>
-                                    <p>{{ agent.description or 'Agente sem descrição operacional registrada.' }}</p>
-                                </div>
-                            </div>
-                            <span class="ai-hub-status-pill is-{{ agent.status }}">{{ 'Ativo' if agent.status == 'active' else 'Inativo' }}</span>
-                        </div>
-                        <div class="ai-hub-agent-card__footer">
-                            <span class="ai-hub-inline-note">ID {{ agent.id }}</span>
-                            <button type="button" class="ai-hub-link-btn" data-agent-id="{{ agent.id }}">Configurar</button>
-                        </div>
-                    </article>
-                    {% else %}
-                    <p class="ai-hub-empty">Nenhum agente cadastrado.</p>
-                    {% endfor %}
-                </div>
-            </article>
-            {% endif %}
 
             {% if pillar.key == 'governance' %}
             <article class="ai-hub-surface-card" id="governance-logs" data-searchable="logs comunicacao auditoria mensagens agentes canais">

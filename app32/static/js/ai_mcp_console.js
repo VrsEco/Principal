@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabs = Array.from(root.querySelectorAll('[data-console-tab]'));
     const panels = Array.from(root.querySelectorAll('[data-console-panel]'));
     const searchInput = document.getElementById('aiMcpConsoleSearch');
-    const wizardButtons = Array.from(root.querySelectorAll('[data-console-go-tab]'));
+    const wizardButtons = Array.from(document.querySelectorAll('[data-console-go-tab]'));
     const decisionCards = Array.from(root.querySelectorAll('.ai-mcp-decision-card'));
     const helpTitle = document.getElementById('aiMcpContextHelpTitle');
     const helpBody = document.getElementById('aiMcpContextHelpBody');
@@ -19,8 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const wizardGo = document.getElementById('aiMcpWizardGo');
     const wizardSearch = document.getElementById('aiMcpWizardSearch');
     const wizardReset = document.getElementById('aiMcpWizardReset');
+    const wizardTranscript = document.getElementById('aiMcpWizardTranscript');
+    const wizardTranscriptList = document.getElementById('aiMcpWizardTranscriptList');
     const assistantActions = Array.from(root.querySelectorAll('[data-assistant-action]'));
     const collapsibleCards = Array.from(root.querySelectorAll('.ai-mcp-panels .ai-mcp-card'));
+    const panelToggles = Array.from(root.querySelectorAll('[data-panel-toggle]'));
 
     const helpTopics = {
         overview: {
@@ -102,8 +105,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const wizardState = {
         currentStep: 1,
         selected: [],
+        answers: [],
         pendingAction: null,
     };
+
+
+    function updateTranscript() {
+        if (!wizardTranscript || !wizardTranscriptList) return;
+        const answers = wizardState.answers.filter(Boolean);
+        wizardTranscript.hidden = answers.length === 0;
+        wizardTranscriptList.innerHTML = '';
+
+        answers.forEach((answer) => {
+            const item = document.createElement('div');
+            item.className = 'ai-mcp-wizard-transcript__item';
+            item.innerHTML = `<span>${answer.question}</span><strong>${answer.answer}</strong>`;
+            wizardTranscriptList.appendChild(item);
+        });
+    }
+
+    function setPanelExpanded(panel, expanded) {
+        if (!panel) return;
+        const toggle = panel.querySelector('[data-panel-toggle]');
+        panel.classList.toggle('is-collapsed', !expanded);
+        panel.classList.toggle('is-expanded', expanded);
+        panel.classList.toggle('is-active', expanded && panel.classList.contains('is-active'));
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', String(expanded));
+        }
+    }
+
+    function expandActivePanel(target) {
+        const activePanel = root.querySelector(`[data-console-panel="${target}"]`);
+        setPanelExpanded(activePanel, true);
+    }
 
     function activateWizardStep(stepNumber) {
         wizardState.currentStep = stepNumber;
@@ -134,15 +169,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetWizard() {
         wizardState.currentStep = 1;
         wizardState.selected = [];
+        wizardState.answers = [];
         wizardState.pendingAction = null;
         wizardChoiceCards.forEach((card) => card.classList.remove('is-selected'));
         if (wizardResult) wizardResult.hidden = true;
+        updateTranscript();
         activateWizardStep(1);
     }
 
     function activateTab(target) {
         tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.consoleTab === target));
-        panels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.consolePanel === target));
+        panels.forEach((panel) => {
+            const isTarget = panel.dataset.consolePanel === target;
+            panel.classList.toggle('is-active', isTarget);
+            if (isTarget) {
+                setPanelExpanded(panel, true);
+            }
+        });
         wizardButtons.forEach((button) => {
             button.classList.toggle('is-selected', button.dataset.consoleGoTab === target);
             button.setAttribute('aria-pressed', button.dataset.consoleGoTab === target ? 'true' : 'false');
@@ -167,6 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const haystack = normalize(panel.dataset.searchable || panel.textContent || '');
             const panelMatch = !needle || haystack.includes(needle);
             panel.classList.toggle('ai-mcp-hidden', !panelMatch);
+            if (needle && panelMatch) {
+                setPanelExpanded(panel, true);
+            }
 
             panel.querySelectorAll('[data-searchable]').forEach((node) => {
                 const nodeMatch = !needle || normalize(node.dataset.searchable || node.textContent || '').includes(needle);
@@ -247,6 +293,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
+    panelToggles.forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const panel = toggle.closest('[data-console-panel]');
+            const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+            setPanelExpanded(panel, expanded);
+        });
+    });
+
     tabs.forEach((tab) => {
         tab.addEventListener('click', () => activateTab(tab.dataset.consoleTab));
     });
@@ -267,7 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const stepNumber = Number(card.closest('[data-wizard-step]')?.dataset.wizardStep || 1);
             wizardChoiceCards.filter((item) => item.closest('[data-wizard-step]')?.dataset.wizardStep === String(stepNumber)).forEach((item) => item.classList.remove('is-selected'));
             card.classList.add('is-selected');
-            wizardState.selected[stepNumber - 1] = card.dataset.choiceLabel || card.textContent.trim();
+            const choiceLabel = card.dataset.choiceLabel || card.textContent.trim();
+            wizardState.selected[stepNumber - 1] = choiceLabel;
+            wizardState.answers[stepNumber - 1] = {
+                question: card.dataset.stepTitle || `Pergunta ${stepNumber}`,
+                answer: choiceLabel,
+            };
+            updateTranscript();
             const nextStep = stepNumber + 1;
             if (nextStep <= wizardSteps.length) {
                 activateWizardStep(nextStep);
