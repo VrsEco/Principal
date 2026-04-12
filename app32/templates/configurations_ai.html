@@ -30,10 +30,8 @@
             <span class="ai-hub-filter-label">Pilares</span>
             <div class="ai-hub-filter-shortcuts">
                 <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="overview">Visão Geral</button>
-                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="configuration">Configuração</button>
-                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="integrations">Integrações</button>
-                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="orchestration">Orquestração</button>
-                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="governance">Governança</button>
+                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="configuration">Configurações</button>
+                <button type="button" class="ai-hub-filter-shortcut" data-tab-jump="monitoring_audit">Monitoramento e Auditoria</button>
             </div>
         </div>
     </div>
@@ -60,7 +58,6 @@
     'quick_actions': []
 }), true) %}
 {% set pillars = pillars|default(hub.get('pillars', []), true) %}
-{% set agents_list = agents|default(hub.get('agents', []), true) %}
 <div class="ai-hub-page" data-default-tab="{{ request.args.get('section', 'overview') }}">
     <section class="ai-hub-hero">
         <div class="ai-hub-hero__copy">
@@ -215,7 +212,7 @@
                     </article>
                     {% endif %}
 
-                    <article class="ai-hub-surface-card ai-hub-overview-card" data-searchable="acoes rapidas console integracoes agentes auditoria">
+                    <article class="ai-hub-surface-card ai-hub-overview-card" data-searchable="acoes rapidas console conexoes agentes auditoria">
                         <header class="ai-hub-surface-card__header">
                             <div>
                                 <span class="ai-hub-inline-note">Ações rápidas</span>
@@ -247,8 +244,46 @@
                 </div>
             </header>
 
+            {% if pillar.key == 'configuration' %}
+            <article class="ai-hub-surface-card ai-hub-overview-card ai-hub-surface-card--featured" data-searchable="atalhos conexoes mcp tools permissoes monitoramento configuracoes">
+                <header class="ai-hub-surface-card__header">
+                    <div>
+                        <span class="ai-hub-inline-note">Atalhos</span>
+                        <h3>Páginas simples</h3>
+                        <p>Abra direto a tela certa sem passar por mais texto.</p>
+                    </div>
+                </header>
+
+                <div class="ai-hub-actions-grid">
+                    <a href="/integrations" class="ai-hub-shortcut">
+                        <strong>Conexões</strong>
+                        <span>Integrações e credenciais.</span>
+                    </a>
+                    <a href="/configs/ai/mcp" class="ai-hub-shortcut">
+                        <strong>MCP</strong>
+                        <span>Estrutura e liberação.</span>
+                    </a>
+                    <a href="/configs/ai/tools" class="ai-hub-shortcut">
+                        <strong>Tools</strong>
+                        <span>Catálogo e risco.</span>
+                    </a>
+                    <a href="/configs/ai/permissions" class="ai-hub-shortcut">
+                        <strong>Permissões e Configurações</strong>
+                        <span>Acessos e cadastros-base.</span>
+                    </a>
+                    <a href="/configs/ai/monitoring" class="ai-hub-shortcut">
+                        <strong>Monitoramento e Auditoria</strong>
+                        <span>Saúde, regras e revisão.</span>
+                    </a>
+                </div>
+            </article>
+            {% endif %}
+
             <div class="ai-hub-card-grid">
                 {% for item in pillar["items"] %}
+                {% set item_title = item.title|default('', true)|lower %}
+                {% set item_href = item.href|default('', true)|lower %}
+                {% if 'sapiens' not in item_title and 'sapiens' not in item_href %}
                 <article class="ai-hub-surface-card" data-searchable="{{ item.title }} {{ item.description }} {{ item.status }} {{ item.badge or '' }}">
                     <header class="ai-hub-surface-card__header">
                         <div>
@@ -272,49 +307,16 @@
                         {% endif %}
                     </footer>
                 </article>
+                {% endif %}
                 {% endfor %}
             </div>
 
-            {% if pillar.key == 'configuration' %}
-            <article class="ai-hub-surface-card" id="configuration-agents" data-searchable="agentes catalogo configuracao cadastro">
-                <header class="ai-hub-surface-card__header">
-                    <div>
-                        <h3>Agentes cadastrados no APP32</h3>
-                        <p>Catálogo atual preservado para não perder o que já existe em produção.</p>
-                    </div>
-                    <span class="ai-hub-inline-note">{{ summary.total_agents }} itens</span>
-                </header>
-                <div class="ai-hub-agent-grid">
-                    {% for agent in agents_list %}
-                    <article class="ai-hub-agent-card" data-searchable="{{ agent.name }} {{ agent.description }} {{ agent.status }}">
-                        <div class="ai-hub-agent-card__top">
-                            <div class="ai-hub-agent-card__identity">
-                                <div class="ai-hub-agent-card__icon">🤖</div>
-                                <div>
-                                    <h4>{{ agent.name }}</h4>
-                                    <p>{{ agent.description or 'Agente sem descrição operacional registrada.' }}</p>
-                                </div>
-                            </div>
-                            <span class="ai-hub-status-pill is-{{ agent.status }}">{{ 'Ativo' if agent.status == 'active' else 'Inativo' }}</span>
-                        </div>
-                        <div class="ai-hub-agent-card__footer">
-                            <span class="ai-hub-inline-note">ID {{ agent.id }}</span>
-                            <button type="button" class="ai-hub-link-btn" data-agent-id="{{ agent.id }}">Configurar</button>
-                        </div>
-                    </article>
-                    {% else %}
-                    <p class="ai-hub-empty">Nenhum agente cadastrado.</p>
-                    {% endfor %}
-                </div>
-            </article>
-            {% endif %}
-
-            {% if pillar.key == 'governance' %}
-            <article class="ai-hub-surface-card" id="governance-logs" data-searchable="logs comunicacao auditoria mensagens agentes canais">
+            {% if pillar.key == 'monitoring_audit' %}
+            <article class="ai-hub-surface-card" id="monitoring-audit-logs" data-searchable="logs comunicacao auditoria mensagens agentes canais monitoramento">
                 <header class="ai-hub-surface-card__header">
                     <div>
                         <h3>Logs de comunicação</h3>
-                        <p>Superfície reaproveitada da tela anterior, agora reposicionada dentro do pilar de governança.</p>
+                        <p>Superfície reaproveitada da tela anterior, agora reposicionada dentro de Monitoramento e Auditoria.</p>
                     </div>
                     <button type="button" class="ai-hub-btn ai-hub-btn--secondary ai-hub-btn--compact" id="refreshLogsBtn">Atualizar logs</button>
                 </header>
@@ -561,8 +563,14 @@
         }
 
         function activateTab(target) {
-            const validTargets = new Set(['overview', 'configuration', 'integrations', 'orchestration', 'governance']);
-            const normalizedTarget = validTargets.has(target) ? target : 'overview';
+            const aliases = {
+                integrations: 'configuration',
+                orchestration: 'configuration',
+                governance: 'monitoring_audit'
+            };
+            const normalizedInput = aliases[target] || target;
+            const validTargets = new Set(['overview', 'configuration', 'monitoring_audit']);
+            const normalizedTarget = validTargets.has(normalizedInput) ? normalizedInput : 'overview';
             tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.tabTarget === normalizedTarget));
             panels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.tabPanel === normalizedTarget));
 
@@ -570,7 +578,7 @@
             url.searchParams.set('section', normalizedTarget);
             window.history.replaceState({}, '', url.toString());
 
-            if (normalizedTarget === 'governance') {
+            if (normalizedTarget === 'monitoring_audit') {
                 loadLogs();
             }
         }
@@ -643,7 +651,7 @@
         root.querySelectorAll('[data-local-link]').forEach((button) => {
             button.addEventListener('click', () => {
                 const target = document.querySelector(button.dataset.localLink);
-                activateTab('governance');
+                activateTab('monitoring_audit');
                 target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         });
