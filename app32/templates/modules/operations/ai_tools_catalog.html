@@ -1,0 +1,222 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Tools | IA Corporativa{% endblock %}
+
+{% block breadcrumb %}
+<a href="/portal">Portal</a>
+<span class="sep">/</span>
+<a href="/configs/system">Sistema</a>
+<span class="sep">/</span>
+<a href="/configs/ai?section=configuration">IA Corporativa</a>
+<span class="sep">/</span>
+<span class="current">Tools</span>
+{% endblock %}
+
+{% block workspace_content %}
+{% set catalog = tool_catalog or {"summary": {}, "domains": [], "discovery": {}} %}
+<div class="int-page fade-in" id="toolsWorkspace">
+  <header class="int-header">
+    <div>
+      <span class="int-eyebrow">Tool-first</span>
+      <h1>Tools</h1>
+      <p class="muted mb-0">Catálogo operacional de domínios, contratos REST/MCP e backlog de publicação de tools.</p>
+    </div>
+  </header>
+
+  <section class="int-shell">
+    <aside class="int-rail">
+      <div class="int-card">
+        <div class="int-card-head">
+          <div>
+            <h2>Domínios</h2>
+            <small>{{ catalog.summary.domains or 0 }} áreas catalogadas</small>
+          </div>
+        </div>
+        <div class="int-integrations-list" id="toolDomainsList">
+          {% for item in catalog.domains %}
+          <button type="button" class="int-list-item" data-domain-key="{{ item.key }}">
+            <div>
+              <strong>{{ item.title }}</strong>
+              <span class="muted">{{ item.surface or '-' }} · {{ item.summary.published_mcp_tools or 0 }} tools publicadas</span>
+            </div>
+            <span class="int-badge {{ 'enabled' if item.status == 'canonical' else 'disabled' }}">
+              {{ 'Canônico' if item.status == 'canonical' else item.status or '-' }}
+            </span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+
+    <main class="int-main">
+      <section class="int-card">
+        <div class="int-card-head">
+          <div>
+            <h2 id="toolDomainTitle">Selecione um domínio</h2>
+            <p id="toolDomainSummary" class="muted">No centro exibimos contratos, tools e regras de governança do domínio selecionado.</p>
+          </div>
+        </div>
+
+        <div class="int-detail-grid">
+          <div class="int-detail-block">
+            <span class="int-detail-label">Status</span>
+            <strong id="toolDomainStatus">-</strong>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Surface</span>
+            <strong id="toolDomainSurface">-</strong>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Entrypoint</span>
+            <div id="toolDomainEntrypoint" class="muted">-</div>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Rotas Canônicas</span>
+            <ul id="toolDomainRoutes"><li>Selecione um domínio.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Contratos REST</span>
+            <ul id="toolDomainRest"><li>Selecione um domínio.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Contratos MCP</span>
+            <ul id="toolDomainMcp"><li>Selecione um domínio.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Governança</span>
+            <ul id="toolDomainGovernance"><li>Selecione um domínio.</li></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="int-rail">
+      <div class="int-card">
+        <div class="int-card-head">
+          <div>
+            <h2>Publicação de tools</h2>
+            <small>Catálogo consolidado</small>
+          </div>
+          <a href="{{ catalog.discovery.rest_endpoint or '/api/configs/ai/mcp/tool-first-catalog' }}" class="btn btn-outline-primary btn-sm" target="_blank">API</a>
+        </div>
+        <div id="toolPublicationList" class="int-requests-list">
+          <div class="int-empty">Carregando catálogo...</div>
+        </div>
+      </div>
+    </aside>
+  </section>
+</div>
+
+<style>
+.int-page { padding:0 2rem 2rem; }
+.int-header { display:flex; justify-content:space-between; align-items:flex-start; gap:2rem; margin-bottom:1.5rem; }
+.int-header h1 { margin:0 0 .3rem; }
+.int-eyebrow { display:inline-flex; padding:.25rem .7rem; border-radius:999px; font-size:.75rem; font-weight:700; background:rgba(59,130,246,.12); color:#2563eb; margin-bottom:.5rem; }
+.int-shell { display:grid; grid-template-columns: minmax(280px, 320px) minmax(0,1fr) minmax(280px, 340px); gap:1rem; align-items:start; }
+.int-rail { position:sticky; top:1rem; }
+.int-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem; }
+.int-card-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.int-card-head h2 { margin:0; font-size:1rem; }
+.int-card-head small { color:var(--text-tertiary); font-weight:600; }
+.int-requests-list, .int-integrations-list { display:flex; flex-direction:column; gap:.6rem; max-height:70vh; overflow:auto; }
+.int-request-group { border:1px dashed var(--border); border-radius:12px; padding:.6rem .7rem; background:#fff; display:flex; flex-direction:column; gap:.5rem; }
+.int-request-title { font-size:.72rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); letter-spacing:.04em; }
+.int-request-item { border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; background:var(--surface-secondary); display:flex; flex-direction:column; gap:.2rem; }
+.int-request-item strong { font-size:.82rem; }
+.int-list-item { border:1px solid var(--border); border-radius:12px; padding:.7rem .8rem; background:var(--surface-secondary); display:flex; justify-content:space-between; gap:.6rem; text-align:left; cursor:pointer; transition:.15s ease; }
+.int-list-item strong { display:block; font-size:.86rem; }
+.int-list-item .muted { font-size:.75rem; color:var(--text-tertiary); }
+.int-list-item:hover { border-color:rgba(59,130,246,.35); background:#f8fbff; }
+.int-badge { border-radius:999px; padding:.2rem .6rem; font-size:.7rem; font-weight:700; text-transform:uppercase; }
+.int-badge.enabled { background:#dcfce7; color:#166534; }
+.int-badge.disabled { background:#e5e7eb; color:#475569; }
+.int-main .int-card { min-height:520px; }
+.int-detail-grid { display:grid; gap:1rem; margin-top:1.2rem; }
+.int-detail-block { background:var(--surface-secondary); border:1px solid var(--border); border-radius:14px; padding:.9rem 1rem; }
+.int-detail-label { display:block; font-size:.75rem; font-weight:700; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:.35rem; }
+.int-detail-block ul { margin:0; padding-left:1.2rem; color:var(--text-secondary); }
+.int-detail-block strong { font-size:.95rem; }
+.int-empty { text-align:center; color:var(--text-tertiary); padding:1.2rem .6rem; }
+.muted { color:var(--text-secondary); }
+@media (max-width: 1200px) {
+  .int-shell { grid-template-columns: minmax(260px, 300px) minmax(0,1fr); }
+  .int-shell .int-rail:last-child { order:3; }
+}
+@media (max-width: 980px) {
+  .int-page { padding:0 1rem 1.5rem; }
+  .int-header { flex-direction:column; }
+  .int-shell { grid-template-columns:1fr; }
+  .int-rail { position:static; }
+}
+</style>
+
+<script>
+  const toolCatalogPayload = {{ catalog|tojson }};
+  const toolDomains = toolCatalogPayload.domains || [];
+  const toolDomainByKey = Object.fromEntries(toolDomains.map(item => [item.key, item]));
+
+  function listMarkup(items, formatter) {
+    return (items || []).length ? items.map(formatter).join('') : '<li>Não informado.</li>';
+  }
+
+  function renderToolDomain(key) {
+    const item = toolDomainByKey[key];
+    if (!item) return;
+
+    document.getElementById('toolDomainTitle').textContent = item.title || '-';
+    document.getElementById('toolDomainSummary').textContent = item.description || 'Sem descrição.';
+    document.getElementById('toolDomainStatus').textContent = item.status || '-';
+    document.getElementById('toolDomainSurface').textContent = item.surface || '-';
+    document.getElementById('toolDomainEntrypoint').innerHTML = item.entrypoint ? `<a href="${item.entrypoint}">${item.entrypoint}</a>` : '-';
+    document.getElementById('toolDomainRoutes').innerHTML = listMarkup(item.canonical_routes, route => `<li>${route}</li>`);
+    document.getElementById('toolDomainRest').innerHTML = listMarkup(item.rest_contracts, contract => `<li><strong>${contract.name || '-'}</strong> · ${contract.method || '-'} ${contract.path || '-'}</li>`);
+    document.getElementById('toolDomainMcp').innerHTML = listMarkup(
+      [...(item.mcp_contracts || []), ...(item.published_tools || []).map(tool => ({ name: tool.name, status: 'ready', notes: tool.description || tool.summary || '' }))],
+      contract => `<li><strong>${contract.name || '-'}</strong> · ${contract.status || '-'}${contract.notes ? ` · ${contract.notes}` : ''}</li>`
+    );
+    document.getElementById('toolDomainGovernance').innerHTML = listMarkup(item.governance, rule => `<li>${rule}</li>`);
+  }
+
+  function renderToolPublicationBoard() {
+    const container = document.getElementById('toolPublicationList');
+    const published = [];
+    const planned = [];
+
+    toolDomains.forEach(domain => {
+      (domain.published_tools || []).forEach(tool => published.push({ ...tool, domain_title: domain.title }));
+      (domain.planned_tools || []).forEach(tool => planned.push({ ...tool, domain_title: domain.title }));
+    });
+
+    if (!published.length && !planned.length) {
+      container.innerHTML = '<div class="int-empty">Nenhuma tool catalogada.</div>';
+      return;
+    }
+
+    const groups = [
+      { title: 'Publicadas', items: published, meta: 'MCP pronto' },
+      { title: 'Planejadas', items: planned, meta: 'Backlog' },
+    ].filter(group => group.items.length);
+
+    container.innerHTML = groups.map(group => `
+      <div class="int-request-group">
+        <div class="int-request-title">${group.title}</div>
+        ${group.items.map(tool => `
+          <div class="int-request-item">
+            <strong>${tool.name || '-'}</strong>
+            <span class="muted">${tool.domain_title || '-'} · ${tool.risk || group.meta}</span>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+
+  document.querySelectorAll('[data-domain-key]').forEach(button => {
+    button.addEventListener('click', () => renderToolDomain(button.dataset.domainKey));
+  });
+
+  renderToolPublicationBoard();
+  if (toolDomains.length) {
+    renderToolDomain(toolDomains[0].key);
+  }
+</script>
+{% endblock %}

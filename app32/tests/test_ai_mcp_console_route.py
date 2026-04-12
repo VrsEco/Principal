@@ -71,6 +71,33 @@ def test_ai_mcp_console_route_renders_console_with_frontend_state(monkeypatch):
     assert captured["context"]["page"]["title"] == "MCP"
 
 
+def test_ai_tools_route_renders_tools_catalog(monkeypatch):
+    app = _build_app()
+    captured = {}
+    active_company = SimpleNamespace(id=31, name="Empresa MCP", client_code="MCP")
+    fake_catalog = {
+        "summary": {"domains": 2, "canonical_domains": 1, "wrapper_domains": 1},
+        "domains": [{"key": "engineering", "title": "Engenharia"}],
+        "discovery": {"rest_endpoint": "/api/configs/ai/mcp/tool-first-catalog"},
+    }
+
+    monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
+    monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
+    monkeypatch.setattr(configs_route.ToolFirstCatalogService, "build_catalog", lambda company=None: fake_catalog)
+    monkeypatch.setattr(
+        configs_route,
+        "render_template",
+        lambda template_name, **context: captured.update({"template_name": template_name, "context": context}) or "ok",
+    )
+
+    response = app.test_client().get("/configs/ai/tools")
+
+    assert response.status_code == 200
+    assert captured["template_name"] == "modules/operations/ai_tools_catalog.html"
+    assert captured["context"]["active_company"].id == 31
+    assert captured["context"]["tool_catalog"]["summary"]["domains"] == 2
+
+
 def test_ai_mcp_console_frontend_state_api_returns_payload(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")

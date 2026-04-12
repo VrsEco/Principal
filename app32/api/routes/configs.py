@@ -302,7 +302,17 @@ def ai_tools_page():
     company_id = getattr(active_company, 'id', None)
     if not _can_access_ai_mcp_console(company_id):
         abort(403)
-    return _render_ai_config_page("tools", active_company)
+    try:
+        tool_catalog = ToolFirstCatalogService.build_catalog(active_company)
+    except Exception:
+        current_app.logger.exception("Falha ao montar catálogo visual de tools IA/MCP.")
+        tool_catalog = {"summary": {"domains": 0, "canonical_domains": 0, "wrapper_domains": 0}, "domains": [], "discovery": {}}
+
+    return render_template(
+        'modules/operations/ai_tools_catalog.html',
+        active_company=active_company,
+        tool_catalog=tool_catalog,
+    )
 
 
 @configs_bp.route('/configs/ai/permissions')
