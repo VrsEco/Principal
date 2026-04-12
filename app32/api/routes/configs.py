@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, jsonify, request, abort, current_app
 from flask_login import login_required, current_user
 from models import db, AIAgent, AgentMessage
+from services.ai_configuration_pages_service import AIConfigurationPagesService
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
 from services.tool_first_catalog_service import ToolFirstCatalogService
@@ -77,14 +78,24 @@ def ai_settings():
                 ],
                 "quick_actions": [
                     {
-                        "title": "Abrir console MCP",
+                        "title": "Abrir MCP",
                         "href": "/configs/ai/mcp",
-                        "description": "Catálogo, readiness e governança técnica.",
+                        "description": "Surface, domínio e liberação.",
                     },
                     {
                         "title": "Gerir integrações",
                         "href": "/integrations",
                         "description": "Conexões, providers e segredos operacionais.",
+                    },
+                    {
+                        "title": "Abrir Tools",
+                        "href": "/configs/ai/tools",
+                        "description": "Catálogo, risco e gate humano.",
+                    },
+                    {
+                        "title": "Abrir monitoramento",
+                        "href": "/configs/ai/monitoring",
+                        "description": "Regras, saúde e auditoria.",
                     },
                     {
                         "title": "Ver auditoria",
@@ -111,37 +122,21 @@ def ai_settings():
                     "key": "overview",
                     "title": "Visão Geral",
                     "eyebrow": "Entrada recomendada",
-                    "description": "Central para entender operação, cobertura MCP, governança e pontos críticos reais.",
+                    "description": "Central para entender operação, cobertura MCP, conexões e pontos críticos reais.",
                     "accent": "primary",
                     "items": [],
                 },
                 {
                     "key": "configuration",
-                    "title": "Configuração",
+                    "title": "Configurações",
                     "eyebrow": "Administração",
-                    "description": "Parâmetros, conexões e agentes.",
+                    "description": "Conexões, MCP, tools e permissões.",
                     "accent": "blue",
                     "items": [],
                 },
                 {
-                    "key": "integrations",
-                    "title": "Integrações",
-                    "eyebrow": "Interoperabilidade",
-                    "description": "MCP, APIs e provedores externos.",
-                    "accent": "violet",
-                    "items": [],
-                },
-                {
-                    "key": "orchestration",
-                    "title": "Orquestração",
-                    "eyebrow": "Execução",
-                    "description": "Agentes, workflows e automações.",
-                    "accent": "emerald",
-                    "items": [],
-                },
-                {
-                    "key": "governance",
-                    "title": "Governança",
+                    "key": "monitoring_audit",
+                    "title": "Monitoramento e Auditoria",
                     "eyebrow": "Controle e evidência",
                     "description": "Logs, auditoria e uso.",
                     "accent": "amber",
@@ -193,6 +188,67 @@ def system_settings():
 
 
 @configs_bp.route('/configs/ai/mcp')
+@login_required
+def ai_mcp_page():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        abort(403)
+
+    page_state = AIConfigurationPagesService.build_page("mcp", active_company)
+    return render_template(
+        'modules/operations/ai_config_simple_page.html',
+        active_company=active_company,
+        page=page_state,
+    )
+
+
+@configs_bp.route('/configs/ai/tools')
+@login_required
+def ai_tools_page():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        abort(403)
+
+    return render_template(
+        'modules/operations/ai_config_simple_page.html',
+        active_company=active_company,
+        page=AIConfigurationPagesService.build_page("tools", active_company),
+    )
+
+
+@configs_bp.route('/configs/ai/permissions')
+@login_required
+def ai_permissions_page():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        abort(403)
+
+    return render_template(
+        'modules/operations/ai_config_simple_page.html',
+        active_company=active_company,
+        page=AIConfigurationPagesService.build_page("permissions", active_company),
+    )
+
+
+@configs_bp.route('/configs/ai/monitoring')
+@login_required
+def ai_monitoring_page():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        abort(403)
+
+    return render_template(
+        'modules/operations/ai_config_simple_page.html',
+        active_company=active_company,
+        page=AIConfigurationPagesService.build_page("monitoring", active_company),
+    )
+
+
+@configs_bp.route('/configs/ai/mcp/console')
 @login_required
 def ai_mcp_console():
     active_company = _resolve_active_company()

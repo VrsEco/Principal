@@ -262,7 +262,7 @@
     <!-- Sistema -->
     {% if has_permission('companies', 'view') or has_permission('users', 'view') %}
     <div
-        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/settings' in request.path or '/configs/ai' in request.path or '/configs/ai/mcp' in request.path or '/integrations' in request.path }}">
+        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/settings' in request.path or '/configs/ai' in request.path or '/configs/ai/mcp' in request.path or '/configs/ai/tools' in request.path or '/configs/ai/permissions' in request.path or '/integrations' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -290,16 +290,19 @@
                         Visão Geral
                     </a>
                     <a href="/configs/ai?section=configuration" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'configuration' }}">
-                        Configuração
+                        Configurações
                     </a>
-                    <a href="/configs/ai?section=integrations" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'integrations' }}">
-                        Integrações
+                    <a href="/configs/ai/mcp" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/mcp' }}">
+                        MCP
                     </a>
-                    <a href="/configs/ai?section=orchestration" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'orchestration' }}">
-                        Orquestração
+                    <a href="/configs/ai/tools" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/tools' }}">
+                        Tools
                     </a>
-                    <a href="/configs/ai?section=governance" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'governance' }}">
-                        Governança
+                    <a href="/configs/ai/permissions" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/permissions' }}">
+                        Permissões e Configurações
+                    </a>
+                    <a href="/configs/ai/monitoring" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/monitoring' or (request.path == '/configs/ai' and ai_section == 'monitoring_audit') }}">
+                        Monitoramento e Auditoria
                     </a>
                 </div>
             </div>
