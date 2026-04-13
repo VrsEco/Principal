@@ -36,23 +36,7 @@
           <span>Buscar</span>
           <input id="toolDomainSearchInput" type="search" placeholder="Domínio, surface ou tool">
         </label>
-        <div class="int-integrations-list" id="toolDomainsList">
-          {% for item in catalog.domains %}
-          <button type="button" class="int-list-item" data-domain-key="{{ item.key }}">
-            <div class="int-list-main">
-              <strong>{{ item.title }}</strong>
-              <span class="muted">{{ item.surface or '-' }} · {{ item.summary.published_mcp_tools or 0 }} publicadas · {{ item.planned_tools|length }} solicitadas</span>
-              <span class="int-list-meta">{{ item.description }}</span>
-            </div>
-            <div class="int-list-side">
-              <span class="int-badge {{ 'enabled' if item.status == 'canonical' else 'disabled' }}">
-                {{ 'Canônico' if item.status == 'canonical' else item.status or '-' }}
-              </span>
-              <span class="int-counter-badge">{{ (item.summary.published_mcp_tools or 0) + (item.planned_tools|length) }}</span>
-            </div>
-          </button>
-          {% endfor %}
-        </div>
+        <div class="int-domain-tree" id="toolDomainsList"></div>
       </div>
     </aside>
 
@@ -89,6 +73,10 @@
           <div class="int-detail-block">
             <span class="int-detail-label">Contratos MCP</span>
             <ul id="toolDomainMcp"><li>Selecione um domínio.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Tool em foco</span>
+            <div id="toolFocusCard" class="muted">Selecione uma tool na árvore para destacar aqui.</div>
           </div>
           <div class="int-detail-block">
             <span class="int-detail-label">Tools publicadas</span>
@@ -137,6 +125,63 @@
 .int-requests-list, .int-integrations-list { display:flex; flex-direction:column; gap:.6rem; max-height:70vh; overflow:auto; }
 .int-search { display:flex; flex-direction:column; gap:.4rem; margin:0 0 1rem; color:var(--text-secondary); font-weight:600; }
 .int-search input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); }
+.int-domain-tree { display:flex; flex-direction:column; gap:.35rem; max-height:70vh; overflow:auto; padding-right:.15rem; }
+.int-tree-node { display:flex; flex-direction:column; gap:.3rem; }
+.int-tree-domain {
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:.7rem .8rem;
+  background:var(--surface-secondary);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:.6rem;
+  text-align:left;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.int-tree-domain:hover,
+.int-tree-domain.active { border-color:rgba(59,130,246,.35); background:#f8fbff; }
+.int-tree-children {
+  display:flex;
+  flex-direction:column;
+  gap:.25rem;
+  margin-left:.8rem;
+  padding-left:.8rem;
+  border-left:1px dashed var(--border);
+}
+.int-tree-children.collapsed { display:none; }
+.int-tree-tool {
+  width:100%;
+  border:1px solid transparent;
+  background:transparent;
+  border-radius:10px;
+  padding:.42rem .55rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.6rem;
+  text-align:left;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.int-tree-tool:hover,
+.int-tree-tool.active { border-color:rgba(59,130,246,.2); background:var(--surface-secondary); }
+.int-tree-toggle {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:1.4rem;
+  height:1.4rem;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:#fff;
+  color:var(--text-secondary);
+  font-size:.72rem;
+  font-weight:800;
+  flex-shrink:0;
+}
 .int-request-group { border:1px dashed var(--border); border-radius:12px; padding:.6rem .7rem; background:#fff; display:flex; flex-direction:column; gap:.5rem; }
 .int-request-title { font-size:.72rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); letter-spacing:.04em; }
 .int-request-item { border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; background:var(--surface-secondary); display:flex; flex-direction:column; gap:.2rem; }
@@ -181,7 +226,7 @@
     return (items || []).length ? items.map(formatter).join('') : '<li>Não informado.</li>';
   }
 
-  function renderToolDomain(key) {
+  function renderToolDomain(key, selectedToolName = null) {
     const item = toolDomainByKey[key];
     if (!item) return;
 
@@ -205,6 +250,91 @@
       tool => `<li><strong>${tool.name || '-'}</strong>${tool.status ? ` · ${tool.status}` : ''}</li>`
     );
     document.getElementById('toolDomainGovernance').innerHTML = listMarkup(item.governance, rule => `<li>${rule}</li>`);
+
+    const selectedTool = [...(item.published_tools || []), ...(item.planned_tools || [])]
+      .find(tool => (tool.name || '') === (selectedToolName || ''));
+    document.getElementById('toolFocusCard').innerHTML = selectedTool
+      ? `
+        <strong>${selectedTool.name || '-'}</strong><br>
+        <span class="muted">${item.title || '-'} · ${selectedTool.risk || selectedTool.status || 'catalogada'}</span>
+        ${(selectedTool.description || selectedTool.summary) ? `<div style="margin-top:.45rem;">${selectedTool.description || selectedTool.summary}</div>` : ''}
+      `
+      : 'Selecione uma tool na árvore para destacar aqui.';
+  }
+
+  function renderDomainTree(filterQuery = '') {
+    const container = document.getElementById('toolDomainsList');
+    const query = (filterQuery || '').trim().toLowerCase();
+
+    container.innerHTML = toolDomains.map(domain => {
+      const published = (domain.published_tools || []).map(tool => ({ ...tool, bucket: 'publicada' }));
+      const planned = (domain.planned_tools || []).map(tool => ({ ...tool, bucket: 'solicitada' }));
+      const tools = [...published, ...planned];
+      const haystack = [domain.title, domain.surface, domain.description, ...tools.map(tool => tool.name)].join(' ').toLowerCase();
+      if (query && !haystack.includes(query)) return '';
+
+      const filteredTools = tools.filter(tool => !query || `${domain.title} ${tool.name} ${tool.bucket}`.toLowerCase().includes(query));
+
+      return `
+        <div class="int-tree-node">
+          <button type="button" class="int-tree-domain" data-domain-select="${domain.key}">
+            <div style="display:flex; gap:.55rem; min-width:0;">
+              <span class="int-tree-toggle" data-domain-toggle="${domain.key}">−</span>
+              <div class="int-list-main">
+                <strong>${domain.title}</strong>
+                <span class="muted">${domain.surface || '-'} · ${(domain.summary?.published_mcp_tools || 0)} publicadas · ${(domain.planned_tools || []).length} solicitadas</span>
+              </div>
+            </div>
+            <div class="int-list-side">
+              <span class="int-badge ${domain.status === 'canonical' ? 'enabled' : 'disabled'}">${domain.status === 'canonical' ? 'Canônico' : (domain.status || '-')}</span>
+              <span class="int-counter-badge">${tools.length}</span>
+            </div>
+          </button>
+          <div class="int-tree-children" data-domain-children="${domain.key}">
+            ${filteredTools.length ? filteredTools.map(tool => `
+              <button type="button" class="int-tree-tool" data-domain-key="${domain.key}" data-tool-name="${tool.name || ''}">
+                <span>
+                  <strong>${tool.name || '-'}</strong>
+                  <span class="muted"> · ${tool.bucket}</span>
+                </span>
+                <span class="int-badge ${tool.bucket === 'publicada' ? 'enabled' : 'disabled'}">${tool.bucket}</span>
+              </button>
+            `).join('') : '<div class="muted" style="padding:.25rem .4rem;">Nenhuma tool encontrada.</div>'}
+          </div>
+        </div>
+      `;
+    }).join('') || '<div class="int-empty">Nenhum domínio encontrado.</div>';
+
+    container.querySelectorAll('[data-domain-toggle]').forEach(toggle => {
+      toggle.addEventListener('click', event => {
+        event.stopPropagation();
+        const key = toggle.dataset.domainToggle;
+        const children = container.querySelector(`[data-domain-children="${key}"]`);
+        if (!children) return;
+        const collapsed = children.classList.toggle('collapsed');
+        toggle.textContent = collapsed ? '+' : '−';
+      });
+    });
+
+    container.querySelectorAll('[data-domain-select]').forEach(button => {
+      button.addEventListener('click', () => {
+        renderToolDomain(button.dataset.domainSelect);
+        container.querySelectorAll('.int-tree-domain').forEach(node => node.classList.remove('active'));
+        container.querySelectorAll('.int-tree-tool').forEach(node => node.classList.remove('active'));
+        button.classList.add('active');
+      });
+    });
+
+    container.querySelectorAll('[data-tool-name]').forEach(button => {
+      button.addEventListener('click', () => {
+        renderToolDomain(button.dataset.domainKey, button.dataset.toolName);
+        container.querySelectorAll('.int-tree-domain').forEach(node => node.classList.remove('active'));
+        container.querySelectorAll('.int-tree-tool').forEach(node => node.classList.remove('active'));
+        button.classList.add('active');
+        const domainButton = container.querySelector(`[data-domain-select="${button.dataset.domainKey}"]`);
+        if (domainButton) domainButton.classList.add('active');
+      });
+    });
   }
 
   async function renderToolPublicationBoard() {
@@ -253,30 +383,14 @@
 
   function bindDomainSearch() {
     const input = document.getElementById('toolDomainSearchInput');
-    const buttons = [...document.querySelectorAll('[data-domain-key]')];
     if (!input) return;
 
     input.addEventListener('input', () => {
-      const query = (input.value || '').trim().toLowerCase();
-      buttons.forEach(button => {
-        const key = button.dataset.domainKey;
-        const item = toolDomainByKey[key] || {};
-        const haystack = [
-          item.title,
-          item.surface,
-          item.description,
-          ...(item.published_tools || []).map(tool => tool.name),
-          ...(item.planned_tools || []).map(tool => tool.name),
-        ].join(' ').toLowerCase();
-        button.style.display = !query || haystack.includes(query) ? '' : 'none';
-      });
+      renderDomainTree(input.value || '');
     });
   }
 
-  document.querySelectorAll('[data-domain-key]').forEach(button => {
-    button.addEventListener('click', () => renderToolDomain(button.dataset.domainKey));
-  });
-
+  renderDomainTree();
   bindDomainSearch();
   renderToolPublicationBoard();
   if (toolDomains.length) {
