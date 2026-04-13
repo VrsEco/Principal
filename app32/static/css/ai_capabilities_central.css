@@ -511,3 +511,5 @@
     text-align: left;
   }
 }
+
+.ai-cap-existing-list{display:grid;gap:.65rem;margin-top:.85rem}.ai-cap-existing-item{background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.8rem;display:grid;gap:.2rem}.ai-cap-existing-item span,.ai-cap-existing-item small{color:var(--text-secondary)}

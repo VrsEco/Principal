@@ -123,6 +123,7 @@ class AICapabilitiesCentralService:
             "rollout": cls._build_rollout(selected, company_id),
             "audit": {"events": cls._load_audit_events(getattr(selected, "id", None), company_id)},
             "sidebar": cls._build_sidebar(selected, company_name, grants),
+            "options": cls._build_options(company_id),
         }
 
     @classmethod
@@ -621,6 +622,48 @@ class AICapabilitiesCentralService:
                     {"label": "Grants ativos", "value": sum(1 for item in grants if item.is_enabled)},
                 ],
             },
+        }
+
+    @classmethod
+    def _build_options(cls, active_company_id: int | None) -> dict[str, Any]:
+        companies = Company.query.filter_by(is_active=True).order_by(Company.name.asc()).limit(100).all()
+        employees_query = Employee.query.filter_by(status="active")
+        if active_company_id:
+            employees_query = employees_query.filter_by(company_id=active_company_id)
+        employees = employees_query.order_by(Employee.name.asc()).limit(100).all()
+
+        try:
+            from models import Role
+
+            roles_query = Role.query
+            if active_company_id:
+                roles_query = roles_query.filter_by(company_id=active_company_id)
+            roles = roles_query.order_by(Role.title.asc()).limit(100).all()
+        except Exception:
+            roles = []
+
+        return {
+            "companies": [
+                {"id": item.id, "label": item.name, "selected": item.id == active_company_id}
+                for item in companies
+            ],
+            "users": [
+                {
+                    "id": item.user_id,
+                    "label": f"{item.name} · {item.department or 'sem departamento'}",
+                    "company_id": item.company_id,
+                }
+                for item in employees
+                if item.user_id
+            ],
+            "roles": [
+                {
+                    "id": item.id,
+                    "label": item.title,
+                    "company_id": item.company_id,
+                }
+                for item in roles
+            ],
         }
 
     @classmethod
