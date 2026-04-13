@@ -32,16 +32,24 @@
             <small>{{ catalog.summary.domains or 0 }} áreas catalogadas</small>
           </div>
         </div>
+        <label class="int-search">
+          <span>Buscar</span>
+          <input id="toolDomainSearchInput" type="search" placeholder="Domínio, surface ou tool">
+        </label>
         <div class="int-integrations-list" id="toolDomainsList">
           {% for item in catalog.domains %}
           <button type="button" class="int-list-item" data-domain-key="{{ item.key }}">
-            <div>
+            <div class="int-list-main">
               <strong>{{ item.title }}</strong>
-              <span class="muted">{{ item.surface or '-' }} · {{ item.summary.published_mcp_tools or 0 }} tools publicadas</span>
+              <span class="muted">{{ item.surface or '-' }} · {{ item.summary.published_mcp_tools or 0 }} publicadas · {{ item.planned_tools|length }} solicitadas</span>
+              <span class="int-list-meta">{{ item.description }}</span>
             </div>
-            <span class="int-badge {{ 'enabled' if item.status == 'canonical' else 'disabled' }}">
-              {{ 'Canônico' if item.status == 'canonical' else item.status or '-' }}
-            </span>
+            <div class="int-list-side">
+              <span class="int-badge {{ 'enabled' if item.status == 'canonical' else 'disabled' }}">
+                {{ 'Canônico' if item.status == 'canonical' else item.status or '-' }}
+              </span>
+              <span class="int-counter-badge">{{ (item.summary.published_mcp_tools or 0) + (item.planned_tools|length) }}</span>
+            </div>
           </button>
           {% endfor %}
         </div>
@@ -83,6 +91,14 @@
             <ul id="toolDomainMcp"><li>Selecione um domínio.</li></ul>
           </div>
           <div class="int-detail-block">
+            <span class="int-detail-label">Tools publicadas</span>
+            <ul id="toolDomainPublished"><li>Selecione um domínio.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Tools solicitadas</span>
+            <ul id="toolDomainPlanned"><li>Selecione um domínio.</li></ul>
+          </div>
+          <div class="int-detail-block">
             <span class="int-detail-label">Governança</span>
             <ul id="toolDomainGovernance"><li>Selecione um domínio.</li></ul>
           </div>
@@ -94,13 +110,13 @@
       <div class="int-card">
         <div class="int-card-head">
           <div>
-            <h2>Publicação de tools</h2>
-            <small>Catálogo consolidado</small>
+            <h2>Backlog aberto de tools</h2>
+            <small>AA.J.31 · status pela lista atual</small>
           </div>
           <a href="{{ catalog.discovery.rest_endpoint or '/api/configs/ai/mcp/tool-first-catalog' }}" class="btn btn-outline-primary btn-sm" target="_blank">API</a>
         </div>
         <div id="toolPublicationList" class="int-requests-list">
-          <div class="int-empty">Carregando catálogo...</div>
+          <div class="int-empty">Carregando solicitações...</div>
         </div>
       </div>
     </aside>
@@ -119,17 +135,23 @@
 .int-card-head h2 { margin:0; font-size:1rem; }
 .int-card-head small { color:var(--text-tertiary); font-weight:600; }
 .int-requests-list, .int-integrations-list { display:flex; flex-direction:column; gap:.6rem; max-height:70vh; overflow:auto; }
+.int-search { display:flex; flex-direction:column; gap:.4rem; margin:0 0 1rem; color:var(--text-secondary); font-weight:600; }
+.int-search input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); }
 .int-request-group { border:1px dashed var(--border); border-radius:12px; padding:.6rem .7rem; background:#fff; display:flex; flex-direction:column; gap:.5rem; }
 .int-request-title { font-size:.72rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); letter-spacing:.04em; }
 .int-request-item { border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; background:var(--surface-secondary); display:flex; flex-direction:column; gap:.2rem; }
 .int-request-item strong { font-size:.82rem; }
 .int-list-item { border:1px solid var(--border); border-radius:12px; padding:.7rem .8rem; background:var(--surface-secondary); display:flex; justify-content:space-between; gap:.6rem; text-align:left; cursor:pointer; transition:.15s ease; }
+.int-list-main { min-width:0; display:flex; flex-direction:column; gap:.15rem; }
+.int-list-side { display:flex; flex-direction:column; align-items:flex-end; gap:.35rem; flex-shrink:0; }
 .int-list-item strong { display:block; font-size:.86rem; }
 .int-list-item .muted { font-size:.75rem; color:var(--text-tertiary); }
+.int-list-meta { font-size:.74rem; color:var(--text-secondary); line-height:1.25; }
 .int-list-item:hover { border-color:rgba(59,130,246,.35); background:#f8fbff; }
 .int-badge { border-radius:999px; padding:.2rem .6rem; font-size:.7rem; font-weight:700; text-transform:uppercase; }
 .int-badge.enabled { background:#dcfce7; color:#166534; }
 .int-badge.disabled { background:#e5e7eb; color:#475569; }
+.int-counter-badge { display:inline-flex; align-items:center; justify-content:center; min-width:1.8rem; height:1.8rem; padding:0 .45rem; border-radius:999px; background:rgba(59,130,246,.12); color:#2563eb; font-size:.74rem; font-weight:800; }
 .int-main .int-card { min-height:520px; }
 .int-detail-grid { display:grid; gap:1rem; margin-top:1.2rem; }
 .int-detail-block { background:var(--surface-secondary); border:1px solid var(--border); border-radius:14px; padding:.9rem 1rem; }
@@ -174,46 +196,88 @@
       [...(item.mcp_contracts || []), ...(item.published_tools || []).map(tool => ({ name: tool.name, status: 'ready', notes: tool.description || tool.summary || '' }))],
       contract => `<li><strong>${contract.name || '-'}</strong> · ${contract.status || '-'}${contract.notes ? ` · ${contract.notes}` : ''}</li>`
     );
+    document.getElementById('toolDomainPublished').innerHTML = listMarkup(
+      item.published_tools,
+      tool => `<li><strong>${tool.name || '-'}</strong>${tool.risk ? ` · ${tool.risk}` : ''}</li>`
+    );
+    document.getElementById('toolDomainPlanned').innerHTML = listMarkup(
+      item.planned_tools,
+      tool => `<li><strong>${tool.name || '-'}</strong>${tool.status ? ` · ${tool.status}` : ''}</li>`
+    );
     document.getElementById('toolDomainGovernance').innerHTML = listMarkup(item.governance, rule => `<li>${rule}</li>`);
   }
 
-  function renderToolPublicationBoard() {
+  async function renderToolPublicationBoard() {
     const container = document.getElementById('toolPublicationList');
-    const published = [];
-    const planned = [];
+    try {
+      const response = await fetch('/api/integrations/tools/requests');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao carregar');
 
-    toolDomains.forEach(domain => {
-      (domain.published_tools || []).forEach(tool => published.push({ ...tool, domain_title: domain.title }));
-      (domain.planned_tools || []).forEach(tool => planned.push({ ...tool, domain_title: domain.title }));
-    });
+      const STATUS_LABELS = {
+        inbox: 'Caixa de Entrada',
+        waiting: 'Aguardando',
+        executing: 'Executando',
+        pending: 'Pendências',
+        suspended: 'Suspensos',
+        completed: 'Concluídos',
+      };
 
-    if (!published.length && !planned.length) {
-      container.innerHTML = '<div class="int-empty">Nenhuma tool catalogada.</div>';
-      return;
+      if (!data.requests || data.requests.length === 0) {
+        container.innerHTML = '<div class="int-empty">Nenhuma tool solicitada.</div>';
+        return;
+      }
+
+      const grouped = {};
+      data.requests.forEach(req => {
+        const status = req.status || 'pending';
+        grouped[status] = grouped[status] || [];
+        grouped[status].push(req);
+      });
+
+      container.innerHTML = Object.entries(grouped).map(([status, items]) => `
+        <div class="int-request-group">
+          <div class="int-request-title">${STATUS_LABELS[status] || status}</div>
+          ${items.map(tool => `
+            <div class="int-request-item">
+              <strong>${tool.title || '-'}</strong>
+              <span class="muted">${tool.domain_title || '-'} · ${tool.backlog_task_code || ('AA.J.31.' + (tool.backlog_task_id || '-'))}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    } catch (error) {
+      container.innerHTML = '<div class="int-empty">Falha ao carregar tools solicitadas.</div>';
     }
+  }
 
-    const groups = [
-      { title: 'Publicadas', items: published, meta: 'MCP pronto' },
-      { title: 'Planejadas', items: planned, meta: 'Backlog' },
-    ].filter(group => group.items.length);
+  function bindDomainSearch() {
+    const input = document.getElementById('toolDomainSearchInput');
+    const buttons = [...document.querySelectorAll('[data-domain-key]')];
+    if (!input) return;
 
-    container.innerHTML = groups.map(group => `
-      <div class="int-request-group">
-        <div class="int-request-title">${group.title}</div>
-        ${group.items.map(tool => `
-          <div class="int-request-item">
-            <strong>${tool.name || '-'}</strong>
-            <span class="muted">${tool.domain_title || '-'} · ${tool.risk || group.meta}</span>
-          </div>
-        `).join('')}
-      </div>
-    `).join('');
+    input.addEventListener('input', () => {
+      const query = (input.value || '').trim().toLowerCase();
+      buttons.forEach(button => {
+        const key = button.dataset.domainKey;
+        const item = toolDomainByKey[key] || {};
+        const haystack = [
+          item.title,
+          item.surface,
+          item.description,
+          ...(item.published_tools || []).map(tool => tool.name),
+          ...(item.planned_tools || []).map(tool => tool.name),
+        ].join(' ').toLowerCase();
+        button.style.display = !query || haystack.includes(query) ? '' : 'none';
+      });
+    });
   }
 
   document.querySelectorAll('[data-domain-key]').forEach(button => {
     button.addEventListener('click', () => renderToolDomain(button.dataset.domainKey));
   });
 
+  bindDomainSearch();
   renderToolPublicationBoard();
   if (toolDomains.length) {
     renderToolDomain(toolDomains[0].key);

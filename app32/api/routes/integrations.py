@@ -18,6 +18,7 @@ from services.integration_catalog_service import IntegrationCatalogService
 from services.integration_request_service import IntegrationRequestService
 from services.instagram_service import InstagramService
 from services.telegram_service import TelegramService
+from services.tool_backlog_service import ToolBacklogService
 from services.tool_first_catalog_service import ToolFirstCatalogService
 from services.whatsapp_service import WhatsAppService
 from utils.integration_settings import resolve_service_config
@@ -951,6 +952,23 @@ def list_integration_requests():
             "requests": IntegrationRequestService.list_requests(
                 company_id=getattr(company, "id", None),
                 limit=request.args.get("limit", default=20, type=int),
+                requester_user_id=int(current_user.id),
+                requester_name=getattr(current_user, "name", None),
+            ),
+        }
+    )
+
+
+@integrations_bp.route("/api/integrations/tools/requests", methods=["GET"])
+@login_required
+def list_tool_requests():
+    company = _safe_active_company()
+    return jsonify(
+        {
+            "success": True,
+            "requests": ToolBacklogService.list_requests(
+                active_company=company,
+                limit=request.args.get("limit", default=100, type=int),
                 requester_user_id=int(current_user.id),
                 requester_name=getattr(current_user, "name", None),
             ),
