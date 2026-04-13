@@ -1,10 +1,18 @@
 from flask import Blueprint, render_template, jsonify, request, abort, current_app, redirect, url_for
 from flask_login import login_required, current_user
+from pydantic import ValidationError
 from models import db, AIAgent, AgentMessage
 from services.ai_configuration_pages_service import AIConfigurationPagesService
+from services.ai_capabilities_central_service import AICapabilitiesCentralService
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
 from services.tool_first_catalog_service import ToolFirstCatalogService
+from schemas.ai_capabilities import (
+    AICapabilityAuditLogCreateSchema,
+    AICapabilityCompanySettingsUpsertSchema,
+    AICapabilityGrantUpsertSchema,
+    AICapabilityRolloutUpdateSchema,
+)
 from utils.permissions import permission_required, has_company_full_access, is_platform_admin
 
 configs_bp = Blueprint('configs', __name__)
@@ -308,7 +316,17 @@ def ai_permissions_page():
     company_id = getattr(active_company, 'id', None)
     if not _can_access_ai_mcp_console(company_id):
         abort(403)
-    return _render_ai_config_page("permissions", active_company)
+    try:
+        state = AICapabilitiesCentralService.build_frontend_state(active_company)
+    except Exception:
+        current_app.logger.exception("Falha ao montar a Central de Capacidades de IA.")
+        return _render_ai_config_page("permissions", active_company)
+
+    return render_template(
+        'modules/operations/ai_capabilities_central.html',
+        active_company=active_company,
+        state=state,
+    )
 
 
 @configs_bp.route('/configs/ai/monitoring')
@@ -429,3 +447,90 @@ def get_tool_first_catalog():
             include_backlog=include_backlog,
         ),
     })
+
+
+@configs_bp.route('/api/configs/ai/capabilities/frontend-state', methods=['GET'])
+@login_required
+def get_ai_capabilities_frontend_state():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    return jsonify({
+        "success": True,
+        "state": AICapabilitiesCentralService.build_frontend_state(active_company),
+    })
+
+
+@configs_bp.route('/api/configs/ai/capabilities/grants', methods=['POST'])
+@login_required
+def upsert_ai_capability_grant():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        payload = AICapabilityGrantUpsertSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        grant = AICapabilitiesCentralService.upsert_grant(payload, actor_user_id=current_user.id)
+        return jsonify({"success": True, "grant": grant.to_dict()})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@configs_bp.route('/api/configs/ai/capabilities/company-settings', methods=['POST'])
+@login_required
+def upsert_ai_capability_company_settings():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        payload = AICapabilityCompanySettingsUpsertSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        record = AICapabilitiesCentralService.upsert_company_settings(payload, actor_user_id=current_user.id)
+        return jsonify({"success": True, "company_settings": record.to_dict()})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@configs_bp.route('/api/configs/ai/capabilities/rollout', methods=['POST'])
+@login_required
+def update_ai_capability_rollout():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        payload = AICapabilityRolloutUpdateSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        capability = AICapabilitiesCentralService.update_rollout(payload, actor_user_id=current_user.id)
+        return jsonify({"success": True, "capability": capability.to_dict()})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@configs_bp.route('/api/configs/ai/capabilities/audit-log', methods=['POST'])
+@login_required
+def create_ai_capability_audit_log():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        payload = AICapabilityAuditLogCreateSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        log = AICapabilitiesCentralService.record_audit_event(
+            capability_key=payload["capability_key"],
+            event_type=payload["event_type"],
+            result=payload["result"],
+            company_id=payload.get("company_id"),
+            user_id=payload.get("user_id"),
+            actor_user_id=current_user.id,
+            channel=payload.get("channel"),
+            surface=payload.get("surface"),
+            detail=payload.get("detail"),
+            payload=payload.get("payload") or {},
+        )
+        return jsonify({"success": True, "audit_log": log.to_dict()})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400

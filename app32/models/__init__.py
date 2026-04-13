@@ -80,6 +80,12 @@ from .agent_menu import AgentMenuOption, AgentMenuSession
 from .workflow_gap import WorkflowGapCandidate
 from .workflow_usage import WorkflowExecutionLog
 from .integration_request import IntegrationRequest
+from .ai_capability import (
+    AICapability,
+    AICapabilityGrant,
+    AICapabilityCompanySetting,
+    AICapabilityAuditLog,
+)
 from .work_journey import (
     WorkJourneyBlock,
     WorkJourneyAgenda,
@@ -114,6 +120,7 @@ __all__ = [
     'UiCatalog', 'UserLog',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog', 'IntegrationRequest',
+    'AICapability', 'AICapabilityGrant', 'AICapabilityCompanySetting', 'AICapabilityAuditLog',
     'WorkJourneyBlock', 'WorkJourneyAgenda', 'WorkJourneyAgendaItem', 'WorkJourneyRule', 'WorkJourneyItem', 'WorkJourneyAbsenceRequest', 'WorkJourneyTransferRequest',
     'IncentiveRuleSet', 'IncentiveRule',
     'IncentiveGovernabilityMatrix', 'IncentiveCalculation',
