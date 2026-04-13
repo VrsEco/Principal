@@ -131,8 +131,8 @@
       <div class="card-header modal-header-block">
         <div class="modal-title-block">
           <span class="int-eyebrow">Assistente</span>
-          <h3 class="text-h3 mb-0">Novo Workflow</h3>
-          <small class="text-secondary">Coleta os dados e abre um card no backlog AA.J.31.</small>
+          <h3 class="text-h3 mb-0">Solicitar novo Workflow</h3>
+          <small class="text-secondary">Coleta o briefing que a IA precisa para especificar o workflow com segurança antes da implementação.</small>
         </div>
         <button class="btn btn-icon btn-ghost modal-close" type="button" onclick="closeWorkflowRequestModal()"><i class="fas fa-times"></i></button>
       </div>
@@ -158,15 +158,80 @@
             </div>
             <div class="vs-control vs-control-wide">
               <label>Objetivo de negócio</label>
-              <textarea class="vs-input" name="objective" rows="4" required></textarea>
+              <textarea class="vs-input" name="objective" rows="3" required placeholder="O que esse workflow precisa entregar para o negócio?"></textarea>
             </div>
             <div class="vs-control vs-control-wide">
-              <label>Dados / parâmetros / etapas</label>
-              <textarea class="vs-input" name="data_summary" rows="4" required></textarea>
+              <label>Problema / contexto</label>
+              <textarea class="vs-input" name="problem_statement" rows="3" required placeholder="Qual problema operacional este workflow resolve?"></textarea>
+            </div>
+            <div class="vs-control">
+              <label>Quem usa</label>
+              <input type="text" class="vs-input" name="target_users" required placeholder="Ex.: Sapiens, gestores, financeiro">
+            </div>
+            <div class="vs-control">
+              <label>Canais desejados</label>
+              <input type="text" class="vs-input" name="desired_channels" required placeholder="Ex.: web, whatsapp, telegram">
+            </div>
+            <div class="vs-control">
+              <label>Perfil de execução</label>
+              <select class="vs-input" name="execution_profile">
+                <option value="action">Executa ação</option>
+                <option value="query">Só consulta</option>
+                <option value="hybrid">Híbrido</option>
+              </select>
+            </div>
+            <div class="vs-control">
+              <label>Sensibilidade</label>
+              <select class="vs-input" name="sensitivity_level">
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+                <option value="critical">Crítica</option>
+                <option value="low">Baixa</option>
+              </select>
+            </div>
+            <div class="vs-control">
+              <label>Exige confirmação humana?</label>
+              <select class="vs-input" name="requires_human_confirmation">
+                <option value="yes">Sim</option>
+                <option value="unknown">A validar</option>
+                <option value="no">Não</option>
+              </select>
+            </div>
+            <div class="vs-control">
+              <label>Área responsável</label>
+              <input type="text" class="vs-input" name="responsible_area" placeholder="Ex.: Operações, Financeiro, RH">
+            </div>
+            <div class="vs-control">
+              <label>Frequência de uso</label>
+              <input type="text" class="vs-input" name="usage_frequency" placeholder="Ex.: diária, semanal, sob demanda">
             </div>
             <div class="vs-control vs-control-wide">
-              <label>Observações</label>
-              <textarea class="vs-input" name="notes" rows="3"></textarea>
+              <label>Resultado esperado</label>
+              <textarea class="vs-input" name="expected_result" rows="3" required placeholder="O que a IA deve entregar ao final?"></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Exemplos reais de solicitação do usuário</label>
+              <textarea class="vs-input" name="user_examples" rows="4" required placeholder="Ex.: “quero concluir o fechamento da empresa X”, “me mostre o que falta para...”"></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Dados de entrada conhecidos</label>
+              <textarea class="vs-input" name="known_inputs" rows="3" placeholder="Quais dados o usuário normalmente já informa?"></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Dados / parâmetros / etapas esperadas</label>
+              <textarea class="vs-input" name="data_summary" rows="4" placeholder="Quais parâmetros, validações ou etapas a IA deve considerar?"></textarea>
+            </div>
+            <div class="vs-control">
+              <label>Sistemas envolvidos</label>
+              <input type="text" class="vs-input" name="systems_involved" placeholder="Ex.: ERP, Financeiro, MCP, PostgreSQL">
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Dependências / restrições</label>
+              <textarea class="vs-input" name="dependencies" rows="2" placeholder="Aprovação, credencial, política, janela operacional, etc."></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Observações adicionais</label>
+              <textarea class="vs-input" name="notes" rows="3" placeholder="Qualquer detalhe importante para a IA especificar melhor."></textarea>
             </div>
           </div>
           <input type="hidden" name="source_channel" value="ui_workflows_catalog">

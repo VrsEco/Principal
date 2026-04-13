@@ -15,7 +15,20 @@ class WorkflowRequestPayload(BaseModel):
     title: str = Field(min_length=3, max_length=255)
     business_domain: str = Field(min_length=2, max_length=120)
     objective: str = Field(min_length=10, max_length=3000)
-    data_summary: str = Field(min_length=5, max_length=3000)
+    problem_statement: str = Field(min_length=10, max_length=3000)
+    target_users: str = Field(min_length=3, max_length=500)
+    desired_channels: str = Field(min_length=3, max_length=500)
+    expected_result: str = Field(min_length=10, max_length=3000)
+    user_examples: str = Field(min_length=10, max_length=3000)
+    known_inputs: str | None = Field(default=None, max_length=3000)
+    systems_involved: str | None = Field(default=None, max_length=1000)
+    dependencies: str | None = Field(default=None, max_length=1000)
+    responsible_area: str | None = Field(default=None, max_length=255)
+    usage_frequency: str | None = Field(default=None, max_length=255)
+    execution_profile: str = Field(default="action", pattern="^(query|action|hybrid)$")
+    sensitivity_level: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
+    requires_human_confirmation: str = Field(default="yes", pattern="^(yes|no|unknown)$")
+    data_summary: str | None = Field(default=None, max_length=3000)
     source_channel: str = Field(default="ui_workflows_catalog", min_length=2, max_length=64)
     urgency: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
     notes: str | None = Field(default=None, max_length=3000)
@@ -31,6 +44,14 @@ class WorkflowBacklogService:
         "suspended": "Suspensos",
         "completed": "Concluídos",
     }
+
+    @staticmethod
+    def _label_yes_no_unknown(value: str) -> str:
+        return {
+            "yes": "Sim",
+            "no": "Não",
+            "unknown": "A validar",
+        }.get(str(value or "").strip().lower(), "A validar")
 
     @classmethod
     def _list_manual_request_tasks(cls) -> list[ProjectTask]:
@@ -120,22 +141,63 @@ class WorkflowBacklogService:
     ) -> dict[str, Any]:
         payload = WorkflowRequestPayload.model_validate(raw_payload)
         description_lines = [
-            "Solicitação estruturada de novo Workflow para catálogo corporativo.",
+            "Solicitação estruturada de novo Workflow para especificação assistida por IA.",
             "",
             f"Workflow: {payload.title}",
             f"Domínio: {payload.business_domain}",
             f"Solicitante: {requester_name or f'User {requester_user_id}'}",
             f"Company ID: {company_id if company_id is not None else '-'}",
             f"Urgência: {payload.urgency}",
+            f"Perfil de execução: {payload.execution_profile}",
+            f"Sensibilidade: {payload.sensitivity_level}",
+            f"Confirmação humana: {cls._label_yes_no_unknown(payload.requires_human_confirmation)}",
             "",
             "Objetivo de negócio:",
             payload.objective,
             "",
-            "Dados / parâmetros / etapas esperadas:",
-            payload.data_summary,
+            "Problema a resolver:",
+            payload.problem_statement,
+            "",
+            "Quem usa / solicitante-alvo:",
+            payload.target_users,
+            "",
+            "Canais desejados:",
+            payload.desired_channels,
+            "",
+            "Resultado esperado:",
+            payload.expected_result,
+            "",
+            "Exemplos reais de solicitação do usuário:",
+            payload.user_examples,
         ]
+        if payload.known_inputs:
+            description_lines.extend(["", "Dados de entrada já conhecidos:", payload.known_inputs])
+        if payload.data_summary:
+            description_lines.extend(["", "Dados / parâmetros / etapas esperadas:", payload.data_summary])
+        if payload.systems_involved:
+            description_lines.extend(["", "Sistemas / integrações envolvidos:", payload.systems_involved])
+        if payload.dependencies:
+            description_lines.extend(["", "Dependências / restrições conhecidas:", payload.dependencies])
+        if payload.responsible_area:
+            description_lines.extend(["", "Área responsável:", payload.responsible_area])
+        if payload.usage_frequency:
+            description_lines.extend(["", "Frequência de uso:", payload.usage_frequency])
         if payload.notes:
             description_lines.extend(["", "Observações:", payload.notes])
+        description_lines.extend(
+            [
+                "",
+                "Checklist esperado para especificação da IA:",
+                "- propor action_key",
+                "- propor domínio canônico",
+                "- identificar canais",
+                "- identificar contratos API/MCP",
+                "- identificar tools necessárias",
+                "- classificar permissões e human gate",
+                "- listar configurações e dependências",
+                "- apontar dúvidas/lacunas antes da implementação",
+            ]
+        )
 
         result, error = ProjectTaskService.create_project_task(
             project_code=cls.BACKLOG_PROJECT_CODE,
@@ -151,6 +213,10 @@ class WorkflowBacklogService:
                 "source_channel=workflow_request_ui\n"
                 f"business_domain={payload.business_domain}\n"
                 f"urgency={payload.urgency}\n"
+                f"execution_profile={payload.execution_profile}\n"
+                f"sensitivity_level={payload.sensitivity_level}\n"
+                f"requires_human_confirmation={payload.requires_human_confirmation}\n"
+                f"desired_channels={payload.desired_channels}\n"
                 f"requester_user_id={requester_user_id}"
             ),
         )

@@ -33,6 +33,12 @@ def test_workflow_backlog_service_creates_manual_request(monkeypatch):
             "title": "fechamento_financeiro_guiado",
             "business_domain": "Financeiro",
             "objective": "Conduzir fechamento com coleta, validação e confirmação.",
+            "problem_statement": "Hoje o fechamento depende de idas e vindas manuais e pode perder etapas críticas.",
+            "target_users": "Financeiro e Sapiens",
+            "desired_channels": "web, whatsapp",
+            "expected_result": "Coleta guiada, checklist validado e execução segura do fechamento.",
+            "user_examples": "Quero fechar o financeiro da empresa X do período Y; valide se está tudo pronto.",
+            "known_inputs": "empresa, período",
             "data_summary": "empresa, período, checkpoints, aprovações",
         },
         company_id=31,
@@ -43,6 +49,8 @@ def test_workflow_backlog_service_creates_manual_request(monkeypatch):
     assert created["stage"] == "inbox"
     assert payload["title"] == "fechamento_financeiro_guiado"
     assert payload["backlog_task_code"] == "AA.J.31.1001"
+    assert "desired_channels=web, whatsapp" in created["notes"]
+    assert "Checklist esperado para especificação da IA" in created["description"]
 
 
 def test_workflow_backlog_service_lists_existing_requests(monkeypatch):
