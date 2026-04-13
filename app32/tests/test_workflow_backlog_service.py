@@ -50,6 +50,7 @@ def test_workflow_backlog_service_creates_manual_request(monkeypatch):
     assert payload["title"] == "fechamento_financeiro_guiado"
     assert payload["backlog_task_code"] == "AA.J.31.1001"
     assert "desired_channels=web, whatsapp" in created["notes"]
+    assert "suggested_action_key=" in created["notes"]
     assert "Checklist esperado para especificação da IA" in created["description"]
 
 

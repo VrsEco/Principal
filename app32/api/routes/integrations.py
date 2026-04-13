@@ -22,6 +22,7 @@ from services.tool_backlog_service import ToolBacklogService
 from services.tool_first_catalog_service import ToolFirstCatalogService
 from services.whatsapp_service import WhatsAppService
 from services.workflow_backlog_service import WorkflowBacklogService
+from services.workflow_spec_draft_service import WorkflowSpecDraftService
 from services.workflow_workspace_service import WorkflowWorkspaceService
 from utils.integration_settings import resolve_service_config
 
@@ -1057,6 +1058,17 @@ def create_workflow_request():
         return jsonify({"success": False, "error": str(exc)}), 400
 
     return jsonify({"success": True, "request": record}), 201
+
+
+@integrations_bp.route("/api/integrations/workflows/spec-draft", methods=["POST"])
+@login_required
+def build_workflow_spec_draft():
+    payload = request.get_json(silent=True) or {}
+    try:
+        draft = WorkflowSpecDraftService.build_draft(payload)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    return jsonify({"success": True, "spec_draft": draft})
 
 
 @integrations_bp.route("/api/integrations/requests", methods=["POST"])

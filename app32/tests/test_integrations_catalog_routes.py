@@ -271,6 +271,35 @@ def test_create_workflow_request_uses_current_user_context(monkeypatch):
     assert captured["requester_user_id"] == 9
 
 
+def test_build_workflow_spec_draft_route(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "current_user", SimpleNamespace(id=9, name="Fabiano"))
+    monkeypatch.setattr(
+        integrations_route.WorkflowSpecDraftService,
+        "build_draft",
+        lambda payload: {"suggested_action_key": "financeiro.execute_fechamento", "channels": ["web"]},
+    )
+
+    response = app.test_client().post(
+        "/api/integrations/workflows/spec-draft",
+        json={
+            "title": "Fechamento Financeiro Guiado",
+            "business_domain": "Financeiro",
+            "objective": "Conduzir fechamento com segurança.",
+            "problem_statement": "Hoje há retrabalho e risco operacional.",
+            "target_users": "Financeiro",
+            "desired_channels": "web",
+            "expected_result": "Fechamento concluído com checklist.",
+            "user_examples": "Quero fechar o financeiro da empresa X.",
+        },
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["spec_draft"]["suggested_action_key"] == "financeiro.execute_fechamento"
+
+
 def test_create_integration_request_uses_active_company_and_current_user(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))

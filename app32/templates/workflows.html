@@ -234,8 +234,13 @@
               <textarea class="vs-input" name="notes" rows="3" placeholder="Qualquer detalhe importante para a IA especificar melhor."></textarea>
             </div>
           </div>
+          <div class="int-detail-block mt-3" id="workflowSpecDraftPreview">
+            <span class="int-detail-label">Proposta técnica inicial da IA</span>
+            <div id="workflowSpecDraftBody" class="muted">Preencha o briefing e clique em <strong>Gerar proposta técnica</strong>.</div>
+          </div>
           <input type="hidden" name="source_channel" value="ui_workflows_catalog">
           <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-primary" id="previewWorkflowSpecDraft">Gerar proposta técnica</button>
             <button type="button" class="btn btn-outline-secondary" onclick="closeWorkflowRequestModal()">Cancelar</button>
             <button type="submit" class="btn btn-primary">Registrar solicitação</button>
           </div>
@@ -486,6 +491,8 @@
     if (!modal) return;
     modal.classList.add('show');
     modal.style.display = 'flex';
+    const preview = document.getElementById('workflowSpecDraftBody');
+    if (preview) preview.innerHTML = 'Preencha o briefing e clique em <strong>Gerar proposta técnica</strong>.';
   }
 
   function closeWorkflowRequestModal() {
@@ -495,7 +502,43 @@
     modal.style.display = 'none';
   }
 
+  function renderWorkflowSpecDraft(draft) {
+    const body = document.getElementById('workflowSpecDraftBody');
+    if (!body) return;
+    const list = (items, formatter) => (items || []).length ? `<ul>${items.map(formatter).join('')}</ul>` : '<div class="muted">Não informado.</div>';
+    body.innerHTML = `
+      <div><strong>Action key sugerida:</strong> ${draft.suggested_action_key || '-'}</div>
+      <div><strong>Domínio sugerido:</strong> ${draft.suggested_domain_key || '-'}</div>
+      <div><strong>Canais:</strong> ${(draft.channels || []).join(', ') || '-'}</div>
+      <div><strong>Perfil:</strong> ${draft.execution_profile || '-'} · <strong>Sensibilidade:</strong> ${draft.sensitivity_level || '-'}</div>
+      <div style="margin-top:.6rem;"><strong>Tools sugeridas</strong>${list(draft.tools, item => `<li>${item.name} <span class="muted">· ${item.status || '-'} · ${item.note || ''}</span></li>`)}</div>
+      <div style="margin-top:.6rem;"><strong>API / MCP sugeridos</strong>${list(draft.api_mcp_contracts, item => `<li>${item.name} <span class="muted">· ${item.kind || '-'} · ${item.status || '-'} · ${item.note || ''}</span></li>`)}</div>
+      <div style="margin-top:.6rem;"><strong>Perguntas em aberto</strong>${list(draft.open_questions, item => `<li>${item}</li>`)}</div>
+    `;
+  }
+
+  async function previewWorkflowSpecDraft() {
+    const form = document.getElementById('workflowRequestForm');
+    if (!form) return;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const body = document.getElementById('workflowSpecDraftBody');
+    if (body) body.innerHTML = 'Gerando proposta técnica inicial...';
+    try {
+      const response = await fetch('/api/integrations/workflows/spec-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Falha ao gerar proposta técnica.');
+      renderWorkflowSpecDraft(data.spec_draft || {});
+    } catch (error) {
+      if (body) body.textContent = error.message || 'Falha ao gerar proposta técnica.';
+    }
+  }
+
   document.getElementById('openWorkflowRequestAssistant')?.addEventListener('click', openWorkflowRequestModal);
+  document.getElementById('previewWorkflowSpecDraft')?.addEventListener('click', previewWorkflowSpecDraft);
   document.getElementById('workflowRequestForm')?.addEventListener('submit', async event => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
