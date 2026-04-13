@@ -164,6 +164,37 @@ def test_list_tool_requests_uses_current_user_context(monkeypatch):
     assert captured["requester_name"] == "Fabiano"
 
 
+def test_create_tool_request_uses_current_user_context(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "current_user", SimpleNamespace(id=9, name="Fabiano"))
+    captured = {}
+    monkeypatch.setattr(
+        integrations_route.ToolBacklogService,
+        "create_request",
+        lambda payload, **kwargs: captured.update({"payload": payload, **kwargs}) or {"id": "manual:999", "backlog_task_code": "AA.J.31.999"},
+    )
+
+    response = app.test_client().post(
+        "/api/integrations/tools/requests",
+        json={
+            "title": "calculate_budget_variance",
+            "business_domain": "Financeiro",
+            "objective": "Comparar orçamento e realizado por centro de resultado.",
+            "data_summary": "budget_id, period, cost_center_id",
+            "source_channel": "ui_tools_catalog",
+        },
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 201
+    assert payload["success"] is True
+    assert payload["request"]["backlog_task_code"] == "AA.J.31.999"
+    assert captured["company_id"] == 31
+    assert captured["requester_user_id"] == 9
+    assert captured["requester_name"] == "Fabiano"
+
+
 def test_create_integration_request_uses_active_company_and_current_user(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))

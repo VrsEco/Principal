@@ -976,6 +976,24 @@ def list_tool_requests():
     )
 
 
+@integrations_bp.route("/api/integrations/tools/requests", methods=["POST"])
+@login_required
+def create_tool_request():
+    company = _safe_active_company()
+    payload = request.get_json(silent=True) or {}
+    try:
+        record = ToolBacklogService.create_request(
+            payload,
+            company_id=getattr(company, "id", None),
+            requester_user_id=int(current_user.id),
+            requester_name=getattr(current_user, "name", None),
+        )
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    return jsonify({"success": True, "request": record}), 201
+
+
 @integrations_bp.route("/api/integrations/requests", methods=["POST"])
 @login_required
 def create_integration_request():

@@ -32,6 +32,7 @@
             <small>{{ catalog.summary.domains or 0 }} áreas catalogadas</small>
           </div>
         </div>
+        <button type="button" class="btn btn-primary btn-sm w-100" id="openToolRequestAssistant">Solicitar nova Tool</button>
         <label class="int-search">
           <span>Buscar</span>
           <input id="toolDomainSearchInput" type="search" placeholder="Domínio, surface ou tool">
@@ -109,6 +110,61 @@
       </div>
     </aside>
   </section>
+</div>
+
+<div id="toolRequestModal" class="modal fade" style="z-index: 25000;">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="card test-modal-content shadow-lg w-100">
+      <div class="card-header modal-header-block">
+        <div class="modal-title-block">
+          <span class="int-eyebrow">Assistente</span>
+          <h3 class="text-h3 mb-0">Nova Tool</h3>
+          <small class="text-secondary">Coleta os dados e abre um card no backlog AA.J.31.</small>
+        </div>
+        <button class="btn btn-icon btn-ghost modal-close" type="button" onclick="closeToolRequestModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="card-body">
+        <form id="toolRequestForm" class="integration-request-form">
+          <div class="vs-form-grid">
+            <div class="vs-control">
+              <label>Nome da tool</label>
+              <input type="text" class="vs-input" name="title" required>
+            </div>
+            <div class="vs-control">
+              <label>Domínio</label>
+              <input type="text" class="vs-input" name="business_domain" required>
+            </div>
+            <div class="vs-control">
+              <label>Urgência</label>
+              <select class="vs-input" name="urgency">
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+                <option value="critical">Crítica</option>
+                <option value="low">Baixa</option>
+              </select>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Objetivo de negócio</label>
+              <textarea class="vs-input" name="objective" rows="4" required></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Dados / parâmetros esperados</label>
+              <textarea class="vs-input" name="data_summary" rows="4" required></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Observações</label>
+              <textarea class="vs-input" name="notes" rows="3"></textarea>
+            </div>
+          </div>
+          <input type="hidden" name="source_channel" value="ui_tools_catalog">
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary" onclick="closeToolRequestModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Registrar solicitação</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -205,6 +261,20 @@
 .int-detail-block strong { font-size:.95rem; }
 .int-empty { text-align:center; color:var(--text-tertiary); padding:1.2rem .6rem; }
 .muted { color:var(--text-secondary); }
+.modal { display:none; }
+.modal.show { display:flex; position:fixed; inset:0; align-items:center; justify-content:center; padding:1.5rem; background:rgba(15,23,42,.45); }
+.modal-dialog { width:100%; max-width:840px; margin:0 auto; }
+.test-modal-content { border-radius:22px; overflow:hidden; }
+.modal-header-block { background:linear-gradient(180deg, rgba(59,130,246,.12), rgba(255,255,255,0)); padding:1.4rem 1.6rem 1.2rem; border-bottom:1px solid var(--border); position:relative; }
+.modal-title-block { display:flex; flex-direction:column; gap:.35rem; }
+.modal-title-block h3 { font-size:1.2rem; }
+.modal-close { position:absolute; top:1rem; right:1rem; }
+.card-body { padding:1.4rem 1.6rem 1.6rem; }
+.vs-form-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:1rem; }
+.vs-control label { display:block; font-size:.72rem; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; }
+.vs-input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.65rem .8rem; font-size:.9rem; color:var(--text-primary); width:100%; transition:all .15s ease; }
+.vs-input:focus { border-color:var(--primary); outline:none; box-shadow:0 0 0 3px rgba(59,130,246,.2); background:var(--surface); }
+.vs-control-wide { grid-column: span 3; }
 @media (max-width: 1200px) {
   .int-shell { grid-template-columns: minmax(260px, 300px) minmax(0,1fr); }
   .int-shell .int-rail:last-child { order:3; }
@@ -214,6 +284,9 @@
   .int-header { flex-direction:column; }
   .int-shell { grid-template-columns:1fr; }
   .int-rail { position:static; }
+  .modal-dialog { max-width:95vw; }
+  .vs-form-grid { grid-template-columns:1fr; }
+  .vs-control-wide { grid-column: span 1; }
 }
 </style>
 
@@ -381,6 +454,20 @@
     }
   }
 
+  function openToolRequestModal() {
+    const modal = document.getElementById('toolRequestModal');
+    if (!modal) return;
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+  }
+
+  function closeToolRequestModal() {
+    const modal = document.getElementById('toolRequestModal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+  }
+
   function bindDomainSearch() {
     const input = document.getElementById('toolDomainSearchInput');
     if (!input) return;
@@ -396,5 +483,29 @@
   if (toolDomains.length) {
     renderToolDomain(toolDomains[0].key);
   }
+
+  document.getElementById('openToolRequestAssistant')?.addEventListener('click', openToolRequestModal);
+  document.getElementById('toolRequestForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    try {
+      const response = await fetch('/api/integrations/tools/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Falha ao registrar solicitação.');
+      }
+      form.reset();
+      closeToolRequestModal();
+      await renderToolPublicationBoard();
+      window.alert('Solicitação registrada com sucesso no backlog AA.J.31.');
+    } catch (error) {
+      window.alert(error.message || 'Falha ao registrar solicitação.');
+    }
+  });
 </script>
 {% endblock %}
