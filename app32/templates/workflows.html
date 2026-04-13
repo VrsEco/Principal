@@ -81,6 +81,26 @@
             <ul id="workflowGaps"><li>Selecione um workflow.</li></ul>
           </div>
           <div class="int-detail-block">
+            <span class="int-detail-label">Canais</span>
+            <ul id="workflowChannels"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">API / MCP</span>
+            <ul id="workflowApiMcp"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Tools</span>
+            <ul id="workflowTools"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Permissões</span>
+            <ul id="workflowPermissions"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Configurações</span>
+            <ul id="workflowConfigurations"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
             <span class="int-detail-label">Workflow em foco</span>
             <div id="workflowFocusCard" class="muted">Selecione um workflow na árvore para destacar aqui.</div>
           </div>
@@ -243,6 +263,17 @@
     return (items || []).length ? items.map(formatter).join('') : '<li>Não informado.</li>';
   }
 
+  function contractListMarkup(items) {
+    return listMarkup(items, item => `
+      <li>
+        <strong>${item.name || '-'}</strong>
+        ${item.kind ? ` · ${item.kind}` : ''}
+        ${item.status ? ` · ${item.status}` : ''}
+        ${item.note ? `<div class="muted">${item.note}</div>` : ''}
+      </li>
+    `);
+  }
+
   function renderWorkflowDetail(code) {
     const item = workflowByCode[code];
     if (!item) return;
@@ -263,6 +294,11 @@
       <li><strong>Gaps:</strong> ${item.gaps?.count || 0}</li>
       <li><strong>Último gap:</strong> ${item.gaps?.last_gap_at || '-'}</li>
     `;
+    document.getElementById('workflowChannels').innerHTML = contractListMarkup(item.channels);
+    document.getElementById('workflowApiMcp').innerHTML = contractListMarkup(item.api_mcp_contracts);
+    document.getElementById('workflowTools').innerHTML = contractListMarkup(item.tools);
+    document.getElementById('workflowPermissions').innerHTML = contractListMarkup(item.permissions);
+    document.getElementById('workflowConfigurations').innerHTML = contractListMarkup(item.configurations);
     const displayCode = item.display_code || item.code || '-';
     document.getElementById('workflowFocusCard').innerHTML = `
       <strong>${item.title || '-'}</strong><br>

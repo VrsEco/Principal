@@ -87,3 +87,8 @@ def test_build_workflow_catalog_aggregates_usage_and_gaps(monkeypatch):
     assert {'route_source': 'lexical', 'count': 1} in item['usage']['by_route_source']
     assert item['gaps']['count'] == 1
     assert item['parent_code'] == '1'
+    assert {channel['name'] for channel in item['channels']} == {'telegram', 'whatsapp'}
+    assert item['api_mcp_contracts'][0]['status'] == 'planned'
+    assert item['tools'][0]['status'] == 'planned'
+    assert any(contract['name'] == 'Escopo tenant' for contract in item['permissions'])
+    assert any(contract['name'] == 'Parâmetros operacionais' for contract in item['configurations'])
