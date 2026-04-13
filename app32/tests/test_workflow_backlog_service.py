@@ -60,6 +60,10 @@ def test_workflow_backlog_service_lists_existing_requests(monkeypatch):
             )
         ],
     )
+    monkeypatch.setattr(
+        "services.workflow_backlog_service.WorkflowBacklogService._list_gap_candidates",
+        lambda active_company=None: [],
+    )
 
     items = WorkflowBacklogService.list_requests(requester_user_id=9, requester_name="Fabiano")
 
@@ -67,3 +71,32 @@ def test_workflow_backlog_service_lists_existing_requests(monkeypatch):
     assert items[0]["title"] == "followup_operacional"
     assert items[0]["status"] == "executing"
     assert items[0]["business_domain"] == "Rotina"
+
+
+def test_workflow_backlog_service_includes_gap_candidates(monkeypatch):
+    monkeypatch.setattr(
+        "services.workflow_backlog_service.WorkflowBacklogService._list_manual_request_tasks",
+        lambda: [],
+    )
+    monkeypatch.setattr(
+        "services.workflow_backlog_service.WorkflowBacklogService._list_gap_candidates",
+        lambda active_company=None: [
+            SimpleNamespace(
+                id=11,
+                suggested_flow_name="followup_financeiro",
+                title="[FLOW GAP][web] followup financeiro",
+                normalized_intent="followup financeiro",
+                app_task_id=777,
+                app_task_code="AA.J.31.777",
+                created_at=None,
+                updated_at=None,
+                task=SimpleNamespace(stage="pending"),
+            )
+        ],
+    )
+
+    items = WorkflowBacklogService.list_requests(requester_user_id=9, requester_name="Fabiano")
+
+    assert len(items) == 1
+    assert items[0]["source_kind"] == "gap_candidate"
+    assert items[0]["backlog_task_code"] == "AA.J.31.777"

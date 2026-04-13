@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from models.project import ProjectTask
+from models.workflow_gap import WorkflowGapCandidate
 from services.project_task_service import ProjectTaskService
 
 
@@ -47,6 +48,18 @@ class WorkflowBacklogService:
         )
 
     @classmethod
+    def _list_gap_candidates(cls, active_company: Any | None = None) -> list[WorkflowGapCandidate]:
+        company_id = getattr(active_company, "id", None)
+        query = WorkflowGapCandidate.query.filter(WorkflowGapCandidate.app_task_id.isnot(None))
+        if company_id is not None:
+            query = query.filter(
+                (WorkflowGapCandidate.company_id == company_id)
+                | (WorkflowGapCandidate.company_id.is_(None))
+            )
+        query = query.filter(WorkflowGapCandidate.status != "resolved")
+        return query.order_by(WorkflowGapCandidate.updated_at.desc(), WorkflowGapCandidate.id.desc()).all()
+
+    @classmethod
     def _serialize_manual_request_task(cls, task: ProjectTask) -> dict[str, Any]:
         stage = str(getattr(task, "stage", None) or "inbox").strip().lower()
         notes = getattr(task, "notes", None) or ""
@@ -64,6 +77,7 @@ class WorkflowBacklogService:
             "id": f"manual:{getattr(task, 'id', None)}",
             "title": title,
             "business_domain": _extract("business_domain") or "Novo workflow",
+            "source_kind": "manual_request",
             "status": stage,
             "status_label": cls.BACKLOG_STAGE_LABELS.get(stage, stage or "-"),
             "backlog_task_id": getattr(task, "id", None),
@@ -73,6 +87,26 @@ class WorkflowBacklogService:
             "urgency": _extract("urgency") or "medium",
             "created_at": getattr(task, "created_at", None).isoformat() if getattr(task, "created_at", None) else None,
             "updated_at": getattr(task, "updated_at", None).isoformat() if getattr(task, "updated_at", None) else None,
+        }
+
+    @classmethod
+    def _serialize_gap_candidate(cls, candidate: WorkflowGapCandidate) -> dict[str, Any]:
+        stage = str(getattr(getattr(candidate, "task", None), "stage", None) or "inbox").strip().lower()
+        domain = str(getattr(candidate, "normalized_intent", None) or getattr(candidate, "suggested_flow_name", None) or "Gap detectado").strip()
+        return {
+            "id": f"gap:{getattr(candidate, 'id', None)}",
+            "title": getattr(candidate, "suggested_flow_name", None) or getattr(candidate, "title", None) or "Workflow gap",
+            "business_domain": domain,
+            "source_kind": "gap_candidate",
+            "status": stage,
+            "status_label": cls.BACKLOG_STAGE_LABELS.get(stage, stage or "-"),
+            "backlog_task_id": getattr(candidate, "app_task_id", None),
+            "backlog_task_code": getattr(candidate, "app_task_code", None),
+            "backlog_stage": stage,
+            "backlog_stage_label": cls.BACKLOG_STAGE_LABELS.get(stage, stage or "-"),
+            "urgency": "medium",
+            "created_at": getattr(candidate, "created_at", None).isoformat() if getattr(candidate, "created_at", None) else None,
+            "updated_at": getattr(candidate, "updated_at", None).isoformat() if getattr(candidate, "updated_at", None) else None,
         }
 
     @classmethod
@@ -137,5 +171,6 @@ class WorkflowBacklogService:
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         items = [cls._serialize_manual_request_task(task) for task in cls._list_manual_request_tasks()]
+        items.extend(cls._serialize_gap_candidate(candidate) for candidate in cls._list_gap_candidates(active_company))
         items.sort(key=lambda item: item.get("updated_at") or item.get("created_at") or "", reverse=True)
         return items[:limit]

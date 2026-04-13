@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block workspace_content %}
-{% set catalog = workflow_catalog or {"summary": {}, "workflows": []} %}
+{% set catalog = workflow_catalog or {"summary": {}, "workflows": [], "domains": []} %}
 <div class="int-page fade-in" id="workflowsWorkspace">
   <header class="int-header">
     <div>
@@ -34,21 +34,7 @@
           <span>Buscar</span>
           <input id="workflowSearchInput" type="search" placeholder="Código, título ou domínio">
         </label>
-        <div class="int-integrations-list" id="workflowList">
-          {% for item in catalog.workflows if item.is_active %}
-          <button type="button" class="int-list-item" data-workflow-code="{{ item.code }}">
-            <div class="int-list-main">
-              <strong>{{ item.title }}</strong>
-              <span class="muted">{{ item.code }} · {{ item.parent_title or 'Geral' }}</span>
-              <span class="int-list-meta">{{ item.action_key or '-' }}</span>
-            </div>
-            <div class="int-list-side">
-              <span class="int-badge enabled">Ativo</span>
-              <span class="int-counter-badge">{{ item.required_fields|length }}</span>
-            </div>
-          </button>
-          {% endfor %}
-        </div>
+        <div class="int-domain-tree" id="workflowList"></div>
       </div>
     </aside>
 
@@ -93,6 +79,10 @@
           <div class="int-detail-block">
             <span class="int-detail-label">Gaps detectados</span>
             <ul id="workflowGaps"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Workflow em foco</span>
+            <div id="workflowFocusCard" class="muted">Selecione um workflow na árvore para destacar aqui.</div>
           </div>
         </div>
       </section>
@@ -185,6 +175,15 @@
 .int-search { display:flex; flex-direction:column; gap:.4rem; margin:0 0 1rem; color:var(--text-secondary); font-weight:600; }
 .int-search input,
 .vs-input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); width:100%; }
+.int-domain-tree { display:flex; flex-direction:column; gap:.35rem; max-height:70vh; overflow:auto; padding-right:.15rem; }
+.int-tree-node { display:flex; flex-direction:column; gap:.3rem; }
+.int-tree-domain { width:100%; border:1px solid var(--border); border-radius:12px; padding:.7rem .8rem; background:var(--surface-secondary); display:flex; align-items:flex-start; justify-content:space-between; gap:.6rem; text-align:left; cursor:pointer; transition:.15s ease; }
+.int-tree-domain:hover, .int-tree-domain.active { border-color:rgba(59,130,246,.35); background:#f8fbff; }
+.int-tree-children { display:flex; flex-direction:column; gap:.25rem; margin-left:.8rem; padding-left:.8rem; border-left:1px dashed var(--border); }
+.int-tree-children.collapsed { display:none; }
+.int-tree-tool { width:100%; border:1px solid transparent; background:transparent; border-radius:10px; padding:.42rem .55rem; display:flex; align-items:center; justify-content:space-between; gap:.6rem; text-align:left; cursor:pointer; transition:.15s ease; }
+.int-tree-tool:hover, .int-tree-tool.active { border-color:rgba(59,130,246,.2); background:var(--surface-secondary); }
+.int-tree-toggle { display:inline-flex; align-items:center; justify-content:center; width:1.4rem; height:1.4rem; border:1px solid var(--border); border-radius:6px; background:#fff; color:var(--text-secondary); font-size:.72rem; font-weight:800; flex-shrink:0; }
 .int-request-group { border:1px dashed var(--border); border-radius:12px; padding:.6rem .7rem; background:#fff; display:flex; flex-direction:column; gap:.5rem; }
 .int-request-title { font-size:.72rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); letter-spacing:.04em; }
 .int-request-item { border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; background:var(--surface-secondary); display:flex; flex-direction:column; gap:.2rem; }
@@ -237,6 +236,7 @@
 
 <script>
   const workflowCatalogData = {{ catalog.workflows|tojson }};
+  const workflowDomainData = {{ catalog.domains|tojson }};
   const workflowByCode = Object.fromEntries(workflowCatalogData.map(item => [item.code, item]));
 
   function listMarkup(items, formatter) {
@@ -263,6 +263,79 @@
       <li><strong>Gaps:</strong> ${item.gaps?.count || 0}</li>
       <li><strong>Último gap:</strong> ${item.gaps?.last_gap_at || '-'}</li>
     `;
+    document.getElementById('workflowFocusCard').innerHTML = `
+      <strong>${item.title || '-'}</strong><br>
+      <span class="muted">${item.code || '-'} · ${item.parent_title || 'Geral'} · ${item.is_active ? 'ativo' : 'inativo'}</span>
+      ${item.description ? `<div style="margin-top:.45rem;">${item.description}</div>` : ''}
+    `;
+  }
+
+  function renderWorkflowTree(filterQuery = '') {
+    const container = document.getElementById('workflowList');
+    const query = (filterQuery || '').trim().toLowerCase();
+    container.innerHTML = workflowDomainData.map(domain => {
+      const workflows = (domain.workflows || []).filter(item => !!item.is_active);
+      const haystack = [domain.title, ...workflows.map(item => `${item.code} ${item.title} ${item.action_key || ''}`)].join(' ').toLowerCase();
+      if (query && !haystack.includes(query)) return '';
+      const filtered = workflows.filter(item => !query || `${domain.title} ${item.code} ${item.title} ${item.action_key || ''}`.toLowerCase().includes(query));
+      return `
+        <div class="int-tree-node">
+          <button type="button" class="int-tree-domain" data-domain-title="${domain.title}">
+            <div style="display:flex; gap:.55rem; min-width:0;">
+              <span class="int-tree-toggle" data-domain-toggle="${domain.title}">−</span>
+              <div class="int-list-main">
+                <strong>${domain.title}</strong>
+                <span class="muted">${domain.count || 0} workflows</span>
+              </div>
+            </div>
+            <div class="int-list-side">
+              <span class="int-badge enabled">Domínio</span>
+              <span class="int-counter-badge">${domain.count || 0}</span>
+            </div>
+          </button>
+          <div class="int-tree-children" data-domain-children="${domain.title}">
+            ${filtered.length ? filtered.map(item => `
+              <button type="button" class="int-tree-tool" data-workflow-code="${item.code}">
+                <span>
+                  <strong>${item.code} - ${item.title || '-'}</strong>
+                  <span class="muted"> · ${item.action_key || 'sem ação'}</span>
+                </span>
+                <span class="int-badge ${item.gaps?.count ? 'disabled' : 'enabled'}">${item.gaps?.count ? `${item.gaps.count} gap(s)` : 'ok'}</span>
+              </button>
+            `).join('') : '<div class="muted" style="padding:.25rem .4rem;">Nenhum workflow encontrado.</div>'}
+          </div>
+        </div>
+      `;
+    }).join('') || '<div class="int-empty">Nenhum workflow encontrado.</div>';
+
+    container.querySelectorAll('[data-domain-toggle]').forEach(toggle => {
+      toggle.addEventListener('click', event => {
+        event.stopPropagation();
+        const key = toggle.dataset.domainToggle;
+        const children = container.querySelector(`[data-domain-children="${key}"]`);
+        if (!children) return;
+        const collapsed = children.classList.toggle('collapsed');
+        toggle.textContent = collapsed ? '+' : '−';
+      });
+    });
+
+    container.querySelectorAll('[data-domain-title]').forEach(button => {
+      button.addEventListener('click', () => {
+        container.querySelectorAll('.int-tree-domain').forEach(node => node.classList.remove('active'));
+        button.classList.add('active');
+      });
+    });
+
+    container.querySelectorAll('[data-workflow-code]').forEach(button => {
+      button.addEventListener('click', () => {
+        renderWorkflowDetail(button.dataset.workflowCode);
+        container.querySelectorAll('.int-tree-tool').forEach(node => node.classList.remove('active'));
+        container.querySelectorAll('.int-tree-domain').forEach(node => node.classList.remove('active'));
+        button.classList.add('active');
+        const parent = button.closest('.int-tree-node')?.querySelector('.int-tree-domain');
+        if (parent) parent.classList.add('active');
+      });
+    });
   }
 
   async function loadWorkflowRequests() {
@@ -288,7 +361,7 @@
           ${items.map(req => `
             <div class="int-request-item">
               <strong>${req.title || '-'}</strong>
-              <span class="muted">${req.business_domain || 'Workflow'} · ${req.backlog_task_code || ('AA.J.31.' + (req.backlog_task_id || '-'))}</span>
+              <span class="muted">${req.business_domain || 'Workflow'} · ${req.backlog_task_code || ('AA.J.31.' + (req.backlog_task_id || '-'))} · ${req.source_kind === 'gap_candidate' ? 'gap detectado' : 'solicitação manual'}</span>
             </div>
           `).join('')}
         </div>
@@ -300,15 +373,9 @@
 
   function bindWorkflowSearch() {
     const input = document.getElementById('workflowSearchInput');
-    const buttons = [...document.querySelectorAll('[data-workflow-code]')];
     if (!input) return;
     input.addEventListener('input', () => {
-      const query = (input.value || '').trim().toLowerCase();
-      buttons.forEach(button => {
-        const item = workflowByCode[button.dataset.workflowCode] || {};
-        const haystack = [item.code, item.title, item.parent_title, item.action_key, ...(item.keywords || [])].join(' ').toLowerCase();
-        button.style.display = !query || haystack.includes(query) ? '' : 'none';
-      });
+      renderWorkflowTree(input.value || '');
     });
   }
 
@@ -325,10 +392,6 @@
     modal.classList.remove('show');
     modal.style.display = 'none';
   }
-
-  document.querySelectorAll('[data-workflow-code]').forEach(button => {
-    button.addEventListener('click', () => renderWorkflowDetail(button.dataset.workflowCode));
-  });
 
   document.getElementById('openWorkflowRequestAssistant')?.addEventListener('click', openWorkflowRequestModal);
   document.getElementById('workflowRequestForm')?.addEventListener('submit', async event => {
@@ -351,6 +414,7 @@
     }
   });
 
+  renderWorkflowTree();
   bindWorkflowSearch();
   loadWorkflowRequests();
   if (workflowCatalogData.length) {

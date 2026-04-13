@@ -63,8 +63,11 @@ class WorkflowWorkspaceService:
         )
 
         parent_counter = Counter()
+        grouped_domains: dict[str, list[dict[str, Any]]] = {}
         for item in catalog.get("workflows") or []:
-            parent_counter[str(item.get("parent_title") or "Geral")] += 1
+            domain_title = str(item.get("parent_title") or "Geral")
+            parent_counter[domain_title] += 1
+            grouped_domains.setdefault(domain_title, []).append(item)
 
         catalog["summary"] = {
             **(catalog.get("summary") or {}),
@@ -74,4 +77,12 @@ class WorkflowWorkspaceService:
                 for title, count in sorted(parent_counter.items(), key=lambda pair: (-pair[1], pair[0]))
             ],
         }
+        catalog["domains"] = [
+            {
+                "title": title,
+                "count": len(items),
+                "workflows": sorted(items, key=lambda item: ((item.get("sort_order") or 0), str(item.get("code") or ""))),
+            }
+            for title, items in sorted(grouped_domains.items(), key=lambda pair: (-len(pair[1]), pair[0]))
+        ]
         return catalog
