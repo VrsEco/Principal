@@ -263,9 +263,10 @@
       <li><strong>Gaps:</strong> ${item.gaps?.count || 0}</li>
       <li><strong>Último gap:</strong> ${item.gaps?.last_gap_at || '-'}</li>
     `;
+    const displayCode = item.display_code || item.code || '-';
     document.getElementById('workflowFocusCard').innerHTML = `
       <strong>${item.title || '-'}</strong><br>
-      <span class="muted">${item.code || '-'} · ${item.parent_title || 'Geral'} · ${item.is_active ? 'ativo' : 'inativo'}</span>
+      <span class="muted">${displayCode} · ${item.parent_title || 'Geral'} · ${item.is_active ? 'ativo' : 'inativo'}</span>
       ${item.description ? `<div style="margin-top:.45rem;">${item.description}</div>` : ''}
     `;
   }
@@ -284,7 +285,7 @@
             <div style="display:flex; gap:.55rem; min-width:0;">
               <span class="int-tree-toggle" data-domain-toggle="${domain.title}">−</span>
               <div class="int-list-main">
-                <strong>${domain.title}</strong>
+                <strong>${domain.display_code || '-'} - ${domain.title}</strong>
                 <span class="muted">${domain.count || 0} workflows</span>
               </div>
             </div>
@@ -297,7 +298,7 @@
             ${filtered.length ? filtered.map(item => `
               <button type="button" class="int-tree-tool" data-workflow-code="${item.code}">
                 <span>
-                  <strong>${item.code} - ${item.title || '-'}</strong>
+                  <strong>${item.display_code || item.code || '-'} - ${item.title || '-'}</strong>
                   <span class="muted"> · ${item.action_key || 'sem ação'}</span>
                 </span>
                 <span class="int-badge ${item.gaps?.count ? 'disabled' : 'enabled'}">${item.gaps?.count ? `${item.gaps.count} gap(s)` : 'ok'}</span>

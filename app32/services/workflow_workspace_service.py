@@ -77,12 +77,32 @@ class WorkflowWorkspaceService:
                 for title, count in sorted(parent_counter.items(), key=lambda pair: (-pair[1], pair[0]))
             ],
         }
-        catalog["domains"] = [
-            {
-                "title": title,
-                "count": len(items),
-                "workflows": sorted(items, key=lambda item: ((item.get("sort_order") or 0), str(item.get("code") or ""))),
-            }
-            for title, items in sorted(grouped_domains.items(), key=lambda pair: (-len(pair[1]), pair[0]))
-        ]
+        catalog_domains: list[dict[str, Any]] = []
+        numbered_catalog_items: list[dict[str, Any]] = []
+        for domain_index, (title, items) in enumerate(
+            sorted(grouped_domains.items(), key=lambda pair: (-len(pair[1]), pair[0])),
+            start=1,
+        ):
+            sorted_items = sorted(items, key=lambda item: ((item.get("sort_order") or 0), str(item.get("code") or "")))
+            numbered_workflows = []
+            for workflow_index, item in enumerate(sorted_items, start=1):
+                numbered_workflows.append(
+                    {
+                        **item,
+                        "display_code": f"{domain_index}.{workflow_index}",
+                    }
+                )
+            numbered_catalog_items.extend(numbered_workflows)
+
+            catalog_domains.append(
+                {
+                    "title": title,
+                    "count": len(items),
+                    "display_code": str(domain_index),
+                    "workflows": numbered_workflows,
+                }
+            )
+
+        catalog["workflows"] = numbered_catalog_items
+        catalog["domains"] = catalog_domains
         return catalog

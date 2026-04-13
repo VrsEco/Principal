@@ -62,5 +62,8 @@ def test_workflow_workspace_service_groups_by_domain(monkeypatch):
     payload = WorkflowWorkspaceService.build_catalog(SimpleNamespace(id=31))
 
     assert payload["summary"]["active_workflow_count"] == 2
+    assert payload["domains"][0]["display_code"] == "1"
     assert payload["domains"][0]["title"] == "Projetos"
     assert payload["domains"][0]["count"] == 2
+    assert payload["domains"][0]["workflows"][0]["display_code"] == "1.1"
+    assert payload["workflows"][0]["display_code"] == "1.1"
