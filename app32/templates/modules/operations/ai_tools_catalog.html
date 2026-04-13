@@ -32,7 +32,6 @@
             <small>{{ catalog.summary.domains or 0 }} áreas catalogadas</small>
           </div>
         </div>
-        <button type="button" class="btn btn-primary btn-sm w-100" id="openToolRequestAssistant">Solicitar nova Tool</button>
         <label class="int-search">
           <span>Buscar</span>
           <input id="toolDomainSearchInput" type="search" placeholder="Domínio, surface ou tool">
@@ -102,7 +101,7 @@
             <h2>Backlog aberto de tools</h2>
             <small>AA.J.31 · status pela lista atual</small>
           </div>
-          <a href="{{ catalog.discovery.rest_endpoint or '/api/configs/ai/mcp/tool-first-catalog' }}" class="btn btn-outline-primary btn-sm" target="_blank">API</a>
+          <button type="button" class="btn btn-primary btn-sm" id="openToolRequestAssistant">Solicitar nova Tool</button>
         </div>
         <div id="toolPublicationList" class="int-requests-list">
           <div class="int-empty">Carregando solicitações...</div>
