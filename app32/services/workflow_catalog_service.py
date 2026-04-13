@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 from models.agent_menu import AgentMenuOption
 from models.workflow_gap import WorkflowGapCandidate
 from models.workflow_usage import WorkflowExecutionLog
+from services.workflow_contract_registry import resolve_workflow_contracts
 from src.intelligence.workflows.registry import WorkflowRegistry
 
 
@@ -62,13 +63,30 @@ def _collect_metadata_list(logs: Sequence[WorkflowExecutionLog], *keys: str) -> 
     return values
 
 
-def _build_channel_contracts(logs: Sequence[WorkflowExecutionLog]) -> List[Dict[str, Any]]:
+def _merge_contract_items(
+    declared_items: Sequence[Dict[str, Any]] | None,
+    observed_items: Sequence[Dict[str, Any]] | None,
+) -> List[Dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for collection in (declared_items or [], observed_items or []):
+        for item in collection:
+            name = _normalize_text(item.get("name"))
+            kind = _normalize_text(item.get("kind"))
+            key = (name.lower(), kind.lower())
+            if not name or key in seen:
+                continue
+            seen.add(key)
+            merged.append(dict(item))
+    return merged
+
+
+def _observed_channel_contracts(logs: Sequence[WorkflowExecutionLog]) -> List[Dict[str, Any]]:
     channel_counts: Dict[str, int] = defaultdict(int)
     for log in logs or []:
         channel = _normalize_text(getattr(log, "channel", None)) or "web"
         channel_counts[channel] += 1
-
-    items = [
+    return [
         {
             "name": channel,
             "status": "ready",
@@ -76,18 +94,9 @@ def _build_channel_contracts(logs: Sequence[WorkflowExecutionLog]) -> List[Dict[
         }
         for channel, count in sorted(channel_counts.items(), key=lambda item: (-item[1], item[0]))
     ]
-    if items:
-        return items
-    return [
-        {
-            "name": "Catálogo de canais",
-            "status": "planned",
-            "note": "Mapeamento por canal ainda não catalogado para este workflow.",
-        }
-    ]
 
 
-def _build_api_mcp_contracts(logs: Sequence[WorkflowExecutionLog], action_key: str) -> List[Dict[str, Any]]:
+def _observed_api_mcp_contracts(logs: Sequence[WorkflowExecutionLog]) -> List[Dict[str, Any]]:
     rest_endpoints = _collect_metadata_list(logs, "rest_endpoints", "api_endpoints")
     mcp_contracts = _collect_metadata_list(logs, "mcp_contracts", "mcp_tools")
     items: list[dict[str, Any]] = []
@@ -109,35 +118,18 @@ def _build_api_mcp_contracts(logs: Sequence[WorkflowExecutionLog], action_key: s
         }
         for contract in mcp_contracts
     )
-    if items:
-        return items
-    return [
-        {
-            "name": action_key or "workflow.runtime",
-            "status": "planned",
-            "kind": "API/MCP",
-            "note": "Contrato técnico específico ainda não foi catalogado neste workflow.",
-        }
-    ]
+    return items
 
 
-def _build_tool_contracts(logs: Sequence[WorkflowExecutionLog], action_key: str) -> List[Dict[str, Any]]:
+def _observed_tool_contracts(logs: Sequence[WorkflowExecutionLog]) -> List[Dict[str, Any]]:
     tools = _collect_metadata_list(logs, "tools", "tool_names", "tool_name")
-    if tools:
-        return [
-            {
-                "name": tool,
-                "status": "ready",
-                "note": "Tool observada em execução real.",
-            }
-            for tool in tools
-        ]
     return [
         {
-            "name": action_key or "tool-first mapping",
-            "status": "planned",
-            "note": "Relacionamento Tool-first ainda não modelado para este workflow.",
+            "name": tool,
+            "status": "ready",
+            "note": "Tool observada em execução real.",
         }
+        for tool in tools
     ]
 
 
@@ -178,6 +170,46 @@ def _build_permission_contracts(action_key: str, workflow_scope: str) -> List[Di
         }
     )
     return items
+
+
+def _build_channel_contracts(logs: Sequence[WorkflowExecutionLog], declared_contracts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items = _merge_contract_items(declared_contracts.get("channels"), _observed_channel_contracts(logs))
+    if items:
+        return items
+    return [
+        {
+            "name": "Catálogo de canais",
+            "status": "planned",
+            "note": "Mapeamento por canal ainda não catalogado para este workflow.",
+        }
+    ]
+
+
+def _build_api_mcp_contracts(logs: Sequence[WorkflowExecutionLog], action_key: str, declared_contracts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items = _merge_contract_items(declared_contracts.get("api_mcp_contracts"), _observed_api_mcp_contracts(logs))
+    if items:
+        return items
+    return [
+        {
+            "name": action_key or "workflow.runtime",
+            "status": "planned",
+            "kind": "API/MCP",
+            "note": "Contrato técnico específico ainda não foi catalogado neste workflow.",
+        }
+    ]
+
+
+def _build_tool_contracts(logs: Sequence[WorkflowExecutionLog], action_key: str, declared_contracts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items = _merge_contract_items(declared_contracts.get("tools"), _observed_tool_contracts(logs))
+    if items:
+        return items
+    return [
+        {
+            "name": action_key or "tool-first mapping",
+            "status": "planned",
+            "note": "Relacionamento Tool-first ainda não modelado para este workflow.",
+        }
+    ]
 
 
 def _build_configuration_contracts(workflow: WorkflowDefinition) -> List[Dict[str, Any]]:
@@ -242,6 +274,7 @@ def build_workflow_catalog(
         option = options_by_id.get(int(workflow.source_option_id or 0))
         logs = usage_by_code.get(workflow.code, [])
         gaps = gaps_by_code.get(workflow.code, [])
+        declared_contracts = resolve_workflow_contracts(workflow.action_key)
         if logs:
             used_workflows += 1
         if gaps:
@@ -293,9 +326,9 @@ def build_workflow_catalog(
                 'count': len(gaps),
                 'last_gap_at': last_gap_at.isoformat() if last_gap_at else None,
             },
-            'channels': _build_channel_contracts(logs),
-            'api_mcp_contracts': _build_api_mcp_contracts(logs, workflow.action_key),
-            'tools': _build_tool_contracts(logs, workflow.action_key),
+            'channels': _build_channel_contracts(logs, declared_contracts),
+            'api_mcp_contracts': _build_api_mcp_contracts(logs, workflow.action_key, declared_contracts),
+            'tools': _build_tool_contracts(logs, workflow.action_key, declared_contracts),
             'permissions': _build_permission_contracts(workflow.action_key, scope),
             'configurations': _build_configuration_contracts(workflow),
             'is_active': bool(getattr(option, 'is_active', True)) if option is not None else True,
