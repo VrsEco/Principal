@@ -21,6 +21,8 @@ from services.telegram_service import TelegramService
 from services.tool_backlog_service import ToolBacklogService
 from services.tool_first_catalog_service import ToolFirstCatalogService
 from services.whatsapp_service import WhatsAppService
+from services.workflow_backlog_service import WorkflowBacklogService
+from services.workflow_workspace_service import WorkflowWorkspaceService
 from utils.integration_settings import resolve_service_config
 
 integrations_bp = Blueprint("integrations", __name__)
@@ -921,6 +923,34 @@ def integrations_tools_page():
         )
 
 
+@integrations_bp.route("/integrations/workflows")
+@login_required
+def integrations_workflows_page():
+    active_company = _safe_active_company()
+    try:
+        catalog = WorkflowWorkspaceService.build_catalog(active_company)
+    except Exception:
+        current_app.logger.exception("Falha ao montar catálogo de workflows.")
+        catalog = {"summary": {"workflow_count": 0, "active_workflow_count": 0}, "workflows": []}
+
+    try:
+        return render_template(
+            "workflows.html",
+            active_company=active_company,
+            workflow_catalog=catalog,
+        )
+    except Exception:
+        current_app.logger.exception("Falha ao renderizar tela de Workflows.")
+        return _fallback_integrations_shell(
+            "Workflows",
+            "A interface operacional de workflows está em contingência. Use o catálogo do Sapiens enquanto concluímos a estabilização.",
+            links=[
+                ("Sapiens", "/sapiens"),
+                ("API / MCP", "/integrations"),
+            ],
+        )
+
+
 @integrations_bp.route("/api/integrations/catalog", methods=["GET"])
 @login_required
 def integrations_catalog():
@@ -983,6 +1013,41 @@ def create_tool_request():
     payload = request.get_json(silent=True) or {}
     try:
         record = ToolBacklogService.create_request(
+            payload,
+            company_id=getattr(company, "id", None),
+            requester_user_id=int(current_user.id),
+            requester_name=getattr(current_user, "name", None),
+        )
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    return jsonify({"success": True, "request": record}), 201
+
+
+@integrations_bp.route("/api/integrations/workflows/requests", methods=["GET"])
+@login_required
+def list_workflow_requests():
+    company = _safe_active_company()
+    return jsonify(
+        {
+            "success": True,
+            "requests": WorkflowBacklogService.list_requests(
+                active_company=company,
+                limit=request.args.get("limit", default=100, type=int),
+                requester_user_id=int(current_user.id),
+                requester_name=getattr(current_user, "name", None),
+            ),
+        }
+    )
+
+
+@integrations_bp.route("/api/integrations/workflows/requests", methods=["POST"])
+@login_required
+def create_workflow_request():
+    company = _safe_active_company()
+    payload = request.get_json(silent=True) or {}
+    try:
+        record = WorkflowBacklogService.create_request(
             payload,
             company_id=getattr(company, "id", None),
             requester_user_id=int(current_user.id),

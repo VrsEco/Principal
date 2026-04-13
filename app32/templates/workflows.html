@@ -1,0 +1,360 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Workflows | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/configurations">Configurações</a>
+<span class="sep">/</span>
+<span class="current">Workflows</span>
+{% endblock %}
+
+{% block workspace_content %}
+{% set catalog = workflow_catalog or {"summary": {}, "workflows": []} %}
+<div class="int-page fade-in" id="workflowsWorkspace">
+  <header class="int-header">
+    <div>
+      <span class="int-eyebrow">Orquestração</span>
+      <h1>Workflows</h1>
+      <p class="muted mb-0">Fluxos operacionais reutilizáveis, contratos de coleta/execução e backlog de evolução no AA.J.31.</p>
+    </div>
+  </header>
+
+  <section class="int-shell">
+    <aside class="int-rail">
+      <div class="int-card">
+        <div class="int-card-head">
+          <div>
+            <h2>Workflows em funcionamento</h2>
+            <small>{{ catalog.summary.active_workflow_count or 0 }} fluxos ativos</small>
+          </div>
+        </div>
+        <label class="int-search">
+          <span>Buscar</span>
+          <input id="workflowSearchInput" type="search" placeholder="Código, título ou domínio">
+        </label>
+        <div class="int-integrations-list" id="workflowList">
+          {% for item in catalog.workflows if item.is_active %}
+          <button type="button" class="int-list-item" data-workflow-code="{{ item.code }}">
+            <div class="int-list-main">
+              <strong>{{ item.title }}</strong>
+              <span class="muted">{{ item.code }} · {{ item.parent_title or 'Geral' }}</span>
+              <span class="int-list-meta">{{ item.action_key or '-' }}</span>
+            </div>
+            <div class="int-list-side">
+              <span class="int-badge enabled">Ativo</span>
+              <span class="int-counter-badge">{{ item.required_fields|length }}</span>
+            </div>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+
+    <main class="int-main">
+      <section class="int-card">
+        <div class="int-card-head">
+          <div>
+            <h2 id="workflowTitle">Selecione um workflow</h2>
+            <p id="workflowSummary" class="muted">No centro exibimos os contratos e requisitos essenciais do workflow selecionado.</p>
+          </div>
+        </div>
+
+        <div class="int-detail-grid">
+          <div class="int-detail-block">
+            <span class="int-detail-label">Código</span>
+            <strong id="workflowCode">-</strong>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Domínio</span>
+            <strong id="workflowDomain">-</strong>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Ação</span>
+            <strong id="workflowActionKey">-</strong>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Campos obrigatórios</span>
+            <ul id="workflowRequiredFields"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Exemplos de intenção</span>
+            <ul id="workflowIntentExamples"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Palavras-chave</span>
+            <ul id="workflowKeywords"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Uso operacional</span>
+            <ul id="workflowUsage"><li>Selecione um workflow.</li></ul>
+          </div>
+          <div class="int-detail-block">
+            <span class="int-detail-label">Gaps detectados</span>
+            <ul id="workflowGaps"><li>Selecione um workflow.</li></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="int-rail">
+      <div class="int-card">
+        <div class="int-card-head">
+          <div>
+            <h2>Backlog aberto de workflows</h2>
+            <small>AA.J.31 · status pela lista atual</small>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="openWorkflowRequestAssistant">Solicitar novo Workflow</button>
+        </div>
+        <div id="workflowRequestsList" class="int-requests-list">
+          <div class="int-empty">Carregando solicitações...</div>
+        </div>
+      </div>
+    </aside>
+  </section>
+</div>
+
+<div id="workflowRequestModal" class="modal fade" style="z-index: 25000;">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="card test-modal-content shadow-lg w-100">
+      <div class="card-header modal-header-block">
+        <div class="modal-title-block">
+          <span class="int-eyebrow">Assistente</span>
+          <h3 class="text-h3 mb-0">Novo Workflow</h3>
+          <small class="text-secondary">Coleta os dados e abre um card no backlog AA.J.31.</small>
+        </div>
+        <button class="btn btn-icon btn-ghost modal-close" type="button" onclick="closeWorkflowRequestModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="card-body">
+        <form id="workflowRequestForm">
+          <div class="vs-form-grid">
+            <div class="vs-control">
+              <label>Nome do workflow</label>
+              <input type="text" class="vs-input" name="title" required>
+            </div>
+            <div class="vs-control">
+              <label>Domínio</label>
+              <input type="text" class="vs-input" name="business_domain" required>
+            </div>
+            <div class="vs-control">
+              <label>Urgência</label>
+              <select class="vs-input" name="urgency">
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+                <option value="critical">Crítica</option>
+                <option value="low">Baixa</option>
+              </select>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Objetivo de negócio</label>
+              <textarea class="vs-input" name="objective" rows="4" required></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Dados / parâmetros / etapas</label>
+              <textarea class="vs-input" name="data_summary" rows="4" required></textarea>
+            </div>
+            <div class="vs-control vs-control-wide">
+              <label>Observações</label>
+              <textarea class="vs-input" name="notes" rows="3"></textarea>
+            </div>
+          </div>
+          <input type="hidden" name="source_channel" value="ui_workflows_catalog">
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary" onclick="closeWorkflowRequestModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Registrar solicitação</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.int-page { padding:0 2rem 2rem; }
+.int-header { display:flex; justify-content:space-between; align-items:flex-start; gap:2rem; margin-bottom:1.5rem; }
+.int-header h1 { margin:0 0 .3rem; }
+.int-eyebrow { display:inline-flex; padding:.25rem .7rem; border-radius:999px; font-size:.75rem; font-weight:700; background:rgba(59,130,246,.12); color:#2563eb; margin-bottom:.5rem; }
+.int-shell { display:grid; grid-template-columns: minmax(280px, 320px) minmax(0,1fr) minmax(280px, 320px); gap:1rem; align-items:start; }
+.int-rail { position:sticky; top:1rem; }
+.int-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem; }
+.int-card-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.int-card-head h2 { margin:0; font-size:1rem; }
+.int-card-head small { color:var(--text-tertiary); font-weight:600; }
+.int-requests-list, .int-integrations-list { display:flex; flex-direction:column; gap:.6rem; max-height:70vh; overflow:auto; }
+.int-search { display:flex; flex-direction:column; gap:.4rem; margin:0 0 1rem; color:var(--text-secondary); font-weight:600; }
+.int-search input,
+.vs-input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); width:100%; }
+.int-request-group { border:1px dashed var(--border); border-radius:12px; padding:.6rem .7rem; background:#fff; display:flex; flex-direction:column; gap:.5rem; }
+.int-request-title { font-size:.72rem; font-weight:800; text-transform:uppercase; color:var(--text-tertiary); letter-spacing:.04em; }
+.int-request-item { border:1px solid var(--border); border-radius:10px; padding:.5rem .6rem; background:var(--surface-secondary); display:flex; flex-direction:column; gap:.2rem; }
+.int-request-item strong { font-size:.82rem; }
+.int-list-item { border:1px solid var(--border); border-radius:12px; padding:.7rem .8rem; background:var(--surface-secondary); display:flex; justify-content:space-between; gap:.6rem; text-align:left; cursor:pointer; transition:.15s ease; }
+.int-list-main { min-width:0; display:flex; flex-direction:column; gap:.15rem; }
+.int-list-side { display:flex; flex-direction:column; align-items:flex-end; gap:.35rem; flex-shrink:0; }
+.int-list-item strong { display:block; font-size:.86rem; }
+.int-list-item .muted { font-size:.75rem; color:var(--text-tertiary); }
+.int-list-meta { font-size:.74rem; color:var(--text-secondary); line-height:1.25; }
+.int-list-item:hover { border-color:rgba(59,130,246,.35); background:#f8fbff; }
+.int-badge { border-radius:999px; padding:.2rem .6rem; font-size:.7rem; font-weight:700; text-transform:uppercase; }
+.int-badge.enabled { background:#dcfce7; color:#166534; }
+.int-badge.disabled { background:#e5e7eb; color:#475569; }
+.int-counter-badge { display:inline-flex; align-items:center; justify-content:center; min-width:1.8rem; height:1.8rem; padding:0 .45rem; border-radius:999px; background:rgba(59,130,246,.12); color:#2563eb; font-size:.74rem; font-weight:800; }
+.int-main .int-card { min-height:520px; }
+.int-detail-grid { display:grid; gap:1rem; margin-top:1.2rem; }
+.int-detail-block { background:var(--surface-secondary); border:1px solid var(--border); border-radius:14px; padding:.9rem 1rem; }
+.int-detail-label { display:block; font-size:.75rem; font-weight:700; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:.35rem; }
+.int-detail-block ul { margin:0; padding-left:1.2rem; color:var(--text-secondary); }
+.int-detail-block strong { font-size:.95rem; }
+.int-empty { text-align:center; color:var(--text-tertiary); padding:1.2rem .6rem; }
+.muted { color:var(--text-secondary); }
+.modal { display:none; }
+.modal.show { display:flex; position:fixed; inset:0; align-items:center; justify-content:center; padding:1.5rem; background:rgba(15,23,42,.45); }
+.modal-dialog { width:100%; max-width:840px; margin:0 auto; }
+.test-modal-content { border-radius:22px; overflow:hidden; }
+.modal-header-block { background:linear-gradient(180deg, rgba(59,130,246,.12), rgba(255,255,255,0)); padding:1.4rem 1.6rem 1.2rem; border-bottom:1px solid var(--border); position:relative; }
+.modal-title-block { display:flex; flex-direction:column; gap:.35rem; }
+.modal-title-block h3 { font-size:1.2rem; }
+.modal-close { position:absolute; top:1rem; right:1rem; }
+.card-body { padding:1.4rem 1.6rem 1.6rem; }
+.vs-form-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:1rem; }
+.vs-control label { display:block; font-size:.72rem; font-weight:800; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.45rem; }
+.vs-control-wide { grid-column: span 3; }
+@media (max-width: 1200px) {
+  .int-shell { grid-template-columns: minmax(260px, 300px) minmax(0,1fr); }
+  .int-shell .int-rail:last-child { order:3; }
+}
+@media (max-width: 980px) {
+  .int-page { padding:0 1rem 1.5rem; }
+  .int-header { flex-direction:column; }
+  .int-shell { grid-template-columns:1fr; }
+  .int-rail { position:static; }
+  .modal-dialog { max-width:95vw; }
+  .vs-form-grid { grid-template-columns:1fr; }
+  .vs-control-wide { grid-column: span 1; }
+}
+</style>
+
+<script>
+  const workflowCatalogData = {{ catalog.workflows|tojson }};
+  const workflowByCode = Object.fromEntries(workflowCatalogData.map(item => [item.code, item]));
+
+  function listMarkup(items, formatter) {
+    return (items || []).length ? items.map(formatter).join('') : '<li>Não informado.</li>';
+  }
+
+  function renderWorkflowDetail(code) {
+    const item = workflowByCode[code];
+    if (!item) return;
+    document.getElementById('workflowTitle').textContent = item.title || '-';
+    document.getElementById('workflowSummary').textContent = item.description || 'Sem descrição.';
+    document.getElementById('workflowCode').textContent = item.code || '-';
+    document.getElementById('workflowDomain').textContent = item.parent_title || 'Geral';
+    document.getElementById('workflowActionKey').textContent = item.action_key || '-';
+    document.getElementById('workflowRequiredFields').innerHTML = listMarkup(item.required_fields, field => `<li><strong>${field.label || field.key || '-'}</strong>${field.required === false ? ' · opcional' : ''}</li>`);
+    document.getElementById('workflowIntentExamples').innerHTML = listMarkup(item.intent_examples, example => `<li>${example}</li>`);
+    document.getElementById('workflowKeywords').innerHTML = listMarkup(item.keywords, keyword => `<li>${keyword}</li>`);
+    document.getElementById('workflowUsage').innerHTML = `
+      <li><strong>Uso no menu:</strong> ${item.usage?.count || 0}</li>
+      <li><strong>Execuções registradas:</strong> ${item.usage?.log_count || 0}</li>
+      <li><strong>Último uso:</strong> ${item.usage?.last_used_at || '-'}</li>
+    `;
+    document.getElementById('workflowGaps').innerHTML = `
+      <li><strong>Gaps:</strong> ${item.gaps?.count || 0}</li>
+      <li><strong>Último gap:</strong> ${item.gaps?.last_gap_at || '-'}</li>
+    `;
+  }
+
+  async function loadWorkflowRequests() {
+    const container = document.getElementById('workflowRequestsList');
+    try {
+      const response = await fetch('/api/integrations/workflows/requests');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao carregar');
+      const STATUS_LABELS = { inbox: 'Caixa de Entrada', waiting: 'Aguardando', executing: 'Executando', pending: 'Pendências', suspended: 'Suspensos', completed: 'Concluídos' };
+      if (!data.requests || data.requests.length === 0) {
+        container.innerHTML = '<div class="int-empty">Nenhuma solicitação pendente.</div>';
+        return;
+      }
+      const grouped = {};
+      data.requests.forEach(req => {
+        const status = req.status || 'inbox';
+        grouped[status] = grouped[status] || [];
+        grouped[status].push(req);
+      });
+      container.innerHTML = Object.entries(grouped).map(([status, items]) => `
+        <div class="int-request-group">
+          <div class="int-request-title">${STATUS_LABELS[status] || status}</div>
+          ${items.map(req => `
+            <div class="int-request-item">
+              <strong>${req.title || '-'}</strong>
+              <span class="muted">${req.business_domain || 'Workflow'} · ${req.backlog_task_code || ('AA.J.31.' + (req.backlog_task_id || '-'))}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    } catch (_error) {
+      container.innerHTML = '<div class="int-empty">Falha ao carregar solicitações.</div>';
+    }
+  }
+
+  function bindWorkflowSearch() {
+    const input = document.getElementById('workflowSearchInput');
+    const buttons = [...document.querySelectorAll('[data-workflow-code]')];
+    if (!input) return;
+    input.addEventListener('input', () => {
+      const query = (input.value || '').trim().toLowerCase();
+      buttons.forEach(button => {
+        const item = workflowByCode[button.dataset.workflowCode] || {};
+        const haystack = [item.code, item.title, item.parent_title, item.action_key, ...(item.keywords || [])].join(' ').toLowerCase();
+        button.style.display = !query || haystack.includes(query) ? '' : 'none';
+      });
+    });
+  }
+
+  function openWorkflowRequestModal() {
+    const modal = document.getElementById('workflowRequestModal');
+    if (!modal) return;
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+  }
+
+  function closeWorkflowRequestModal() {
+    const modal = document.getElementById('workflowRequestModal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+  }
+
+  document.querySelectorAll('[data-workflow-code]').forEach(button => {
+    button.addEventListener('click', () => renderWorkflowDetail(button.dataset.workflowCode));
+  });
+
+  document.getElementById('openWorkflowRequestAssistant')?.addEventListener('click', openWorkflowRequestModal);
+  document.getElementById('workflowRequestForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+    try {
+      const response = await fetch('/api/integrations/workflows/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Falha ao registrar solicitação.');
+      event.currentTarget.reset();
+      closeWorkflowRequestModal();
+      await loadWorkflowRequests();
+      window.alert('Solicitação registrada com sucesso no backlog AA.J.31.');
+    } catch (error) {
+      window.alert(error.message || 'Falha ao registrar solicitação.');
+    }
+  });
+
+  bindWorkflowSearch();
+  loadWorkflowRequests();
+  if (workflowCatalogData.length) {
+    renderWorkflowDetail(workflowCatalogData[0].code);
+  }
+</script>
+{% endblock %}

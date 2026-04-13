@@ -27,6 +27,13 @@ def _option_parent_code(option: AgentMenuOption) -> Optional[str]:
     return _normalize_text(getattr(parent, 'code', None)) or None
 
 
+def _option_parent_title(option: AgentMenuOption) -> Optional[str]:
+    parent = getattr(option, 'parent', None)
+    if parent is None:
+        return None
+    return _normalize_text(getattr(parent, 'title', None)) or None
+
+
 def build_workflow_catalog(
     *,
     options: Sequence[AgentMenuOption],
@@ -95,6 +102,7 @@ def build_workflow_catalog(
             'scope': 'company' if workflow.company_id is not None else 'global',
             'source_option_id': workflow.source_option_id,
             'parent_code': _option_parent_code(option) if option is not None else None,
+            'parent_title': _option_parent_title(option) if option is not None else None,
             'required_fields': required_fields,
             'keywords': list(workflow.keywords or []),
             'intent_examples': list(workflow.intent_examples or []),

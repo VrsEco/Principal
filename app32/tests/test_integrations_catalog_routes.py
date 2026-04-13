@@ -104,6 +104,31 @@ def test_integrations_tools_page_renders(monkeypatch):
     assert captured["context"]["tool_catalog"]["summary"]["domains"] == 2
 
 
+def test_integrations_workflows_page_renders(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(
+        integrations_route.WorkflowWorkspaceService,
+        "build_catalog",
+        lambda company=None: {
+            "summary": {"workflow_count": 2, "active_workflow_count": 2},
+            "workflows": [{"code": "1.4", "title": "Cadastrar Atividade", "is_active": True}],
+        },
+    )
+    monkeypatch.setattr(
+        integrations_route,
+        "render_template",
+        lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
+    )
+
+    response = app.test_client().get("/integrations/workflows")
+
+    assert response.status_code == 200
+    assert captured["template"] == "workflows.html"
+    assert captured["context"]["workflow_catalog"]["summary"]["workflow_count"] == 2
+
+
 def test_integrations_catalog_api_returns_payload(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(
@@ -193,6 +218,57 @@ def test_create_tool_request_uses_current_user_context(monkeypatch):
     assert captured["company_id"] == 31
     assert captured["requester_user_id"] == 9
     assert captured["requester_name"] == "Fabiano"
+
+
+def test_list_workflow_requests_uses_current_user_context(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "current_user", SimpleNamespace(id=9, name="Fabiano"))
+    captured = {}
+    monkeypatch.setattr(
+        integrations_route.WorkflowBacklogService,
+        "list_requests",
+        lambda **kwargs: captured.update(kwargs) or [{"id": "manual:999", "title": "followup_operacional"}],
+    )
+
+    response = app.test_client().get("/api/integrations/workflows/requests")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["requests"][0]["title"] == "followup_operacional"
+    assert captured["active_company"].id == 31
+    assert captured["requester_user_id"] == 9
+
+
+def test_create_workflow_request_uses_current_user_context(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "current_user", SimpleNamespace(id=9, name="Fabiano"))
+    captured = {}
+    monkeypatch.setattr(
+        integrations_route.WorkflowBacklogService,
+        "create_request",
+        lambda payload, **kwargs: captured.update({"payload": payload, **kwargs}) or {"id": "manual:1001", "backlog_task_code": "AA.J.31.1001"},
+    )
+
+    response = app.test_client().post(
+        "/api/integrations/workflows/requests",
+        json={
+            "title": "fechamento_financeiro_guiado",
+            "business_domain": "Financeiro",
+            "objective": "Conduzir fechamento com coleta, validação e confirmação.",
+            "data_summary": "empresa, período, checkpoints, aprovações",
+            "source_channel": "ui_workflows_catalog",
+        },
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 201
+    assert payload["success"] is True
+    assert payload["request"]["backlog_task_code"] == "AA.J.31.1001"
+    assert captured["company_id"] == 31
+    assert captured["requester_user_id"] == 9
 
 
 def test_create_integration_request_uses_active_company_and_current_user(monkeypatch):
