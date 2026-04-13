@@ -278,7 +278,7 @@
         </button>
         <div class="sub-menu">
             {% set ai_section = request.args.get('section', 'overview') if request.path == '/configs/ai' else '' %}
-            <div class="sidebar-subgroup {{ 'open' if '/configs/ai' in request.path }}">
+            <div class="sidebar-subgroup {{ 'open' if '/integrations' in request.path or '/configs/ai' in request.path }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     IA Corporativa
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -292,29 +292,12 @@
                     <a href="/configs/ai?section=configuration" class="sub-nav-link {{ 'active' if request.path == '/configs/ai' and ai_section == 'configuration' }}">
                         Configurações
                     </a>
-                    <a href="/configs/ai/mcp" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/mcp' }}">
-                        MCP
-                    </a>
-                    <a href="/configs/ai/permissions" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/permissions' }}">
-                        Permissões e Configurações
-                    </a>
-                    <a href="/configs/ai/monitoring" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/monitoring' or (request.path == '/configs/ai' and ai_section == 'monitoring_audit') }}">
-                        Monitoramento e Auditoria
-                    </a>
-                </div>
-            </div>
-
-            <div class="sidebar-subgroup {{ 'open' if '/integrations' in request.path }}">
-                <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                    Integrações
-                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-                <div class="subgroup-content">
                     <a href="/integrations" class="sub-nav-link {{ 'active' if request.path == '/integrations' }}">API / MCP</a>
                     <a href="/integrations/tools" class="sub-nav-link {{ 'active' if request.path == '/integrations/tools' }}">Tools</a>
                     <a href="/integrations/workflows" class="sub-nav-link {{ 'active' if request.path == '/integrations/workflows' }}">Workflows</a>
+                    <a href="/configs/ai/permissions" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/permissions' }}">Capacidades de IA</a>
+                    <a href="/configs/ai/mcp" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/mcp' }}">MCP</a>
+                    <a href="/configs/ai/monitoring" class="sub-nav-link {{ 'active' if request.path == '/configs/ai/monitoring' or (request.path == '/configs/ai' and ai_section == 'monitoring_audit') }}">Monitoramento e Auditoria</a>
                     {% if is_platform_admin() %}
                     <a href="/integrations/admin" class="sub-nav-link {{ 'active' if request.path == '/integrations/admin' }}">Configurações de Canais</a>
                     {% endif %}
