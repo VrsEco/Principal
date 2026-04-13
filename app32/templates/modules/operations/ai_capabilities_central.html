@@ -39,7 +39,7 @@
         <div class="ai-cap-sidebar-card">
             <span class="ai-cap-sidebar__label">{{ sidebar.context.title }}</span>
             <div class="ai-cap-context-list">
-                {% for item in sidebar.context.items %}
+                {% for item in sidebar.context["items"] %}
                 <article class="ai-cap-context-item">
                     <span>{{ item.label }}</span>
                     <strong>{{ item.value }}</strong>
@@ -153,7 +153,7 @@
         </header>
 
         <div class="ai-cap-card-grid">
-            {% for item in catalog.items %}
+            {% for item in catalog["items"] %}
             <article class="ai-cap-card" data-searchable="{{ item.key }} {{ item.name }} {{ item.domain }} {{ item.type }} {{ item.description }} {{ item.notes }}">
                 <div class="ai-cap-card__top">
                     <div>
