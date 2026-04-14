@@ -830,7 +830,7 @@ def _build_integration_payload(data: Dict[str, Any]) -> Tuple[Optional[Dict[str,
     return payload, None
 
 
-@integrations_bp.route("/integrations")
+@integrations_bp.route("/api-mcp")
 @login_required
 def integrations_page():
     active_company = _safe_active_company()
@@ -852,10 +852,16 @@ def integrations_page():
             "API / MCP",
             "A interface de integrações de negócio está em contingência. Você ainda pode acessar as configurações de canais enquanto concluímos a estabilização.",
             links=[
-                ("Configurações de Canais", "/integrations/admin"),
-                ("IA Corporativa", "/configs/ai"),
+                ("Configurações de Canais", "/channels"),
+                ("IA Corporativa", "/ai"),
             ],
         )
+
+
+@integrations_bp.route("/integrations")
+@login_required
+def integrations_legacy_redirect():
+    return redirect(url_for("integrations.integrations_page"))
 
 
 @integrations_bp.route("/integrations/requests")
@@ -864,7 +870,7 @@ def integration_requests_page():
     return redirect(url_for("integrations.integrations_page"))
 
 
-@integrations_bp.route("/integrations/admin")
+@integrations_bp.route("/channels")
 @login_required
 def integrations_admin_page():
     active_company = _safe_active_company()
@@ -886,12 +892,18 @@ def integrations_admin_page():
             "Configurações de Canais",
             "A console de canais está em contingência. Use a tela API / MCP enquanto estabilizamos a administração técnica.",
             links=[
-                ("API / MCP", "/integrations"),
+                ("API / MCP", "/api-mcp"),
             ],
         )
 
 
-@integrations_bp.route("/integrations/tools")
+@integrations_bp.route("/integrations/admin")
+@login_required
+def integrations_admin_legacy_redirect():
+    return redirect(url_for("integrations.integrations_admin_page"))
+
+
+@integrations_bp.route("/tools")
 @login_required
 def integrations_tools_page():
     active_company = _safe_active_company()
@@ -917,14 +929,20 @@ def integrations_tools_page():
             "Tools",
             "A interface operacional de tools está em contingência. Use a API do catálogo enquanto concluímos a estabilização.",
             links=[
-                ("API / MCP", "/integrations"),
-                ("Configurações de Canais", "/integrations/admin"),
+                ("API / MCP", "/api-mcp"),
+                ("Configurações de Canais", "/channels"),
                 ("API do catálogo", "/api/configs/ai/mcp/tool-first-catalog"),
             ],
         )
 
 
-@integrations_bp.route("/integrations/workflows")
+@integrations_bp.route("/integrations/tools")
+@login_required
+def integrations_tools_legacy_redirect():
+    return redirect(url_for("integrations.integrations_tools_page"))
+
+
+@integrations_bp.route("/workflow")
 @login_required
 def integrations_workflows_page():
     active_company = _safe_active_company()
@@ -947,9 +965,15 @@ def integrations_workflows_page():
             "A interface operacional de workflows está em contingência. Use o catálogo do Sapiens enquanto concluímos a estabilização.",
             links=[
                 ("Sapiens", "/sapiens"),
-                ("API / MCP", "/integrations"),
+                ("API / MCP", "/api-mcp"),
             ],
         )
+
+
+@integrations_bp.route("/integrations/workflows")
+@login_required
+def integrations_workflows_legacy_redirect():
+    return redirect(url_for("integrations.integrations_workflows_page"))
 
 
 @integrations_bp.route("/api/integrations/catalog", methods=["GET"])

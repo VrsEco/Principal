@@ -1,6 +1,6 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Console Operacional IA/MCP{% endblock %}
+{% block title %}API / MCP{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -12,13 +12,13 @@
 <span class="sep">/</span>
 <a href="/operations">Operações Inteligentes</a>
 <span class="sep">/</span>
-<span class="current">Console IA/MCP</span>
+<span class="current">API / MCP</span>
 {% endblock %}
 
 {% block navbar_actions %}
 <div class="ai-mcp-navbar-actions">
     <a href="/operations" class="ai-mcp-btn ai-mcp-btn--secondary">Voltar ao hub</a>
-    <a href="/integrations" class="ai-mcp-btn ai-mcp-btn--secondary">Integrações</a>
+    <a href="/channels" class="ai-mcp-btn ai-mcp-btn--secondary">Configurações de Canais</a>
     <a href="/sapiens" class="ai-mcp-btn ai-mcp-btn--primary">Abrir Sapiens</a>
 </div>
 {% endblock %}
@@ -33,13 +33,13 @@
     <section class="ai-mcp-hero">
         <div class="ai-mcp-hero__copy">
             <span class="ai-mcp-eyebrow">Console operacional</span>
-            <h1>Console Operacional IA/MCP</h1>
+            <h1>API / MCP</h1>
             <p>
-                Área única para governança MCP, contratos, permissões, onboarding, release, freeze,
+                Área única para contratos, permissões, onboarding, release, freeze,
                 observabilidade e links de configuração/cadastro necessários para colocar o APP32 em teste.
             </p>
             <div class="ai-mcp-hero__badges">
-                <span class="ai-mcp-badge">MCP First</span>
+                <span class="ai-mcp-badge">API / MCP</span>
                 <span class="ai-mcp-badge">Tenant-safe</span>
                 <span class="ai-mcp-badge">Ponto de teste</span>
             </div>
@@ -310,7 +310,7 @@
                 </article>
 
                 <article class="ai-mcp-card">
-                    <header><h2>Cadastros e contexto</h2><p>Pontos de cadastro necessários para operar a camada IA/MCP sem retrabalho.</p></header>
+                <header><h2>Cadastros e contexto</h2><p>Pontos de cadastro necessários para operar a camada API / MCP sem retrabalho.</p></header>
                     <div class="ai-mcp-link-grid">
                         {% for item in console.registration_links %}
                         <a class="ai-mcp-link-card" href="{{ item.href }}" data-searchable="{{ item.title }} {{ item.description }} {{ item.kind }}">
@@ -398,7 +398,7 @@
                 </article>
 
                 <article class="ai-mcp-card">
-                    <header><h2>Domínios IA/MCP</h2><p>Explorador de domínio com tools canônicas, surfaces e perfis permitidos.</p></header>
+                <header><h2>Domínios API / MCP</h2><p>Explorador de domínio com tools canônicas, surfaces e perfis permitidos.</p></header>
                     <div class="ai-mcp-stack ai-mcp-stack--scroll">
                         {% for domain in console.domains %}
                         <div class="ai-mcp-entity-card" data-searchable="{{ domain.domain }} {{ domain.aliases|join(' ') }} {{ domain.allowed_surfaces|join(' ') }} {{ domain.allowed_profiles|join(' ') }}">
@@ -549,7 +549,7 @@
         <section class="ai-mcp-panel" data-console-panel="release" data-searchable="release freeze smoke rollback incidentes">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
-                    <header><h2>Checklist de release</h2><p>Gates, evidências e smokes pós-deploy da camada IA/MCP.</p></header>
+                <header><h2>Checklist de release</h2><p>Gates, evidências e smokes pós-deploy da camada API / MCP.</p></header>
                     <div class="ai-mcp-stack ai-mcp-stack--scroll">
                         {% for item in console.release.checklist %}
                         <div class="ai-mcp-entity-card" data-searchable="{{ item.gate }} {{ item.title }} {{ item.risk }}">
@@ -585,7 +585,7 @@
         <section class="ai-mcp-panel" data-console-panel="dashboard" data-searchable="dashboard readiness alerts métricas telemetria">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
-                    <header><h2>Painéis e métricas</h2><p>Especificação do dashboard operacional de uso IA/MCP.</p></header>
+                <header><h2>Painéis e métricas</h2><p>Especificação do dashboard operacional de uso API / MCP.</p></header>
                     <div class="ai-mcp-stack">
                         {% for panel in console.dashboard.panels %}
                         <div class="ai-mcp-entity-card" data-searchable="{{ panel.panel_id }} {{ panel.title }} {{ panel.objective }}">
@@ -621,7 +621,7 @@
         <section class="ai-mcp-panel" data-console-panel="governance" data-searchable="governança drift bloqueios critérios abertura">
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
-                    <header><h2>Critérios de abertura</h2><p>O que precisa existir para testar a operação IA/MCP sem abrir risco estrutural.</p></header>
+                <header><h2>Critérios de abertura</h2><p>O que precisa existir para testar a operação API / MCP sem abrir risco estrutural.</p></header>
                     <ul class="ai-mcp-bullet-list">
                         {% for item in console.readiness.opening_criteria %}
                         <li>{{ item }}</li>

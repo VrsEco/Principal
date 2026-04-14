@@ -27,11 +27,11 @@ class AIConfigurationPagesService:
             "eyebrow": eyebrow,
             "search_terms": search_terms,
             "shortcuts": [
-                {"label": "Integrações", "href": "/integrations"},
-                {"label": "MCP", "href": "/configs/ai/mcp"},
-                {"label": "Tools", "href": "/integrations/tools"},
-                {"label": "Permissões e Configurações", "href": "/configs/ai/permissions"},
-                {"label": "Monitoramento e Auditoria", "href": "/configs/ai/monitoring"},
+                {"label": "Configurações de Canais", "href": "/channels"},
+                {"label": "API / MCP", "href": "/api-mcp"},
+                {"label": "Tools", "href": "/tools"},
+                {"label": "Capacidades de IA", "href": "/ai-capabilities"},
+                {"label": "Monitoramento e Auditoria", "href": "/ai-monitoring"},
             ],
         }
 
@@ -46,7 +46,7 @@ class AIConfigurationPagesService:
         integration_cards = integration_catalog.get("integrations") or []
         integration_summary = integration_catalog.get("summary") or {}
 
-        page = cls._base_shell("MCP", "Configurações", "mcp superfícies domínios readiness onboarding")
+        page = cls._base_shell("API / MCP", "IA Corporativa", "mcp superfícies domínios readiness onboarding")
         page.update(
             {
                 "intro": "Organize onde a IA atua e o que está liberado.",
@@ -56,12 +56,12 @@ class AIConfigurationPagesService:
                     {"label": "Gates", "value": int(summary.get("readiness_gates") or 0)},
                 ],
                 "wizard": {
-                    "title": "Assistente MCP",
+                    "title": "Assistente API / MCP",
                     "intro": "Me diga o que você precisa e eu te levo para a seção certa.",
                     "steps": [
                         {
                             "step": 1,
-                            "question": "O que você quer fazer no MCP?",
+                            "question": "O que você quer fazer em API / MCP?",
                             "options": [
                                 {
                                     "label": "Ver estrutura",
@@ -78,10 +78,10 @@ class AIConfigurationPagesService:
                                     "target_section": "release",
                                 },
                                 {
-                                    "label": "Integrações",
+                                    "label": "API / MCP",
                                     "description": "Catálogo e solicitação assistida.",
-                                    "result_title": "Abra integrações",
-                                    "result_body": "Abra a seção Integrações para ver o catálogo e solicitar uma nova integração.",
+                                    "result_title": "Abra API / MCP",
+                                    "result_body": "Abra a seção API / MCP para ver o catálogo e solicitar uma nova integração.",
                                     "target_section": "integrations",
                                 },
                             ],
@@ -160,20 +160,20 @@ class AIConfigurationPagesService:
                     },
                     {
                         "id": "integrations",
-                        "title": "Integrações",
+                        "title": "API / MCP",
                         "summary": "Catálogo consultivo e assistente de novas integrações.",
                         "items": [
                             {
-                                "title": "Central de Integrações",
+                                "title": "API / MCP",
                                 "meta": f"{integration_summary.get('total', 0)} integrações mapeadas",
                                 "description": "Abra os cards com descrição, modo de operação e instruções de configuração.",
-                                "href": "/integrations",
+                                "href": "/api-mcp",
                             },
                             {
                                 "title": "Assistente de Nova Integração",
                                 "meta": "Backlog automático",
                                 "description": "Coleta briefing e cria card em AA.J.31 com solicitante, canal e contexto.",
-                                "href": "/integrations#new-integration-assistant",
+                                "href": "/api-mcp#new-integration-assistant",
                             },
                         ] + [
                             {
@@ -298,7 +298,7 @@ class AIConfigurationPagesService:
         risk_distribution = catalog.get("risk_distribution") or []
         tool_first_domains = (console.get("tool_first_catalog") or {}).get("domains") or []
 
-        page = cls._base_shell("Tools", "Configurações", "tools risco gate dominio catalogo")
+        page = cls._base_shell("Tools", "IA Corporativa", "tools risco gate dominio catalogo")
         page.update(
             {
                 "intro": "Escolha o que a IA pode usar e com qual cuidado.",
@@ -393,7 +393,7 @@ class AIConfigurationPagesService:
         configuration_links = console.get("configuration_links") or []
         readiness = console.get("readiness") or {}
 
-        page = cls._base_shell("Permissões e Configurações", "Configurações", "permissoes usuarios perfis cadastros parametros liberacoes")
+        page = cls._base_shell("Permissões e Configurações", "IA Corporativa", "permissoes usuarios perfis cadastros parametros liberacoes")
         page.update(
             {
                 "intro": "Defina quem pode usar, o que precisa estar pronto e o que pode ser liberado.",

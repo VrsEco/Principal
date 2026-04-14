@@ -205,15 +205,15 @@ def operations_hub():
             "key": "technical",
             "label": "Plataforma IA",
             "icon": "settings",
-            "description": "Governança de Sapiens, MCP, catálogo de tools, configurações de IA e observabilidade.",
+            "description": "Governança de Sapiens, API / MCP, catálogo de tools, configurações de IA e observabilidade.",
             "groups": [
                 {
                     "label": "Backoffice técnico",
                     "items": [
                         {
-                            "title": "Console Operacional IA/MCP",
-                            "description": "Governança MCP, perfis, permissões, onboarding, readiness e observabilidade em uma única área.",
-                            "href": "/configs/ai/mcp",
+                            "title": "API / MCP",
+                            "description": "Catálogo funcional, contratos, discovery e governança operacional em uma única área.",
+                            "href": "/api-mcp",
                             "badge": "Novo console",
                             "mode": "Console",
                         },
@@ -224,15 +224,15 @@ def operations_hub():
                             "mode": "Técnico",
                         },
                         {
-                            "title": "Parâmetros gerais de IA",
-                            "description": "Configurar agentes, chaves e parâmetros gerais da inteligência artificial.",
-                            "href": "/configs/ai",
+                            "title": "Visão Geral",
+                            "description": "Acompanhar a central da IA Corporativa e seus indicadores principais.",
+                            "href": "/ai",
                             "mode": "Configuração IA",
                         },
                         {
-                            "title": "Catálogo de tools / MCP",
+                            "title": "Configurações de Canais",
                             "description": "Centralizar integrações, tools e pontos de conectividade do APP32.",
-                            "href": "/integrations",
+                            "href": "/channels",
                             "mode": "Técnico",
                         },
                         {

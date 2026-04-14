@@ -40,9 +40,9 @@ def _require_ai_admin_access(company_id=None):
 
 def _build_ai_config_fallback_page(page_key: str) -> dict:
     titles = {
-        "mcp": "MCP",
+        "mcp": "API / MCP",
         "tools": "Tools",
-        "permissions": "Permissões e Configurações",
+        "permissions": "Capacidades de IA",
         "monitoring": "Monitoramento e Auditoria",
     }
     title = titles.get(page_key, "IA Corporativa")
@@ -60,11 +60,11 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
             {"label": "Ação", "value": "Revisar logs"},
         ],
         "shortcuts": [
-            {"label": "Integrações", "href": "/integrations"},
-            {"label": "MCP", "href": "/configs/ai/mcp"},
-            {"label": "Tools", "href": "/integrations/tools"},
-            {"label": "Permissões e Configurações", "href": "/configs/ai/permissions"},
-            {"label": "Monitoramento e Auditoria", "href": "/configs/ai/monitoring"},
+            {"label": "Configurações de Canais", "href": "/channels"},
+            {"label": "API / MCP", "href": "/api-mcp"},
+            {"label": "Tools", "href": "/tools"},
+            {"label": "Capacidades de IA", "href": "/ai-capabilities"},
+            {"label": "Monitoramento e Auditoria", "href": "/ai-monitoring"},
         ],
         "wizard": {
             "title": "Assistente de recuperação",
@@ -75,10 +75,10 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
                     "question": "O que você precisa fazer agora?",
                     "options": [
                         {
-                            "label": "Abrir integrações",
-                            "description": "Revisar catálogo, credenciais e ativação das integrações.",
-                            "result_title": "Ir para integrações",
-                            "result_body": "Abra a área de integrações para revisar o catálogo e a operação externa.",
+                            "label": "Abrir API / MCP",
+                            "description": "Revisar catálogo, contratos e ativação operacional.",
+                            "result_title": "Ir para API / MCP",
+                            "result_body": "Abra a área API / MCP para revisar o catálogo e a operação externa.",
                             "target_section": "links",
                         },
                         {
@@ -99,10 +99,10 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
                 "summary": "Continue a operação enquanto a página completa é restabelecida.",
                 "items": [
                     {
-                        "title": "Integrações",
-                        "meta": "/integrations",
-                        "description": "Revisar catálogo, providers, segredos e saúde das integrações.",
-                        "href": "/integrations",
+                        "title": "API / MCP",
+                        "meta": "/api-mcp",
+                        "description": "Revisar catálogo, contratos e saúde operacional das integrações de negócio.",
+                        "href": "/api-mcp",
                     },
                     {
                         "title": "Auditoria operacional",
@@ -112,9 +112,9 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
                     },
                     {
                         "title": "Hub IA Corporativa",
-                        "meta": "/configs/ai?section=configuration",
+                        "meta": "/ai",
                         "description": "Voltar para a central principal de administração da IA corporativa.",
-                        "href": "/configs/ai?section=configuration",
+                        "href": "/ai",
                     },
                 ],
             }
@@ -135,7 +135,7 @@ def _render_ai_config_page(page_key: str, active_company):
         page=page_state,
     )
 
-@configs_bp.route('/configs/ai')
+@configs_bp.route('/ai')
 @login_required
 # @permission_required('admin', 'view') # Maybe restrict to admin?
 def ai_settings():
@@ -184,23 +184,23 @@ def ai_settings():
                 ],
                 "quick_actions": [
                     {
-                        "title": "Abrir MCP",
-                        "href": "/configs/ai/mcp",
+                        "title": "Abrir API / MCP",
+                        "href": "/api-mcp",
                         "description": "Surface, domínio e liberação.",
                     },
                     {
-                        "title": "Gerir integrações",
-                        "href": "/integrations",
-                        "description": "Integrações, providers e segredos operacionais.",
+                        "title": "Configurar canais",
+                        "href": "/channels",
+                        "description": "Configurações de canais, providers e segredos operacionais.",
                     },
                     {
                         "title": "Abrir Tools",
-                        "href": "/integrations/tools",
+                        "href": "/tools",
                         "description": "Catálogo, risco e gate humano.",
                     },
                     {
                         "title": "Abrir monitoramento",
-                        "href": "/configs/ai/monitoring",
+                        "href": "/ai-monitoring",
                         "description": "Regras, saúde e auditoria.",
                     },
                     {
@@ -236,7 +236,7 @@ def ai_settings():
                     "key": "configuration",
                     "title": "Configurações",
                     "eyebrow": "Administração",
-                    "description": "Integrações, MCP, tools e permissões.",
+                    "description": "Canais, API / MCP, tools e permissões.",
                     "accent": "blue",
                     "items": [],
                 },
@@ -262,6 +262,12 @@ def ai_settings():
         pillars=hub["pillars"],
         active_company=None,
     )
+
+
+@configs_bp.route('/configs/ai')
+@login_required
+def ai_settings_legacy_redirect():
+    return redirect(url_for('configs.ai_settings'))
 
 @configs_bp.route('/configs/system')
 @login_required
@@ -293,23 +299,19 @@ def system_settings():
                           users_with_contacts=users_with_contacts)
 
 
-@configs_bp.route('/configs/ai/mcp')
+@configs_bp.route('/api-mcp-legacy')
 @login_required
 def ai_mcp_page():
-    active_company = _resolve_active_company()
-    company_id = getattr(active_company, 'id', None)
-    if not _can_access_ai_mcp_console(company_id):
-        abort(403)
-    return _render_ai_config_page("mcp", active_company)
+    return redirect('/api-mcp')
 
 
 @configs_bp.route('/configs/ai/tools')
 @login_required
 def ai_tools_page():
-    return redirect("/integrations/tools")
+    return redirect("/tools")
 
 
-@configs_bp.route('/configs/ai/permissions')
+@configs_bp.route('/ai-capabilities')
 @login_required
 def ai_permissions_page():
     active_company = _resolve_active_company()
@@ -329,7 +331,13 @@ def ai_permissions_page():
     )
 
 
-@configs_bp.route('/configs/ai/monitoring')
+@configs_bp.route('/configs/ai/permissions')
+@login_required
+def ai_permissions_legacy_redirect():
+    return redirect('/ai-capabilities')
+
+
+@configs_bp.route('/ai-monitoring')
 @login_required
 def ai_monitoring_page():
     active_company = _resolve_active_company()
@@ -337,6 +345,18 @@ def ai_monitoring_page():
     if not _can_access_ai_mcp_console(company_id):
         abort(403)
     return _render_ai_config_page("monitoring", active_company)
+
+
+@configs_bp.route('/configs/ai/monitoring')
+@login_required
+def ai_monitoring_legacy_redirect():
+    return redirect('/ai-monitoring')
+
+
+@configs_bp.route('/configs/ai/mcp')
+@login_required
+def ai_mcp_legacy_redirect():
+    return redirect('/api-mcp')
 
 
 @configs_bp.route('/configs/ai/mcp/console')

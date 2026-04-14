@@ -18,7 +18,7 @@
             <h1 class="text-h1" id="page-main-title">{{ 'Configurações da Unidade' if company_id else 'Cadastrar
                 Empresa' }}</h1>
             <p class="text-subtitle">Wizard guiado para criar ou alterar empresas sem perder o contexto de rotina,
-                estratégia, finanças, Sapiens e IA/MCP.</p>
+            estratégia, finanças, Sapiens e API / MCP.</p>
         </div>
         <button class="btn btn-secondary" onclick="window.location.href='/companies'">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -33,13 +33,13 @@
         <div class="onboarding-hero-copy">
             <div class="onboarding-kicker">Onboarding guiado de empresas</div>
             <h2>{{ onboarding.header.title if onboarding else ('Ajuste a empresa existente' if company_id else 'Crie uma nova empresa') }}</h2>
-            <p id="onboarding-mode-text">{{ onboarding.header.subtitle if onboarding else 'Você vai preencher o básico primeiro e depois avançar para operação, equipe, acessos e IA/MCP. O fluxo foi simplificado para quem não quer lidar com a complexidade de uma vez.' }}</p>
+                    <p id="onboarding-mode-text">{{ onboarding.header.subtitle if onboarding else 'Você vai preencher o básico primeiro e depois avançar para operação, equipe, acessos e API / MCP. O fluxo foi simplificado para quem não quer lidar com a complexidade de uma vez.' }}</p>
             <div class="onboarding-hero-actions">
                 <button type="button" class="btn btn-special" data-wizard-save onclick="handleSubmit()">
                     {{ 'Salvar alterações' if company_id else 'Criar empresa e continuar' }}
                 </button>
                 <button type="button" class="btn btn-secondary" data-wizard-goto="dados">Começar pelo básico</button>
-                <button type="button" class="btn btn-secondary" data-wizard-goto="config">Ir para IA/MCP</button>
+                    <button type="button" class="btn btn-secondary" data-wizard-goto="config">Ir para API / MCP</button>
                 <button type="button" class="btn btn-secondary" data-wizard-clear-draft>Limpar rascunho</button>
             </div>
             <div class="onboarding-mode-badges">
@@ -53,7 +53,7 @@
             <h3>{{ onboarding.context_panel.title if onboarding else 'O que você vai fazer agora' }}</h3>
             <p>{{ onboarding.context_panel.body if onboarding else 'Escolha um passo e avance. O wizard mostra a ordem certa para cadastro ou alteração da empresa.' }}</p>
             <ul class="onboarding-help-list">
-                {% for item in (onboarding.context_panel['items'] if onboarding else ['Identidade da empresa e propósito.', 'Contexto operacional e econômico.', 'Estrutura do time, acessos e IA/MCP.']) %}
+                                {% for item in (onboarding.context_panel['items'] if onboarding else ['Identidade da empresa e propósito.', 'Contexto operacional e econômico.', 'Estrutura do time, acessos e API / MCP.']) %}
                 <li>{{ item }}</li>
                 {% endfor %}
             </ul>
@@ -152,7 +152,7 @@
             <button class="tab-btn" data-tab="colaboradores" onclick="switchTab('colaboradores')">Time</button>
             <button class="tab-btn" data-tab="usuarios" onclick="switchTab('usuarios')">Acessos</button>
             <button class="tab-btn" data-tab="pontuacao" onclick="switchTab('pontuacao')">Regras</button>
-            <button class="tab-btn" data-tab="config" onclick="switchTab('config')">IA/MCP & Sistema</button>
+                        <button class="tab-btn" data-tab="config" onclick="switchTab('config')">API / MCP & Sistema</button>
         </div>
     </div>
     {% endif %}
@@ -417,9 +417,9 @@
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body">
                     <div class="wizard-section-intro">
-                        <h3>7. IA/MCP e Sistema</h3>
+                    <h3>7. API / MCP e Sistema</h3>
                         <p>Aqui você deixa a unidade pronta para o ecossistema: ativo/inativo, identidade visual e
-                            leitura pelos agentes de IA/MCP.</p>
+                        leitura pelos agentes de API / MCP.</p>
                     </div>
                     <div class="wizard-domain-grid">
                         <div class="wizard-domain-card">
@@ -435,7 +435,7 @@
                             <p>Prepara a empresa para controles, regras e tratamento de dados financeiros.</p>
                         </div>
                         <div class="wizard-domain-card">
-                            <h4>Sapiens / IA-MCP</h4>
+                            <h4>Sapiens / API / MCP</h4>
                             <p>Deixa a unidade pronta para agentes, discovery e leitura guiada por permissões.</p>
                         </div>
                     </div>

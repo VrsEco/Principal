@@ -25,7 +25,7 @@ def _build_app():
     return app
 
 
-def test_integrations_page_receives_catalog(monkeypatch):
+def test_api_mcp_page_receives_catalog(monkeypatch):
     app = _build_app()
     captured = {}
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
@@ -40,11 +40,20 @@ def test_integrations_page_receives_catalog(monkeypatch):
         lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
     )
 
-    response = app.test_client().get("/integrations")
+    response = app.test_client().get("/api-mcp")
 
     assert response.status_code == 200
     assert captured["template"] == "integrations.html"
     assert captured["context"]["integration_catalog"]["summary"]["total"] == 2
+
+
+def test_integrations_legacy_route_redirects_to_api_mcp(monkeypatch):
+    app = _build_app()
+
+    response = app.test_client().get("/integrations")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/api-mcp")
 
 
 def test_integrations_requests_page_redirects_to_catalog(monkeypatch):
@@ -53,10 +62,10 @@ def test_integrations_requests_page_redirects_to_catalog(monkeypatch):
     response = app.test_client().get("/integrations/requests")
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/integrations")
+    assert response.headers["Location"].endswith("/api-mcp")
 
 
-def test_integrations_admin_page_renders(monkeypatch):
+def test_channels_page_renders(monkeypatch):
     app = _build_app()
     captured = {}
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
@@ -71,14 +80,14 @@ def test_integrations_admin_page_renders(monkeypatch):
         lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
     )
 
-    response = app.test_client().get("/integrations/admin")
+    response = app.test_client().get("/channels")
 
     assert response.status_code == 200
     assert captured["template"] == "integrations_admin.html"
     assert captured["context"]["integration_catalog"]["summary"]["total"] == 1
 
 
-def test_integrations_tools_page_renders(monkeypatch):
+def test_tools_page_renders(monkeypatch):
     app = _build_app()
     captured = {}
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
@@ -97,14 +106,14 @@ def test_integrations_tools_page_renders(monkeypatch):
         lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
     )
 
-    response = app.test_client().get("/integrations/tools")
+    response = app.test_client().get("/tools")
 
     assert response.status_code == 200
     assert captured["template"] == "modules/operations/ai_tools_catalog.html"
     assert captured["context"]["tool_catalog"]["summary"]["domains"] == 2
 
 
-def test_integrations_workflows_page_renders(monkeypatch):
+def test_workflow_page_renders(monkeypatch):
     app = _build_app()
     captured = {}
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
@@ -122,7 +131,7 @@ def test_integrations_workflows_page_renders(monkeypatch):
         lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
     )
 
-    response = app.test_client().get("/integrations/workflows")
+    response = app.test_client().get("/workflow")
 
     assert response.status_code == 200
     assert captured["template"] == "workflows.html"

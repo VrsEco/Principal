@@ -509,7 +509,7 @@ class AICapabilitiesCentralService:
             "status": "ok" if integrations_total > 0 else "danger",
             "detail": f"{integrations_total} integrações mapeadas no ecossistema." if integrations_total > 0 else "Nenhuma integração encontrada.",
             "action": "Abrir integrações",
-            "href": "/integrations",
+            "href": "/channels",
         })
 
         valid_contacts = 0

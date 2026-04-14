@@ -35,11 +35,11 @@
     pontuacao: {
       title: '6. Regras de avaliação',
       description: 'Defina como o sistema mede prazo, atraso e comportamento operacional.',
-      next: 'Por fim, ajuste estado, logo e preparação para IA/MCP.',
+      next: 'Por fim, ajuste estado, logo e preparação para API / MCP.',
       hint: 'Bom para governança e leitura executiva.'
     },
     config: {
-      title: '7. IA/MCP e sistema',
+      title: '7. API / MCP e sistema',
       description: 'Ative a unidade, carregue a identidade visual e deixe o ambiente pronto para Sapiens e agentes.',
       next: 'Revise tudo e salve.',
       hint: 'Use esta etapa para abrir a empresa para o ecossistema com segurança.'
@@ -52,8 +52,8 @@
     cargos: { primaryLabel: 'Adicionar cargo', primaryKind: 'custom', primaryTarget: 'showAddRoleModal', secondaryLabel: 'Próxima etapa: Time', secondaryTarget: 'colaboradores' },
     colaboradores: { primaryLabel: 'Novo colaborador', primaryKind: 'custom', primaryTarget: 'showEmployeeModal', secondaryLabel: 'Próxima etapa: Acessos', secondaryTarget: 'usuarios' },
     usuarios: { primaryLabel: 'Vincular acesso', primaryKind: 'custom', primaryTarget: 'showAddUserModal', secondaryLabel: 'Próxima etapa: Regras', secondaryTarget: 'pontuacao' },
-    pontuacao: { primaryLabel: 'Salvar regras', primaryKind: 'custom', primaryTarget: 'submitPerformanceForm', secondaryLabel: 'Próxima etapa: IA/MCP', secondaryTarget: 'config' },
-    config: { primaryLabel: 'Salvar sistema', primaryKind: 'save', secondaryLabel: 'Abrir Console IA/MCP', secondaryHref: '/configs/ai/mcp' }
+    pontuacao: { primaryLabel: 'Salvar regras', primaryKind: 'custom', primaryTarget: 'submitPerformanceForm', secondaryLabel: 'Próxima etapa: API / MCP', secondaryTarget: 'config' },
+    config: { primaryLabel: 'Salvar sistema', primaryKind: 'save', secondaryLabel: 'Abrir API / MCP', secondaryHref: '/api-mcp' }
   };
 
   function getCompanyId() {
@@ -96,8 +96,8 @@
       cargos: { question: 'Você já definiu os cargos principais da empresa?', label: 'Sim, ir para Time', target: 'colaboradores' },
       colaboradores: { question: 'O time principal já está cadastrado?', label: 'Sim, ir para Acessos', target: 'usuarios' },
       usuarios: { question: 'Quem precisa entrar no sistema já foi vinculado?', label: 'Sim, ir para Regras', target: 'pontuacao' },
-      pontuacao: { question: 'As regras mínimas já estão definidas?', label: 'Sim, ir para IA/MCP', target: 'config' },
-      config: { question: 'A empresa já está pronta para entrar em teste controlado?', label: 'Abrir Console IA/MCP', href: '/configs/ai/mcp' }
+      pontuacao: { question: 'As regras mínimas já estão definidas?', label: 'Sim, ir para API / MCP', target: 'config' },
+      config: { question: 'A empresa já está pronta para entrar em teste controlado?', label: 'Abrir API / MCP', href: '/api-mcp' }
     };
     const meta = focusMeta[tabId] || focusMeta.dados;
     if (question) question.textContent = meta.question;
@@ -286,7 +286,7 @@
 
     if (modeText) {
       modeText.textContent = isEditMode
-        ? 'A empresa já existe; use o wizard para ajustar identidade, operação, acessos e IA/MCP sem se perder.'
+      ? 'A empresa já existe; use o wizard para ajustar identidade, operação, acessos e API / MCP sem se perder.'
         : 'Você vai criar a empresa e sair com a base pronta para rotina, estratégia, finanças e Sapiens.';
     }
 
@@ -303,7 +303,7 @@
       colaboradores: 'Time',
       usuarios: 'Acessos',
       pontuacao: 'Regras',
-      config: 'IA/MCP & Sistema'
+    config: 'API / MCP & Sistema'
     };
 
     document.querySelectorAll('.tab-btn[data-tab]').forEach((btn) => {

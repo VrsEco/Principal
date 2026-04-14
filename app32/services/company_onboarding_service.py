@@ -23,7 +23,7 @@ class CompanyOnboardingService:
             "items": [
                 "Preencha razão social, código e propósito.",
                 "Se estiver criando, salve aqui antes de seguir para as demais etapas.",
-                "Missão, visão e valores ajudam IA/MCP e o Sapiens a contextualizar a empresa.",
+                "Missão, visão e valores ajudam API / MCP e o Sapiens a contextualizar a empresa.",
             ],
         },
         "economico": {
@@ -59,7 +59,7 @@ class CompanyOnboardingService:
             "items": [
                 "Vincule colaboradores aos usuários existentes do sistema.",
                 "Confirme quem pode operar, consultar ou administrar.",
-                "Perfis errados aqui geram ruído depois em IA/MCP e Sapiens.",
+                "Perfis errados aqui geram ruído depois em API / MCP e Sapiens.",
             ],
         },
         "pontuacao": {
@@ -76,7 +76,7 @@ class CompanyOnboardingService:
             "body": "Finalize deixando a unidade pronta para operar no ecossistema de IA, com logo, ativação e atalhos de configuração.",
             "items": [
                 "Revise se a empresa está ativa para o portal.",
-                "Configure logo e use os atalhos para console IA/MCP, integrações e Sapiens.",
+                "Configure logo e use os atalhos para console API / MCP, integrações e Sapiens.",
                 "Só avance para testes depois de concluir identidade, equipe e acessos.",
             ],
         },
@@ -133,7 +133,7 @@ class CompanyOnboardingService:
             {
                 "id": "config",
                 "number": 7,
-                "title": "IA/MCP",
+                "title": "API / MCP",
                 "description": "Logo, ativação e preparo da unidade.",
                 "status": "available" if company_id else "after_create",
             },
@@ -149,13 +149,13 @@ class CompanyOnboardingService:
             {
                 "id": "update",
                 "label": "Alterar",
-                "description": "Ajustar empresa existente sem se perder entre cadastros, acessos e IA/MCP.",
+                "description": "Ajustar empresa existente sem se perder entre cadastros, acessos e API / MCP.",
                 "recommended_tab": active_tab if company_id else "dados",
             },
             {
                 "id": "configure",
                 "label": "Configurar",
-                "description": "Ir para sistema, logo, readiness operacional e superfícies IA/MCP.",
+                "description": "Ir para sistema, logo, readiness operacional e superfícies API / MCP.",
                 "recommended_tab": "config" if company_id else "dados",
             },
             {
@@ -187,7 +187,7 @@ class CompanyOnboardingService:
                 "update_tab": "economico" if company_id else "dados",
                 "links": [
                     {"label": "Operações Inteligentes", "href": "/operations"},
-                    {"label": "Dashboard IA/MCP", "href": "/configs/ai/mcp"},
+                    {"label": "API / MCP", "href": "/api-mcp"},
                 ],
             },
             {
@@ -203,13 +203,13 @@ class CompanyOnboardingService:
             },
             {
                 "id": "sapiens",
-                "title": "Sapiens / IA / MCP",
-                "summary": "Console, integrações, superfícies e readiness para agentes e assistentes.",
+                "title": "Sapiens / IA / API / MCP",
+                "summary": "API / MCP, canais, superfícies e readiness para agentes e assistentes.",
                 "create_tab": "config" if company_id else "dados",
                 "update_tab": "config" if company_id else "dados",
                 "links": [
-                    {"label": "Console IA/MCP", "href": "/configs/ai/mcp"},
-                    {"label": "Integrações", "href": "/integrations"},
+                    {"label": "API / MCP", "href": "/api-mcp"},
+                    {"label": "Configurações de Canais", "href": "/channels"},
                     {"label": "Sapiens", "href": "/sapiens"},
                 ],
             },
@@ -217,14 +217,14 @@ class CompanyOnboardingService:
 
         quick_links = [
             {
-                "title": "Console Operacional IA/MCP",
+                "title": "API / MCP",
                 "description": "Perfis, surfaces, release, freeze, readiness e onboarding técnico.",
-                "href": "/configs/ai/mcp",
+                "href": "/api-mcp",
             },
             {
-                "title": "Integrações",
+                "title": "Configurações de Canais",
                 "description": "Conectividade, provedores e segredos operacionais do ecossistema.",
-                "href": "/integrations",
+                "href": "/channels",
             },
             {
                 "title": "Sapiens",
@@ -244,13 +244,13 @@ class CompanyOnboardingService:
                 "Preencher contexto econômico mínimo.",
                 "Estruturar cargos antes de cadastrar o time.",
                 "Vincular acessos dos responsáveis.",
-                "Configurar IA/MCP e validar readiness básica.",
+                "Configurar API / MCP e validar readiness básica.",
             ],
             "edit": [
                 "Revisar o que mudou de identidade e contexto.",
                 "Atualizar estrutura, equipe e acessos impactados.",
                 "Conferir regras e parâmetros da unidade.",
-                "Revalidar IA/MCP, integrações e status ativo.",
+                "Revalidar API / MCP, canais e status ativo.",
                 "Executar smoke funcional antes de liberar para teste.",
             ],
         }
@@ -306,16 +306,16 @@ class CompanyOnboardingService:
                 "primary_label": "Salvar regras",
                 "primary_action": "custom",
                 "primary_target": "submitPerformanceForm",
-                "secondary_label": "Próxima etapa: IA/MCP",
+                "secondary_label": "Próxima etapa: API / MCP",
                 "secondary_target": next_steps["pontuacao"],
             },
             "config": {
                 "title": "Faça isso agora",
-                "body": "Revise status ativo, logo e atalhos de IA/MCP antes de começar os testes.",
+                "body": "Revise status ativo, logo e atalhos de API / MCP antes de começar os testes.",
                 "primary_label": "Salvar sistema",
                 "primary_action": "save",
-                "secondary_label": "Abrir Console IA/MCP",
-                "secondary_href": "/configs/ai/mcp",
+                "secondary_label": "Abrir API / MCP",
+                "secondary_href": "/api-mcp",
             },
         }
 
@@ -352,14 +352,14 @@ class CompanyOnboardingService:
             },
             "pontuacao": {
                 "question": "As regras mínimas já estão definidas?",
-                "confirm_label": "Sim, ir para IA/MCP",
+                "confirm_label": "Sim, ir para API / MCP",
                 "confirm_target": "config",
                 "skip_label": "Ainda vou revisar",
             },
             "config": {
                 "question": "A empresa já está pronta para entrar em teste controlado?",
-                "confirm_label": "Abrir Console IA/MCP",
-                "confirm_href": "/configs/ai/mcp",
+                "confirm_label": "Abrir API / MCP",
+                "confirm_href": "/api-mcp",
                 "skip_label": "Ainda vou finalizar",
             },
         }
@@ -369,7 +369,7 @@ class CompanyOnboardingService:
             "active_tab": active_tab,
             "header": {
                 "title": "Ajuste a empresa existente" if company_id else "Crie uma nova empresa",
-                "subtitle": "Wizard guiado para criar ou alterar empresas sem perder o contexto de rotina, estratégia, finanças, Sapiens e IA/MCP.",
+                "subtitle": "Wizard guiado para criar ou alterar empresas sem perder o contexto de rotina, estratégia, finanças, Sapiens e API / MCP.",
                 "mode_badge": "Alteração assistida" if company_id else "Criação guiada",
             },
             "steps": steps,
@@ -382,7 +382,7 @@ class CompanyOnboardingService:
             "mode_selector": [
                 {"id": "create", "label": "Criar nova", "description": "Começar do zero.", "target": "dados"},
                 {"id": "update", "label": "Alterar existente", "description": "Ajustar sem se perder.", "target": active_tab if company_id else "dados"},
-                {"id": "configure", "label": "Configurar IA/MCP", "description": "Ir direto ao sistema e integrações.", "target": "config" if company_id else "dados"},
+                {"id": "configure", "label": "Configurar API / MCP", "description": "Ir direto ao API / MCP e canais.", "target": "config" if company_id else "dados"},
                 {"id": "test", "label": "Preparar teste", "description": "Fechar o setup para uso controlado.", "target": "config" if company_id else "dados"},
             ],
             "checklist": checklists[mode],

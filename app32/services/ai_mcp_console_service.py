@@ -71,20 +71,20 @@ class AIMCPConsoleService:
 
         configuration_links = [
             {
-                "title": "Console Operacional IA/MCP",
-                "href": "/configs/ai/mcp",
+                "title": "API / MCP",
+                "href": "/api-mcp",
                 "description": "Governança, onboarding, readiness, catálogo e observabilidade em uma única superfície.",
                 "kind": "console",
             },
             {
-                "title": "Parâmetros gerais de IA",
-                "href": "/configs/ai",
+                "title": "Visão Geral",
+                "href": "/ai",
                 "description": "Configurar agentes, parâmetros e monitorar logs de comunicação.",
                 "kind": "config",
             },
             {
-                "title": "Tools / MCP / Integrações",
-                "href": "/integrations",
+                "title": "Configurações de Canais",
+                "href": "/channels",
                 "description": "Gerenciar provedores, segredos operacionais e conectividade do ecossistema.",
                 "kind": "config",
             },
@@ -131,7 +131,7 @@ class AIMCPConsoleService:
             },
             {
                 "title": "Mapa de integrações",
-                "href": "/integrations",
+                "href": "/channels",
                 "description": "Conferir provedores externos, canais e políticas de segredo.",
             },
             {
@@ -231,7 +231,7 @@ class AIMCPConsoleService:
                         "target_selector": "finance governance identity",
                     },
                     {
-                        "label": "Sapiens / MCP / Integrações",
+                        "label": "Sapiens / API / MCP / Canais",
                         "description": "Fluxos conversacionais, catálogo de tools, onboarding técnico e integrações.",
                         "target_tab": "catalog",
                         "target_selector": "sapiens mcp integrations catalog",
@@ -247,7 +247,7 @@ class AIMCPConsoleService:
                 "description": "Fluxos operacionais do dia a dia e acompanhamento de trabalho.",
                 "create": {"label": "Criar via Meu Trabalho", "href": "/my-work"},
                 "update": {"label": "Alterar via Meu Trabalho", "href": "/my-work"},
-                "analyze": {"label": "Ver surfaces", "href": "/configs/ai/mcp"},
+                "analyze": {"label": "Ver surfaces", "href": "/api-mcp"},
             },
             {
                 "domain": "processes",
@@ -255,7 +255,7 @@ class AIMCPConsoleService:
                 "description": "Mapa, instâncias e evolução de processos operacionais.",
                 "create": {"label": "Criar / mapear processo", "href": "/processes/map"},
                 "update": {"label": "Alterar instância", "href": "/processes/instances"},
-                "analyze": {"label": "Revisar domínio", "href": "/configs/ai/mcp"},
+                "analyze": {"label": "Revisar domínio", "href": "/api-mcp"},
             },
             {
                 "domain": "projects",
@@ -263,7 +263,7 @@ class AIMCPConsoleService:
                 "description": "Projetos, tarefas e acompanhamento de execução.",
                 "create": {"label": "Criar projeto / tarefa", "href": "/projects"},
                 "update": {"label": "Alterar projeto / tarefa", "href": "/projects"},
-                "analyze": {"label": "Analisar riscos", "href": "/configs/ai/mcp"},
+                "analyze": {"label": "Analisar riscos", "href": "/api-mcp"},
             },
             {
                 "domain": "meetings",
@@ -271,7 +271,7 @@ class AIMCPConsoleService:
                 "description": "Agenda, condução, registro e follow-up.",
                 "create": {"label": "Criar reunião", "href": "/meetings/manage-v2"},
                 "update": {"label": "Alterar reunião", "href": "/meetings/manage-v2"},
-                "analyze": {"label": "Revisar regras", "href": "/configs/ai/mcp"},
+                "analyze": {"label": "Revisar regras", "href": "/api-mcp"},
             },
             {
                 "domain": "strategy",
@@ -279,7 +279,7 @@ class AIMCPConsoleService:
                 "description": "Planos, indicadores, análises e direcionamento executivo.",
                 "create": {"label": "Criar / evoluir plano", "href": "/plans"},
                 "update": {"label": "Alterar plano / indicador", "href": "/plans"},
-                "analyze": {"label": "Abrir dashboard estratégico", "href": "/configs/ai/mcp"},
+                "analyze": {"label": "Abrir dashboard estratégico", "href": "/api-mcp"},
             },
             {
                 "domain": "finance",
@@ -295,15 +295,15 @@ class AIMCPConsoleService:
                 "description": "Conversação assistida e fluxo oficial do runtime.",
                 "create": {"label": "Criar conversa / solicitação", "href": "/sapiens"},
                 "update": {"label": "Retomar / alterar contexto", "href": "/sapiens"},
-                "analyze": {"label": "Ver catálogo e surfaces", "href": "/configs/ai/mcp"},
+                "analyze": {"label": "Ver catálogo e surfaces", "href": "/api-mcp"},
             },
             {
                 "domain": "mcp",
-                "label": "MCP / Integrações",
+                "label": "API / MCP / Canais",
                 "description": "Catálogo de tools, providers, conexões e onboarding técnico.",
-                "create": {"label": "Criar integração", "href": "/integrations"},
-                "update": {"label": "Alterar integração", "href": "/integrations"},
-                "analyze": {"label": "Ver catálogo MCP", "href": "/configs/ai/mcp"},
+                "create": {"label": "Criar integração", "href": "/channels"},
+                "update": {"label": "Alterar integração", "href": "/channels"},
+                "analyze": {"label": "Ver catálogo MCP", "href": "/api-mcp"},
             },
             {
                 "domain": "identity",
@@ -311,14 +311,14 @@ class AIMCPConsoleService:
                 "description": "Perfis, usuários, acessos e contexto operacional.",
                 "create": {"label": "Criar / registrar usuário", "href": "/auth/users/page"},
                 "update": {"label": "Alterar perfil / usuário", "href": "/auth/profile"},
-                "analyze": {"label": "Ver permissões", "href": "/configs/ai/mcp"},
+                "analyze": {"label": "Ver permissões", "href": "/api-mcp"},
             },
             {
                 "domain": "governance",
                 "label": "Governança / Operação",
                 "description": "Release, freeze, readiness, auditoria e abertura controlada.",
-                "create": {"label": "Abrir checklist / readiness", "href": "/configs/ai/mcp"},
-                "update": {"label": "Revisar release / freeze", "href": "/configs/ai/mcp"},
+                "create": {"label": "Abrir checklist / readiness", "href": "/api-mcp"},
+                "update": {"label": "Revisar release / freeze", "href": "/api-mcp"},
                 "analyze": {"label": "Ver auditoria operacional", "href": "/operations/audit"},
             },
         ]

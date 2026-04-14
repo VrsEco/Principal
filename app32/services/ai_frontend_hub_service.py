@@ -54,16 +54,16 @@ class AIFrontendHubService:
                 "accent": "primary",
                 "items": [
                     cls._item(
-                        "Console Operacional IA/MCP",
+                        "API / MCP",
                         "Hub já existente para catálogo, surfaces, readiness, onboarding e governança MCP.",
-                        "/configs/ai/mcp",
+                        "/api-mcp",
                         status="existente",
                         badge=f"{summary['mcp_tools_total']} tools",
                     ),
                     cls._item(
                         "Mapa de integrações",
                         "Superfície atual para provedores, credenciais e conectividade externa.",
-                        "/integrations",
+                        "/channels",
                         status="existente",
                         badge=f"{summary['integrations_total']} integrações",
                     ),
@@ -86,7 +86,7 @@ class AIFrontendHubService:
                     cls._item(
                         "Conexões",
                         "Reaproveita a tela atual de integrações para credenciais, providers e webhooks.",
-                        "/integrations",
+                        "/channels",
                         status="existente",
                     ),
                     cls._item(
@@ -99,28 +99,28 @@ class AIFrontendHubService:
                     cls._item(
                         "Modelos e políticas",
                         "Hoje concentrado no console IA/MCP; futura extração deve virar tela dedicada sem duplicação.",
-                        "/configs/ai/mcp",
+                        "/api-mcp",
                         status="consolidado",
                     ),
                 ],
             },
             {
                 "key": "integrations",
-                "title": "Integrações",
+                "title": "Interoperabilidade",
                 "eyebrow": "Interoperabilidade",
                 "description": "Separa claramente MCP, API REST, tools e provedores externos.",
                 "accent": "violet",
                 "items": [
                     cls._item(
-                        "MCP",
+                        "API / MCP",
                         "Catálogo operacional, surfaces, permissões e readiness do ecossistema MCP.",
-                        "/configs/ai/mcp",
+                        "/api-mcp",
                         status="existente",
                     ),
                     cls._item(
                         "Tools",
                         "Descoberta atual de capabilities via console MCP e gestão de providers pela tela de integrações.",
-                        "/configs/ai/mcp",
+                        "/tools",
                         status="consolidado",
                         badge=f"{summary['human_gate_tools']} com gate",
                     ),
@@ -133,7 +133,7 @@ class AIFrontendHubService:
                     cls._item(
                         "Webhooks e provedores",
                         "Cadastro operacional já existente para IA, e-mail, WhatsApp, Telegram e Instagram.",
-                        "/integrations",
+                        "/channels",
                         status="existente",
                     ),
                 ],
@@ -195,13 +195,13 @@ class AIFrontendHubService:
                     cls._item(
                         "Custos e uso",
                         "Hoje agregado no console MCP/readiness; extração dedicada deve vir só quando houver métrica consolidada suficiente.",
-                        "/configs/ai/mcp",
+                        "/api-mcp",
                         status="consolidado",
                     ),
                     cls._item(
                         "Permissões",
                         "Perfis, surfaces e gates humanos já estão modelados no console operacional.",
-                        "/configs/ai/mcp",
+                        "/api-mcp",
                         status="existente",
                     ),
                 ],
@@ -446,8 +446,8 @@ class AIFrontendHubService:
         )
 
         quick_actions = [
-            cls._action_card("Abrir console MCP", "/configs/ai/mcp", "Catálogo, surfaces, readiness e governança técnica."),
-            cls._action_card("Gerir integrações", "/integrations", "Conexões, providers, segredos e webhooks corporativos."),
+            cls._action_card("Abrir API / MCP", "/api-mcp", "Catálogo, surfaces, readiness e governança técnica."),
+            cls._action_card("Gerir integrações", "/channels", "Conexões, providers, segredos e webhooks corporativos."),
             cls._action_card("Abrir Sapiens", "/sapiens", "Hub principal de IA para operar jornadas e superfícies do APP32."),
             cls._action_card("Ver auditoria", "/operations/audit", "Timeline de eventos sensíveis, workflows e revisões humanas."),
         ]
@@ -521,8 +521,8 @@ class AIFrontendHubService:
             "recent_workflows": [],
             "alerts": [],
             "quick_actions": [
-                cls._action_card("Abrir console MCP", "/configs/ai/mcp", "Catálogo, surfaces, readiness e governança técnica."),
-                cls._action_card("Gerir integrações", "/integrations", "Conexões, providers, segredos e webhooks corporativos."),
+                cls._action_card("Abrir API / MCP", "/api-mcp", "Catálogo, surfaces, readiness e governança técnica."),
+                cls._action_card("Gerir integrações", "/channels", "Conexões, providers, segredos e webhooks corporativos."),
             ],
             "duplicate_clusters": [],
             "approvals_recent": [],

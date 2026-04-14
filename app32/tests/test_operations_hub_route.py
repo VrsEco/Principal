@@ -87,13 +87,13 @@ def test_operations_hub_renders_unified_menu(monkeypatch):
     )
 
     assert any(
-        item["href"] == "/configs/ai"
+        item["href"] == "/ai"
         for module in modules
         for group in module["groups"]
         for item in group["items"]
     )
     assert any(
-        item["href"] == "/configs/ai/mcp"
+        item["href"] == "/api-mcp"
         for module in modules
         for group in module["groups"]
         for item in group["items"]
@@ -115,7 +115,7 @@ def test_operations_hub_template_renders_real_jinja():
                         {
                             "title": "Parâmetros gerais de IA",
                             "description": "Configurar agentes.",
-                            "href": "/configs/ai",
+                            "href": "/ai",
                             "mode": "Configuração IA",
                         }
                     ],
@@ -132,5 +132,5 @@ def test_operations_hub_template_renders_real_jinja():
         )
 
     assert "Parâmetros gerais de IA" in html
-    assert "/configs/ai/mcp" in html
-    assert "/configs/ai" in html
+    assert "/api-mcp" in html
+    assert "/ai" in html

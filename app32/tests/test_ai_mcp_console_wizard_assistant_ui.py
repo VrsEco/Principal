@@ -211,47 +211,13 @@ def _fake_console_state():
     }
 
 
-def test_ai_mcp_console_wizard_route_exposes_guided_entry_contract(monkeypatch):
+def test_ai_mcp_legacy_route_redirects_to_api_mcp(monkeypatch):
     app = _build_app()
-    captured = {}
-    active_company = _fake_active_company()
-    fake_console = _fake_console_state()
-
-    monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
-    monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
-    monkeypatch.setattr(configs_route.AIMCPConsoleService, "build_frontend_state", lambda company=None: fake_console)
-    monkeypatch.setattr(
-        configs_route,
-        "render_template",
-        lambda template_name, **context: captured.update({"template_name": template_name, "context": context}) or "ok",
-    )
 
     response = app.test_client().get("/configs/ai/mcp")
 
-    assert response.status_code == 200
-    assert captured["template_name"] == "modules/operations/ai_mcp_console.html"
-
-    context = captured["context"]
-    assert context["active_company"].id == 31
-    assert context["active_company"].name == "Empresa MCP"
-    assert context["active_company"].client_code == "MCP"
-
-    console = context["console"]
-    assert [step["title"] for step in console["wizard_steps"]] == [
-        "Quem vai usar?",
-        "O que você quer fazer?",
-        "Qual área você vai usar?",
-    ]
-    assert [item["label"] for item in console["quick_assistant"]] == [
-        "Quero configurar primeiro",
-        "Quero entender permissões",
-        "Quero analisar dados",
-    ]
-    assert [item["title"] for item in console["contextual_help"]] == [
-        "Se você está começando agora",
-        "Se precisa só configurar",
-        "Se quer apenas usar no dia a dia",
-    ]
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/api-mcp")
 
 
 def test_ai_mcp_console_template_renders_wizard_steps_ctas_and_contextual_help():
