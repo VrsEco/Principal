@@ -77,3 +77,14 @@ def test_factory_page_renders(monkeypatch):
 
     assert response.status_code == 200
     assert b"rendered:modules/operations/sapiens_factory.html:diagnose" in response.data
+
+
+def test_factory_actor_context_handles_admin_unrestricted_access(monkeypatch):
+    active_company = SimpleNamespace(id=31, name="Versus", client_code="VRS")
+    monkeypatch.setattr(configs_route, "current_user", SimpleNamespace(id=7, role="admin"))
+    monkeypatch.setattr(configs_route, "get_accessible_company_ids", lambda: None)
+
+    actor = configs_route._build_factory_actor_context(active_company)
+
+    assert actor.company_id == 31
+    assert actor.accessible_company_ids == [31]

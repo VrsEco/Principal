@@ -51,7 +51,7 @@ def _require_ai_admin_access(company_id=None):
 
 def _build_factory_actor_context(active_company) -> FactoryActorContext:
     company_id = getattr(active_company, "id", None)
-    accessible_company_ids = get_accessible_company_ids()
+    accessible_company_ids = list(get_accessible_company_ids() or [])
     if company_id and company_id not in accessible_company_ids:
         accessible_company_ids.append(company_id)
     return FactoryActorContext(
