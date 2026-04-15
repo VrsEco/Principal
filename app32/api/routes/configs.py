@@ -6,10 +6,14 @@ from pydantic import ValidationError
 from models import db, AIAgent, AgentMessage
 from services.ai_configuration_pages_service import AIConfigurationPagesService
 from services.ai_capability_backlog_service import AICapabilityBacklogService
+from services.ai_capability_blueprint_service import AICapabilityBlueprintService
+from services.ai_capability_inventory_service import AICapabilityInventoryService
 from services.ai_capabilities_central_service import AICapabilitiesCentralService
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
+from services.ai_automation_registry_service import AIAutomationRegistryService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
+from services.agent_backlog_service import create_backlog_task
 from services.external_llm_factory_service import ExternalLLMFactoryService
 from services.monitoring_audit_request_service import MonitoringAuditRequestService
 from services.sapiens_factory_registry_service import SapiensFactoryRegistryService
@@ -68,6 +72,8 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
         "mcp": "API / MCP",
         "tools": "Tools",
         "permissions": "Capacidades de IA",
+        "inventory": "Inventário de Capabilities",
+        "automation_mesh": "Malha de Automações",
         "monitoring": "Monitoramento e Auditoria",
     }
     title = titles.get(page_key, "IA Corporativa")
@@ -89,6 +95,8 @@ def _build_ai_config_fallback_page(page_key: str) -> dict:
             {"label": "API / MCP", "href": "/api-mcp"},
             {"label": "Tools", "href": "/tools"},
             {"label": "Capacidades de IA", "href": "/ai-capabilities"},
+            {"label": "Inventário de Capabilities", "href": "/ai-capability-inventory"},
+            {"label": "Malha de Automações", "href": "/ai-automation-mesh"},
             {"label": "Monitoramento e Auditoria", "href": "/ai-monitoring"},
         ],
         "wizard": {
@@ -224,6 +232,16 @@ def ai_settings():
                         "description": "Catálogo, risco e gate humano.",
                     },
                     {
+                        "title": "Inventário IA",
+                        "href": "/ai-capability-inventory",
+                        "description": "Capabilities, workflows, integrações e automações.",
+                    },
+                    {
+                        "title": "Malha de automações",
+                        "href": "/ai-automation-mesh",
+                        "description": "Scheduler, rotinas e automações event-driven.",
+                    },
+                    {
                         "title": "Abrir monitoramento",
                         "href": "/ai-monitoring",
                         "description": "Regras, saúde e auditoria.",
@@ -293,6 +311,22 @@ def ai_settings():
 @login_required
 def ai_settings_legacy_redirect():
     return redirect(url_for('configs.ai_settings'))
+
+
+@configs_bp.route('/ai-capability-inventory')
+@login_required
+def ai_capability_inventory_page():
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    return _render_ai_config_page("inventory", active_company)
+
+
+@configs_bp.route('/ai-automation-mesh')
+@login_required
+def ai_automation_mesh_page():
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    return _render_ai_config_page("automation_mesh", active_company)
 
 @configs_bp.route('/configs/system')
 @login_required
@@ -609,6 +643,8 @@ def get_sapiens_factory_context():
         'actor': actor.model_dump(mode='json'),
         'registry': SapiensFactoryRegistryService.build_registry_snapshot(),
         'external_surface': ExternalLLMFactoryService.build_surface_manifest(),
+        'inventory': AICapabilityInventoryService.build_inventory(active_company),
+        'automation_registry': AIAutomationRegistryService.build_registry(active_company),
     })
 
 
@@ -651,6 +687,102 @@ def assess_sapiens_factory_change():
             actor_context=actor.model_dump(mode='json'),
         )
         return jsonify({'success': True, 'assessment': assessment})
+    except ValidationError as exc:
+        return jsonify({'success': False, 'error': exc.errors()}), 400
+
+
+@configs_bp.route('/api/configs/ai/capability-blueprint', methods=['GET', 'POST'])
+@login_required
+def get_ai_capability_blueprint():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({'success': False, 'error': 'Acesso negado ao blueprint de capabilities.'}), 403
+
+    payload = request.get_json(silent=True) or {}
+    if request.method == 'GET':
+        payload = {
+            'title': request.args.get('title') or 'Capability padrão APP32',
+            'domain': request.args.get('domain') or 'platform',
+            'target_layers': request.args.getlist('target_layers') or ['service', 'tool_contract', 'rest_mcp', 'workflow', 'ui_sapiens'],
+            'risk': request.args.get('risk') or 'medium',
+            'human_gate_required': request.args.get('human_gate_required', 'true').lower() == 'true',
+            'execution_mode': request.args.get('execution_mode') or 'plan',
+        }
+
+    blueprint = AICapabilityBlueprintService.build_blueprint(
+        title=payload.get('title') or 'Capability padrão APP32',
+        domain=payload.get('domain') or 'platform',
+        target_layers=payload.get('target_layers') or ['service', 'tool_contract', 'rest_mcp', 'workflow', 'ui_sapiens'],
+        risk=payload.get('risk') or 'medium',
+        human_gate_required=bool(payload.get('human_gate_required', False)),
+        target_object=payload.get('target_object'),
+        execution_mode=payload.get('execution_mode') or 'plan',
+    )
+    return jsonify({'success': True, 'blueprint': blueprint})
+
+
+@configs_bp.route('/api/configs/ai/factory/create-backlog-card', methods=['POST'])
+@login_required
+def create_sapiens_factory_backlog_card():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({'success': False, 'error': 'Acesso negado à Sapiens Factory.'}), 403
+
+    actor = _build_factory_actor_context(active_company)
+    payload = request.get_json(silent=True) or {}
+    if company_id and payload.get('company_id') is None:
+        payload['company_id'] = company_id
+
+    try:
+        request_model = SapiensFactoryChangeRequest.model_validate(payload)
+        assessment = SapiensFactoryService.assess_change_request(
+            request_model.model_dump(mode='json'),
+            actor_context=actor.model_dump(mode='json'),
+        )
+        title = f"[Sapiens Factory] {assessment['summary']['change_type']} · {assessment['request'].get('target_object') or request_model.request_text[:72]}"
+        description = "\n".join(
+            [
+                "Demanda formalizada pela Sapiens Factory.",
+                "",
+                f"Resumo: {request_model.request_text}",
+                f"Domínio: {assessment['request'].get('domain') or '-'}",
+                f"Risco: {assessment.get('risk_level') or '-'}",
+                f"Human gate: {'sim' if assessment.get('human_gate_required') else 'não'}",
+                "",
+                "Próximos passos:",
+                *[f"- {item}" for item in (assessment.get('next_steps') or [])],
+            ]
+        )
+        task, error = create_backlog_task(
+            source_type='sapiens_factory',
+            title=title,
+            description=description,
+            user_id=getattr(current_user, 'id', None),
+            company_id=company_id,
+            metadata={
+                'change_type': assessment['summary'].get('change_type'),
+                'risk_level': assessment.get('risk_level'),
+                'target_object': assessment['request'].get('target_object'),
+                'domain': assessment['request'].get('domain'),
+            },
+            priority='high' if assessment.get('risk_level') in {'high', 'critical'} else 'normal',
+        )
+        if error or task is None:
+            return jsonify({'success': False, 'error': error or 'Falha ao criar card no backlog.'}), 400
+        return jsonify(
+            {
+                'success': True,
+                'backlog_task': {
+                    'id': task.id,
+                    'code': task.code,
+                    'title': task.what,
+                    'href': f"/my-work/project-task/{task.id}",
+                },
+                'assessment': assessment,
+            }
+        )
     except ValidationError as exc:
         return jsonify({'success': False, 'error': exc.errors()}), 400
 

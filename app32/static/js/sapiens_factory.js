@@ -113,9 +113,16 @@
             assessmentEl.innerHTML = '<div class="text-sm text-slate-500">Nenhum assessment disponível.</div>';
             return;
         }
+        const blueprint = data.blueprint || {};
         const dependencies = (data.related_capabilities || []).length
             ? (data.related_capabilities || []).map((item) => `<li>${item}</li>`).join('')
             : '<li>Nenhuma capability relacionada mapeada.</li>';
+        const backlogPlan = (data.backlog_plan || []).length
+            ? (data.backlog_plan || []).map((item) => `<li><strong>Etapa ${item.step}:</strong> ${item.title} — ${item.description}</li>`).join('')
+            : '<li>Nenhum plano de backlog calculado.</li>';
+        const blueprintArtifacts = (blueprint.artifacts || []).length
+            ? (blueprint.artifacts || []).map((item) => `<li>${item.name} (${item.status}) — ${item.path_hint || 'n/d'}</li>`).join('')
+            : '<li>Nenhum artefato canônico calculado.</li>';
         assessmentEl.innerHTML = `
             <div class="border border-slate-200 rounded-2xl p-4 bg-white">
                 <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -153,8 +160,67 @@
                         <ul class="factory-list">${dependencies}</ul>
                     </div>
                 </div>
+                <div class="grid md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <h3 class="factory-result-title">Blueprint canônico</h3>
+                        <ul class="factory-list">
+                            <li>Capability key: ${blueprint.capability_key || 'n/d'}</li>
+                            <li>Action key: ${blueprint.action_key || 'n/d'}</li>
+                            <li>Execution mode: ${blueprint.execution_mode || 'n/d'}</li>
+                            <li>Human gate: ${blueprint.human_gate_required ? 'obrigatório' : 'condicional'}</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="factory-result-title">Artefatos do blueprint</h3>
+                        <ul class="factory-list">${blueprintArtifacts}</ul>
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-1 gap-4 mt-4">
+                    <div>
+                        <h3 class="factory-result-title">Plano de backlog</h3>
+                        <ul class="factory-list">${backlogPlan}</ul>
+                    </div>
+                </div>
+                <div class="factory-actions">
+                    <button type="button" class="factory-btn factory-btn-primary" id="factoryCreateBacklogCard">Criar card no AA.J.31</button>
+                </div>
+                <div id="factoryBacklogFeedback" class="text-sm text-slate-500 mt-2"></div>
             </div>
         `;
+        const createBacklogBtn = document.getElementById('factoryCreateBacklogCard');
+        if (createBacklogBtn) {
+            createBacklogBtn.addEventListener('click', createBacklogCardFromAssessment);
+        }
+    }
+
+    async function createBacklogCardFromAssessment() {
+        const payload = {
+            request_text: form.request_text.value,
+            change_type: form.change_type.value || null,
+            execution_mode: form.execution_mode.value,
+            urgency: form.urgency.value,
+            domain: form.domain.value || null,
+            target_object: form.target_object.value || null,
+            desired_outcome: form.desired_outcome.value || null,
+        };
+        const feedbackEl = document.getElementById('factoryBacklogFeedback');
+        if (feedbackEl) feedbackEl.textContent = 'Criando card no backlog...';
+        try {
+            const response = await fetch('/api/configs/ai/factory/create-backlog-card', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(Array.isArray(data.error) ? JSON.stringify(data.error) : (data.error || 'Falha ao criar card.'));
+            }
+            if (feedbackEl) {
+                feedbackEl.innerHTML = `Card criado com sucesso: <a href="${data.backlog_task.href}" class="text-blue-700 underline">${data.backlog_task.code}</a>`;
+            }
+        } catch (error) {
+            if (feedbackEl) feedbackEl.textContent = `Falha ao criar card: ${error.message}`;
+        }
     }
 
     function renderExamples() {

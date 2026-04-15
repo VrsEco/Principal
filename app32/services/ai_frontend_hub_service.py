@@ -102,6 +102,12 @@ class AIFrontendHubService:
                         "/api-mcp",
                         status="consolidado",
                     ),
+                    cls._item(
+                        "Inventário de capabilities",
+                        "Mapa unificado de capabilities, integrações, workflows e automações governadas.",
+                        "/ai-capability-inventory",
+                        status="existente",
+                    ),
                 ],
             },
             {
@@ -153,9 +159,9 @@ class AIFrontendHubService:
                     ),
                     cls._item(
                         "Automações",
-                        "Hoje há cobertura parcial principalmente no financeiro; a extração para camada geral fica sinalizada sem código morto.",
-                        "/financial/automation-rules",
-                        status="parcial",
+                        "Malha consolidada de jobs, rotinas e automações event-driven já acessível pela IA Corporativa.",
+                        "/ai-automation-mesh",
+                        status="existente",
                     ),
                     cls._item(
                         "Execuções",
@@ -448,6 +454,8 @@ class AIFrontendHubService:
         quick_actions = [
             cls._action_card("Abrir API / MCP", "/api-mcp", "Catálogo, surfaces, readiness e governança técnica."),
             cls._action_card("Gerir integrações", "/channels", "Conexões, providers, segredos e webhooks corporativos."),
+            cls._action_card("Inventário IA", "/ai-capability-inventory", "Mapa canônico de capabilities, workflows, integrações e automações."),
+            cls._action_card("Malha de automações", "/ai-automation-mesh", "Scheduler, rotinas, automações financeiras e observabilidade básica."),
             cls._action_card("Abrir Sapiens", "/sapiens", "Hub principal de IA para operar jornadas e superfícies do APP32."),
             cls._action_card("Ver auditoria", "/operations/audit", "Timeline de eventos sensíveis, workflows e revisões humanas."),
         ]

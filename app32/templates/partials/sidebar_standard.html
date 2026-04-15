@@ -259,7 +259,7 @@
     <!-- Sistema -->
     {% if has_permission('companies', 'view') or has_permission('users', 'view') %}
     <div
-        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/settings' in request.path or '/configs/ai' in request.path or '/integrations' in request.path or request.path in ['/ai', '/ai/factory', '/api-mcp', '/tools', '/workflow', '/ai-capabilities', '/ai-monitoring', '/channels'] }}">
+        class="sidebar-group {{ 'open' if '/companies' in request.path or '/users' in request.path or '/settings' in request.path or '/configs/ai' in request.path or '/integrations' in request.path or request.path in ['/ai', '/ai/factory', '/ai-capability-inventory', '/ai-automation-mesh', '/api-mcp', '/tools', '/workflow', '/ai-capabilities', '/ai-monitoring', '/channels'] }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"></circle>
@@ -275,7 +275,7 @@
         </button>
         <div class="sub-menu">
             {% set ai_section = request.args.get('section', 'overview') if request.path in ['/configs/ai', '/ai'] else '' %}
-            <div class="sidebar-subgroup {{ 'open' if '/integrations' in request.path or '/configs/ai' in request.path or request.path in ['/ai', '/ai/factory', '/api-mcp', '/tools', '/workflow', '/ai-capabilities', '/ai-monitoring', '/channels'] }}">
+            <div class="sidebar-subgroup {{ 'open' if '/integrations' in request.path or '/configs/ai' in request.path or request.path in ['/ai', '/ai/factory', '/ai-capability-inventory', '/ai-automation-mesh', '/api-mcp', '/tools', '/workflow', '/ai-capabilities', '/ai-monitoring', '/channels'] }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     IA Corporativa
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -293,6 +293,8 @@
                     <a href="/tools" class="sub-nav-link {{ 'active' if request.path in ['/tools', '/integrations/tools'] }}">Tools</a>
                     <a href="/workflow" class="sub-nav-link {{ 'active' if request.path in ['/workflow', '/integrations/workflows'] }}">Workflow</a>
                     <a href="/ai/factory" class="sub-nav-link {{ 'active' if request.path == '/ai/factory' }}">Sapiens Factory</a>
+                    <a href="/ai-capability-inventory" class="sub-nav-link {{ 'active' if request.path == '/ai-capability-inventory' }}">Inventário de Capabilities</a>
+                    <a href="/ai-automation-mesh" class="sub-nav-link {{ 'active' if request.path == '/ai-automation-mesh' }}">Malha de Automações</a>
                     <a href="/ai-capabilities" class="sub-nav-link {{ 'active' if request.path in ['/ai-capabilities', '/configs/ai/permissions'] }}">Capacidades de IA</a>
                     <a href="/ai-monitoring" class="sub-nav-link {{ 'active' if request.path in ['/ai-monitoring', '/configs/ai/monitoring'] or (request.path in ['/configs/ai', '/ai'] and ai_section == 'monitoring_audit') }}">Monitoramento e Auditoria</a>
                 </div>

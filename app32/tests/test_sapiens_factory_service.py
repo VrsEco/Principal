@@ -36,6 +36,8 @@ def test_assess_change_request_infers_tool_fix():
     assert "tool_contract" in result["request"]["target_layers"]
     assert result["request"]["target_object"] == "tool:xyz"
     assert result["risk_level"] in {"medium", "high"}
+    assert result["blueprint"]["capability_key"]
+    assert result["backlog_plan"]
 
 
 def test_external_llm_surface_manifest_is_split_ready():

@@ -4,6 +4,7 @@ import re
 import unicodedata
 from typing import Any
 
+from services.ai_capability_blueprint_service import AICapabilityBlueprintService
 from services.sapiens_factory_registry_service import SapiensFactoryRegistryService
 from services.sapiens_factory_schema import FactoryActorContext, FactoryChangeType, FactoryTargetLayer, SapiensFactoryChangeRequest
 
@@ -195,6 +196,15 @@ class SapiensFactoryService:
         }).model_dump(mode="json")
         artifacts = cls._recommend_artifacts(layers)
         next_steps = cls._build_next_steps(change_type=change_type, layers=layers, risk=risk, target_object=target_object)
+        blueprint = AICapabilityBlueprintService.build_blueprint(
+            title=payload.desired_outcome or payload.request_text[:80],
+            domain=domain,
+            target_layers=layers,
+            risk=risk,
+            human_gate_required=human_gate,
+            target_object=target_object,
+            execution_mode=payload.execution_mode,
+        )
         return {
             "summary": {
                 "change_type": change_type,
@@ -214,4 +224,6 @@ class SapiensFactoryService:
             "risk_level": risk,
             "human_gate_required": human_gate,
             "request": normalized_request,
+            "blueprint": blueprint,
+            "backlog_plan": blueprint.get("backlog_plan") or [],
         }

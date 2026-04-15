@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from services.ai_automation_registry_service import AIAutomationRegistryService
+from services.ai_capability_inventory_service import AICapabilityInventoryService
 from services.integration_catalog_service import IntegrationCatalogService
 from services.ai_mcp_console_service import AIMCPConsoleService
 from services.operational_audit_service import OperationalAuditService
@@ -18,6 +20,8 @@ class AIConfigurationPagesService:
             "tools": cls._build_tools_page(console),
             "permissions": cls._build_permissions_page(console),
             "monitoring": cls._build_monitoring_page(console, active_company),
+            "inventory": cls._build_inventory_page(active_company),
+            "automation_mesh": cls._build_automation_mesh_page(active_company),
         }
         return pages[page_key]
 
@@ -32,9 +36,169 @@ class AIConfigurationPagesService:
                 {"label": "API / MCP", "href": "/api-mcp"},
                 {"label": "Tools", "href": "/tools"},
                 {"label": "Capacidades de IA", "href": "/ai-capabilities"},
+                {"label": "Inventário de Capabilities", "href": "/ai-capability-inventory"},
+                {"label": "Malha de Automações", "href": "/ai-automation-mesh"},
                 {"label": "Monitoramento e Auditoria", "href": "/ai-monitoring"},
             ],
         }
+
+    @classmethod
+    def _build_inventory_page(cls, active_company: Any | None = None) -> dict[str, Any]:
+        inventory = AICapabilityInventoryService.build_inventory(active_company)
+        summary = inventory.get("summary") or {}
+        items = inventory.get("items") or []
+        blueprint = inventory.get("blueprint") or {}
+
+        page = cls._base_shell("Inventário de Capabilities", "IA Corporativa", "inventario capabilities workflows tools integrations automations blueprint")
+        page.update(
+            {
+                "key": "inventory",
+                "intro": "Mapa único de capabilities, workflows, integrações, automações e superfícies governadas do APP32.",
+                "hero_metrics": [
+                    {"label": "Itens", "value": int(summary.get("capabilities") or 0)},
+                    {"label": "Categorias", "value": int(summary.get("categories") or 0)},
+                    {"label": "Workflows", "value": int(summary.get("workflow_count") or 0)},
+                ],
+                "wizard": {
+                    "title": "Assistente do inventário",
+                    "intro": "Use o inventário para descobrir o que já existe antes de criar novas superfícies.",
+                    "steps": [
+                        {
+                            "step": 1,
+                            "question": "Qual leitura você quer fazer agora?",
+                            "options": [
+                                {
+                                    "label": "Ver capabilities",
+                                    "description": "Mapa consolidado por categoria.",
+                                    "result_title": "Abrir capabilities",
+                                    "result_body": "Vá para a seção Inventário operacional para revisar o que já existe.",
+                                    "target_section": "inventory",
+                                },
+                                {
+                                    "label": "Ver blueprint",
+                                    "description": "Contrato padrão canônico.",
+                                    "result_title": "Abrir blueprint",
+                                    "result_body": "Vá para Blueprint canônico para orientar novas entregas.",
+                                    "target_section": "blueprint",
+                                },
+                            ],
+                        }
+                    ],
+                },
+                "sections": [
+                    {
+                        "id": "inventory",
+                        "title": "Inventário operacional",
+                        "summary": "Capabilities consolidadas por categoria, domínio e superfície.",
+                        "items": [
+                            {
+                                "title": item.get("title") or "Capability",
+                                "meta": f"{item.get('category') or '-'} · {item.get('domain') or '-'} · {item.get('status') or '-'}",
+                                "description": item.get("description") or "-",
+                                "href": item.get("entrypoint"),
+                            }
+                            for item in items[:18]
+                        ],
+                    },
+                    {
+                        "id": "blueprint",
+                        "title": "Blueprint canônico",
+                        "summary": "Contrato padrão de capability para criação/evolução no APP32.",
+                        "items": [
+                            {
+                                "title": artifact.get("name") or "Artefato",
+                                "meta": artifact.get("status") or "-",
+                                "description": artifact.get("path_hint") or "-",
+                            }
+                            for artifact in (blueprint.get("artifacts") or [])
+                        ] + [
+                            {
+                                "title": "Documentação padrão",
+                                "meta": "/docs/governance/ai_capability_blueprint_standard.md",
+                                "description": "Playbook do contrato canônico de capability IA/automação.",
+                            }
+                        ],
+                    },
+                ],
+            }
+        )
+        return page
+
+    @classmethod
+    def _build_automation_mesh_page(cls, active_company: Any | None = None) -> dict[str, Any]:
+        registry = AIAutomationRegistryService.build_registry(active_company)
+        summary = registry.get("summary") or {}
+        automations = registry.get("automations") or []
+
+        page = cls._base_shell("Malha de Automações", "IA Corporativa", "automacoes scheduler jobs financeiro proativo timeout rotinas observabilidade")
+        page.update(
+            {
+                "key": "automation_mesh",
+                "intro": "Leitura unificada das automações recorrentes e event-driven que sustentam a operação assistida do APP32.",
+                "hero_metrics": [
+                    {"label": "Automações", "value": int(summary.get("automations") or 0)},
+                    {"label": "Jobs agendados", "value": int(summary.get("scheduled_jobs") or 0)},
+                    {"label": "Regras financeiras", "value": int(summary.get("active_financial_rules") or 0)},
+                ],
+                "wizard": {
+                    "title": "Assistente da malha de automações",
+                    "intro": "Veja o que já roda, o que depende de evento e o que ainda exige consolidação.",
+                    "steps": [
+                        {
+                            "step": 1,
+                            "question": "Qual foco você precisa agora?",
+                            "options": [
+                                {
+                                    "label": "Jobs do scheduler",
+                                    "description": "Cron e intervalos do core.",
+                                    "result_title": "Abrir scheduler core",
+                                    "result_body": "Vá para a seção Scheduler core para ver os jobs recorrentes.",
+                                    "target_section": "scheduler",
+                                },
+                                {
+                                    "label": "Financeiro",
+                                    "description": "Automações event-driven.",
+                                    "result_title": "Abrir automações financeiras",
+                                    "result_body": "Vá para a seção Automações event-driven para revisar regras e execuções.",
+                                    "target_section": "event_driven",
+                                },
+                            ],
+                        }
+                    ],
+                },
+                "sections": [
+                    {
+                        "id": "scheduler",
+                        "title": "Scheduler core",
+                        "summary": "Jobs recorrentes do APP32.",
+                        "items": [
+                            {
+                                "title": item.get("title") or "Job",
+                                "meta": f"{item.get('trigger') or '-'} · próxima execução: {item.get('next_run_at') or 'n/d'}",
+                                "description": item.get("description") or "-",
+                            }
+                            for item in automations
+                            if item.get("execution_mode") == "scheduled"
+                        ],
+                    },
+                    {
+                        "id": "event_driven",
+                        "title": "Automações event-driven e catálogos",
+                        "summary": "Regras financeiras, rotinas e ativos operacionais que não dependem apenas de cron.",
+                        "items": [
+                            {
+                                "title": item.get("title") or "Automação",
+                                "meta": f"{item.get('kind') or '-'} · {item.get('status') or '-'}",
+                                "description": item.get("description") or "-",
+                            }
+                            for item in automations
+                            if item.get("execution_mode") != "scheduled"
+                        ],
+                    },
+                ],
+            }
+        )
+        return page
 
     @classmethod
     def _build_mcp_page(cls, console: dict[str, Any]) -> dict[str, Any]:
