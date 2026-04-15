@@ -4,6 +4,7 @@ from typing import Any
 
 from services.integration_catalog_service import IntegrationCatalogService
 from services.ai_mcp_console_service import AIMCPConsoleService
+from services.operational_audit_service import OperationalAuditService
 
 
 class AIConfigurationPagesService:
@@ -16,7 +17,7 @@ class AIConfigurationPagesService:
             "mcp": cls._build_mcp_page(console),
             "tools": cls._build_tools_page(console),
             "permissions": cls._build_permissions_page(console),
-            "monitoring": cls._build_monitoring_page(console),
+            "monitoring": cls._build_monitoring_page(console, active_company),
         }
         return pages[page_key]
 
@@ -190,21 +191,72 @@ class AIConfigurationPagesService:
         return page
 
     @classmethod
-    def _build_monitoring_page(cls, console: dict[str, Any]) -> dict[str, Any]:
+    def _build_monitoring_page(cls, console: dict[str, Any], active_company: Any | None = None) -> dict[str, Any]:
         summary = console.get("summary") or {}
         dashboard = (console.get("dashboard") or {}).get("panels") or []
         readiness = console.get("readiness_by_phase") or []
         freeze = (console.get("freeze") or {}).get("triggers") or []
+        company_id = getattr(active_company, "id", None)
 
-        page = cls._base_shell("Monitoramento e Auditoria", "Governança", "monitoramento auditoria logs readiness alertas evidencias")
+        audit_panel = {"summary": {"total": 0, "by_source": {}, "by_status": {}}, "events": [], "filters": {"source": "all", "limit": 12}}
+        if company_id:
+            audit_panel, _error = OperationalAuditService.build_panel(
+                company_id=int(company_id),
+                allowed_company_ids=[int(company_id)],
+                source=None,
+                limit=12,
+            )
+            audit_panel = audit_panel or {"summary": {"total": 0, "by_source": {}, "by_status": {}}, "events": [], "filters": {"source": "all", "limit": 12}}
+
+        audit_summary = audit_panel.get("summary") or {}
+        requests: list[dict[str, Any]] = []
+
+        page = cls._base_shell("Monitoramento e Auditoria", "Governança", "monitoramento auditoria logs readiness alertas evidencias timeline backlog pdf")
         page.update(
             {
-                "intro": "Veja o que aconteceu e o que ainda bloqueia a operação.",
+                "key": "monitoring",
+                "intro": "Veja o que aconteceu, o que exige ação e gere a evidência pronta para auditoria e impressão.",
                 "hero_metrics": [
-                    {"label": "Painéis", "value": len(dashboard)},
+                    {"label": "Eventos", "value": int(audit_summary.get("total") or 0)},
                     {"label": "Gates", "value": int(summary.get("readiness_gates") or 0)},
                     {"label": "Travas", "value": int(summary.get("freeze_triggers") or 0)},
                 ],
+                "monitoring_dashboard": {
+                    "summary_cards": [
+                        {
+                            "label": "Total monitorado",
+                            "value": int(audit_summary.get("total") or 0),
+                            "description": "Eventos recentes consolidados na empresa ativa.",
+                            "tone": "primary",
+                        },
+                        {
+                            "label": "Revisões humanas",
+                            "value": int((audit_summary.get("by_source") or {}).get("human_review") or 0),
+                            "description": "Evidências registradas por pessoas na operação.",
+                            "tone": "neutral",
+                        },
+                        {
+                            "label": "Sapiens / workflows",
+                            "value": int((audit_summary.get("by_source") or {}).get("sapiens_workflow") or 0),
+                            "description": "Execuções recentes com orquestração e resposta automatizada.",
+                            "tone": "accent",
+                        },
+                        {
+                            "label": "Ações de agentes",
+                            "value": int((audit_summary.get("by_source") or {}).get("agent_action") or 0),
+                            "description": "Ações MCP e agentes com rastreabilidade operacional.",
+                            "tone": "warning",
+                        },
+                    ],
+                    "recent_events": audit_panel.get("events") or [],
+                    "recent_requests": requests,
+                    "request_endpoint": "/api/ai-monitoring/requests",
+                    "requests_endpoint": "/api/ai-monitoring/requests",
+                    "panel_endpoint": "/api/ai-monitoring/panel",
+                    "pdf_export_url": "/api/ai-monitoring/report.pdf",
+                    "default_limit": 12,
+                    "default_source": "",
+                },
                 "wizard": {
                     "title": "Assistente de Monitoramento",
                     "intro": "Escolha a leitura que você precisa agora.",
@@ -231,7 +283,7 @@ class AIConfigurationPagesService:
                                     "label": "Auditoria",
                                     "description": "Linha do tempo operacional.",
                                     "result_title": "Abra a auditoria",
-                                    "result_body": "Use o atalho da seção Auditoria para abrir a timeline completa.",
+                                    "result_body": "Use a leitura simples acima ou o atalho da seção Auditoria para aprofundar a análise.",
                                     "target_section": "audit",
                                 },
                             ],
@@ -268,7 +320,7 @@ class AIConfigurationPagesService:
                     {
                         "id": "audit",
                         "title": "Auditoria",
-                        "summary": "Abrir a timeline completa.",
+                        "summary": "Abrir a timeline completa ou formalizar uma solicitação no backlog.",
                         "items": [
                             {
                                 "title": panel.get("title") or "Painel",
@@ -282,7 +334,13 @@ class AIConfigurationPagesService:
                                 "meta": "/operations/audit",
                                 "description": "Linha do tempo de eventos sensíveis, workflows e revisão humana.",
                                 "href": "/operations/audit",
-                            }
+                            },
+                            {
+                                "title": "Exportar relatório PDF",
+                                "meta": "/api/ai-monitoring/report.pdf",
+                                "description": "Gera um PDF pronto para impressão com base nos filtros da leitura simples acima.",
+                                "href": "/api/ai-monitoring/report.pdf",
+                            },
                         ],
                     },
                 ],

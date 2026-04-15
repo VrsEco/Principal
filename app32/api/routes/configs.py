@@ -1,11 +1,17 @@
-from flask import Blueprint, render_template, jsonify, request, abort, current_app, redirect, url_for
+from io import BytesIO
+
+from flask import Blueprint, render_template, jsonify, request, abort, current_app, redirect, url_for, send_file
 from flask_login import login_required, current_user
 from pydantic import ValidationError
 from models import db, AIAgent, AgentMessage
 from services.ai_configuration_pages_service import AIConfigurationPagesService
+from services.ai_capability_backlog_service import AICapabilityBacklogService
 from services.ai_capabilities_central_service import AICapabilitiesCentralService
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
+from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
+from services.monitoring_audit_request_service import MonitoringAuditRequestService
+from services.operational_audit_service import OperationalAuditService
 from services.tool_first_catalog_service import ToolFirstCatalogService
 from schemas.ai_capabilities import (
     AICapabilityAuditLogCreateSchema,
@@ -13,6 +19,7 @@ from schemas.ai_capabilities import (
     AICapabilityGrantUpsertSchema,
     AICapabilityRolloutUpdateSchema,
 )
+from utils.company_access import get_accessible_company_ids
 from utils.permissions import permission_required, has_company_full_access, is_platform_admin
 
 configs_bp = Blueprint('configs', __name__)
@@ -143,10 +150,10 @@ def ai_settings():
     active_company = _resolve_active_company()
     _require_ai_admin_access(getattr(active_company, "id", None))
     try:
-        hub = AIFrontendHubService.build_frontend_state(None)
+        hub = AIFrontendHubService.build_frontend_state(active_company)
     except Exception:
         current_app.logger.exception('Falha ao montar central de IA.')
-        console = AIMCPConsoleService.build_frontend_state(None)
+        console = AIMCPConsoleService.build_frontend_state(active_company)
         hub = {
             "summary": {
                 "active_agents": 0,
@@ -318,8 +325,13 @@ def ai_permissions_page():
     company_id = getattr(active_company, 'id', None)
     if not _can_access_ai_mcp_console(company_id):
         abort(403)
+    allowed_company_ids = get_accessible_company_ids()
     try:
-        state = AICapabilitiesCentralService.build_frontend_state(active_company)
+        state = AICapabilitiesCentralService.build_frontend_state(
+            active_company,
+            selected_capability_key=request.args.get('capability_key'),
+            allowed_company_ids=allowed_company_ids,
+        )
     except Exception:
         current_app.logger.exception("Falha ao montar a Central de Capacidades de IA.")
         return _render_ai_config_page("permissions", active_company)
@@ -351,6 +363,104 @@ def ai_monitoring_page():
 @login_required
 def ai_monitoring_legacy_redirect():
     return redirect('/ai-monitoring')
+
+@configs_bp.route('/api/ai-monitoring/panel', methods=['GET'])
+@login_required
+def ai_monitoring_panel_api():
+    active_company = _resolve_active_company()
+    company_id = request.args.get('company_id', type=int) or getattr(active_company, 'id', None)
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para monitoramento."}), 400
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao monitoramento de IA."}), 403
+
+    result, error = OperationalAuditService.build_panel(
+        company_id=int(company_id),
+        allowed_company_ids=None if is_platform_admin() else get_accessible_company_ids(),
+        source=request.args.get('source') or None,
+        limit=request.args.get('limit', default=12, type=int),
+    )
+    if error:
+        return jsonify({"success": False, "error": error}), 400
+    return jsonify({"success": True, "panel": result})
+
+
+@configs_bp.route('/api/ai-monitoring/requests', methods=['GET'])
+@login_required
+def ai_monitoring_requests_api():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if company_id and not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao monitoramento de IA."}), 403
+
+    return jsonify({
+        "success": True,
+        "requests": MonitoringAuditRequestService.list_requests(
+            company_id=company_id,
+            requester_user_id=int(current_user.id),
+            limit=request.args.get('limit', default=10, type=int),
+        ),
+    })
+
+
+@configs_bp.route('/api/ai-monitoring/requests', methods=['POST'])
+@login_required
+def ai_monitoring_create_request_api():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para abrir solicitação de monitoramento."}), 400
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao monitoramento de IA."}), 403
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        record = MonitoringAuditRequestService.create_request(
+            payload,
+            company_id=int(company_id),
+            company_name=getattr(active_company, 'name', None),
+            requester_user_id=int(current_user.id),
+            requester_name=getattr(current_user, 'name', None),
+        )
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": "Payload inválido para solicitação de auditoria.", "details": exc.errors()}), 400
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    return jsonify({"success": True, "request": record}), 201
+
+
+@configs_bp.route('/api/ai-monitoring/report.pdf', methods=['GET'])
+@login_required
+def ai_monitoring_report_pdf():
+    active_company = _resolve_active_company()
+    company_id = request.args.get('company_id', type=int) or getattr(active_company, 'id', None)
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para exportar o relatório."}), 400
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao monitoramento de IA."}), 403
+
+    panel, error = OperationalAuditService.build_panel(
+        company_id=int(company_id),
+        allowed_company_ids=None if is_platform_admin() else get_accessible_company_ids(),
+        source=request.args.get('source') or None,
+        limit=request.args.get('limit', default=50, type=int),
+    )
+    if error:
+        return jsonify({"success": False, "error": error}), 400
+
+    pdf_bytes = generate_ai_monitoring_report_pdf(
+        panel=panel or {},
+        company_name=getattr(active_company, 'name', None) or f'Empresa {company_id}',
+        generated_by=(getattr(current_user, 'name', None) or getattr(current_user, 'email', None) or 'Usuário autenticado'),
+    )
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'monitoramento-auditoria-{company_id}.pdf',
+    )
+
 
 
 @configs_bp.route('/configs/ai/mcp')
@@ -475,9 +585,14 @@ def get_ai_capabilities_frontend_state():
     active_company = _resolve_active_company()
     company_id = getattr(active_company, 'id', None)
     _require_ai_admin_access(company_id)
+    allowed_company_ids = get_accessible_company_ids()
     return jsonify({
         "success": True,
-        "state": AICapabilitiesCentralService.build_frontend_state(active_company),
+        "state": AICapabilitiesCentralService.build_frontend_state(
+            active_company,
+            selected_capability_key=request.args.get('capability_key'),
+            allowed_company_ids=allowed_company_ids,
+        ),
     })
 
 
@@ -550,6 +665,41 @@ def create_ai_capability_audit_log():
             payload=payload.get("payload") or {},
         )
         return jsonify({"success": True, "audit_log": log.to_dict()})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@configs_bp.route('/api/configs/ai/capabilities/requests', methods=['GET'])
+@login_required
+def list_ai_capability_requests():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    return jsonify({
+        "success": True,
+        "requests": AICapabilityBacklogService.list_requests(
+            capability_key=request.args.get('capability_key'),
+            limit=request.args.get('limit', 100, type=int),
+        ),
+    })
+
+
+@configs_bp.route('/api/configs/ai/capabilities/requests', methods=['POST'])
+@login_required
+def create_ai_capability_request():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        record = AICapabilityBacklogService.create_request(
+            request.get_json(silent=True) or {},
+            company_id=company_id,
+            requester_user_id=current_user.id,
+            requester_name=getattr(current_user, 'name', None),
+        )
+        return jsonify({"success": True, "request": record})
     except ValidationError as exc:
         return jsonify({"success": False, "error": exc.errors()}), 400
     except ValueError as exc:
