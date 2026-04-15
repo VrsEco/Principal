@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_login import LoginManager, login_required
 from flask_restful import Api
 import os
+import shutil
 from sqlalchemy import inspect, or_, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -42,6 +43,62 @@ def _should_run_runtime_bootstrap(config_name: str) -> bool:
     if config_name == "production":
         return False
     return True
+
+
+def _sync_public_static_assets(app: Flask) -> None:
+    """
+    Sincroniza os assets estáticos da aplicação para o diretório público raiz.
+
+    Contexto:
+    - O código Flask reside em C:\\GestaoVersus\\app32\\app32
+    - Os templates referenciam /static/...
+    - Em produção, o diretório público raiz pode servir C:\\GestaoVersus\\app32\\static
+      enquanto os assets versionados vivem em C:\\GestaoVersus\\app32\\app32\\static
+
+    Estratégia:
+    - Cópia incremental, não destrutiva
+    - Cria apenas arquivos inexistentes ou desatualizados
+    """
+    source_static = os.path.abspath(app.static_folder)
+    public_static = os.path.abspath(os.path.join(app.root_path, "..", "static"))
+
+    if source_static == public_static:
+        return
+
+    if not os.path.isdir(source_static):
+        app.logger.warning("Static source directory not found: %s", source_static)
+        return
+
+    os.makedirs(public_static, exist_ok=True)
+
+    copied_files = 0
+    for root, _, files in os.walk(source_static):
+        relative_root = os.path.relpath(root, source_static)
+        target_root = public_static if relative_root == "." else os.path.join(public_static, relative_root)
+        os.makedirs(target_root, exist_ok=True)
+
+        for filename in files:
+            source_file = os.path.join(root, filename)
+            target_file = os.path.join(target_root, filename)
+
+            should_copy = not os.path.exists(target_file)
+            if not should_copy:
+                try:
+                    should_copy = os.path.getmtime(source_file) > os.path.getmtime(target_file)
+                except OSError:
+                    should_copy = True
+
+            if should_copy:
+                shutil.copy2(source_file, target_file)
+                copied_files += 1
+
+    if copied_files:
+        app.logger.info(
+            "Static assets synchronized: %s files copied from %s to %s",
+            copied_files,
+            source_static,
+            public_static,
+        )
 
 
 def _backfill_user_channel_contacts():
@@ -124,6 +181,7 @@ def create_app(config_name=None):
     
     app.config.from_object(app_configs[config_name])
     app.config["FLASK_CONFIG"] = config_name
+    _sync_public_static_assets(app)
 
     if config_name == "production":
         if not app.config.get("SECRET_KEY"):
