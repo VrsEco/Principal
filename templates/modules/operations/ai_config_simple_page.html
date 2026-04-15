@@ -1,0 +1,306 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ page.title }} | IA Corporativa{% endblock %}
+
+{% block breadcrumb %}
+<a href="/portal">Portal</a>
+<span class="sep">/</span>
+<a href="/configs/system">Sistema</a>
+<span class="sep">/</span>
+<a href="/ai">IA Corporativa</a>
+<span class="sep">/</span>
+<span class="current">{{ page.title }}</span>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="ai-config-sidebar">
+    <div class="sidebar-header-ws">
+        <h3>Atalhos</h3>
+        <p>Abra direto a página certa.</p>
+    </div>
+    <div class="ai-config-sidebar__body">
+        {% for item in page.shortcuts %}
+        <a href="{{ item.href }}" class="ai-config-sidebar__link {% if item.label == page.title %}is-active{% endif %}">
+            {{ item.label }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai_config_pages.css') }}">
+{% if page.key == 'monitoring' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai_monitoring_page.css') }}">
+{% endif %}
+
+{% set monitoring = page.monitoring_dashboard|default(None, true) %}
+<div class="ai-config-page" id="aiConfigPage" data-page-title="{{ page.title }}" {% if monitoring %}data-monitoring-page="true" data-company-id="{{ active_company.id if active_company else '' }}" data-panel-endpoint="{{ monitoring.panel_endpoint }}" data-requests-endpoint="{{ monitoring.requests_endpoint }}" data-request-endpoint="{{ monitoring.request_endpoint }}" data-pdf-export-url="{{ monitoring.pdf_export_url }}" data-default-limit="{{ monitoring.default_limit }}"{% endif %}>
+    <section class="ai-config-hero">
+        <div>
+            <span class="ai-config-eyebrow">{{ page.eyebrow }}</span>
+            <h1>{{ page.title }}</h1>
+            <p>{{ page.intro }}</p>
+        </div>
+        <div class="ai-config-metrics">
+            {% for metric in page.hero_metrics %}
+            <article class="ai-config-metric">
+                <span>{{ metric.label }}</span>
+                <strong>{{ metric.value }}</strong>
+            </article>
+            {% endfor %}
+        </div>
+
+</section>
+
+{% if monitoring %}
+<section class="ai-monitoring-shell" aria-label="Resumo operacional do monitoramento e auditoria">
+    <div class="ai-monitoring-summary-grid" id="aiMonitoringSummaryGrid">
+        {% for card in monitoring.summary_cards %}
+        <article class="ai-monitoring-summary-card ai-monitoring-summary-card--{{ card.tone }}">
+            <span>{{ card.label }}</span>
+            <strong data-summary-key="{{ loop.index0 }}">{{ card.value }}</strong>
+            <p>{{ card.description }}</p>
+        </article>
+        {% endfor %}
+    </div>
+
+    <section class="ai-monitoring-toolbar">
+        <div class="ai-monitoring-toolbar__filters">
+            <label>
+                <span>Fonte</span>
+                <select id="aiMonitoringSource">
+                    <option value="">Todas</option>
+                    <option value="human_review">Revisões humanas</option>
+                    <option value="sapiens_workflow">Sapiens / workflows</option>
+                    <option value="agent_action">Ações de agentes / MCP</option>
+                </select>
+            </label>
+            <label>
+                <span>Limite</span>
+                <input id="aiMonitoringLimit" type="number" min="1" max="200" value="{{ monitoring.default_limit }}">
+            </label>
+            <button type="button" class="ai-config-btn ai-config-btn--secondary" id="aiMonitoringRefresh">Atualizar</button>
+        </div>
+        <div class="ai-monitoring-toolbar__actions">
+            <a href="/operations/audit" class="ai-config-link-btn">Abrir timeline completa</a>
+            <button type="button" class="ai-config-btn ai-config-btn--secondary" id="aiMonitoringExportPdf">Exportar PDF</button>
+            <button type="button" class="ai-config-btn ai-config-btn--primary" id="aiMonitoringOpenRequest">Solicitar verificação / auditoria</button>
+        </div>
+    </section>
+
+    <div class="ai-monitoring-grid">
+        <article class="ai-monitoring-panel">
+            <header class="ai-monitoring-panel__header">
+                <div>
+                    <span class="ai-config-eyebrow">Leitura simples</span>
+                    <h2>Linha do tempo recente</h2>
+                    <p>Leitura direta da empresa ativa, no mesmo espírito da auditoria operacional.</p>
+                </div>
+                <span class="ai-monitoring-status" id="aiMonitoringPanelStatus">Aguardando consulta</span>
+            </header>
+            <div class="ai-monitoring-events" id="aiMonitoringEvents">
+                {% for event in monitoring.recent_events %}
+                <article class="ai-monitoring-event">
+                    <div class="ai-monitoring-event__top">
+                        <div>
+                            <strong>{{ event.title }}</strong>
+                            <span>{{ event.created_at }} · {{ event.actor }} · {{ event.channel }}</span>
+                        </div>
+                        <mark>{{ event.source }}</mark>
+                    </div>
+                    <p>{{ event.description }}</p>
+                </article>
+                {% else %}
+                <div class="ai-monitoring-empty">Nenhum evento encontrado para a empresa ativa.</div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <aside class="ai-monitoring-side">
+            <article class="ai-monitoring-panel">
+                <header class="ai-monitoring-panel__header">
+                    <div>
+                        <span class="ai-config-eyebrow">Backlog AA.J.31</span>
+                        <h2>Solicitações recentes</h2>
+                        <p>Cards criados pela tela para formalizar verificação ou auditoria.</p>
+                    </div>
+                </header>
+                <div class="ai-monitoring-request-list" id="aiMonitoringRequestList">
+                    {% for item in monitoring.recent_requests %}
+                    <article class="ai-monitoring-request-item">
+                        <strong>{{ item.title }}</strong>
+                        <span>{{ item.request_kind_label }} · {{ item.status_label }}</span>
+                        <small>{{ item.backlog_task_code or ('#' ~ item.backlog_task_id) }}</small>
+                    </article>
+                    {% else %}
+                    <div class="ai-monitoring-empty">Nenhuma solicitação aberta por esta tela até agora.</div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="ai-monitoring-panel ai-monitoring-panel--form" id="aiMonitoringRequestPanel" hidden>
+                <header class="ai-monitoring-panel__header">
+                    <div>
+                        <span class="ai-config-eyebrow">Nova solicitação</span>
+                        <h2>Enviar para AA.J.31</h2>
+                        <p>Cria um card estruturado no backlog corporativo.</p>
+                    </div>
+                </header>
+                <form id="aiMonitoringRequestForm" class="ai-monitoring-form">
+                    <label>
+                        <span>Título</span>
+                        <input type="text" name="title" maxlength="255" required placeholder="Ex.: Auditoria de trilha MCP do fechamento financeiro">
+                    </label>
+                    <label>
+                        <span>Tipo</span>
+                        <select name="request_kind" required>
+                            <option value="verification">Verificação</option>
+                            <option value="audit">Auditoria</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Escopo</span>
+                        <input type="text" name="scope_label" maxlength="120" required placeholder="Ex.: MCP financeiro / workflows críticos">
+                    </label>
+                    <label>
+                        <span>Objetivo</span>
+                        <textarea name="objective" rows="4" maxlength="3000" required placeholder="Descreva o que precisa ser verificado ou auditado."></textarea>
+                    </label>
+                    <label>
+                        <span>Urgência</span>
+                        <select name="urgency">
+                            <option value="medium">Média</option>
+                            <option value="high">Alta</option>
+                            <option value="critical">Crítica</option>
+                            <option value="low">Baixa</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Observações</span>
+                        <textarea name="notes" rows="3" maxlength="3000" placeholder="Contexto adicional para o time que receberá o card."></textarea>
+                    </label>
+                    <input type="hidden" name="source_filter" value="">
+                    <input type="hidden" name="evidence_summary" value="">
+                    <div class="ai-monitoring-form__actions">
+                        <button type="button" class="ai-config-btn ai-config-btn--secondary" id="aiMonitoringCancelRequest">Cancelar</button>
+                        <button type="submit" class="ai-config-btn ai-config-btn--primary">Criar card</button>
+                    </div>
+                    <p class="ai-monitoring-form__feedback" id="aiMonitoringRequestFeedback" hidden></p>
+                </form>
+            </article>
+        </aside>
+    </div>
+</section>
+{% endif %}
+
+<section class="ai-config-chat-card is-expanded" data-config-searchable="{{ page.search_terms }}" data-config-chat-card>
+        <header class="ai-config-chat-card__header">
+            <div>
+                <span class="ai-config-eyebrow">Comece por aqui</span>
+                <h2>{{ page.wizard.title }}</h2>
+                <p>{{ page.wizard.intro }}</p>
+            </div>
+            <div class="ai-config-chat-card__actions">
+                <button type="button" class="ai-config-link-btn" id="aiConfigWizardReset">Reiniciar</button>
+                <button type="button" class="ai-config-section__toggle" data-config-chat-toggle aria-expanded="true" aria-label="Expandir ou recolher assistente API / MCP">
+                    <span>⌄</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="ai-config-chat-card__body">
+        <div class="ai-config-chat">
+            <div class="ai-config-chat__bubble ai-config-chat__bubble--agent">
+                <strong>{{ page.title }}</strong>
+                <p>Responda uma pergunta por vez.</p>
+            </div>
+
+            <div class="ai-config-chat__steps">
+                {% for step in page.wizard.steps %}
+                <section class="ai-config-step {% if loop.first %}is-active{% endif %}" data-config-step="{{ step.step }}">
+                    <div class="ai-config-chat__bubble ai-config-chat__bubble--agent">
+                        <span class="ai-config-chat__label">Pergunta {{ step.step }}</span>
+                        <p>{{ step.question }}</p>
+                    </div>
+                    <div class="ai-config-options">
+                        {% for option in step.options %}
+                        <button
+                            type="button"
+                            class="ai-config-option"
+                            data-config-choice
+                            data-result-title="{{ option.result_title }}"
+                            data-result-body="{{ option.result_body }}"
+                            data-target-section="{{ option.target_section }}"
+                            data-choice-label="{{ option.label }}"
+                        >
+                            <strong>{{ option.label }}</strong>
+                            <span>{{ option.description }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endfor %}
+            </div>
+
+            <div class="ai-config-chat__transcript" id="aiConfigTranscript" hidden></div>
+
+            <div class="ai-config-result" id="aiConfigResult" hidden>
+                <strong id="aiConfigResultTitle"></strong>
+                <p id="aiConfigResultBody"></p>
+                <div class="ai-config-result__actions">
+                    <button type="button" class="ai-config-btn ai-config-btn--primary" id="aiConfigGo">Ir para a seção</button>
+                </div>
+            </div>
+        </div>
+        </div>
+    </section>
+
+    <div class="ai-config-sections">
+        {% for section in page.sections %}
+        <article class="ai-config-section {% if loop.first %}is-expanded{% else %}is-collapsed{% endif %}" data-config-section="{{ section.id }}">
+            <header class="ai-config-section__header">
+                <div>
+                    <span class="ai-config-eyebrow">Sessão {{ loop.index }}</span>
+                    <h2>{{ section.title }}</h2>
+                    <p>{{ section.summary }}</p>
+                </div>
+                <button type="button" class="ai-config-section__toggle" data-config-toggle aria-expanded="{{ 'true' if loop.first else 'false' }}">
+                    <span>⌄</span>
+                </button>
+            </header>
+            <div class="ai-config-section__body">
+                <div class="ai-config-card-grid">
+                    {% for item in section["items"] %}
+                    <article class="ai-config-card">
+                        <div class="ai-config-card__head">
+                            <strong>{{ item.title }}</strong>
+                            <span>{{ item.meta }}</span>
+                        </div>
+                        <p>{{ item.description }}</p>
+                        {% if item.href %}
+                        <a href="{{ item.href }}" class="ai-config-link-btn">Abrir</a>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                    {% if not section["items"] %}
+                    <article class="ai-config-card ai-config-card--empty">
+                        <strong>Sem itens</strong>
+                        <p>Nada para mostrar agora.</p>
+                    </article>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/ai_config_pages.js') }}"></script>
+{% if page.key == 'monitoring' %}
+<script src="{{ url_for('static', filename='js/ai_monitoring_page.js') }}" defer></script>
+{% endif %}
+{% endblock %}
