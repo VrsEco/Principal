@@ -1254,7 +1254,7 @@
         userInput.style.height = (userInput.scrollHeight) + 'px';
     }
     function shouldShowOperationalPanels() {
-        return ['sapiens', 'engineering'].includes(activeContact);
+        return ['sapiens', 'engineering', 'factory'].includes(activeContact);
     }
 
     function updateOperationalViewControls() {
@@ -1832,7 +1832,7 @@
                 chatMessages.innerHTML = `
                     <div style="text-align:center; padding: 4rem 1rem; color: #888; font-size: 0.85rem;">
                         <div style="background: rgba(0,0,0,0.05); display: inline-block; padding: 4px 12px; border-radius: 12px;">
-                            Início da conversa com ${activeContact === 'sapiens' ? 'o Sapiens' : 'a Engenharia'}
+                            Início da conversa com ${activeContact === 'sapiens' ? 'o Sapiens' : (activeContact === 'engineering' ? 'a Engenharia' : 'a Sapiens Factory')}
                         </div>
                     </div>
                 `;
@@ -1885,6 +1885,8 @@
             'auditor': 'Auditor',
             'engineering': 'Squad Engenharia',
             'engineering_squad': 'Squad Engenharia',
+            'factory': 'Sapiens Factory',
+            'factory_squad': 'Sapiens Factory',
             '@ARQUITETO': 'Arquiteto',
             '@QA_AUTOMATION': 'QA-Bot'
         };

@@ -10,7 +10,11 @@ from services.ai_capabilities_central_service import AICapabilitiesCentralServic
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
+from services.external_llm_factory_service import ExternalLLMFactoryService
 from services.monitoring_audit_request_service import MonitoringAuditRequestService
+from services.sapiens_factory_registry_service import SapiensFactoryRegistryService
+from services.sapiens_factory_schema import FactoryActorContext, SapiensFactoryChangeRequest
+from services.sapiens_factory_service import SapiensFactoryService
 from services.operational_audit_service import OperationalAuditService
 from services.tool_first_catalog_service import ToolFirstCatalogService
 from schemas.ai_capabilities import (
@@ -43,6 +47,20 @@ def _can_access_ai_mcp_console(company_id=None):
 def _require_ai_admin_access(company_id=None):
     if not _can_access_ai_mcp_console(company_id):
         abort(403)
+
+
+def _build_factory_actor_context(active_company) -> FactoryActorContext:
+    company_id = getattr(active_company, "id", None)
+    accessible_company_ids = get_accessible_company_ids()
+    if company_id and company_id not in accessible_company_ids:
+        accessible_company_ids.append(company_id)
+    return FactoryActorContext(
+        user_id=getattr(current_user, "id", None),
+        role=getattr(current_user, "role", None),
+        channel="web",
+        company_id=company_id,
+        accessible_company_ids=accessible_company_ids,
+    )
 
 
 def _build_ai_config_fallback_page(page_key: str) -> dict:
@@ -484,6 +502,33 @@ def ai_mcp_console():
         console=frontend_state,
     )
 
+@configs_bp.route('/ai/factory')
+@login_required
+def sapiens_factory_page():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        abort(403)
+    actor = _build_factory_actor_context(active_company)
+    assessment = SapiensFactoryService.assess_change_request(
+        {
+            'request_text': 'Diagnosticar a prontidão da Sapiens Factory para evoluções assistidas.',
+            'execution_mode': 'diagnose',
+            'urgency': 'medium',
+            'company_id': company_id,
+        },
+        actor_context=actor.model_dump(mode='json'),
+    )
+    return render_template(
+        'modules/operations/sapiens_factory.html',
+        active_company=active_company,
+        actor_context=actor.model_dump(mode='json'),
+        registry_snapshot=SapiensFactoryRegistryService.build_registry_snapshot(),
+        external_surface=ExternalLLMFactoryService.build_surface_manifest(),
+        initial_assessment=assessment,
+    )
+
+
 # API Endpoints
 
 @configs_bp.route('/api/configs/ai/agents', methods=['GET'])
@@ -546,6 +591,68 @@ def get_ai_mcp_frontend_state():
         "success": True,
         "console": AIMCPConsoleService.build_frontend_state(active_company),
     })
+
+
+
+
+@configs_bp.route('/api/configs/ai/factory/context', methods=['GET'])
+@login_required
+def get_sapiens_factory_context():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({'success': False, 'error': 'Acesso negado à Sapiens Factory.'}), 403
+
+    actor = _build_factory_actor_context(active_company)
+    return jsonify({
+        'success': True,
+        'actor': actor.model_dump(mode='json'),
+        'registry': SapiensFactoryRegistryService.build_registry_snapshot(),
+        'external_surface': ExternalLLMFactoryService.build_surface_manifest(),
+    })
+
+
+@configs_bp.route('/api/configs/ai/factory/capabilities', methods=['GET'])
+@login_required
+def get_sapiens_factory_capabilities():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({'success': False, 'error': 'Acesso negado à Sapiens Factory.'}), 403
+    return jsonify({'success': True, 'registry': SapiensFactoryRegistryService.build_registry_snapshot()})
+
+
+@configs_bp.route('/api/configs/ai/factory/external-surface', methods=['GET'])
+@login_required
+def get_sapiens_factory_external_surface():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({'success': False, 'error': 'Acesso negado à surface externa da factory.'}), 403
+    return jsonify({'success': True, 'surface': ExternalLLMFactoryService.build_surface_manifest()})
+
+
+@configs_bp.route('/api/configs/ai/factory/assess-change', methods=['POST'])
+@login_required
+def assess_sapiens_factory_change():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({'success': False, 'error': 'Acesso negado à Sapiens Factory.'}), 403
+
+    actor = _build_factory_actor_context(active_company)
+    payload = request.get_json(silent=True) or {}
+    if company_id and payload.get('company_id') is None:
+        payload['company_id'] = company_id
+    try:
+        request_model = SapiensFactoryChangeRequest.model_validate(payload)
+        assessment = SapiensFactoryService.assess_change_request(
+            request_model.model_dump(mode='json'),
+            actor_context=actor.model_dump(mode='json'),
+        )
+        return jsonify({'success': True, 'assessment': assessment})
+    except ValidationError as exc:
+        return jsonify({'success': False, 'error': exc.errors()}), 400
 
 
 @configs_bp.route('/api/configs/ai/mcp/tool-first-catalog', methods=['GET'])

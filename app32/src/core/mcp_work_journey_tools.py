@@ -4,6 +4,15 @@ from datetime import date
 from typing import Any, Optional
 
 from app import create_app
+from src.intelligence.mcp_contracts import (
+    MCPErrorDetail,
+    MCPErrorEnvelope,
+    MCPResponseMeta,
+    MCPSuccessEnvelope,
+    WorkJourneyBoardItem,
+    WorkJourneyBoardPayload,
+    WorkJourneyBoardQuery,
+)
 from schemas.work_journey import (
     WorkJourneyAbsenceApprovalSchema,
     WorkJourneyAbsenceRequestCreateSchema,
@@ -59,12 +68,67 @@ def _run(callback, *args, **kwargs) -> Any:
         return callback(*args, **kwargs)
 
 
+def _meta(operation: str) -> MCPResponseMeta:
+    return MCPResponseMeta(
+        domain='work_journey',
+        operation=operation,
+        scope='mcp_user',
+        capability=f'work_journey.{operation}',
+        permissions=['work_journey.read'],
+        tags=['work-journey', 'routine'],
+        human_gate_required=False,
+    )
+
+
+def _success_envelope(*, operation: str, data: dict[str, Any], message: str | None = None) -> dict[str, Any]:
+    return MCPSuccessEnvelope[Any](
+        data=data,
+        meta=_meta(operation),
+        message=message or 'Operação work_journey concluída com sucesso.',
+    ).model_dump(mode='json')
+
+
+def _error_envelope(*, operation: str, message: str, code: str = 'work_journey_error', details: dict[str, Any] | None = None) -> dict[str, Any]:
+    return MCPErrorEnvelope(
+        error=MCPErrorDetail(code=code, message=message, details=details or {}),
+        meta=_meta(operation),
+    ).model_dump(mode='json')
+
+
+def _normalize_board_item(raw_item: dict[str, Any]) -> WorkJourneyBoardItem:
+    title = raw_item.get('display_title') or raw_item.get('title') or 'Item sem título'
+    return WorkJourneyBoardItem(
+        item_id=raw_item.get('id') or raw_item.get('item_id'),
+        source_type=raw_item.get('item_type') or raw_item.get('source_type') or 'manual',
+        title=title,
+        status=raw_item.get('status') or 'pending',
+        block_id=raw_item.get('block_id'),
+        due_date=raw_item.get('due_date'),
+        estimated_minutes=raw_item.get('estimated_minutes'),
+        worked_minutes=raw_item.get('worked_minutes'),
+    )
+
+
+def _build_work_journey_board_envelope(service_payload: dict[str, Any], query: WorkJourneyBoardQuery) -> dict[str, Any]:
+    payload = WorkJourneyBoardPayload(
+        company_id=query.company_id,
+        employee_id=query.employee_id,
+        anchor_date=query.anchor_date,
+        scope=query.scope,
+        items=[_normalize_board_item(item) for item in service_payload.get('period_items', [])],
+        summary=dict(service_payload.get('summary') or {}),
+    )
+    return _success_envelope(operation='board.read', data=payload.model_dump(mode='json'))
+
+
 def register_work_journey_tools(mcp) -> None:
     @mcp.tool()
     def get_work_journey_board_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'day') -> dict:
         """Retorna o quadro operacional da jornada por blocos de um colaborador."""
         anchor = date.fromisoformat(anchor_date)
-        return _run(get_work_journey_board, company_id, employee_id, anchor, scope)
+        query = WorkJourneyBoardQuery(company_id=company_id, employee_id=employee_id, anchor_date=anchor, scope=scope)
+        payload = _run(get_work_journey_board, company_id, employee_id, anchor, scope)
+        return _build_work_journey_board_envelope(payload or {}, query)
 
     @mcp.tool()
     def list_work_journey_blocks_tool(company_id: int, employee_id: int) -> dict:
@@ -213,3 +277,4 @@ def register_work_journey_tools(mcp) -> None:
 
 WorkJourneyCreateSchema = WorkJourneyBlockCreateSchema
 WorkJourneyUpdateSchema = WorkJourneyBlockUpdateSchema
+

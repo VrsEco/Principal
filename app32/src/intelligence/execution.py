@@ -9,6 +9,7 @@ try:
 except Exception:  # pragma: no cover - fallback defensivo
     TRANSIENT_AI_EXCEPTIONS = tuple()
 
+from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
 from src.intelligence.tool_context import (
     set_sapiens_context,
     reset_sapiens_context,
@@ -165,6 +166,33 @@ def _build_execution_metadata(
     }
 
 
+
+
+def _audit_execution_event(
+    *,
+    status: str,
+    user_id: int,
+    company_id: Optional[int],
+    channel: str,
+    thread_id: str,
+    execution_id: str,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    record = build_ai_execution_audit_record(
+        event_type=f"sapiens.execution.{status}",
+        runtime='sapiens',
+        status=status,
+        domain='intelligence',
+        operation='run_agent_with_context',
+        scope='sapiens',
+        company_id=company_id,
+        user_id=user_id,
+        thread_id=thread_id,
+        execution_id=execution_id,
+        metadata=metadata or {},
+    )
+    return emit_ai_execution_audit_event(record, logger=logger)
+
 def _is_transient_ai_error(exc: Exception) -> bool:
     if TRANSIENT_AI_EXCEPTIONS and isinstance(exc, TRANSIENT_AI_EXCEPTIONS):
         return True
@@ -268,16 +296,56 @@ def run_agent_with_context(
     Suporta: Web, Telegram, Instagram, WhatsApp, E-mail.
     """
     if not company_id:
-        from models.employee import Employee
-        first_emp = Employee.query.filter_by(user_id=user_id).first()
-        if first_emp:
-            company_id = first_emp.company_id
+        try:
+            from models.employee import Employee
+            first_emp = Employee.query.filter_by(user_id=user_id).first()
+            if first_emp:
+                company_id = first_emp.company_id
+        except RuntimeError:
+            company_id = None
 
     if not thread_id:
         thread_id = f"{thread_prefix}_{user_id}"
 
     execution_id = uuid4().hex
     config = {"configurable": {"thread_id": thread_id}}
+
+    if not company_id:
+        denial_message = (
+            "Desculpe, o contexto de empresa nao foi validado para esta execução. "
+            "Selecione a empresa ativa antes de continuar."
+        )
+        denial_metadata = _merge_execution_metadata(
+            {
+                "ai_security": {
+                    "tenant_allowed": False,
+                    "reason": "company_context_missing",
+                }
+            },
+            _build_execution_metadata(
+                execution_id=execution_id,
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                thread_prefix=thread_prefix,
+                menu_intercepted=False,
+            ),
+        )
+        _audit_execution_event(
+            status='blocked',
+            user_id=user_id,
+            company_id=company_id,
+            channel=channel,
+            thread_id=thread_id,
+            execution_id=execution_id,
+            metadata=denial_metadata,
+        )
+        return {
+            "messages": [("ai", denial_message)],
+            "next_node": "sapiens",
+            "menu_metadata": denial_metadata,
+        }
 
     context_metadata = _merge_execution_metadata(
         metadata,
@@ -291,7 +359,15 @@ def run_agent_with_context(
             menu_intercepted=False,
         ),
     )
-    runtime_identity = resolve_runtime_identity(user_id=user_id, company_id=company_id)
+    try:
+        runtime_identity = resolve_runtime_identity(user_id=user_id, company_id=company_id)
+    except RuntimeError:
+        runtime_identity = {
+            'employee_id': None,
+            'role': None,
+            'permissions': [],
+            'accessible_company_ids': [company_id] if company_id else [],
+        }
     context_metadata = _merge_execution_metadata(
         context_metadata,
         {
@@ -313,6 +389,16 @@ def run_agent_with_context(
         metadata=context_metadata,
     )
     legacy_tokens = set_legacy_tool_context(user_id=user_id, company_id=company_id)
+
+    _audit_execution_event(
+        status='started',
+        user_id=user_id,
+        company_id=company_id,
+        channel=channel,
+        thread_id=thread_id,
+        execution_id=execution_id,
+        metadata=context_metadata,
+    )
 
     try:
         menu_result = handle_menu_message(
@@ -343,6 +429,15 @@ def run_agent_with_context(
                 user_msg=user_msg,
                 response_text=menu_result.response_text or "",
                 menu_metadata=final_menu_metadata,
+            )
+            _audit_execution_event(
+                status='menu_intercepted',
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                execution_id=execution_id,
+                metadata=final_menu_metadata,
             )
             return {
                 "messages": [("ai", menu_result.response_text or "")],
@@ -402,6 +497,15 @@ def run_agent_with_context(
                 response_text=response_text,
                 menu_metadata=response.get("menu_metadata"),
             )
+            _audit_execution_event(
+                status='completed',
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                execution_id=execution_id,
+                metadata=response.get("menu_metadata"),
+            )
             return response
 
     except Exception as e:
@@ -452,11 +556,29 @@ def run_agent_with_context(
                 response_text=temporary_message,
                 menu_metadata=transient_metadata,
             )
+            _audit_execution_event(
+                status='transient_error',
+                user_id=user_id,
+                company_id=company_id,
+                channel=channel,
+                thread_id=thread_id,
+                execution_id=execution_id,
+                metadata=transient_metadata,
+            )
             return {
                 "messages": [("ai", temporary_message)],
                 "next_node": "sapiens",
                 "menu_metadata": transient_metadata,
             }
+        _audit_execution_event(
+            status='error',
+            user_id=user_id,
+            company_id=company_id,
+            channel=channel,
+            thread_id=thread_id,
+            execution_id=execution_id,
+            metadata={'error': str(e), 'error_type': e.__class__.__name__},
+        )
         logger.error(
             "SAPIENS ERROR [%s]: Thread %s | User %s | Company %s | Execution %s | Error=%s",
             channel.upper(),

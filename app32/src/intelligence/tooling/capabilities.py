@@ -190,6 +190,18 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "human_gate_reason": "Cadastro de usuário do sistema exige validação humana e trilha de auditoria.",
         "tags": ("admin", "mutation"),
     },
+    "get_financial_results": {
+        "domain": "finance",
+        "scopes": (
+            ToolScope.SAPIENS.value,
+            ToolScope.MCP_USER.value,
+            ToolScope.MCP_ADMIN.value,
+            ToolScope.MCP_ANALYTICS.value,
+        ),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("financial.results.read",),
+        "tags": ("finance", "read", "executive"),
+    },
     "update_user_contacts": {
         "domain": "identity_self_service",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

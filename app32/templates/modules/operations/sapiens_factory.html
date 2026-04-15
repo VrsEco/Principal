@@ -1,0 +1,177 @@
+{% extends "layouts/app.html" %}
+
+{% block page_title %}Sapiens Factory{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .factory-shell { display:grid; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr); gap:1.25rem; }
+    .factory-card { background:#fff; border:1px solid #e5e7eb; border-radius:1rem; box-shadow:0 10px 24px rgba(15,23,42,.05); }
+    .factory-card-header { padding:1.25rem 1.25rem .75rem; border-bottom:1px solid #f1f5f9; }
+    .factory-card-body { padding:1.25rem; }
+    .factory-title { font-size:1.3rem; font-weight:800; color:#0f172a; margin:0; }
+    .factory-subtitle { color:#475569; margin:.35rem 0 0; }
+    .factory-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:.75rem; }
+    .factory-metric { border:1px solid #e2e8f0; border-radius:.85rem; padding:.9rem; background:#f8fafc; }
+    .factory-metric-label { font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
+    .factory-metric-value { font-size:1.25rem; font-weight:800; color:#0f172a; margin-top:.35rem; }
+    .factory-field { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.9rem; }
+    .factory-field label { font-weight:700; color:#0f172a; }
+    .factory-field input, .factory-field select, .factory-field textarea {
+        width:100%; border:1px solid #cbd5e1; border-radius:.75rem; padding:.8rem .95rem; background:#fff; color:#0f172a;
+    }
+    .factory-field textarea { min-height:130px; resize:vertical; }
+    .factory-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1rem; }
+    .factory-btn { border:none; border-radius:.85rem; padding:.85rem 1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+    .factory-btn-primary { background:#2563eb; color:#fff; }
+    .factory-btn-secondary { background:#e2e8f0; color:#0f172a; }
+    .factory-chip-row { display:flex; flex-wrap:wrap; gap:.5rem; margin:.8rem 0 0; }
+    .factory-chip { background:#eff6ff; color:#1d4ed8; padding:.4rem .65rem; border-radius:999px; font-size:.78rem; font-weight:700; }
+    .factory-list { margin:0; padding-left:1rem; color:#334155; }
+    .factory-list li { margin:.35rem 0; }
+    .factory-highlight { background:#0f172a; color:#e2e8f0; border-radius:1rem; padding:1rem; }
+    .factory-highlight strong { color:#fff; }
+    .factory-example-list { display:grid; gap:.65rem; }
+    .factory-example { border:1px dashed #cbd5e1; background:#f8fafc; border-radius:.85rem; padding:.8rem; cursor:pointer; text-align:left; }
+    .factory-result-section { margin-top:1rem; }
+    .factory-result-title { font-weight:800; color:#0f172a; margin:0 0 .5rem; }
+    .factory-badge-risk { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .6rem; border-radius:999px; font-size:.75rem; font-weight:700; }
+    .risk-high { background:#fee2e2; color:#b91c1c; }
+    .risk-medium { background:#fef3c7; color:#b45309; }
+    .risk-low { background:#dcfce7; color:#15803d; }
+    @media (max-width: 1100px) { .factory-shell { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6" id="factoryApp"
+     data-actor='{{ actor_context|tojson }}'
+     data-registry='{{ registry_snapshot|tojson }}'
+     data-surface='{{ external_surface|tojson }}'
+     data-assessment='{{ initial_assessment|tojson }}'>
+    <section class="factory-card">
+        <div class="factory-card-header">
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 mb-2">IA Corporativa • Factory Assistida</p>
+            <h1 class="factory-title">Sapiens Factory</h1>
+            <p class="factory-subtitle">
+                Esteira assistida para criar, alterar, ativar, desativar, corrigir e refatorar
+                <strong>Service → Tool + contrato → REST/MCP → Workflow → UI/Sapiens</strong>,
+                com governança, human gate e trilha de auditoria.
+            </p>
+        </div>
+        <div class="factory-card-body">
+            <div class="factory-grid" id="factoryMetrics"></div>
+        </div>
+    </section>
+
+    <div class="factory-shell">
+        <section class="factory-card">
+            <div class="factory-card-header">
+                <h2 class="factory-title">Wizard de mudança</h2>
+                <p class="factory-subtitle">Descreva a necessidade. O Sapiens Factory classifica risco, camadas afetadas e próximos passos seguros.</p>
+            </div>
+            <div class="factory-card-body">
+                <form id="factoryForm">
+                    <div class="factory-field">
+                        <label for="request_text">Solicitação</label>
+                        <textarea id="request_text" name="request_text" required placeholder="Ex.: Precisamos evoluir o workflow XYZ porque a confirmação não está respeitando o human gate."></textarea>
+                    </div>
+                    <div class="factory-grid">
+                        <div class="factory-field">
+                            <label for="change_type">Tipo</label>
+                            <select id="change_type" name="change_type">
+                                <option value="">Auto detectar</option>
+                                <option value="create">Criar</option>
+                                <option value="alter">Alterar</option>
+                                <option value="activate">Ativar</option>
+                                <option value="deactivate">Desativar</option>
+                                <option value="fix">Corrigir</option>
+                                <option value="refactor">Refatorar</option>
+                                <option value="diagnose">Diagnosticar</option>
+                            </select>
+                        </div>
+                        <div class="factory-field">
+                            <label for="execution_mode">Modo</label>
+                            <select id="execution_mode" name="execution_mode">
+                                <option value="diagnose">Diagnóstico</option>
+                                <option value="plan">Planejamento</option>
+                                <option value="prepare">Preparação</option>
+                                <option value="execute_controlled">Execução controlada</option>
+                            </select>
+                        </div>
+                        <div class="factory-field">
+                            <label for="urgency">Urgência</label>
+                            <select id="urgency" name="urgency">
+                                <option value="medium">Média</option>
+                                <option value="low">Baixa</option>
+                                <option value="high">Alta</option>
+                                <option value="critical">Crítica</option>
+                            </select>
+                        </div>
+                        <div class="factory-field">
+                            <label for="domain">Domínio</label>
+                            <input id="domain" name="domain" placeholder="finance, engineering, routine..." />
+                        </div>
+                    </div>
+                    <div class="factory-grid">
+                        <div class="factory-field">
+                            <label for="target_object">Objeto alvo</label>
+                            <input id="target_object" name="target_object" placeholder="workflow:xyz / tool:abc / capability:financial_results_query" />
+                        </div>
+                        <div class="factory-field">
+                            <label for="desired_outcome">Resultado esperado</label>
+                            <input id="desired_outcome" name="desired_outcome" placeholder="Ex.: reduzir erro, melhorar assertividade, liberar surface externa." />
+                        </div>
+                    </div>
+                    <div class="factory-actions">
+                        <button type="submit" class="factory-btn factory-btn-primary">Validar mudança</button>
+                        <button type="button" class="factory-btn factory-btn-secondary" id="factoryReset">Limpar</button>
+                        <a href="/sapiens?contact=factory" class="factory-btn factory-btn-secondary">Abrir no chat</a>
+                    </div>
+                </form>
+
+                <div class="factory-result-section">
+                    <h3 class="factory-result-title">Exemplos rápidos</h3>
+                    <div class="factory-example-list" id="factoryExamples"></div>
+                </div>
+
+                <div class="factory-result-section">
+                    <h3 class="factory-result-title">Assessment</h3>
+                    <div id="factoryAssessment" class="space-y-4"></div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="space-y-5">
+            <section class="factory-card">
+                <div class="factory-card-header">
+                    <h2 class="factory-title">Contexto ativo</h2>
+                    <p class="factory-subtitle">Identidade, tenant e registry consultivo usados no diagnóstico.</p>
+                </div>
+                <div class="factory-card-body">
+                    <div class="factory-highlight" id="factoryActorSummary"></div>
+                    <div class="factory-result-section">
+                        <h3 class="factory-result-title">Capacidades registradas</h3>
+                        <div id="factoryCapabilities" class="space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="factory-card">
+                <div class="factory-card-header">
+                    <h2 class="factory-title">Surface externa LLM</h2>
+                    <p class="factory-subtitle">Pronta para Factory agora, preparada para split futuro com Operations.</p>
+                </div>
+                <div class="factory-card-body">
+                    <div id="externalSurfacePanel" class="space-y-4"></div>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/sapiens_factory.js') }}"></script>
+{% endblock %}

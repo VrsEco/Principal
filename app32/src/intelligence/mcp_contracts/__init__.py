@@ -148,6 +148,20 @@ from .operational_readiness import (
     ReadinessStatus,
     build_operational_readiness_manifest,
 )
+from .sapiens_factory import (
+    APP32_SAPIENS_FACTORY_MANIFEST,
+    SapiensFactoryEnvelope,
+    SapiensFactoryManifest,
+    SapiensFactorySupportedIntent,
+    build_app32_sapiens_factory_manifest,
+)
+from .external_llm_factory import (
+    APP32_EXTERNAL_LLM_FACTORY_MANIFEST,
+    ExternalLLMFactoryEnvelope,
+    ExternalLLMFactoryManifest,
+    ExternalLLMFactoryStrategy,
+    build_external_llm_factory_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -270,4 +284,14 @@ __all__ = [
     "ReadinessPhase",
     "ReadinessStatus",
     "build_operational_readiness_manifest",
+    "APP32_SAPIENS_FACTORY_MANIFEST",
+    "SapiensFactoryEnvelope",
+    "SapiensFactoryManifest",
+    "SapiensFactorySupportedIntent",
+    "build_app32_sapiens_factory_manifest",
+    "APP32_EXTERNAL_LLM_FACTORY_MANIFEST",
+    "ExternalLLMFactoryEnvelope",
+    "ExternalLLMFactoryManifest",
+    "ExternalLLMFactoryStrategy",
+    "build_external_llm_factory_manifest",
 ]

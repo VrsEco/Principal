@@ -77,6 +77,12 @@ class AIMCPConsoleService:
                 "kind": "console",
             },
             {
+                "title": "Sapiens Factory",
+                "href": "/ai/factory",
+                "description": "Factory assistida para evoluir Service, Tool, REST/MCP, Workflow e UI/Sapiens com governança.",
+                "kind": "console",
+            },
+            {
                 "title": "Visão Geral",
                 "href": "/ai",
                 "description": "Configurar agentes, parâmetros e monitorar logs de comunicação.",
@@ -128,6 +134,11 @@ class AIMCPConsoleService:
                 "title": "Sapiens",
                 "href": "/sapiens",
                 "description": "Acesso direto ao runtime conversacional oficial do APP32.",
+            },
+            {
+                "title": "Factory Assistida",
+                "href": "/ai/factory",
+                "description": "Diagnosticar, planejar e preparar mudanças técnicas com guardrails corporativos.",
             },
             {
                 "title": "Mapa de integrações",

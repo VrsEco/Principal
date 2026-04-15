@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
+from services.agent_conversation_service import AgentConversationService
 from services.cadastro_agent_service import CadastroAgentService
 from utils.permissions import has_company_full_access, is_platform_admin
 
@@ -196,101 +197,44 @@ def get_engineering_board():
     from flask import redirect, url_for
     return redirect(url_for('agents.sapiens_page', contact='engineering'))
 
+@agents_bp.route('/agents/factory')
+@login_required
+def get_factory_board():
+    from flask import redirect, url_for
+    return redirect(url_for('agents.sapiens_page', contact='factory'))
+
+
 @agents_bp.route('/api/agents/chat', methods=['POST'])
 @login_required
 def agents_chat():
-    from models import db, AgentMessage
     from flask import session
-    
+
     data = request.get_json(silent=True) or {}
     message = (data.get('message') or '').strip()
-    contact = data.get('contact', 'sapiens') # 'sapiens' ou 'engineering'
-    
-    if not message:
-        return jsonify({
-            "success": False,
-            "error": "Mensagem vazia. Informe o que deseja executar."
-        }), 400
-
+    contact = data.get('contact', 'sapiens')
     company_id = session.get('active_company_id')
-    
-    # Define o prefixo se for engenharia
-    processed_message = message
-    agent_type = 'work_agent_squad'
-    
-    if contact == 'engineering' and '[CANAL ENGENHARIA]' not in message:
-        processed_message = f"[CANAL ENGENHARIA] {message}"
-        agent_type = 'engineering_squad'
-
-    # Thread unica e consistente entre logs e execucao do agente.
-    thread_id = f"web_{current_user.id}_{contact}"
-
-    # 1. Salva a mensagem do usuário (Inbound)
-    user_msg = AgentMessage(
-        company_id=company_id,
-        user_id=current_user.id,
-        agent_type=agent_type,
-        agent_name='Usuário',
-        direction='inbound',
-        content=message,
-        channel='platform',
-        metadata_json={
-            "contact": contact,
-            "thread_id": thread_id
-        }
-    )
 
     try:
-        db.session.add(user_msg)
-        db.session.commit()
-
-        # 2. Executa o Agente com Contexto Unificado (@ARQUITETO)
-        from src.intelligence.execution import run_agent_with_context, extract_response_text
-
-        response = run_agent_with_context(
-            user_id=current_user.id,
-            user_msg=processed_message,
-            channel="web",
-            thread_id=thread_id,
+        result = AgentConversationService.chat_with_agent(
+            user_id=int(current_user.id),
             company_id=company_id,
-            metadata={"agent_type": agent_type, "contact": contact}
+            message=message,
+            contact=contact,
         )
-
-        final_text = extract_response_text(response)
-        fallback_agent = "engineering_squad" if contact == "engineering" else "sapiens"
-        agent_executor = response.get("next_node") or fallback_agent
-        if agent_executor == "end":
-            agent_executor = fallback_agent
-        menu_metadata = dict(response.get("menu_metadata") or {})
-
-        # 3. Salva a resposta da IA no log de mensagens (Visual apenas)
-        outbound_metadata = {
-            "agent": agent_executor,
-            "contact": contact,
-            "thread_id": thread_id,
-        }
-        outbound_metadata.update(menu_metadata)
-        ai_msg = AgentMessage(
-            company_id=company_id,
-            user_id=current_user.id,
-            agent_type=agent_type,
-            agent_name=agent_executor,
-            direction='outbound',
-            content=final_text,
-            channel='platform',
-            metadata_json=outbound_metadata
-        )
-        db.session.add(ai_msg)
-        db.session.commit()
-
         return jsonify({
             "success": True,
-            "response": final_text,
-            "agent": agent_executor
+            "response": result["response"],
+            "agent": result["agent"],
+            "thread_id": result["thread_id"],
+            "menu_metadata": result.get("menu_metadata") or {},
         })
-    except Exception as e:
-        db.session.rollback()
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception:
+        from models import db
         import logging
+
+        db.session.rollback()
         logging.getLogger(__name__).exception("Erro no endpoint /api/agents/chat para user_id=%s", getattr(current_user, "id", None))
         return jsonify({
             "success": False,
@@ -937,6 +881,14 @@ def get_agents_contacts():
             "avatar": "🛠️",
             "status": "online",
             "description": "@Arquitetos & @QA Automation",
+            "type": "bot"
+        },
+        {
+            "id": "factory",
+            "name": "Sapiens Factory",
+            "avatar": "🏭",
+            "status": "online",
+            "description": "Factory assistida para evolução técnica com governança",
             "type": "bot"
         }
     ]

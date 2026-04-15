@@ -149,6 +149,10 @@ def sanitize_output(data):
     return data
 
 
+def _sanitize_json_payload(payload):
+    return sanitize_output(json.dumps(payload, ensure_ascii=False, default=str))
+
+
 def _normalize_company_text(value: str) -> str:
     """
     Normaliza texto para matching tolerante (acento, pontuacao e caixa).
@@ -656,6 +660,29 @@ def squad_finish_intervention(task_id: int, remark: str, hours_worked: float = 0
         hours_worked=hours_worked,
     )
 
+@tool
+def get_financial_results(period_start: str = "", period_end: str = "", company_id: int = 0):
+    """
+    Consulta read-only os resultados financeiros consolidados da empresa ativa.
+    Use para resumir caixa, DRE líquida e painéis executivos sem expor SQL livre.
+    """
+    from services.financial_results_query_service import FinancialResultsQueryService
+
+    selected_company_id = int(company_id) if int(company_id or 0) > 0 else get_active_company_id()
+    if not selected_company_id:
+        return "Erro: Nenhuma empresa ativa identificada para consulta financeira."
+
+    payload, error = FinancialResultsQueryService.get_company_financial_results(
+        company_id=int(selected_company_id),
+        allowed_company_ids=[int(selected_company_id)],
+        period_start=(period_start or None),
+        period_end=(period_end or None),
+    )
+    if error:
+        return f"Erro ao consultar resultados financeiros: {error}"
+    return _sanitize_json_payload(payload or {})
+
+
 
 
 tools = [
@@ -695,5 +722,7 @@ tools = [
     list_team_workload,
     get_team_workload_read_model,
     get_projects_execution_risk_read_model,
+    # Fase 3 — Finance
+    get_financial_results,
 ]
 logger = logging.getLogger(__name__)
