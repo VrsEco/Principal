@@ -106,6 +106,35 @@ def test_workflow_approval_service_keeps_action_approved_when_resume_does_not_ex
     assert action.payload["resume_result"]["executed"] is False
 
 
+def test_workflow_approval_service_tool_runtime_approval_returns_resume_hint():
+    service = WorkflowApprovalService(
+        resume_executor=lambda payload: DirectExecutionResult(executed=False),
+        now_factory=lambda: datetime(2026, 3, 8, 12, 15, 0),
+    )
+    action = _build_action(
+        payload={
+            "created_via": "tool_runtime_guard",
+            "request_payload": {"tool_name": "register_system_user"},
+            "resume_payload": {
+                "tool_name": "register_system_user",
+                "company_id": 9,
+            },
+        }
+    )
+
+    outcome = service.approve(
+        action=action,
+        approver_user_id=7,
+        approver_name="Fabiano Ferreira",
+        active_company_id=9,
+    )
+
+    assert outcome.success is True
+    assert action.status == "approved"
+    assert "register_system_user" in outcome.message
+    assert "repetir a mesma solicitação" in outcome.message
+
+
 
 def test_workflow_approval_service_rejects_and_marks_action_without_resuming():
     called = {"resume": False}

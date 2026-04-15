@@ -302,12 +302,20 @@ class WorkflowApprovalService:
         action.resolved_at = now
 
         if not resume_payload.get("action_key"):
+            created_via = str(payload.get("created_via") or "").strip().lower()
+            request_payload = dict(payload.get("request_payload") or {})
+            tool_name = request_payload.get("tool_name")
             action.payload = payload
             action.status = "approved"
             sync_backlog_task_for_action(action)
             return WorkflowApprovalOutcome(
                 success=True,
-                message="Solicitação aprovada. Não havia payload de retomada para executar automaticamente.",
+                message=(
+                    f"Solicitação aprovada. Peça ao Sapiens para repetir a mesma solicitação da tool {tool_name} "
+                    "para retomar com o human gate já validado."
+                    if created_via == "tool_runtime_guard" and tool_name
+                    else "Solicitação aprovada. Não havia payload de retomada para executar automaticamente."
+                ),
                 action_status=action.status,
                 resume_payload=resume_payload,
                 audit_metadata=self._build_audit_metadata(

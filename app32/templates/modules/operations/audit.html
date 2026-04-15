@@ -10,30 +10,28 @@
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
-<a href="/operations">Operações Inteligentes</a>
+<a href="/ai-monitoring">Monitoramento e Auditoria</a>
 <span class="sep">/</span>
 <span class="current">Auditoria operacional</span>
 {% endblock %}
 
 {% block navbar_actions %}
 <div class="ops-audit-navbar-actions">
-    <a href="/operations" class="ops-audit-btn ops-audit-btn--secondary">Voltar para central</a>
+    <a href="/ai-monitoring" class="ops-audit-btn ops-audit-btn--secondary">Voltar ao monitoramento</a>
+    <a href="/workflow" class="ops-audit-btn ops-audit-btn--secondary">Ver workflow</a>
     <a href="/sapiens" class="ops-audit-btn ops-audit-btn--primary">Conversar com Sapiens</a>
 </div>
 {% endblock %}
 
 {% block workspace_content %}
-<div
-    class="ops-audit-page"
-    data-company-id="{{ active_company.id if active_company else '' }}"
->
-    <section class="ops-audit-hero">
+<div class="int-page fade-in ops-audit-page" data-company-id="{{ active_company.id if active_company else '' }}">
+    <header class="int-header ops-audit-header">
         <div>
-            <span class="ops-audit-eyebrow">Observabilidade técnica</span>
-            <h1>Auditoria operacional</h1>
-            <p>
-                Painel unificado para trilhas MCP, Sapiens, ações de agentes e revisões humanas.
-                A consulta sempre respeita a empresa ativa e o mesmo RBAC usado pelas rotas do APP32.
+            <span class="int-eyebrow">Observabilidade técnica</span>
+            <h1>Auditoria operacional IA/MCP</h1>
+            <p class="muted mb-0">
+                Painel no padrão de workflow para trilhas persistidas de IA/MCP, approvals humanos, bloqueios de governança
+                e retomada assistida por empresa.
             </p>
         </div>
         <div class="ops-audit-company-card">
@@ -41,53 +39,110 @@
             <strong>{{ active_company.client_code if active_company and active_company.client_code else 'VS' }}</strong>
             <small>{{ active_company.name if active_company else 'Selecione uma empresa' }}</small>
         </div>
-    </section>
+    </header>
 
-    <section class="ops-audit-toolbar" aria-label="Filtros de auditoria operacional">
-        <label>
-            <span>Fonte</span>
-            <select id="opsAuditSource">
-                <option value="">Todas</option>
-                <option value="human_review">Revisões humanas</option>
-                <option value="sapiens_workflow">Sapiens / workflows</option>
-                <option value="agent_action">Ações de agentes / MCP</option>
-            </select>
-        </label>
-        <label>
-            <span>Limite</span>
-            <input id="opsAuditLimit" type="number" min="1" max="200" value="50">
-        </label>
-        <button id="opsAuditRefresh" type="button">Atualizar auditoria</button>
-    </section>
+    <section class="int-shell">
+        <aside class="int-rail">
+            <div class="int-card">
+                <div class="int-card-head">
+                    <div>
+                        <h2>Filtros e trilhas</h2>
+                        <small id="opsAuditListHint">Carregando eventos...</small>
+                    </div>
+                </div>
 
-    <section class="ops-audit-summary" aria-label="Resumo da auditoria">
-        <article>
-            <span>Total</span>
-            <strong data-summary-total>0</strong>
-        </article>
-        <article>
-            <span>Revisões humanas</span>
-            <strong data-summary-source="human_review">0</strong>
-        </article>
-        <article>
-            <span>Sapiens / workflows</span>
-            <strong data-summary-source="sapiens_workflow">0</strong>
-        </article>
-        <article>
-            <span>Ações de agentes</span>
-            <strong data-summary-source="agent_action">0</strong>
-        </article>
-    </section>
+                <div class="ops-audit-filter-grid">
+                    <label class="int-search">
+                        <span>Buscar</span>
+                        <input id="opsAuditSearchInput" type="search" placeholder="Tool, domínio, status, runtime ou descrição">
+                    </label>
+                    <label class="int-search">
+                        <span>Fonte</span>
+                        <select id="opsAuditSource">
+                            <option value="">Todas</option>
+                            <option value="ai_mcp_runtime">IA / MCP runtime</option>
+                            <option value="human_review">Revisões humanas</option>
+                            <option value="sapiens_workflow">Sapiens / workflows</option>
+                            <option value="agent_action">Ações de agentes</option>
+                        </select>
+                    </label>
+                    <label class="int-search">
+                        <span>Limite</span>
+                        <input id="opsAuditLimit" type="number" min="1" max="200" value="50">
+                    </label>
+                    <button id="opsAuditRefresh" type="button" class="ops-audit-refresh">Atualizar painel</button>
+                </div>
 
-    <section class="ops-audit-card">
-        <div class="ops-audit-card__header">
-            <div>
-                <span class="ops-audit-eyebrow">Eventos</span>
-                <h2>Linha do tempo operacional</h2>
+                <div class="ops-audit-summary-grid" id="opsAuditSummaryCards"></div>
+                <div class="int-domain-tree ops-audit-event-list" id="opsAuditEventsList"></div>
             </div>
-            <span id="opsAuditStatus" class="ops-audit-status">Aguardando consulta</span>
-        </div>
-        <div id="opsAuditEvents" class="ops-audit-events" aria-live="polite"></div>
+        </aside>
+
+        <main class="int-main">
+            <section class="int-card">
+                <div class="int-card-head">
+                    <div>
+                        <h2 id="opsAuditDetailTitle">Selecione um evento</h2>
+                        <p id="opsAuditDetailSummary" class="muted">No centro exibimos o contexto técnico completo do evento auditado.</p>
+                    </div>
+                    <span id="opsAuditStatus" class="ops-audit-status">Aguardando consulta</span>
+                </div>
+
+                <div class="int-detail-grid">
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Fonte</span>
+                        <strong id="opsAuditDetailSource">-</strong>
+                    </div>
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Runtime / canal</span>
+                        <strong id="opsAuditDetailRuntime">-</strong>
+                    </div>
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Status</span>
+                        <strong id="opsAuditDetailStatus">-</strong>
+                    </div>
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Tool / operação</span>
+                        <strong id="opsAuditDetailTool">-</strong>
+                    </div>
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Domínio</span>
+                        <strong id="opsAuditDetailDomain">-</strong>
+                    </div>
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Actor</span>
+                        <strong id="opsAuditDetailActor">-</strong>
+                    </div>
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Thread / trace</span>
+                        <ul id="opsAuditDetailTrace"><li>Selecione um evento.</li></ul>
+                    </div>
+                    <div class="int-detail-block">
+                        <span class="int-detail-label">Governança</span>
+                        <ul id="opsAuditDetailGovernance"><li>Selecione um evento.</li></ul>
+                    </div>
+                    <div class="int-detail-block ops-audit-detail-json">
+                        <span class="int-detail-label">Payload auditado</span>
+                        <pre id="opsAuditDetailRaw">Selecione um evento.</pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="int-rail">
+            <div class="int-card">
+                <div class="int-card-head">
+                    <div>
+                        <h2>Fila de approvals</h2>
+                        <small id="opsAuditApprovalHint">Gates humanos do runtime e workflows</small>
+                    </div>
+                </div>
+                <div class="ops-audit-analytics" id="opsAuditAnalytics"></div>
+                <div class="int-requests-list" id="opsAuditApprovalsList">
+                    <div class="int-empty">Carregando approvals...</div>
+                </div>
+            </div>
+        </aside>
     </section>
 </div>
 {% endblock %}

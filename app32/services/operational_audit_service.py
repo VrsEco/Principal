@@ -1,23 +1,29 @@
 from __future__ import annotations
 
+import logging
+from collections import Counter
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from models import AgentAction, FinancialIngestionRecord, UserLog, WorkflowExecutionLog
+from sqlalchemy import inspect, text
+
+from models import AgentAction, FinancialIngestionRecord, UserLog, WorkflowExecutionLog, db
 from services.financial_service import FinancialService
+from services.workflow_approval_service import (
+    build_workflow_approval_metrics,
+    serialize_workflow_approval_action,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 class OperationalAuditService:
-    """Consolida trilhas de auditoria operacionais do APP32.
-
-    O serviço não cria novas tabelas: ele reutiliza os ledgers existentes para
-    expor, com escopo multi-tenant obrigatório, a visão de MCP/Sapiens/agentes e
-    revisões humanas que alimentam o catálogo único de tools.
-    """
+    """Consolida trilhas de auditoria operacionais e IA/MCP do APP32."""
 
     DEFAULT_LIMIT = 50
     MAX_LIMIT = 200
-    VALID_SOURCES = {"human_review", "sapiens_workflow", "agent_action"}
+    VALID_SOURCES = {"ai_mcp_runtime", "human_review", "sapiens_workflow", "agent_action"}
 
     @classmethod
     def build_panel(
@@ -39,21 +45,36 @@ class OperationalAuditService:
         normalized_limit = cls._normalize_limit(limit)
         events: List[Dict[str, Any]] = []
 
+        if cls._should_include(normalized_source, "ai_mcp_runtime"):
+            events.extend(
+                cls._safe_collect(
+                    "ai_mcp_runtime",
+                    cls._collect_ai_mcp_runtime_events,
+                    company_id=company_id,
+                    limit=normalized_limit,
+                )
+            )
         if cls._should_include(normalized_source, "human_review"):
-            events.extend(cls._collect_human_review_events(company_id=company_id, limit=normalized_limit))
+            events.extend(cls._safe_collect("human_review", cls._collect_human_review_events, company_id=company_id, limit=normalized_limit))
         if cls._should_include(normalized_source, "sapiens_workflow"):
-            events.extend(cls._collect_workflow_events(company_id=company_id, limit=normalized_limit))
+            events.extend(cls._safe_collect("sapiens_workflow", cls._collect_workflow_events, company_id=company_id, limit=normalized_limit))
         if cls._should_include(normalized_source, "agent_action"):
-            events.extend(cls._collect_agent_action_events(company_id=company_id, limit=normalized_limit))
+            events.extend(cls._safe_collect("agent_action", cls._collect_agent_action_events, company_id=company_id, limit=normalized_limit))
 
         events = sorted(events, key=cls._sort_key, reverse=True)[:normalized_limit]
+        approvals = cls._safe_collect("workflow_approvals", cls._collect_workflow_approvals, company_id=company_id, limit=min(normalized_limit, 25))
+        approvals_summary = build_workflow_approval_metrics([item["_action"] for item in approvals if item.get("_action")])
+        approvals = [{key: value for key, value in item.items() if key != "_action"} for item in approvals]
         summary = cls._build_summary(events)
 
         return {
             "company_id": int(company_id),
             "filters": {"source": normalized_source or "all", "limit": normalized_limit},
             "summary": summary,
+            "analytics": cls._build_analytics(events, approvals),
             "events": events,
+            "approvals": approvals,
+            "approvals_summary": approvals_summary,
         }, None
 
     @classmethod
@@ -69,6 +90,28 @@ class OperationalAuditService:
         return selected_source in {None, candidate}
 
     @classmethod
+    def _safe_collect(cls, source_name: str, collector, **kwargs) -> List[Dict[str, Any]]:
+        try:
+            return collector(**kwargs)
+        except Exception:
+            db.session.rollback()
+            logger.exception("Falha ao coletar eventos de auditoria operacional para a fonte %s.", source_name)
+            return [
+                {
+                    "source": source_name,
+                    "title": f"Falha na coleta da fonte {source_name}",
+                    "description": "A fonte apresentou divergência de schema ou erro operacional. A tela foi mantida ativa em modo resiliente.",
+                    "actor": "Sistema",
+                    "entity_type": "audit_source",
+                    "entity_id": None,
+                    "status": "degraded",
+                    "channel": source_name,
+                    "created_at": cls._iso(datetime.now()),
+                    "raw": {"source": source_name, "status": "degraded"},
+                }
+            ]
+
+    @classmethod
     def _build_summary(cls, events: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
         by_source = {source: 0 for source in sorted(cls.VALID_SOURCES)}
         by_status: Dict[str, int] = {}
@@ -79,6 +122,45 @@ class OperationalAuditService:
                 by_source[source] += 1
             by_status[status] = by_status.get(status, 0) + 1
         return {"total": len(events), "by_source": by_source, "by_status": by_status}
+
+    @classmethod
+    def _build_analytics(cls, events: Sequence[Dict[str, Any]], approvals: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+        by_tool = Counter()
+        by_domain = Counter()
+        by_runtime = Counter()
+        by_status = Counter()
+        for event in events:
+            runtime = str(event.get("runtime") or event.get("source") or "unknown")
+            status = str(event.get("status") or "unknown")
+            tool_name = str(event.get("tool_name") or "").strip()
+            domain = str(event.get("domain") or "").strip()
+            by_runtime[runtime] += 1
+            by_status[status] += 1
+            if tool_name:
+                by_tool[tool_name] += 1
+            if domain:
+                by_domain[domain] += 1
+
+        pending_approvals = sum(1 for item in approvals if (item.get("approval") or {}).get("approval_status") == "pending")
+        tool_gate_pending = sum(
+            1
+            for item in approvals
+            if (item.get("approval") or {}).get("approval_status") == "pending"
+            and str((item.get("approval") or {}).get("action_key") or "").startswith("tool.")
+        )
+
+        return {
+            "top_tools": [{"name": name, "count": count} for name, count in by_tool.most_common(8)],
+            "top_domains": [{"name": name, "count": count} for name, count in by_domain.most_common(8)],
+            "by_runtime": dict(by_runtime),
+            "by_status": dict(by_status),
+            "cards": [
+                {"id": "events_total", "label": "Eventos auditados", "value": len(events), "hint": "Linha do tempo consolidada"},
+                {"id": "human_gate_pending", "label": "Approvals pendentes", "value": pending_approvals, "hint": "Fila operacional aberta"},
+                {"id": "tool_gate_pending", "label": "Tools aguardando gate", "value": tool_gate_pending, "hint": "Pedidos sensíveis do runtime"},
+                {"id": "blocked_total", "label": "Bloqueios/gates", "value": by_status.get("blocked", 0) + by_status.get("human_gate_requested", 0), "hint": "Governança em ação"},
+            ],
+        }
 
     @staticmethod
     def _sort_key(event: Dict[str, Any]) -> datetime:
@@ -99,6 +181,59 @@ class OperationalAuditService:
         if value is None:
             return None
         return str(value)
+
+    @classmethod
+    def _collect_ai_mcp_runtime_events(cls, *, company_id: int, limit: int) -> List[Dict[str, Any]]:
+        inspector = inspect(db.engine)
+        if not inspector.has_table("ai_mcp_audit_events"):
+            return []
+
+        rows = db.session.execute(
+            text(
+                """
+                SELECT id, event_type, runtime, status, domain, operation, tool_name, scope,
+                       company_id, user_id, thread_id, execution_id, request_id, trace_id,
+                       metadata_json, occurred_at, created_at
+                  FROM ai_mcp_audit_events
+                 WHERE company_id = :company_id
+                 ORDER BY occurred_at DESC, id DESC
+                 LIMIT :limit
+                """
+            ),
+            {"company_id": int(company_id), "limit": int(limit)},
+        ).mappings().all()
+
+        events: list[dict[str, Any]] = []
+        for row in rows:
+            metadata = dict(row.get("metadata_json") or {})
+            tool_name = row.get("tool_name")
+            domain = row.get("domain")
+            status = row.get("status")
+            runtime = row.get("runtime")
+            events.append(
+                {
+                    "source": "ai_mcp_runtime",
+                    "title": cls._build_ai_runtime_title(row),
+                    "description": cls._build_ai_runtime_description(row, metadata),
+                    "actor": f"user:{row.get('user_id')}" if row.get("user_id") else (runtime or "runtime"),
+                    "entity_type": "ai_mcp_audit_event",
+                    "entity_id": row.get("id"),
+                    "status": status,
+                    "channel": row.get("scope") or runtime,
+                    "created_at": cls._iso(row.get("occurred_at") or row.get("created_at")),
+                    "raw": dict(row),
+                    "runtime": runtime,
+                    "domain": domain,
+                    "tool_name": tool_name,
+                    "operation": row.get("operation"),
+                    "scope": row.get("scope"),
+                    "thread_id": row.get("thread_id"),
+                    "trace_id": row.get("trace_id"),
+                    "request_id": row.get("request_id"),
+                    "metadata_preview": metadata,
+                }
+            )
+        return events
 
     @classmethod
     def _collect_human_review_events(cls, *, company_id: int, limit: int) -> List[Dict[str, Any]]:
@@ -136,15 +271,21 @@ class OperationalAuditService:
                     }
                 )
 
-        user_logs = (
-            UserLog.query.filter(
-                UserLog.company_id == company_id,
-                UserLog.entity_type == "financial_ingestion_record",
+        try:
+            user_logs = (
+                UserLog.query.filter(
+                    UserLog.company_id == company_id,
+                    UserLog.entity_type == "financial_ingestion_record",
+                )
+                .order_by(UserLog.created_at.desc(), UserLog.id.desc())
+                .limit(limit)
+                .all()
             )
-            .order_by(UserLog.created_at.desc(), UserLog.id.desc())
-            .limit(limit)
-            .all()
-        )
+        except Exception:
+            db.session.rollback()
+            logger.exception("Falha ao consultar UserLog na auditoria operacional da empresa %s.", company_id)
+            user_logs = []
+
         for log in user_logs:
             events.append(
                 {
@@ -211,6 +352,21 @@ class OperationalAuditService:
             for action in actions
         ]
 
+    @classmethod
+    def _collect_workflow_approvals(cls, *, company_id: int, limit: int) -> List[Dict[str, Any]]:
+        actions = (
+            AgentAction.query.filter_by(company_id=company_id, type="workflow_approval_request")
+            .order_by(AgentAction.created_at.desc(), AgentAction.id.desc())
+            .limit(limit)
+            .all()
+        )
+        serialized: list[dict[str, Any]] = []
+        for action in actions:
+            item = serialize_workflow_approval_action(action)
+            item["_action"] = action
+            serialized.append(item)
+        return serialized
+
     @staticmethod
     def _actor_label(actor: Dict[str, Any]) -> str:
         return actor.get("user_name") or actor.get("user_email") or actor.get("agent") or "Usuário APP32"
@@ -222,7 +378,30 @@ class OperationalAuditService:
 
     @staticmethod
     def _truncate(value: str, size: int = 240) -> str:
-        text = " ".join(str(value or "").split())
-        if len(text) <= size:
-            return text
-        return f"{text[: size - 1]}…"
+        text_value = " ".join(str(value or "").split())
+        if len(text_value) <= size:
+            return text_value
+        return f"{text_value[: size - 1]}…"
+
+    @classmethod
+    def _build_ai_runtime_title(cls, row: Dict[str, Any]) -> str:
+        tool_name = row.get("tool_name")
+        event_type = row.get("event_type")
+        if tool_name:
+            return f"{tool_name} · {row.get('status') or 'evento'}"
+        if event_type:
+            return str(event_type)
+        return "Evento IA/MCP"
+
+    @classmethod
+    def _build_ai_runtime_description(cls, row: Dict[str, Any], metadata: Dict[str, Any]) -> str:
+        reason = str(metadata.get("reason") or "").strip()
+        if reason:
+            return reason
+        operation = str(row.get("operation") or "").strip()
+        domain = str(row.get("domain") or "").strip()
+        runtime = str(row.get("runtime") or "").strip()
+        parts = [part for part in (runtime, domain, operation) if part]
+        if parts:
+            return " · ".join(parts)
+        return "Evento persistido da trilha IA/MCP."

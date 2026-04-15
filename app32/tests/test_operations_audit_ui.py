@@ -8,8 +8,12 @@ def test_operations_audit_ui_declares_expected_contracts():
 
     assert "data-company-id" in template
     assert "opsAuditSource" in template
+    assert "opsAuditEventsList" in template
+    assert "opsAuditApprovalsList" in template
     assert "/api/operations/audit" in script
+    assert "ai_mcp_runtime" in script
     assert "human_review" in script
     assert "sapiens_workflow" in script
     assert "agent_action" in script
     assert ".ops-audit-page" in css
+    assert ".ops-audit-summary-grid" in css

@@ -104,6 +104,27 @@ def test_build_panel_aggregates_operational_sources_with_company_scope(monkeypat
 
     monkeypatch.setattr(audit_module.FinancialService, "_ensure_company_scope", lambda company_id, allowed_company_ids=None: None)
     monkeypatch.setattr(
+        OperationalAuditService,
+        "_collect_ai_mcp_runtime_events",
+        classmethod(lambda cls, **kwargs: [
+            {
+                "source": "ai_mcp_runtime",
+                "title": "register_system_user · human_gate_requested",
+                "description": "mutação de alto risco exige confirmação explícita",
+                "actor": "user:7",
+                "entity_type": "ai_mcp_audit_event",
+                "entity_id": 401,
+                "status": "human_gate_requested",
+                "channel": "admin",
+                "runtime": "sapiens",
+                "tool_name": "register_system_user",
+                "domain": "identity_admin",
+                "created_at": "2026-04-09T12:04:00",
+                "raw": {"id": 401},
+            }
+        ]),
+    )
+    monkeypatch.setattr(
         audit_module,
         "FinancialIngestionRecord",
         _model_stub(record and [record], company_id=True, deleted_at=True, updated_at=True, id=True),
@@ -123,16 +144,23 @@ def test_build_panel_aggregates_operational_sources_with_company_scope(monkeypat
         "AgentAction",
         _model_stub([action], company_id=True, created_at=True, id=True),
     )
+    monkeypatch.setattr(
+        OperationalAuditService,
+        "_collect_workflow_approvals",
+        classmethod(lambda cls, **kwargs: []),
+    )
 
     result, error = OperationalAuditService.build_panel(company_id=9, allowed_company_ids=[9], limit=10)
 
     assert error is None
     assert result["company_id"] == 9
+    assert result["summary"]["by_source"]["ai_mcp_runtime"] == 1
     assert result["summary"]["by_source"]["human_review"] == 2
     assert result["summary"]["by_source"]["sapiens_workflow"] == 1
     assert result["summary"]["by_source"]["agent_action"] == 1
-    assert result["events"][0]["source"] == "agent_action"
-    assert all(event["source"] in {"human_review", "sapiens_workflow", "agent_action"} for event in result["events"])
+    assert result["events"][0]["source"] == "ai_mcp_runtime"
+    assert result["analytics"]["top_tools"][0]["name"] == "register_system_user"
+    assert all(event["source"] in {"ai_mcp_runtime", "human_review", "sapiens_workflow", "agent_action"} for event in result["events"])
 
 
 def test_build_panel_rejects_cross_tenant_scope(monkeypatch):

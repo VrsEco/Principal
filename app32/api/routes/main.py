@@ -3,7 +3,9 @@ from flask_login import login_required, current_user
 from models import Company, Indicator, Process, Project, OKRGlobal, User, OKRArea, IndicatorData, IndicatorGoal, Employee, Meeting, db
 from sqlalchemy import func, or_
 from datetime import datetime
-from utils.permissions import has_company_full_access, get_default_company_id
+from services.operational_audit_service import OperationalAuditService
+from utils.company_access import get_accessible_company_ids
+from utils.permissions import has_company_full_access, get_default_company_id, is_platform_admin
 
 main_bp = Blueprint('main', __name__)
 PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
@@ -41,242 +43,6 @@ def index():
         return redirect(url_for('my_work.my_work'))
     return redirect(url_for('auth.login'))
 
-@main_bp.route('/styleguide')
-def styleguide():
-    """Styleguide page"""
-    return render_template('styleguide.html')
-
-
-@main_bp.route('/operations')
-@login_required
-def operations_hub():
-    """Central unificada de operações inteligentes do APP32."""
-    active_company = _resolve_active_company()
-    modules = [
-        {
-            "key": "financial",
-            "label": "Gestão Financeira",
-            "icon": "currency",
-            "description": "Importações, lançamentos, classificação assistida, automações e revisão operacional.",
-            "groups": [
-                {
-                    "label": "Importações",
-                    "items": [
-                        {
-                            "title": "Prestação de contas",
-                            "description": "Importar documento, sugerir lançamentos e revisar vínculos antes da confirmação.",
-                            "href": "/financial/accountability",
-                            "badge": "Piloto prioritário",
-                            "mode": "Assistida",
-                        },
-                        {
-                            "title": "Entradas / Integrações IA",
-                            "description": "Acompanhar documentos, lotes e registros trazidos por integrações e importações.",
-                            "href": "/financial/ingestions",
-                            "mode": "Automática",
-                        },
-                    ],
-                },
-                {
-                    "label": "Configurações operacionais",
-                    "items": [
-                        {
-                            "title": "Cadastros-base",
-                            "description": "Contas bancárias, plano de contas, centros de resultado e favorecidos.",
-                            "href": "/financial/catalogs",
-                            "mode": "Manual",
-                        },
-                        {
-                            "title": "Projetos / Processos habilitados",
-                            "description": "Definir os domínios que podem ser vinculados às operações financeiras.",
-                            "href": "/financial/domain-enablements",
-                            "mode": "Manual",
-                        },
-                    ],
-                },
-                {
-                    "label": "Execução assistida",
-                    "items": [
-                        {
-                            "title": "Fila de classificação IA",
-                            "description": "Revisar pendências e exceções da classificação assistida do financeiro.",
-                            "href": "/financial/classification-queue",
-                            "mode": "Assistida",
-                        },
-                        {
-                            "title": "Dashboard IA",
-                            "description": "Acompanhar qualidade, volume e evolução da classificação assistida.",
-                            "href": "/financial/classification-dashboard",
-                            "mode": "Operacional",
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            "key": "projects",
-            "label": "Projetos",
-            "icon": "folder",
-            "description": "Criação, execução e acompanhamento de projetos e atividades.",
-            "groups": [
-                {
-                    "label": "Operações",
-                    "items": [
-                        {
-                            "title": "Projetos",
-                            "description": "Gerenciar cadastro, andamento e contexto dos projetos em execução.",
-                            "href": "/projects",
-                            "mode": "Manual",
-                        },
-                        {
-                            "title": "Atividades de projeto",
-                            "description": "Criar e acompanhar tarefas, responsáveis e prazos.",
-                            "href": "/projects",
-                            "mode": "Assistida",
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            "key": "processes",
-            "label": "Processos",
-            "icon": "workflow",
-            "description": "Mapeamento, execução e melhoria contínua dos processos.",
-            "groups": [
-                {
-                    "label": "Operações",
-                    "items": [
-                        {
-                            "title": "Mapa de processos",
-                            "description": "Visualizar a estrutura e manter o desenho operacional dos processos.",
-                            "href": "/processes/map",
-                            "mode": "Manual",
-                        },
-                        {
-                            "title": "Instâncias de processo",
-                            "description": "Acompanhar etapas, prazos e execução operacional do dia a dia.",
-                            "href": "/processes/instances",
-                            "mode": "Assistida",
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            "key": "meetings",
-            "label": "Reuniões",
-            "icon": "meeting",
-            "description": "Agendamento, condução, ata e follow-up das reuniões.",
-            "groups": [
-                {
-                    "label": "Execução",
-                    "items": [
-                        {
-                            "title": "Gerenciar reuniões",
-                            "description": "Agendar, iniciar, registrar decisões, encerrar e enviar atas.",
-                            "href": "/meetings/manage-v2",
-                            "mode": "Assistida",
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            "key": "journey",
-            "label": "Jornada",
-            "icon": "calendar",
-            "description": "Agenda operacional, regras, blocos e redistribuição de carga.",
-            "groups": [
-                {
-                    "label": "Operações",
-                    "items": [
-                        {
-                            "title": "Meu Trabalho",
-                            "description": "Visualizar agenda, prioridades, rotinas, tarefas e jornada operacional.",
-                            "href": "/my-work",
-                            "mode": "Assistida",
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            "key": "technical",
-            "label": "Plataforma IA",
-            "icon": "settings",
-            "description": "Governança de Sapiens, API / MCP, catálogo de tools, configurações de IA e observabilidade.",
-            "groups": [
-                {
-                    "label": "Backoffice técnico",
-                    "items": [
-                        {
-                            "title": "API / MCP",
-                            "description": "Catálogo funcional, contratos, discovery e governança operacional em uma única área.",
-                            "href": "/api-mcp",
-                            "badge": "Novo console",
-                            "mode": "Console",
-                        },
-                        {
-                            "title": "Sapiens",
-                            "description": "Acesso direto ao agente conversacional e seus fluxos operacionais atuais.",
-                            "href": "/sapiens",
-                            "mode": "Técnico",
-                        },
-                        {
-                            "title": "Visão Geral",
-                            "description": "Acompanhar a central da IA Corporativa e seus indicadores principais.",
-                            "href": "/ai",
-                            "mode": "Configuração IA",
-                        },
-                        {
-                            "title": "Configurações de Canais",
-                            "description": "Centralizar integrações, tools e pontos de conectividade do APP32.",
-                            "href": "/channels",
-                            "mode": "Técnico",
-                        },
-                        {
-                            "title": "Regras de classificação financeira",
-                            "description": "Configurar critérios usados pela IA na classificação financeira.",
-                            "href": "/financial/classification-rules",
-                            "mode": "Configuração IA",
-                        },
-                        {
-                            "title": "Memórias de classificação financeira",
-                            "description": "Revisar memórias e aprendizados operacionais usados pela IA financeira.",
-                            "href": "/financial/classification-memories",
-                            "mode": "Configuração IA",
-                        },
-                        {
-                            "title": "Regras de automação financeira",
-                            "description": "Definir automações executadas pela IA no módulo financeiro.",
-                            "href": "/financial/automation-rules",
-                            "mode": "Configuração IA",
-                        },
-                        {
-                            "title": "Auditoria operacional",
-                            "description": "Painel unificado de trilhas MCP, Sapiens, agentes e revisões humanas por empresa.",
-                            "href": "/operations/audit",
-                            "mode": "Observabilidade",
-                        },
-                        {
-                            "title": "Auditoria de automação IA",
-                            "description": "Acompanhar ações automatizadas executadas no financeiro.",
-                            "href": "/financial/automation-audit",
-                            "mode": "Observabilidade",
-                        },
-                    ],
-                },
-            ],
-        },
-    ]
-    return render_template(
-        'modules/operations/hub.html',
-        active_company=active_company,
-        modules=modules,
-    )
-
-
 @main_bp.route('/operations/audit')
 @login_required
 def operations_audit_panel():
@@ -286,6 +52,27 @@ def operations_audit_panel():
         'modules/operations/audit.html',
         active_company=active_company,
     )
+
+
+@main_bp.route('/api/operations/audit')
+@login_required
+def operations_audit_panel_api():
+    active_company = _resolve_active_company()
+    company_id = request.args.get('company_id', type=int) or getattr(active_company, 'id', None)
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para consultar a auditoria operacional."}), 400
+    if not has_company_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para consultar a auditoria operacional."}), 403
+
+    result, error = OperationalAuditService.build_panel(
+        company_id=int(company_id),
+        allowed_company_ids=None if is_platform_admin() else get_accessible_company_ids(),
+        source=request.args.get('source') or None,
+        limit=request.args.get('limit', default=50, type=int),
+    )
+    if error:
+        return jsonify({"success": False, "error": error}), 400
+    return jsonify({"success": True, **(result or {})})
 
 @main_bp.route('/api/dashboard/stats')
 @login_required
