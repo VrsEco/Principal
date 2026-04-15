@@ -105,26 +105,65 @@ class AICapabilitiesCentralService:
             db.session.commit()
 
     @classmethod
-    def build_frontend_state(cls, active_company: Any | None = None) -> dict[str, Any]:
+    def build_frontend_state(
+        cls,
+        active_company: Any | None = None,
+        *,
+        selected_capability_key: str | None = None,
+        allowed_company_ids: list[int] | tuple[int, ...] | None = None,
+    ) -> dict[str, Any]:
         cls.sync_catalog()
         company_id = getattr(active_company, "id", None)
         company_name = getattr(active_company, "name", None) or "Sem empresa ativa"
+        normalized_company_ids = cls._normalize_allowed_company_ids(allowed_company_ids, active_company)
         capabilities = AICapability.query.order_by(AICapability.domain.asc(), AICapability.name.asc()).all()
-        selected = capabilities[0] if capabilities else None
-        grants = AICapabilityGrant.query.all()
+        selected = next((item for item in capabilities if item.key == selected_capability_key), None)
+        if selected is None:
+            selected = capabilities[0] if capabilities else None
+        grants = cls._load_scoped_grants(normalized_company_ids)
 
         return {
             "hero": cls._build_hero(capabilities, grants),
             "assistant": cls._build_assistant(),
             "tabs": cls._build_tabs(),
             "catalog": {"filters": cls._build_filters(capabilities), "items": [cls._serialize_capability(item, grants) for item in capabilities]},
-            "availability": cls._build_availability(capabilities, grants, company_id, company_name, selected),
+            "availability": cls._build_availability(capabilities, grants, company_id, company_name, selected, normalized_company_ids),
             "requirements": cls._build_requirements(selected, company_id, company_name),
-            "rollout": cls._build_rollout(selected, company_id),
+            "rollout": cls._build_rollout(selected, company_id, normalized_company_ids),
             "audit": {"events": cls._load_audit_events(getattr(selected, "id", None), company_id)},
             "sidebar": cls._build_sidebar(selected, company_name, grants),
-            "options": cls._build_options(company_id),
+            "options": cls._build_options(company_id, normalized_company_ids),
+            "selected_capability_key": selected.key if selected else "",
         }
+
+    @staticmethod
+    def _normalize_allowed_company_ids(
+        allowed_company_ids: list[int] | tuple[int, ...] | None,
+        active_company: Any | None = None,
+    ) -> tuple[int, ...]:
+        normalized = {
+            int(company_id)
+            for company_id in (allowed_company_ids or [])
+            if company_id not in (None, "", 0, "0")
+        }
+        active_company_id = getattr(active_company, "id", None)
+        if active_company_id not in (None, "", 0, "0"):
+            normalized.add(int(active_company_id))
+        return tuple(sorted(normalized))
+
+    @classmethod
+    def _load_scoped_grants(cls, allowed_company_ids: tuple[int, ...]) -> list[AICapabilityGrant]:
+        query = AICapabilityGrant.query
+        if allowed_company_ids:
+            query = query.filter(
+                or_(
+                    AICapabilityGrant.company_id.is_(None),
+                    AICapabilityGrant.company_id.in_(allowed_company_ids),
+                )
+            )
+        else:
+            query = query.filter(AICapabilityGrant.company_id.is_(None))
+        return query.all()
 
     @classmethod
     def upsert_grant(cls, payload: dict[str, Any], *, actor_user_id: int | None = None) -> AICapabilityGrant:
@@ -431,6 +470,7 @@ class AICapabilitiesCentralService:
         company_id: int | None,
         company_name: str,
         selected: AICapability | None,
+        allowed_company_ids: tuple[int, ...],
     ) -> dict[str, Any]:
         selected_grants = [item for item in grants if selected and item.capability_id == selected.id]
         selected_company_grant = next((item for item in selected_grants if item.company_id == company_id and item.scope_type == "company"), None)
@@ -449,7 +489,13 @@ class AICapabilitiesCentralService:
             })
 
         company_cards = []
-        company_ids = sorted({grant.company_id for grant in grants if grant.company_id})[:6]
+        company_ids = sorted(
+            {
+                grant.company_id
+                for grant in grants
+                if grant.company_id and (not allowed_company_ids or grant.company_id in allowed_company_ids)
+            }
+        )[:6]
         if company_id and company_id not in company_ids:
             company_ids.insert(0, company_id)
         for item_company_id in company_ids:
@@ -465,7 +511,15 @@ class AICapabilitiesCentralService:
                 "description": "Disponibilização consolidada por grants explícitos na central.",
             })
 
-        employees_query = Employee.query.filter_by(company_id=company_id, status="active") if company_id else Employee.query.filter_by(status="active")
+        if company_id:
+            employees_query = Employee.query.filter_by(company_id=company_id, status="active")
+        elif allowed_company_ids:
+            employees_query = Employee.query.filter(
+                Employee.status == "active",
+                Employee.company_id.in_(allowed_company_ids),
+            )
+        else:
+            employees_query = Employee.query.filter(Employee.id == -1)
         user_cards = []
         for employee in employees_query.limit(6).all():
             user = User.query.get(employee.user_id) if employee.user_id else None
@@ -503,7 +557,7 @@ class AICapabilitiesCentralService:
     @classmethod
     def _build_requirements(cls, selected: AICapability | None, company_id: int | None, company_name: str) -> dict[str, Any]:
         checklist = []
-        integrations_total = len(list_integrations() or [])
+        integrations_total = len(list_integrations(company_id=company_id) or [])
         checklist.append({
             "title": "Integração principal ativa",
             "status": "ok" if integrations_total > 0 else "danger",
@@ -556,7 +610,12 @@ class AICapabilitiesCentralService:
         return {"checklist": checklist, "company_settings": formatted_settings}
 
     @classmethod
-    def _build_rollout(cls, selected: AICapability | None, company_id: int | None) -> dict[str, Any]:
+    def _build_rollout(
+        cls,
+        selected: AICapability | None,
+        company_id: int | None,
+        allowed_company_ids: tuple[int, ...],
+    ) -> dict[str, Any]:
         if not selected:
             return {"status": "draft", "status_label": "Sem capacidade selecionada", "owner": "-", "updated_at": "-", "steps": [], "summary_cards": []}
         steps_order = ["draft", "internal_test", "pilot", "active", "paused", "blocked"]
@@ -578,8 +637,8 @@ class AICapabilitiesCentralService:
             "updated_at": selected.updated_at.strftime("%d/%m/%Y %H:%M") if selected.updated_at else "-",
             "steps": steps,
             "summary_cards": [
-                {"label": "Empresas no rollout", "value": str(cls._count_enabled_companies(selected.id)), "tone": "primary"},
-                {"label": "Usuários usando", "value": str(cls._count_enabled_users(selected.id)), "tone": "success"},
+                {"label": "Empresas no rollout", "value": str(cls._count_enabled_companies(selected.id, allowed_company_ids)), "tone": "primary"},
+                {"label": "Usuários usando", "value": str(cls._count_enabled_users(selected.id, allowed_company_ids)), "tone": "success"},
                 {"label": "Bloqueios recentes", "value": str(blocked_recent), "tone": "warning"},
                 {"label": "Falhas operacionais", "value": str(failures), "tone": "danger"},
             ],
@@ -625,11 +684,23 @@ class AICapabilitiesCentralService:
         }
 
     @classmethod
-    def _build_options(cls, active_company_id: int | None) -> dict[str, Any]:
-        companies = Company.query.filter_by(is_active=True).order_by(Company.name.asc()).limit(100).all()
+    def _build_options(cls, active_company_id: int | None, allowed_company_ids: tuple[int, ...]) -> dict[str, Any]:
+        companies_query = Company.query.filter_by(is_active=True)
+        if allowed_company_ids:
+            companies_query = companies_query.filter(Company.id.in_(allowed_company_ids))
+        elif active_company_id:
+            companies_query = companies_query.filter(Company.id == active_company_id)
+        else:
+            companies_query = companies_query.filter(Company.id == -1)
+        companies = companies_query.order_by(Company.name.asc()).limit(100).all()
+
         employees_query = Employee.query.filter_by(status="active")
         if active_company_id:
             employees_query = employees_query.filter_by(company_id=active_company_id)
+        elif allowed_company_ids:
+            employees_query = employees_query.filter(Employee.company_id.in_(allowed_company_ids))
+        else:
+            employees_query = employees_query.filter(Employee.id == -1)
         employees = employees_query.order_by(Employee.name.asc()).limit(100).all()
 
         try:
@@ -638,6 +709,10 @@ class AICapabilitiesCentralService:
             roles_query = Role.query
             if active_company_id:
                 roles_query = roles_query.filter_by(company_id=active_company_id)
+            elif allowed_company_ids:
+                roles_query = roles_query.filter(Role.company_id.in_(allowed_company_ids))
+            else:
+                roles_query = roles_query.filter(Role.id == -1)
             roles = roles_query.order_by(Role.title.asc()).limit(100).all()
         except Exception:
             roles = []
@@ -677,12 +752,23 @@ class AICapabilitiesCentralService:
         return count
 
     @classmethod
-    def _count_enabled_companies(cls, capability_id: int) -> int:
-        return len({item.company_id for item in AICapabilityGrant.query.filter_by(capability_id=capability_id, is_enabled=True).all() if item.company_id})
+    def _count_enabled_companies(cls, capability_id: int, allowed_company_ids: tuple[int, ...]) -> int:
+        query = AICapabilityGrant.query.filter_by(capability_id=capability_id, is_enabled=True)
+        if allowed_company_ids:
+            query = query.filter(AICapabilityGrant.company_id.in_(allowed_company_ids))
+        return len({item.company_id for item in query.all() if item.company_id})
 
     @classmethod
-    def _count_enabled_users(cls, capability_id: int) -> int:
-        return len({item.user_id for item in AICapabilityGrant.query.filter_by(capability_id=capability_id, is_enabled=True).all() if item.user_id})
+    def _count_enabled_users(cls, capability_id: int, allowed_company_ids: tuple[int, ...]) -> int:
+        query = AICapabilityGrant.query.filter_by(capability_id=capability_id, is_enabled=True)
+        if allowed_company_ids:
+            query = query.filter(
+                or_(
+                    AICapabilityGrant.company_id.is_(None),
+                    AICapabilityGrant.company_id.in_(allowed_company_ids),
+                )
+            )
+        return len({item.user_id for item in query.all() if item.user_id})
 
     @classmethod
     def _describe_effective_rule(cls, selected_company_grant: AICapabilityGrant | None, selected_grants: list[AICapabilityGrant]) -> str:

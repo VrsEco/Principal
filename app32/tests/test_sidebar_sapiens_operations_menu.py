@@ -1,24 +1,21 @@
 from pathlib import Path
 
 
-def test_operations_inteligentes_is_submenu_of_sapiens_ia():
+def test_sapiens_menu_no_longer_exposes_operations_hub():
     sidebar = Path("templates/partials/sidebar_standard.html").read_text(encoding="utf-8")
 
-    assert 'or \'/operations\' in request.path' in sidebar
-    assert 'href="/operations" class="sub-nav-link' in sidebar
-    assert 'Operações Inteligentes' in sidebar
-    assert 'href="/operations" class="nav-link' not in sidebar
-
-    sapiens_index = sidebar.index("Sapiens")
-    operations_index = sidebar.index("Operações Inteligentes")
-    assert operations_index > sapiens_index
+    assert 'or \'/operations\' in request.path' not in sidebar
+    assert 'href="/operations" class="sub-nav-link' not in sidebar
+    assert 'Operações Inteligentes' not in sidebar
 
 
 def test_operations_audit_keeps_sapiens_group_open_and_active():
     sidebar = Path("templates/partials/sidebar_standard.html").read_text(encoding="utf-8")
 
-    assert "'/operations' in request.path" in sidebar
-    assert "request.path == '/operations' or '/operations/' in request.path" in sidebar
+    sapiens_block = sidebar[sidebar.index("Sapiens"):sidebar.index("Sistema")]
+
+    assert "request.path == '/sapiens'" in sapiens_block
+    assert 'href="/sapiens" class="sub-nav-link' in sapiens_block
 
 
 

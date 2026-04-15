@@ -12,365 +12,134 @@
 <span class="current">Central de Capacidades</span>
 {% endblock %}
 
-{% block sidebar_right %}
-{% set sidebar = state.sidebar %}
-<div class="ai-cap-sidebar">
-    <div class="sidebar-header-ws">
-        <h3>Contexto e filtros</h3>
-        <p>Busque capacidades, empresas, usuários e eventos sem sair da tela.</p>
-    </div>
-
-    <div class="ai-cap-sidebar__body">
-        <div class="ai-cap-sidebar-card">
-            <label class="ai-cap-sidebar__label" for="aiCapabilitiesSearch">Busca geral</label>
-            <input id="aiCapabilitiesSearch" type="search" placeholder="{{ sidebar.search_placeholder }}" autocomplete="off">
-            <small>O filtro atua sobre cards, blocos e eventos visíveis nesta tela.</small>
-        </div>
-
-        <div class="ai-cap-sidebar-card">
-            <span class="ai-cap-sidebar__label">Atalhos</span>
-            <div class="ai-cap-sidebar-shortcuts">
-                {% for item in sidebar.shortcuts %}
-                <button type="button" class="ai-cap-sidebar-shortcut" data-tab-jump="{{ item.tab }}">{{ item.label }}</button>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="ai-cap-sidebar-card">
-            <span class="ai-cap-sidebar__label">{{ sidebar.context.title }}</span>
-            <div class="ai-cap-context-list">
-                {% for item in sidebar.context["items"] %}
-                <article class="ai-cap-context-item">
-                    <span>{{ item.label }}</span>
-                    <strong>{{ item.value }}</strong>
-                </article>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% block sidebar_right %}{% endblock %}
 
 {% block workspace_content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ai_capabilities_central.css') }}">
 
-{% set hero = state.hero %}
-{% set assistant = state.assistant %}
-{% set tabs = state.tabs %}
-{% set catalog = state.catalog %}
-{% set availability = state.availability %}
-{% set requirements = state.requirements %}
-{% set rollout = state.rollout %}
-{% set audit = state.audit %}
-{% set options = state.options %}
+<div
+  class="int-page ai-cap-workspace fade-in"
+  id="aiCapabilitiesPage"
+  data-selected-capability="{{ state.selected_capability_key }}"
+  data-state-endpoint="/api/configs/ai/capabilities/frontend-state"
+>
+  <header class="int-header ai-cap-header">
+    <div>
+      <span class="int-eyebrow">Governança</span>
+      <h1>Capacidades de IA</h1>
+      <p class="muted mb-0">Catálogo, permissões, pré-requisitos, rollout e auditoria em um fluxo operacional único, no padrão das telas de workflow.</p>
+    </div>
+  </header>
 
-<div class="ai-cap-page" id="aiCapabilitiesPage" data-default-tab="catalog">
-    <section class="ai-cap-hero">
-        <div class="ai-cap-hero__copy">
-            <span class="ai-cap-eyebrow">{{ hero.eyebrow }}</span>
-            <h1>{{ hero.title }}</h1>
-            <p>{{ hero.description }}</p>
+  <section class="int-shell ai-cap-shell">
+    <aside class="int-rail ai-cap-rail">
+      <div class="int-card ai-cap-list-card">
+        <div class="int-card-head">
+          <div>
+            <h2>Catálogo operacional</h2>
+            <small id="aiCapabilitiesCatalogCount">{{ state.catalog['items']|length }} capacidades mapeadas</small>
+          </div>
         </div>
 
-        <div class="ai-cap-hero__metrics">
-            {% for metric in hero.metrics %}
-            <article class="ai-cap-metric">
-                <span>{{ metric.label }}</span>
-                <strong>{{ metric.value }}</strong>
-            </article>
-            {% endfor %}
-        </div>
+        <label class="int-search ai-cap-search">
+          <span>Buscar</span>
+          <input id="aiCapabilitiesSearch" type="search" placeholder="Código, nome, domínio ou risco">
+        </label>
 
-        <div class="ai-cap-hero__actions">
-            {% for action in hero.quick_actions %}
-            <button type="button" class="ai-cap-quick-action" data-tab-jump="{{ action.target_tab }}">
-                <strong>{{ action.title }}</strong>
-                <span>{{ action.description }}</span>
-            </button>
-            {% endfor %}
-        </div>
-    </section>
+        <div class="ai-cap-domain-filters" id="aiCapabilitiesDomainFilters"></div>
+        <div class="int-domain-tree ai-cap-list" id="aiCapabilitiesList"></div>
+      </div>
+    </aside>
 
-    <section class="ai-cap-assistant">
-        <header class="ai-cap-section-head">
-            <div>
-                <span class="ai-cap-eyebrow">Assistente</span>
-                <h2>{{ assistant.title }}</h2>
-                <p>{{ assistant.intro }}</p>
+    <main class="int-main ai-cap-main">
+      <div class="int-card ai-cap-content-card" id="aiCapabilitiesContent"></div>
+    </main>
+
+    <aside class="int-rail ai-cap-rail">
+      <div class="int-card ai-cap-side-stack">
+        <div class="int-card-head">
+          <div>
+            <h2>Backlog aberto</h2>
+            <small>AA.J.31 · status pela lista atual</small>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="openCapabilityRequestAssistant">Registrar solicitação</button>
+        </div>
+        <div id="aiCapabilitiesRequestList" class="int-requests-list">
+          <div class="int-empty">Carregando solicitações...</div>
+        </div>
+      </div>
+    </aside>
+  </section>
+</div>
+
+<script id="aiCapabilitiesInitialState" type="application/json">{{ state|tojson }}</script>
+
+<div id="capabilityRequestModal" class="modal fade" style="z-index: 25000;">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="card test-modal-content shadow-lg w-100">
+      <div class="card-header modal-header-block">
+        <div class="modal-title-block">
+          <span class="int-eyebrow">Assistente</span>
+          <h3 class="text-h3 mb-0">Registrar solicitação da capability</h3>
+          <small class="text-secondary">Coleta os dados e abre um card no backlog AA.J.31.</small>
+        </div>
+        <button class="btn btn-icon btn-ghost modal-close" type="button" onclick="window.closeCapabilityRequestModal?.()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="card-body">
+        <form id="capabilityRequestForm">
+          <div class="vs-form-grid">
+            <div class="vs-control">
+              <label>Título</label>
+              <input type="text" class="vs-input" name="title" required>
             </div>
-        </header>
-
-        {% for step in assistant.steps %}
-        <div class="ai-cap-assistant__question">
-            <strong>Pergunta {{ step.step }}</strong>
-            <p>{{ step.question }}</p>
-        </div>
-        <div class="ai-cap-assistant__grid">
-            {% for option in step.options %}
-            <button
-                type="button"
-                class="ai-cap-option"
-                data-assistant-option
-                data-target-tab="{{ option.target_tab }}"
-                data-result-title="{{ option.result_title }}"
-                data-result-body="{{ option.result_body }}"
-            >
-                <strong>{{ option.label }}</strong>
-                <span>{{ option.description }}</span>
-            </button>
-            {% endfor %}
-        </div>
-        {% endfor %}
-
-        <div class="ai-cap-assistant__result" id="aiCapabilitiesAssistantResult" hidden>
-            <strong id="aiCapabilitiesAssistantTitle"></strong>
-            <p id="aiCapabilitiesAssistantBody"></p>
-            <button type="button" class="ai-cap-btn ai-cap-btn--primary" id="aiCapabilitiesAssistantGo">Ir para a aba</button>
-        </div>
-    </section>
-
-    <nav class="ai-cap-tabs" aria-label="Seções da Central de Capacidades">
-        {% for tab in tabs %}
-        <button type="button" class="ai-cap-tab {% if loop.first %}is-active{% endif %}" data-tab-trigger="{{ tab.key }}">
-            <span>{{ tab.title }}</span>
-            <small>{{ tab.eyebrow }}</small>
-        </button>
-        {% endfor %}
-    </nav>
-
-    <section class="ai-cap-panel is-active" data-tab-panel="catalog" data-searchable="catalogo capacidades ia workflows tools features agentes">
-        <header class="ai-cap-section-head">
-            <div>
-                <span class="ai-cap-eyebrow">Catálogo</span>
-                <h2>Capacidades disponíveis</h2>
-                <p>Cadastro estruturado sincronizado pelo sistema, com metadados de negócio e leitura operacional.</p>
+            <div class="vs-control">
+              <label>Domínio</label>
+              <input type="text" class="vs-input" name="business_domain" required>
             </div>
-            <div class="ai-cap-pill-row">
-                {% for item in catalog.filters.domains %}
-                <span class="ai-cap-pill">{{ item }}</span>
-                {% endfor %}
+            <div class="vs-control">
+              <label>Tipo</label>
+              <select class="vs-input" name="issue_type">
+                <option value="bug">Problema</option>
+                <option value="improvement">Melhoria</option>
+                <option value="access">Acesso</option>
+                <option value="configuration">Configuração</option>
+                <option value="rollout">Rollout</option>
+                <option value="audit">Auditoria</option>
+              </select>
             </div>
-        </header>
-
-        <div class="ai-cap-card-grid">
-            {% for item in catalog["items"] %}
-            <article class="ai-cap-card" data-searchable="{{ item.key }} {{ item.name }} {{ item.domain }} {{ item.type }} {{ item.description }} {{ item.notes }}">
-                <div class="ai-cap-card__top">
-                    <div>
-                        <span class="ai-cap-inline-note">{{ item.key }}</span>
-                        <h3>{{ item.name }}</h3>
-                    </div>
-                    <span class="ai-cap-status is-{{ item.status }}">{{ item.status }}</span>
-                </div>
-                <p>{{ item.description }}</p>
-                <div class="ai-cap-meta-list">
-                    <span><strong>Domínio:</strong> {{ item.domain }}</span>
-                    <span><strong>Tipo:</strong> {{ item.type }}</span>
-                    <span><strong>Risco:</strong> {{ item.risk }}</span>
-                    <span><strong>Origem:</strong> {{ item.origin }}</span>
-                </div>
-                <div class="ai-cap-pill-row">
-                    {% for badge in item.badges %}
-                    <span class="ai-cap-pill">{{ badge }}</span>
-                    {% endfor %}
-                </div>
-                <footer class="ai-cap-card__footer">
-                    <span>{{ item.notes }}</span>
-                    <button type="button" class="ai-cap-btn">Ver detalhe</button>
-                </footer>
-            </article>
-            {% endfor %}
-        </div>
-    </section>
-
-    <section class="ai-cap-panel" data-tab-panel="availability" data-searchable="disponibilizacao permissao uso empresa usuario role canal grants">
-        <header class="ai-cap-section-head">
-            <div>
-                <span class="ai-cap-eyebrow">Disponibilização</span>
-                <h2>Quem pode usar cada capacidade</h2>
-                <p>Liberação funcional por capacidade, empresa e usuário com precedência segura e leitura do motivo efetivo.</p>
+            <div class="vs-control">
+              <label>Urgência</label>
+              <select class="vs-input" name="urgency">
+                <option value="medium">Média</option>
+                <option value="high">Alta</option>
+                <option value="critical">Crítica</option>
+                <option value="low">Baixa</option>
+              </select>
             </div>
-            <div class="ai-cap-context-summary">
-                <strong>{{ availability.selected_context.title }}</strong>
-                <span>{{ availability.selected_context.company }}</span>
-                <span>Regra efetiva: {{ availability.selected_context.effective_rule }}</span>
+            <div class="vs-control vs-control-wide">
+              <label>Solicitação / objetivo</label>
+              <textarea class="vs-input" name="objective" rows="4" required></textarea>
             </div>
-        </header>
-
-        <div class="ai-cap-columns">
-            <div class="ai-cap-stack">
-                {% for view in availability.views %}
-                <article class="ai-cap-surface-card" data-searchable="{{ view.title }} {{ view.summary }}">
-                    <header class="ai-cap-surface-card__head">
-                        <div>
-                            <h3>{{ view.title }}</h3>
-                            <p>{{ view.summary }}</p>
-                        </div>
-                    </header>
-
-                    <div class="ai-cap-mini-grid">
-                        {% for card in view.cards %}
-                        <article class="ai-cap-mini-card" data-searchable="{{ card.title }} {{ card.meta }} {{ card.description }}">
-                            <div class="ai-cap-card__top">
-                                <div>
-                                    <strong>{{ card.title }}</strong>
-                                    <span>{{ card.meta }}</span>
-                                </div>
-                                <span class="ai-cap-status is-{{ card.status }}">{{ card.status }}</span>
-                            </div>
-                            <p>{{ card.description }}</p>
-                            <div class="ai-cap-pill-row">
-                                {% for chip in card.chips %}
-                                <span class="ai-cap-pill">{{ chip }}</span>
-                                {% endfor %}
-                            </div>
-                        </article>
-                        {% endfor %}
-                    </div>
-                </article>
-                {% endfor %}
+            <div class="vs-control vs-control-wide">
+              <label>Contexto / evidências</label>
+              <textarea class="vs-input" name="data_summary" rows="4"></textarea>
             </div>
-
-            <aside class="ai-cap-side-card">
-                <span class="ai-cap-inline-note">Precedência</span>
-                <h3>Ordem de decisão</h3>
-                <ol class="ai-cap-ranked-list">
-                    {% for item in availability.precedence %}
-                    <li>{{ item }}</li>
-                    {% endfor %}
-                </ol>
-                <div class="ai-cap-side-card__actions">
-                    <button type="button" class="ai-cap-btn ai-cap-btn--primary">Liberar empresa</button>
-                    <button type="button" class="ai-cap-btn">Revogar usuário</button>
-                </div>
-            </aside>
-        </div>
-    </section>
-
-    <section class="ai-cap-panel" data-tab-panel="requirements" data-searchable="pre requisitos configuracao parametros empresa canais checklist">
-        <header class="ai-cap-section-head">
-            <div>
-                <span class="ai-cap-eyebrow">Pré-requisitos e Configuração</span>
-                <h2>O que ainda falta e o que pode ser ajustado</h2>
-                <p>O sistema calcula as pendências operacionais; o administrador resolve o que for necessário e ajusta os parâmetros de negócio.</p>
+            <div class="vs-control vs-control-wide">
+              <label>Observações</label>
+              <textarea class="vs-input" name="notes" rows="3"></textarea>
             </div>
-        </header>
-
-        <div class="ai-cap-columns">
-            <article class="ai-cap-surface-card">
-                <header class="ai-cap-surface-card__head">
-                    <div>
-                        <h3>Checklist operacional</h3>
-                        <p>Leitura calculada automaticamente com atalhos para correção.</p>
-                    </div>
-                </header>
-
-                <div class="ai-cap-checklist">
-                    {% for item in requirements.checklist %}
-                    <article class="ai-cap-check-item ai-cap-check-item--{{ item.status }}" data-searchable="{{ item.title }} {{ item.detail }}">
-                        <div>
-                            <strong>{{ item.title }}</strong>
-                            <p>{{ item.detail }}</p>
-                        </div>
-                        <div class="ai-cap-check-item__meta">
-                            <span class="ai-cap-status is-{{ item.status }}">{{ item.status }}</span>
-                            {% if item.href %}
-                            <a href="{{ item.href }}" class="ai-cap-btn"> {{ item.action or 'Abrir' }} </a>
-                            {% endif %}
-                        </div>
-                    </article>
-                    {% endfor %}
-                </div>
-            </article>
-
-            <article class="ai-cap-surface-card">
-                <header class="ai-cap-surface-card__head">
-                    <div>
-                        <h3>Parâmetros por empresa</h3>
-                        <p>Controles de negócio do fluxo, sem alterar o mapeamento técnico automático.</p>
-                    </div>
-                </header>
-
-                <div class="ai-cap-settings-grid">
-                    {% for item in requirements.company_settings %}
-                    <article class="ai-cap-setting">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.value }}</strong>
-                    </article>
-                    {% endfor %}
-                </div>
-            </article>
-        </div>
-    </section>
-
-    <section class="ai-cap-panel" data-tab-panel="rollout" data-searchable="rollout piloto ativo pausado bloqueado health status">
-        <header class="ai-cap-section-head">
-            <div>
-                <span class="ai-cap-eyebrow">Rollout</span>
-                <h2>Expansão controlada da capacidade</h2>
-                <p>Estado oficial decidido pelo admin, com apoio do sistema para sinais de saúde e incidentes.</p>
-            </div>
-            <div class="ai-cap-context-summary">
-                <strong>{{ rollout.status_label }}</strong>
-                <span>Responsável: {{ rollout.owner }}</span>
-                <span>Última atualização: {{ rollout.updated_at }}</span>
-            </div>
-        </header>
-
-        <div class="ai-cap-rollout-track">
-            {% for item in rollout.steps %}
-            <article class="ai-cap-rollout-step is-{{ item.state }}">
-                <span class="ai-cap-rollout-step__dot"></span>
-                <strong>{{ item.label }}</strong>
-            </article>
-            {% endfor %}
-        </div>
-
-        <div class="ai-cap-kpi-grid">
-            {% for item in rollout.summary_cards %}
-            <article class="ai-cap-kpi ai-cap-kpi--{{ item.tone }}">
-                <span>{{ item.label }}</span>
-                <strong>{{ item.value }}</strong>
-            </article>
-            {% endfor %}
-        </div>
-
-        <div class="ai-cap-action-row">
-            <button type="button" class="ai-cap-btn">Mover para piloto</button>
-            <button type="button" class="ai-cap-btn ai-cap-btn--primary">Ativar</button>
-            <button type="button" class="ai-cap-btn">Pausar</button>
-            <button type="button" class="ai-cap-btn">Bloquear</button>
-        </div>
-    </section>
-
-    <section class="ai-cap-panel" data-tab-panel="audit" data-searchable="auditoria timeline eventos grants bloqueios falhas uso">
-        <header class="ai-cap-section-head">
-            <div>
-                <span class="ai-cap-eyebrow">Auditoria</span>
-                <h2>Trilha completa de decisão e uso</h2>
-                <p>Toda mudança relevante e toda execução bloqueada ou permitida precisa deixar evidência.</p>
-            </div>
-        </header>
-
-        <div class="ai-cap-timeline">
-            {% for item in audit.events %}
-            <article class="ai-cap-timeline-item ai-cap-timeline-item--{{ item.result }}" data-searchable="{{ item.event }} {{ item.actor }} {{ item.company }} {{ item.detail }}">
-                <div class="ai-cap-timeline-item__top">
-                    <div>
-                        <span class="ai-cap-inline-note">{{ item.when }}</span>
-                        <h3>{{ item.event }}</h3>
-                    </div>
-                    <span class="ai-cap-status is-{{ item.result }}">{{ item.result }}</span>
-                </div>
-                <div class="ai-cap-meta-list">
-                    <span><strong>Ator:</strong> {{ item.actor }}</span>
-                    <span><strong>Empresa:</strong> {{ item.company }}</span>
-                </div>
-                <p>{{ item.detail }}</p>
-            </article>
-            {% endfor %}
-        </div>
-    </section>
+          </div>
+          <input type="hidden" name="capability_key" id="capabilityRequestKey">
+          <input type="hidden" name="capability_name" id="capabilityRequestName">
+          <input type="hidden" name="source_channel" value="ui_ai_capabilities">
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary" onclick="window.closeCapabilityRequestModal?.()">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Registrar solicitação</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

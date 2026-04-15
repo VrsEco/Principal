@@ -1940,18 +1940,25 @@ def _build_summary_email_service():
 def _resolve_active_email_integration() -> Optional[Dict[str, Any]]:
     try:
         from database.postgresql_db import get_integration, list_integrations
+        from src.intelligence.tool_context import get_sapiens_context
     except Exception:
         return None
 
+    company_id = None
     try:
-        preferred = get_integration("email_integration")
+        company_id = get_sapiens_context().company_id
+    except Exception:
+        company_id = None
+
+    try:
+        preferred = get_integration("email_integration", company_id=company_id)
         if preferred and _is_email_integration_record(preferred):
             return preferred
     except Exception:
         logger.exception("Falha ao buscar integracao 'email_integration'.")
 
     try:
-        integrations = list_integrations() or []
+        integrations = list_integrations(company_id=company_id) or []
     except Exception:
         logger.exception("Falha ao listar integracoes para envio de resumo por e-mail.")
         return None

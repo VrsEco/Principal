@@ -890,7 +890,6 @@ def register_blueprints(app):
     import api.routes.financial_reports  # noqa: F401
     from api.user_employee import user_employee_bp
     from api.routes.meetings import meetings_bp
-    # from api.routes.ai_board import ai_board_bp
     from api.routes.onboarding import onboarding_bp
     from api.routes.plans import plans_bp
     from api.routes.users import usuarios_bp
@@ -917,7 +916,6 @@ def register_blueprints(app):
     app.register_blueprint(financial_bp)
     app.register_blueprint(user_employee_bp)
     app.register_blueprint(meetings_bp, url_prefix='/meetings')
-    # app.register_blueprint(ai_board_bp)
     app.register_blueprint(onboarding_bp)
     app.register_blueprint(plans_bp)
     app.register_blueprint(usuarios_bp)
@@ -953,5 +951,7 @@ def register_blueprints(app):
 
 if __name__ == '__main__':
     app = create_app()
-    print("Starting APP32 modularized version...")
-    app.run(debug=True, port=5032)
+    port = int(os.environ.get('PORT') or os.environ.get('FLASK_RUN_PORT') or 5032)
+    debug = os.environ.get('DEBUG', 'true').lower() == 'true'
+    print(f'Starting APP32 modularized version on port {port}...')
+    app.run(debug=debug, port=port, use_reloader=False)

@@ -18,6 +18,7 @@ from src.intelligence.tool_context import (
 from src.intelligence.memory import get_checkpointer
 from src.intelligence.work_agents.graph import create_work_agent_workflow
 from src.intelligence.menu_engine import handle_menu_message
+from src.intelligence.security.runtime_identity import resolve_runtime_identity
 
 logger = logging.getLogger(__name__)
 
@@ -290,10 +291,23 @@ def run_agent_with_context(
             menu_intercepted=False,
         ),
     )
+    runtime_identity = resolve_runtime_identity(user_id=user_id, company_id=company_id)
+    context_metadata = _merge_execution_metadata(
+        context_metadata,
+        {
+            "security": {
+                "employee_id": runtime_identity.get("employee_id"),
+                "role": runtime_identity.get("role"),
+                "permissions": list(runtime_identity.get("permissions") or ()),
+                "accessible_company_ids": list(runtime_identity.get("accessible_company_ids") or ()),
+            }
+        },
+    )
 
     token = set_sapiens_context(
         user_id=user_id,
         company_id=company_id,
+        employee_id=runtime_identity.get("employee_id"),
         channel=channel,
         thread_id=thread_id,
         metadata=context_metadata,

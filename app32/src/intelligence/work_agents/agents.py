@@ -192,7 +192,7 @@ def get_agent_node(agent_name: str):
     """Factory para criar nós dos agentes de trabalho"""
     
     def agent_node(state):
-        from src.intelligence.tool_context import set_sapiens_context
+        from src.intelligence.tool_context import get_sapiens_context, set_sapiens_context
         
         # RESGATE DE CONTEXTO (@ARQUITETO):
         # Garante que o ContextVar esteja setado nesta thread/node a partir do State
@@ -201,10 +201,14 @@ def get_agent_node(agent_name: str):
         
         token = None
         if user_id or company_id:
+            current_context = get_sapiens_context()
             token = set_sapiens_context(
                 user_id=user_id,
-                company_id=company_id
-                # Os demais campos podem ser inferidos ou passados se necessário
+                company_id=company_id,
+                employee_id=current_context.employee_id,
+                channel=current_context.channel,
+                thread_id=current_context.thread_id,
+                metadata=current_context.metadata,
             )
 
         try:

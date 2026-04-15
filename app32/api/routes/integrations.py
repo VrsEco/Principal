@@ -2,8 +2,9 @@ import os
 from contextlib import contextmanager
 from typing import Any, Dict, Optional, Tuple
 
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, abort, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from pydantic import ValidationError
 
 from database.postgresql_db import (
     create_integration,
@@ -24,7 +25,9 @@ from services.whatsapp_service import WhatsAppService
 from services.workflow_backlog_service import WorkflowBacklogService
 from services.workflow_spec_draft_service import WorkflowSpecDraftService
 from services.workflow_workspace_service import WorkflowWorkspaceService
-from utils.integration_settings import resolve_service_config
+from schemas.integration_admin import IntegrationAdminUpsertSchema, LegacyIntegrationSaveSchema
+from utils.integration_settings import build_scoped_integration_id, resolve_service_config
+from utils.permissions import has_company_full_access, is_platform_admin
 
 integrations_bp = Blueprint("integrations", __name__)
 
@@ -41,6 +44,20 @@ def _safe_active_company():
     except Exception:
         current_app.logger.exception("Falha ao resolver empresa ativa em integrações.")
         return None
+
+
+def _can_manage_integrations(company_id=None) -> bool:
+    if is_platform_admin():
+        return True
+    try:
+        return has_company_full_access(company_id)
+    except Exception:
+        return False
+
+
+def _require_integration_admin(company_id=None) -> None:
+    if not _can_manage_integrations(company_id):
+        abort(403)
 
 
 def _fallback_integrations_shell(title: str, body: str, *, links: list[tuple[str, str]] | None = None) -> str:
@@ -328,6 +345,11 @@ def _service_from_integration_identifier(identifier: Optional[str]) -> Optional[
     if not raw:
         return None
 
+    if raw.startswith("company_"):
+        parts = raw.split("_", 3)
+        if len(parts) == 4:
+            raw = parts[3]
+
     direct = _normalize_service(raw)
     if direct in SUPPORTED_SERVICES:
         return direct
@@ -354,15 +376,25 @@ def _normalize_config(config: Any) -> Dict[str, Any]:
     return config if isinstance(config, dict) else {}
 
 
-def _find_service_integration(service: str) -> Optional[Dict[str, Any]]:
-    records = list_integrations()
+def _active_company_id() -> Optional[int]:
+    active_company = _safe_active_company()
+    return getattr(active_company, "id", None)
+
+
+def _find_service_integration(service: str, company_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    records = list_integrations(company_id=company_id)
     if not records:
         return None
 
-    priority_id = f"{service}_integration"
+    priority_id = build_scoped_integration_id(service, company_id)
     match = next((item for item in records if item.get("id") == priority_id), None)
     if match:
         return match
+
+    generic_id = f"{service}_integration"
+    generic_match = next((item for item in records if item.get("id") == generic_id), None)
+    if generic_match:
+        return generic_match
 
     for item in records:
         if _normalize_service(item.get("type")) == service:
@@ -371,11 +403,21 @@ def _find_service_integration(service: str) -> Optional[Dict[str, Any]]:
 
 
 def _default_service_config(service: str) -> Dict[str, Any]:
-    return resolve_service_config(service)
+    return resolve_service_config(service, company_id=_active_company_id())
 
 
 def _resolve_service_config(service: str) -> Dict[str, Any]:
     return _default_service_config(service)
+
+
+def _scoped_integration_id(service: str, company_id: Optional[int], identifier: Optional[str] = None) -> str:
+    normalized_service = _normalize_service(service)
+    raw_identifier = (identifier or "").strip()
+    if raw_identifier.startswith("company_") and raw_identifier.endswith(f"_{normalized_service}_integration"):
+        return raw_identifier
+    if company_id:
+        return build_scoped_integration_id(normalized_service, company_id)
+    return raw_identifier or f"{normalized_service}_integration"
 
 
 def _is_configured(service: str, provider: str, config: Dict[str, Any]) -> bool:
@@ -616,14 +658,14 @@ def _looks_masked_secret(value: Any) -> bool:
     return star_count >= max(2, len(text) // 2)
 
 
-def _merge_existing_secret_values(payload: Dict[str, Any]) -> Dict[str, Any]:
+def _merge_existing_secret_values(payload: Dict[str, Any], company_id: Optional[int] = None) -> Dict[str, Any]:
     service = _normalize_service(payload.get("type"))
     integration_id = payload.get("id")
     incoming_config = _normalize_config(payload.get("config"))
 
-    existing = get_integration(integration_id) if integration_id else None
+    existing = get_integration(integration_id, company_id=company_id) if integration_id else None
     if not existing:
-        existing = _find_service_integration(service)
+        existing = _find_service_integration(service, company_id=company_id)
     if not existing:
         payload["config"] = incoming_config
         return payload
@@ -874,6 +916,7 @@ def integration_requests_page():
 @login_required
 def integrations_admin_page():
     active_company = _safe_active_company()
+    _require_integration_admin(getattr(active_company, "id", None))
     try:
         catalog = IntegrationCatalogService.build_channel_catalog()
     except Exception:
@@ -1120,6 +1163,8 @@ def create_integration_request():
 @integrations_bp.route("/api/integrations/status", methods=["GET"])
 @login_required
 def integrations_status():
+    active_company = _safe_active_company()
+    _require_integration_admin(getattr(active_company, "id", None))
     return jsonify(
         {
             "success": True,
@@ -1137,6 +1182,8 @@ def integrations_status():
 @integrations_bp.route("/api/integrations/configs", methods=["GET"])
 @login_required
 def integrations_configs():
+    active_company = _safe_active_company()
+    _require_integration_admin(getattr(active_company, "id", None))
     return jsonify(
         {
             "success": True,
@@ -1154,6 +1201,8 @@ def integrations_configs():
 @integrations_bp.route("/api/integrations/requirements", methods=["GET"])
 @login_required
 def integrations_requirements():
+    active_company = _safe_active_company()
+    _require_integration_admin(getattr(active_company, "id", None))
     base_url = request.url_root.rstrip("/")
     channels = {
         service: _service_requirements_payload(service, base_url)
@@ -1185,30 +1234,47 @@ def integrations_requirements():
 @integrations_bp.route("/api/integrations", methods=["GET"])
 @login_required
 def get_integrations():
-    items = [_integration_to_response(item) for item in list_integrations()]
+    active_company = _safe_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    _require_integration_admin(active_company_id)
+    items = [_integration_to_response(item) for item in list_integrations(company_id=active_company_id)]
     return jsonify({"success": True, "integrations": items})
 
 
 @integrations_bp.route("/api/integrations", methods=["POST"])
 @login_required
 def create_or_update_integration():
-    data = request.get_json(silent=True) or {}
+    active_company = _safe_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    _require_integration_admin(active_company_id)
+    try:
+        data = IntegrationAdminUpsertSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": "Payload inválido para integração.", "details": exc.errors()}), 400
     payload, error = _build_integration_payload(data)
     if error:
         return jsonify({"success": False, "error": error}), 400
-    payload = _merge_existing_secret_values(payload)
+    payload["id"] = _scoped_integration_id(payload.get("type"), active_company_id, payload.get("id"))
+    payload["company_id"] = active_company_id
+    payload = _merge_existing_secret_values(payload, company_id=active_company_id)
 
-    if not create_integration(payload):
+    if not create_integration(payload, company_id=active_company_id):
         return jsonify({"success": False, "error": "Falha ao salvar integracao."}), 500
 
-    saved = get_integration(payload["id"]) or payload
+    saved = get_integration(payload["id"], company_id=active_company_id) or payload
     return jsonify({"success": True, "integration": _integration_to_response(saved)})
 
 
 @integrations_bp.route("/api/integrations/save", methods=["POST"])
 @login_required
 def save_integration_legacy():
-    data = request.get_json(silent=True) or {}
+    active_company = _safe_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    _require_integration_admin(active_company_id)
+    try:
+        data = LegacyIntegrationSaveSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": "Payload inválido para salvamento legado da integração.", "details": exc.errors()}), 400
     service = _normalize_service(data.get("service"))
     payload_data = {
         "id": f"{service}_integration",
@@ -1221,9 +1287,11 @@ def save_integration_legacy():
     payload, error = _build_integration_payload(payload_data)
     if error:
         return jsonify({"success": False, "error": error}), 400
-    payload = _merge_existing_secret_values(payload)
+    payload["id"] = _scoped_integration_id(service, active_company_id, payload.get("id"))
+    payload["company_id"] = active_company_id
+    payload = _merge_existing_secret_values(payload, company_id=active_company_id)
 
-    if not create_integration(payload):
+    if not create_integration(payload, company_id=active_company_id):
         return jsonify({"success": False, "error": "Falha ao salvar integracao."}), 500
 
     return jsonify({"success": True, "integration": _integration_to_response(payload)})
@@ -1232,7 +1300,14 @@ def save_integration_legacy():
 @integrations_bp.route("/api/integrations/<string:integration_id>", methods=["GET"])
 @login_required
 def get_single_integration(integration_id: str):
-    item = get_integration(integration_id)
+    active_company = _safe_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    _require_integration_admin(active_company_id)
+    item = get_integration(integration_id, company_id=active_company_id)
+    if not item:
+        service = _service_from_integration_identifier(integration_id)
+        if service:
+            item = _find_service_integration(service, company_id=active_company_id)
     if not item:
         return jsonify({"success": False, "error": "Integracao nao encontrada."}), 404
     return jsonify({"success": True, "integration": _integration_to_response(item)})
@@ -1241,13 +1316,23 @@ def get_single_integration(integration_id: str):
 @integrations_bp.route("/api/integrations/<string:integration_id>", methods=["PUT", "PATCH"])
 @login_required
 def update_single_integration(integration_id: str):
-    current = get_integration(integration_id)
+    active_company = _safe_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    _require_integration_admin(active_company_id)
+    current = get_integration(integration_id, company_id=active_company_id)
+    if not current:
+        inferred_service = _service_from_integration_identifier(integration_id)
+        if inferred_service:
+            current = _find_service_integration(inferred_service, company_id=active_company_id)
     if not current:
         return jsonify({"success": False, "error": "Integracao nao encontrada."}), 404
 
-    data = request.get_json(silent=True) or {}
+    try:
+        data = IntegrationAdminUpsertSchema.model_validate(request.get_json(silent=True) or {}).model_dump(exclude_unset=True)
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": "Payload inválido para atualização da integração.", "details": exc.errors()}), 400
     merged = {
-        "id": integration_id,
+        "id": current.get("id") or _scoped_integration_id(current.get("type"), active_company_id, integration_id),
         "name": data.get("name", current.get("name")),
         "provider": data.get("provider", current.get("provider")),
         "type": data.get("type", current.get("type")),
@@ -1257,19 +1342,30 @@ def update_single_integration(integration_id: str):
     payload, error = _build_integration_payload(merged)
     if error:
         return jsonify({"success": False, "error": error}), 400
-    payload = _merge_existing_secret_values(payload)
+    payload["id"] = current.get("id") or payload.get("id")
+    payload["company_id"] = active_company_id
+    payload = _merge_existing_secret_values(payload, company_id=active_company_id)
 
-    if not update_integration(integration_id, payload):
+    if not update_integration(payload["id"], payload, company_id=active_company_id):
         return jsonify({"success": False, "error": "Falha ao atualizar integracao."}), 500
 
-    saved = get_integration(integration_id) or payload
+    saved = get_integration(payload["id"], company_id=active_company_id) or payload
     return jsonify({"success": True, "integration": _integration_to_response(saved)})
 
 
 @integrations_bp.route("/api/integrations/<string:integration_id>", methods=["DELETE"])
 @login_required
 def delete_single_integration(integration_id: str):
-    if not delete_integration(integration_id):
+    active_company = _safe_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    _require_integration_admin(active_company_id)
+    item = get_integration(integration_id, company_id=active_company_id)
+    if not item:
+        service = _service_from_integration_identifier(integration_id)
+        if service:
+            item = _find_service_integration(service, company_id=active_company_id)
+    target_id = item.get("id") if item else integration_id
+    if not delete_integration(target_id, company_id=active_company_id):
         return jsonify({"success": False, "error": "Falha ao excluir integracao."}), 500
     return jsonify({"success": True})
 
@@ -1277,6 +1373,8 @@ def delete_single_integration(integration_id: str):
 @integrations_bp.route("/api/integrations/test/<string:service>", methods=["POST"])
 @login_required
 def test_service(service: str):
+    active_company = _safe_active_company()
+    _require_integration_admin(getattr(active_company, "id", None))
     normalized = _normalize_service(service)
     if normalized not in SUPPORTED_SERVICES:
         return jsonify({"success": False, "error": f"Servico invalido: {service}"}), 400
@@ -1297,7 +1395,10 @@ def test_service(service: str):
 @integrations_bp.route("/api/integrations/<string:integration_id>/test", methods=["POST"])
 @login_required
 def test_integration_by_id(integration_id: str):
-    item = get_integration(integration_id)
+    active_company = _safe_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    _require_integration_admin(active_company_id)
+    item = get_integration(integration_id, company_id=active_company_id)
     if not item:
         fallback_service = _service_from_integration_identifier(integration_id)
         if not fallback_service:

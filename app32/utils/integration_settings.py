@@ -38,27 +38,42 @@ def normalize_config(config: Any) -> Dict[str, Any]:
     return config if isinstance(config, dict) else {}
 
 
-def _find_service_integration(service: str) -> Optional[Dict[str, Any]]:
+def build_scoped_integration_id(service: str, company_id: Optional[int]) -> str:
+    normalized_service = normalize_service(service)
+    if company_id:
+        return f"company_{int(company_id)}_{normalized_service}_integration"
+    return f"{normalized_service}_integration"
+
+
+def _service_aliases(service: str, company_id: Optional[int]) -> list[str]:
+    normalized_service = normalize_service(service)
+    aliases = [build_scoped_integration_id(normalized_service, company_id)]
+    generic_id = f"{normalized_service}_integration"
+    if generic_id not in aliases:
+        aliases.append(generic_id)
+    return aliases
+
+
+def _find_service_integration(service: str, company_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
     normalized_service = normalize_service(service)
     if normalized_service not in SUPPORTED_SERVICES:
         return None
 
-    priority_id = f"{normalized_service}_integration"
-    try:
-        record = get_integration(priority_id)
-        if record:
-            return record
-    except Exception:
-        pass
+    for priority_id in _service_aliases(normalized_service, company_id):
+        try:
+            record = get_integration(priority_id, company_id=company_id)
+            if record and (
+                company_id is None
+                or record.get("company_id") in {None, int(company_id)}
+            ):
+                return record
+        except Exception:
+            continue
 
     try:
-        records = list_integrations() or []
+        records = list_integrations(company_id=company_id) or []
     except Exception:
         return None
-
-    for item in records:
-        if item.get("id") == priority_id:
-            return item
 
     for item in records:
         if normalize_service(item.get("type")) == normalized_service:
@@ -201,12 +216,12 @@ def _default_service_config(service: str) -> Dict[str, Any]:
     return {"provider": "disabled", "config": {}, "source": "environment", "integration_id": None}
 
 
-def resolve_service_config(service: str) -> Dict[str, Any]:
+def resolve_service_config(service: str, company_id: Optional[int] = None) -> Dict[str, Any]:
     normalized_service = normalize_service(service)
     if os.environ.get("APP32_INTEGRATIONS_TEST_MODE", "").strip().lower() == "true":
         return _default_service_config(normalized_service)
 
-    db_record = _find_service_integration(normalized_service)
+    db_record = _find_service_integration(normalized_service, company_id=company_id)
     if db_record:
         config = normalize_config(db_record.get("config"))
         provider = str(coalesce(config.get("provider"), db_record.get("provider"), "disabled")).strip().lower()

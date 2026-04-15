@@ -220,6 +220,33 @@ def test_ai_mcp_legacy_route_redirects_to_api_mcp(monkeypatch):
     assert response.headers["Location"].endswith("/api-mcp")
 
 
+def test_ai_settings_uses_active_company_when_mounting_hub(monkeypatch):
+    app = _build_app()
+    captured = {}
+
+    monkeypatch.setattr(configs_route, "_resolve_active_company", _fake_active_company)
+    monkeypatch.setattr(configs_route, "_require_ai_admin_access", lambda company_id=None: None)
+
+    def _fake_build_frontend_state(active_company):
+        captured["company_id"] = getattr(active_company, "id", None)
+        return {
+            "summary": {},
+            "overview": {},
+            "agents": [],
+            "pillars": [],
+            "console_summary": {},
+            "audit_summary": {},
+        }
+
+    monkeypatch.setattr(configs_route.AIFrontendHubService, "build_frontend_state", _fake_build_frontend_state)
+    monkeypatch.setattr(configs_route, "render_template", lambda *args, **kwargs: "ok")
+
+    response = app.test_client().get("/ai")
+
+    assert response.status_code == 200
+    assert captured["company_id"] == 31
+
+
 def test_ai_mcp_console_template_renders_wizard_steps_ctas_and_contextual_help():
     app = _build_app()
     fake_console = _fake_console_state()

@@ -9638,6 +9638,7 @@ def ensure_integrations_tables():
             """
             CREATE TABLE IF NOT EXISTS integrations (
                 id VARCHAR(64) PRIMARY KEY,
+                company_id INTEGER,
                 name VARCHAR(255) NOT NULL,
                 provider VARCHAR(100) NOT NULL,
                 type VARCHAR(100) NOT NULL,
@@ -9646,6 +9647,32 @@ def ensure_integrations_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        """
+        )
+        conn.commit()
+
+        cursor.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'integrations'
+        """
+        )
+        columns = {row[0] for row in cursor.fetchall()}
+        if "company_id" not in columns:
+            cursor.execute("ALTER TABLE integrations ADD COLUMN company_id INTEGER")
+            conn.commit()
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_integrations_company_type
+            ON integrations (company_id, type)
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_integrations_company_provider
+            ON integrations (company_id, provider)
         """
         )
         conn.commit()
@@ -9709,29 +9736,74 @@ def _parse_integration_config(config_value: Any) -> Dict[str, Any]:
     return {}
 
 
-def list_integrations():
+def _coerce_company_id(value: Any) -> Optional[int]:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            return int(stripped)
+    return None
+
+
+def _build_integration_scope_clause(
+    company_id: Optional[int],
+    *,
+    include_global: bool = True,
+    include_all_companies: bool = False,
+) -> Tuple[str, Tuple[Any, ...]]:
+    normalized_company_id = _coerce_company_id(company_id)
+    if include_all_companies:
+        return "", ()
+    if normalized_company_id is None:
+        return "WHERE company_id IS NULL", ()
+    if include_global:
+        return "WHERE (company_id = %s OR company_id IS NULL)", (normalized_company_id,)
+    return "WHERE company_id = %s", (normalized_company_id,)
+
+
+def list_integrations(
+    company_id: Optional[int] = None,
+    *,
+    include_global: bool = True,
+    include_all_companies: bool = False,
+):
     try:
         ensure_integrations_tables()
         conn = get_connection()
         cursor = conn.cursor()
+        where_clause, params = _build_integration_scope_clause(
+            company_id,
+            include_global=include_global,
+            include_all_companies=include_all_companies,
+        )
         cursor.execute(
-            "SELECT id, name, provider, type, auth_type, config, created_at, updated_at FROM integrations ORDER BY name"
+            f"""
+            SELECT id, company_id, name, provider, type, auth_type, config, created_at, updated_at
+            FROM integrations
+            {where_clause}
+            ORDER BY CASE WHEN company_id IS NULL THEN 1 ELSE 0 END, name
+            """,
+            params,
         )
         rows = cursor.fetchall()
         conn.close()
         items = []
         for r in rows:
-            cfg = _parse_integration_config(r[5])
+            cfg = _parse_integration_config(r[6])
             items.append(
                 {
                     "id": r[0],
-                    "name": r[1],
-                    "provider": r[2],
-                    "type": r[3],
-                    "auth_type": r[4],
+                    "company_id": r[1],
+                    "name": r[2],
+                    "provider": r[3],
+                    "type": r[4],
+                    "auth_type": r[5],
                     "config": cfg,
-                    "created_at": r[6],
-                    "updated_at": r[7],
+                    "created_at": r[7],
+                    "updated_at": r[8],
                 }
             )
         return items
@@ -9744,20 +9816,27 @@ def _serialize_integration_row(row):
     """Helper to convert integration row tuples into dictionaries."""
     if not row:
         return None
-    cfg = _parse_integration_config(row[5])
+    cfg = _parse_integration_config(row[6])
     return {
         "id": row[0],
-        "name": row[1],
-        "provider": row[2],
-        "type": row[3],
-        "auth_type": row[4],
+        "company_id": row[1],
+        "name": row[2],
+        "provider": row[3],
+        "type": row[4],
+        "auth_type": row[5],
         "config": cfg,
-        "created_at": row[6],
-        "updated_at": row[7],
+        "created_at": row[7],
+        "updated_at": row[8],
     }
 
 
-def get_integration(integration_id: str) -> Optional[Dict[str, Any]]:
+def get_integration(
+    integration_id: str,
+    company_id: Optional[int] = None,
+    *,
+    include_global: bool = True,
+    include_all_companies: bool = False,
+) -> Optional[Dict[str, Any]]:
     """Retrieve a single integration definition."""
     if not integration_id:
         return None
@@ -9765,13 +9844,45 @@ def get_integration(integration_id: str) -> Optional[Dict[str, Any]]:
         ensure_integrations_tables()
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute(
+        normalized_company_id = _coerce_company_id(company_id)
+        params: Tuple[Any, ...]
+        if include_all_companies:
+            query = """
+                SELECT id, company_id, name, provider, type, auth_type, config, created_at, updated_at
+                FROM integrations
+                WHERE id = %s
+                ORDER BY CASE WHEN company_id IS NULL THEN 1 ELSE 0 END
+                LIMIT 1
             """
-            SELECT id, name, provider, type, auth_type, config, created_at, updated_at
-            FROM integrations
-            WHERE id = %s
-        """,
-            (integration_id,),
+            params = (integration_id,)
+        elif normalized_company_id is None:
+            query = """
+                SELECT id, company_id, name, provider, type, auth_type, config, created_at, updated_at
+                FROM integrations
+                WHERE id = %s AND company_id IS NULL
+                LIMIT 1
+            """
+            params = (integration_id,)
+        elif include_global:
+            query = """
+                SELECT id, company_id, name, provider, type, auth_type, config, created_at, updated_at
+                FROM integrations
+                WHERE id = %s AND (company_id = %s OR company_id IS NULL)
+                ORDER BY CASE WHEN company_id = %s THEN 0 ELSE 1 END
+                LIMIT 1
+            """
+            params = (integration_id, normalized_company_id, normalized_company_id)
+        else:
+            query = """
+                SELECT id, company_id, name, provider, type, auth_type, config, created_at, updated_at
+                FROM integrations
+                WHERE id = %s AND company_id = %s
+                LIMIT 1
+            """
+            params = (integration_id, normalized_company_id)
+        cursor.execute(
+            query,
+            params,
         )
         row = cursor.fetchone()
         conn.close()
@@ -9801,7 +9912,7 @@ def _normalize_config_payload(config_value: Any) -> Optional[str]:
         return None
 
 
-def create_integration(data: Dict[str, Any]) -> bool:
+def create_integration(data: Dict[str, Any], company_id: Optional[int] = None) -> bool:
     """Create a new integration record."""
     required_fields = ["id", "name", "provider", "type", "auth_type"]
     if not all(data.get(field) for field in required_fields):
@@ -9814,9 +9925,10 @@ def create_integration(data: Dict[str, Any]) -> bool:
         cursor.execute(
             """
             INSERT INTO integrations (
-                id, name, provider, type, auth_type, config, created_at, updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                id, company_id, name, provider, type, auth_type, config, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (id) DO UPDATE SET
+                company_id = EXCLUDED.company_id,
                 name = EXCLUDED.name,
                 provider = EXCLUDED.provider,
                 type = EXCLUDED.type,
@@ -9826,6 +9938,7 @@ def create_integration(data: Dict[str, Any]) -> bool:
         """,
             (
                 data["id"],
+                _coerce_company_id(data.get("company_id", company_id)),
                 data["name"],
                 data["provider"],
                 data["type"],
@@ -9845,7 +9958,13 @@ def create_integration(data: Dict[str, Any]) -> bool:
             conn.close()
 
 
-def update_integration(integration_id: str, data: Dict[str, Any]) -> bool:
+def update_integration(
+    integration_id: str,
+    data: Dict[str, Any],
+    company_id: Optional[int] = None,
+    *,
+    include_global: bool = True,
+) -> bool:
     """Update an existing integration definition."""
     if not integration_id:
         return False
@@ -9854,26 +9973,73 @@ def update_integration(integration_id: str, data: Dict[str, Any]) -> bool:
         ensure_integrations_tables()
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute(
+        normalized_company_id = _coerce_company_id(data.get("company_id", company_id))
+        if normalized_company_id is None:
+            query = """
+                UPDATE integrations SET
+                    company_id = %s,
+                    name = %s,
+                    provider = %s,
+                    type = %s,
+                    auth_type = %s,
+                    config = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND company_id IS NULL
             """
-            UPDATE integrations SET
-                name = %s,
-                provider = %s,
-                type = %s,
-                auth_type = %s,
-                config = %s,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s
-        """,
-            (
+            params = (
+                normalized_company_id,
                 data.get("name"),
                 data.get("provider"),
                 data.get("type"),
                 data.get("auth_type"),
                 _normalize_config_payload(data.get("config")),
                 integration_id,
-            ),
-        )
+            )
+        elif include_global:
+            query = """
+                UPDATE integrations SET
+                    company_id = %s,
+                    name = %s,
+                    provider = %s,
+                    type = %s,
+                    auth_type = %s,
+                    config = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND (company_id = %s OR company_id IS NULL)
+            """
+            params = (
+                normalized_company_id,
+                data.get("name"),
+                data.get("provider"),
+                data.get("type"),
+                data.get("auth_type"),
+                _normalize_config_payload(data.get("config")),
+                integration_id,
+                normalized_company_id,
+            )
+        else:
+            query = """
+                UPDATE integrations SET
+                    company_id = %s,
+                    name = %s,
+                    provider = %s,
+                    type = %s,
+                    auth_type = %s,
+                    config = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND company_id = %s
+            """
+            params = (
+                normalized_company_id,
+                data.get("name"),
+                data.get("provider"),
+                data.get("type"),
+                data.get("auth_type"),
+                _normalize_config_payload(data.get("config")),
+                integration_id,
+                normalized_company_id,
+            )
+        cursor.execute(query, params)
         conn.commit()
         return cursor.rowcount > 0
     except Exception as exc:
@@ -9886,7 +10052,12 @@ def update_integration(integration_id: str, data: Dict[str, Any]) -> bool:
             conn.close()
 
 
-def delete_integration(integration_id: str) -> bool:
+def delete_integration(
+    integration_id: str,
+    company_id: Optional[int] = None,
+    *,
+    include_global: bool = True,
+) -> bool:
     """Remove an integration definition."""
     if not integration_id:
         return False
@@ -9895,11 +10066,25 @@ def delete_integration(integration_id: str) -> bool:
         ensure_integrations_tables()
         conn = get_connection()
         cursor = conn.cursor()
+        item = get_integration(
+            integration_id,
+            company_id=company_id,
+            include_global=include_global,
+        )
+        if not item:
+            conn.close()
+            return False
         cursor.execute(
             "DELETE FROM agent_integrations WHERE integration_id = %s",
             (integration_id,),
         )
-        cursor.execute("DELETE FROM integrations WHERE id = %s", (integration_id,))
+        if item.get("company_id") is None:
+            cursor.execute("DELETE FROM integrations WHERE id = %s AND company_id IS NULL", (integration_id,))
+        else:
+            cursor.execute(
+                "DELETE FROM integrations WHERE id = %s AND company_id = %s",
+                (integration_id, item.get("company_id")),
+            )
         conn.commit()
         return cursor.rowcount > 0
     except Exception as exc:

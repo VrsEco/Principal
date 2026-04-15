@@ -186,7 +186,7 @@ class CompanyOnboardingService:
                 "create_tab": "dados",
                 "update_tab": "economico" if company_id else "dados",
                 "links": [
-                    {"label": "Operações Inteligentes", "href": "/operations"},
+                    {"label": "Central de IA", "href": "/ai"},
                     {"label": "API / MCP", "href": "/api-mcp"},
                 ],
             },

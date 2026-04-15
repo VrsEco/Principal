@@ -22,7 +22,7 @@ class AIFrontendHubService:
     def build_frontend_state(cls, active_company: Any | None = None) -> dict[str, Any]:
         company_id = getattr(active_company, "id", None)
         agents = AIAgent.query.order_by(AIAgent.name.asc()).all()
-        integrations = list_integrations() or []
+        integrations = list_integrations(company_id=company_id) or []
         console = AIMCPConsoleService.build_frontend_state(active_company)
         overview = cls._build_overview(
             company_id=company_id,

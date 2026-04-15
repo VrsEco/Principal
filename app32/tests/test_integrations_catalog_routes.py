@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from flask import Flask
 from flask_login import LoginManager
+from werkzeug.exceptions import Forbidden
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -69,6 +70,7 @@ def test_channels_page_renders(monkeypatch):
     app = _build_app()
     captured = {}
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: None)
     monkeypatch.setattr(
         integrations_route.IntegrationCatalogService,
         "build_channel_catalog",
@@ -152,6 +154,16 @@ def test_integrations_catalog_api_returns_payload(monkeypatch):
     assert response.status_code == 200
     assert payload["success"] is True
     assert payload["catalog"]["summary"]["total"] == 4
+
+
+def test_channels_page_requires_integration_admin(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: (_ for _ in ()).throw(Forbidden()))
+
+    response = app.test_client().get("/channels")
+
+    assert response.status_code == 403
 
 
 def test_list_integration_requests_uses_current_user_context(monkeypatch):
@@ -337,3 +349,102 @@ def test_create_integration_request_uses_active_company_and_current_user(monkeyp
     assert response.status_code == 201
     assert payload["success"] is True
     assert payload["request"]["backlog_task_id"] == 456
+
+
+def test_create_or_update_integration_requires_admin(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: (_ for _ in ()).throw(Forbidden()))
+
+    response = app.test_client().post(
+        "/api/integrations",
+        json={
+            "name": "Integração WhatsApp",
+            "provider": "z-api",
+            "type": "whatsapp",
+            "auth_type": "z-api",
+            "config": {"api_key": "abc", "instance_id": "inst"},
+        },
+    )
+
+    assert response.status_code == 403
+
+
+def test_create_or_update_integration_rejects_unknown_fields(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: None)
+
+    response = app.test_client().post(
+        "/api/integrations",
+        json={
+            "name": "Integração WhatsApp",
+            "provider": "z-api",
+            "type": "whatsapp",
+            "auth_type": "z-api",
+            "config": {"api_key": "abc", "instance_id": "inst"},
+            "unexpected_field": "boom",
+        },
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 400
+    assert payload["success"] is False
+    assert "Payload inválido" in payload["error"]
+
+
+def test_create_or_update_integration_scopes_payload_to_active_company(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: None)
+    captured = {}
+    monkeypatch.setattr(
+        integrations_route,
+        "create_integration",
+        lambda payload, company_id=None: captured.update({"payload": payload, "company_id": company_id}) or True,
+    )
+    monkeypatch.setattr(
+        integrations_route,
+        "get_integration",
+        lambda integration_id, company_id=None, **kwargs: {"id": integration_id, "company_id": company_id, "type": "whatsapp", "provider": "z-api", "config": {"provider": "z-api"}},
+    )
+
+    response = app.test_client().post(
+        "/api/integrations",
+        json={
+            "name": "Integração WhatsApp",
+            "provider": "z-api",
+            "type": "whatsapp",
+            "auth_type": "z-api",
+            "config": {"api_key": "abc", "instance_id": "inst"},
+        },
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert captured["company_id"] == 31
+    assert captured["payload"]["company_id"] == 31
+    assert captured["payload"]["id"] == "company_31_whatsapp_integration"
+
+
+def test_get_integrations_lists_only_active_company_scope(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: None)
+    captured = {}
+    monkeypatch.setattr(
+        integrations_route,
+        "list_integrations",
+        lambda company_id=None, **kwargs: captured.update({"company_id": company_id, **kwargs}) or [
+            {"id": "company_31_email_integration", "company_id": 31, "type": "email", "provider": "smtp", "config": {"provider": "smtp"}},
+        ],
+    )
+
+    response = app.test_client().get("/api/integrations")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert captured["company_id"] == 31
+    assert payload["integrations"][0]["id"] == "company_31_email_integration"
