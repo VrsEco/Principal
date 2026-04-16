@@ -5,6 +5,7 @@
 | Tipo | Skill principal | Especialista líder | Apoio comum |
 |---|---|---|---|
 | Definir arquitetura, boundaries, refatoração estrutural | `gestao_versus_core` | `arquiteto.md` | `dba.md`, `backend_service.md` |
+| Execução longa com 3+ etapas e necessidade de cards | `aa-j-31-card-execution` | depende do domínio | `qa_automation.md`, `arquiteto.md` |
 | Criar ou revisar workflow V3 | `workflow-factory-versus` | `backend_service.md` | `backend_api.md`, `qa_automation.md`, `ai_engineer.md` |
 | Investigar bug, drift, permissão, tenant, produção | `gestao-versus-incident-response` | `qa_automation.md` | `arquiteto.md`, `backend_api.md`, `dba.md` |
 | Deploy, produção, migração, restart | `deploy_gestao_versus` | `qa_automation.md` | `backend_api.md`, `dba.md` |

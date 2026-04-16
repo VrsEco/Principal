@@ -17,6 +17,7 @@ Skill obrigatória de governança do projeto.
 1. Ler `../../router/orchestrator.md`
 2. Aplicar guardrails globais de `../../references/constitution.md`
 3. Selecionar a skill principal, se existir:
+   - execução longa com 3+ etapas -> `aa-j-31-card-execution`
    - incidente -> `gestao-versus-incident-response`
    - workflow V3 -> `workflow-factory-versus`
    - deploy/produção -> `deploy_gestao_versus`

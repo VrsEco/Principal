@@ -9,6 +9,7 @@ PROJECT_SKILLS = {
     ROOT / 'skills' / 'gestao-versus-incident-response' / 'SKILL.md',
     ROOT / 'skills' / 'deploy_gestao_versus' / 'SKILL.md',
     ROOT / 'skills' / 'bug-investigation-playbook' / 'SKILL.md',
+    ROOT / 'skills' / 'aa-j-31-card-execution' / 'SKILL.md',
 }
 
 
