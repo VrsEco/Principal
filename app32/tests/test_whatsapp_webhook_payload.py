@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from api.webhooks.whatsapp_webhook import (
     _extract_whatsapp_message,
     _load_whatsapp_request_payload,
+    _personalize_whatsapp_greeting,
     whatsapp_webhook_bp,
 )
 
@@ -101,6 +102,18 @@ def test_load_whatsapp_request_payload_from_form_json_field():
 
     assert payload["phone"] == "5511999999999"
     assert payload["message"] == "oi"
+
+
+def test_personalize_whatsapp_greeting_uses_first_name():
+    result = _personalize_whatsapp_greeting("Olá! Como posso ajudar você hoje?", "Fabiano Ferreira")
+
+    assert result == "Olá Fabiano! Como posso te ajudar?"
+
+
+def test_personalize_whatsapp_greeting_preserves_non_greeting_text():
+    result = _personalize_whatsapp_greeting("Segue o resumo das suas atividades.", "Fabiano Ferreira")
+
+    assert result == "Segue o resumo das suas atividades."
 
 
 def test_handle_whatsapp_accepts_form_encoded_payload(monkeypatch):

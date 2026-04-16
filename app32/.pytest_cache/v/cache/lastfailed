@@ -5,5 +5,7 @@
   "tests/governance/test_code_standards.py::TestSecurityStandards::test_no_password_in_logs": true,
   "tests/test_sapiens_workflow_catalog_ui.py::test_sapiens_page_contains_workflow_catalog_panel": true,
   "tests/test_email_service_templates.py::test_send_email_autowraps_corporate_html": true,
-  "tests/test_email_service_templates.py::test_send_email_preserves_explicit_html": true
+  "tests/test_email_service_templates.py::test_send_email_preserves_explicit_html": true,
+  "tests/test_menu_engine_summary_flow_helpers.py::test_handle_item_selection_state_for_project_picker_advances_to_remaining_fields": true,
+  "tests/test_menu_engine_summary_flow_helpers.py::test_handle_menu_message_prompts_company_first_for_whatsapp_multi_company": true
 }

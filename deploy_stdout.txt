@@ -1,0 +1,31 @@
+----------------------------------------------------
+🚀 INICIANDO ATUALIZAÇÃO: Wed Apr 15 06:33:10 PM -03 2026
+----------------------------------------------------
+📂 Sincronizando código com repositório central...
+HEAD is now at acc214a9 Fix public static sync for my-work layout
+✅ Código atualizado com sucesso.
+📦 Atualizando dependências Python...
+✅ Dependências em conformidade.
+🗃️  Verificando migrações de banco de dados...
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+DEBUG: Registering Jinja filters...
+DEBUG: Registering API resources...
+DEBUG: CLOUD_SQL_CONNECTION_NAME='None'
+DEBUG: Using standard DATABASE_URL connection
+DEBUG: API resources registered.
+DEBUG: Registering blueprints...
+DEBUG: Blueprints registered.
+DEBUG: DB bootstrap skipped for this runtime context.
+DEBUG: Runtime background bootstrap skipped for this context.
+DEBUG: create_app() finished successfully.
+✅ Migrations aplicadas/verificadas com sucesso.
+🔄 Reiniciando servidor uWSGI (Configr)...
+   - Encerrando workers/vassal atuais: 822047
+824794
+   - Aguardando Emperor recriar o vassal...
+   - uWSGI ativo novamente com PID(s): 822047
+824794
+----------------------------------------------------
+✨ DEPLOY CONCLUÍDO COM SUCESSO!
+----------------------------------------------------

@@ -1,0 +1,269 @@
+/* 
+PADRÃO DE CORES GRV - FUNDOS CLAROS + FONTES ESCURAS
+=====================================================
+
+CORES PRINCIPAIS:
+- Fundos: Gradientes branco → cinza muito claro
+- Fontes: Azul muito escuro (#0f172a) ou preto (#000000)
+- Bordas: Azul claro transparente
+- Sombras: Azul transparente
+- Acentos: Gradientes coloridos apenas em barras superiores
+
+APLICAÇÃO:
+- Todos os textos devem ser escuros
+- Todos os fundos devem ser claros
+- Contraste mínimo de 4.5:1
+- Sempre usar !important para garantir precedência
+*/
+
+/* FUNDOS CLAROS */
+.grv-bg-primary {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+}
+
+.grv-bg-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+}
+
+.grv-bg-hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+}
+
+/* FONTES ESCURAS */
+.grv-text-primary {
+  color: #000000 !important;
+}
+
+.grv-text-secondary {
+  color: #0f172a !important;
+}
+
+.grv-text-muted {
+  color: #1e293b !important;
+}
+
+.grv-text-accent {
+  color: #1e40af !important;
+}
+
+/* BORDAS CLARAS */
+.grv-border {
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+}
+
+.grv-border-hover {
+  border: 1px solid rgba(30, 64, 175, 0.2) !important;
+}
+
+/* SOMBRAS CLARAS */
+.grv-shadow {
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+}
+
+.grv-shadow-hover {
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12) !important;
+}
+
+/* BARRAS COLORIDAS (apenas para identificação visual) */
+.grv-accent-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.grv-accent-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1e40af, #7c3aed, #dc2626);
+  z-index: 1;
+}
+
+/* BOTÕES */
+.grv-btn-primary {
+  background: linear-gradient(135deg, #1e40af, #7c3aed, #dc2626) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.grv-btn-secondary {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(100, 116, 139, 0.15)) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+/* INPUTS E FORMULÁRIOS */
+.grv-input {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+}
+
+.grv-input:focus {
+  border-color: rgba(30, 64, 175, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1) !important;
+}
+
+.grv-label {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+/* SELECTS E OPTIONS */
+.grv-select {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
+
+.grv-select option {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* MODAIS E POPUPS */
+.grv-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  box-shadow: 0 16px 48px rgba(30, 64, 175, 0.15) !important;
+}
+
+.grv-modal-title {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.grv-modal-text {
+  color: #1e293b !important;
+}
+
+/* CARDS E SUPERFÍCIES */
+.grv-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.08) !important;
+  transition: all 0.3s ease !important;
+}
+
+.grv-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.12) !important;
+  border-color: rgba(30, 64, 175, 0.2) !important;
+}
+
+.grv-card-title {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+.grv-card-text {
+  color: #1e293b !important;
+}
+
+/* NAVEGAÇÃO E SIDEBAR */
+.grv-nav-item {
+  color: #1e293b !important;
+  transition: all 0.3s ease !important;
+}
+
+.grv-nav-item:hover {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+}
+
+.grv-nav-item.active {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  font-weight: 600 !important;
+}
+
+/* TABELAS */
+.grv-table {
+  background: #ffffff !important;
+  border: 1px solid rgba(30, 64, 175, 0.1) !important;
+}
+
+.grv-table th {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  color: #000000 !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.1) !important;
+}
+
+.grv-table td {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.05) !important;
+}
+
+.grv-table tr:hover td {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+}
+
+/* BADGES E STATUS */
+.grv-badge {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* ALERTAS E NOTIFICAÇÕES */
+.grv-alert {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  color: #92400e !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+}
+
+.grv-alert-success {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+  color: #065f46 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.grv-alert-error {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+  color: #991b1b !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+/* UTILITÁRIOS */
+.grv-text-center { text-align: center !important; }
+.grv-text-left { text-align: left !important; }
+.grv-text-right { text-align: right !important; }
+.grv-font-bold { font-weight: 700 !important; }
+.grv-font-semibold { font-weight: 600 !important; }
+.grv-font-medium { font-weight: 500 !important; }
+.grv-font-normal { font-weight: 400 !important; }
+
+/* RESPONSIVIDADE */
+@media (max-width: 768px) {
+  .grv-card {
+    margin: 8px !important;
+    padding: 16px !important;
+  }
+  
+  .grv-btn-primary,
+  .grv-btn-secondary {
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+  }
+}

@@ -15,6 +15,13 @@ class AgentConversationService:
         if not normalized_message:
             raise ValueError("Mensagem vazia. Informe o que deseja executar.")
 
+        previous_outbound_count = AgentMessage.query.filter_by(
+            user_id=user_id,
+            company_id=company_id,
+            direction="outbound",
+            channel="platform",
+        ).count()
+
         processed_message = normalized_message
         agent_type = "work_agent_squad"
         if normalized_contact == "engineering" and "[CANAL ENGENHARIA]" not in normalized_message:
@@ -49,6 +56,19 @@ class AgentConversationService:
         )
 
         final_text = extract_response_text(response)
+        if normalized_contact == "sapiens" and previous_outbound_count == 0:
+            user_first_name = str(getattr(getattr(inbound, "user", None), "name", "") or "").strip().split(" ")[0]
+            if not user_first_name:
+                try:
+                    from models import User
+                    user = User.query.get(int(user_id))
+                    user_first_name = str(getattr(user, "name", "") or "").strip().split(" ")[0]
+                except Exception:
+                    user_first_name = ""
+            if user_first_name:
+                lowered = final_text.strip().lower()
+                if not lowered.startswith(("olá", "ola", "bom dia", "boa tarde", "boa noite")):
+                    final_text = f"Olá, {user_first_name}!\n\n{final_text}"
         fallback_agent = "engineering_squad" if normalized_contact == "engineering" else "sapiens"
         agent_executor = response.get("next_node") or fallback_agent
         if agent_executor == "end":

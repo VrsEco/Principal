@@ -14,6 +14,45 @@ class WorkflowDisplayOption(BaseModel):
     code: str
     title: str
     action_key: Optional[str] = None
+    description: Optional[str] = None
+
+
+def build_workflow_selection_confirmation(
+    option: WorkflowDisplayOption,
+    *,
+    user_name: str | None = None,
+    channel: str = "web",
+) -> str:
+    greeting = f"Ola, {str(user_name or 'usuario').strip()}!" if str(user_name or "").strip() else "Ola!"
+    blocks: List[ChatMessageBlock] = [
+        ChatMessageBlock(kind="body", text=greeting),
+        ChatMessageBlock(kind="body", text="Entendi melhor o seu pedido e selecionei o fluxo mais adequado para continuar."),
+        ChatMessageBlock(kind="heading", text=f"Fluxo/Tool sugerido: {option.code} - {option.title}"),
+    ]
+
+    if option.description:
+        blocks.append(ChatMessageBlock(kind="body", text=f"Descricao: {option.description}"))
+
+    blocks.extend(
+        [
+            ChatMessageBlock(kind="status", text=build_status_callout("info", "Se estiver certo, eu sigo com os dados da sessao e pergunto apenas o que faltar.", channel=channel)),
+            ChatMessageBlock(
+                kind="next_step",
+                items=[
+                    "Responda 'sim' para continuar.",
+                    "Responda 'nao' para cancelar.",
+                    "Se quiser, descreva em uma frase curta o ajuste necessario.",
+                ],
+            ),
+        ]
+    )
+
+    return build_chat_contract_message(
+        "Confirmacao do fluxo",
+        subtitle="Validacao explicita antes da coleta e execucao controlada.",
+        blocks=blocks,
+        channel=channel,
+    )
 
 
 def build_confirmation_text(

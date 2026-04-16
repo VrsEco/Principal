@@ -26,6 +26,7 @@ from .confirmation_presenter import (
     WorkflowDisplayOption,
     build_confirmation_display_items,
     build_confirmation_text,
+    build_workflow_selection_confirmation,
 )
 from .field_collection_presenter import build_missing_fields_prompt
 from .error_presenter import (
@@ -69,6 +70,7 @@ __all__ = [
     "build_presenter_header",
     "build_status_callout",
     "build_confirmation_text",
+    "build_workflow_selection_confirmation",
     "build_my_work_report",
     "build_item_selection_prompt",
     "build_my_work_empty_report",

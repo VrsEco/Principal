@@ -12,6 +12,13 @@ PROFILE_CLIENT = "client"
 PROFILE_COLLABORATOR = "collaborator"
 
 
+def _resolve_authenticated_user(user=None):
+    candidate = user if user is not None else current_user
+    if not candidate or not getattr(candidate, "is_authenticated", False):
+        return None
+    return candidate
+
+
 def _normalize_role_title(value):
     return str(value or "").strip().lower()
 
@@ -25,10 +32,14 @@ def _normalize_user_role(value):
     return "collaborator"
 
 
-def _employee_query(company_id=None):
+def _employee_query(company_id=None, user=None):
     from models.employee import Employee
 
-    query = Employee.query.filter(Employee.user_id == current_user.id).filter(
+    actor = _resolve_authenticated_user(user)
+    if actor is None:
+        return Employee.query.filter(False)
+
+    query = Employee.query.filter(Employee.user_id == actor.id).filter(
         or_(Employee.status.is_(None), func.lower(Employee.status) == "active")
     )
     if company_id is not None:
@@ -36,11 +47,12 @@ def _employee_query(company_id=None):
     return query
 
 
-def _has_admin_employee_role(company_id=None):
-    if not current_user.is_authenticated:
+def _has_admin_employee_role(company_id=None, user=None):
+    actor = _resolve_authenticated_user(user)
+    if actor is None:
         return False
 
-    for employee in _employee_query(company_id).all():
+    for employee in _employee_query(company_id, user=actor).all():
         role_title = _normalize_role_title(
             employee.role.title if employee and employee.role else None
         )
@@ -66,32 +78,35 @@ def _employee_has_permission(employee, resource, action):
     return False
 
 
-def is_platform_admin():
+def is_platform_admin(user=None):
+    actor = _resolve_authenticated_user(user)
     return bool(
-        current_user.is_authenticated
-        and _normalize_user_role(getattr(current_user, "role", None)) == "admin"
+        actor
+        and _normalize_user_role(getattr(actor, "role", None)) == "admin"
     )
 
 
-def is_client_user():
+def is_client_user(user=None):
+    actor = _resolve_authenticated_user(user)
     return bool(
-        current_user.is_authenticated
-        and _normalize_user_role(getattr(current_user, "role", None)) == "client"
+        actor
+        and _normalize_user_role(getattr(actor, "role", None)) == "client"
     )
 
 
-def get_default_company_id():
-    if not current_user.is_authenticated:
+def get_default_company_id(user=None):
+    actor = _resolve_authenticated_user(user)
+    if actor is None:
         return None
 
     from models.company import Company
     from models.employee import Employee
 
-    employee = _employee_query().order_by(Employee.company_id.asc()).first()
+    employee = _employee_query(user=actor).order_by(Employee.company_id.asc()).first()
     if employee and employee.company_id:
         return employee.company_id
 
-    if is_platform_admin():
+    if is_platform_admin(user=actor):
         first = (
             Company.query.filter(
                 or_(Company.is_active.is_(None), Company.is_active.is_(True))
@@ -105,15 +120,16 @@ def get_default_company_id():
     return None
 
 
-def can_access_company(company_id):
-    if not current_user.is_authenticated or not company_id:
+def can_access_company(company_id, user=None):
+    actor = _resolve_authenticated_user(user)
+    if actor is None or not company_id:
         return False
-    if is_platform_admin():
+    if is_platform_admin(user=actor):
         return True
-    return _employee_query(company_id).first() is not None
+    return _employee_query(company_id, user=actor).first() is not None
 
 
-def get_access_profile(company_id=None):
+def get_access_profile(company_id=None, user=None):
     """
     Resolve o perfil efetivo do usuário no contexto informado.
 
@@ -122,28 +138,29 @@ def get_access_profile(company_id=None):
       - client: cliente dentro de empresa vinculada
       - collaborator: colaborador restrito
     """
-    if not current_user.is_authenticated:
+    actor = _resolve_authenticated_user(user)
+    if actor is None:
         return None
 
-    if is_platform_admin():
+    if is_platform_admin(user=actor):
         return PROFILE_ADMINISTRATOR
 
-    if company_id is not None and not can_access_company(company_id):
+    if company_id is not None and not can_access_company(company_id, user=actor):
         return None
 
-    if is_client_user():
-        if company_id is None or can_access_company(company_id):
+    if is_client_user(user=actor):
+        if company_id is None or can_access_company(company_id, user=actor):
             return PROFILE_CLIENT
         return None
 
-    if _has_admin_employee_role(company_id):
+    if _has_admin_employee_role(company_id, user=actor):
         return PROFILE_ADMINISTRATOR
 
-    employee = _employee_query(company_id).first()
+    employee = _employee_query(company_id, user=actor).first()
     if employee:
         return PROFILE_COLLABORATOR
 
-    if company_id is None and _employee_query().first():
+    if company_id is None and _employee_query(user=actor).first():
         return PROFILE_COLLABORATOR
 
     return None

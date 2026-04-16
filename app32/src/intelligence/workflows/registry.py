@@ -22,6 +22,7 @@ def _build_required_fields(raw_fields: Sequence[dict] | None) -> List[WorkflowFi
                 key=key,
                 label=label,
                 required=bool(raw_field.get("required", True)),
+                category=str(raw_field.get("category") or ("required" if raw_field.get("required", True) else "optional")).strip().lower() or "required",
             )
         )
     return fields

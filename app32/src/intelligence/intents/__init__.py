@@ -1,4 +1,4 @@
-from .builders import MyWorkIntentFormBuilder
+from .builders import MyWorkIntentFormBuilder, RoutineConsultIntentFormBuilder
 from .dispatchers import OperationalIntentDispatcher
 from .presenters import OperationalIntentConfirmationPresenter
 from .schemas import (
@@ -19,6 +19,7 @@ __all__ = [
     "ConfirmationScopeForm",
     "FilterScopeForm",
     "MyWorkIntentFormBuilder",
+    "RoutineConsultIntentFormBuilder",
     "OperationalIntentConfirmationPresenter",
     "OperationalIntentDispatcher",
     "OperationalIntentForm",

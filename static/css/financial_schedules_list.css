@@ -1,0 +1,225 @@
+.sched-list-page {
+  padding: 0 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sched-list-header,
+.sched-list-actions,
+.sched-row-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sched-list-header {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.sched-list-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
+.sched-list-actions {
+  align-items: flex-start;
+}
+
+.sched-navbar-filter-count {
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sched-sidebar-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
+.sched-sidebar-filters {
+  padding: 1rem;
+}
+
+.sched-list-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.sched-kpi,
+.sched-list-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.sched-kpi {
+  padding: 1rem;
+}
+
+.sched-kpi span,
+.sched-kpi small {
+  color: var(--text-secondary);
+}
+
+.sched-kpi strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1.1rem;
+}
+
+.sched-amount {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sched-amount--negative {
+  color: #dc2626;
+}
+
+.sched-amount--positive {
+  color: #2563eb;
+}
+
+.sched-list-card {
+  overflow: hidden;
+}
+
+.sched-sidebar-filters .filter-group {
+  margin-bottom: 1.25rem;
+}
+
+.sched-sidebar-filters .filter-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 0.5rem;
+  display: block;
+  letter-spacing: 0.05em;
+}
+
+.sched-sidebar-filters input,
+.sched-sidebar-filters select,
+.sched-sidebar-filters .filter-select {
+  width: 100%;
+  padding: 0.6rem 0.875rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.sched-sidebar-filters input:focus,
+.sched-sidebar-filters select:focus {
+  border-color: var(--primary);
+  outline: none;
+  background: var(--surface);
+}
+
+.sched-sidebar-actions {
+  margin-top: 2rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.5rem;
+}
+
+.w-100 { width: 100%; justify-content: center; }
+.mt-2 { margin-top: 0.5rem; }
+
+.sched-sidebar-actions .btn {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.sched-table-wrap {
+  overflow-x: auto;
+}
+
+.sched-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1100px;
+}
+
+.sched-table th,
+.sched-table td {
+  padding: 0.9rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.sched-table th {
+  text-align: left;
+  color: var(--primary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.sched-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sched-pill--payable { background: rgba(239, 68, 68, 0.14); color: #b91c1c; }
+.sched-pill--receivable { background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+.sched-pill--open { background: rgba(239, 68, 68, 0.14); color: #b91c1c; }
+.sched-pill--partial { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+.sched-pill--settled { background: rgba(34, 197, 94, 0.16); color: #15803d; }
+.sched-pill--bordero-item { background: rgba(202, 138, 4, 0.2); color: #854d0e; }
+.sched-pill--bordero { background: rgba(14, 116, 144, 0.14); color: #0f766e; }
+
+.sched-row-actions .btn {
+  min-width: 88px;
+}
+
+.sched-history strong {
+  display: block;
+}
+
+.sched-history small,
+.sched-muted,
+.empty-state {
+  color: var(--text-secondary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 1.4rem 0.8rem;
+}
+
+@media (max-width: 1100px) {
+  .sched-list-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .sched-list-page {
+    padding: 0 1rem 1.5rem;
+  }
+
+  .sched-list-header,
+  .sched-list-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

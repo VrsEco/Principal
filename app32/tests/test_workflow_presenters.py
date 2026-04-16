@@ -9,6 +9,7 @@ from src.intelligence.workflows.presenters import (
     WorkflowDisplayOption,
     build_confirmation_display_items,
     build_confirmation_text,
+    build_workflow_selection_confirmation,
     build_missing_fields_prompt,
     build_my_work_report,
     build_operation_company_prompt,
@@ -99,6 +100,22 @@ def test_confirmation_presenter_builds_text():
     assert "responda 'sim'" in text.lower()
 
 
+def test_workflow_selection_confirmation_includes_description_and_greeting():
+    option = WorkflowDisplayOption(
+        code="3.1",
+        title="Atividades em Aberto",
+        action_key="my_work.open",
+        description="Consulta atividades, processos e reunioes em aberto no contexto operacional.",
+    )
+
+    text = build_workflow_selection_confirmation(option, user_name="Fabiano", channel="whatsapp")
+
+    assert "*Confirmacao do fluxo*" in text
+    assert "Ola, Fabiano!" in text
+    assert "Fluxo/Tool sugerido: 3.1 - Atividades em Aberto" in text
+    assert "Descricao: Consulta atividades, processos e reunioes em aberto no contexto operacional." in text
+
+
 def test_confirmation_presenter_supports_whatsapp_heading():
     option = WorkflowDisplayOption(
         code="1.4",
@@ -150,6 +167,27 @@ def test_missing_fields_and_company_prompt_support_channel_formatting():
 
     assert "*1.4 - Cadastrar Atividade*" in fields_text
     assert "Escolha a empresa para continuar:" in company_text
+
+
+def test_missing_fields_prompt_supports_optional_and_complementary_sections():
+    option = WorkflowDisplayOption(code="1.4", title="Cadastrar Atividade", action_key="project_task.create")
+
+    text = build_missing_fields_prompt(
+        option,
+        [{"key": "nome_atividade", "label": "Nome da Atividade", "required": True, "category": "required"}],
+        {"codigo_projeto": "AA.J.17"},
+        optional_fields=[{"key": "due_date", "label": "Prazo", "required": False, "category": "optional"}],
+        complementary_fields=[{"key": "notes", "label": "Observacoes", "required": False, "category": "complementary"}],
+        auto_filled_fields=["Usuario: Fabiano", "Empresa ativa: AA - Versus"],
+        channel="web",
+    )
+
+    assert "Dados aproveitados automaticamente da sessao:" in text
+    assert "Campos opcionais que podem melhorar a resposta:" in text
+    assert "Campos complementares para dar mais contexto:" in text
+    assert "1 - Nome da Atividade (nome_atividade)" in text
+    assert "2 - Prazo (due_date)" in text
+    assert "3 - Observacoes (notes)" in text
 
 
 def test_channel_presenter_treats_instagram_as_chat_family():

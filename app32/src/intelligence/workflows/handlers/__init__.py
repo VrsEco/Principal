@@ -35,6 +35,11 @@ from .my_work_handler import (
     MyWorkExecutionRequest,
     MyWorkExecutionResult,
 )
+from .routine_consult_handler import (
+    RoutineConsultExecutionHandler,
+    RoutineConsultExecutionRequest,
+    RoutineConsultExecutionResult,
+)
 from .onboarding_handler import (
     OnboardingDiagnoseExecutionHandler,
     OnboardingDiagnoseRequest,
@@ -92,6 +97,9 @@ __all__ = [
     "MyWorkExecutionHandler",
     "MyWorkExecutionRequest",
     "MyWorkExecutionResult",
+    "RoutineConsultExecutionHandler",
+    "RoutineConsultExecutionRequest",
+    "RoutineConsultExecutionResult",
     "OnboardingDiagnoseExecutionHandler",
     "OnboardingDiagnoseRequest",
     "OnboardingDiagnoseResult",

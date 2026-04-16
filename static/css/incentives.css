@@ -1,0 +1,93 @@
+:root {
+    --incentive-primary: #6366f1;
+    --incentive-secondary: #a855f7;
+    --incentive-accent: #f43f5e;
+    --incentive-bg: #0f172a;
+    --incentive-card-bg: rgba(30, 41, 59, 0.7);
+    --incentive-text: #f8fafc;
+    --incentive-border: rgba(255, 255, 255, 0.1);
+}
+
+.incentive-container {
+    padding: 2rem;
+    color: var(--incentive-text);
+    min-height: 100vh;
+}
+
+.incentive-glass {
+    background: var(--incentive-card-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--incentive-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.incentive-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.incentive-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(to right, var(--incentive-primary), var(--incentive-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.spider-web-canvas {
+    width: 100%;
+    height: 600px;
+    background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+    border-radius: 1rem;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+}
+
+.spider-web-canvas:active {
+    cursor: grabbing;
+}
+
+.incentive-card {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.incentive-card:hover {
+    transform: translateY(-5px);
+}
+
+.node-role {
+    fill: var(--incentive-primary);
+    filter: drop-shadow(0 0 8px var(--incentive-primary));
+}
+
+.node-indicator {
+    fill: var(--incentive-secondary);
+    filter: drop-shadow(0 0 8px var(--incentive-secondary));
+}
+
+.link-edge {
+    stroke: rgba(255, 255, 255, 0.2);
+    stroke-width: 1.5;
+    transition: stroke 0.3s;
+}
+
+.link-edge:hover {
+    stroke: var(--incentive-accent);
+    stroke-width: 3;
+}
+
+/* Animations */
+@keyframes pulseGlow {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.pulse {
+    animation: pulseGlow 2s infinite ease-in-out;
+}

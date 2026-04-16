@@ -349,6 +349,14 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
                 "para fazer",
                 "temos para fazer",
                 "tenho para fazer",
+                "atividades para hoje",
+                "atividade para hoje",
+                "tarefas para hoje",
+                "tarefa para hoje",
+                "atividades de hoje",
+                "atividade de hoje",
+                "tarefas de hoje",
+                "tarefa de hoje",
                 "atividades pendentes para",
                 "atividade pendente para",
                 "instancias pendentes para",
@@ -370,6 +378,28 @@ class HeuristicWorkflowReranker(WorkflowMatchReranker):
             if action_key == "my_work.open":
                 score -= 2
                 reasons.append(f"reranker:my_work=open_period_penalty:{period_hint}")
+
+        personal_scope = bool(
+            {"eu", "me", "meu", "meus", "minha", "minhas", "tenho", "pra", "mim"} & tokens
+            or "para mim" in normalized_text
+        )
+        routine_entity_query = bool(
+            {"atividade", "atividades", "tarefa", "tarefas", "processo", "processos", "instancia", "instancias", "reuniao", "reunioes"} & tokens
+        )
+        routine_consult_intent = routine_entity_query and (
+            personal_scope
+            or asks_for_work_queue
+            or period_hint in {"today", "week", "month"}
+        )
+        if routine_consult_intent and action_key == "routine.consult":
+            score += 28
+            reasons.append("reranker:routine_consult=personal_operational_query")
+        elif routine_consult_intent and action_key.startswith("summary."):
+            score -= 16
+            reasons.append("reranker:summary_penalty_for_routine_consult")
+        elif routine_consult_intent and action_key.startswith("my_work."):
+            score += 6
+            reasons.append("reranker:my_work_supports_routine_consult")
 
         if occupancy_intent:
             score, reasons = self._apply_action_hint(

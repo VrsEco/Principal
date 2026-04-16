@@ -76,6 +76,8 @@ from src.intelligence.workflows.handlers import (
     ProjectTaskCreateRequest,
     ProjectTaskUpdateExecutionHandler,
     ProjectTaskUpdateRequest,
+    RoutineConsultExecutionHandler,
+    RoutineConsultExecutionRequest,
     SummaryExecutionRequest,
     SummaryWorkflowExecutionHandler,
 )
@@ -85,6 +87,7 @@ from src.intelligence.workflows.presenters import (
     build_my_work_report,
     build_confirmation_display_items,
     build_confirmation_text,
+    build_workflow_selection_confirmation,
     build_item_selection_prompt,
     build_missing_fields_prompt,
     build_operation_company_prompt,
@@ -326,7 +329,9 @@ COMPANY_ALIAS_PATTERN = re.compile(r"^\s*([A-Za-z]{2,5})(?:\s*-\s*(.+))?\s*$")
 SUMMARY_ACTION_PERIOD = dict(SUMMARY_ACTION_PERIOD_MAP)
 SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
 SUMMARY_EMAIL_CUSTOM_STATUS = "awaiting_summary_email_custom"
+CONTEXT_DISAMBIGUATION_STATUS = "awaiting_context_disambiguation"
 COMPANY_SELECTION_STATUS = "awaiting_operation_company"
+ADDITIONAL_FIELDS_STATUS = "awaiting_additional_fields"
 SUMMARY_SELECTION_STATUSES = SUMMARY_WIZARD_STATUSES | {
     SUMMARY_EMAIL_CONFIRM_STATUS,
     SUMMARY_EMAIL_CUSTOM_STATUS,
@@ -336,6 +341,12 @@ SUMMARY_EMAIL_OFFER_SUFFIX = (
     "1 - Enviar para meu e-mail cadastrado\n"
     "2 - Informar outro e-mail\n"
     "Responda com 1, 2 ou nao."
+)
+CONTEXT_DISAMBIGUATION_PROMPT = (
+    "Nao consegui ter certeza se voce quer continuar o fluxo anterior ou iniciar um novo pedido.\n"
+    "Responda:\n"
+    "1 - Nova conversa\n"
+    "2 - Continuar a atual"
 )
 
 
@@ -398,6 +409,8 @@ def handle_menu_message(
         )
 
         explicit_code = _extract_explicit_code(text, lower)
+        if session.status == CONTEXT_DISAMBIGUATION_STATUS and _is_context_disambiguation_reply(text, lower):
+            explicit_code = None
         is_item_selection_reply = (
             session.status == "awaiting_item_selection"
             and _parse_selection_number_date(text) is not None
@@ -411,10 +424,11 @@ def handle_menu_message(
             and _parse_selection_number_date(text) is not None
         )
         is_missing_fields_reply = (
-            session.status == "awaiting_fields"
+            session.status in {"awaiting_fields", ADDITIONAL_FIELDS_STATUS}
             and bool(
                 _extract_numbered_fields_from_text(text, session.missing_fields or [])
                 or _extract_fields_from_text(text)
+                or _normalize_text(text) in {"pular", "prosseguir", "continuar", "seguir"}
             )
         )
         is_confirmation_adjustment_reply = (
@@ -422,18 +436,26 @@ def handle_menu_message(
             and bool(_extract_fields_from_text(text))
         )
 
-        # Se o usuário iniciar um novo comando de menu enquanto há sessão pendente,
-        # reinicia o estado para evitar "prisão" em fluxo anterior.
-        if session.status != "idle" and not (
+        should_prompt_context_disambiguation = _should_prompt_context_disambiguation(
+            session,
+            text=text,
+            lower=lower,
+            explicit_code=explicit_code,
+            is_item_selection_reply=is_item_selection_reply,
+            is_company_selection_reply=is_company_selection_reply,
+            is_summary_selection_reply=is_summary_selection_reply,
+            is_missing_fields_reply=is_missing_fields_reply,
+            is_confirmation_adjustment_reply=is_confirmation_adjustment_reply,
+        )
+
+        # Se o usuário acionar explicitamente o menu/código, reinicia o estado pendente.
+        if session.status != "idle" and not should_prompt_context_disambiguation and not (
             is_item_selection_reply
             or is_company_selection_reply
             or is_summary_selection_reply
             or is_missing_fields_reply
             or is_confirmation_adjustment_reply
-        ) and (
-            _is_menu_request(lower)
-            or explicit_code
-        ):
+        ) and (_is_menu_request(lower) or explicit_code):
             _reset_session(session)
 
         selected_option = _safe_selected_option(session)
@@ -444,6 +466,30 @@ def handle_menu_message(
                 session=session,
                 option=selected_option,
                 intercept_stage="back_navigation",
+            )
+
+        if session.status == CONTEXT_DISAMBIGUATION_STATUS:
+            return _attach_menu_intercept_metadata(
+                _handle_context_disambiguation_state(
+                    session=session,
+                    text=text,
+                    lower=lower,
+                    user_id=user_id,
+                    company_id=company_id,
+                    channel=channel,
+                    thread_id=thread_id,
+                ),
+                session=session,
+                option=selected_option,
+                intercept_stage=CONTEXT_DISAMBIGUATION_STATUS,
+            )
+
+        if should_prompt_context_disambiguation:
+            return _attach_menu_intercept_metadata(
+                _prepare_context_disambiguation(session=session, pending_message=text),
+                session=session,
+                option=selected_option,
+                intercept_stage=CONTEXT_DISAMBIGUATION_STATUS,
             )
 
         if session.status == "awaiting_confirmation":
@@ -468,6 +514,14 @@ def handle_menu_message(
                 session=session,
                 option=selected_option,
                 intercept_stage="awaiting_fields",
+            )
+
+        if session.status == ADDITIONAL_FIELDS_STATUS:
+            return _attach_menu_intercept_metadata(
+                _handle_additional_fields_state(session, text, lower),
+                session=session,
+                option=selected_option,
+                intercept_stage=ADDITIONAL_FIELDS_STATUS,
             )
 
         if session.status == COMPANY_SELECTION_STATUS:
@@ -691,35 +745,20 @@ def _prepare_option_flow(
     collected = _extract_fields_from_text(text)
     session.selected_option_id = option.id
     session.last_user_message = text
-
-    company_selection_flow = _prepare_company_selection_flow_if_needed(
-        session=session,
-        option=option,
-        collected=collected,
-    )
-    if company_selection_flow is not None:
-        return company_selection_flow
-
-    selection_flow = _prepare_selection_flow_if_applicable(
-        session=session,
-        option=option,
-        collected=collected,
-    )
-    if selection_flow is not None:
-        return selection_flow
-
-    summary_flow = _prepare_summary_flow_if_applicable(
-        session=session,
-        option=option,
-        collected=collected,
-    )
-    if summary_flow is not None:
-        return summary_flow
-
-    return _advance_option_after_payload_collection(
+    payload = _inject_session_context_into_payload(
         session=session,
         option=option,
         payload=collected,
+    )
+    _transition_session_state(
+        session=session,
+        status="awaiting_confirmation",
+        payload=payload,
+        missing_fields=[],
+    )
+    return MenuInterceptResult(
+        handled=True,
+        response_text=_format_workflow_selection_confirmation(option, session, payload, session.channel or "web"),
     )
 
 
@@ -733,46 +772,64 @@ def _handle_confirmation_state(
         _reset_session(session)
         return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
 
-    coordinator = _build_confirmation_coordinator()
-    workflow_state = WorkflowSessionState.from_agent_menu_session(
-        session,
-        workflow_code=option.code,
-        workflow_action_key=option.action_key,
-    )
-    decision = coordinator.handle_reply(
-        workflow_state,
+    payload = _inject_session_context_into_payload(
+        session=session,
         option=option,
-        text=text,
-        lower=lower,
+        payload=dict(session.collected_data or {}),
     )
+    first_word = str(lower or "").split(" ")[0].strip(".,;:!?")
 
-    if decision.route == CONFIRMATION_ROUTE_CANCELLED:
+    if first_word in CANCEL_WORDS:
         _reset_session(session)
         return MenuInterceptResult(
             handled=True,
-            response_text=decision.response_text or "Acao cancelada.",
+            response_text="Acao cancelada. Digite 'menu' para retomar.",
         )
 
-    if decision.route == CONFIRMATION_ROUTE_DIRECT_RESPONSE:
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=True,
-            response_text=decision.response_text,
-            metadata=dict(decision.metadata or {}),
+    if first_word in CONFIRM_WORDS:
+        collected = dict(payload or {})
+
+        company_selection_flow = _prepare_company_selection_flow_if_needed(
+            session=session,
+            option=option,
+            collected=collected,
+        )
+        if company_selection_flow is not None:
+            return company_selection_flow
+
+        selection_flow = _prepare_selection_flow_if_applicable(
+            session=session,
+            option=option,
+            collected=collected,
+        )
+        if selection_flow is not None:
+            return selection_flow
+
+        summary_flow = _prepare_summary_flow_if_applicable(
+            session=session,
+            option=option,
+            collected=collected,
+        )
+        if summary_flow is not None:
+            return summary_flow
+
+        return _advance_option_after_payload_collection(
+            session=session,
+            option=option,
+            payload=collected,
         )
 
-    if decision.route == CONFIRMATION_ROUTE_EXECUTION_PROMPT:
-        _reset_session(session)
-        return MenuInterceptResult(
-            handled=False,
-            override_message=decision.override_message,
-        )
-
-    session.collected_data = dict(decision.payload or {})
-    db.session.commit()
+    updated_payload = dict(payload)
+    updated_payload.update(_extract_fields_from_text(text))
+    _transition_session_state(
+        session=session,
+        status="awaiting_confirmation",
+        payload=updated_payload,
+        missing_fields=[],
+    )
     return MenuInterceptResult(
         handled=True,
-        response_text=_format_confirmation(option, decision.payload, session.channel or "web"),
+        response_text=_format_workflow_selection_confirmation(option, session, updated_payload, session.channel or "web"),
     )
 
 
@@ -802,6 +859,34 @@ def _handle_missing_fields_state(
         session=session,
         option=option,
         payload=merged,
+    )
+
+
+def _handle_additional_fields_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+) -> MenuInterceptResult:
+    option = session.selected_option
+    if not option:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Sessao de menu reiniciada. Digite 'menu' para continuar.")
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(handled=True, response_text="Acao cancelada. Digite 'menu' para retomar.")
+
+    payload = dict(session.collected_data or {})
+    normalized = _normalize_text(text)
+    if normalized not in {"pular", "prosseguir", "continuar", "seguir"}:
+        payload.update(_extract_numbered_fields_from_text(text, session.missing_fields or []))
+        payload.update(_extract_fields_from_text(text))
+
+    return _execute_option_with_payload(
+        session=session,
+        option=option,
+        payload=payload,
     )
 
 
@@ -853,36 +938,23 @@ def _advance_option_after_payload_collection(
             response_text=_format_missing_fields(option, missing, payload, session.channel or "web"),
         )
 
-    if _is_read_only_action(option.action_key):
-        effective_company_id = _resolve_effective_company_id_for_payload(
-            payload=original_payload,
-            fallback_company_id=session.company_id,
-            user_id=session.user_id,
-        )
-        direct_execution = _try_execute_direct_option_result(
-            option=option,
+    additional_fields = _list_additional_fields(option, payload)
+    if additional_fields:
+        _transition_session_state(
+            session=session,
+            status=ADDITIONAL_FIELDS_STATUS,
             payload=payload,
-            company_id=effective_company_id,
-            user_id=session.user_id,
-            channel=session.channel or "web",
+            missing_fields=[field.model_dump() for field in additional_fields],
         )
-        if direct_execution.executed:
-            _reset_session(session)
-            return MenuInterceptResult(
-                handled=True,
-                response_text=direct_execution.response_text,
-                metadata=dict(direct_execution.metadata or {}),
-            )
+        return MenuInterceptResult(
+            handled=True,
+            response_text=_format_additional_fields(option, additional_fields, payload, session, session.channel or "web"),
+        )
 
-    _transition_session_state(
+    return _execute_option_with_payload(
         session=session,
-        status="awaiting_confirmation",
+        option=option,
         payload=payload,
-        missing_fields=[],
-    )
-    return MenuInterceptResult(
-        handled=True,
-        response_text=_format_confirmation(option, payload, session.channel or "web"),
     )
 
 
@@ -915,15 +987,10 @@ def _handle_item_selection_state(
             payload=decision.payload,
         )
     if decision.route == SELECTION_ROUTE_CONFIRM:
-        _transition_session_state(
+        return _advance_option_after_payload_collection(
             session=session,
-            status="awaiting_confirmation",
+            option=option,
             payload=decision.payload,
-            missing_fields=[],
-        )
-        return MenuInterceptResult(
-            handled=True,
-            response_text=_format_confirmation(option, decision.payload, session.channel or "web"),
         )
     return MenuInterceptResult(
         handled=True,
@@ -971,6 +1038,39 @@ def _looks_like_command(lower_text: str) -> bool:
     if is_hitl_operation or is_pending_decision_query or is_deadline_rewrite or is_task_completion_operation:
         return True
     return (has_command or has_query) and (has_scope or has_status)
+
+
+def _is_context_disambiguation_reply(text: str, lower_text: str) -> bool:
+    if _extract_selection_index(text) in {1, 2}:
+        return True
+    return lower_text in {"nova conversa", "continuar", "continuar a atual", "atual"}
+
+
+def _should_prompt_context_disambiguation(
+    session: AgentMenuSession,
+    *,
+    text: str,
+    lower: str,
+    explicit_code: Optional[str],
+    is_item_selection_reply: bool,
+    is_company_selection_reply: bool,
+    is_summary_selection_reply: bool,
+    is_missing_fields_reply: bool,
+    is_confirmation_adjustment_reply: bool,
+) -> bool:
+    if session.status in {"idle", CONTEXT_DISAMBIGUATION_STATUS}:
+        return False
+    if explicit_code or _is_menu_request(lower):
+        return False
+    if (
+        is_item_selection_reply
+        or is_company_selection_reply
+        or is_summary_selection_reply
+        or is_missing_fields_reply
+        or is_confirmation_adjustment_reply
+    ):
+        return False
+    return _looks_like_command(lower)
 
 
 def _extract_explicit_code(text: str, lower_text: str) -> Optional[str]:
@@ -1211,6 +1311,58 @@ def _public_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _resolve_user_first_name(user_id: int) -> Optional[str]:
+    from models import User
+
+    user = User.query.get(user_id)
+    if not user or not str(getattr(user, "name", "") or "").strip():
+        return None
+    return str(user.name).strip().split(" ")[0]
+
+
+def _resolve_company_session_label(company_id: Optional[int]) -> Optional[str]:
+    if not company_id:
+        return None
+    from models.company import Company
+
+    company = Company.query.get(company_id)
+    if not company:
+        return None
+    code = str(getattr(company, "client_code", "") or "").strip()
+    name = str(getattr(company, "name", "") or getattr(company, "legal_name", "") or "").strip()
+    return " - ".join([part for part in (code, name) if part])
+
+
+def _inject_session_context_into_payload(
+    *,
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    updated = dict(payload or {})
+    if session.company_id and updated.get("_selected_company_id") is None and str(option.action_key or "").strip().lower() != "company.list_accessible":
+        updated["_selected_company_id"] = int(session.company_id)
+    updated.setdefault("_session_user_id", int(session.user_id))
+    if session.company_id:
+        updated.setdefault("_session_company_id", int(session.company_id))
+    user_name = _resolve_user_first_name(session.user_id)
+    if user_name:
+        updated.setdefault("_session_user_name", user_name)
+    company_label = _resolve_company_session_label(session.company_id)
+    if company_label:
+        updated.setdefault("_session_company_label", company_label)
+    return updated
+
+
+def _build_auto_filled_session_lines(payload: Dict[str, Any]) -> List[str]:
+    lines: List[str] = []
+    if payload.get("_session_user_name"):
+        lines.append(f"Usuario: {payload['_session_user_name']}")
+    if payload.get("_session_company_label"):
+        lines.append(f"Empresa ativa: {payload['_session_company_label']}")
+    return lines
+
+
 def _payload_without_navigation(payload: Dict[str, Any]) -> Dict[str, Any]:
     return workflow_payload_without_navigation(payload)
 
@@ -1240,6 +1392,90 @@ def _transition_session_state(
         payload=payload,
         missing_fields=missing_fields,
         push_history=push_history,
+    )
+
+
+def _prepare_context_disambiguation(
+    session: AgentMenuSession,
+    *,
+    pending_message: str,
+) -> MenuInterceptResult:
+    payload = dict(session.collected_data or {})
+    payload["_context_disambiguation_previous_status"] = str(session.status or "idle")
+    payload["_context_disambiguation_pending_message"] = pending_message
+    payload["_context_disambiguation_missing_fields"] = list(session.missing_fields or [])
+    _transition_session_state(
+        session=session,
+        status=CONTEXT_DISAMBIGUATION_STATUS,
+        payload=payload,
+        missing_fields=[],
+    )
+    return MenuInterceptResult(
+        handled=True,
+        response_text=CONTEXT_DISAMBIGUATION_PROMPT,
+    )
+
+
+def _handle_context_disambiguation_state(
+    session: AgentMenuSession,
+    text: str,
+    lower: str,
+    *,
+    user_id: int,
+    company_id: Optional[int],
+    channel: str,
+    thread_id: str,
+) -> MenuInterceptResult:
+    payload = dict(session.collected_data or {})
+    pending_message = str(payload.get("_context_disambiguation_pending_message") or "").strip()
+    previous_status = str(payload.get("_context_disambiguation_previous_status") or "").strip() or "idle"
+    previous_missing_fields = list(payload.get("_context_disambiguation_missing_fields") or [])
+
+    first_word = lower.split(" ")[0] if lower else ""
+    if first_word in CANCEL_WORDS:
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Perfeito. Fluxo anterior encerrado. Quando quiser, envie um novo pedido.",
+        )
+
+    selected_index = _extract_selection_index(text)
+    normalized = _normalize_text(text)
+
+    if selected_index == 1 or normalized == "nova conversa":
+        if not pending_message:
+            _reset_session(session)
+            return MenuInterceptResult(
+                handled=True,
+                response_text="Nao consegui recuperar a ultima mensagem. Envie novamente o novo pedido.",
+            )
+        _reset_session(session)
+        return handle_menu_message(
+            user_id=user_id,
+            company_id=company_id,
+            channel=channel,
+            thread_id=thread_id,
+            message=pending_message,
+        )
+
+    if selected_index == 2 or normalized in {"continuar", "continuar a atual", "atual"}:
+        payload.pop("_context_disambiguation_pending_message", None)
+        payload.pop("_context_disambiguation_previous_status", None)
+        payload.pop("_context_disambiguation_missing_fields", None)
+        _transition_session_state(
+            session=session,
+            status=previous_status,
+            payload=payload,
+            missing_fields=previous_missing_fields,
+        )
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Certo. Entao continue a solicitacao atual com mais detalhes para eu concluir o fluxo.",
+        )
+
+    return MenuInterceptResult(
+        handled=True,
+        response_text="Responda com 1 para nova conversa ou 2 para continuar a atual.",
     )
 
 
@@ -1344,9 +1580,43 @@ def _adjust_required_fields_for_context(
     ]
 
 
+def _list_optional_fields(
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> List[WorkflowRequiredField]:
+    normalized_payload = _public_payload(payload)
+    fields = WorkflowRequiredField.normalize_many(option.required_fields or [])
+    return [
+        field
+        for field in fields
+        if field.category == "optional" and not str(normalized_payload.get(field.key) or "").strip()
+    ]
+
+
+def _list_complementary_fields(
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> List[WorkflowRequiredField]:
+    normalized_payload = _public_payload(payload)
+    fields = WorkflowRequiredField.normalize_many(option.required_fields or [])
+    return [
+        field
+        for field in fields
+        if field.category == "complementary" and not str(normalized_payload.get(field.key) or "").strip()
+    ]
+
+
+def _list_additional_fields(
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> List[WorkflowRequiredField]:
+    return _list_optional_fields(option, payload) + _list_complementary_fields(option, payload)
+
+
 def _is_read_only_action(action_key: Optional[str]) -> bool:
     action = (action_key or "").strip().lower()
     return action in {
+        "routine.consult",
         "collaborator.occupancy",
         "company.list_accessible",
         "agent_action.list_pending",
@@ -2123,10 +2393,12 @@ def _format_summary_period_prompt(option: AgentMenuOption, channel: str = "web")
 
 
 def _build_workflow_display_option(option: AgentMenuOption) -> WorkflowDisplayOption:
+    action_key = str(option.action_key or "").strip()
     return WorkflowDisplayOption(
         code=str(option.code or "").strip(),
         title=str(option.title or "").strip(),
-        action_key=(str(option.action_key or "").strip() or None),
+        action_key=(action_key or None),
+        description=(str(option.description or "").strip() or _default_workflow_description(action_key, str(option.title or "").strip()) or None),
     )
 
 
@@ -2244,6 +2516,11 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                 handler_factory=_build_my_work_execution_handler,
                 request_model=MyWorkExecutionRequest,
                 action_override="my_work.completed_range",
+            ),
+            "routine.consult": build_handler_executor(
+                handler_factory=_build_routine_consult_execution_handler,
+                request_model=RoutineConsultExecutionRequest,
+                action_override="routine.consult",
             ),
             "meeting.schedule": build_handler_executor(
                 handler_factory=_build_meeting_schedule_execution_handler,
@@ -2442,6 +2719,22 @@ def _build_my_work_execution_handler() -> MyWorkExecutionHandler:
             active_company_id=active_company_id,
             channel=channel,
         ),
+    )
+
+
+def _build_routine_consult_execution_handler() -> RoutineConsultExecutionHandler:
+    from src.intelligence.intents import RoutineConsultIntentFormBuilder
+
+    intent_form_builder = RoutineConsultIntentFormBuilder()
+    my_work_handler = _build_my_work_execution_handler()
+    return RoutineConsultExecutionHandler(
+        build_operational_form=lambda action, payload, active_company_id, channel: intent_form_builder.build(
+            action=action,
+            payload=payload,
+            active_company_id=active_company_id,
+            channel=channel,
+        ),
+        execute_my_work=my_work_handler.execute,
     )
 
 
@@ -3651,6 +3944,37 @@ def _try_execute_direct_option_result(
     )
 
 
+def _execute_option_with_payload(
+    *,
+    session: AgentMenuSession,
+    option: AgentMenuOption,
+    payload: Dict[str, Any],
+) -> MenuInterceptResult:
+    effective_company_id = _resolve_effective_company_id_for_payload(
+        payload=payload,
+        fallback_company_id=session.company_id,
+        user_id=session.user_id,
+    )
+    direct_execution = _try_execute_direct_option_result(
+        option=option,
+        payload=payload,
+        company_id=effective_company_id,
+        user_id=session.user_id,
+        channel=session.channel or "web",
+    )
+    _reset_session(session)
+    if direct_execution.executed:
+        return MenuInterceptResult(
+            handled=True,
+            response_text=direct_execution.response_text,
+            metadata=dict(direct_execution.metadata or {}),
+        )
+    return MenuInterceptResult(
+        handled=False,
+        override_message=_build_execution_prompt(option, payload, str(session.last_user_message or "")),
+    )
+
+
 def _try_execute_direct_option(
     option: AgentMenuOption,
     payload: Dict[str, Any],
@@ -3902,6 +4226,43 @@ def _format_objective_label(value: str) -> str:
         "geral": "Geral",
     }
     return mapping.get(objective, value)
+
+
+def _default_workflow_description(action_key: str, title: str) -> str:
+    mapping = {
+        "project.create": "Cria um novo projeto no sistema com escopo inicial controlado.",
+        "project.update": "Atualiza dados estruturados de um projeto existente com rastreabilidade.",
+        "project.complete": "Finaliza um projeto e registra o encerramento operacional.",
+        "project_task.create": "Cadastra uma nova atividade vinculada a um projeto existente.",
+        "project_task.complete": "Conclui uma atividade de projeto e registra a finalizacao.",
+        "project_task.update": "Atualiza dados de uma atividade, como prazo ou informacoes operacionais.",
+        "project_task.audit": "Audita atividades para localizar lacunas de responsavel, prazo ou cadastro.",
+        "process_instance.start": "Inicia uma instancia operacional de processo para execucao controlada.",
+        "process_instance.complete": "Conclui uma instancia de processo e registra a finalizacao.",
+        "routine.consult": "Consulta operacional de rotina para atividades, processos e reunioes usando contexto da sessao.",
+        "my_work.open": "Consulta atividades, processos e reunioes em aberto no contexto operacional.",
+        "my_work.overdue": "Consulta itens vencidos para priorizacao imediata.",
+        "my_work.due_range": "Consulta itens a vencer em um periodo informado.",
+        "my_work.completed_range": "Consulta itens concluidos dentro de um periodo.",
+        "summary.today": "Gera um resumo executivo das atividades do dia.",
+        "summary.week": "Gera um resumo executivo consolidado da semana.",
+        "summary.month": "Gera um resumo executivo consolidado do mes.",
+        "summary.custom": "Gera um resumo executivo para um periodo personalizado.",
+        "collaborator.occupancy": "Analisa ocupacao, capacidade e carga de um colaborador no periodo informado.",
+        "company.list_accessible": "Lista as empresas vinculadas e acessiveis ao usuario atual.",
+        "meeting.schedule": "Agenda uma reuniao e registra os dados essenciais do compromisso.",
+        "meeting.start": "Inicia uma reuniao registrada para acompanhamento operacional.",
+        "meeting.summarize": "Consolida e resume uma reuniao registrada.",
+        "onboarding.diagnose": "Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.",
+        "onboarding.status": "Consulta o status do onboarding e os pontos pendentes.",
+        "onboarding.start": "Inicia um onboarding assistido de forma estruturada.",
+        "onboarding.go_live_check": "Executa um checklist de prontidao antes de entrada em producao.",
+        "agent_action.approve": "Aprova uma solicitacao pendente com trilha de auditoria.",
+        "agent_action.reject": "Rejeita uma solicitacao pendente com trilha de auditoria.",
+        "agent_action.revalidate": "Revalida uma solicitacao pendente para nova analise.",
+        "agent_action.list_pending": "Lista solicitacoes pendentes aguardando decisao humana.",
+    }
+    return mapping.get(str(action_key or "").strip().lower(), f"Executa o fluxo {title} de forma controlada no APP32.")
 
 
 def _execute_complete_project_task(payload: Dict[str, Any], company_id: Optional[int], user_id: int) -> str:
@@ -4869,6 +5230,19 @@ def _format_confirmation(option: AgentMenuOption, payload: Dict[str, Any], chann
     )
 
 
+def _format_workflow_selection_confirmation(
+    option: AgentMenuOption,
+    session: AgentMenuSession,
+    payload: Dict[str, Any],
+    channel: str = "web",
+) -> str:
+    return build_workflow_selection_confirmation(
+        _build_workflow_display_option(option),
+        user_name=str(payload.get("_session_user_name") or _resolve_user_first_name(session.user_id) or "").strip() or None,
+        channel=channel,
+    )
+
+
 def _build_confirmation_display_items(option: AgentMenuOption, payload: Dict[str, Any]) -> List[str]:
     return build_confirmation_display_items(
         _build_workflow_display_option(option),
@@ -4973,10 +5347,41 @@ def _format_missing_fields(
     payload: Dict[str, Any],
     channel: str = "web",
 ) -> str:
+    optional_fields = [
+        field.model_dump()
+        for field in _list_optional_fields(option, payload)
+    ]
+    complementary_fields = [
+        field.model_dump()
+        for field in _list_complementary_fields(option, payload)
+    ]
     return build_missing_fields_prompt(
         _build_workflow_display_option(option),
         missing_fields,
         payload,
+        optional_fields=optional_fields,
+        complementary_fields=complementary_fields,
+        auto_filled_fields=_build_auto_filled_session_lines(payload),
+        channel=channel,
+    )
+
+
+def _format_additional_fields(
+    option: AgentMenuOption,
+    additional_fields: List[WorkflowRequiredField],
+    payload: Dict[str, Any],
+    session: AgentMenuSession,
+    channel: str = "web",
+) -> str:
+    optional_fields = [field.model_dump() for field in additional_fields if field.category == "optional"]
+    complementary_fields = [field.model_dump() for field in additional_fields if field.category == "complementary"]
+    return build_missing_fields_prompt(
+        _build_workflow_display_option(option),
+        [],
+        payload,
+        optional_fields=optional_fields,
+        complementary_fields=complementary_fields,
+        auto_filled_fields=_build_auto_filled_session_lines(_inject_session_context_into_payload(session=session, option=option, payload=payload)),
         channel=channel,
     )
 
@@ -5147,7 +5552,7 @@ def _ensure_default_menu_seed() -> None:
         {"code": "1.1", "title": "Cadastrar Projeto", "parent_code": "1", "action_key": "project.create", "required_fields": [{"key": "nome_projeto", "label": "Nome do Projeto"}], "keywords": ["cadastrar projeto", "criar projeto", "novo projeto"], "sort_order": 11},
         {"code": "1.2", "title": "Editar Projeto", "parent_code": "1", "action_key": "project.update", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}, {"key": "dados", "label": "Dados para atualizacao"}], "keywords": ["editar projeto", "alterar projeto"], "sort_order": 12},
         {"code": "1.3", "title": "Finalizar Projeto", "parent_code": "1", "action_key": "project.complete", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}], "keywords": ["finalizar projeto", "encerrar projeto"], "sort_order": 13},
-        {"code": "1.4", "title": "Cadastrar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.create", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}, {"key": "nome_atividade", "label": "Nome da Atividade"}], "keywords": ["cadastrar atividade", "nova atividade de projeto"], "sort_order": 14},
+        {"code": "1.4", "title": "Cadastrar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.create", "description": "Cadastra uma nova atividade vinculada a um projeto existente.", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto", "required": True, "category": "required"}, {"key": "nome_atividade", "label": "Nome da Atividade", "required": True, "category": "required"}, {"key": "due_date", "label": "Prazo", "required": False, "category": "optional"}, {"key": "notes", "label": "Observacoes", "required": False, "category": "complementary"}], "keywords": ["cadastrar atividade", "nova atividade de projeto"], "sort_order": 14},
         {"code": "1.5", "title": "Finalizar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.complete", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}], "keywords": ["finalizar atividade de projeto", "concluir atividade"], "sort_order": 15},
         {"code": "1.6", "title": "Editar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.update", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}, {"key": "due_date", "label": "Novo Prazo"}], "keywords": ["editar atividade", "alterar atividade de projeto", "alterar prazo da atividade", "mudar prazo da atividade", "colocar atividade para o dia"], "sort_order": 16},
         {"code": "1.7", "title": "Auditar Atividades de Projeto", "parent_code": "1", "action_key": "project_task.audit", "required_fields": [], "keywords": ["atividades sem responsável", "atividades sem data", "auditoria de atividades", "analisar atividades de projetos"], "sort_order": 17},
@@ -5155,10 +5560,11 @@ def _ensure_default_menu_seed() -> None:
         {"code": "2.1", "title": "Iniciar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.start", "required_fields": [{"key": "codigo_processo", "label": "Codigo do Processo"}], "keywords": ["iniciar instancia", "abrir processo"], "sort_order": 21},
         {"code": "2.2", "title": "Finalizar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.complete", "required_fields": [{"key": "codigo_instancia", "label": "Codigo da Instancia"}], "keywords": ["finalizar instancia", "encerrar processo"], "sort_order": 22},
         {"code": "3", "title": "Consultas de Trabalho", "parent_code": None, "sort_order": 30},
-        {"code": "3.1", "title": "Atividades em Aberto", "parent_code": "3", "action_key": "my_work.open", "required_fields": [{"key": "empresa", "label": "Empresa"}], "keywords": ["atividades em aberto", "tarefas em aberto"], "sort_order": 31},
-        {"code": "3.2", "title": "Atividades Vencidas", "parent_code": "3", "action_key": "my_work.overdue", "required_fields": [{"key": "empresa", "label": "Empresa"}], "keywords": ["atividades vencidas", "tarefas vencidas"], "sort_order": 32},
-        {"code": "3.3", "title": "Atividades a Vencer no Periodo", "parent_code": "3", "action_key": "my_work.due_range", "required_fields": [{"key": "empresa", "label": "Empresa"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["a vencer", "proximo vencimento"], "sort_order": 33},
-        {"code": "3.4", "title": "Atividades Concluidas no Periodo", "parent_code": "3", "action_key": "my_work.completed_range", "required_fields": [{"key": "empresa", "label": "Empresa"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["concluidas no periodo", "atividades concluidas"], "sort_order": 34},
+        {"code": "3.0", "title": "Consulta de Rotina", "parent_code": "3", "action_key": "routine.consult", "description": "Consulta operacional guiada para projetos, processos e reunioes usando contexto da sessao.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": False, "category": "optional"}, {"key": "status_consulta", "label": "Status", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["quais atividades tenho para hoje", "o que tenho para hoje", "minhas atividades de hoje", "meus processos de hoje", "minhas reunioes de hoje", "consulta de rotina"], "sort_order": 30},
+        {"code": "3.1", "title": "Atividades em Aberto", "parent_code": "3", "action_key": "my_work.open", "description": "Consulta atividades, processos e reunioes em aberto no contexto operacional.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["atividades em aberto", "tarefas em aberto"], "sort_order": 31},
+        {"code": "3.2", "title": "Atividades Vencidas", "parent_code": "3", "action_key": "my_work.overdue", "description": "Consulta itens vencidos para priorizacao imediata.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["atividades vencidas", "tarefas vencidas"], "sort_order": 32},
+        {"code": "3.3", "title": "Atividades a Vencer no Periodo", "parent_code": "3", "action_key": "my_work.due_range", "description": "Consulta itens a vencer em um periodo informado.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["a vencer", "proximo vencimento"], "sort_order": 33},
+        {"code": "3.4", "title": "Atividades Concluidas no Periodo", "parent_code": "3", "action_key": "my_work.completed_range", "description": "Consulta itens concluidos dentro de um periodo.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["concluidas no periodo", "atividades concluidas"], "sort_order": 34},
         {"code": "3.5", "title": "Resumos", "parent_code": "3", "sort_order": 35},
         {"code": "3.6", "title": "Ocupacao de Colaborador", "parent_code": "3", "action_key": "collaborator.occupancy", "required_fields": [{"key": "colaborador", "label": "Colaborador"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["ocupacao do colaborador", "ocupacao do usuario", "capacidade do colaborador", "carga do colaborador", "horas disponiveis do colaborador"], "sort_order": 40},
         {"code": "3.7", "title": "Empresas Vinculadas ao Usuario", "parent_code": "3", "action_key": "company.list_accessible", "required_fields": [], "keywords": ["quantas empresas estão vinculadas a mim", "quantas empresas estao vinculadas a mim", "minhas empresas", "empresas vinculadas a mim", "empresas que tenho acesso", "listar minhas empresas"], "sort_order": 41},
@@ -5167,11 +5573,11 @@ def _ensure_default_menu_seed() -> None:
         {"code": "3.5.3", "title": "Este Mes", "parent_code": "3.5", "action_key": "summary.month", "required_fields": [], "keywords": ["resumo mes", "este mes"], "sort_order": 38},
         {"code": "3.5.4", "title": "Personalizado", "parent_code": "3.5", "action_key": "summary.custom", "required_fields": [{"key": "periodo", "label": "Periodo (Data inicial e final)"}], "keywords": ["resumo personalizado", "periodo personalizado"], "sort_order": 39},
         {"code": "4", "title": "Gestao de Reunioes", "parent_code": None, "sort_order": 40},
-        {"code": "4.1", "title": "Agendar Reuniao", "parent_code": "4", "action_key": "meeting.schedule", "required_fields": [{"key": "titulo", "label": "Titulo da Reuniao"}, {"key": "data_hora", "label": "Data/Hora"}], "keywords": ["agendar reuniao", "marcar reuniao"], "sort_order": 41},
+        {"code": "4.1", "title": "Agendar Reuniao", "parent_code": "4", "action_key": "meeting.schedule", "description": "Agenda uma reuniao e registra os dados essenciais do compromisso.", "required_fields": [{"key": "titulo", "label": "Titulo da Reuniao", "required": True, "category": "required"}, {"key": "data_hora", "label": "Data/Hora", "required": True, "category": "required"}, {"key": "participantes", "label": "Participantes", "required": False, "category": "optional"}, {"key": "pauta", "label": "Pauta", "required": False, "category": "complementary"}], "keywords": ["agendar reuniao", "marcar reuniao"], "sort_order": 41},
         {"code": "4.2", "title": "Iniciar Reuniao", "parent_code": "4", "action_key": "meeting.start", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao"}], "keywords": ["iniciar reuniao", "comecar reuniao"], "sort_order": 42},
         {"code": "4.3", "title": "Resumir Reuniao", "parent_code": "4", "action_key": "meeting.summarize", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao"}], "keywords": ["resumo da reuniao", "resumir reuniao"], "sort_order": 43},
         {"code": "5", "title": "Funcionamento e Onboarding", "parent_code": None, "sort_order": 50},
-        {"code": "5.1", "title": "Diagnosticar Funcionamento", "parent_code": "5", "action_key": "onboarding.diagnose", "required_fields": [{"key": "objetivo", "label": "O que voce quer fazer funcionar"}], "keywords": ["diagnosticar funcionamento", "fazer funcionar", "checklist"], "sort_order": 51},
+        {"code": "5.1", "title": "Diagnosticar Funcionamento", "parent_code": "5", "action_key": "onboarding.diagnose", "description": "Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.", "required_fields": [{"key": "objetivo", "label": "O que voce quer fazer funcionar", "required": True, "category": "required"}, {"key": "area", "label": "Area/Modulo", "required": False, "category": "optional"}, {"key": "evidencias", "label": "Evidencias do Problema", "required": False, "category": "complementary"}], "keywords": ["diagnosticar funcionamento", "fazer funcionar", "checklist"], "sort_order": 51},
         {"code": "5.2", "title": "Status do Onboarding", "parent_code": "5", "action_key": "onboarding.status", "required_fields": [], "keywords": ["status onboarding", "campos faltantes", "onboarding"], "sort_order": 52},
         {"code": "5.3", "title": "Iniciar Onboarding Assistido", "parent_code": "5", "action_key": "onboarding.start", "required_fields": [{"key": "tipo_cadastro", "label": "Tipo de Cadastro (real ou modelo)"}], "keywords": ["iniciar onboarding", "cadastro assistido", "onboarding assistido"], "sort_order": 53},
         {"code": "5.4", "title": "Checklist para Producao", "parent_code": "5", "action_key": "onboarding.go_live_check", "required_fields": [], "keywords": ["checklist producao", "prontidao producao", "go live"], "sort_order": 54},
@@ -5218,6 +5624,21 @@ def _ensure_default_menu_upgrades() -> None:
     )
     if root_1:
         _ensure_menu_option_exists(
+            code="1.4",
+            title="Cadastrar Atividade de Projeto",
+            parent_code="1",
+            action_key="project_task.create",
+            description="Cadastra uma nova atividade vinculada a um projeto existente.",
+            required_fields=[
+                {"key": "codigo_projeto", "label": "Codigo do Projeto", "required": True, "category": "required"},
+                {"key": "nome_atividade", "label": "Nome da Atividade", "required": True, "category": "required"},
+                {"key": "due_date", "label": "Prazo", "required": False, "category": "optional"},
+                {"key": "notes", "label": "Observacoes", "required": False, "category": "complementary"},
+            ],
+            keywords=["cadastrar atividade", "nova atividade de projeto"],
+            sort_order=14,
+        )
+        _ensure_menu_option_exists(
             code="1.7",
             title="Auditar Atividades de Projeto",
             parent_code="1",
@@ -5239,6 +5660,86 @@ def _ensure_default_menu_upgrades() -> None:
         sort_order=30,
     )
     if root_3:
+        _ensure_menu_option_exists(
+            code="3.0",
+            title="Consulta de Rotina",
+            parent_code="3",
+            action_key="routine.consult",
+            description="Consulta operacional guiada para projetos, processos e reunioes usando contexto da sessao.",
+            required_fields=[
+                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
+                {"key": "periodo", "label": "Periodo", "required": False, "category": "optional"},
+                {"key": "status_consulta", "label": "Status", "required": False, "category": "optional"},
+                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
+            ],
+            keywords=[
+                "quais atividades tenho para hoje",
+                "o que tenho para hoje",
+                "minhas atividades de hoje",
+                "meus processos de hoje",
+                "minhas reunioes de hoje",
+                "consulta de rotina",
+            ],
+            sort_order=30,
+        )
+        _ensure_menu_option_exists(
+            code="3.1",
+            title="Atividades em Aberto",
+            parent_code="3",
+            action_key="my_work.open",
+            description="Consulta atividades, processos e reunioes em aberto no contexto operacional.",
+            required_fields=[
+                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
+                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
+                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
+            ],
+            keywords=["atividades em aberto", "tarefas em aberto"],
+            sort_order=31,
+        )
+        _ensure_menu_option_exists(
+            code="3.2",
+            title="Atividades Vencidas",
+            parent_code="3",
+            action_key="my_work.overdue",
+            description="Consulta itens vencidos para priorizacao imediata.",
+            required_fields=[
+                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
+                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
+                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
+            ],
+            keywords=["atividades vencidas", "tarefas vencidas"],
+            sort_order=32,
+        )
+        _ensure_menu_option_exists(
+            code="3.3",
+            title="Atividades a Vencer no Periodo",
+            parent_code="3",
+            action_key="my_work.due_range",
+            description="Consulta itens a vencer em um periodo informado.",
+            required_fields=[
+                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
+                {"key": "periodo", "label": "Periodo", "required": True, "category": "required"},
+                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
+                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
+            ],
+            keywords=["a vencer", "proximo vencimento"],
+            sort_order=33,
+        )
+        _ensure_menu_option_exists(
+            code="3.4",
+            title="Atividades Concluidas no Periodo",
+            parent_code="3",
+            action_key="my_work.completed_range",
+            description="Consulta itens concluidos dentro de um periodo.",
+            required_fields=[
+                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
+                {"key": "periodo", "label": "Periodo", "required": True, "category": "required"},
+                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
+                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
+            ],
+            keywords=["concluidas no periodo", "atividades concluidas"],
+            sort_order=34,
+        )
         _ensure_menu_option_exists(
             code="3.6",
             title="Ocupacao de Colaborador",
@@ -5330,7 +5831,12 @@ def _ensure_default_menu_upgrades() -> None:
         title="Diagnosticar Funcionamento",
         parent_code="5",
         action_key="onboarding.diagnose",
-        required_fields=[{"key": "objetivo", "label": "O que voce quer fazer funcionar"}],
+        description="Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.",
+        required_fields=[
+            {"key": "objetivo", "label": "O que voce quer fazer funcionar", "required": True, "category": "required"},
+            {"key": "area", "label": "Area/Modulo", "required": False, "category": "optional"},
+            {"key": "evidencias", "label": "Evidencias do Problema", "required": False, "category": "complementary"},
+        ],
         keywords=["diagnosticar funcionamento", "fazer funcionar", "checklist"],
         sort_order=51,
     )
@@ -5417,6 +5923,7 @@ def _ensure_menu_option_exists(
     parent_code: Optional[str],
     sort_order: int,
     action_key: Optional[str] = None,
+    description: Optional[str] = None,
     required_fields: Optional[List[Dict[str, Any]]] = None,
     keywords: Optional[List[str]] = None,
 ) -> Optional[AgentMenuOption]:
@@ -5425,6 +5932,22 @@ def _ensure_menu_option_exists(
         AgentMenuOption.code == code,
     ).first()
     if existing:
+        updated = False
+        if description and not str(existing.description or "").strip():
+            existing.description = description
+            updated = True
+        existing_fields = list(existing.required_fields or [])
+        if required_fields and (
+            not existing_fields
+            or any("category" not in field for field in existing_fields if isinstance(field, dict))
+        ):
+            existing.required_fields = required_fields
+            updated = True
+        if keywords and not list(existing.keywords or []):
+            existing.keywords = keywords
+            updated = True
+        if updated:
+            db.session.flush()
         return existing
 
     parent_id = None
@@ -5443,6 +5966,7 @@ def _ensure_menu_option_exists(
         code=code,
         title=title,
         action_key=action_key,
+        description=description,
         required_fields=required_fields or [],
         keywords=keywords or [],
         sort_order=sort_order,

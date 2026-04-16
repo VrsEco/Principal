@@ -1314,3 +1314,88 @@ def test_heuristic_reranker_prioritizes_due_range_for_pending_month_queue():
     assert reranked
     assert reranked[0].workflow.action_key == "my_work.due_range"
     assert any("period_queue" in reason for reason in reranked[0].reasons)
+
+
+def test_heuristic_reranker_prioritizes_due_range_for_activities_for_today_phrase():
+    options = [
+        _option(
+            option_id=70,
+            code="3.1",
+            title="Atividades em Aberto",
+            action_key="my_work.open",
+            keywords=["atividades em aberto"],
+            sort_order=31,
+        ),
+        _option(
+            option_id=71,
+            code="3.3",
+            title="Vencendo no Periodo",
+            action_key="my_work.due_range",
+            keywords=["o que vence no periodo", "tarefas para hoje"],
+            sort_order=33,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Quais atividades para hoje?",
+        company_id=9,
+        channel="whatsapp",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=12, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "my_work.due_range"
+    assert any("period_queue" in reason for reason in reranked[0].reasons)
+
+
+def test_heuristic_reranker_prioritizes_routine_consult_over_summary_for_personal_today_query():
+    options = [
+        _option(
+            option_id=72,
+            code="3.0",
+            title="Consulta de Rotina",
+            action_key="routine.consult",
+            keywords=["quais atividades tenho para hoje"],
+            sort_order=30,
+        ),
+        _option(
+            option_id=73,
+            code="3.5.1",
+            title="Hoje",
+            action_key="summary.today",
+            keywords=["resumo hoje", "resumo do dia"],
+            sort_order=36,
+        ),
+        _option(
+            option_id=74,
+            code="3.3",
+            title="Vencendo no Periodo",
+            action_key="my_work.due_range",
+            keywords=["tarefas para hoje"],
+            sort_order=33,
+        ),
+    ]
+    registry = WorkflowRegistry.from_menu_options(options)
+    reranker = HeuristicWorkflowReranker()
+    request = WorkflowDiscoveryRequest(
+        text="Quais atividades tenho para hoje?",
+        company_id=9,
+        channel="whatsapp",
+    )
+    matches = [
+        WorkflowMatch(workflow=registry.list()[0], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[1], score=12, reasons=[]),
+        WorkflowMatch(workflow=registry.list()[2], score=12, reasons=[]),
+    ]
+
+    reranked = reranker.rerank(request, matches, registry)
+
+    assert reranked
+    assert reranked[0].workflow.action_key == "routine.consult"
+    assert any("routine_consult" in reason for reason in reranked[0].reasons)

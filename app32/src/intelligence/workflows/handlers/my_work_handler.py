@@ -106,9 +106,11 @@ class MyWorkExecutionHandler:
 
         start_date = None
         end_date = None
-        if execution_input.requires_period:
+        payload_period = str(payload.get("periodo") or payload.get("period") or "").strip()
+        should_apply_period = execution_input.requires_period or bool(payload_period)
+        if should_apply_period:
             start_date, end_date = self._resolve_period_from_payload(payload)
-            if not start_date or not end_date:
+            if execution_input.requires_period and (not start_date or not end_date):
                 return MyWorkExecutionResult(
                     response_text=(
                         "Para esta consulta, informe o periodo no formato:\n"

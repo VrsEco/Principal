@@ -1,0 +1,6 @@
+From github.com:VrsEco/Principal
+ * branch              main       -> FETCH_HEAD
+   fe07f45a..acc214a9  main       -> origin/main
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python -m pip install --upgrade pip

@@ -234,6 +234,46 @@ def _normalize_text_basic(value: str) -> str:
     return (value or "").strip().lower()
 
 
+def _personalize_whatsapp_greeting(text: str, user_name: Any) -> str:
+    message = str(text or "").strip()
+    if not message:
+        return message
+
+    first_name = str(user_name or "").strip().split(" ")[0]
+    if not first_name:
+        return message
+
+    normalized = _normalize_text_basic(message)
+    generic_greetings = {
+        "olá! como posso ajudar você hoje?",
+        "ola! como posso ajudar você hoje?",
+        "olá! como posso ajudar voce hoje?",
+        "ola! como posso ajudar voce hoje?",
+        "olá! como posso te ajudar?",
+        "ola! como posso te ajudar?",
+    }
+    is_generic_greeting = normalized in generic_greetings
+    if not is_generic_greeting:
+        starts_with_greeting = normalized.startswith(("olá!", "ola!", "olá ", "ola "))
+        has_help_intent = any(
+            phrase in normalized
+            for phrase in (
+                "como posso",
+                "em que posso",
+                "posso ajudar",
+                "posso te ajudar",
+                "ser útil para você hoje",
+                "ser util para voce hoje",
+            )
+        )
+        is_generic_greeting = starts_with_greeting and has_help_intent
+
+    if not is_generic_greeting:
+        return message
+
+    return f"Olá {first_name}! Como posso te ajudar?"
+
+
 def _is_menu_like_message(text: str) -> bool:
     lower = _normalize_text_basic(text)
     if not lower:
@@ -361,6 +401,7 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
             )
 
             response_text = extract_response_text(response)
+            response_text = _personalize_whatsapp_greeting(response_text, getattr(user, "name", ""))
             final_agent_name = response.get("next_node") or "sapiens"
             if final_agent_name == "end":
                 final_agent_name = "sapiens"

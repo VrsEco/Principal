@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,6 +9,7 @@ class WorkflowFieldDefinition(BaseModel):
     key: str
     label: str
     required: bool = True
+    category: Literal["required", "optional", "complementary"] = "required"
 
 
 class WorkflowDefinition(BaseModel):

@@ -303,6 +303,24 @@ def test_my_work_handler_uses_canonical_intent_form_payload_when_available():
     assert result.response_text == "report:my_work.open:empresa AA - Versus"
 
 
+def test_my_work_handler_applies_period_even_for_open_action_when_payload_has_period():
+    handler, captured = _build_handler()
+
+    result = handler.execute(
+        MyWorkExecutionRequest(
+            action="my_work.open",
+            payload={"empresa": "Versus", "periodo": "hoje"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["period_payload"]["periodo"] == "hoje"
+    assert captured["tasks_calls"][0]["start_date"] == date(2026, 3, 5)
+    assert captured["tasks_calls"][0]["end_date"] == date(2026, 3, 19)
+    assert result.response_text == "report:my_work.open:empresa AA - Versus"
+
+
 def test_my_work_handler_returns_form_missing_fields_error():
     handler, _ = _build_handler(
         build_operational_form=lambda action, payload, active_company_id, channel: (None, "Formulario invalido")

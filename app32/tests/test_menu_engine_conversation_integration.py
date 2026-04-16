@@ -111,6 +111,8 @@ def _install_common_patches(monkeypatch, session, option):
         },
     )
     monkeypatch.setattr(menu_engine, "_format_project_choice_line", lambda project_code: f"{project_code} - Projeto V3")
+    monkeypatch.setattr(menu_engine, "_resolve_user_first_name", lambda user_id: "Fabiano")
+    monkeypatch.setattr(menu_engine, "_resolve_company_session_label", lambda company_id: "AA - Versus" if company_id else None)
     monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
     monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
     monkeypatch.setattr(menu_engine, "_format_root_menu", lambda company_id: "ROOT MENU")
@@ -122,11 +124,11 @@ def test_handle_menu_message_project_task_create_full_cycle(monkeypatch):
     _install_common_patches(monkeypatch, session, option)
     monkeypatch.setattr(
         menu_engine,
-        "_try_execute_direct_option",
-        lambda option, payload, company_id, user_id, channel="web": (
-            f"atividade criada: {payload.get('codigo_projeto')} - {payload.get('nome_atividade')}"
-            if str(option.action_key or "").strip().lower() == "project_task.create" and payload.get("nome_atividade")
-            else None
+        "_try_execute_direct_option_result",
+        lambda option, payload, company_id, user_id, channel="web": menu_engine.DirectExecutionResult(
+            executed=bool(str(option.action_key or "").strip().lower() == "project_task.create" and payload.get("nome_atividade")),
+            response_text=f"atividade criada: {payload.get('codigo_projeto')} - {payload.get('nome_atividade')}",
+            metadata={},
         ),
     )
 
@@ -136,6 +138,19 @@ def test_handle_menu_message_project_task_create_full_cycle(monkeypatch):
         channel="whatsapp",
         thread_id="thread-1",
         message="1.4",
+    )
+
+    assert result.handled is True
+    assert "Fluxo/Tool sugerido: 1.4 - Cadastrar Atividade de Projeto" in result.response_text
+    assert "Fabiano" in result.response_text
+    assert session.status == "awaiting_confirmation"
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="whatsapp",
+        thread_id="thread-1",
+        message="sim",
     )
 
     assert result.handled is True
@@ -163,7 +178,7 @@ def test_handle_menu_message_project_task_create_full_cycle(monkeypatch):
     )
 
     assert result.handled is True
-    assert "Para executar, faltam os seguintes dados:" in result.response_text
+    assert "Para executar, faltam os seguintes dados obrigatorios:" in result.response_text
     assert "Nome da Atividade" in result.response_text
     assert session.status == "awaiting_fields"
 
@@ -173,19 +188,6 @@ def test_handle_menu_message_project_task_create_full_cycle(monkeypatch):
         channel="whatsapp",
         thread_id="thread-1",
         message="1: Implementar Workflow V3",
-    )
-
-    assert result.handled is True
-    assert "Confirme que voce quer:" in result.response_text
-    assert "Implementar Workflow V3" in result.response_text
-    assert session.status == "awaiting_confirmation"
-
-    result = menu_engine.handle_menu_message(
-        user_id=10,
-        company_id=None,
-        channel="whatsapp",
-        thread_id="thread-1",
-        message="sim",
     )
 
     assert result.handled is True
@@ -199,9 +201,13 @@ def test_handle_menu_message_back_navigation_restores_previous_steps(monkeypatch
     option = _build_project_task_option()
     session = _DummySession(option)
     _install_common_patches(monkeypatch, session, option)
-    monkeypatch.setattr(menu_engine, "_try_execute_direct_option", lambda **kwargs: None)
+    monkeypatch.setattr(
+        menu_engine,
+        "_try_execute_direct_option_result",
+        lambda **kwargs: menu_engine.DirectExecutionResult(executed=False, response_text="", metadata={}),
+    )
 
-    for message in ("1.4", "1", "1"):
+    for message in ("1.4", "sim", "1", "1"):
         result = menu_engine.handle_menu_message(
             user_id=10,
             company_id=None,
@@ -246,8 +252,8 @@ def test_handle_menu_message_back_navigation_restores_previous_steps(monkeypatch
     )
 
     assert result.handled is True
-    assert result.response_text == "ROOT MENU"
-    assert session.status == "idle"
+    assert "1.4 - Cadastrar Atividade de Projeto" in result.response_text
+    assert session.status == "awaiting_confirmation"
 
 
 def test_handle_menu_message_operation_company_selection_executes_my_work_with_selected_company(monkeypatch):
@@ -289,6 +295,8 @@ def test_handle_menu_message_operation_company_selection_executes_my_work_with_s
         lambda payload, user_id: payload.get("_selected_company_id") or payload.get("_summary_company_id"),
     )
     monkeypatch.setattr(menu_engine, "_user_can_access_company", lambda user_id, company_id: company_id in {9, 2})
+    monkeypatch.setattr(menu_engine, "_resolve_user_first_name", lambda user_id: "Fabiano")
+    monkeypatch.setattr(menu_engine, "_resolve_company_session_label", lambda company_id: "ZZ - Sessao" if company_id else None)
     monkeypatch.setattr(
         menu_engine,
         "_try_execute_direct_option_result",
@@ -307,6 +315,18 @@ def test_handle_menu_message_operation_company_selection_executes_my_work_with_s
         channel="whatsapp",
         thread_id="thread-my-work",
         message="3.1",
+    )
+
+    assert result.handled is True
+    assert "Fluxo/Tool sugerido: 3.1 - Atividades em Aberto" in result.response_text
+    assert session.status == "awaiting_confirmation"
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-my-work",
+        message="sim",
     )
 
     assert result.handled is True
@@ -673,6 +693,118 @@ def test_extract_fields_from_text_detects_deadline_update_command():
 
     assert payload["due_date"] == "31/03/2026"
     assert payload["prazo"] == "31/03/2026"
+
+
+def test_handle_menu_message_prompts_context_disambiguation_for_new_command_during_pending_summary(monkeypatch):
+    option = _build_my_work_open_option()
+    session = _DummySession(option)
+    session.status = menu_engine.SUMMARY_EMAIL_CONFIRM_STATUS
+    session.selected_option_id = option.id
+    session.collected_data = {"_summary_report_text": "RELATORIO TESTE"}
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=9,
+        channel="whatsapp",
+        thread_id="thread-ctx",
+        message="Quais as atividades eu tenho para hoje?",
+    )
+
+    assert result.handled is True
+    assert "1 - Nova conversa" in result.response_text
+    assert session.status == menu_engine.CONTEXT_DISAMBIGUATION_STATUS
+    assert session.collected_data["_context_disambiguation_pending_message"] == "Quais as atividades eu tenho para hoje?"
+
+
+def test_handle_menu_message_context_disambiguation_new_conversation_replays_pending_message(monkeypatch):
+    option = _build_my_work_open_option()
+    session = _DummySession(option)
+    session.status = menu_engine.CONTEXT_DISAMBIGUATION_STATUS
+    session.selected_option_id = option.id
+    session.collected_data = {
+        "_summary_report_text": "RELATORIO TESTE",
+        "_context_disambiguation_previous_status": menu_engine.SUMMARY_EMAIL_CONFIRM_STATUS,
+        "_context_disambiguation_pending_message": "Quais as atividades eu tenho para hoje?",
+    }
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+    monkeypatch.setattr(
+        menu_engine,
+        "_discover_options_by_keywords",
+        lambda company_id, lower_text, channel="web": ([option], {"top_matches": [{"code": option.code}]}),
+    )
+
+    class _Decision:
+        route = menu_engine.DISCOVERY_CONFIDENCE_ROUTE_SELECT
+        selected_code = option.code
+        candidate_codes = [option.code]
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_build_workflow_discovery_confidence_policy",
+        lambda: type("P", (), {"decide": lambda self, matches: _Decision()})(),
+    )
+    monkeypatch.setattr(menu_engine, "attach_confidence_decision_to_trace", lambda trace, decision: trace)
+
+    captured = {}
+    monkeypatch.setattr(
+        menu_engine,
+        "_prepare_option_flow",
+        lambda current_session, selected_option, text, lower: (
+            captured.update({"message": text}) or menu_engine.MenuInterceptResult(handled=True, response_text="ATIVIDADES DE HOJE")
+        ),
+    )
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=9,
+        channel="whatsapp",
+        thread_id="thread-ctx",
+        message="1",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "ATIVIDADES DE HOJE"
+    assert captured["message"] == "Quais as atividades eu tenho para hoje?"
+    assert session.status == "idle"
+
+
+def test_handle_menu_message_context_disambiguation_continue_restores_previous_flow(monkeypatch):
+    option = _build_my_work_open_option()
+    session = _DummySession(option)
+    session.status = menu_engine.CONTEXT_DISAMBIGUATION_STATUS
+    session.selected_option_id = option.id
+    session.missing_fields = []
+    session.collected_data = {
+        "_summary_report_text": "RELATORIO TESTE",
+        "_context_disambiguation_previous_status": menu_engine.SUMMARY_EMAIL_CONFIRM_STATUS,
+        "_context_disambiguation_pending_message": "Quais as atividades eu tenho para hoje?",
+    }
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=9,
+        channel="whatsapp",
+        thread_id="thread-ctx",
+        message="2",
+    )
+
+    assert result.handled is True
+    assert "continue a solicitacao atual com mais detalhes" in result.response_text
+    assert session.status == menu_engine.SUMMARY_EMAIL_CONFIRM_STATUS
 
 
 def test_extract_choice_index_from_text_matches_company_alias_or_label():

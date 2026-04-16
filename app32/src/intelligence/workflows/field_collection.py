@@ -89,6 +89,8 @@ def missing_required_fields(
     }
     missing: List[WorkflowRequiredField] = []
     for field in required_fields or []:
+        if not field.required:
+            continue
         if field.key not in normalized_payload:
             missing.append(field)
     return missing
