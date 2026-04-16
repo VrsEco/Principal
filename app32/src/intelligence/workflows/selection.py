@@ -98,7 +98,7 @@ class AssistedSelectionCoordinator:
             merged["codigo_atividade"] = selected.get("code")
         elif context.selection_action == "process_instance.complete":
             merged["codigo_instancia"] = selected.get("code")
-        elif context.selection_action in {"meeting.start", "meeting.summarize"}:
+        elif context.selection_action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"}:
             merged["id_reuniao"] = str(selected.get("id") or selected.get("code") or "")
         elif context.selection_action == "onboarding.diagnose":
             merged["objetivo"] = str(selected.get("objective") or selected.get("code") or "")
@@ -150,7 +150,7 @@ class AssistedSelectionCoordinator:
             merged.update(direct_fields)
             return SelectionRouteDecision(handled=True, route=SELECTION_ROUTE_CONFIRM, payload=merged)
 
-        if context.selection_action in {"meeting.start", "meeting.summarize"} and any(
+        if context.selection_action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"} and any(
             key in direct_fields for key in ("id_reuniao", "meeting_id", "codigo_reuniao", "codigo")
         ):
             merged = self._public_payload(payload)
@@ -191,7 +191,7 @@ class AssistedSelectionCoordinator:
                 "Formato invalido. Informe apenas o numero do projeto (ex: 1).\n"
                 "Se preferir, envie o codigo diretamente no formato codigo_projeto: AA.J.12."
             )
-        if context.selection_action in {"meeting.start", "meeting.summarize", "onboarding.diagnose"}:
+        if context.selection_action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp", "onboarding.diagnose"}:
             return (
                 "Formato invalido. Informe apenas o numero da opcao (ex: 1).\n"
                 "Se quiser, voce tambem pode enviar o ID diretamente no formato campo: valor."

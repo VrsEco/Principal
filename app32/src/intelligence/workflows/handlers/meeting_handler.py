@@ -52,6 +52,48 @@ class MeetingSummarizeResult(BaseModel):
     response_text: str
 
 
+class MeetingCloseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    active_company_id: Optional[int] = None
+    user_id: int
+
+
+class MeetingCloseResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_text: str
+
+
+class MeetingSendSummaryEmailRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    active_company_id: Optional[int] = None
+    user_id: int
+
+
+class MeetingSendSummaryEmailResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_text: str
+
+
+class MeetingSendSummaryWhatsAppRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    active_company_id: Optional[int] = None
+    user_id: int
+
+
+class MeetingSendSummaryWhatsAppResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_text: str
+
+
 class MeetingScheduleExecutionHandler:
     def __init__(
         self,
@@ -395,3 +437,194 @@ class MeetingSummarizeExecutionHandler:
             if isinstance(item, dict):
                 normalized.append(item)
         return normalized
+
+
+class MeetingCloseExecutionHandler:
+    def __init__(
+        self,
+        *,
+        load_meeting_by_id: Callable[[int], Any],
+        user_can_access_company: Callable[[int, int], bool],
+        now_provider: Callable[[], datetime],
+        commit_changes: Callable[[], None],
+        rollback_changes: Callable[[], None],
+    ):
+        self._load_meeting_by_id = load_meeting_by_id
+        self._user_can_access_company = user_can_access_company
+        self._now_provider = now_provider
+        self._commit_changes = commit_changes
+        self._rollback_changes = rollback_changes
+
+    def execute(self, request: MeetingCloseRequest) -> MeetingCloseResult:
+        meeting_input, input_error = MeetingReferenceInput.build_from_legacy_payload(
+            dict(request.payload or {})
+        )
+        if input_error:
+            return MeetingCloseResult(response_text=input_error)
+        if not meeting_input:
+            return MeetingCloseResult(response_text="Nao consegui interpretar a reuniao informada.")
+
+        meeting = self._load_meeting_by_id(meeting_input.meeting_id)
+        if not meeting:
+            return MeetingCloseResult(response_text=f"Reuniao ID {meeting_input.meeting_id} nao encontrada.")
+
+        meeting_company_id = int(getattr(meeting, "company_id"))
+        if (
+            request.active_company_id
+            and meeting_company_id != int(request.active_company_id)
+            and not self._user_can_access_company(request.user_id, meeting_company_id)
+        ):
+            return MeetingCloseResult(
+                response_text="A reuniao informada nao pertence ao contexto da empresa ativa."
+            )
+        if not self._user_can_access_company(request.user_id, meeting_company_id):
+            return MeetingCloseResult(response_text="Voce nao possui acesso a esta reuniao.")
+
+        if str(getattr(meeting, "status", "") or "").lower() == "completed":
+            return MeetingCloseResult(response_text=f"A reuniao '{meeting.title}' ja esta concluida.")
+
+        finished_at = self._now_provider()
+        meeting.status = "completed"
+        if not getattr(meeting, "actual_date", None):
+            meeting.actual_date = finished_at.date()
+        if not getattr(meeting, "actual_time", None):
+            meeting.actual_time = finished_at.strftime("%H:%M")
+
+        try:
+            self._commit_changes()
+        except Exception as exc:
+            self._rollback_changes()
+            return MeetingCloseResult(response_text=f"Erro ao encerrar reuniao: {str(exc)}")
+
+        return MeetingCloseResult(
+            response_text=(
+                f"Reuniao '{meeting.title}' encerrada com sucesso!\n\n"
+                f"- ID Reuniao: {meeting.id}\n"
+                f"- Encerramento: {finished_at.strftime('%Y-%m-%d %H:%M')}"
+            )
+        )
+
+
+class MeetingSendSummaryEmailExecutionHandler:
+    def __init__(
+        self,
+        *,
+        load_meeting_by_id: Callable[[int], Any],
+        user_can_access_company: Callable[[int, int], bool],
+        build_summary_text: Callable[[int, Optional[int], int], str],
+        send_email: Callable[[List[str], str, str], bool],
+    ):
+        self._load_meeting_by_id = load_meeting_by_id
+        self._user_can_access_company = user_can_access_company
+        self._build_summary_text = build_summary_text
+        self._send_email = send_email
+
+    def execute(self, request: MeetingSendSummaryEmailRequest) -> MeetingSendSummaryEmailResult:
+        payload = dict(request.payload or {})
+        meeting_input, input_error = MeetingReferenceInput.build_from_legacy_payload(payload)
+        if input_error:
+            return MeetingSendSummaryEmailResult(response_text=input_error)
+        if not meeting_input:
+            return MeetingSendSummaryEmailResult(response_text="Nao consegui interpretar a reuniao informada.")
+
+        email = str(payload.get("email") or payload.get("to_email") or "").strip()
+        if not email:
+            return MeetingSendSummaryEmailResult(
+                response_text="Nao encontrei o e-mail de destino. Informe no formato: email: nome@empresa.com.br"
+            )
+
+        meeting = self._validated_meeting(meeting_input.meeting_id, request.active_company_id, request.user_id)
+        if isinstance(meeting, str):
+            return MeetingSendSummaryEmailResult(response_text=meeting)
+
+        summary_text = self._build_summary_text(meeting.id, request.active_company_id, request.user_id)
+        subject = f"Resumo da reuniao - {meeting.title}"
+        if not self._send_email([email], subject, summary_text):
+            return MeetingSendSummaryEmailResult(
+                response_text="Nao foi possivel enviar o resumo da reuniao por e-mail."
+            )
+
+        return MeetingSendSummaryEmailResult(
+            response_text=(
+                f"Resumo da reuniao '{meeting.title}' enviado por e-mail com sucesso!\n\n"
+                f"- ID Reuniao: {meeting.id}\n"
+                f"- Destino: {email}"
+            )
+        )
+
+    def _validated_meeting(self, meeting_id: int, active_company_id: Optional[int], user_id: int) -> Any:
+        meeting = self._load_meeting_by_id(meeting_id)
+        if not meeting:
+            return f"Reuniao ID {meeting_id} nao encontrada."
+        meeting_company_id = int(getattr(meeting, "company_id"))
+        if (
+            active_company_id
+            and meeting_company_id != int(active_company_id)
+            and not self._user_can_access_company(user_id, meeting_company_id)
+        ):
+            return "A reuniao informada nao pertence ao contexto da empresa ativa."
+        if not self._user_can_access_company(user_id, meeting_company_id):
+            return "Voce nao possui acesso a esta reuniao."
+        return meeting
+
+
+class MeetingSendSummaryWhatsAppExecutionHandler:
+    def __init__(
+        self,
+        *,
+        load_meeting_by_id: Callable[[int], Any],
+        user_can_access_company: Callable[[int, int], bool],
+        build_summary_text: Callable[[int, Optional[int], int], str],
+        send_whatsapp: Callable[[str, str], bool],
+    ):
+        self._load_meeting_by_id = load_meeting_by_id
+        self._user_can_access_company = user_can_access_company
+        self._build_summary_text = build_summary_text
+        self._send_whatsapp = send_whatsapp
+
+    def execute(self, request: MeetingSendSummaryWhatsAppRequest) -> MeetingSendSummaryWhatsAppResult:
+        payload = dict(request.payload or {})
+        meeting_input, input_error = MeetingReferenceInput.build_from_legacy_payload(payload)
+        if input_error:
+            return MeetingSendSummaryWhatsAppResult(response_text=input_error)
+        if not meeting_input:
+            return MeetingSendSummaryWhatsAppResult(response_text="Nao consegui interpretar a reuniao informada.")
+
+        phone = str(payload.get("telefone") or payload.get("whatsapp") or "").strip()
+        if not phone:
+            return MeetingSendSummaryWhatsAppResult(
+                response_text="Nao encontrei o telefone de destino. Informe no formato: telefone: 5511999999999"
+            )
+
+        meeting = self._validated_meeting(meeting_input.meeting_id, request.active_company_id, request.user_id)
+        if isinstance(meeting, str):
+            return MeetingSendSummaryWhatsAppResult(response_text=meeting)
+
+        summary_text = self._build_summary_text(meeting.id, request.active_company_id, request.user_id)
+        if not self._send_whatsapp(phone, summary_text):
+            return MeetingSendSummaryWhatsAppResult(
+                response_text="Nao foi possivel enviar o resumo da reuniao por WhatsApp."
+            )
+
+        return MeetingSendSummaryWhatsAppResult(
+            response_text=(
+                f"Resumo da reuniao '{meeting.title}' enviado por WhatsApp com sucesso!\n\n"
+                f"- ID Reuniao: {meeting.id}\n"
+                f"- Destino: {phone}"
+            )
+        )
+
+    def _validated_meeting(self, meeting_id: int, active_company_id: Optional[int], user_id: int) -> Any:
+        meeting = self._load_meeting_by_id(meeting_id)
+        if not meeting:
+            return f"Reuniao ID {meeting_id} nao encontrada."
+        meeting_company_id = int(getattr(meeting, "company_id"))
+        if (
+            active_company_id
+            and meeting_company_id != int(active_company_id)
+            and not self._user_can_access_company(user_id, meeting_company_id)
+        ):
+            return "A reuniao informada nao pertence ao contexto da empresa ativa."
+        if not self._user_can_access_company(user_id, meeting_company_id):
+            return "Voce nao possui acesso a esta reuniao."
+        return meeting

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Sapiens Workflow First"
+  short_description: "Orquestra Sapiens com workflow-first e contexto canonico"
+  default_prompt: "Use $sapiens-workflow-first para desenhar ou evoluir fluxos do Sapiens com intencao, contexto, permissao e execucao deterministica antes de fallback em LLM."
+policy:
+  allow_implicit_invocation: true

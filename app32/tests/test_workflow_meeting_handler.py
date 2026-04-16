@@ -5,8 +5,14 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.intelligence.workflows.handlers import (
+    MeetingCloseExecutionHandler,
+    MeetingCloseRequest,
     MeetingScheduleExecutionHandler,
     MeetingScheduleRequest,
+    MeetingSendSummaryEmailExecutionHandler,
+    MeetingSendSummaryEmailRequest,
+    MeetingSendSummaryWhatsAppExecutionHandler,
+    MeetingSendSummaryWhatsAppRequest,
     MeetingStartExecutionHandler,
     MeetingStartRequest,
     MeetingSummarizeExecutionHandler,
@@ -101,6 +107,49 @@ def _build_summarize_handler(**overrides):
     }
     defaults.update(overrides)
     return MeetingSummarizeExecutionHandler(**defaults), meeting
+
+
+def _build_close_handler(**overrides):
+    captured = {}
+    meeting = DummyMeeting(55)
+    meeting.status = "in_progress"
+    defaults = {
+        "load_meeting_by_id": lambda meeting_id: meeting,
+        "user_can_access_company": lambda user_id, company_id: True,
+        "now_provider": lambda: datetime(2026, 3, 20, 16, 45),
+        "commit_changes": lambda: captured.setdefault("committed", True),
+        "rollback_changes": lambda: captured.setdefault("rolled_back", True),
+    }
+    defaults.update(overrides)
+    return MeetingCloseExecutionHandler(**defaults), captured, meeting
+
+
+def _build_send_email_handler(**overrides):
+    captured = {}
+    meeting = DummyMeeting(55)
+    defaults = {
+        "load_meeting_by_id": lambda meeting_id: meeting,
+        "user_can_access_company": lambda user_id, company_id: True,
+        "build_summary_text": lambda meeting_id, active_company_id, user_id: f"Resumo {meeting_id}",
+        "send_email": lambda to_emails, subject, body: captured.update(
+            {"to_emails": to_emails, "subject": subject, "body": body}
+        ) or True,
+    }
+    defaults.update(overrides)
+    return MeetingSendSummaryEmailExecutionHandler(**defaults), captured, meeting
+
+
+def _build_send_whatsapp_handler(**overrides):
+    captured = {}
+    meeting = DummyMeeting(55)
+    defaults = {
+        "load_meeting_by_id": lambda meeting_id: meeting,
+        "user_can_access_company": lambda user_id, company_id: True,
+        "build_summary_text": lambda meeting_id, active_company_id, user_id: f"Resumo {meeting_id}",
+        "send_whatsapp": lambda phone, message: captured.update({"phone": phone, "message": message}) or True,
+    }
+    defaults.update(overrides)
+    return MeetingSendSummaryWhatsAppExecutionHandler(**defaults), captured, meeting
 
 
 def test_meeting_schedule_handler_requires_title():
@@ -300,3 +349,54 @@ def test_meeting_summarize_handler_falls_back_to_notes():
 
     assert "Resumo registrado:" in result.response_text
     assert "Esta é uma ata resumida da reunião." in result.response_text
+
+
+def test_meeting_close_handler_formats_success():
+    handler, captured, meeting = _build_close_handler()
+
+    result = handler.execute(
+        MeetingCloseRequest(
+            payload={"id_reuniao": "55"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["committed"] is True
+    assert meeting.status == "completed"
+    assert meeting.actual_date == date(2026, 3, 20)
+    assert meeting.actual_time == "16:45"
+    assert "Reuniao 'Reuniao de Operacoes' encerrada com sucesso!" in result.response_text
+
+
+def test_meeting_send_summary_email_handler_sends_payload():
+    handler, captured, _ = _build_send_email_handler()
+
+    result = handler.execute(
+        MeetingSendSummaryEmailRequest(
+            payload={"id_reuniao": "55", "email": "destino@empresa.com.br"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["to_emails"] == ["destino@empresa.com.br"]
+    assert captured["subject"] == "Resumo da reuniao - Reuniao de Operacoes"
+    assert captured["body"] == "Resumo 55"
+    assert "enviado por e-mail com sucesso" in result.response_text
+
+
+def test_meeting_send_summary_whatsapp_handler_sends_payload():
+    handler, captured, _ = _build_send_whatsapp_handler()
+
+    result = handler.execute(
+        MeetingSendSummaryWhatsAppRequest(
+            payload={"id_reuniao": "55", "telefone": "5511999999999"},
+            active_company_id=9,
+            user_id=10,
+        )
+    )
+
+    assert captured["phone"] == "5511999999999"
+    assert captured["message"] == "Resumo 55"
+    assert "enviado por WhatsApp com sucesso" in result.response_text

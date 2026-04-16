@@ -82,14 +82,14 @@ def build_item_selection_prompt(
 
     description = (
         f"Existem {article} seguintes {item_label_plural} disponiveis para a {scope_label}."
-        if action in {"meeting.start", "meeting.summarize"}
+        if action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"}
         else f"Existem {article} seguintes {item_label_plural} em aberto para a {scope_label}."
     )
     blocks = [
         ChatMessageBlock(kind="status", text=build_status_callout("info", "Escolha o item correto para evitar execucao sobre o registro errado.", channel=channel)),
         make_list_block([_build_generic_choice_line(item, action, channel) for item in choices]),
     ]
-    if action in {"meeting.start", "meeting.summarize"}:
+    if action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"}:
         blocks.append(ChatMessageBlock(kind="next_step", items=["Informe o numero da reuniao.", "Exemplo: 1"]))
     else:
         blocks.append(
@@ -126,7 +126,7 @@ def _project_detail_parts(item: Dict[str, Any], format_project_status_label: Cal
 def _build_generic_choice_line(item: Dict[str, Any], action: str, channel: str) -> str:
     code = item.get("code") or "-"
     title = item.get("title") or "-"
-    if action in {"meeting.start", "meeting.summarize"}:
+    if action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"}:
         status = item.get("status") or "-"
         when = f"{item.get('scheduled_date') or '-'} {item.get('scheduled_time') or ''}".strip()
         return (

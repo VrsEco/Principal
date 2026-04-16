@@ -50,8 +50,14 @@ from src.intelligence.workflows.handlers import (
     CollaboratorOccupancyRequest,
     CompanyAccessExecutionHandler,
     CompanyAccessExecutionRequest,
+    MeetingCloseExecutionHandler,
+    MeetingCloseRequest,
     MeetingScheduleExecutionHandler,
     MeetingScheduleRequest,
+    MeetingSendSummaryEmailExecutionHandler,
+    MeetingSendSummaryEmailRequest,
+    MeetingSendSummaryWhatsAppExecutionHandler,
+    MeetingSendSummaryWhatsAppRequest,
     MeetingStartExecutionHandler,
     MeetingStartRequest,
     MeetingSummarizeExecutionHandler,
@@ -776,6 +782,13 @@ def _prepare_option_flow(
         option=option,
         payload=collected,
     )
+    company_selection_flow = _prepare_company_selection_flow_if_needed(
+        session=session,
+        option=option,
+        collected=payload,
+    )
+    if company_selection_flow is not None:
+        return company_selection_flow
     _transition_session_state(
         session=session,
         status="awaiting_confirmation",
@@ -1385,7 +1398,10 @@ def _public_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 def _resolve_user_first_name(user_id: int) -> Optional[str]:
     from models import User
 
-    user = User.query.get(user_id)
+    try:
+        user = User.query.get(user_id)
+    except RuntimeError:
+        return None
     if not user or not str(getattr(user, "name", "") or "").strip():
         return None
     return str(user.name).strip().split(" ")[0]
@@ -1396,7 +1412,10 @@ def _resolve_company_session_label(company_id: Optional[int]) -> Optional[str]:
         return None
     from models.company import Company
 
-    company = Company.query.get(company_id)
+    try:
+        company = Company.query.get(company_id)
+    except RuntimeError:
+        return None
     if not company:
         return None
     code = str(getattr(company, "client_code", "") or "").strip()
@@ -1747,7 +1766,7 @@ def _prepare_selection_flow_if_applicable(
         return None
     if action == "process_instance.complete" and any(k in collected for k in ("codigo_instancia", "instance_code", "codigo")):
         return None
-    if action in {"meeting.start", "meeting.summarize"} and any(
+    if action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"} and any(
         k in collected for k in ("id_reuniao", "meeting_id", "codigo_reuniao", "codigo")
     ):
         return None
@@ -2626,6 +2645,18 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                 handler_factory=_build_meeting_summarize_execution_handler,
                 request_model=MeetingSummarizeRequest,
             ),
+            "meeting.close": build_handler_executor(
+                handler_factory=_build_meeting_close_execution_handler,
+                request_model=MeetingCloseRequest,
+            ),
+            "meeting.send_summary_email": build_handler_executor(
+                handler_factory=_build_meeting_send_summary_email_execution_handler,
+                request_model=MeetingSendSummaryEmailRequest,
+            ),
+            "meeting.send_summary_whatsapp": build_handler_executor(
+                handler_factory=_build_meeting_send_summary_whatsapp_execution_handler,
+                request_model=MeetingSendSummaryWhatsAppRequest,
+            ),
             "onboarding.status": build_handler_executor(
                 handler_factory=_build_onboarding_status_execution_handler,
                 request_model=OnboardingStatusRequest,
@@ -3227,6 +3258,62 @@ def _build_meeting_summarize_execution_handler() -> MeetingSummarizeExecutionHan
     )
 
 
+def _build_meeting_close_execution_handler() -> MeetingCloseExecutionHandler:
+    from models.meeting import Meeting
+
+    return MeetingCloseExecutionHandler(
+        load_meeting_by_id=lambda meeting_id: db.session.get(Meeting, meeting_id),
+        user_can_access_company=_user_can_access_company,
+        now_provider=_local_now,
+        commit_changes=db.session.commit,
+        rollback_changes=db.session.rollback,
+    )
+
+
+def _build_meeting_send_summary_email_execution_handler() -> MeetingSendSummaryEmailExecutionHandler:
+    from models.meeting import Meeting
+    from services.email_service import email_service
+
+    def _build_summary_text(meeting_id: int, active_company_id: Optional[int], user_id: int) -> str:
+        result = _build_meeting_summarize_execution_handler().execute(
+            MeetingSummarizeRequest(
+                payload={"id_reuniao": str(meeting_id)},
+                active_company_id=active_company_id,
+                user_id=user_id,
+            )
+        )
+        return result.response_text
+
+    return MeetingSendSummaryEmailExecutionHandler(
+        load_meeting_by_id=lambda meeting_id: db.session.get(Meeting, meeting_id),
+        user_can_access_company=_user_can_access_company,
+        build_summary_text=_build_summary_text,
+        send_email=lambda to_emails, subject, body: email_service.send_email(to_emails, subject, body),
+    )
+
+
+def _build_meeting_send_summary_whatsapp_execution_handler() -> MeetingSendSummaryWhatsAppExecutionHandler:
+    from models.meeting import Meeting
+    from services.whatsapp_service import whatsapp_service
+
+    def _build_summary_text(meeting_id: int, active_company_id: Optional[int], user_id: int) -> str:
+        result = _build_meeting_summarize_execution_handler().execute(
+            MeetingSummarizeRequest(
+                payload={"id_reuniao": str(meeting_id)},
+                active_company_id=active_company_id,
+                user_id=user_id,
+            )
+        )
+        return result.response_text
+
+    return MeetingSendSummaryWhatsAppExecutionHandler(
+        load_meeting_by_id=lambda meeting_id: db.session.get(Meeting, meeting_id),
+        user_can_access_company=_user_can_access_company,
+        build_summary_text=_build_summary_text,
+        send_whatsapp=whatsapp_service.send_message,
+    )
+
+
 def _apply_summary_route_decision(
     session: AgentMenuSession,
     option: AgentMenuOption,
@@ -3645,7 +3732,7 @@ def _load_open_choices(
         return _load_open_project_task_choices(company_ids=company_ids)
     if action == "process_instance.complete":
         return _load_open_process_instance_choices(company_ids=company_ids)
-    if action == "meeting.start":
+    if action in {"meeting.start", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"}:
         return _load_meeting_choices(company_ids=company_ids, mode="start")
     if action == "meeting.summarize":
         return _load_meeting_choices(company_ids=company_ids, mode="summarize")
@@ -4345,6 +4432,9 @@ def _default_workflow_description(action_key: str, title: str) -> str:
         "meeting.schedule": "Agenda uma reuniao e registra os dados essenciais do compromisso.",
         "meeting.start": "Inicia uma reuniao registrada para acompanhamento operacional.",
         "meeting.summarize": "Consolida e resume uma reuniao registrada.",
+        "meeting.close": "Encerra uma reuniao registrada com trilha operacional.",
+        "meeting.send_summary_email": "Envia o resumo de uma reuniao por e-mail.",
+        "meeting.send_summary_whatsapp": "Envia o resumo de uma reuniao por WhatsApp.",
         "onboarding.diagnose": "Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.",
         "onboarding.status": "Consulta o status do onboarding e os pontos pendentes.",
         "onboarding.start": "Inicia um onboarding assistido de forma estruturada.",
@@ -5641,61 +5731,111 @@ def _slugify(value: str) -> str:
     return normalized
 
 
+def _default_menu_seed_items() -> List[Dict[str, Any]]:
+    return [
+        {"code": "1", "title": "Gestao da Rotina", "parent_code": None, "sort_order": 10},
+        {"code": "11", "title": "Minhas Tarefas", "parent_code": "1", "sort_order": 11},
+        {"code": "111", "title": "O que tenho para hoje", "parent_code": "11", "action_key": "summary.today", "keywords": ["o que tenho para hoje", "minhas tarefas hoje"], "sort_order": 111},
+        {"code": "112", "title": "O que tenho para esta semana", "parent_code": "11", "action_key": "summary.week", "keywords": ["o que tenho para esta semana", "minhas tarefas da semana"], "sort_order": 112},
+        {"code": "113", "title": "O que esta vencido", "parent_code": "11", "action_key": "my_work.overdue", "keywords": ["o que esta vencido", "tarefas vencidas"], "sort_order": 113},
+        {"code": "114", "title": "O que vence no periodo", "parent_code": "11", "action_key": "my_work.due_range", "required_fields": [{"key": "periodo", "label": "Periodo", "required": True, "category": "required"}], "keywords": ["o que vence no periodo"], "sort_order": 114},
+        {"code": "115", "title": "O que foi concluido no periodo", "parent_code": "11", "action_key": "my_work.completed_range", "required_fields": [{"key": "periodo", "label": "Periodo", "required": True, "category": "required"}], "keywords": ["o que foi concluido no periodo"], "sort_order": 115},
+        {"code": "12", "title": "Atividades de Projetos", "parent_code": "1", "sort_order": 12},
+        {"code": "121", "title": "Consultar atividades", "parent_code": "12", "action_key": "my_work.open", "description": "Consulta atividades em aberto no contexto operacional.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}], "keywords": ["consultar atividades", "listar atividades", "atividades em aberto"], "sort_order": 121},
+        {"code": "122", "title": "Criar atividade", "parent_code": "12", "action_key": "project_task.create", "description": "Cadastra uma nova atividade vinculada a um projeto existente.", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto", "required": True, "category": "required"}, {"key": "nome_atividade", "label": "Nome da Atividade", "required": True, "category": "required"}, {"key": "due_date", "label": "Prazo", "required": False, "category": "optional"}, {"key": "notes", "label": "Observacoes", "required": False, "category": "complementary"}], "keywords": ["criar atividade", "nova atividade"], "sort_order": 122},
+        {"code": "123", "title": "Editar atividade", "parent_code": "12", "action_key": "project_task.update", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade", "required": True, "category": "required"}, {"key": "due_date", "label": "Novo Prazo", "required": False, "category": "optional"}], "keywords": ["editar atividade", "alterar atividade"], "sort_order": 123},
+        {"code": "124", "title": "Concluir atividade", "parent_code": "12", "action_key": "project_task.complete", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade", "required": True, "category": "required"}], "keywords": ["concluir atividade", "finalizar atividade"], "sort_order": 124},
+        {"code": "13", "title": "Instancias de Processos", "parent_code": "1", "sort_order": 13},
+        {"code": "131", "title": "Consultar instancias", "parent_code": "13", "action_key": "routine.consult", "description": "Consulta instancias de processo usando o contexto operacional da sessao.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": False, "category": "optional"}], "keywords": ["consultar instancias", "meus processos", "instancias de processos"], "sort_order": 131},
+        {"code": "132", "title": "Iniciar instancia", "parent_code": "13", "action_key": "process_instance.start", "required_fields": [{"key": "codigo_processo", "label": "Codigo do Processo", "required": True, "category": "required"}], "keywords": ["iniciar instancia", "abrir processo"], "sort_order": 132},
+        {"code": "133", "title": "Atualizar instancia", "parent_code": "13", "sort_order": 133},
+        {"code": "134", "title": "Concluir instancia", "parent_code": "13", "action_key": "process_instance.complete", "required_fields": [{"key": "codigo_instancia", "label": "Codigo da Instancia", "required": True, "category": "required"}], "keywords": ["concluir instancia", "encerrar processo"], "sort_order": 134},
+        {"code": "14", "title": "Reunioes", "parent_code": "1", "sort_order": 14},
+        {"code": "141", "title": "Consultar reunioes", "parent_code": "14", "action_key": "routine.consult", "description": "Consulta reunioes usando o contexto operacional da sessao.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": False, "category": "optional"}], "keywords": ["consultar reunioes", "minhas reunioes"], "sort_order": 141},
+        {"code": "142", "title": "Agendar reuniao", "parent_code": "14", "action_key": "meeting.schedule", "description": "Agenda uma reuniao e registra os dados essenciais do compromisso.", "required_fields": [{"key": "titulo", "label": "Titulo da Reuniao", "required": True, "category": "required"}, {"key": "data_hora", "label": "Data/Hora", "required": True, "category": "required"}, {"key": "participantes", "label": "Participantes", "required": False, "category": "optional"}, {"key": "pauta", "label": "Pauta", "required": False, "category": "complementary"}], "keywords": ["agendar reuniao", "marcar reuniao"], "sort_order": 142},
+        {"code": "143", "title": "Iniciar reuniao", "parent_code": "14", "action_key": "meeting.start", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao", "required": True, "category": "required"}], "keywords": ["iniciar reuniao", "comecar reuniao"], "sort_order": 143},
+        {"code": "144", "title": "Resumir reuniao", "parent_code": "14", "action_key": "meeting.summarize", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao", "required": True, "category": "required"}], "keywords": ["resumir reuniao", "resumo da reuniao"], "sort_order": 144},
+        {"code": "145", "title": "Encerrar reuniao", "parent_code": "14", "action_key": "meeting.close", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao", "required": True, "category": "required"}], "keywords": ["encerrar reuniao", "finalizar reuniao"], "sort_order": 145},
+        {"code": "146", "title": "Enviar resumo de reuniao por e-mail", "parent_code": "14", "action_key": "meeting.send_summary_email", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao", "required": True, "category": "required"}, {"key": "email", "label": "E-mail", "required": True, "category": "required"}], "keywords": ["enviar resumo de reuniao por email", "enviar ata por email"], "sort_order": 146},
+        {"code": "147", "title": "Enviar resumo de reuniao por WhatsApp", "parent_code": "14", "action_key": "meeting.send_summary_whatsapp", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao", "required": True, "category": "required"}, {"key": "telefone", "label": "Telefone", "required": True, "category": "required"}], "keywords": ["enviar resumo de reuniao por whatsapp", "enviar ata por whatsapp"], "sort_order": 147},
+        {"code": "15", "title": "Tarefas da Equipe", "parent_code": "1", "sort_order": 15},
+        {"code": "151", "title": "O que tem para hoje", "parent_code": "15", "action_key": "summary.today", "keywords": ["tarefas da equipe hoje", "o que a equipe tem para hoje"], "sort_order": 151},
+        {"code": "152", "title": "O que tem para esta semana", "parent_code": "15", "action_key": "summary.week", "keywords": ["tarefas da equipe esta semana"], "sort_order": 152},
+        {"code": "153", "title": "O que esta vencido", "parent_code": "15", "action_key": "my_work.overdue", "keywords": ["tarefas vencidas da equipe"], "sort_order": 153},
+        {"code": "154", "title": "O que vence no periodo", "parent_code": "15", "action_key": "my_work.due_range", "required_fields": [{"key": "periodo", "label": "Periodo", "required": True, "category": "required"}], "keywords": ["o que vence no periodo da equipe"], "sort_order": 154},
+        {"code": "155", "title": "O que foi concluido no periodo", "parent_code": "15", "action_key": "my_work.completed_range", "required_fields": [{"key": "periodo", "label": "Periodo", "required": True, "category": "required"}], "keywords": ["o que foi concluido no periodo da equipe"], "sort_order": 155},
+        {"code": "16", "title": "Tarefas da Empresa", "parent_code": "1", "sort_order": 16},
+        {"code": "161", "title": "O que tem para hoje", "parent_code": "16", "action_key": "summary.today", "keywords": ["tarefas da empresa hoje"], "sort_order": 161},
+        {"code": "162", "title": "O que tem para esta semana", "parent_code": "16", "action_key": "summary.week", "keywords": ["tarefas da empresa esta semana"], "sort_order": 162},
+        {"code": "163", "title": "O que esta vencido", "parent_code": "16", "action_key": "my_work.overdue", "keywords": ["tarefas vencidas da empresa"], "sort_order": 163},
+        {"code": "164", "title": "O que vence no periodo", "parent_code": "16", "action_key": "my_work.due_range", "required_fields": [{"key": "periodo", "label": "Periodo", "required": True, "category": "required"}], "keywords": ["o que vence no periodo da empresa"], "sort_order": 164},
+        {"code": "165", "title": "O que foi concluido no periodo", "parent_code": "16", "action_key": "my_work.completed_range", "required_fields": [{"key": "periodo", "label": "Periodo", "required": True, "category": "required"}], "keywords": ["o que foi concluido no periodo da empresa"], "sort_order": 165},
+        {"code": "17", "title": "Resumos Operacionais", "parent_code": "1", "sort_order": 17},
+        {"code": "171", "title": "Resumo de hoje", "parent_code": "17", "action_key": "summary.today", "keywords": ["resumo de hoje"], "sort_order": 171},
+        {"code": "172", "title": "Resumo da semana", "parent_code": "17", "action_key": "summary.week", "keywords": ["resumo da semana"], "sort_order": 172},
+        {"code": "173", "title": "Resumo do mes", "parent_code": "17", "action_key": "summary.month", "keywords": ["resumo do mes"], "sort_order": 173},
+        {"code": "174", "title": "Resumo personalizado", "parent_code": "17", "action_key": "summary.custom", "required_fields": [{"key": "periodo", "label": "Periodo", "required": True, "category": "required"}], "keywords": ["resumo personalizado"], "sort_order": 174},
+        {"code": "18", "title": "Capacidade Operacional", "parent_code": "1", "sort_order": 18},
+        {"code": "181", "title": "Ocupacao do colaborador", "parent_code": "18", "action_key": "collaborator.occupancy", "required_fields": [{"key": "colaborador", "label": "Colaborador"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["ocupacao do colaborador", "capacidade do colaborador"], "sort_order": 181},
+        {"code": "182", "title": "Capacidade da equipe", "parent_code": "18", "sort_order": 182},
+        {"code": "183", "title": "Capacidade da empresa", "parent_code": "18", "sort_order": 183},
+        {"code": "2", "title": "Gestao Estrategica", "parent_code": None, "sort_order": 20},
+        {"code": "21", "title": "Planejamento Estrategico", "parent_code": "2", "sort_order": 21},
+        {"code": "22", "title": "Metas e Objetivos", "parent_code": "2", "sort_order": 22},
+        {"code": "23", "title": "Indicadores", "parent_code": "2", "sort_order": 23},
+        {"code": "24", "title": "Projetos Estrategicos", "parent_code": "2", "sort_order": 24},
+        {"code": "241", "title": "Criar projeto", "parent_code": "24", "action_key": "project.create", "required_fields": [{"key": "nome_projeto", "label": "Nome do Projeto", "required": True, "category": "required"}], "keywords": ["criar projeto", "novo projeto"], "sort_order": 241},
+        {"code": "242", "title": "Editar projeto", "parent_code": "24", "action_key": "project.update", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto", "required": True, "category": "required"}], "keywords": ["editar projeto"], "sort_order": 242},
+        {"code": "243", "title": "Concluir projeto", "parent_code": "24", "action_key": "project.complete", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto", "required": True, "category": "required"}], "keywords": ["concluir projeto", "finalizar projeto"], "sort_order": 243},
+        {"code": "25", "title": "Riscos e Prioridades", "parent_code": "2", "sort_order": 25},
+        {"code": "26", "title": "Resumos Executivos", "parent_code": "2", "sort_order": 26},
+        {"code": "3", "title": "Gestao Financeira", "parent_code": None, "sort_order": 30},
+        {"code": "31", "title": "Resultado Financeiro", "parent_code": "3", "sort_order": 31},
+        {"code": "32", "title": "Receitas", "parent_code": "3", "sort_order": 32},
+        {"code": "33", "title": "Despesas", "parent_code": "3", "sort_order": 33},
+        {"code": "34", "title": "Fluxo de Caixa", "parent_code": "3", "sort_order": 34},
+        {"code": "35", "title": "Orcamento", "parent_code": "3", "sort_order": 35},
+        {"code": "36", "title": "Prestacao de Contas", "parent_code": "3", "sort_order": 36},
+        {"code": "37", "title": "Consultas Financeiras", "parent_code": "3", "sort_order": 37},
+        {"code": "4", "title": "Sapiens", "parent_code": None, "sort_order": 40},
+        {"code": "41", "title": "Pergunta Livre", "parent_code": "4", "sort_order": 41},
+        {"code": "42", "title": "Descobrir Capacidades", "parent_code": "4", "sort_order": 42},
+        {"code": "43", "title": "Consultar por Linguagem Natural", "parent_code": "4", "sort_order": 43},
+        {"code": "44", "title": "Executar por Linguagem Natural", "parent_code": "4", "sort_order": 44},
+        {"code": "45", "title": "Ajuda e Exemplos", "parent_code": "4", "sort_order": 45},
+        {"code": "46", "title": "Minhas Conversas", "parent_code": "4", "sort_order": 46},
+        {"code": "5", "title": "Governanca e Aprovacoes", "parent_code": None, "sort_order": 50},
+        {"code": "51", "title": "Aprovar solicitacao", "parent_code": "5", "action_key": "agent_action.approve", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao", "required": True, "category": "required"}], "keywords": ["aprovar solicitacao"], "sort_order": 51},
+        {"code": "52", "title": "Rejeitar solicitacao", "parent_code": "5", "action_key": "agent_action.reject", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao", "required": True, "category": "required"}], "keywords": ["rejeitar solicitacao"], "sort_order": 52},
+        {"code": "53", "title": "Revalidar solicitacao", "parent_code": "5", "action_key": "agent_action.revalidate", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao", "required": True, "category": "required"}], "keywords": ["revalidar solicitacao"], "sort_order": 53},
+        {"code": "54", "title": "Pendencias de aprovacao", "parent_code": "5", "action_key": "agent_action.list_pending", "keywords": ["pendencias de aprovacao", "aprovacoes pendentes"], "sort_order": 54},
+        {"code": "55", "title": "Auditoria operacional", "parent_code": "5", "sort_order": 55},
+        {"code": "56", "title": "Human gate", "parent_code": "5", "sort_order": 56},
+        {"code": "6", "title": "Implantacao e Funcionamento", "parent_code": None, "sort_order": 60},
+        {"code": "61", "title": "Diagnosticar funcionamento", "parent_code": "6", "action_key": "onboarding.diagnose", "description": "Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.", "required_fields": [{"key": "objetivo", "label": "O que voce quer fazer funcionar", "required": True, "category": "required"}, {"key": "area", "label": "Area/Modulo", "required": False, "category": "optional"}, {"key": "evidencias", "label": "Evidencias do Problema", "required": False, "category": "complementary"}], "keywords": ["diagnosticar funcionamento", "fazer funcionar"], "sort_order": 61},
+        {"code": "62", "title": "Status do onboarding", "parent_code": "6", "action_key": "onboarding.status", "keywords": ["status do onboarding"], "sort_order": 62},
+        {"code": "63", "title": "Iniciar onboarding assistido", "parent_code": "6", "action_key": "onboarding.start", "required_fields": [{"key": "tipo_cadastro", "label": "Tipo de Cadastro (real ou modelo)", "required": True, "category": "required"}], "keywords": ["iniciar onboarding"], "sort_order": 63},
+        {"code": "64", "title": "Checklist de producao", "parent_code": "6", "action_key": "onboarding.go_live_check", "keywords": ["checklist de producao", "go live"], "sort_order": 64},
+        {"code": "65", "title": "Prontidao operacional", "parent_code": "6", "sort_order": 65},
+        {"code": "7", "title": "Sapiens Factory", "parent_code": None, "sort_order": 70},
+        {"code": "71", "title": "Diagnosticar workflow", "parent_code": "7", "sort_order": 71},
+        {"code": "72", "title": "Criar capability", "parent_code": "7", "sort_order": 72},
+        {"code": "73", "title": "Evoluir capability", "parent_code": "7", "sort_order": 73},
+        {"code": "74", "title": "Corrigir tool/contrato", "parent_code": "7", "sort_order": 74},
+        {"code": "75", "title": "Planejar rollout", "parent_code": "7", "sort_order": 75},
+        {"code": "76", "title": "Governanca tecnica", "parent_code": "7", "sort_order": 76},
+    ]
+
+
 def _ensure_default_menu_seed() -> None:
-    has_global = AgentMenuOption.query.filter(
-        AgentMenuOption.company_id.is_(None)
-    ).first()
+    has_global = AgentMenuOption.query.filter(AgentMenuOption.company_id.is_(None)).first()
     if has_global:
         _ensure_default_menu_upgrades()
         return
 
-    seed_items = [
-        {"code": "1", "title": "Gestao de Projetos", "parent_code": None, "sort_order": 10},
-        {"code": "1.1", "title": "Cadastrar Projeto", "parent_code": "1", "action_key": "project.create", "required_fields": [{"key": "nome_projeto", "label": "Nome do Projeto"}], "keywords": ["cadastrar projeto", "criar projeto", "novo projeto"], "sort_order": 11},
-        {"code": "1.2", "title": "Editar Projeto", "parent_code": "1", "action_key": "project.update", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}, {"key": "dados", "label": "Dados para atualizacao"}], "keywords": ["editar projeto", "alterar projeto"], "sort_order": 12},
-        {"code": "1.3", "title": "Finalizar Projeto", "parent_code": "1", "action_key": "project.complete", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto"}], "keywords": ["finalizar projeto", "encerrar projeto"], "sort_order": 13},
-        {"code": "1.4", "title": "Cadastrar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.create", "description": "Cadastra uma nova atividade vinculada a um projeto existente.", "required_fields": [{"key": "codigo_projeto", "label": "Codigo do Projeto", "required": True, "category": "required"}, {"key": "nome_atividade", "label": "Nome da Atividade", "required": True, "category": "required"}, {"key": "due_date", "label": "Prazo", "required": False, "category": "optional"}, {"key": "notes", "label": "Observacoes", "required": False, "category": "complementary"}], "keywords": ["cadastrar atividade", "nova atividade de projeto"], "sort_order": 14},
-        {"code": "1.5", "title": "Finalizar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.complete", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}], "keywords": ["finalizar atividade de projeto", "concluir atividade"], "sort_order": 15},
-        {"code": "1.6", "title": "Editar Atividade de Projeto", "parent_code": "1", "action_key": "project_task.update", "required_fields": [{"key": "codigo_atividade", "label": "Codigo da Atividade"}, {"key": "due_date", "label": "Novo Prazo"}], "keywords": ["editar atividade", "alterar atividade de projeto", "alterar prazo da atividade", "mudar prazo da atividade", "colocar atividade para o dia"], "sort_order": 16},
-        {"code": "1.7", "title": "Auditar Atividades de Projeto", "parent_code": "1", "action_key": "project_task.audit", "required_fields": [], "keywords": ["atividades sem responsável", "atividades sem data", "auditoria de atividades", "analisar atividades de projetos"], "sort_order": 17},
-        {"code": "2", "title": "Gestao de Processos", "parent_code": None, "sort_order": 20},
-        {"code": "2.1", "title": "Iniciar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.start", "required_fields": [{"key": "codigo_processo", "label": "Codigo do Processo"}], "keywords": ["iniciar instancia", "abrir processo"], "sort_order": 21},
-        {"code": "2.2", "title": "Finalizar Instancia de Processo", "parent_code": "2", "action_key": "process_instance.complete", "required_fields": [{"key": "codigo_instancia", "label": "Codigo da Instancia"}], "keywords": ["finalizar instancia", "encerrar processo"], "sort_order": 22},
-        {"code": "3", "title": "Consultas de Trabalho", "parent_code": None, "sort_order": 30},
-        {"code": "3.0", "title": "Consulta de Rotina", "parent_code": "3", "action_key": "routine.consult", "description": "Consulta operacional guiada para projetos, processos e reunioes usando contexto da sessao.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": False, "category": "optional"}, {"key": "status_consulta", "label": "Status", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["quais atividades tenho para hoje", "o que tenho para hoje", "minhas atividades de hoje", "meus processos de hoje", "minhas reunioes de hoje", "consulta de rotina"], "sort_order": 30},
-        {"code": "3.1", "title": "Atividades em Aberto", "parent_code": "3", "action_key": "my_work.open", "description": "Consulta atividades, processos e reunioes em aberto no contexto operacional.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["atividades em aberto", "tarefas em aberto"], "sort_order": 31},
-        {"code": "3.2", "title": "Atividades Vencidas", "parent_code": "3", "action_key": "my_work.overdue", "description": "Consulta itens vencidos para priorizacao imediata.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["atividades vencidas", "tarefas vencidas"], "sort_order": 32},
-        {"code": "3.3", "title": "Atividades a Vencer no Periodo", "parent_code": "3", "action_key": "my_work.due_range", "description": "Consulta itens a vencer em um periodo informado.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["a vencer", "proximo vencimento"], "sort_order": 33},
-        {"code": "3.4", "title": "Atividades Concluidas no Periodo", "parent_code": "3", "action_key": "my_work.completed_range", "description": "Consulta itens concluidos dentro de um periodo.", "required_fields": [{"key": "empresa", "label": "Empresa", "required": True, "category": "required"}, {"key": "periodo", "label": "Periodo", "required": True, "category": "required"}, {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}, {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"}], "keywords": ["concluidas no periodo", "atividades concluidas"], "sort_order": 34},
-        {"code": "3.5", "title": "Resumos", "parent_code": "3", "sort_order": 35},
-        {"code": "3.6", "title": "Ocupacao de Colaborador", "parent_code": "3", "action_key": "collaborator.occupancy", "required_fields": [{"key": "colaborador", "label": "Colaborador"}, {"key": "periodo", "label": "Periodo"}], "keywords": ["ocupacao do colaborador", "ocupacao do usuario", "capacidade do colaborador", "carga do colaborador", "horas disponiveis do colaborador"], "sort_order": 40},
-        {"code": "3.7", "title": "Empresas Vinculadas ao Usuario", "parent_code": "3", "action_key": "company.list_accessible", "required_fields": [], "keywords": ["quantas empresas estão vinculadas a mim", "quantas empresas estao vinculadas a mim", "minhas empresas", "empresas vinculadas a mim", "empresas que tenho acesso", "listar minhas empresas"], "sort_order": 41},
-        {"code": "3.5.1", "title": "Hoje", "parent_code": "3.5", "action_key": "summary.today", "required_fields": [], "keywords": ["resumo hoje", "resumo do dia"], "sort_order": 36},
-        {"code": "3.5.2", "title": "Esta Semana", "parent_code": "3.5", "action_key": "summary.week", "required_fields": [], "keywords": ["resumo semana", "esta semana"], "sort_order": 37},
-        {"code": "3.5.3", "title": "Este Mes", "parent_code": "3.5", "action_key": "summary.month", "required_fields": [], "keywords": ["resumo mes", "este mes"], "sort_order": 38},
-        {"code": "3.5.4", "title": "Personalizado", "parent_code": "3.5", "action_key": "summary.custom", "required_fields": [{"key": "periodo", "label": "Periodo (Data inicial e final)"}], "keywords": ["resumo personalizado", "periodo personalizado"], "sort_order": 39},
-        {"code": "4", "title": "Gestao de Reunioes", "parent_code": None, "sort_order": 40},
-        {"code": "4.1", "title": "Agendar Reuniao", "parent_code": "4", "action_key": "meeting.schedule", "description": "Agenda uma reuniao e registra os dados essenciais do compromisso.", "required_fields": [{"key": "titulo", "label": "Titulo da Reuniao", "required": True, "category": "required"}, {"key": "data_hora", "label": "Data/Hora", "required": True, "category": "required"}, {"key": "participantes", "label": "Participantes", "required": False, "category": "optional"}, {"key": "pauta", "label": "Pauta", "required": False, "category": "complementary"}], "keywords": ["agendar reuniao", "marcar reuniao"], "sort_order": 41},
-        {"code": "4.2", "title": "Iniciar Reuniao", "parent_code": "4", "action_key": "meeting.start", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao"}], "keywords": ["iniciar reuniao", "comecar reuniao"], "sort_order": 42},
-        {"code": "4.3", "title": "Resumir Reuniao", "parent_code": "4", "action_key": "meeting.summarize", "required_fields": [{"key": "id_reuniao", "label": "ID da Reuniao"}], "keywords": ["resumo da reuniao", "resumir reuniao"], "sort_order": 43},
-        {"code": "5", "title": "Funcionamento e Onboarding", "parent_code": None, "sort_order": 50},
-        {"code": "5.1", "title": "Diagnosticar Funcionamento", "parent_code": "5", "action_key": "onboarding.diagnose", "description": "Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.", "required_fields": [{"key": "objetivo", "label": "O que voce quer fazer funcionar", "required": True, "category": "required"}, {"key": "area", "label": "Area/Modulo", "required": False, "category": "optional"}, {"key": "evidencias", "label": "Evidencias do Problema", "required": False, "category": "complementary"}], "keywords": ["diagnosticar funcionamento", "fazer funcionar", "checklist"], "sort_order": 51},
-        {"code": "5.2", "title": "Status do Onboarding", "parent_code": "5", "action_key": "onboarding.status", "required_fields": [], "keywords": ["status onboarding", "campos faltantes", "onboarding"], "sort_order": 52},
-        {"code": "5.3", "title": "Iniciar Onboarding Assistido", "parent_code": "5", "action_key": "onboarding.start", "required_fields": [{"key": "tipo_cadastro", "label": "Tipo de Cadastro (real ou modelo)"}], "keywords": ["iniciar onboarding", "cadastro assistido", "onboarding assistido"], "sort_order": 53},
-        {"code": "5.4", "title": "Checklist para Producao", "parent_code": "5", "action_key": "onboarding.go_live_check", "required_fields": [], "keywords": ["checklist producao", "prontidao producao", "go live"], "sort_order": 54},
-        {"code": "6", "title": "Operacoes HITL", "parent_code": None, "sort_order": 60},
-        {"code": "6.1", "title": "Aprovar Solicitacao", "parent_code": "6", "action_key": "agent_action.approve", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["aprovar solicitacao", "aprovar ticket", "aprovado", "aprovar"], "sort_order": 61},
-        {"code": "6.2", "title": "Rejeitar Solicitacao", "parent_code": "6", "action_key": "agent_action.reject", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["rejeitar solicitacao", "recusar ticket", "rejeitar"], "sort_order": 62},
-        {"code": "6.3", "title": "Revalidar Solicitacao", "parent_code": "6", "action_key": "agent_action.revalidate", "required_fields": [{"key": "agent_action_id", "label": "ID da Solicitacao"}], "keywords": ["revalidar solicitacao", "renovar prazo da solicitacao", "revalidar"], "sort_order": 63},
-        {"code": "6.4", "title": "Listar Solicitacoes Pendentes", "parent_code": "6", "action_key": "agent_action.list_pending", "required_fields": [], "keywords": ["listar solicitacoes pendentes", "acoes aguardando minha decisao", "acoes do sistema aguardando minha decisao", "minhas aprovacoes pendentes"], "sort_order": 64},
-      ]
-
     code_to_id: Dict[str, int] = {}
-    for item in seed_items:
-        parent_id = None
-        parent_code = item.get("parent_code")
-        if parent_code:
-            parent_id = code_to_id.get(parent_code)
+    for item in _default_menu_seed_items():
+        parent_id = code_to_id.get(item.get("parent_code")) if item.get("parent_code") else None
         option = AgentMenuOption(
             company_id=None,
             parent_id=parent_id,
@@ -5718,304 +5858,26 @@ def _ensure_default_menu_upgrades() -> None:
     """
     Garante que novas opcoes padrao sejam adicionadas em bases ja inicializadas.
     """
-    root_1 = _ensure_menu_option_exists(
-        code="1",
-        title="Gestao de Projetos",
-        parent_code=None,
-        sort_order=10,
-    )
-    if root_1:
-        _ensure_menu_option_exists(
-            code="1.4",
-            title="Cadastrar Atividade de Projeto",
-            parent_code="1",
-            action_key="project_task.create",
-            description="Cadastra uma nova atividade vinculada a um projeto existente.",
-            required_fields=[
-                {"key": "codigo_projeto", "label": "Codigo do Projeto", "required": True, "category": "required"},
-                {"key": "nome_atividade", "label": "Nome da Atividade", "required": True, "category": "required"},
-                {"key": "due_date", "label": "Prazo", "required": False, "category": "optional"},
-                {"key": "notes", "label": "Observacoes", "required": False, "category": "complementary"},
-            ],
-            keywords=["cadastrar atividade", "nova atividade de projeto"],
-            sort_order=14,
-        )
-        _ensure_menu_option_exists(
-            code="1.7",
-            title="Auditar Atividades de Projeto",
-            parent_code="1",
-            action_key="project_task.audit",
-            required_fields=[],
-            keywords=[
-                "atividades sem responsável",
-                "atividades sem data",
-                "auditoria de atividades",
-                "analisar atividades de projetos",
-            ],
-            sort_order=17,
-        )
+    valid_codes = {item["code"] for item in _default_menu_seed_items()}
+    legacy_options = AgentMenuOption.query.filter(
+        AgentMenuOption.company_id.is_(None),
+        ~AgentMenuOption.code.in_(valid_codes),
+        AgentMenuOption.is_active.is_(True),
+    ).all()
+    for legacy in legacy_options:
+        legacy.is_active = False
 
-    root_3 = _ensure_menu_option_exists(
-        code="3",
-        title="Consultas de Trabalho",
-        parent_code=None,
-        sort_order=30,
-    )
-    if root_3:
+    for item in _default_menu_seed_items():
         _ensure_menu_option_exists(
-            code="3.0",
-            title="Consulta de Rotina",
-            parent_code="3",
-            action_key="routine.consult",
-            description="Consulta operacional guiada para projetos, processos e reunioes usando contexto da sessao.",
-            required_fields=[
-                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
-                {"key": "periodo", "label": "Periodo", "required": False, "category": "optional"},
-                {"key": "status_consulta", "label": "Status", "required": False, "category": "optional"},
-                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
-            ],
-            keywords=[
-                "quais atividades tenho para hoje",
-                "o que tenho para hoje",
-                "minhas atividades de hoje",
-                "meus processos de hoje",
-                "minhas reunioes de hoje",
-                "consulta de rotina",
-            ],
-            sort_order=30,
+            code=item["code"],
+            title=item["title"],
+            parent_code=item.get("parent_code"),
+            sort_order=int(item.get("sort_order", 0) or 0),
+            action_key=item.get("action_key"),
+            description=item.get("description"),
+            required_fields=item.get("required_fields") or [],
+            keywords=item.get("keywords") or [],
         )
-        _ensure_menu_option_exists(
-            code="3.1",
-            title="Atividades em Aberto",
-            parent_code="3",
-            action_key="my_work.open",
-            description="Consulta atividades, processos e reunioes em aberto no contexto operacional.",
-            required_fields=[
-                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
-                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
-                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
-            ],
-            keywords=["atividades em aberto", "tarefas em aberto"],
-            sort_order=31,
-        )
-        _ensure_menu_option_exists(
-            code="3.2",
-            title="Atividades Vencidas",
-            parent_code="3",
-            action_key="my_work.overdue",
-            description="Consulta itens vencidos para priorizacao imediata.",
-            required_fields=[
-                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
-                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
-                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
-            ],
-            keywords=["atividades vencidas", "tarefas vencidas"],
-            sort_order=32,
-        )
-        _ensure_menu_option_exists(
-            code="3.3",
-            title="Atividades a Vencer no Periodo",
-            parent_code="3",
-            action_key="my_work.due_range",
-            description="Consulta itens a vencer em um periodo informado.",
-            required_fields=[
-                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
-                {"key": "periodo", "label": "Periodo", "required": True, "category": "required"},
-                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
-                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
-            ],
-            keywords=["a vencer", "proximo vencimento"],
-            sort_order=33,
-        )
-        _ensure_menu_option_exists(
-            code="3.4",
-            title="Atividades Concluidas no Periodo",
-            parent_code="3",
-            action_key="my_work.completed_range",
-            description="Consulta itens concluidos dentro de um periodo.",
-            required_fields=[
-                {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
-                {"key": "periodo", "label": "Periodo", "required": True, "category": "required"},
-                {"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"},
-                {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
-            ],
-            keywords=["concluidas no periodo", "atividades concluidas"],
-            sort_order=34,
-        )
-        _ensure_menu_option_exists(
-            code="3.6",
-            title="Ocupacao de Colaborador",
-            parent_code="3",
-            action_key="collaborator.occupancy",
-            required_fields=[
-                {"key": "colaborador", "label": "Colaborador"},
-                {"key": "periodo", "label": "Periodo"},
-            ],
-            keywords=[
-                "ocupacao do colaborador",
-                "ocupacao do usuario",
-                "capacidade do colaborador",
-                "carga do colaborador",
-                "horas disponiveis do colaborador",
-            ],
-            sort_order=36,
-        )
-        _ensure_menu_option_exists(
-            code="3.7",
-            title="Empresas Vinculadas ao Usuario",
-            parent_code="3",
-            action_key="company.list_accessible",
-            required_fields=[],
-            keywords=[
-                "quantas empresas estão vinculadas a mim",
-                "quantas empresas estao vinculadas a mim",
-                "minhas empresas",
-                "empresas vinculadas a mim",
-                "empresas que tenho acesso",
-                "listar minhas empresas",
-            ],
-            sort_order=41,
-        )
-        _ensure_menu_option_exists(
-            code="3.5",
-            title="Resumos",
-            parent_code="3",
-            sort_order=35,
-        )
-        _ensure_menu_option_exists(
-            code="3.5.1",
-            title="Hoje",
-            parent_code="3.5",
-            action_key="summary.today",
-            required_fields=[],
-            keywords=["resumo hoje", "resumo do dia"],
-            sort_order=36,
-        )
-        _ensure_menu_option_exists(
-            code="3.5.2",
-            title="Esta Semana",
-            parent_code="3.5",
-            action_key="summary.week",
-            required_fields=[],
-            keywords=["resumo semana", "esta semana"],
-            sort_order=37,
-        )
-        _ensure_menu_option_exists(
-            code="3.5.3",
-            title="Este Mes",
-            parent_code="3.5",
-            action_key="summary.month",
-            required_fields=[],
-            keywords=["resumo mes", "este mes"],
-            sort_order=38,
-        )
-        _ensure_menu_option_exists(
-            code="3.5.4",
-            title="Personalizado",
-            parent_code="3.5",
-            action_key="summary.custom",
-            required_fields=[{"key": "periodo", "label": "Periodo (Data inicial e final)"}],
-            keywords=["resumo personalizado", "periodo personalizado"],
-            sort_order=39,
-        )
-
-    root_5 = _ensure_menu_option_exists(
-        code="5",
-        title="Funcionamento e Onboarding",
-        parent_code=None,
-        sort_order=50,
-    )
-    if not root_5:
-        return
-
-    _ensure_menu_option_exists(
-        code="5.1",
-        title="Diagnosticar Funcionamento",
-        parent_code="5",
-        action_key="onboarding.diagnose",
-        description="Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.",
-        required_fields=[
-            {"key": "objetivo", "label": "O que voce quer fazer funcionar", "required": True, "category": "required"},
-            {"key": "area", "label": "Area/Modulo", "required": False, "category": "optional"},
-            {"key": "evidencias", "label": "Evidencias do Problema", "required": False, "category": "complementary"},
-        ],
-        keywords=["diagnosticar funcionamento", "fazer funcionar", "checklist"],
-        sort_order=51,
-    )
-    _ensure_menu_option_exists(
-        code="5.2",
-        title="Status do Onboarding",
-        parent_code="5",
-        action_key="onboarding.status",
-        required_fields=[],
-        keywords=["status onboarding", "campos faltantes", "onboarding"],
-        sort_order=52,
-    )
-    _ensure_menu_option_exists(
-        code="5.3",
-        title="Iniciar Onboarding Assistido",
-        parent_code="5",
-        action_key="onboarding.start",
-        required_fields=[{"key": "tipo_cadastro", "label": "Tipo de Cadastro (real ou modelo)"}],
-        keywords=["iniciar onboarding", "cadastro assistido", "onboarding assistido"],
-        sort_order=53,
-    )
-    _ensure_menu_option_exists(
-        code="5.4",
-        title="Checklist para Producao",
-        parent_code="5",
-        action_key="onboarding.go_live_check",
-        required_fields=[],
-        keywords=["checklist producao", "prontidao producao", "go live"],
-        sort_order=54,
-    )
-    _ensure_menu_option_exists(
-        code="6",
-        title="Operacoes HITL",
-        parent_code=None,
-        sort_order=60,
-    )
-    _ensure_menu_option_exists(
-        code="6.1",
-        title="Aprovar Solicitacao",
-        parent_code="6",
-        action_key="agent_action.approve",
-        required_fields=[{"key": "agent_action_id", "label": "ID da Solicitacao"}],
-        keywords=["aprovar solicitacao", "aprovar ticket", "aprovado", "aprovar"],
-        sort_order=61,
-    )
-    _ensure_menu_option_exists(
-        code="6.2",
-        title="Rejeitar Solicitacao",
-        parent_code="6",
-        action_key="agent_action.reject",
-        required_fields=[{"key": "agent_action_id", "label": "ID da Solicitacao"}],
-        keywords=["rejeitar solicitacao", "recusar ticket", "rejeitar"],
-        sort_order=62,
-    )
-    _ensure_menu_option_exists(
-        code="6.3",
-        title="Revalidar Solicitacao",
-        parent_code="6",
-        action_key="agent_action.revalidate",
-        required_fields=[{"key": "agent_action_id", "label": "ID da Solicitacao"}],
-        keywords=["revalidar solicitacao", "renovar prazo da solicitacao", "revalidar"],
-        sort_order=63,
-    )
-    _ensure_menu_option_exists(
-        code="6.4",
-        title="Listar Solicitacoes Pendentes",
-        parent_code="6",
-        action_key="agent_action.list_pending",
-        required_fields=[],
-        keywords=[
-            "listar solicitacoes pendentes",
-            "acoes aguardando minha decisao",
-            "acoes do sistema aguardando minha decisao",
-            "minhas aprovacoes pendentes",
-        ],
-        sort_order=64,
-    )
     db.session.commit()
 
 
@@ -6029,38 +5891,51 @@ def _ensure_menu_option_exists(
     required_fields: Optional[List[Dict[str, Any]]] = None,
     keywords: Optional[List[str]] = None,
 ) -> Optional[AgentMenuOption]:
-    existing = AgentMenuOption.query.filter(
-        AgentMenuOption.company_id.is_(None),
-        AgentMenuOption.code == code,
-    ).first()
-    if existing:
-        updated = False
-        if description and not str(existing.description or "").strip():
-            existing.description = description
-            updated = True
-        existing_fields = list(existing.required_fields or [])
-        if required_fields and (
-            not existing_fields
-            or any("category" not in field for field in existing_fields if isinstance(field, dict))
-        ):
-            existing.required_fields = required_fields
-            updated = True
-        if keywords and not list(existing.keywords or []):
-            existing.keywords = keywords
-            updated = True
-        if updated:
-            db.session.flush()
-        return existing
-
     parent_id = None
     if parent_code:
         parent = AgentMenuOption.query.filter(
             AgentMenuOption.company_id.is_(None),
             AgentMenuOption.code == parent_code,
         ).first()
-        if not parent:
+        if parent is None:
             return None
         parent_id = parent.id
+
+    existing = AgentMenuOption.query.filter(
+        AgentMenuOption.company_id.is_(None),
+        AgentMenuOption.code == code,
+    ).first()
+    if existing:
+        updated = False
+        if str(existing.title or "").strip() != title:
+            existing.title = title
+            updated = True
+        if existing.parent_id != parent_id:
+            existing.parent_id = parent_id
+            updated = True
+        normalized_action = str(action_key or "").strip() or None
+        if (str(existing.action_key or "").strip() or None) != normalized_action:
+            existing.action_key = normalized_action
+            updated = True
+        if existing.sort_order != sort_order:
+            existing.sort_order = sort_order
+            updated = True
+        if not bool(existing.is_active):
+            existing.is_active = True
+            updated = True
+        if description and str(existing.description or "").strip() != description:
+            existing.description = description
+            updated = True
+        existing_fields = list(existing.required_fields or [])
+        if required_fields and existing_fields != required_fields:
+            existing.required_fields = required_fields
+            updated = True
+        if keywords and list(existing.keywords or []) != keywords:
+            existing.keywords = keywords
+            updated = True
+        if updated:
+            db.session.flush()
+        return existing
 
     option = AgentMenuOption(
         company_id=None,

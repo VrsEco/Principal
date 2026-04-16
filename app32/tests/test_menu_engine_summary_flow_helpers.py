@@ -361,7 +361,9 @@ def test_handle_item_selection_state_for_project_picker_advances_to_remaining_fi
     assert session.status == "awaiting_fields"
     assert session.collected_data["codigo_projeto"] == "SW.J.22"
     assert session.collected_data["_nav_stack"][-1]["status"] == "awaiting_item_selection"
-    assert session.missing_fields == [{"key": "nome_atividade", "label": "Nome da Atividade"}]
+    assert len(session.missing_fields) == 1
+    assert session.missing_fields[0]["key"] == "nome_atividade"
+    assert session.missing_fields[0]["label"] == "Nome da Atividade"
 
 
 def test_build_confirmation_display_items_formats_selected_project(monkeypatch):

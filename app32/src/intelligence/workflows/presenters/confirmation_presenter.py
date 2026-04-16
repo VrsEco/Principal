@@ -162,7 +162,7 @@ def build_confirmation_display_items(
             items.append(f"{key}: {value}")
         return items
 
-    if action in {"meeting.start", "meeting.summarize"}:
+    if action in {"meeting.start", "meeting.summarize", "meeting.close", "meeting.send_summary_email", "meeting.send_summary_whatsapp"}:
         meeting_value = str(
             payload.get("id_reuniao")
             or payload.get("meeting_id")

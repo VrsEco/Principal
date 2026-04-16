@@ -23,6 +23,7 @@ Skill obrigatória de governança do projeto.
    - deploy/produção -> `deploy_gestao_versus`
 5. Selecionar o especialista líder em `../../router/routing-matrix.md`
 6. Consultar referências só se o detalhe for realmente necessário
+7. Se o tema envolver Sapiens, validar aderencia à arvore oficial, aos codigos sem ponto e ao escopo pessoal/equipe/empresa
 
 ## Guardrails inegociáveis
 - stack oficial Python/Flask/PostgreSQL
@@ -31,6 +32,21 @@ Skill obrigatória de governança do projeto.
 - sem lógica de negócio em rota
 - sem documentação longa dentro desta skill
 - sem execução 3+ etapas sem cards reais em `AA.J.31`
+- para Sapiens: arvore oficial por dominio, nao por estrutura legada
+- para Sapiens: codigos de menu sem ponto, ex: `111`, `145`, `183`
+- para Sapiens: escopo operacional explicito entre pessoal, equipe e empresa
+
+## Governança adicional para Sapiens
+- `1` Gestao da Rotina
+- `2` Gestao Estrategica
+- `3` Gestao Financeira
+- `4` Sapiens
+- `5` Governanca e Aprovacoes
+- `6` Implantacao e Funcionamento
+- `7` Sapiens Factory
+
+## Regra de canal relevante
+- no WhatsApp, quando houver multiplas empresas elegiveis para a operacao, a selecao da empresa deve acontecer antes da confirmacao final
 
 ## Referências
 - `../../router/orchestrator.md`
@@ -38,3 +54,4 @@ Skill obrigatória de governança do projeto.
 - `../../references/constitution.md`
 - `../../references/personas.md`
 - `../../references/component-boundaries.md`
+- `../../references/sapiens-official-tree.md`
