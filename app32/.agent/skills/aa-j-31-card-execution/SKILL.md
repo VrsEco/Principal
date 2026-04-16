@@ -23,11 +23,16 @@ Use esta skill quando a demanda exigir execução longa com 3 ou mais etapas.
 5. Concluir o card do passo 1
 6. Repetir até o fim
 
+## Integração real
+- usar `scripts/aa_j_31_cards_ssh.py` para listar, criar, concluir ou materializar passos em `AA.J.31`
+- o script opera via SSH no app.gestaoversus.com.br sobre `ProjectTask` do projeto `AA.J.31`
+
 ## Regras
 - não pular criação de card quando houver 3+ etapas
 - não executar passos em lote sem fechamento intermediário
 - se a tarefa tiver 1 ou 2 etapas, esta skill não é obrigatória
-- se não houver integração disponível com o sistema de cards na sessão, preparar explicitamente a lista de cards antes de iniciar a execução
+- se o acesso SSH não estiver disponível na sessão, preparar explicitamente a lista de cards antes de iniciar a execução
 
-## Referência
+## Referências
 - `references/card-workflow.md`
+- `references/remote-integration.md`
