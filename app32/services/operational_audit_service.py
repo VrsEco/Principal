@@ -272,15 +272,7 @@ class OperationalAuditService:
                 )
 
         try:
-            user_logs = (
-                UserLog.query.filter(
-                    UserLog.company_id == company_id,
-                    UserLog.entity_type == "financial_ingestion_record",
-                )
-                .order_by(UserLog.created_at.desc(), UserLog.id.desc())
-                .limit(limit)
-                .all()
-            )
+            user_logs = cls._load_user_log_rows(company_id=company_id, limit=limit)
         except Exception:
             db.session.rollback()
             logger.exception("Falha ao consultar UserLog na auditoria operacional da empresa %s.", company_id)
@@ -290,19 +282,75 @@ class OperationalAuditService:
             events.append(
                 {
                     "source": "human_review",
-                    "title": getattr(log, "entity_name", None) or f"{getattr(log, 'action', 'AUDIT')} financeiro",
-                    "description": getattr(log, "description", None) or "Registro de auditoria de usuário.",
-                    "actor": getattr(log, "user_name", None) or getattr(log, "user_email", None) or "Usuário APP32",
-                    "entity_type": getattr(log, "entity_type", None),
-                    "entity_id": getattr(log, "entity_id", None),
-                    "status": getattr(log, "action", None),
-                    "channel": getattr(log, "endpoint", None) or "user_log",
-                    "created_at": cls._iso(getattr(log, "created_at", None)),
-                    "raw": log.to_dict() if hasattr(log, "to_dict") else {},
+                    "title": log.get("entity_name") or f"{log.get('action', 'AUDIT')} financeiro",
+                    "description": log.get("description") or "Registro de auditoria de usuário.",
+                    "actor": log.get("user_name") or log.get("user_email") or "Usuário APP32",
+                    "entity_type": log.get("entity_type"),
+                    "entity_id": log.get("entity_id"),
+                    "status": log.get("action"),
+                    "channel": log.get("endpoint") or "user_log",
+                    "created_at": cls._iso(log.get("created_at")),
+                    "raw": log,
                 }
             )
 
         return events
+
+    @classmethod
+    def _load_user_log_rows(cls, *, company_id: int, limit: int) -> List[Dict[str, Any]]:
+        inspector = inspect(db.engine)
+        if not inspector.has_table("user_logs"):
+            return []
+
+        available_columns = {column["name"] for column in inspector.get_columns("user_logs")}
+        required_columns = ("id", "created_at", "company_id", "entity_type")
+        if any(column not in available_columns for column in required_columns):
+            logger.warning(
+                "Tabela user_logs sem colunas mínimas para auditoria operacional. company_id=%s available=%s",
+                company_id,
+                sorted(available_columns),
+            )
+            return []
+
+        projected_columns = [
+            "id",
+            "user_id",
+            "user_email",
+            "user_name",
+            "action",
+            "entity_type",
+            "entity_id",
+            "entity_name",
+            "ip_address",
+            "user_agent",
+            "endpoint",
+            "method",
+            "description",
+            "company_id",
+            "created_at",
+        ]
+        select_clause = ", ".join(
+            column if column in available_columns else f"NULL AS {column}"
+            for column in projected_columns
+        )
+        rows = db.session.execute(
+            text(
+                f"""
+                SELECT {select_clause}
+                  FROM user_logs
+                 WHERE company_id = :company_id
+                   AND entity_type = :entity_type
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT :limit
+                """
+            ),
+            {
+                "company_id": int(company_id),
+                "entity_type": "financial_ingestion_record",
+                "limit": int(limit),
+            },
+        ).mappings().all()
+        return [dict(row) for row in rows]
 
     @classmethod
     def _collect_workflow_events(cls, *, company_id: int, limit: int) -> List[Dict[str, Any]]:

@@ -39,6 +39,29 @@ class _FakeQuery:
         return list(self.items)
 
 
+class _FakeInspector:
+    def __init__(self, columns):
+        self._columns = columns
+
+    def has_table(self, table_name):
+        return table_name == "user_logs"
+
+    def get_columns(self, table_name):
+        assert table_name == "user_logs"
+        return [{"name": column} for column in self._columns]
+
+
+class _FakeResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def mappings(self):
+        return self
+
+    def all(self):
+        return self._rows
+
+
 def _model_stub(items, **columns):
     payload = {"query": _FakeQuery(items)}
     for column in columns:
@@ -135,6 +158,26 @@ def test_build_panel_aggregates_operational_sources_with_company_scope(monkeypat
         _model_stub([user_log], company_id=True, entity_type=True, created_at=True, id=True),
     )
     monkeypatch.setattr(
+        OperationalAuditService,
+        "_load_user_log_rows",
+        classmethod(
+            lambda cls, **kwargs: [
+                {
+                    "id": user_log.id,
+                    "entity_name": user_log.entity_name,
+                    "action": user_log.action,
+                    "entity_type": user_log.entity_type,
+                    "entity_id": user_log.entity_id,
+                    "description": user_log.description,
+                    "user_name": user_log.user_name,
+                    "user_email": user_log.user_email,
+                    "endpoint": user_log.endpoint,
+                    "created_at": user_log.created_at,
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr(
         audit_module,
         "WorkflowExecutionLog",
         _model_stub([workflow], company_id=True, created_at=True, id=True),
@@ -183,3 +226,81 @@ def test_operational_audit_query_forbids_unknown_filters():
         assert "unexpected" in str(exc)
     else:
         raise AssertionError("Filtro extra deveria ser rejeitado")
+
+
+def test_load_user_log_rows_projects_only_existing_columns(monkeypatch):
+    captured = {}
+    fake_db = SimpleNamespace(engine=object(), session=SimpleNamespace())
+
+    def fake_execute(statement, params):
+        captured["sql"] = str(statement)
+        captured["params"] = params
+        return _FakeResult(
+            [
+                {
+                    "id": 1,
+                    "user_id": 7,
+                    "user_email": "ops@versus.com.br",
+                    "user_name": "Ops",
+                    "action": "UPDATE",
+                    "entity_type": "financial_ingestion_record",
+                    "entity_id": "55",
+                    "entity_name": "Arquivo CNAB",
+                    "ip_address": None,
+                    "user_agent": None,
+                    "endpoint": "/financial/ingestion/55",
+                    "method": "POST",
+                    "description": "Aprovação manual registrada",
+                    "company_id": 31,
+                    "created_at": None,
+                }
+            ]
+        )
+
+    monkeypatch.setattr(
+        audit_module,
+        "inspect",
+        lambda _engine: _FakeInspector(
+            [
+                "id",
+                "user_id",
+                "user_email",
+                "user_name",
+                "action",
+                "entity_type",
+                "entity_id",
+                "entity_name",
+                "endpoint",
+                "method",
+                "description",
+                "company_id",
+                "created_at",
+            ]
+        ),
+    )
+    fake_db.session.execute = fake_execute
+    monkeypatch.setattr(audit_module, "db", fake_db)
+
+    rows = OperationalAuditService._load_user_log_rows(company_id=31, limit=10)
+
+    assert len(rows) == 1
+    assert rows[0]["entity_name"] == "Arquivo CNAB"
+    assert captured["params"] == {"company_id": 31, "entity_type": "financial_ingestion_record", "limit": 10}
+    assert "plan_id" not in captured["sql"]
+    assert "NULL AS ip_address" in captured["sql"]
+    assert "NULL AS user_agent" in captured["sql"]
+
+
+def test_load_user_log_rows_returns_empty_when_required_columns_are_missing(monkeypatch):
+    fake_db = SimpleNamespace(engine=object(), session=SimpleNamespace())
+
+    monkeypatch.setattr(
+        audit_module,
+        "inspect",
+        lambda _engine: _FakeInspector(["id", "entity_type", "created_at"]),
+    )
+    monkeypatch.setattr(audit_module, "db", fake_db)
+
+    rows = OperationalAuditService._load_user_log_rows(company_id=31, limit=5)
+
+    assert rows == []
