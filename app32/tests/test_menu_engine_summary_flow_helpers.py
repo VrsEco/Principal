@@ -810,3 +810,51 @@ def test_resolve_company_ids_for_payload_honors_selected_company_id_before_ambig
 
     assert company_ids == [9]
     assert label == "empresa AU - Gandu Investimentos e Participações"
+
+
+def test_resolve_employee_scope_for_my_work_payload_allows_explicit_collaborator_with_explicit_company(monkeypatch):
+    class DummyEmployee:
+        def __init__(self, employee_id, name):
+            self.id = employee_id
+            self.name = name
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_match_employees_by_term_for_companies",
+        lambda company_ids, collaborator_term: ([DummyEmployee(91, "Márcio Simões")], None),
+    )
+
+    employee_ids, collaborator_label, error = menu_engine._resolve_employee_scope_for_my_work_payload(
+        payload={"empresa": "Ventana", "colaborador": "Márcio Simões"},
+        user_id=10,
+        company_ids=[18],
+        default_employee_ids=[77],
+    )
+
+    assert employee_ids == [91]
+    assert collaborator_label == "Márcio Simões"
+    assert error is None
+
+
+def test_resolve_employee_scope_for_my_work_payload_keeps_self_restriction_without_explicit_company(monkeypatch):
+    class DummyEmployee:
+        def __init__(self, employee_id, name):
+            self.id = employee_id
+            self.name = name
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_match_employees_by_term_for_companies",
+        lambda company_ids, collaborator_term: ([DummyEmployee(91, "Márcio Simões")], None),
+    )
+
+    employee_ids, collaborator_label, error = menu_engine._resolve_employee_scope_for_my_work_payload(
+        payload={"colaborador": "Márcio Simões"},
+        user_id=10,
+        company_ids=[18],
+        default_employee_ids=[77],
+    )
+
+    assert employee_ids is None
+    assert collaborator_label is None
+    assert error == "Voce nao possui acesso ao colaborador 'Márcio Simões' neste recorte."

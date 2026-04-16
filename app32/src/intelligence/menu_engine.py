@@ -4710,10 +4710,16 @@ def _resolve_employee_scope_for_my_work_payload(
     matched_label = str(getattr(matches[0], "name", "") or collaborator_term).strip() if matches else collaborator_term
 
     if default_employee_ids is not None:
-        allowed_ids = set(default_employee_ids)
-        matched_ids = [employee_id for employee_id in matched_ids if employee_id in allowed_ids]
-        if not matched_ids:
-            return None, None, f"Voce nao possui acesso ao colaborador '{matched_label}' neste recorte."
+        has_explicit_company_scope = bool(
+            payload.get("_selected_company_id")
+            or payload.get("_summary_company_id")
+            or str(payload.get("empresa") or payload.get("company") or "").strip()
+        )
+        if not (collaborator_term and has_explicit_company_scope):
+            allowed_ids = set(default_employee_ids)
+            matched_ids = [employee_id for employee_id in matched_ids if employee_id in allowed_ids]
+            if not matched_ids:
+                return None, None, f"Voce nao possui acesso ao colaborador '{matched_label}' neste recorte."
 
     return matched_ids, matched_label, None
 
