@@ -5,7 +5,7 @@
 | Tipo | Skill principal | Especialista líder | Apoio comum |
 |---|---|---|---|
 | Definir arquitetura, boundaries, refatoração estrutural | `gestao_versus_core` | `arquiteto.md` | `dba.md`, `backend_service.md` |
-| Execução longa com 3+ etapas e necessidade de cards | `aa-j-31-card-execution` | depende do domínio | `qa_automation.md`, `arquiteto.md` |
+| Execução longa com 3+ etapas | `aa-j-31-card-execution` (obrigatória) | depende do domínio | `qa_automation.md`, `arquiteto.md` |
 | Criar ou revisar workflow V3 | `workflow-factory-versus` | `backend_service.md` | `backend_api.md`, `qa_automation.md`, `ai_engineer.md` |
 | Investigar bug, drift, permissão, tenant, produção | `gestao-versus-incident-response` | `qa_automation.md` | `arquiteto.md`, `backend_api.md`, `dba.md` |
 | Deploy, produção, migração, restart | `deploy_gestao_versus` | `qa_automation.md` | `backend_api.md`, `dba.md` |
@@ -17,3 +17,6 @@
 
 ## Regra de contenção
 Se o pedido couber em 1 skill + 1 especialista, não expandir para mais componentes.
+
+## Regra mandatória
+Se houver 3 ou mais etapas, a execução deve começar por `aa-j-31-card-execution`, com cards reais em `AA.J.31 (Produção)` e fechamento sequencial de cada passo.

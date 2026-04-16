@@ -10,6 +10,9 @@
 ## Script operacional
 `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_cards_ssh.py <comando>`
 
+## Wrapper operacional preferencial
+`python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_step_wrapper.py <comando>`
+
 ## Pré-requisito local
 - definir `GV_DEPLOY_KEY_PATH` apontando para a chave SSH de deploy quando a sessão não tiver isso configurado automaticamente
 - exemplo:
@@ -24,6 +27,12 @@
   - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_cards_ssh.py complete --identifier "AA.J.31.123" --evidence "Passo validado"`
 - materializar passos:
   - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_cards_ssh.py ensure-steps --stage-name "Alterar Front End Página XYZ" --total-steps 4`
+- materializar uma execução com descrições:
+  - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_step_wrapper.py materialize --stage-name "Alterar Front End Página XYZ" --steps "ajustar layout" "validar backend" "rodar smoke"`
+- concluir um passo da execução:
+  - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_step_wrapper.py complete-step --stage-name "Alterar Front End Página XYZ" --step-number 1 --total-steps 3 --evidence "smoke concluído"`
+- consultar o status dos cards da execução:
+  - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_step_wrapper.py status --stage-name "Alterar Front End Página XYZ"`
 
 ## Observações
 - a criação ocorre como `ProjectTask`

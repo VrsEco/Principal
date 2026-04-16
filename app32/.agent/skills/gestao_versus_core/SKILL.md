@@ -16,13 +16,13 @@ Skill obrigatória de governança do projeto.
 ## Sequência curta
 1. Ler `../../router/orchestrator.md`
 2. Aplicar guardrails globais de `../../references/constitution.md`
-3. Selecionar a skill principal, se existir:
-   - execução longa com 3+ etapas -> `aa-j-31-card-execution`
+3. Se houver 3 ou mais etapas, ativar obrigatoriamente `aa-j-31-card-execution` e materializar os cards antes da execução
+4. Selecionar a skill principal, se existir:
    - incidente -> `gestao-versus-incident-response`
    - workflow V3 -> `workflow-factory-versus`
    - deploy/produção -> `deploy_gestao_versus`
-4. Selecionar o especialista líder em `../../router/routing-matrix.md`
-5. Consultar referências só se o detalhe for realmente necessário
+5. Selecionar o especialista líder em `../../router/routing-matrix.md`
+6. Consultar referências só se o detalhe for realmente necessário
 
 ## Guardrails inegociáveis
 - stack oficial Python/Flask/PostgreSQL
@@ -30,6 +30,7 @@ Skill obrigatória de governança do projeto.
 - MCP First quando houver estado operacional
 - sem lógica de negócio em rota
 - sem documentação longa dentro desta skill
+- sem execução 3+ etapas sem cards reais em `AA.J.31`
 
 ## Referências
 - `../../router/orchestrator.md`

@@ -10,13 +10,21 @@ Interpretar a solicitação, classificar o tipo de trabalho e decidir qual skill
    - multi-tenancy obrigatório com `company_id`
    - MCP First sempre que houver leitura operacional do sistema
    - sem lógica de negócio em rota
-3. Escolher o fluxo principal:
+3. Se a execução tiver 3 ou mais etapas, ativar obrigatoriamente `aa-j-31-card-execution` antes de começar qualquer implementação.
+4. Escolher o fluxo principal:
    - incidente/bug -> `gestao-versus-incident-response`
    - workflow conversacional/V3 -> `workflow-factory-versus`
+   - Sapiens, WhatsApp, intent routing, contexto de sessao ou workflow-first -> `sapiens-workflow-first`
    - deploy/produção -> `deploy_gestao_versus`
    - trabalho transversal sem workflow específico -> especialista adequado
-4. Chamar no máximo os especialistas realmente necessários.
-5. Consultar referências só quando houver detalhe operacional, checklist ou dúvida de governança.
+5. Chamar no máximo os especialistas realmente necessários.
+6. Consultar referências só quando houver detalhe operacional, checklist ou dúvida de governança.
+
+## Regra mandatória para 3+ etapas
+- quebrar a execução em passos antes de codar
+- criar ou atualizar os cards em `AA.J.31 (Produção)` no padrão `[<nome da etapa> - Passo X de N]`
+- executar, testar, corrigir e concluir um passo por vez
+- não abrir frente paralela sem o card correspondente
 
 ## Prioridade de especialistas
 1. `arquiteto.md` para desenho, auditoria, boundary e segurança
