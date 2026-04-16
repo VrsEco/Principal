@@ -158,19 +158,6 @@ def test_handle_menu_message_project_task_create_full_cycle(monkeypatch):
     )
 
     assert result.handled is True
-    assert "Fluxo/Tool sugerido: 1.4 - Cadastrar Atividade de Projeto" in result.response_text
-    assert "Fabiano" in result.response_text
-    assert session.status == "awaiting_confirmation"
-
-    result = menu_engine.handle_menu_message(
-        user_id=10,
-        company_id=None,
-        channel="whatsapp",
-        thread_id="thread-1",
-        message="sim",
-    )
-
-    assert result.handled is True
     assert "Escolha a empresa para continuar:" in result.response_text
     assert session.status == menu_engine.COMPANY_SELECTION_STATUS
 
@@ -224,7 +211,7 @@ def test_handle_menu_message_back_navigation_restores_previous_steps(monkeypatch
         lambda **kwargs: menu_engine.DirectExecutionResult(executed=False, response_text="", metadata={}),
     )
 
-    for message in ("1.4", "sim", "1", "1"):
+    for message in ("1.4", "1", "1"):
         result = menu_engine.handle_menu_message(
             user_id=10,
             company_id=None,
@@ -269,8 +256,8 @@ def test_handle_menu_message_back_navigation_restores_previous_steps(monkeypatch
     )
 
     assert result.handled is True
-    assert "1.4 - Cadastrar Atividade de Projeto" in result.response_text
-    assert session.status == "awaiting_confirmation"
+    assert result.response_text == "ROOT MENU"
+    assert session.status == "idle"
 
 
 def test_handle_menu_message_operation_company_selection_executes_my_work_with_selected_company(monkeypatch):
@@ -332,18 +319,6 @@ def test_handle_menu_message_operation_company_selection_executes_my_work_with_s
         channel="whatsapp",
         thread_id="thread-my-work",
         message="3.1",
-    )
-
-    assert result.handled is True
-    assert "Fluxo/Tool sugerido: 3.1 - Atividades em Aberto" in result.response_text
-    assert session.status == "awaiting_confirmation"
-
-    result = menu_engine.handle_menu_message(
-        user_id=10,
-        company_id=1,
-        channel="whatsapp",
-        thread_id="thread-my-work",
-        message="sim",
     )
 
     assert result.handled is True
@@ -428,18 +403,6 @@ def test_handle_menu_message_operation_company_selection_executes_routine_consul
         channel="whatsapp",
         thread_id="thread-routine",
         message="3.0",
-    )
-
-    assert result.handled is True
-    assert "Fluxo/Tool sugerido: 3.0 - Consulta de Rotina" in result.response_text
-    assert session.status == "awaiting_confirmation"
-
-    result = menu_engine.handle_menu_message(
-        user_id=10,
-        company_id=1,
-        channel="whatsapp",
-        thread_id="thread-routine",
-        message="sim",
     )
 
     assert result.handled is True
