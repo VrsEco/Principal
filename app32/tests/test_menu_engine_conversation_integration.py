@@ -973,6 +973,42 @@ def test_handle_menu_message_prompts_context_disambiguation_for_new_command_duri
     assert session.collected_data["_context_disambiguation_pending_message"] == "Quais as atividades eu tenho para hoje?"
 
 
+def test_looks_like_command_accepts_me_informe_operational_query():
+    assert (
+        menu_engine._looks_like_command(
+            "me informe as atividades em aberto de Joaquim (Guga) para a empresa Gandu Investimentos"
+        )
+        is True
+    )
+
+
+def test_handle_menu_message_prompts_context_disambiguation_for_me_informe_during_pending_summary(monkeypatch):
+    option = _build_my_work_open_option()
+    session = _DummySession(option)
+    session.status = menu_engine.SUMMARY_EMAIL_CONFIRM_STATUS
+    session.selected_option_id = option.id
+    session.collected_data = {"_summary_report_text": "RELATORIO TESTE"}
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+
+    message = "me informe as atividades em aberto de Joaquim (Guga) para a empresa Gandu Investimentos"
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=9,
+        channel="whatsapp",
+        thread_id="thread-ctx",
+        message=message,
+    )
+
+    assert result.handled is True
+    assert "1 - Nova conversa" in result.response_text
+    assert session.status == menu_engine.CONTEXT_DISAMBIGUATION_STATUS
+    assert session.collected_data["_context_disambiguation_pending_message"] == message
+
+
 def test_handle_menu_message_context_disambiguation_new_conversation_replays_pending_message(monkeypatch):
     option = _build_my_work_open_option()
     session = _DummySession(option)
