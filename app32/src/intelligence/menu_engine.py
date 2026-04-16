@@ -325,6 +325,17 @@ COMMAND_STATUS_HINTS = (
     "mes",
     "mês",
 )
+GREETING_ONLY_PHRASES = {
+    "oi",
+    "ola",
+    "ola sapiens",
+    "bom dia",
+    "boa tarde",
+    "boa noite",
+    "e ai",
+    "fala",
+    "opa",
+}
 COMPANY_ALIAS_PATTERN = re.compile(r"^\s*([A-Za-z]{2,5})(?:\s*-\s*(.+))?\s*$")
 SUMMARY_ACTION_PERIOD = dict(SUMMARY_ACTION_PERIOD_MAP)
 SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
@@ -490,6 +501,21 @@ def handle_menu_message(
                 session=session,
                 option=selected_option,
                 intercept_stage=CONTEXT_DISAMBIGUATION_STATUS,
+            )
+
+        if (
+            session.status == "idle"
+            and not explicit_code
+            and _is_greeting_only_message(lower)
+        ):
+            return _attach_menu_intercept_metadata(
+                MenuInterceptResult(
+                    handled=True,
+                    response_text=_build_greeting_only_message(session.user_id),
+                ),
+                session=session,
+                option=None,
+                intercept_stage="greeting_only",
             )
 
         if session.status == "awaiting_confirmation":
@@ -1046,6 +1072,38 @@ def _is_context_disambiguation_reply(text: str, lower_text: str) -> bool:
     return lower_text in {"nova conversa", "continuar", "continuar a atual", "atual"}
 
 
+def _is_greeting_only_message(lower_text: str) -> bool:
+    normalized = _normalize_text(lower_text)
+    if not normalized:
+        return False
+    compact = re.sub(r"[^\w\s]", " ", normalized)
+    compact = " ".join(compact.split())
+    if compact in GREETING_ONLY_PHRASES:
+        return True
+
+    tokens = compact.split()
+    removable_suffixes = {"sapiens", "versus", "gestao", "gestão", "corp", "bot", "ai"}
+    while tokens and tokens[-1] in removable_suffixes:
+        tokens.pop()
+    compact = " ".join(tokens)
+    return compact in GREETING_ONLY_PHRASES
+
+
+def _build_greeting_only_message(user_id: int) -> str:
+    first_name = _resolve_user_first_name(user_id)
+    greeting = (
+        f"Olá {first_name}! Espero que esteja bem."
+        if first_name
+        else "Olá! Espero que esteja bem."
+    )
+    return (
+        f"{greeting}\n\n"
+        "Você pode:\n"
+        "- digitar menu para navegar pelas opções\n"
+        "- ou me fazer uma pergunta diretamente"
+    )
+
+
 def _should_prompt_context_disambiguation(
     session: AgentMenuSession,
     *,
@@ -1149,6 +1207,7 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
                 data.setdefault("empresa", implicit_company)
 
     collaborator_patterns = (
+        r"\b(?:usuario|usuário|colaborador)\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|tem\b|t[eê]m\b|vencid[oa]s?\b|atrasad[oa]s?\b|abert[oa]s?\b|concluid[oa]s?\b|ids?\b)|[?.!,;]|$)",
         r"\brespons[aá]vel(?:\s+por)?\s+(.+?)(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
         r"\bque\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|tem\b|t[eê]m\b|ids?\b)|[?.!,;]|$)",
         r"\bpara\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'`.-]+){0,4})(?=\s+(?:da?\s+empresa\b|na?\s+empresa\b|empresa\b|com\b|status\b|hoje\b|esta\b|este\b|semana\b|mes\b|m[eê]s\b|ids?\b)|[?.!,;]|$)",
@@ -1168,6 +1227,12 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
         collaborator_name = re.sub(r"\s+\b(?:na|no|da|do)\b$", "", collaborator_name, flags=re.IGNORECASE).strip(" ,.-")
         collaborator_name = re.sub(
             r"\s+\b(?:esta\s+semana|este\s+mes|este\s+m[eê]s|hoje)\b.*$",
+            "",
+            collaborator_name,
+            flags=re.IGNORECASE,
+        ).strip(" ,.-")
+        collaborator_name = re.sub(
+            r"\s+\b(?:tem|t[eê]m|est[aã]o|possui|tem\s+vencid[oa]s?|tem\s+atrasad[oa]s?)\b.*$",
             "",
             collaborator_name,
             flags=re.IGNORECASE,
@@ -1222,7 +1287,13 @@ def _extract_fields_from_text(text: str) -> Dict[str, str]:
             collaborator_tokens
             and all(token in collaborator_leading_noise for token in collaborator_tokens)
         ) and not (
-            normalized_collaborator.startswith("projet")
+            normalized_collaborator.startswith("quais ")
+            or normalized_collaborator.startswith("qual ")
+            or normalized_collaborator.startswith("me diga ")
+            or normalized_collaborator.startswith("gostaria ")
+            or normalized_collaborator.startswith("atividad")
+            or normalized_collaborator.startswith("atividade")
+            or normalized_collaborator.startswith("projet")
             or normalized_collaborator.startswith("sistema")
             or normalized_collaborator.startswith("todas")
         ):
@@ -1340,7 +1411,16 @@ def _inject_session_context_into_payload(
     payload: Dict[str, Any],
 ) -> Dict[str, Any]:
     updated = dict(payload or {})
-    if session.company_id and updated.get("_selected_company_id") is None and str(option.action_key or "").strip().lower() != "company.list_accessible":
+    explicit_company_id = _resolve_explicit_company_id_from_payload(
+        payload=updated,
+        user_id=session.user_id,
+    )
+    if explicit_company_id:
+        updated["_selected_company_id"] = int(explicit_company_id)
+        explicit_label = _resolve_company_session_label(int(explicit_company_id))
+        if explicit_label:
+            updated["_resolved_company_label"] = explicit_label
+    elif session.company_id and updated.get("_selected_company_id") is None and str(option.action_key or "").strip().lower() != "company.list_accessible":
         updated["_selected_company_id"] = int(session.company_id)
     updated.setdefault("_session_user_id", int(session.user_id))
     if session.company_id:
@@ -1358,7 +1438,11 @@ def _build_auto_filled_session_lines(payload: Dict[str, Any]) -> List[str]:
     lines: List[str] = []
     if payload.get("_session_user_name"):
         lines.append(f"Usuario: {payload['_session_user_name']}")
-    if payload.get("_session_company_label"):
+    if payload.get("_resolved_company_label"):
+        lines.append(f"Empresa da consulta: {payload['_resolved_company_label']}")
+    elif payload.get("_summary_company_label"):
+        lines.append(f"Empresa da consulta: {payload['_summary_company_label']}")
+    elif payload.get("_session_company_label"):
         lines.append(f"Empresa ativa: {payload['_session_company_label']}")
     return lines
 
@@ -1586,11 +1670,15 @@ def _list_optional_fields(
 ) -> List[WorkflowRequiredField]:
     normalized_payload = _public_payload(payload)
     fields = WorkflowRequiredField.normalize_many(option.required_fields or [])
-    return [
-        field
-        for field in fields
-        if field.category == "optional" and not str(normalized_payload.get(field.key) or "").strip()
-    ]
+    selected: List[WorkflowRequiredField] = []
+    seen_keys: set[str] = set()
+    for field in fields:
+        if field.key in seen_keys:
+            continue
+        if field.category == "optional" and not str(normalized_payload.get(field.key) or "").strip():
+            selected.append(field)
+            seen_keys.add(field.key)
+    return selected
 
 
 def _list_complementary_fields(
@@ -1599,11 +1687,15 @@ def _list_complementary_fields(
 ) -> List[WorkflowRequiredField]:
     normalized_payload = _public_payload(payload)
     fields = WorkflowRequiredField.normalize_many(option.required_fields or [])
-    return [
-        field
-        for field in fields
-        if field.category == "complementary" and not str(normalized_payload.get(field.key) or "").strip()
-    ]
+    selected: List[WorkflowRequiredField] = []
+    seen_keys: set[str] = set()
+    for field in fields:
+        if field.key in seen_keys:
+            continue
+        if field.category == "complementary" and not str(normalized_payload.get(field.key) or "").strip():
+            selected.append(field)
+            seen_keys.add(field.key)
+    return selected
 
 
 def _list_additional_fields(
@@ -5392,19 +5484,29 @@ def _get_or_create_session(
     channel: str,
     thread_id: str,
 ) -> AgentMenuSession:
+    normalized_channel = str(channel or "web").strip().lower() or "web"
     session = AgentMenuSession.query.filter(
         AgentMenuSession.user_id == user_id,
         AgentMenuSession.company_id == company_id,
-        AgentMenuSession.channel == channel,
+        AgentMenuSession.channel == normalized_channel,
         AgentMenuSession.thread_id == thread_id,
     ).first()
     if session:
         return session
 
+    if normalized_channel != "web":
+        fallback_session = AgentMenuSession.query.filter(
+            AgentMenuSession.user_id == user_id,
+            AgentMenuSession.channel == normalized_channel,
+            AgentMenuSession.thread_id == thread_id,
+        ).order_by(AgentMenuSession.updated_at.desc(), AgentMenuSession.id.desc()).first()
+        if fallback_session:
+            return fallback_session
+
     session = AgentMenuSession(
         user_id=user_id,
         company_id=company_id,
-        channel=channel,
+        channel=normalized_channel,
         thread_id=thread_id,
         status="idle",
         collected_data={},

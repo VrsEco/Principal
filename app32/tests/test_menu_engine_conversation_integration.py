@@ -1,5 +1,6 @@
 import os
 import sys
+from types import SimpleNamespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -47,6 +48,22 @@ def _build_my_work_open_option() -> AgentMenuOption:
         required_fields=[],
     )
     option.id = 31
+    return option
+
+
+def _build_routine_consult_option() -> AgentMenuOption:
+    option = AgentMenuOption(
+        code="3.0",
+        title="Consulta de Rotina",
+        action_key="routine.consult",
+        required_fields=[
+            {"key": "empresa", "label": "Empresa", "required": True, "category": "required"},
+            {"key": "periodo", "label": "Periodo", "required": False, "category": "optional"},
+            {"key": "status_consulta", "label": "Status", "required": False, "category": "optional"},
+            {"key": "entidade", "label": "Tipo de Item", "required": False, "category": "complementary"},
+        ],
+    )
+    option.id = 30
     return option
 
 
@@ -348,6 +365,104 @@ def test_handle_menu_message_operation_company_selection_executes_my_work_with_s
     assert session.status == "idle"
 
 
+def test_handle_menu_message_operation_company_selection_executes_routine_consult_with_selected_company(monkeypatch):
+    option = _build_routine_consult_option()
+    session = _DummySession(option)
+    captured = {}
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(
+        menu_engine,
+        "_find_option_by_code",
+        lambda company_id, code, include_inactive=False: option if code == option.code else None,
+    )
+    monkeypatch.setattr(menu_engine, "_list_children", lambda company_id, parent_id: [])
+    monkeypatch.setattr(
+        menu_engine,
+        "_load_summary_company_choices",
+        lambda user_id: [
+            {
+                "index": 1,
+                "company_id": 9,
+                "company_name": "Versus Gestao Corporativa",
+                "company_code": "AA",
+                "label": "AA - Versus Gestao Corporativa",
+            },
+            {
+                "index": 2,
+                "company_id": 12,
+                "company_name": "Save Water",
+                "company_code": "AL",
+                "label": "AL - Save Water",
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_resolve_explicit_company_id_from_payload",
+        lambda payload, user_id: payload.get("_selected_company_id") or payload.get("_summary_company_id"),
+    )
+    monkeypatch.setattr(menu_engine, "_user_can_access_company", lambda user_id, company_id: company_id in {9, 12})
+    monkeypatch.setattr(menu_engine, "_resolve_user_first_name", lambda user_id: "Fabiano")
+    monkeypatch.setattr(menu_engine, "_resolve_company_session_label", lambda company_id: "AA - Versus Gestao Corporativa" if company_id else None)
+    monkeypatch.setattr(
+        menu_engine,
+        "_try_execute_direct_option_result",
+        lambda option, payload, company_id, user_id, channel="web": (
+            captured.update({"payload": dict(payload), "company_id": company_id, "channel": channel})
+            or menu_engine.DirectExecutionResult(
+                executed=True,
+                response_text=f"consulta executada na empresa {company_id}",
+                metadata={},
+            )
+        ),
+    )
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+    monkeypatch.setattr(menu_engine, "_format_root_menu", lambda company_id: "ROOT MENU")
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-routine",
+        message="3.0",
+    )
+
+    assert result.handled is True
+    assert "Fluxo/Tool sugerido: 3.0 - Consulta de Rotina" in result.response_text
+    assert session.status == "awaiting_confirmation"
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-routine",
+        message="sim",
+    )
+
+    assert result.handled is True
+    assert "Escolha a empresa para continuar:" in result.response_text
+    assert session.status == menu_engine.COMPANY_SELECTION_STATUS
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-routine",
+        message="1",
+    )
+
+    assert result.handled is True
+    assert "Campos adicionais disponiveis antes da execucao." in result.response_text
+    assert session.status == menu_engine.ADDITIONAL_FIELDS_STATUS
+    assert session.collected_data["_selected_company_id"] == 9
+    assert session.collected_data["empresa"] == "Versus Gestao Corporativa"
+    assert "periodo" in {field.get("key") for field in (session.missing_fields or [])}
+    assert captured == {}
+
+
 def test_handle_menu_message_attaches_discovery_metadata_for_implicit_selection(monkeypatch):
     option = _build_project_task_option()
     session = _DummySession(option)
@@ -397,6 +512,74 @@ def test_handle_menu_message_attaches_discovery_metadata_for_implicit_selection(
     assert result.metadata["menu_engine"]["selected_option_code"] == option.code
     assert result.metadata["workflow_discovery"]["selected_action_key"] == option.action_key
     assert result.metadata["workflow_discovery"]["confidence"]["route"] == "select"
+
+
+def test_get_or_create_session_reuses_external_thread_when_company_context_changes(monkeypatch):
+    stored_session = SimpleNamespace(
+        id=77,
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="wa_5511999999999",
+        status=menu_engine.COMPANY_SELECTION_STATUS,
+        updated_at=1,
+    )
+
+    class _QueryStub:
+        def __init__(self, exact_match, fallback_match):
+            self._exact_match = exact_match
+            self._fallback_match = fallback_match
+            self._last_filters = ()
+
+        def filter(self, *args):
+            self._last_filters = args
+            return self
+
+        def order_by(self, *args):
+            return self
+
+        def first(self):
+            if len(self._last_filters) >= 4:
+                return self._exact_match
+            return self._fallback_match
+
+    class _AgentMenuSessionStub:
+        class _Field:
+            def __init__(self, name):
+                self.name = name
+
+            def __eq__(self, other):
+                return (self.name, other)
+
+            def desc(self):
+                return self
+
+        query = _QueryStub(exact_match=None, fallback_match=stored_session)
+        user_id = _Field("user_id")
+        company_id = _Field("company_id")
+        channel = _Field("channel")
+        thread_id = _Field("thread_id")
+        updated_at = _Field("updated_at")
+        id = _Field("id")
+
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    added = []
+
+    monkeypatch.setattr(menu_engine, "AgentMenuSession", _AgentMenuSessionStub)
+    monkeypatch.setattr(menu_engine.db.session, "add", lambda session: added.append(session))
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+
+    session = menu_engine._get_or_create_session(
+        user_id=10,
+        company_id=9,
+        channel="whatsapp",
+        thread_id="wa_5511999999999",
+    )
+
+    assert session is stored_session
+    assert added == []
 
 
 def test_handle_menu_message_auto_selects_clear_winner_even_with_multiple_candidates(monkeypatch):
@@ -656,6 +839,75 @@ def test_extract_fields_from_text_avoids_false_positive_collaborator_for_week_pe
     assert "colaborador" not in payload
 
 
+def test_handle_menu_message_greeting_only_offers_menu_or_free_question(monkeypatch):
+    option = _build_my_work_open_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+    monkeypatch.setattr(menu_engine, "_looks_like_command", lambda lower: False)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="whatsapp",
+        thread_id="thread-1",
+        message="oi",
+    )
+
+    assert result.handled is True
+    assert "Olá Fabiano! Espero que esteja bem." in result.response_text
+    assert "digitar menu" in result.response_text
+    assert "pergunta diretamente" in result.response_text
+    assert result.metadata["menu_engine"]["intercept_stage"] == "greeting_only"
+
+
+def test_handle_menu_message_clear_operational_request_does_not_fall_into_greeting(monkeypatch):
+    option = _build_my_work_open_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+    monkeypatch.setattr(menu_engine, "_looks_like_command", lambda lower: True)
+    monkeypatch.setattr(
+        menu_engine,
+        "_discover_options_by_keywords",
+        lambda company_id, lower, channel="web": (
+            [option],
+            {"strategy": "implicit", "top_matches": [{"code": option.code, "score": 0.93}]},
+        ),
+    )
+
+    class _Decision:
+        route = menu_engine.DISCOVERY_CONFIDENCE_ROUTE_SELECT
+        selected_code = option.code
+        candidate_codes = [option.code]
+        reason = "clear_winner"
+
+    monkeypatch.setattr(
+        menu_engine,
+        "_build_workflow_discovery_confidence_policy",
+        lambda: SimpleNamespace(decide=lambda matches: _Decision()),
+    )
+    monkeypatch.setattr(menu_engine, "attach_confidence_decision_to_trace", lambda trace, decision: trace)
+    monkeypatch.setattr(
+        menu_engine,
+        "_prepare_option_flow",
+        lambda session, option, text, lower: menu_engine.MenuInterceptResult(
+            handled=True,
+            response_text="WORKFLOW OK",
+        ),
+    )
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="whatsapp",
+        thread_id="thread-1",
+        message="Quais atividades tenho para hoje?",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "WORKFLOW OK"
+    assert result.metadata["menu_engine"]["intercept_stage"] == "implicit_discovery_selected"
+
+
 def test_extract_fields_from_text_strips_trailing_preposition_from_collaborator():
     payload = menu_engine._extract_fields_from_text(
         "gostaria de saber as atividade vencidas de Caroline Marques na empresa Gandu Motor"
@@ -895,3 +1147,72 @@ def test_extract_fields_from_text_handles_mixed_entity_question_with_que_and_ope
     assert payload["colaborador"] == "Joaquim Guga"
     assert payload["entidade"] == "mixed"
     assert payload["status_consulta"] == "open"
+
+
+def test_extract_fields_from_text_does_not_capture_full_question_as_collaborator():
+    payload = menu_engine._extract_fields_from_text(
+        "Quais as atividades eu tenho vencidas na empresa Versus Gestão Corporativa?"
+    )
+
+    assert payload["empresa"] == "Versus Gestão Corporativa"
+    assert "colaborador" not in payload
+
+
+def test_extract_fields_from_text_detects_explicit_usuario_collaborator():
+    payload = menu_engine._extract_fields_from_text(
+        "Quais as atividades o usuário Caroline Marques tem vencidas?"
+    )
+
+    assert payload["colaborador"] == "Caroline Marques"
+    assert payload["status_consulta"] == "overdue"
+
+
+def test_extract_numbered_fields_from_text_accepts_whatsapp_hyphen_format():
+    parsed = menu_engine.extract_workflow_numbered_fields_from_text(
+        "1 - Caroline Marques",
+        [{"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}],
+    )
+
+    assert parsed["colaborador"] == "Caroline Marques"
+
+
+def test_extract_numbered_fields_from_text_ignores_bare_numeric_reply_for_single_optional_field():
+    parsed = menu_engine.extract_workflow_numbered_fields_from_text(
+        "1",
+        [{"key": "colaborador", "label": "Colaborador", "required": False, "category": "optional"}],
+    )
+
+    assert parsed == {}
+
+
+def test_build_auto_filled_session_lines_prefers_explicit_company_over_active_company():
+    lines = menu_engine._build_auto_filled_session_lines(
+        {
+            "_session_user_name": "Fabiano",
+            "_session_company_label": "AL - Save Water",
+            "_resolved_company_label": "AA - Versus Gestao Corporativa",
+        }
+    )
+
+    assert "Usuario: Fabiano" in lines
+    assert "Empresa da consulta: AA - Versus Gestao Corporativa" in lines
+    assert all("Save Water" not in line for line in lines)
+
+
+def test_adjust_required_fields_for_context_normalizes_my_work_collaborator_as_optional():
+    fields = menu_engine.adjust_workflow_required_fields_for_context(
+        "my_work.overdue",
+        [
+            menu_engine.WorkflowRequiredField(key="empresa", label="Empresa", required=True, category="required"),
+            menu_engine.WorkflowRequiredField(key="colaborador", label="Colaborador", required=True, category="required"),
+            menu_engine.WorkflowRequiredField(key="colaborador", label="Colaborador", required=False, category="optional"),
+            menu_engine.WorkflowRequiredField(key="entidade", label="Tipo de Item", required=True, category="required"),
+        ],
+    )
+
+    normalized = {field.key: field for field in fields}
+    assert "empresa" not in normalized
+    assert normalized["colaborador"].required is False
+    assert normalized["colaborador"].category == "optional"
+    assert normalized["entidade"].required is False
+    assert normalized["entidade"].category == "complementary"
