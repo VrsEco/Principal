@@ -657,7 +657,6 @@ def register_api_resources(api):
         FinancialIngestionRecordResource,
         FinancialIngestionRecordReviewResource,
         FinancialIngestionRecordConvertResource,
-        FinancialAccountabilityUploadResource,
         FinancialScheduleListResource,
         FinancialScheduleOptionsResource,
         FinancialScheduleResource,
@@ -842,7 +841,6 @@ def register_api_resources(api):
     api.add_resource(FinancialIngestionRecordResource, '/api/financial/ingestions/<int:record_id>')
     api.add_resource(FinancialIngestionRecordReviewResource, '/api/financial/ingestions/<int:record_id>/review')
     api.add_resource(FinancialIngestionRecordConvertResource, '/api/financial/ingestions/<int:record_id>/convert')
-    api.add_resource(FinancialAccountabilityUploadResource, '/api/financial/accountability/uploads')
     api.add_resource(FinancialScheduleListResource, '/api/financial/schedules')
     api.add_resource(FinancialScheduleOptionsResource, '/api/financial/schedules/options')
     api.add_resource(FinancialScheduleResource, '/api/financial/schedules/<int:schedule_id>')
@@ -1013,3 +1011,4 @@ if __name__ == '__main__':
     debug = os.environ.get('DEBUG', 'true').lower() == 'true'
     print(f'Starting APP32 modularized version on port {port}...')
     app.run(debug=debug, port=port, use_reloader=False)
+
