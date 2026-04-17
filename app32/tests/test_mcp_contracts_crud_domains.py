@@ -11,7 +11,7 @@ from src.intelligence.mcp_contracts import (
 def test_app32_crud_contracts_cover_required_domains_and_crud_guidance():
     domains = {contract.domain for contract in APP32_CRUD_CONTRACTS_MANIFEST.domains}
 
-    assert domains == {"routine", "projects", "meetings", "finance", "strategy"}
+    assert domains == {"routine", "projects", "processes", "meetings", "finance", "strategy"}
 
     for contract in APP32_CRUD_CONTRACTS_MANIFEST.domains:
         assert contract.operations

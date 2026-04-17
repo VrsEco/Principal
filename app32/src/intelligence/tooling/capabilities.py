@@ -196,7 +196,6 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "domain": "finance",
         "scopes": (
             ToolScope.SAPIENS.value,
-            ToolScope.MCP_USER.value,
             ToolScope.MCP_ADMIN.value,
             ToolScope.MCP_ANALYTICS.value,
         ),

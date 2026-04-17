@@ -85,6 +85,8 @@ def test_contract_drift_surface_manifests_expose_only_expected_canonical_tools()
     assert "list_system_users" in admin_tools
     assert "register_system_user" not in user_tools
     assert "register_system_user" in admin_tools
+    assert "get_financial_results" not in user_tools
+    assert "get_financial_results" in admin_tools
     assert "get_team_workload_read_model" in analytics_tools
     assert "get_team_workload_read_model" not in ops_tools
     assert "list_team_workload" in analytics_tools
