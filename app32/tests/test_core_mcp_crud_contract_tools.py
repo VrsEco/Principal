@@ -29,6 +29,7 @@ def test_crud_contract_tool_describes_all_domains_and_single_domain():
     assert {domain["domain"] for domain in all_contracts["data"]["domains"]} == {
         "routine",
         "projects",
+        "processes",
         "meetings",
         "finance",
         "strategy",

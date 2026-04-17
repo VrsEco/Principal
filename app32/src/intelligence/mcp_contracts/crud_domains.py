@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 from .base import MCPSuccessEnvelope, _StrictModel
 
 
-CRUDDomain = Literal["routine", "projects", "meetings", "finance", "strategy"]
+CRUDDomain = Literal["routine", "projects", "processes", "meetings", "finance", "strategy"]
 CRUDAction = Literal["create", "read", "update", "delete", "list", "analyze", "execute"]
 CRUDRole = Literal["colaborador", "cliente", "administrador", "admin_tecnico"]
 CRUDSurface = Literal["mcp_user", "mcp_admin", "mcp_analytics", "mcp_ops"]
@@ -244,6 +244,14 @@ def build_app32_crud_contracts_manifest() -> CRUDContractsManifest:
                 title="Projetos",
                 description="Projetos, tarefas, prazos, workload e logs de trabalho.",
                 entity="project_task",
+                mutation_roles=operational_roles,
+                read_roles=all_roles,
+            ),
+            _domain_contract(
+                domain="processes",
+                title="Processos",
+                description="Processos, fluxos, instâncias operacionais e cadastros associados ao domínio canônico de processos.",
+                entity="process",
                 mutation_roles=operational_roles,
                 read_roles=all_roles,
             ),
