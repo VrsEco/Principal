@@ -20,6 +20,9 @@ Classificar a entrada do usuário e selecionar o workflow/tool mais adequado ant
 - refletir a arvore oficial do Sapiens por macrodominio, nao a arvore legada
 - aceitar codigos sem ponto como atalho de roteamento, ex: `111`, `124`, `145`, `183`
 - normalizar aliases de dominio antes de decidir policy ou workflow
+- nao rotear leitura financeira executiva para surface `user`; usar surface privilegiada compatível com policy
+- em canal remoto/claude.ai, considerar que a identidade vem do conector/autenticacao remota e nao da sessao web local
+- se o conector remoto nao expuser as tools esperadas, iniciar por discovery/capabilities e nao presumir indisponibilidade de negocio
 
 ## Dominios oficiais
 - `1` Gestao da Rotina

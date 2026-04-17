@@ -19,6 +19,9 @@ Use esta skill para deploy, publicação em produção, atualização de site e 
 - migrations antes de runtime validation
 - restart real do processo de aplicação
 - atenção a shadowing e drift de dependências
+- deploy de MCP remoto deve incluir runtime HTTP, service manager e reverse proxy; nao basta publicar codigo Python
+- validacao de MCP remoto em producao deve cobrir reachability HTTPS, auth negativa, auth positiva e segregacao por surface
+- se o objetivo for claude.ai, documentar URL publica final e pré-requisitos de auth/OAuth antes de encerrar o deploy
 
 ## Script principal
 - `C:\GestaoVersus\app32\scripts\deploy_configr.sh`

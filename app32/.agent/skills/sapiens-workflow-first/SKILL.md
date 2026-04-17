@@ -59,7 +59,21 @@ Use quando o pedido envolver Sapiens, WhatsApp, chat operacional, roteamento por
 - `routine` e o dominio canônico das consultas e mutacoes operacionais do dia a dia
 - `work`, `tasks` e `worklog` sao aliases de `routine`
 - `processes` e dominio canônico proprio, nao alias de `routine`
+- `finance` continua dominio canônico, mas leitura executiva/privilegiada nao deve ser tratada como surface `user`
 - workflow, policy, contracts e catalogo devem falar o mesmo nome canônico
+
+## Regra de surface MCP aplicada ao roteamento
+- consultas operacionais comuns priorizam `user`
+- leitura financeira executiva ou privilegiada deve priorizar `admin`/`analytics`, conforme policy
+- analytics e leitura/análise apenas; nao usar como atalho para mutacao
+- ops e intervencao operacional; nao usar como substituto de admin
+
+## Regra de MCP remoto aplicada ao roteamento
+- quando o canal for conector remoto/claude.ai, assumir transporte HTTPS e contexto por request, nao por `current_user`
+- roteamento remoto deve considerar que a identidade pode vir de auth/token/OAuth e nao de sessao Flask local
+- na ausencia de identidade remota resolvida, falhar fechado; nao degradar para execucao sem tenant
+- para conector remoto, discovery de capability deve continuar refletindo o mesmo manifesto canonico das surfaces stdio
+- auth MVP por Bearer token serve para homologacao controlada; onboarding real no claude.ai deve apontar para OAuth como destino arquitetural
 
 ## Pipeline canonico
 1. Identificar workflow
