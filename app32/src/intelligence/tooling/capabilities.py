@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Iterable, Mapping, Sequence
 
+from src.intelligence.taxonomy import expand_tool_domain_aliases, normalize_tool_domain
+
 
 class ToolScope(str, Enum):
     """Escopos operacionais suportados pelo APP32."""
@@ -159,7 +161,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("crud",),
     },
     "get_my_work": {
-        "domain": "work",
+        "domain": "routine",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.LOW,
         "permissions": ("work.read_self",),
@@ -245,7 +247,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("communication",),
     },
     "get_tasks_today": {
-        "domain": "tasks",
+        "domain": "routine",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.LOW,
         "permissions": ("task.read",),
@@ -259,14 +261,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("crud",),
     },
     "complete_task": {
-        "domain": "tasks",
+        "domain": "routine",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("task.complete",),
         "tags": ("mutation",),
     },
     "log_work_hours": {
-        "domain": "worklog",
+        "domain": "routine",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("worklog.create",),
@@ -307,8 +309,8 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("process", "processes"),
     ("plan", "strategy"),
     ("meeting", "meetings"),
-    ("task", "tasks"),
-    ("work", "work"),
+    ("task", "routine"),
+    ("work", "routine"),
     ("project", "projects"),
     ("user", "identity"),
     ("company", "governance"),
@@ -319,9 +321,7 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("query", "analytics"),
 )
 
-_DOMAIN_FILTER_ALIASES: dict[str, tuple[str, ...]] = {
-    "identity": ("identity_self_service", "identity_admin"),
-}
+_DOMAIN_FILTER_ALIASES: dict[str, tuple[str, ...]] = {}
 
 
 def _normalize_scopes(scopes: Iterable[str | ToolScope]) -> tuple[str, ...]:
@@ -334,7 +334,7 @@ def _normalize_scopes(scopes: Iterable[str | ToolScope]) -> tuple[str, ...]:
 
 
 def _expand_domain_aliases(domains: set[str]) -> set[str]:
-    expanded = {str(domain) for domain in domains}
+    expanded = expand_tool_domain_aliases(str(domain) for domain in domains)
     for domain in tuple(expanded):
         expanded.update(_DOMAIN_FILTER_ALIASES.get(domain, ()))
     return expanded
@@ -365,6 +365,7 @@ def infer_tool_capability(tool: Any) -> ToolCapability:
         if keyword in lowered:
             domain = mapped_domain
             break
+    domain = normalize_tool_domain(domain) or "general"
 
     mutating_prefixes = ("create_", "update_", "delete_", "complete_", "log_", "request_", "start_", "finish_", "send_", "register_")
     is_mutation = lowered.startswith(mutating_prefixes)

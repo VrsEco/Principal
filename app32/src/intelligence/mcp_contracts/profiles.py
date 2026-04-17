@@ -68,7 +68,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 profile="colaborador",
                 allowed_surfaces=["user"],
                 default_surface="user",
-                allowed_domains=["routine", "projects", "meetings", "strategy", "identity_self_service"],
+                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "identity_self_service"],
                 forbidden_domains=["finance", "governance", "admin", "analytics", "operations", "workload", "identity_admin"],
                 max_risk_without_human_gate="medium",
                 can_execute_mutations=True,
@@ -77,7 +77,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 profile="cliente",
                 allowed_surfaces=["user"],
                 default_surface="user",
-                allowed_domains=["routine", "projects", "meetings", "strategy", "identity_self_service"],
+                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "identity_self_service"],
                 forbidden_domains=["finance", "governance", "admin", "analytics", "operations", "workload", "identity_admin"],
                 max_risk_without_human_gate="low",
                 can_execute_mutations=False,
@@ -89,6 +89,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 allowed_domains=[
                     "routine",
                     "projects",
+                    "processes",
                     "meetings",
                     "finance",
                     "strategy",
@@ -112,6 +113,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 allowed_domains=[
                     "routine",
                     "projects",
+                    "processes",
                     "meetings",
                     "finance",
                     "strategy",

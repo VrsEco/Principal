@@ -706,6 +706,15 @@ def test_looks_like_command_accepts_operational_query_in_natural_language():
     )
 
 
+def test_looks_like_command_accepts_me_traga_operational_phrase():
+    assert (
+        menu_engine._looks_like_command(
+            "preciso que você me traga as tarefas atrasadas de marcio da empresa ventana"
+        )
+        is True
+    )
+
+
 def test_looks_like_command_accepts_hitl_approval_short_reply():
     assert menu_engine._looks_like_command("aprovado.") is True
 

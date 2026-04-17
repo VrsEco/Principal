@@ -33,6 +33,7 @@ def test_cliente_is_restricted_to_user_read_or_limited_actions():
     assert "finance" in cliente.forbidden_domains
     assert "workload" in cliente.forbidden_domains
     assert "identity_self_service" in cliente.allowed_domains
+    assert "processes" in cliente.allowed_domains
     assert "identity_admin" in cliente.forbidden_domains
 
 
@@ -47,9 +48,11 @@ def test_administrador_and_admin_tecnico_surface_matrix():
     assert "ops" not in administrador.allowed_surfaces
     assert set(admin_tecnico.allowed_surfaces) == {"admin", "analytics", "ops"}
     assert "identity_admin" in administrador.allowed_domains
+    assert "processes" in administrador.allowed_domains
     assert "identity_self_service" in administrador.allowed_domains
     assert "workload" in administrador.allowed_domains
     assert "identity_admin" in admin_tecnico.allowed_domains
+    assert "processes" in admin_tecnico.allowed_domains
     assert "workload" in admin_tecnico.allowed_domains
 
 

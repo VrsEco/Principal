@@ -120,10 +120,12 @@ def test_validate_permission_supports_projects_meetings_and_canonical_actions():
 
     project_discover = validate_permission(collaborator, domain="projects", action="discover")
     meeting_search = validate_permission(collaborator, domain="meetings", action="search")
+    process_read = validate_permission(collaborator, domain="processes", action="read")
     operations_audit = validate_permission(admin_tecnico, domain="operations", action="audit")
 
     assert project_discover.allowed is True
     assert meeting_search.allowed is True
+    assert process_read.allowed is True
     assert operations_audit.allowed is True
 
 
@@ -164,6 +166,18 @@ def test_validate_permission_supports_identity_split_and_blocks_unknown_domain_e
     assert admin_identity.allowed is True
     assert decision.allowed is False
     assert "unknown_domain_rejected" in decision.checks
+
+
+def test_validate_permission_normalizes_legacy_routine_aliases() -> None:
+    collaborator = PrincipalContext(user_id=10, company_id=12, role="colaborador")
+
+    work_read = validate_permission(collaborator, domain="work", action="read")
+    tasks_read = validate_permission(collaborator, domain="tasks", action="read")
+    worklog_create = validate_permission(collaborator, domain="worklog", action="create")
+
+    assert work_read.allowed is True
+    assert tasks_read.allowed is True
+    assert worklog_create.allowed is True
 
 
 def test_prepare_enforcement_combines_tenant_and_permission_checks():

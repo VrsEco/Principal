@@ -12,6 +12,7 @@ from .profiles import APP32_PROFILE_CONTRACTS_MANIFEST, MCPMutationRisk, MCPProf
 PermissionAction = Literal["discover", "read", "create", "update", "delete", "analyze", "audit"]
 PermissionDomain = Literal[
     "routine",
+    "processes",
     "projects",
     "meetings",
     "strategy",
@@ -157,6 +158,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 default_scope="active_company",
                 domains=[
                     _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Pode operar rotina do tenant ativo sem bypass de escopo."]),
+                    _rule("processes", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Processos estruturados seguem surface user com rastreabilidade operacional."]),
                     _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Projetos e tarefas seguem surface user e trilha auditável do sistema."]),
                     _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Reuniões permitem preparação e atualização operacional."]),
                     _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Estratégia para colaborador fica restrita à leitura e análise assistida."]),
@@ -170,6 +172,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 default_scope="active_company",
                 domains=[
                     _rule("routine", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Cliente consulta rotinas sem alterar dados."]),
+                    _rule("processes", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Cliente consulta processos em modo leitura, sem mutação."]),
                     _rule("projects", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Projetos do cliente são somente leitura."]),
                     _rule("meetings", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Acesso a reuniões é informativo, sem mutação."]),
                     _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Cliente pode consultar diagnóstico estratégico sem alterar plano."]),
@@ -183,6 +186,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 default_scope="active_company",
                 domains=[
                     _rule("routine", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Mutações destrutivas devem migrar para admin com confirmação."]),
+                    _rule("processes", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Processos operacionais podem ser geridos na surface user sem admin global."]),
                     _rule("projects", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Projetos operacionais podem ser geridos na surface user."]),
                     _rule("meetings", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Reuniões seguem fluxo operacional comum."]),
                     _rule("strategy", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Mudanças estratégicas sensíveis podem exigir redirecionamento para admin."]),
@@ -196,6 +200,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 default_scope="explicit_company_id",
                 domains=[
                     _rule("routine", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Delete requer confirmação explícita."]),
+                    _rule("processes", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Processos sensíveis exigem confirmação em exclusão e escopo explícito."]),
                     _rule("projects", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Projetos sensíveis pedem gate em exclusão."]),
                     _rule("meetings", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Exclusão de reunião deve ser excepcional e auditada."]),
                     _rule("strategy", ["discover", "read", "create", "update", "delete", "analyze", "audit"], human_gate_for_actions=["delete", "update"], requires_explicit_company_id=True, notes=["Mudanças estratégicas relevantes pedem confirmação humana."]),
@@ -238,6 +243,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 domains=[
                     _rule("operations", ["discover", "read", "create", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Operações devem manter evidência e rollback quando aplicável."]),
                     _rule("routine", ["discover", "read", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Ajustes operacionais via ops são restritos e auditáveis."]),
+                    _rule("processes", ["discover", "read", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Intervenções em processos via ops são pontuais e auditáveis."]),
                     _rule("projects", ["discover", "read", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Projetos em ops são intervenções pontuais, não gestão ampla."]),
                     _rule("meetings", ["discover", "read", "update", "audit"], denied=["delete"], human_gate_for_actions=["update"], notes=["Reuniões em ops ocorrem apenas em contexto de incidente ou suporte."]),
                     _rule("workload", ["discover", "read", "analyze"], denied=["create", "update", "delete"], notes=["Ops pode diagnosticar capacidade do time sem alterar alocação pela própria surface."]),

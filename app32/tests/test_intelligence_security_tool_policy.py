@@ -175,3 +175,33 @@ def test_tool_policy_allows_workload_for_admin_on_analytics() -> None:
     )
 
     assert decision.allowed is True
+
+
+def test_tool_policy_allows_routine_queries_for_supported_user_profiles() -> None:
+    for role in ("colaborador", "cliente", "administrador"):
+        decision = evaluate_tool_policy(
+            {"user_id": 8, "company_id": 7, "role": role},
+            ToolPolicyRequest(
+                tool_name="get_my_work",
+                surface="user",
+                domain="routine",
+                action="read",
+                requested_company_id=7,
+            ),
+        )
+        assert decision.allowed is True, role
+
+
+def test_tool_policy_normalizes_legacy_work_alias_into_routine() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 9, "company_id": 7, "role": "administrador"},
+        ToolPolicyRequest(
+            tool_name="get_my_work",
+            surface="user",
+            domain="work",
+            action="read",
+            requested_company_id=7,
+        ),
+    )
+
+    assert decision.allowed is True

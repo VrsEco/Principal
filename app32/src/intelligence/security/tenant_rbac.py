@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Optional, Sequence, Tuple
 
 from src.intelligence.mcp_contracts import APP32_PROFILE_CONTRACTS_MANIFEST
+from src.intelligence.taxonomy import normalize_tool_domain
 
 ROLE_ALIASES = {
     "admin": "administrador",
@@ -29,6 +30,12 @@ ACTION_ALIASES = {
 }
 DOMAIN_MATRIX = {
     "routine": {
+        "colaborador": READ_ACTIONS | {"create", "update"},
+        "cliente": {"discover", "read", "list", "search"},
+        "administrador": READ_ACTIONS | WRITE_ACTIONS,
+        "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
+    },
+    "processes": {
         "colaborador": READ_ACTIONS | {"create", "update"},
         "cliente": {"discover", "read", "list", "search"},
         "administrador": READ_ACTIONS | WRITE_ACTIONS,
@@ -356,7 +363,7 @@ def validate_permission(
     action: Optional[str] = None,
     required_permissions: Optional[Sequence[str]] = None,
 ) -> PermissionDecision:
-    normalized_domain = _normalize_text(domain).lower() or None
+    normalized_domain = normalize_tool_domain(_normalize_text(domain).lower() or None)
     normalized_action = _normalize_action(action)
     normalized_role = _normalize_role(principal.role)
     required = {perm.lower() for perm in (required_permissions or ()) if _normalize_text(perm)}

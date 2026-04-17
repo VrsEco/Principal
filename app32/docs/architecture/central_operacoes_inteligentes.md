@@ -332,6 +332,8 @@ Sapiens e MCP deixam de ser “menus concorrentes” e passam a ser:
 
 ## Taxonomia funcional recomendada
 
+> Referência complementar: `C:\GestaoVersus\app32\app32\docs\architecture\TAXONOMIA_CANONICA_SAPIENS_APP32.md`
+
 Cada operação deve ter:
 
 - `module_key`

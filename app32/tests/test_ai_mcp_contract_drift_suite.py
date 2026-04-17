@@ -11,6 +11,7 @@ from src.intelligence.mcp_contracts import (
 from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
 from src.intelligence.tool_catalog import catalog
 from src.intelligence.tooling.capabilities import ToolScope
+from src.intelligence.taxonomy import CANONICAL_TOOL_DOMAINS
 from services.tool_first_catalog_service import ToolFirstCatalogService
 
 
@@ -55,6 +56,7 @@ def test_contract_drift_permission_matrix_domains_remain_inside_profile_and_surf
 
 def test_contract_drift_canonical_capabilities_match_expected_scopes_and_domains():
     expected = {
+        "get_my_work": ("routine", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
         "list_my_companies": ("identity_self_service", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
         "list_system_users": ("identity_admin", {ToolScope.MCP_ADMIN.value}),
         "register_system_user": ("identity_admin", {ToolScope.MCP_ADMIN.value}),
@@ -167,6 +169,13 @@ def test_contract_drift_workload_and_identity_have_matrix_coverage_on_expected_s
     assert any(rule.domain == "workload" for rule in tech_analytics.domains)
     assert any(rule.domain == "workload" for rule in tech_ops.domains)
     assert all(rule.domain != "identity_admin" for matrix in APP32_PERMISSION_MATRIX_MANIFEST.matrices for rule in matrix.domains)
+
+
+def test_contract_drift_all_published_tool_domains_are_canonical() -> None:
+    manifest = catalog.get_capability_manifest(include_tools=True)
+    published_domains = {tool["domain"] for tool in manifest.get("tools", [])}
+
+    assert published_domains <= set(CANONICAL_TOOL_DOMAINS)
 
 
 def test_contract_drift_tool_first_catalog_references_only_published_capabilities_or_planned_backlog():

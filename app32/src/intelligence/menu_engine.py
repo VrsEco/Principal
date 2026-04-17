@@ -260,6 +260,8 @@ COMMAND_QUERY_HINTS = (
     "qual",
     "me informe",
     "informe",
+    "me traga",
+    "traga",
     "quero saber",
     "gostaria de saber",
     "me diga",
