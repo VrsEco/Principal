@@ -712,12 +712,14 @@ def register_api_resources(api):
     )
     from api.resources.financial_automation import (
         FinancialAutomationBatchListResource,
-        FinancialAutomationBulkStatusResource,
-        FinancialAutomationDocumentResource,
-        FinancialAutomationGenerateResource,
         FinancialAutomationOptionsResource,
+        FinancialAutomationUploadBatchResource,
+        FinancialAutomationBatchParseResource,
+        FinancialAutomationBulkStatusResource,
         FinancialAutomationRecordListResource,
         FinancialAutomationRecordResource,
+        FinancialAutomationGenerateResource,
+        FinancialAutomationDocumentResource,
     )
     from api.resources.operational_audit import OperationalAuditPanelResource
     from api.resources.financial_budget import (
@@ -895,6 +897,15 @@ def register_api_resources(api):
     api.add_resource(FinancialBankReconciliationRowCandidatesResource, '/api/financial/reconciliation/rows/<int:row_id>/candidates')
     api.add_resource(FinancialBankReconciliationRowMatchResource, '/api/financial/reconciliation/rows/<int:row_id>/match')
     api.add_resource(FinancialBankReconciliationCreateEntryResource, '/api/financial/reconciliation/rows/<int:row_id>/create-entry')
+    api.add_resource(FinancialAutomationOptionsResource, '/api/financial/automation/options')
+    api.add_resource(FinancialAutomationBatchListResource, '/api/financial/automation/batches')
+    api.add_resource(FinancialAutomationUploadBatchResource, '/api/financial/automation/uploads')
+    api.add_resource(FinancialAutomationBatchParseResource, '/api/financial/automation/batches/<int:batch_id>/parse')
+    api.add_resource(FinancialAutomationRecordListResource, '/api/financial/automation/records')
+    api.add_resource(FinancialAutomationRecordResource, '/api/financial/automation/records/<int:record_id>')
+    api.add_resource(FinancialAutomationBulkStatusResource, '/api/financial/automation/records/bulk-status')
+    api.add_resource(FinancialAutomationGenerateResource, '/api/financial/automation/generate')
+    api.add_resource(FinancialAutomationDocumentResource, '/api/financial/automation/documents/<int:document_id>')
     api.add_resource(FinancialClassificationRuleListResource, '/api/financial/classification-rules')
     api.add_resource(FinancialClassificationRuleResource, '/api/financial/classification-rules/<int:rule_id>')
     api.add_resource(FinancialClassificationRuleToggleResource, '/api/financial/classification-rules/<int:rule_id>/toggle')

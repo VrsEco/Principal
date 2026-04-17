@@ -62,6 +62,12 @@
                     </select>
                 </label>
                 <label>
+                    <span>Tipo documental</span>
+                    <select id="filter-document-type">
+                        <option value="">Todos</option>
+                    </select>
+                </label>
+                <label>
                     <span>Competência de</span>
                     <input type="date" id="filter-competence-from">
                 </label>
@@ -85,7 +91,10 @@
                         <tr>
                             <th><input type="checkbox" id="fa-select-all"></th>
                             <th>Status</th>
+                            <th>Documento</th>
                             <th>Origem</th>
+                            <th>Emitente / Destinatário</th>
+                            <th>Número / Chave</th>
                             <th>Tipo</th>
                             <th>Situação</th>
                             <th>Descrição</th>
@@ -98,12 +107,13 @@
                             <th>Centro</th>
                             <th>Projeto/Processo</th>
                             <th>Confiança</th>
+                            <th>Pendências</th>
                             <th>Origem</th>
                         </tr>
                     </thead>
                     <tbody id="fa-records-body">
                         <tr>
-                            <td colspan="16" class="fa-empty">Carregando registros...</td>
+                            <td colspan="20" class="fa-empty">Carregando registros...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -123,8 +133,8 @@
         </div>
         <div class="fa-dialog__body">
             <p class="fa-muted">
-                MVP inicial com ingestão estruturada por payload. O conector de upload documental
-                poderá alimentar este mesmo endpoint na próxima iteração.
+                Agora a Central aceita XML fiscal, DANFE/DACTE em PDF, imagens e recibos,
+                armazenando o original, derivados de consulta e o que foi extraído para revisão.
             </p>
             <label>
                 <span>Origem</span>
@@ -140,6 +150,11 @@
             <label>
                 <span>Rótulo do lote</span>
                 <input type="text" id="fa-import-source-label" placeholder="Ex.: Prestação abril / lote 01">
+            </label>
+            <label>
+                <span>Arquivos reais</span>
+                <input type="file" id="fa-import-files" multiple>
+                <small class="fa-muted">Você pode subir XMLs fiscais, DANFEs/DACTEs em PDF, recibos em PDF/imagem, planilhas e OFX. Os arquivos ficam vinculados ao registro para consulta posterior.</small>
             </label>
             <label>
                 <span>Documents JSON (opcional)</span>

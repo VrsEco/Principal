@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import request
+from flask import current_app, request
 from flask_login import current_user
 from flask_restful import Resource
 
@@ -39,6 +39,40 @@ class FinancialAutomationBatchListResource(Resource):
         return result, 201
 
 
+class FinancialAutomationUploadBatchResource(Resource):
+    @permission_required("financial", "create")
+    def post(self):
+        company_id = get_request_company_id()
+        result, error = FinancialAutomationService.upload_batch_files(
+            company_id=company_id,
+            origin_type=str(request.form.get("origin_type") or "manual_upload").strip() or "manual_upload",
+            source_label=request.form.get("source_label"),
+            files=request.files.getlist("files"),
+            upload_root=current_app.config.get("UPLOAD_FOLDER", "uploads"),
+            created_by_user_id=getattr(current_user, "id", None),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
+class FinancialAutomationBatchParseResource(Resource):
+    @permission_required("financial", "create")
+    def post(self, batch_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialAutomationService.parse_batch_documents(
+            company_id=company_id,
+            batch_id=batch_id,
+            upload_root=current_app.config.get("UPLOAD_FOLDER", "uploads"),
+            allowed_company_ids=get_accessible_company_ids(),
+            performed_by_user_id=getattr(current_user, "id", None),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
 class FinancialAutomationRecordListResource(Resource):
     @permission_required("financial", "view")
     def get(self):
@@ -48,6 +82,7 @@ class FinancialAutomationRecordListResource(Resource):
             allowed_company_ids=get_accessible_company_ids(),
             status=request.args.get("status"),
             origin_type=request.args.get("origin_type"),
+            document_type=request.args.get("document_type"),
             batch_id=request.args.get("batch_id", type=int),
             competence_date_from=request.args.get("competence_date_from"),
             competence_date_to=request.args.get("competence_date_to"),

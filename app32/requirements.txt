@@ -40,6 +40,10 @@ pyTelegramBotAPI
 reportlab
 weasyprint
 pypdf
+PyMuPDF
+pillow
+lxml
+xmltodict
 playwright
 
 # Report formatting / i18n
