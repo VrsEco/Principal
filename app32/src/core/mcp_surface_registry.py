@@ -4,6 +4,7 @@ from typing import Any, Literal, Sequence
 
 from src.intelligence.tool_catalog import catalog
 from src.intelligence.tooling.capabilities import ToolScope
+from src.core.mcp_runtime import wrap_mcp_callable
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
     from mcp.server.fastmcp import FastMCP
@@ -56,11 +57,12 @@ def _tool_map() -> dict[str, Any]:
 
 def _register_tool(mcp: Any, tool: Any) -> None:
     if hasattr(tool, "func"):
-        mcp.tool(name=tool.name, description=tool.description)(tool.func)
+        mcp.tool(name=tool.name, description=tool.description)(wrap_mcp_callable(tool.func))
         return
 
     def make_wrapper(current_tool: Any):
         @mcp.tool(name=current_tool.name, description=current_tool.description)
+        @wrap_mcp_callable
         def mcp_tool_wrapper(*args, **kwargs):
             payload = kwargs if kwargs else args[0] if args else {}
             return current_tool.invoke(payload)

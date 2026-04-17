@@ -1,0 +1,52 @@
+{
+  "mcpServers": {
+    "app32-user": {
+      "type": "stdio",
+      "command": "${APP32_PYTHON_EXE:-C:/GestaoVersus/app32/.venv/Scripts/python.exe}",
+      "args": [
+        "${APP32_MCP_ENTRYPOINT:-C:/GestaoVersus/app32/app32/src/core/mcp_server.py}"
+      ],
+      "env": {
+        "APP32_MCP_CLIENT": "claude_code",
+        "APP32_MCP_CHANNEL": "claude_code",
+        "APP32_MCP_SURFACE": "user",
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_COMPANY_ID": "${APP32_MCP_COMPANY_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "FLASK_ENV": "${FLASK_ENV:-production}"
+      }
+    },
+    "app32-admin": {
+      "type": "stdio",
+      "command": "${APP32_PYTHON_EXE:-C:/GestaoVersus/app32/.venv/Scripts/python.exe}",
+      "args": [
+        "${APP32_MCP_ENTRYPOINT:-C:/GestaoVersus/app32/app32/src/core/mcp_server.py}"
+      ],
+      "env": {
+        "APP32_MCP_CLIENT": "claude_code",
+        "APP32_MCP_CHANNEL": "claude_code",
+        "APP32_MCP_SURFACE": "admin",
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_COMPANY_ID": "${APP32_MCP_COMPANY_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "FLASK_ENV": "${FLASK_ENV:-production}"
+      }
+    },
+    "app32-analytics": {
+      "type": "stdio",
+      "command": "${APP32_PYTHON_EXE:-C:/GestaoVersus/app32/.venv/Scripts/python.exe}",
+      "args": [
+        "${APP32_MCP_ENTRYPOINT:-C:/GestaoVersus/app32/app32/src/core/mcp_server.py}"
+      ],
+      "env": {
+        "APP32_MCP_CLIENT": "claude_code",
+        "APP32_MCP_CHANNEL": "claude_code",
+        "APP32_MCP_SURFACE": "analytics",
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_COMPANY_ID": "${APP32_MCP_COMPANY_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "FLASK_ENV": "${FLASK_ENV:-production}"
+      }
+    }
+  }
+}

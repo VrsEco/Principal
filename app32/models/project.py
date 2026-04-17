@@ -135,6 +135,10 @@ class ProjectTask(db.Model):
     worked_hours = db.Column(db.Numeric(10, 2), default=0)
     completion_date = db.Column(db.Date)
     logs = db.Column(db.JSON, default=list)  # Diary/journal entries
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+    deleted_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    delete_reason = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
@@ -191,6 +195,10 @@ class ProjectTask(db.Model):
             "estimated_hours": float(self.estimated_hours) if self.estimated_hours is not None else 0.0,
             "worked_hours": float(self.worked_hours) if self.worked_hours is not None else 0.0,
             "logs": self.logs or [],
+            "is_deleted": bool(self.is_deleted),
+            "deleted_at": self.deleted_at.isoformat() if hasattr(self.deleted_at, 'isoformat') else self.deleted_at,
+            "deleted_by_user_id": self.deleted_by_user_id,
+            "delete_reason": self.delete_reason,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
             "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
         }

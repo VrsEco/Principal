@@ -9,6 +9,13 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func
 
 from models import db
+from services.project_task_mcp_service import ProjectTaskMCPService
+from src.intelligence.security.mcp_mutation_guard import (
+    evaluate_mutation_limit,
+    record_mutation_success,
+)
+from src.intelligence.security.runtime_identity import resolve_runtime_identity
+from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
 from src.intelligence.tools_support import (
     get_active_company_id,
     get_active_user,
@@ -19,6 +26,66 @@ from src.intelligence.tools_support import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _current_surface() -> str:
+    return str(os.environ.get("APP32_MCP_SURFACE") or "user").strip().lower()
+
+
+def _build_mcp_principal(company_id: int | None) -> dict[str, object]:
+    user_id = get_active_user_id()
+    runtime_identity = (
+        resolve_runtime_identity(user_id=int(user_id), company_id=company_id)
+        if user_id
+        else {}
+    )
+    permissions = runtime_identity.get("permissions") or ()
+    if isinstance(permissions, dict):
+        permissions = tuple(str(key).strip().lower() for key in permissions.keys() if str(key).strip())
+    elif isinstance(permissions, (list, tuple, set, frozenset)):
+        permissions = tuple(str(item).strip().lower() for item in permissions if str(item).strip())
+    elif permissions:
+        permissions = (str(permissions).strip().lower(),)
+    else:
+        permissions = ()
+
+    return {
+        "user_id": user_id,
+        "company_id": runtime_identity.get("company_id") or company_id,
+        "employee_id": runtime_identity.get("employee_id"),
+        "role": runtime_identity.get("role") or str(os.environ.get("APP32_MCP_FALLBACK_ROLE") or "colaborador").strip().lower(),
+        "channel": str(os.environ.get("APP32_MCP_CHANNEL") or "claude_code").strip().lower(),
+        "thread_id": os.environ.get("APP32_MCP_THREAD_ID"),
+        "permissions": permissions,
+        "accessible_company_ids": tuple(runtime_identity.get("accessible_company_ids") or ()),
+    }
+
+
+def _authorize_project_task_mcp(
+    *,
+    tool_name: str,
+    action: str,
+    company_id: int | None,
+    risk: str,
+    confirmed_mutation: bool = False,
+    required_permissions: tuple[str, ...] = (),
+):
+    principal = _build_mcp_principal(company_id)
+    decision = evaluate_tool_policy(
+        principal,
+        ToolPolicyRequest(
+            tool_name=tool_name,
+            surface=_current_surface(),
+            domain="projects",
+            action=action,
+            risk=risk,
+            requested_company_id=company_id,
+            accessible_company_ids=tuple(principal.get("accessible_company_ids") or ()),
+            required_permissions=required_permissions,
+            confirmed_mutation=confirmed_mutation,
+        ),
+    )
+    return principal, decision
 
 
 def get_tasks_today(scope: str = "me"):
@@ -183,6 +250,248 @@ def create_project_task(project_code: str, task_name: str, responsible_name: str
         f"Codigo da Atividade: {activity_code}\n"
         f"Responsavel: {responsible}"
     )
+
+
+def list_project_tasks_secure(
+    project_id: int | None = None,
+    company_id: int | None = None,
+    include_deleted: bool = False,
+    limit: int = 50,
+):
+    resolved_company_id = int(company_id or get_active_company_id() or 0) or None
+    principal, decision = _authorize_project_task_mcp(
+        tool_name="list_project_tasks_secure",
+        action="read",
+        company_id=resolved_company_id,
+        risk="low",
+        required_permissions=("project.task.read",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    payload, error = ProjectTaskMCPService.list_tasks(
+        company_id=int(decision.resolved_company_id),
+        project_id=int(project_id) if project_id else None,
+        include_deleted=bool(include_deleted),
+        limit=limit,
+    )
+    if error:
+        return {"success": False, "error": error}
+    return {"success": True, "actor_user_id": principal.get("user_id"), **payload}
+
+
+def create_project_task_secure(
+    project_code: str,
+    task_name: str,
+    responsible_name: str = None,
+    due_date: str = None,
+    description: str = None,
+    priority: str = "normal",
+    notes: str = None,
+    company_id: int | None = None,
+):
+    resolved_company_id = int(company_id or get_active_company_id() or 0) or None
+    principal, decision = _authorize_project_task_mcp(
+        tool_name="create_project_task_secure",
+        action="create",
+        company_id=resolved_company_id,
+        risk="medium",
+        required_permissions=("project.task.create",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    limit_decision = evaluate_mutation_limit(
+        action="create",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+
+    payload, error = ProjectTaskMCPService.create_task(
+        company_id=int(decision.resolved_company_id),
+        user_id=int(principal["user_id"]),
+        project_code=project_code,
+        task_name=task_name,
+        responsible_name=responsible_name,
+        due_date=due_date,
+        description=description,
+        priority=priority,
+        notes=notes,
+    )
+    if error:
+        return {"success": False, "error": error}
+
+    record_mutation_success(
+        action="create",
+        company_id=int(decision.resolved_company_id),
+        user_id=int(principal["user_id"]),
+        tool_name="create_project_task_secure",
+        domain="projects",
+        metadata={"project_code": project_code},
+    )
+    return {"success": True, **(payload or {})}
+
+
+def update_project_task_secure(
+    task_id: int,
+    changes: dict,
+    company_id: int | None = None,
+):
+    resolved_company_id = int(company_id or get_active_company_id() or 0) or None
+    principal, decision = _authorize_project_task_mcp(
+        tool_name="update_project_task_secure",
+        action="update",
+        company_id=resolved_company_id,
+        risk="medium",
+        required_permissions=("project.task.update",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    limit_decision = evaluate_mutation_limit(
+        action="update",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+
+    payload, error = ProjectTaskMCPService.update_task(
+        company_id=int(decision.resolved_company_id),
+        task_id=int(task_id),
+        changes=dict(changes or {}),
+    )
+    if error:
+        return {"success": False, "error": error}
+
+    record_mutation_success(
+        action="update",
+        company_id=int(decision.resolved_company_id),
+        user_id=int(principal["user_id"]),
+        tool_name="update_project_task_secure",
+        domain="projects",
+        metadata={"task_id": int(task_id)},
+    )
+    return {"success": True, **(payload or {})}
+
+
+def delete_project_task_secure(
+    task_id: int,
+    reason: str,
+    confirm: bool = False,
+    company_id: int | None = None,
+):
+    resolved_company_id = int(company_id or get_active_company_id() or 0) or None
+    principal, decision = _authorize_project_task_mcp(
+        tool_name="delete_project_task_secure",
+        action="delete",
+        company_id=resolved_company_id,
+        risk="high",
+        confirmed_mutation=bool(confirm),
+        required_permissions=("project.task.delete",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    limit_decision = evaluate_mutation_limit(
+        action="delete",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+
+    payload, error = ProjectTaskMCPService.soft_delete_task(
+        company_id=int(decision.resolved_company_id),
+        task_id=int(task_id),
+        user_id=int(principal["user_id"]),
+        reason=reason,
+    )
+    if error:
+        return {"success": False, "error": error}
+
+    record_mutation_success(
+        action="delete",
+        company_id=int(decision.resolved_company_id),
+        user_id=int(principal["user_id"]),
+        tool_name="delete_project_task_secure",
+        domain="projects",
+        metadata={"task_id": int(task_id)},
+    )
+    return {"success": True, **(payload or {})}
+
+
+def restore_project_task_secure(
+    task_id: int,
+    confirm: bool = False,
+    company_id: int | None = None,
+):
+    resolved_company_id = int(company_id or get_active_company_id() or 0) or None
+    principal, decision = _authorize_project_task_mcp(
+        tool_name="restore_project_task_secure",
+        action="update",
+        company_id=resolved_company_id,
+        risk="high",
+        confirmed_mutation=bool(confirm),
+        required_permissions=("project.task.restore",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    limit_decision = evaluate_mutation_limit(
+        action="restore",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+
+    payload, error = ProjectTaskMCPService.restore_task(
+        company_id=int(decision.resolved_company_id),
+        task_id=int(task_id),
+    )
+    if error:
+        return {"success": False, "error": error}
+
+    record_mutation_success(
+        action="restore",
+        company_id=int(decision.resolved_company_id),
+        user_id=int(principal["user_id"]),
+        tool_name="restore_project_task_secure",
+        domain="projects",
+        metadata={"task_id": int(task_id)},
+    )
+    return {"success": True, **(payload or {})}
+
+
+def get_project_task_analytics_report(
+    project_id: int | None = None,
+    company_id: int | None = None,
+    include_deleted: bool = True,
+    limit: int = 200,
+):
+    resolved_company_id = int(company_id or get_active_company_id() or 0) or None
+    principal, decision = _authorize_project_task_mcp(
+        tool_name="get_project_task_analytics_report",
+        action="analyze",
+        company_id=resolved_company_id,
+        risk="low",
+        required_permissions=("project.task.analyze",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    payload, error = ProjectTaskMCPService.build_analytics_report(
+        company_id=int(decision.resolved_company_id),
+        project_id=int(project_id) if project_id else None,
+        include_deleted=bool(include_deleted),
+        limit=limit,
+    )
+    if error:
+        return {"success": False, "error": error}
+    return {"success": True, "actor_user_id": principal.get("user_id"), **payload}
 
 def list_team_workload():
     """
