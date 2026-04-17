@@ -1,0 +1,192 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Central de Automação{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Central de Automação</span>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/financial_automation_center.css">
+{% endblock %}
+
+{% block workspace_content %}
+<div class="fa-page" data-company-id="{{ company_id or '' }}">
+    <section class="fa-hero">
+        <div>
+            <p class="fa-eyebrow">Camada externa do Financeiro</p>
+            <h1>Central de Automação Financeira</h1>
+            <p class="fa-muted">
+                Ingestão, validação humana em lote e geração controlada de lançamentos/agendamentos
+                sem alterar o fluxo manual já consolidado do Financeiro.
+            </p>
+        </div>
+        <div class="fa-actions">
+            <button type="button" class="fa-btn fa-btn--primary" id="fa-open-import">Novo lote</button>
+            <button type="button" class="fa-btn fa-btn--secondary" id="fa-refresh">Atualizar</button>
+        </div>
+    </section>
+
+    <section class="fa-card">
+        <div class="fa-card__header">
+            <div>
+                <p class="fa-eyebrow">Filtros</p>
+                <h2>Grade operacional</h2>
+            </div>
+            <div class="fa-inline">
+                <button type="button" class="fa-btn fa-btn--secondary" id="fa-mark-validated">Marcar validados</button>
+                <button type="button" class="fa-btn fa-btn--ghost" id="fa-mark-excluded">Marcar excluídos</button>
+                <button type="button" class="fa-btn fa-btn--primary" id="fa-generate">Gerar validados</button>
+            </div>
+        </div>
+        <div class="fa-card__body">
+            <form class="fa-filters" id="fa-filters">
+                <label>
+                    <span>Status</span>
+                    <select id="filter-status">
+                        <option value="">Todos</option>
+                        <option value="imported">Importada</option>
+                        <option value="validated">Validada</option>
+                        <option value="generated">Gerada</option>
+                        <option value="excluded">Excluída</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Origem</span>
+                    <select id="filter-origin">
+                        <option value="">Todas</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Tipo documental</span>
+                    <select id="filter-document-type">
+                        <option value="">Todos</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Competência de</span>
+                    <input type="date" id="filter-competence-from">
+                </label>
+                <label>
+                    <span>Competência até</span>
+                    <input type="date" id="filter-competence-to">
+                </label>
+                <label>
+                    <span>Vencimento de</span>
+                    <input type="date" id="filter-due-from">
+                </label>
+                <label>
+                    <span>Vencimento até</span>
+                    <input type="date" id="filter-due-to">
+                </label>
+            </form>
+
+            <div class="fa-table-wrap">
+                <table class="fa-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="fa-select-all"></th>
+                            <th>Status</th>
+                            <th>Documento</th>
+                            <th>Origem</th>
+                            <th>Emitente / Destinatário</th>
+                            <th>Número / Chave</th>
+                            <th>Tipo</th>
+                            <th>Situação</th>
+                            <th>Descrição</th>
+                            <th>Favorecido</th>
+                            <th>Valor</th>
+                            <th>Competência</th>
+                            <th>Vencimento</th>
+                            <th>Conta</th>
+                            <th>Conta contábil</th>
+                            <th>Centro</th>
+                            <th>Projeto/Processo</th>
+                            <th>Confiança</th>
+                            <th>Pendências</th>
+                            <th>Origem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fa-records-body">
+                        <tr>
+                            <td colspan="20" class="fa-empty">Carregando registros...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<dialog id="fa-import-dialog" class="fa-dialog">
+    <form method="dialog" class="fa-dialog__content">
+        <div class="fa-dialog__header">
+            <div>
+                <p class="fa-eyebrow">Ingestão inicial</p>
+                <h3>Novo lote</h3>
+            </div>
+            <button type="submit" class="fa-btn fa-btn--ghost">Fechar</button>
+        </div>
+        <div class="fa-dialog__body">
+            <p class="fa-muted">
+                Agora a Central aceita XML fiscal, DANFE/DACTE em PDF, imagens e recibos,
+                armazenando o original, derivados de consulta e o que foi extraído para revisão.
+            </p>
+            <label>
+                <span>Origem</span>
+                <select id="fa-import-origin">
+                    <option value="manual_upload">manual_upload</option>
+                    <option value="accountability">accountability</option>
+                    <option value="csv">csv</option>
+                    <option value="xlsx">xlsx</option>
+                    <option value="ofx">ofx</option>
+                    <option value="integration">integration</option>
+                </select>
+            </label>
+            <label>
+                <span>Rótulo do lote</span>
+                <input type="text" id="fa-import-source-label" placeholder="Ex.: Prestação abril / lote 01">
+            </label>
+            <label>
+                <span>Arquivos reais</span>
+                <input type="file" id="fa-import-files" multiple>
+                <small class="fa-muted">Você pode subir XMLs fiscais, DANFEs/DACTEs em PDF, recibos em PDF/imagem, planilhas e OFX. Os arquivos ficam vinculados ao registro para consulta posterior.</small>
+            </label>
+            <label>
+                <span>Documents JSON (opcional)</span>
+                <textarea id="fa-import-documents" rows="6" placeholder='[{"file_name":"nf_123.pdf","stored_relative_path":"financial/accountability/9/x.pdf","mime_type":"application/pdf"}]'></textarea>
+            </label>
+            <label>
+                <span>Records JSON</span>
+                <textarea id="fa-import-records" rows="12" placeholder='[{"entry_direction":"payable","settlement_state":"open","description":"Fornecedor X","amount":1500.00,"competence_date":"2026-04-17","due_date":"2026-04-25"}]'></textarea>
+            </label>
+            <div class="fa-inline">
+                <button type="button" class="fa-btn fa-btn--primary" id="fa-submit-import">Criar lote</button>
+            </div>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="fa-document-dialog" class="fa-dialog">
+    <form method="dialog" class="fa-dialog__content fa-dialog__content--wide">
+        <div class="fa-dialog__header">
+            <div>
+                <p class="fa-eyebrow">Origem</p>
+                <h3>Documento / preview</h3>
+            </div>
+            <button type="submit" class="fa-btn fa-btn--ghost">Fechar</button>
+        </div>
+        <div class="fa-dialog__body" id="fa-document-body">
+            <p class="fa-muted">Selecione um registro com documento de origem.</p>
+        </div>
+    </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/financial_automation_center.js"></script>
+{% endblock %}
