@@ -12,6 +12,7 @@ from src.intelligence.tool_context import (
     set_legacy_tool_context,
     set_sapiens_context,
 )
+from src.core.mcp_http_auth import get_http_request_context
 
 
 def _coerce_optional_int(value: Any) -> int | None:
@@ -62,20 +63,32 @@ class MCPExecutionContext:
 
 def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> MCPExecutionContext:
     raw_payload = dict(payload or {})
+    http_request_context = dict(get_http_request_context() or {})
+
     user_id = _coerce_optional_int(
-        os.environ.get("APP32_MCP_USER_ID") or os.environ.get("ACTIVE_USER_ID")
+        http_request_context.get("user_id")
+        or os.environ.get("APP32_MCP_USER_ID")
+        or os.environ.get("ACTIVE_USER_ID")
     )
     env_company_id = _coerce_optional_int(
-        os.environ.get("APP32_MCP_COMPANY_ID") or os.environ.get("ACTIVE_COMPANY_ID")
+        http_request_context.get("company_id")
+        or os.environ.get("APP32_MCP_COMPANY_ID")
+        or os.environ.get("ACTIVE_COMPANY_ID")
     )
     requested_company_id = _coerce_optional_int(raw_payload.get("company_id")) or env_company_id
     channel = (
-        str(raw_payload.get("channel") or os.environ.get("APP32_MCP_CHANNEL") or "claude_code")
+        str(
+            raw_payload.get("channel")
+            or http_request_context.get("channel")
+            or os.environ.get("APP32_MCP_CHANNEL")
+            or "claude_code"
+        )
         .strip()
         .lower()
     )
     thread_id = str(
         raw_payload.get("thread_id")
+        or http_request_context.get("thread_id")
         or os.environ.get("APP32_MCP_THREAD_ID")
         or os.environ.get("APP32_MCP_SESSION_ID")
         or ""
@@ -91,14 +104,22 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         for company_id in (runtime_identity.get("accessible_company_ids") or ())
         if _coerce_optional_int(company_id) is not None
     )
-    fallback_role = str(os.environ.get("APP32_MCP_FALLBACK_ROLE") or "colaborador").strip().lower()
+    fallback_role = str(
+        http_request_context.get("fallback_role")
+        or os.environ.get("APP32_MCP_FALLBACK_ROLE")
+        or "colaborador"
+    ).strip().lower()
     role = str(runtime_identity.get("role") or fallback_role).strip().lower() or "colaborador"
     permissions = _normalize_permissions(runtime_identity.get("permissions"))
 
     metadata = {
-        "surface": str(os.environ.get("APP32_MCP_SURFACE") or "user").strip().lower(),
-        "transport": "stdio",
-        "client": str(os.environ.get("APP32_MCP_CLIENT") or "claude_code").strip().lower(),
+        "surface": str(
+            http_request_context.get("surface") or os.environ.get("APP32_MCP_SURFACE") or "user"
+        ).strip().lower(),
+        "transport": str(http_request_context.get("transport") or "stdio").strip().lower(),
+        "client": str(
+            http_request_context.get("client") or os.environ.get("APP32_MCP_CLIENT") or "claude_code"
+        ).strip().lower(),
     }
 
     return MCPExecutionContext(
@@ -142,4 +163,3 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
                 reset_sapiens_context(sapiens_token)
 
     return _wrapped
-
