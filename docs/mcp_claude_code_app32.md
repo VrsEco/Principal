@@ -30,11 +30,14 @@ Opcionalmente:
 
 ## Configuração já preparada
 
-O arquivo `C:\GestaoVersus\app32\.mcp.json` já define 3 servidores:
+O arquivo `C:\GestaoVersus\app32\.mcp.json` agora define 6 servidores:
 
 - `app32-user`
 - `app32-admin`
 - `app32-analytics`
+- `app32-prod-user`
+- `app32-prod-admin`
+- `app32-prod-analytics`
 
 ## Como usar no Claude Code
 
@@ -54,6 +57,51 @@ Depois, no Claude Code:
   - `app32-user` para criar, listar e alterar atividades com privilégio do usuário
   - `app32-admin` para soft delete e restore com confirmação explícita
   - `app32-analytics` para leitura ampla e relatórios
+
+## Como usar direto na produção via SSH
+
+Além do modo local, os servidores `app32-prod-*` sobem o MCP diretamente no host produtivo via SSH e transportam o stdio para o Claude Code.
+
+### Pré-requisitos locais
+
+- OpenSSH cliente disponível no Windows
+- PowerShell 7 em:
+  - `C:\Program Files\PowerShell\7\pwsh.exe`
+- chave privada de deploy disponível localmente
+
+### Variáveis adicionais recomendadas
+
+- `APP32_MCP_SSH_KEY_PATH`
+- `APP32_MCP_PROD_HOST`
+- `APP32_MCP_PROD_USER`
+- `APP32_MCP_PROD_PORT`
+
+Exemplo:
+
+```powershell
+$env:APP32_MCP_USER_ID="SEU_USER_ID"
+$env:APP32_MCP_COMPANY_ID="SUA_COMPANY_ID"
+$env:APP32_MCP_SSH_KEY_PATH="C:\GestaoVersus\app32\deploy_key_SECRETA.txt"
+claude
+```
+
+No Claude Code, prefira:
+
+- `app32-prod-user` para operação do dia a dia em produção
+- `app32-prod-admin` para operações administrativas seguras
+- `app32-prod-analytics` para leitura ampliada e relatórios
+
+## Script local usado para o túnel stdio SSH
+
+- `C:\GestaoVersus\app32\app32\scripts\start_mcp_prod_ssh.ps1`
+
+Esse script:
+
+- valida `APP32_MCP_USER_ID` e `APP32_MCP_COMPANY_ID`
+- conecta no host produtivo com a chave configurada
+- carrega `.env` da aplicação no servidor
+- sobe `src/core/mcp_server.py` em modo stdio no ambiente produtivo
+- seleciona a `surface` remota conforme o servidor MCP escolhido
 
 ## Tools novas deste MVP
 
@@ -133,3 +181,15 @@ Depois, no Claude Code:
 Neste ciclo o `soft delete` foi operacionalizado de ponta a ponta para `ProjectTask`, que é a entidade piloto do MVP.  
 O padrão está pronto para ser expandido para outros domínios.
 
+## Referência oficial do Claude Code
+
+Confirmei a sintaxe de configuração na documentação oficial:
+
+- [Claude Code MCP](https://code.claude.com/docs/en/mcp)
+
+Pontos relevantes da doc:
+
+- `.mcp.json` em escopo de projeto é suportado
+- servidores `stdio` são suportados
+- o comando local pode ser qualquer executável, com `args`
+- `/mcp` é o comando recomendado para checar status dos servidores
