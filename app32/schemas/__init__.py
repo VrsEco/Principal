@@ -24,6 +24,15 @@ from .financial import (
     financial_settlement_schema,
     financial_settlements_schema,
 )
+from .financial_automation import (
+    FinancialAutomationBatchCreateInput,
+    FinancialAutomationBulkStatusInput,
+    FinancialAutomationDocumentCreateInput,
+    FinancialAutomationGenerateInput,
+    FinancialAutomationHistoryCreateInput,
+    FinancialAutomationRecordCreateInput,
+    FinancialAutomationRecordUpdateInput,
+)
 
 __all__ = [
     'ma', 'CompanySchema', 'company_schema', 'companies_schema',
@@ -31,6 +40,10 @@ __all__ = [
     'occurrence_schema', 'occurrences_schema',
     'FinancialEntrySchema', 'FinancialEntryAllocationSchema', 'FinancialSettlementSchema',
     'FinancialImportBatchInput', 'FinancialImportRowInput',
+    'FinancialAutomationBatchCreateInput', 'FinancialAutomationBulkStatusInput',
+    'FinancialAutomationDocumentCreateInput', 'FinancialAutomationGenerateInput',
+    'FinancialAutomationHistoryCreateInput', 'FinancialAutomationRecordCreateInput',
+    'FinancialAutomationRecordUpdateInput',
     'financial_entry_schema', 'financial_entries_schema',
     'financial_entry_allocation_schema', 'financial_entry_allocations_schema',
     'financial_settlement_schema', 'financial_settlements_schema',

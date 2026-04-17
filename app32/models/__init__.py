@@ -49,6 +49,12 @@ from .financial import (
     FinancialClassificationSuggestion,
     FinancialIngestionRecord,
 )
+from .financial_automation import (
+    FinancialAutomationBatch,
+    FinancialAutomationDocument,
+    FinancialAutomationHistory,
+    FinancialAutomationRecord,
+)
 from .financial_budget import (
     FinancialBudgetCycle,
     FinancialBudgetVersion,
@@ -113,6 +119,7 @@ __all__ = [
     'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',
+    'FinancialAutomationBatch', 'FinancialAutomationDocument', 'FinancialAutomationHistory', 'FinancialAutomationRecord',
     'FinancialBudgetCycle', 'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
