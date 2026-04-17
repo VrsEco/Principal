@@ -506,6 +506,86 @@ def create_project_task(project_code: str, task_name: str, responsible_name: str
 
 
 @tool
+def list_project_tasks_secure(project_id: int = None, company_id: int = None, include_deleted: bool = False, limit: int = 50):
+    """
+    Lista atividades de projeto com filtro tenant-safe e suporte opcional a itens soft-deletados.
+    """
+    return task_ops_domain.list_project_tasks_secure(
+        project_id=project_id,
+        company_id=company_id,
+        include_deleted=include_deleted,
+        limit=limit,
+    )
+
+
+@tool
+def create_project_task_secure(project_code: str, task_name: str, responsible_name: str = None, due_date: str = None, description: str = None, priority: str = "normal", notes: str = None, company_id: int = None):
+    """
+    Cria atividade de projeto via MCP com política, quota de mutação e auditoria reforçada.
+    """
+    return task_ops_domain.create_project_task_secure(
+        project_code=project_code,
+        task_name=task_name,
+        responsible_name=responsible_name,
+        due_date=due_date,
+        description=description,
+        priority=priority,
+        notes=notes,
+        company_id=company_id,
+    )
+
+
+@tool
+def update_project_task_secure(task_id: int, changes: dict, company_id: int = None):
+    """
+    Atualiza atividade de projeto via MCP com whitelist de campos e limite de alterações.
+    """
+    return task_ops_domain.update_project_task_secure(
+        task_id=task_id,
+        changes=changes,
+        company_id=company_id,
+    )
+
+
+@tool
+def delete_project_task_secure(task_id: int, reason: str, confirm: bool = False, company_id: int = None):
+    """
+    Executa soft delete de atividade de projeto via MCP. Exige confirmação explícita.
+    """
+    return task_ops_domain.delete_project_task_secure(
+        task_id=task_id,
+        reason=reason,
+        confirm=confirm,
+        company_id=company_id,
+    )
+
+
+@tool
+def restore_project_task_secure(task_id: int, confirm: bool = False, company_id: int = None):
+    """
+    Restaura atividade de projeto previamente removida logicamente. Exige confirmação explícita.
+    """
+    return task_ops_domain.restore_project_task_secure(
+        task_id=task_id,
+        confirm=confirm,
+        company_id=company_id,
+    )
+
+
+@tool
+def get_project_task_analytics_report(project_id: int = None, company_id: int = None, include_deleted: bool = True, limit: int = 200):
+    """
+    Consolida leitura ampla das atividades de projeto para análise e relatórios tenant-safe.
+    """
+    return task_ops_domain.get_project_task_analytics_report(
+        project_id=project_id,
+        company_id=company_id,
+        include_deleted=include_deleted,
+        limit=limit,
+    )
+
+
+@tool
 def complete_task(task_type: str, task_id: int, evidence_description: str = None, completion_date: str = None, notification_email: str = None, notification_whatsapp: str = None):
     """
     Marca uma tarefa de projeto ou instância de processo como CONCLUÍDA e opcionalmente notifica interessados.
@@ -716,6 +796,12 @@ tools = [
     # Fase 2 — Task Management
     get_tasks_today,
     create_project_task,
+    list_project_tasks_secure,
+    create_project_task_secure,
+    update_project_task_secure,
+    delete_project_task_secure,
+    restore_project_task_secure,
+    get_project_task_analytics_report,
     complete_task,
     log_work_hours,
     request_deadline_extension,

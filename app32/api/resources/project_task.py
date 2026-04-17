@@ -153,7 +153,7 @@ def _user_can_update_task(company_id, project_id, task_id):
     if has_permission(company_id, 'projects', 'edit'):
         return True
 
-    query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+    query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
     query = apply_task_employee_filter(query, company_id)
     return query.first() is not None
 
@@ -176,7 +176,7 @@ def _resolve_due_date_change_company_id(project_id, task_id):
     if not project:
         return None
 
-    task = ProjectTask.query.filter_by(id=task_id, project_id=project_id).first()
+    task = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False).first()
     if not task:
         return None
 
@@ -201,7 +201,7 @@ class ProjectTaskListResource(Resource):
         from .project import get_request_company_id
         company_id = get_request_company_id()
             
-        query = ProjectTask.query.filter_by(project_id=project_id).order_by(ProjectTask.id.asc())
+        query = ProjectTask.query.filter_by(project_id=project_id, is_deleted=False).order_by(ProjectTask.id.asc())
         query = apply_task_employee_filter(query, company_id)
         tasks = query.all()
         dumped_tasks = _serialize_task_list(tasks, project_id=project_id, company_id=company_id)
@@ -301,7 +301,7 @@ class ProjectTaskResource(Resource):
         """Get a single task."""
         from .project import get_request_company_id
         company_id = get_request_company_id()
-        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         return _serialize_task(
@@ -317,7 +317,7 @@ class ProjectTaskResource(Resource):
         if not _user_can_update_task(company_id, project_id, task_id):
             return {"error": "Permission denied: edit on projects"}, 403
 
-        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         try:
@@ -387,18 +387,23 @@ class ProjectTaskResource(Resource):
         """Delete a task."""
         from .project import get_request_company_id
         company_id = get_request_company_id()
-        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         if _is_backlog_human_gate_task(task):
             return _build_backlog_human_gate_lock_response()
         try:
+            from flask_login import current_user
+
             _detach_workflow_gap_candidates_for_task(
                 task_id=task.id,
                 project_id=task.project_id,
                 company_id=company_id,
             )
-            db.session.delete(task)
+            task.is_deleted = True
+            task.deleted_at = datetime.utcnow()
+            task.deleted_by_user_id = getattr(current_user, "id", None) if getattr(current_user, "is_authenticated", False) else None
+            task.delete_reason = "soft delete via API"
             
             # Update project progress
             with db.session.no_autoflush:
@@ -421,7 +426,7 @@ class ProjectTaskStageResource(Resource):
         if not _user_can_update_task(company_id, project_id, task_id):
             return {"error": "Permission denied: edit on projects"}, 403
 
-        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         if _is_backlog_human_gate_task(task):
@@ -563,7 +568,7 @@ class ProjectTaskDueDateChangeRequestDecisionResource(Resource):
             return {"error": error}, 400
 
         refreshed_task = ProjectTask.query.filter_by(
-            id=task_id, project_id=project_id
+            id=task_id, project_id=project_id, is_deleted=False
         ).first()
         return {
             "request": request_obj.to_dict(),
@@ -650,7 +655,7 @@ class ProjectTaskHoursSummaryResource(Resource):
         from models.project import ProjectActivityCollaborator
         from .project import get_request_company_id
         company_id = get_request_company_id()
-        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         
@@ -717,7 +722,7 @@ class ProjectTaskTransferResource(Resource):
         """Transfer a task to another project."""
         from .project import get_request_company_id
         company_id = get_request_company_id()
-        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id)
+        query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         if _is_backlog_human_gate_task(task):
@@ -800,7 +805,7 @@ class ProjectTaskDependencyListResource(Resource):
 
         # Valida que a tarefa pertence ao projeto e empresa
         task = ProjectTask.query.filter_by(
-            id=task_id, project_id=project_id
+            id=task_id, project_id=project_id, is_deleted=False
         ).first()
         if not task:
             return {"error": "Atividade não encontrada neste projeto."}, 404

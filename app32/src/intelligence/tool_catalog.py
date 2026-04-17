@@ -17,6 +17,7 @@ from typing import Callable, Iterable, List, Sequence
 from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
+from src.core.mcp_runtime import wrap_mcp_callable
 from src.core.mcp_crud_contract_tools import register_crud_contract_tools
 from src.core.mcp_domain_example_tools import register_domain_example_tools
 from src.core.mcp_domain_playbook_tools import register_domain_playbook_tools
@@ -130,6 +131,7 @@ class ToolCatalog:
 
                 @mcp.tool(name=tool.name, description=tool.description)
                 @wraps(original_func)
+                @wrap_mcp_callable
                 def _wrapped_tool(*args, __current_tool=tool, **kwargs):
                     payload = _extract_context(kwargs if kwargs else (args[0] if args else {}))
                     _audit_mcp_tool(tool_name=__current_tool.name, status="start", payload=payload)
@@ -146,6 +148,7 @@ class ToolCatalog:
 
                     @mcp.tool(name=current_tool.name, description=current_tool.description)
                     @wraps(original_invoke)
+                    @wrap_mcp_callable
                     def mcp_tool_wrapper(*args, **kwargs):
                         payload = _extract_context(kwargs if kwargs else (args[0] if args else {}))
                         _audit_mcp_tool(tool_name=current_tool.name, status="start", payload=payload)
