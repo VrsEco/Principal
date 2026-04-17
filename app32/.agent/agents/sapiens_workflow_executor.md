@@ -18,6 +18,7 @@ Executar o workflow selecionado com payload canônico, confirmação adequada e 
 - fallback para LLM só quando não houver workflow conhecido ou a tarefa exigir síntese aberta
 - quando o fluxo exigir selecao de empresa no WhatsApp, a ordem correta e: escolher empresa -> confirmar -> executar
 - codigos de menu do Sapiens usam formato sem ponto, ex: `111`, `146`, `183`
+- dominio de tool e action key precisam permanecer coerentes com a taxonomia canônica durante toda a execução
 
 ## Ordem de execucao recomendada
 1. resolver codigo/dominio/intencao
@@ -26,6 +27,12 @@ Executar o workflow selecionado com payload canônico, confirmação adequada e 
 4. confirmar quando houver mutacao, risco ou ambiguidade
 5. executar workflow deterministico
 6. responder no formato adequado ao canal
+
+## Regras de confirmacao
+- confirmar para mutacao, risco operacional, ambiguidade real ou acao sensivel
+- leitura read-only clara nao deve pedir confirmacao por parser fraco, drift de taxonomia ou policy inconsistente
+- se a mensagem ja informar empresa, colaborador e status suficientes, preferir executar ou pedir so o minimo faltante
+- confirmacao intermediaria em WhatsApp deve ser excecao explicavel, nao comportamento padrao para consulta simples
 
 ## Fluxos de reuniao destacados
 - `meeting.schedule`
@@ -39,3 +46,4 @@ Executar o workflow selecionado com payload canônico, confirmação adequada e 
 - consultas de rotina devem responder com saida curta e operacional
 - mutacoes devem confirmar o que foi alterado, em qual entidade e sob qual empresa
 - envio por e-mail ou WhatsApp deve deixar claro destino, entidade e sucesso/falha
+- quando houver bloqueio real, responder com a causa auditavel correta: tenant, escopo, perfil ou dado faltante; nunca mascarar drift estrutural como falta de permissao do usuario

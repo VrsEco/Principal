@@ -29,6 +29,8 @@ Use quando o pedido envolver Sapiens, WhatsApp, chat operacional, roteamento por
 - desambiguacao de contexto so quando houver conflito real
 - perguntar apenas o que for indispensavel
 - no WhatsApp, quando houver multiplas empresas elegiveis para uma operacao, selecionar empresa antes da confirmacao final
+- leituras operacionais seguras devem esgotar workflow/tool deterministico antes de qualquer agente livre
+- taxonomia de dominio faz parte da governanca: aliases devem ser normalizados antes da policy
 
 ## Arvore oficial de referencia
 - `1` Gestao da Rotina
@@ -52,6 +54,12 @@ Use quando o pedido envolver Sapiens, WhatsApp, chat operacional, roteamento por
 - equipe: `15x`
 - empresa: `16x`
 - capacidade: `18x`
+
+## Taxonomia operacional canônica
+- `routine` e o dominio canônico das consultas e mutacoes operacionais do dia a dia
+- `work`, `tasks` e `worklog` sao aliases de `routine`
+- `processes` e dominio canônico proprio, nao alias de `routine`
+- workflow, policy, contracts e catalogo devem falar o mesmo nome canônico
 
 ## Pipeline canonico
 1. Identificar workflow
@@ -82,12 +90,19 @@ Use quando o pedido envolver Sapiens, WhatsApp, chat operacional, roteamento por
 - saudacao pura oferece `menu` ou pergunta direta
 - pedido operacional claro nao passa por pergunta de menu
 - pedido que cite explicitamente codigo numerico como `111`, `145` ou `183` deve tentar roteamento direto
+- verbos e padroes como `me informe`, `informe`, `me diga`, `me traga`, `traga` e `preciso que voce me traga` contam como gatilhos operacionais validos quando houver escopo/status/entidade suficientes
+- consulta com empresa explicita + colaborador explicito + status explicito deve tentar execucao deterministica antes de qualquer conclusao de bloqueio
 - se houver sessao pendente:
   - continuar automaticamente quando a resposta casar com o estado atual
   - resetar automaticamente quando o novo comando estiver claro
   - perguntar `nova conversa` x `continuar` apenas em ambiguidade real
 - no WhatsApp aceitar formatos numerados naturais como `1`, `1: valor`, `1 - valor`
 - no WhatsApp, para operacoes com multiplas empresas acessiveis, perguntar a empresa antes de exibir confirmacao de execucao
+
+## Regras de confirmacao
+- confirmar quando houver mutacao, ambiguidade real, risco operacional ou acao sensivel
+- consulta read-only clara nao deve cair em confirmacao por falha de parser ou drift de taxonomia
+- se a pergunta ja trouxer empresa, colaborador, periodo/status e entidade suficientes, preferir execucao direta ou coleta minima faltante
 
 ## Workflows novos ou destacados
 - `meeting.close`
@@ -107,6 +122,7 @@ Use quando o pedido envolver Sapiens, WhatsApp, chat operacional, roteamento por
 - politica de contexto/permissao
 - regras de confirmacao
 - testes de conversa feliz + ambiguidades + canal externo
+- teste de drift para garantir que o dominio publicado continua canônico
 
 ## Referências
 - `references/deterministic-routing-checklist.md`

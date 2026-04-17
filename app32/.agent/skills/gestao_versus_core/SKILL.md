@@ -23,7 +23,7 @@ Skill obrigatória de governança do projeto.
    - deploy/produção -> `deploy_gestao_versus`
 5. Selecionar o especialista líder em `../../router/routing-matrix.md`
 6. Consultar referências só se o detalhe for realmente necessário
-7. Se o tema envolver Sapiens, validar aderencia à arvore oficial, aos codigos sem ponto e ao escopo pessoal/equipe/empresa
+7. Se o tema envolver Sapiens, validar aderencia à arvore oficial, aos codigos sem ponto, ao escopo pessoal/equipe/empresa e à taxonomia canônica de domínios
 
 ## Guardrails inegociáveis
 - stack oficial Python/Flask/PostgreSQL
@@ -35,6 +35,9 @@ Skill obrigatória de governança do projeto.
 - para Sapiens: arvore oficial por dominio, nao por estrutura legada
 - para Sapiens: codigos de menu sem ponto, ex: `111`, `145`, `183`
 - para Sapiens: escopo operacional explicito entre pessoal, equipe e empresa
+- para Sapiens: dominio de tool precisa ser canonico antes da RBAC/policy
+- para Sapiens: alias de dominio devem ser normalizados antes de permissao, telemetria e workflow resolution
+- drift entre `capabilities`, `tenant_rbac`, `profiles`, `permission_matrix` e `playbooks` e falha arquitetural, nao detalhe de implementacao
 
 ## Governança adicional para Sapiens
 - `1` Gestao da Rotina
@@ -45,8 +48,15 @@ Skill obrigatória de governança do projeto.
 - `6` Implantacao e Funcionamento
 - `7` Sapiens Factory
 
+## Taxonomia canônica obrigatória do Sapiens
+- `routine` e o dominio canônico para consultas e operacoes de rotina
+- `work`, `tasks` e `worklog` sao aliases de `routine`, nunca dominios canônicos independentes
+- `processes` e dominio canônico suportado e precisa existir em contratos, policy e catálogo
+- toda capability nova deve nascer com dominio canônico, nunca depender de alias legado para autorizacao
+
 ## Regra de canal relevante
 - no WhatsApp, quando houver multiplas empresas elegiveis para a operacao, a selecao da empresa deve acontecer antes da confirmacao final
+- quando a consulta operacional estiver clara e for somente leitura, nao empurrar fallback agentic por falha de classificação textual
 
 ## Referências
 - `../../router/orchestrator.md`

@@ -19,6 +19,7 @@ Resolver contexto operacional antes da execução: usuário, empresa, permissõe
 - todo acesso deve validar permissão e escopo do tenant
 - webhooks e jobs não podem depender de sessão web autenticada
 - no WhatsApp, quando houver mais de uma empresa elegivel para a operacao, selecionar empresa antes da confirmacao final
+- normalizar dominio antes da policy para nao gerar bloqueio artificial por alias legado
 
 ## Ordem canonica de resolucao de escopo
 1. empresa explicita na mensagem
@@ -30,6 +31,12 @@ Resolver contexto operacional antes da execução: usuário, empresa, permissõe
 - pessoal: operar no contexto do proprio usuario
 - equipe: pode exigir empresa + colaborador + periodo + status
 - empresa: pode exigir empresa + periodo + status + entidade
+
+## Perfis que podem consultar operacional conforme regra de negocio
+- `colaborador`: pode consultar o que e proprio e o que estiver explicitamente autorizado pelo tenant
+- `cliente`: pode consultar dados operacionais da empresa dentro do escopo permitido
+- `administrador`: pode consultar dados operacionais da empresa/equipe sob sua administracao
+- nunca inferir negacao so porque a frase cita outro colaborador; primeiro validar empresa, vinculo e escopo efetivo
 
 ## Payload canonico recomendado
 ```json
@@ -46,3 +53,4 @@ Resolver contexto operacional antes da execução: usuário, empresa, permissõe
 - canal externo nao pode assumir `current_user`; deve depender do contexto recebido e das regras de acesso
 - se o fluxo for de equipe ou empresa e houver risco de tenant errado, preferir confirmar empresa primeiro
 - para codigos de menu sem ponto, preservar o codigo original no payload quando ele ajudar auditoria e telemetria
+- empresa explicita + colaborador explicito + status explicito deve gerar validacao de acesso e escopo, nao resposta pronta de restricao
