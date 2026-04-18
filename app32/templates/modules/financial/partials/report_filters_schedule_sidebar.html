@@ -1,0 +1,133 @@
+{% set period_start = (filters.get('period_start', [default_period_start]) | first) %}
+{% set period_end = (filters.get('period_end', [default_period_end]) | first) %}
+{% set selected_bank_account_id = (filters.get('bank_account_id', ['']) | first) %}
+{% set selected_counterparty_id = (filters.get('counterparty_id', ['']) | first) %}
+{% set selected_schedule_status = (filters.get('schedule_status', ['']) | first) %}
+{% set selected_frequency = (filters.get('frequency', ['']) | first) %}
+{% set selected_movement_nature = (filters.get('movement_nature', ['']) | first) %}
+
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="schedule-report-sidebar-subtitle">Relatório de agendamentos no padrão app32.</p>
+</div>
+
+<div class="sidebar-content-ws schedule-report-sidebar">
+    <form id="schedule-report-filter-form"
+          method="get"
+          action="/financial/reports/{{ report_definition.slug }}/view"
+          data-view-action="/financial/reports/{{ report_definition.slug }}/view"
+          data-pdf-action="/financial/reports/{{ report_definition.slug }}/export.pdf"
+          data-clear-url="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">
+
+        <section class="sr-sidebar-section">
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-period-start">Período inicial</label>
+                <input id="schedule-report-period-start"
+                       type="date"
+                       name="period_start"
+                       value="{{ period_start }}"
+                       required
+                       data-filter-input
+                       data-default-value="{{ default_period_start }}">
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-period-end">Período final</label>
+                <input id="schedule-report-period-end"
+                       type="date"
+                       name="period_end"
+                       value="{{ period_end }}"
+                       required
+                       data-filter-input
+                       data-default-value="{{ default_period_end }}">
+            </div>
+        </section>
+
+        <section class="sr-sidebar-section">
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-movement">Movimento</label>
+                <select id="schedule-report-movement" name="movement_nature" data-filter-input data-default-value="">
+                    <option value="">Entradas e saídas</option>
+                    {% for item in options.movement_natures %}
+                    <option value="{{ item.id }}" {% if selected_movement_nature == item.id %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-status">Status</label>
+                <select id="schedule-report-status" name="schedule_status" data-filter-input data-default-value="">
+                    <option value="">Todos</option>
+                    {% for item in options.schedule_statuses %}
+                    <option value="{{ item.id }}" {% if selected_schedule_status == item.id %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-frequency">Frequência</label>
+                <select id="schedule-report-frequency" name="frequency" data-filter-input data-default-value="">
+                    <option value="">Todas</option>
+                    {% for item in options.frequencies %}
+                    <option value="{{ item.id }}" {% if selected_frequency == item.id %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </section>
+
+        <section class="sr-sidebar-section">
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-bank-account">Conta bancária</label>
+                <select id="schedule-report-bank-account" name="bank_account_id" data-filter-input data-default-value="">
+                    <option value="">Todas</option>
+                    {% for item in options.bank_accounts %}
+                    <option value="{{ item.id }}" {% if selected_bank_account_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-counterparty">Favorecido</label>
+                <select id="schedule-report-counterparty" name="counterparty_id" data-filter-input data-default-value="">
+                    <option value="">Todos</option>
+                    {% for item in options.counterparties %}
+                    <option value="{{ item.id }}" {% if selected_counterparty_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </section>
+
+        <section class="sr-sidebar-section">
+            <p class="filter-label">Orientação</p>
+            <div class="sr-radio-grid">
+                <label class="sr-choice-card">
+                    <input type="radio" name="orientation" value="portrait" {% if selected_orientation == 'portrait' %}checked{% endif %} data-filter-input data-default-value="landscape">
+                    <span>Retrato</span>
+                </label>
+                <label class="sr-choice-card">
+                    <input type="radio" name="orientation" value="landscape" {% if selected_orientation == 'landscape' %}checked{% endif %} data-filter-input data-default-value="landscape">
+                    <span>Paisagem</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="sr-sidebar-section">
+            <p class="filter-label">Saída</p>
+            <div class="sr-radio-grid">
+                <label class="sr-choice-card">
+                    <input type="radio" name="output_mode" value="screen" {% if selected_output_mode == 'screen' %}checked{% endif %} data-filter-input data-default-value="screen">
+                    <span>Na tela</span>
+                </label>
+                <label class="sr-choice-card">
+                    <input type="radio" name="output_mode" value="pdf" {% if selected_output_mode == 'pdf' %}checked{% endif %} data-filter-input data-default-value="screen">
+                    <span>PDF</span>
+                </label>
+            </div>
+        </section>
+
+        <div class="sr-sidebar-footer">
+            <button type="submit" class="btn btn-primary w-100">Gerar relatório</button>
+            <button type="button" class="btn btn-secondary w-100" id="schedule-report-clear-filters">Limpar filtros</button>
+        </div>
+    </form>
+</div>

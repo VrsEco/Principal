@@ -168,14 +168,14 @@
                     </svg>
                 </button>
                 <div class="subgroup-content">
+                    <a href="/financial/automation" class="sub-nav-link {{ 'active' if request.path == '/financial/automation' }}">
+                        <span>Central de Automação</span>
+                    </a>
                     <a href="/financial/schedules" class="sub-nav-link {{ 'active' if request.path == '/financial/schedules' }}">
                         <span>Agendamentos</span>
                     </a>
                     <a href="/financial/entries" class="sub-nav-link {{ 'active' if request.path == '/financial/entries' or '/financial/entries/' in request.path or request.path == '/financial/entries/direct' }}">
                         <span>Lançamento Rápido</span>
-                    </a>
-                    <a href="/financial/automation" class="sub-nav-link {{ 'active' if request.path == '/financial/automation' }}">
-                        <span>Central de Automação</span>
                     </a>
                     <a href="/financial/budget" class="sub-nav-link {{ 'active' if request.path == '/financial/budget' }}">
                         <span>Orçamento Matricial</span>

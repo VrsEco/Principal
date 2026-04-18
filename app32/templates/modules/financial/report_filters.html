@@ -2,12 +2,36 @@
 
 {% block title %}Financeiro - {{ report_definition.label }}{% endblock %}
 
+{% block head %}
+{{ super() }}
+{% if report_definition.code == 'schedule_report' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_schedule.css', v='20260418a') }}">
+{% endif %}
+{% endblock %}
+
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
 <a href="/financial">Financeiro</a>
 <span class="sep">/</span>
 <span class="current">{{ report_definition.label }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+{% if report_definition.code == 'schedule_report' %}
+<div style="display:flex;align-items:center;gap:.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="sched-navbar-filter-count" id="schedule-report-filter-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% else %}
+{{ super() }}
+{% endif %}
 {% endblock %}
 
 {% block workspace_content %}
@@ -35,6 +59,9 @@
 {% set selected_orientation = (filters.get('orientation', ['landscape']) | first) %}
 {% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
 {% set selected_reference_date = (filters.get('reference_date', [default_period_end]) | first) %}
+{% if is_schedule_report %}
+{% include 'modules/financial/partials/report_filters_schedule_page.html' %}
+{% else %}
 <div class="fin-report-page fade-in">
     <section class="report-hero">
         <div>
@@ -712,7 +739,20 @@
         .report-actions .btn { width:100%; }
     }
 </style>
+{% endif %}
+{% endblock %}
 
+{% block sidebar_right %}
+{% if report_definition.code == 'schedule_report' %}
+{% include 'modules/financial/partials/report_filters_schedule_sidebar.html' %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if report_definition.code == 'schedule_report' %}
+<script src="{{ url_for('static', filename='js/financial_report_filters_schedule.js', v='20260418a') }}"></script>
+{% else %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.querySelector('.report-filter-grid[data-view-action]');
@@ -727,4 +767,5 @@
         });
     });
 </script>
+{% endif %}
 {% endblock %}
