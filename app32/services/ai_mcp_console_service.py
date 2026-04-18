@@ -296,9 +296,9 @@ class AIMCPConsoleService:
                 "domain": "finance",
                 "label": "Financeiro",
                 "description": "Operações sensíveis, classificação, cadastros e análise financeira assistida.",
-                "create": {"label": "Criar via prestação / catálogos", "href": "/financial/accountability"},
+                "create": {"label": "Importar via central / catálogos", "href": "/financial/automation"},
                 "update": {"label": "Alterar cadastros financeiros", "href": "/financial/catalogs"},
-                "analyze": {"label": "Abrir dashboard financeiro IA", "href": "/financial/classification-dashboard"},
+                "analyze": {"label": "Abrir central financeira IA", "href": "/financial/automation"},
             },
             {
                 "domain": "sapiens",

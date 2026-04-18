@@ -597,8 +597,8 @@ class AICapabilitiesCentralService:
                 "title": "Base operacional do fluxo",
                 "status": "ok" if ingestion_count > 0 else "warning",
                 "detail": f"{ingestion_count} registros de ingestão já passaram pelo pipeline." if ingestion_count > 0 else "Ainda não há ingestões financeiras registradas para esta empresa.",
-                "action": "Abrir entradas",
-                "href": "/financial/ingestions",
+                "action": "Abrir central",
+                "href": "/financial/automation",
             })
 
         company_settings = dict(selected.default_settings_json or {}) if selected else {}
