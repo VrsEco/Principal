@@ -159,7 +159,7 @@
                 </div>
             </div>
 
-            <div class="sidebar-subgroup {{ 'open' if request.path == '/financial/schedules' or request.path == '/financial/entries' or '/financial/entries/' in request.path or request.path == '/financial/entries/direct' or request.path == '/financial/accountability' or request.path == '/financial/ingestions' or request.path == '/financial/classification-queue' or request.path == '/financial/classification-dashboard' or request.path == '/financial/budget' or request.path == '/financial/budget/execution' or request.path == '/financial/reconciliation' or request.path == '/financial/borderos' or '/financial/borderos/' in request.path or request.path == '/financial/borderos/new' }}">
+            <div class="sidebar-subgroup {{ 'open' if request.path == '/financial/schedules' or request.path == '/financial/entries' or '/financial/entries/' in request.path or request.path == '/financial/entries/direct' or request.path == '/financial/automation' or request.path == '/financial/budget' or request.path == '/financial/budget/execution' or request.path == '/financial/reconciliation' or request.path == '/financial/borderos' or '/financial/borderos/' in request.path or request.path == '/financial/borderos/new' }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     Operação
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -174,17 +174,8 @@
                     <a href="/financial/entries" class="sub-nav-link {{ 'active' if request.path == '/financial/entries' or '/financial/entries/' in request.path or request.path == '/financial/entries/direct' }}">
                         <span>Lançamento Rápido</span>
                     </a>
-                    <a href="/financial/accountability" class="sub-nav-link {{ 'active' if request.path == '/financial/accountability' }}">
-                        <span>Prestação de contas</span>
-                    </a>
-                    <a href="/financial/ingestions" class="sub-nav-link {{ 'active' if request.path == '/financial/ingestions' }}">
-                        <span>Entradas / Integrações IA</span>
-                    </a>
-                    <a href="/financial/classification-queue" class="sub-nav-link {{ 'active' if request.path == '/financial/classification-queue' }}">
-                        <span>Fila de Classificação IA</span>
-                    </a>
-                    <a href="/financial/classification-dashboard" class="sub-nav-link {{ 'active' if request.path == '/financial/classification-dashboard' }}">
-                        <span>Dashboard IA</span>
+                    <a href="/financial/automation" class="sub-nav-link {{ 'active' if request.path == '/financial/automation' }}">
+                        <span>Central de Automação</span>
                     </a>
                     <a href="/financial/budget" class="sub-nav-link {{ 'active' if request.path == '/financial/budget' }}">
                         <span>Orçamento Matricial</span>

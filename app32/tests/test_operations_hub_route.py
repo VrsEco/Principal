@@ -59,7 +59,7 @@ def test_operations_hub_renders_unified_menu(monkeypatch):
     assert captured["payload"]["template_name"] == "modules/operations/hub.html"
     modules = captured["payload"]["context"]["modules"]
     assert any(module["label"] == "Gestão Financeira" for module in modules)
-    assert any(
+    assert not any(
         item["href"] == "/financial/accountability"
         for module in modules
         for group in module["groups"]
@@ -68,7 +68,7 @@ def test_operations_hub_renders_unified_menu(monkeypatch):
     assert any(module["label"] == "Plataforma IA" for module in modules)
 
     assert any(
-        item["href"] == "/financial/classification-dashboard"
+        item["href"] == "/financial/automation"
         for module in modules
         for group in module["groups"]
         for item in group["items"]

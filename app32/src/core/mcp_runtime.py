@@ -141,9 +141,9 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
         from app import create_app
 
         payload = extract_mcp_payload(args, kwargs)
-        execution_context = resolve_mcp_execution_context(payload)
         app = create_app()
         with app.app_context():
+            execution_context = resolve_mcp_execution_context(payload)
             sapiens_token = set_sapiens_context(
                 user_id=execution_context.user_id,
                 company_id=execution_context.company_id,

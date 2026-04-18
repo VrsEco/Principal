@@ -7,6 +7,7 @@ from models.agent_menu import AgentMenuOption
 from models.workflow_gap import WorkflowGapCandidate
 from models.workflow_usage import WorkflowExecutionLog
 from services.workflow_contract_registry import resolve_workflow_contracts
+from src.intelligence.workflows.contracts import WorkflowDefinition
 from src.intelligence.workflows.registry import WorkflowRegistry
 
 

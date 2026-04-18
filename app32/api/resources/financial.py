@@ -27,7 +27,6 @@ from schemas.financial import (
 from services.financial_service import FinancialService
 from services.financial_import_service import FinancialImportService
 from services.financial_ingestion_service import FinancialIngestionService
-from services.financial_accountability_service import FinancialAccountabilityService
 from services.financial_direct_entry_service import FinancialDirectEntryService
 from services.financial_classification_service import FinancialClassificationService
 from services.financial_classification_hybrid_service import FinancialClassificationHybridService
@@ -358,24 +357,6 @@ class FinancialIngestionRecordResource(Resource):
         if error:
             return {"error": error}, 404
         return result, 200
-
-
-class FinancialAccountabilityUploadResource(Resource):
-    @permission_required("financial", "create")
-    def post(self):
-        company_id = get_request_company_id()
-        if not company_id:
-            return {"error": "Empresa ativa não identificada para upload da prestação de contas."}, 400
-
-        result, error = FinancialAccountabilityService.upload_document(
-            company_id=company_id,
-            file_storage=request.files.get("file"),
-            upload_root=current_app.config.get("UPLOAD_FOLDER", "uploads"),
-            allowed_company_ids=get_accessible_company_ids(),
-        )
-        if error:
-            return {"error": error}, 400
-        return result, 201
 
     @permission_required("financial", "edit")
     def put(self, record_id: int):

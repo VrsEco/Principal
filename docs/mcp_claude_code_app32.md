@@ -91,6 +91,58 @@ No Claude Code, prefira:
 - `app32-prod-admin` para operações administrativas seguras
 - `app32-prod-analytics` para leitura ampliada e relatórios
 
+## Instalação em escopo de usuário, sem pasta do projeto
+
+Para testar como usuário normal, sem depender de `C:\GestaoVersus\app32` na máquina, use o instalador:
+
+- `C:\GestaoVersus\app32\app32\scripts\install_claude_mcp_app32_prod.ps1`
+
+Ele faz 3 coisas:
+
+1. cria um launcher persistente em `~\.app32-mcp\start_mcp_prod_ssh.ps1`
+2. registra os servidores no Claude Code em `--scope user`
+3. opcionalmente persiste `APP32_MCP_USER_ID`, `APP32_MCP_COMPANY_ID` e `APP32_MCP_SSH_KEY_PATH` no perfil do usuário Windows
+
+### Exemplo recomendado
+
+```powershell
+pwsh -File C:\GestaoVersus\app32\app32\scripts\install_claude_mcp_app32_prod.ps1 `
+  -SshKeyPath 'C:\Chaves\app32_prod' `
+  -McpUserId 'SEU_USER_ID' `
+  -McpCompanyId 'SUA_COMPANY_ID' `
+  -PersistUserEnv
+```
+
+Depois disso, basta abrir:
+
+```powershell
+claude
+```
+
+E no Claude Code:
+
+```text
+/mcp
+```
+
+Os servidores globais disponíveis ficam:
+
+- `app32-prod-user`
+- `app32-prod-admin`
+- `app32-prod-analytics`
+
+### Se não quiser persistir identidade
+
+Você também pode instalar sem `-PersistUserEnv`. Nesse caso, antes de cada sessão do Claude Code, defina:
+
+```powershell
+$env:APP32_MCP_USER_ID="SEU_USER_ID"
+$env:APP32_MCP_COMPANY_ID="SUA_COMPANY_ID"
+$env:APP32_MCP_FALLBACK_ROLE="colaborador"
+$env:APP32_MCP_SSH_KEY_PATH="C:\Chaves\app32_prod"
+claude
+```
+
 ## Script local usado para o túnel stdio SSH
 
 - `C:\GestaoVersus\app32\app32\scripts\start_mcp_prod_ssh.ps1`

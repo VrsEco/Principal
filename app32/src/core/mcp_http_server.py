@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import AsyncExitStack, asynccontextmanager
 import os
 import sys
 from typing import Any
@@ -9,7 +10,25 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
+def _normalize_import_path() -> str:
+    package_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+    shadow_path = os.path.abspath(os.path.dirname(__file__))
+
+    normalized_sys_path: list[str] = []
+    for entry in sys.path:
+        resolved = os.path.abspath(entry or os.getcwd())
+        if resolved == shadow_path:
+            continue
+        if resolved == package_root:
+            continue
+        normalized_sys_path.append(entry)
+
+    sys.path[:] = [package_root, *normalized_sys_path]
+    return package_root
+
+
+_normalize_import_path()
 
 from src.core.mcp_http_auth import (  # noqa: E402
     App32MCPRequestContextMiddleware,
@@ -37,19 +56,6 @@ DEFAULT_PUBLIC_BASE_URL = os.environ.get("APP32_MCP_PUBLIC_BASE_URL", "https://a
 
 def _surface_mount_path(surface: str) -> str:
     return f"/mcp/{surface}"
-
-
-def _make_exact_surface_entrypoint(surface_app, mount_path: str):
-    class _ExactSurfaceEntrypoint:
-        async def __call__(self, scope, receive, send):
-            rewritten_scope = dict(scope)
-            rewritten_scope["root_path"] = f"{scope.get('root_path', '')}{mount_path}"
-            rewritten_scope["path"] = "/"
-            await surface_app(rewritten_scope, receive, send)
-
-    return _ExactSurfaceEntrypoint()
-
-
 def build_surface_http_app(surface: str):
     """
     Constrói uma app Starlette montável em `/mcp/<surface>`.
@@ -127,20 +133,21 @@ def create_http_app() -> Starlette:
     admin_app = build_surface_http_app("admin")
     analytics_app = build_surface_http_app("analytics")
 
+    @asynccontextmanager
+    async def lifespan(app: Starlette):
+        async with AsyncExitStack() as stack:
+            for surface_app in (user_app, admin_app, analytics_app):
+                await stack.enter_async_context(surface_app.router.lifespan_context(surface_app))
+            yield
+
     routes = [
         Route("/", endpoint=_index),
         Route("/healthz", endpoint=_healthz),
-        Route(_surface_mount_path("user"), endpoint=_make_exact_surface_entrypoint(user_app, _surface_mount_path("user"))),
-        Route(_surface_mount_path("admin"), endpoint=_make_exact_surface_entrypoint(admin_app, _surface_mount_path("admin"))),
-        Route(
-            _surface_mount_path("analytics"),
-            endpoint=_make_exact_surface_entrypoint(analytics_app, _surface_mount_path("analytics")),
-        ),
         Mount(_surface_mount_path("user"), app=user_app),
         Mount(_surface_mount_path("admin"), app=admin_app),
         Mount(_surface_mount_path("analytics"), app=analytics_app),
     ]
-    return Starlette(debug=False, routes=routes)
+    return Starlette(debug=False, routes=routes, lifespan=lifespan)
 
 
 def run_mcp_http_server() -> None:

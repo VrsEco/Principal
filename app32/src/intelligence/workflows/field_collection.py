@@ -24,7 +24,7 @@ def extract_numbered_fields_from_text(
     if not normalized_fields:
         return data
 
-    pattern = re.compile(r"(?:^|[\n;])\s*(\d{1,2})\s*[:=]\s*([^\n;]+)")
+    pattern = re.compile(r"(?:^|[\n;])\s*(\d{1,2})\s*(?:[:=\-]|-\s+|\s+)\s*([^\n;]+)")
     for idx_raw, value_raw in pattern.findall(text):
         try:
             pos = int(idx_raw) - 1
@@ -45,6 +45,9 @@ def extract_numbered_fields_from_text(
 
     free_text = str(text or "").strip(" \n\r\t,.;:!?")
     if not free_text:
+        return data
+
+    if re.fullmatch(r"\d{1,2}", free_text):
         return data
 
     normalized_free_text = re.sub(r"\s+", " ", free_text.casefold()).strip()
@@ -75,7 +78,42 @@ def adjust_required_fields_for_context(
     if not action.startswith("my_work."):
         return list(required_fields or [])
 
-    return [field for field in (required_fields or []) if field.key != "empresa"]
+    normalized_fields: List[WorkflowRequiredField] = []
+    seen_keys: set[str] = set()
+
+    for field in required_fields or []:
+        key = str(field.key or "").strip().lower()
+        if not key or key == "empresa" or key in seen_keys:
+            continue
+
+        if key == "colaborador":
+            normalized_fields.append(
+                WorkflowRequiredField(
+                    key=field.key,
+                    label=field.label,
+                    required=False,
+                    category="optional",
+                )
+            )
+            seen_keys.add(key)
+            continue
+
+        if key == "entidade":
+            normalized_fields.append(
+                WorkflowRequiredField(
+                    key=field.key,
+                    label=field.label,
+                    required=False,
+                    category="complementary",
+                )
+            )
+            seen_keys.add(key)
+            continue
+
+        normalized_fields.append(field)
+        seen_keys.add(key)
+
+    return normalized_fields
 
 
 def missing_required_fields(

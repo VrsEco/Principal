@@ -10,10 +10,13 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from models import db
 from models.financial import (
     FinancialAccountCategory,
     FinancialAssetAccount,
     FinancialBankAccount,
+    FinancialBordero,
+    FinancialBorderoItem,
     FinancialChartAccount,
     FinancialCostCenter,
     FinancialCounterparty,
@@ -59,9 +62,9 @@ class FinancialReportService:
         "schedule_report": {
             "code": "schedule_report",
             "slug": "agendamento",
-            "label": "Relatório de Agendamento",
-            "description": "Mapa operacional dos agendamentos financeiros com próximos vencimentos, frequência e situação.",
-            "filters": ("period", "schedule_status", "frequency", "movement_nature", "bank_account", "counterparty"),
+            "label": "Relatório de Agendamentos",
+            "description": "Mapa operacional dos agendamentos financeiros com títulos, saldos, liquidação e vínculo com borderô.",
+            "filters": ("schedule_report_config",),
         },
         "bank_statement": {
             "code": "bank_statement",
@@ -187,6 +190,30 @@ class FinancialReportService:
                 return None, "Selecione ao menos um tipo para o DRE."
             if not any([data.show_code, data.show_description]):
                 return None, "Selecione ao menos uma coluna de identificação para o DRE."
+        if data.report_type == "schedule_report":
+            updates = {}
+            if not data.competence_start:
+                updates["competence_start"] = data.period_start
+            if not data.competence_end:
+                updates["competence_end"] = data.period_end
+            if updates:
+                data = data.model_copy(update=updates)
+            if not any([data.include_settled, data.include_partial, data.include_open, data.include_bordero]):
+                return None, "Selecione ao menos um status para o relatório de agendamentos."
+            if not any([data.include_receivable, data.include_payable]):
+                return None, "Selecione ao menos um tipo para o relatório de agendamentos."
+            if not any([
+                data.show_title_number,
+                data.show_installment,
+                data.show_history,
+                data.show_counterparty,
+                data.show_title_amount,
+                data.show_balance_amount,
+                data.show_competence_date,
+                data.show_due_date,
+                data.show_settlement_date,
+            ]):
+                return None, "Selecione ao menos uma coluna para exibir no relatório de agendamentos."
         if data.report_type == "working_capital" and data.reference_date:
             data = data.model_copy(update={"period_end": data.reference_date, "period_start": data.reference_date})
         return data, None
@@ -363,6 +390,49 @@ class FinancialReportService:
         return bool(selected.intersection(FinancialReportService._entry_project_ids(entry)))
 
     @staticmethod
+    def _schedule_project_ids(schedule: FinancialSchedule) -> List[int]:
+        metadata = dict(getattr(schedule, "metadata_json", None) or {})
+        candidates = [
+            metadata.get("project_id"),
+            metadata.get("app_project_id"),
+            metadata.get("grv_project_id"),
+        ]
+        values = metadata.get("project_ids") or []
+        if isinstance(values, (list, tuple, set)):
+            candidates.extend(values)
+
+        allocations = metadata.get("allocations") or []
+        if isinstance(allocations, list):
+            for allocation in allocations:
+                if not isinstance(allocation, dict):
+                    continue
+                candidates.extend([
+                    allocation.get("project_id"),
+                    allocation.get("app_project_id"),
+                    allocation.get("grv_project_id"),
+                ])
+                allocation_values = allocation.get("project_ids") or []
+                if isinstance(allocation_values, (list, tuple, set)):
+                    candidates.extend(allocation_values)
+
+        project_ids: List[int] = []
+        for value in candidates:
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0 and parsed not in project_ids:
+                project_ids.append(parsed)
+        return project_ids
+
+    @staticmethod
+    def _schedule_matches_projects(schedule: FinancialSchedule, project_ids: Sequence[int]) -> bool:
+        selected = {int(item) for item in project_ids if item}
+        if not selected:
+            return True
+        return bool(selected.intersection(FinancialReportService._schedule_project_ids(schedule)))
+
+    @staticmethod
     def _entry_query(company_id: int, filters: FinancialManagementReportFiltersInput):
         query = FinancialEntry.query.filter(
             FinancialEntry.company_id == company_id,
@@ -422,67 +492,266 @@ class FinancialReportService:
     @staticmethod
     def _build_schedule_report(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
-        bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
         counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
         query = FinancialSchedule.query.filter(
             FinancialSchedule.company_id == company_id,
             FinancialSchedule.deleted_at.is_(None),
-            FinancialSchedule.next_due_date >= filters.period_start,
-            FinancialSchedule.next_due_date <= filters.period_end,
         )
-        if filters.schedule_status:
-            query = query.filter(FinancialSchedule.status == filters.schedule_status)
-        if filters.frequency:
-            query = query.filter(FinancialSchedule.frequency == filters.frequency)
-        if filters.movement_nature:
-            query = query.filter(FinancialSchedule.movement_nature == filters.movement_nature)
+        if filters.competence_start and filters.competence_end:
+            query = query.filter(
+                FinancialSchedule.start_date >= filters.competence_start,
+                FinancialSchedule.start_date <= filters.competence_end,
+            )
+        if filters.due_start and filters.due_end:
+            query = query.filter(
+                FinancialSchedule.next_due_date >= filters.due_start,
+                FinancialSchedule.next_due_date <= filters.due_end,
+            )
         if filters.bank_account_id:
             query = query.filter(FinancialSchedule.bank_account_id == filters.bank_account_id)
         if filters.counterparty_id:
             query = query.filter(FinancialSchedule.counterparty_id == filters.counterparty_id)
+        chart_account_ids = FinancialReportService._selected_ids(filters.chart_account_id, filters.chart_account_ids)
+        if chart_account_ids:
+            query = query.filter(FinancialSchedule.chart_account_id.in_(chart_account_ids))
+        cost_center_ids = FinancialReportService._selected_ids(filters.cost_center_id, filters.cost_center_ids)
+        if cost_center_ids:
+            query = query.filter(FinancialSchedule.cost_center_id.in_(cost_center_ids))
+        allowed_entry_types = []
+        if filters.include_payable:
+            allowed_entry_types.append("payable")
+        if filters.include_receivable:
+            allowed_entry_types.append("receivable")
+        if allowed_entry_types:
+            query = query.filter(FinancialSchedule.entry_type.in_(allowed_entry_types))
 
-        items = query.order_by(FinancialSchedule.next_due_date.asc(), FinancialSchedule.id.asc()).all()
-        total_amount = sum(Decimal(item.template_amount or 0) for item in items)
-        rows = [
-            {
-                "codigo": item.schedule_code,
-                "descricao": item.name,
-                "movimento": "Entrada" if item.movement_nature == "credit" else "Saída",
-                "frequencia": item.frequency,
-                "status": item.status,
-                "proximo_vencimento": item.next_due_date.isoformat() if item.next_due_date else "-",
-                "favorecido": counterparty_names.get(item.counterparty_id, "Não informado"),
-                "conta_bancaria": bank_names.get(item.bank_account_id, "Não informada"),
-                "valor": FinancialReportService._serialize_money(item.template_amount or 0),
-            }
-            for item in items
-        ]
+        schedules = query.order_by(FinancialSchedule.next_due_date.asc(), FinancialSchedule.id.asc()).all()
+        if filters.project_ids:
+            schedules = [item for item in schedules if FinancialReportService._schedule_matches_projects(item, filters.project_ids)]
+
+        schedule_map = {item.id: item for item in schedules}
+        entry_refs = {f"financial_schedule:{item.id}": item.id for item in schedules}
+        entries = []
+        if entry_refs:
+            entries = FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.external_reference.in_(list(entry_refs.keys())),
+                FinancialEntry.deleted_at.is_(None),
+            ).all()
+
+        entries_by_schedule: Dict[int, List[FinancialEntry]] = {item.id: [] for item in schedules}
+        for entry in entries:
+            schedule_id = entry_refs.get(entry.external_reference)
+            if schedule_id and schedule_id in entries_by_schedule:
+                entries_by_schedule[schedule_id].append(entry)
+
+        settlements_by_entry: Dict[int, List[FinancialSettlement]] = {}
+        if entries:
+            entry_ids = [item.id for item in entries]
+            settlements = FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.financial_entry_id.in_(entry_ids),
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            ).order_by(
+                FinancialSettlement.financial_entry_id.asc(),
+                FinancialSettlement.settlement_date.asc(),
+                FinancialSettlement.id.asc(),
+            ).all()
+            for settlement in settlements:
+                settlements_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
+
+        active_borderos_by_schedule: Dict[int, FinancialBordero] = {}
+        if schedules:
+            bordero_rows = db.session.query(FinancialBorderoItem, FinancialBordero).join(
+                FinancialBordero,
+                FinancialBorderoItem.bordero_id == FinancialBordero.id,
+            ).filter(
+                FinancialBorderoItem.company_id == company_id,
+                FinancialBorderoItem.financial_schedule_id.in_(list(schedule_map.keys())),
+                FinancialBorderoItem.deleted_at.is_(None),
+                FinancialBordero.company_id == company_id,
+                FinancialBordero.deleted_at.is_(None),
+                FinancialBordero.status.in_(("draft", "open", "partially_settled")),
+            ).order_by(FinancialBordero.id.desc()).all()
+            for bordero_item, bordero in bordero_rows:
+                active_borderos_by_schedule.setdefault(bordero_item.financial_schedule_id, bordero)
+
+        rows: List[Dict[str, Any]] = []
+        receivable_open_total = Decimal("0")
+        payable_open_total = Decimal("0")
+        open_count = 0
+        bordero_count = 0
+
+        for schedule in schedules:
+            metadata = dict(schedule.metadata_json or {})
+            schedule_entries = entries_by_schedule.get(schedule.id, [])
+            original_total = Decimal("0")
+            settled_total = Decimal("0")
+            open_total = Decimal("0")
+            settled_entries = 0
+            partial_entries = 0
+            open_entries = 0
+            latest_settlement_date = None
+
+            if not schedule_entries:
+                template_amount = Decimal(str(schedule.template_amount or 0))
+                original_total = template_amount
+                if schedule.status not in {"completed", "cancelled"} and template_amount > 0:
+                    open_total = template_amount
+                    open_entries = 1
+
+            for entry in schedule_entries:
+                original_amount = Decimal(str(entry.original_amount or 0))
+                entry_settlements = settlements_by_entry.get(entry.id, [])
+                settlements_total = sum(Decimal(str(item.principal_amount or 0)) for item in entry_settlements)
+                outstanding = max(original_amount - settlements_total, Decimal("0"))
+                original_total += original_amount
+                settled_total += settlements_total
+                open_total += outstanding
+                if entry_settlements:
+                    latest_entry_settlement = entry_settlements[-1].settlement_date
+                    if latest_entry_settlement and (latest_settlement_date is None or latest_entry_settlement > latest_settlement_date):
+                        latest_settlement_date = latest_entry_settlement
+                if outstanding == 0 and original_amount > 0:
+                    settled_entries += 1
+                elif settlements_total > 0:
+                    partial_entries += 1
+                else:
+                    open_entries += 1
+
+            settlement_state = "open"
+            if schedule_entries:
+                if open_entries == 0 and partial_entries == 0:
+                    settlement_state = "settled"
+                elif partial_entries > 0 or settled_entries > 0:
+                    settlement_state = "partial"
+
+            active_bordero = active_borderos_by_schedule.get(schedule.id)
+            report_state = "bordero" if active_bordero else settlement_state
+            if report_state == "settled" and not filters.include_settled:
+                continue
+            if report_state == "partial" and not filters.include_partial:
+                continue
+            if report_state == "open" and not filters.include_open:
+                continue
+            if report_state == "bordero" and not filters.include_bordero:
+                continue
+
+            if filters.settlement_start and filters.settlement_end:
+                if not latest_settlement_date:
+                    continue
+                if latest_settlement_date < filters.settlement_start or latest_settlement_date > filters.settlement_end:
+                    continue
+
+            signed_title_amount = Decimal(str(FinancialService.get_signed_amount(original_total, schedule.movement_nature)))
+            signed_open_amount = Decimal(str(FinancialService.get_signed_amount(open_total, schedule.movement_nature)))
+            if schedule.entry_type == "receivable":
+                receivable_open_total += signed_open_amount
+            else:
+                payable_open_total += signed_open_amount
+            if report_state != "settled":
+                open_count += 1
+            if report_state == "bordero":
+                bordero_count += 1
+
+            installment_value = (
+                metadata.get("installment_number")
+                or metadata.get("parcela")
+                or metadata.get("installment_label")
+                or metadata.get("parcel_label")
+                or metadata.get("repeat_label")
+                or "-"
+            )
+            title_number_value = schedule.document_number_prefix or schedule.schedule_code or str(schedule.id)
+            history_value = schedule.name or schedule.description or "-"
+            counterparty_value = counterparty_names.get(schedule.counterparty_id) or metadata.get("counterparty_name") or "Não informado"
+            competence_date_value = schedule.start_date.isoformat() if schedule.start_date else "-"
+            due_date_value = (schedule.next_due_date or schedule.first_due_date).isoformat() if (schedule.next_due_date or schedule.first_due_date) else "-"
+            settlement_date_value = latest_settlement_date.isoformat() if latest_settlement_date else "-"
+            status_label = {
+                "settled": "Liquidado",
+                "partial": "Liquidado Parcial",
+                "open": "Aberto",
+                "bordero": "Borderô",
+            }[report_state]
+            type_label = "Recebimento" if schedule.entry_type == "receivable" else "Pagamento"
+
+            rows.append(
+                {
+                    "title_number": title_number_value,
+                    "installment": str(installment_value),
+                    "history": history_value,
+                    "counterparty": counterparty_value,
+                    "title_amount": FinancialReportService._format_currency(signed_title_amount),
+                    "balance_amount": FinancialReportService._format_currency(signed_open_amount),
+                    "competence_date": competence_date_value,
+                    "due_date": due_date_value,
+                    "settlement_date": settlement_date_value,
+                    "status": status_label,
+                    "type": type_label,
+                    "_title_number_sort": str(title_number_value or "").lower(),
+                    "_installment_sort": str(installment_value or "").lower(),
+                    "_history_sort": str(history_value or "").lower(),
+                    "_counterparty_sort": str(counterparty_value or "").lower(),
+                    "_title_amount_sort": float(signed_title_amount),
+                    "_balance_amount_sort": float(signed_open_amount),
+                    "_competence_date_sort": competence_date_value if competence_date_value != "-" else "",
+                    "_due_date_sort": due_date_value if due_date_value != "-" else "",
+                    "_settlement_date_sort": settlement_date_value if settlement_date_value != "-" else "",
+                }
+            )
+
+        sort_key_map = {
+            "title_number": "_title_number_sort",
+            "installment": "_installment_sort",
+            "history": "_history_sort",
+            "counterparty": "_counterparty_sort",
+            "title_amount": "_title_amount_sort",
+            "balance_amount": "_balance_amount_sort",
+            "competence_date": "_competence_date_sort",
+            "due_date": "_due_date_sort",
+            "settlement_date": "_settlement_date_sort",
+        }
+        reverse = filters.order_direction == "desc"
+        sort_key = sort_key_map.get(filters.order_by, "_title_number_sort")
+        rows.sort(key=lambda item: item.get(sort_key) or "", reverse=reverse)
+
+        columns = []
+        for key, label, enabled in [
+            ("title_number", "Nº Título", filters.show_title_number),
+            ("installment", "Parcela", filters.show_installment),
+            ("history", "Histórico", filters.show_history),
+            ("counterparty", "Favorecido", filters.show_counterparty),
+            ("title_amount", "Valor Título", filters.show_title_amount),
+            ("balance_amount", "Valor Saldo", filters.show_balance_amount),
+            ("competence_date", "Competência", filters.show_competence_date),
+            ("due_date", "Vencimento", filters.show_due_date),
+            ("settlement_date", "Data da Liquidação", filters.show_settlement_date),
+        ]:
+            if enabled:
+                columns.append({"key": key, "label": label})
+
         return {
             "title": definition["label"],
             "subtitle": definition["description"],
             "summary_cards": [
-                {"label": "Agendamentos no período", "value": len(items)},
-                {"label": "Ativos", "value": sum(1 for item in items if item.status == "active")},
-                {"label": "Pausados", "value": sum(1 for item in items if item.status == "paused")},
-                {"label": "Valor programado", "value": FinancialReportService._format_currency(total_amount)},
+                {"label": "Agendamentos filtrados", "value": len(rows)},
+                {"label": "Saldo a receber", "value": FinancialReportService._format_currency(receivable_open_total)},
+                {"label": "Saldo a pagar", "value": FinancialReportService._format_currency(payable_open_total)},
+                {"label": "Em aberto / borderô", "value": f"{open_count} / {bordero_count}"},
             ],
             "general_info": [
-                {"label": "Janela analisada", "value": f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"},
-                {"label": "Critério principal", "value": "Próximo vencimento do agendamento"},
+                {"label": "Competência base", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"},
+                {"label": "Critério principal", "value": "Agendamento operacional por título e saldo"},
             ],
-            "columns": [
-                {"key": "codigo", "label": "Código"},
-                {"key": "descricao", "label": "Descrição"},
-                {"key": "movimento", "label": "Movimento"},
-                {"key": "frequencia", "label": "Frequência"},
-                {"key": "status", "label": "Status"},
-                {"key": "proximo_vencimento", "label": "Próximo vencimento"},
-                {"key": "favorecido", "label": "Favorecido"},
-                {"key": "conta_bancaria", "label": "Conta bancária"},
-                {"key": "valor", "label": "Valor"},
-            ],
+            "columns": columns,
             "rows": rows,
-            "totals": {"scheduled_amount": FinancialReportService._serialize_money(total_amount), "count": len(items)},
+            "totals": {
+                "count": len(rows),
+                "receivable_open_total": FinancialReportService._serialize_money(receivable_open_total),
+                "payable_open_total": FinancialReportService._serialize_money(payable_open_total),
+            },
         }
 
     @staticmethod
@@ -1264,6 +1533,20 @@ class FinancialReportService:
         center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
         counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
         project_names = FinancialReportService._name_map(Project, company_id)
+        order_labels = {
+            "code": "Código",
+            "description": "Descrição",
+            "project": "Projeto",
+            "title_number": "Nº Título",
+            "installment": "Parcela",
+            "history": "Histórico",
+            "counterparty": "Favorecido",
+            "title_amount": "Valor Título",
+            "balance_amount": "Valor Saldo",
+            "competence_date": "Competência",
+            "due_date": "Vencimento",
+            "settlement_date": "Data da Liquidação",
+        }
         values = [{"label": "Período inicial", "value": filters.period_start.isoformat()}, {"label": "Período final", "value": filters.period_end.isoformat()}]
         if filters.competence_start and filters.competence_end:
             values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
@@ -1309,13 +1592,57 @@ class FinancialReportService:
             values.append({"label": "Status do agendamento", "value": filters.schedule_status})
         if filters.frequency:
             values.append({"label": "Frequência", "value": filters.frequency})
-        values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
-        values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
-        values.append({"label": "Considerar limites", "value": "Sim" if filters.include_overdraft else "Não"})
-        values.append({"label": "Status considerados", "value": ", ".join([label for enabled, label in [(filters.include_settled, "Liquidado"), (filters.include_open, "Aberto")] if enabled]) or "Nenhum"})
-        values.append({"label": "Tipos considerados", "value": ", ".join([label for enabled, label in [(filters.include_receivable, "Recebimento"), (filters.include_payable, "Pagamento"), (filters.include_budget_vs_actual, "Orçado x Realizado")] if enabled]) or "Nenhum"})
-        values.append({"label": "Exibir", "value": ", ".join([label for enabled, label in [(filters.show_code, "Código"), (filters.show_description, "Descrição")] if enabled]) or "Nenhum"})
-        values.append({"label": "Ordenar por", "value": filters.order_by})
+        if filters.report_type == "schedule_report":
+            values.append({
+                "label": "Status considerados",
+                "value": ", ".join(
+                    [
+                        label for enabled, label in [
+                            (filters.include_settled, "Liquidado"),
+                            (filters.include_partial, "Liquidado Parcial"),
+                            (filters.include_open, "Aberto"),
+                            (filters.include_bordero, "Borderô"),
+                        ] if enabled
+                    ]
+                ) or "Nenhum",
+            })
+            values.append({
+                "label": "Tipos considerados",
+                "value": ", ".join(
+                    [
+                        label for enabled, label in [
+                            (filters.include_payable, "Pagamento"),
+                            (filters.include_receivable, "Recebimento"),
+                        ] if enabled
+                    ]
+                ) or "Nenhum",
+            })
+            values.append({
+                "label": "Exibir",
+                "value": ", ".join(
+                    [
+                        label for enabled, label in [
+                            (filters.show_title_number, "Nº Título"),
+                            (filters.show_installment, "Parcela"),
+                            (filters.show_history, "Histórico"),
+                            (filters.show_counterparty, "Favorecido"),
+                            (filters.show_title_amount, "Valor Título"),
+                            (filters.show_balance_amount, "Valor Saldo"),
+                            (filters.show_competence_date, "Competência"),
+                            (filters.show_due_date, "Vencimento"),
+                            (filters.show_settlement_date, "Data da Liquidação"),
+                        ] if enabled
+                    ]
+                ) or "Nenhum",
+            })
+        else:
+            values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
+            values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
+            values.append({"label": "Considerar limites", "value": "Sim" if filters.include_overdraft else "Não"})
+            values.append({"label": "Status considerados", "value": ", ".join([label for enabled, label in [(filters.include_settled, "Liquidado"), (filters.include_open, "Aberto")] if enabled]) or "Nenhum"})
+            values.append({"label": "Tipos considerados", "value": ", ".join([label for enabled, label in [(filters.include_receivable, "Recebimento"), (filters.include_payable, "Pagamento"), (filters.include_budget_vs_actual, "Orçado x Realizado")] if enabled]) or "Nenhum"})
+            values.append({"label": "Exibir", "value": ", ".join([label for enabled, label in [(filters.show_code, "Código"), (filters.show_description, "Descrição")] if enabled]) or "Nenhum"})
+        values.append({"label": "Ordenar por", "value": order_labels.get(filters.order_by, filters.order_by)})
         values.append({"label": "Direção", "value": filters.order_direction})
         values.append({"label": "Orientação", "value": "Paisagem" if filters.orientation == "landscape" else "Retrato"})
         values.append({"label": "Saída inicial", "value": "PDF" if filters.output_mode == "pdf" else "Na tela"})
@@ -1349,6 +1676,8 @@ class FinancialReportService:
                 "filters": FinancialReportService._build_filter_labels(normalized_filters, company_id),
                 "period_start": normalized_filters.period_start.isoformat(),
                 "period_end": normalized_filters.period_end.isoformat(),
+                "orientation": normalized_filters.orientation,
+                "output_mode": normalized_filters.output_mode,
                 "items": payload.get("rows", []),
             }
         )

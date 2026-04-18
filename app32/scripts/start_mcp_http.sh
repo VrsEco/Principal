@@ -20,5 +20,25 @@ export PYTHONPATH="$APP_DIR"
 export APP32_MCP_HTTP_HOST="$HOST"
 export APP32_MCP_HTTP_PORT="$PORT"
 export APP32_MCP_PUBLIC_BASE_URL="$PUBLIC_BASE_URL"
+export APP32_MCP_HTTP_APP_DIR="$APP_DIR"
 
-exec "$PYTHON_BIN" -m app32.src.core.mcp_http_server
+exec "$PYTHON_BIN" - <<'PY'
+import os
+import runpy
+import sys
+
+app_dir = os.path.abspath(os.environ["APP32_MCP_HTTP_APP_DIR"])
+shadow_path = os.path.join(app_dir, "src", "core")
+
+normalized_sys_path = []
+for entry in sys.path:
+    resolved = os.path.abspath(entry or os.getcwd())
+    if resolved == shadow_path:
+        continue
+    if resolved == app_dir:
+        continue
+    normalized_sys_path.append(entry)
+
+sys.path[:] = [app_dir, *normalized_sys_path]
+runpy.run_module("src.core.mcp_http_server", run_name="__main__")
+PY

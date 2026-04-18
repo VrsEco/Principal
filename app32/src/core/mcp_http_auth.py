@@ -17,9 +17,21 @@ try:  # pragma: no cover - dependência opcional em ambiente de teste
     from mcp.server.auth.provider import AccessToken, OAuthAuthorizationServerProvider, TokenVerifier
     from mcp.server.auth.settings import AuthSettings
 except ImportError:  # pragma: no cover
-    AccessToken = Any  # type: ignore[assignment]
-    AuthSettings = Any  # type: ignore[assignment]
-    OAuthAuthorizationServerProvider = Any  # type: ignore[assignment]
+    @dataclass(frozen=True)
+    class AccessToken:  # type: ignore[no-redef]
+        token: str
+        client_id: str
+        scopes: list[str]
+        resource: str | None = None
+
+    @dataclass(frozen=True)
+    class AuthSettings:  # type: ignore[no-redef]
+        issuer_url: str
+        service_documentation_url: str | None = None
+        required_scopes: list[str] = field(default_factory=list)
+        resource_server_url: str | None = None
+
+    OAuthAuthorizationServerProvider = object  # type: ignore[assignment]
     TokenVerifier = object  # type: ignore[assignment]
 
 
@@ -347,7 +359,7 @@ def build_auth_settings(base_url: str | None = None) -> AuthSettings | None:
     )
 
 
-class App32OAuthAuthorizationServerProvider(OAuthAuthorizationServerProvider[Any, Any, Any]):
+class App32OAuthAuthorizationServerProvider(OAuthAuthorizationServerProvider):
     """
     Estrutura-base para futura evolução OAuth do MCP remoto.
 

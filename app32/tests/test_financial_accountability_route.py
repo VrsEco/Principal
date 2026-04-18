@@ -78,185 +78,40 @@ def _build_app():
     return app
 
 
-def test_financial_accountability_route_renders_review_flow(monkeypatch):
+def test_financial_accountability_route_redirects_to_automation_center(monkeypatch):
     app = _build_app()
-    captured = {}
-
-    monkeypatch.setattr(
-        financial_route,
-        "get_active_company",
-        lambda: SimpleNamespace(id=9, name="GanduInvest", client_code="GND"),
-    )
     monkeypatch.setattr(financial_route, "has_permission", lambda company_id, resource, action: True)
     monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
-    monkeypatch.setattr(
-        financial_route,
-        "render_template",
-        lambda template_name, **context: (
-            captured.update(
-                {
-                    "payload": {
-                        "template_name": template_name,
-                        "context": context,
-                    }
-                }
-            )
-            or "ok"
-        ),
-    )
-
-    bank_accounts = [
-        SimpleNamespace(
-            id=1,
-            company_id=9,
-            deleted_at=None,
-            is_active=True,
-            name="Conta principal",
-            code="CX.1",
-            metadata_json={"is_default": True},
-        )
-    ]
-    chart_accounts = [
-        SimpleNamespace(
-            id=2,
-            company_id=9,
-            deleted_at=None,
-            is_active=True,
-            accepts_posting=True,
-            code="3.1.01",
-            name="Despesas operacionais",
-            movement_nature="debit",
-            metadata_json={"default_for_accountability": True},
-        )
-    ]
-    cost_centers = [
-        SimpleNamespace(
-            id=3,
-            company_id=9,
-            deleted_at=None,
-            is_active=True,
-            accepts_posting=True,
-            name="Comercial",
-            code="CC.1",
-            is_default_suggestion=True,
-        )
-    ]
-    counterparties = [
-        SimpleNamespace(
-            id=4,
-            company_id=9,
-            deleted_at=None,
-            is_active=True,
-            name="Fornecedor ABC",
-            code="F.1",
-            default_chart_account_id=2,
-            default_cost_center_id=3,
-        )
-    ]
-    enabled_domains = [
-        SimpleNamespace(
-            company_id=9,
-            deleted_at=None,
-            is_enabled=True,
-            is_default_suggestion=True,
-            domain_type="project",
-            source_id=50,
-            notes="Projeto principal",
-        )
-    ]
-    projects = [SimpleNamespace(id=50, company_id=9, code="AA.J.31", name="Produção")]
-
-    monkeypatch.setattr(
-        financial_route,
-        "FinancialBankAccount",
-        SimpleNamespace(
-            query=_FakeQuery(bank_accounts),
-            company_id=_FakeColumn("company_id"),
-            deleted_at=_FakeColumn("deleted_at"),
-            is_active=_FakeColumn("is_active"),
-            name=_FakeColumn("name"),
-        ),
-    )
-    monkeypatch.setattr(
-        financial_route,
-        "FinancialChartAccount",
-        SimpleNamespace(
-            query=_FakeQuery(chart_accounts),
-            company_id=_FakeColumn("company_id"),
-            deleted_at=_FakeColumn("deleted_at"),
-            is_active=_FakeColumn("is_active"),
-            accepts_posting=_FakeColumn("accepts_posting"),
-            code=_FakeColumn("code"),
-            name=_FakeColumn("name"),
-        ),
-    )
-    monkeypatch.setattr(
-        financial_route,
-        "FinancialCostCenter",
-        SimpleNamespace(
-            query=_FakeQuery(cost_centers),
-            company_id=_FakeColumn("company_id"),
-            deleted_at=_FakeColumn("deleted_at"),
-            is_active=_FakeColumn("is_active"),
-            accepts_posting=_FakeColumn("accepts_posting"),
-            is_default_suggestion=_FakeColumn("is_default_suggestion"),
-            name=_FakeColumn("name"),
-        ),
-    )
-    monkeypatch.setattr(
-        financial_route,
-        "FinancialCounterparty",
-        SimpleNamespace(
-            query=_FakeQuery(counterparties),
-            company_id=_FakeColumn("company_id"),
-            deleted_at=_FakeColumn("deleted_at"),
-            is_active=_FakeColumn("is_active"),
-            name=_FakeColumn("name"),
-        ),
-    )
-    monkeypatch.setattr(
-        financial_route,
-        "FinancialDomainEnablement",
-        SimpleNamespace(
-            query=_FakeQuery(enabled_domains),
-            company_id=_FakeColumn("company_id"),
-            deleted_at=_FakeColumn("deleted_at"),
-            is_enabled=_FakeColumn("is_enabled"),
-            is_default_suggestion=_FakeColumn("is_default_suggestion"),
-            domain_type=_FakeColumn("domain_type"),
-            source_id=_FakeColumn("source_id"),
-        ),
-    )
-    monkeypatch.setattr(
-        financial_route,
-        "Project",
-        SimpleNamespace(
-            query=_FakeQuery(projects),
-            company_id=_FakeColumn("company_id"),
-            id=_FakeColumn("id"),
-        ),
-    )
-    monkeypatch.setattr(
-        financial_route,
-        "Process",
-        SimpleNamespace(
-            query=_FakeQuery([]),
-            company_id=_FakeColumn("company_id"),
-            id=_FakeColumn("id"),
-        ),
-    )
 
     client = app.test_client()
-    response = client.get("/financial/accountability?company_id=9")
+    response = client.get("/financial/accountability?company_id=9", follow_redirects=False)
 
-    assert response.status_code == 200
-    assert captured["payload"]["template_name"] == "modules/financial/accountability.html"
-    context = captured["payload"]["context"]
-    assert context["company_id"] == 9
-    assert context["can_create"] is True
-    assert context["counterparties"][0].name == "Fornecedor ABC"
-    assert context["default_bank_account_id"] == 1
-    assert context["default_chart_account_id"] == 2
-    assert context["default_cost_center_id"] == 3
-    assert context["default_domain_key"] == "project:50"
-    assert context["domain_options"][0]["label"] == "Projeto · AA.J.31 · Produção"
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/financial/automation")
+
+
+def test_legacy_financial_ingestions_route_redirects_to_automation_center(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(financial_route, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+
+    client = app.test_client()
+    response = client.get("/financial/ingestions?company_id=9", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/financial/automation")
+
+
+def test_legacy_financial_classification_routes_redirect_to_automation_center(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(financial_route, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+
+    client = app.test_client()
+    queue_response = client.get("/financial/classification-queue?company_id=9", follow_redirects=False)
+    dashboard_response = client.get("/financial/classification-dashboard?company_id=9", follow_redirects=False)
+
+    assert queue_response.status_code == 302
+    assert queue_response.headers["Location"].endswith("/financial/automation")
+    assert dashboard_response.status_code == 302
+    assert dashboard_response.headers["Location"].endswith("/financial/automation")

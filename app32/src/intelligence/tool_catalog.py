@@ -23,6 +23,7 @@ from src.core.mcp_domain_example_tools import register_domain_example_tools
 from src.core.mcp_domain_playbook_tools import register_domain_playbook_tools
 from src.core.mcp_external_ai_onboarding_tools import register_external_ai_onboarding_tools
 from src.core.mcp_external_llm_factory_tools import register_external_llm_factory_tools
+from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
@@ -207,6 +208,7 @@ catalog = ToolCatalog(
         register_domain_playbook_tools,
         register_external_ai_onboarding_tools,
         register_external_llm_factory_tools,
+        register_incentive_tools,
         register_integration_request_tools,
         register_operational_readiness_tools,
         register_permission_matrix_tools,

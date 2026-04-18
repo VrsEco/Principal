@@ -6,7 +6,6 @@ from flask_login import login_user, logout_user, login_required, current_user
 from pydantic import ValidationError
 from models import User, Employee, Company, ProjectTask, ProcessInstance, Project
 from datetime import date, datetime, timedelta
-from sqlalchemy.orm import joinedload
 from services.auth_service import auth_service
 from schemas.user_pydantic import UserProfileUpdateSchema, UserPasswordChangeSchema
 from utils.error_handling import (
@@ -55,6 +54,56 @@ def _normalize_summary_delivery_channels(raw_channels):
             normalized.append(item)
 
     return ','.join(normalized) if normalized else 'telegram'
+
+
+def _build_project_task_code_for_portal(company_code, company_name, project_id, task_id):
+    normalized_company_code = str(company_code or '').strip()
+    normalized_company_name = str(company_name or '').strip()
+
+    if not normalized_company_code and normalized_company_name:
+        normalized_company_code = normalized_company_name[:2].upper()
+
+    if normalized_company_code:
+        return f"{normalized_company_code}.J.{project_id}.{task_id}"
+
+    return f"J.{project_id}.{task_id}"
+
+
+def _load_portal_project_tasks(employee_ids):
+    """
+    Carrega apenas os campos necessários para o portal.
+
+    Motivo:
+    - o clone local pode estar com drift de schema em colunas novas do model
+      (`is_deleted`, `deleted_at`, etc.)
+    - consultar a entidade completa faz o SQLAlchemy selecionar colunas ausentes
+      e derruba a rota /portal com 500
+    """
+    if not employee_ids:
+        return []
+
+    return (
+        ProjectTask.query.join(Project, Project.id == ProjectTask.project_id)
+        .join(Company, Company.id == Project.company_id)
+        .with_entities(
+            ProjectTask.id.label('task_id'),
+            ProjectTask.project_id.label('project_id'),
+            ProjectTask.what.label('title'),
+            ProjectTask.due_date.label('due_date'),
+            ProjectTask.status.label('status'),
+            ProjectTask.priority.label('priority'),
+            ProjectTask.estimated_hours.label('estimated_hours'),
+            Project.company_id.label('company_id'),
+            Company.client_code.label('company_code'),
+            Company.name.label('company_name'),
+        )
+        .filter(
+            ProjectTask.employee_id.in_(employee_ids),
+            ProjectTask.status.notin_(['completed', 'done', 'cancelled']),
+            Company.is_active == True,
+        )
+        .all()
+    )
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -150,11 +199,7 @@ def portal():
 
     if employee_ids:
         # 1. Project Tasks
-        tasks = ProjectTask.query.join(Project).join(Company).filter(
-            ProjectTask.employee_id.in_(employee_ids),
-            ProjectTask.status.notin_(['completed', 'done', 'cancelled']),
-            Company.is_active == True
-        ).options(joinedload(ProjectTask.project)).all()
+        tasks = _load_portal_project_tasks(employee_ids)
         
         for t in tasks:
             task_date = (t.due_date.date() if isinstance(t.due_date, datetime) else t.due_date) if t.due_date else None
@@ -173,9 +218,14 @@ def portal():
                 activities.append({
                     "type": "projeto",
                     "category": "Projeto",
-                    "company_id": t.project.company_id if t.project else None,
-                    "title": t.what,
-                    "code": t.code,
+                    "company_id": t.company_id,
+                    "title": t.title,
+                    "code": _build_project_task_code_for_portal(
+                        t.company_code,
+                        t.company_name,
+                        t.project_id,
+                        t.task_id,
+                    ),
                     "due_date": t.due_date,
                     "status": t.status,
                     "priority": t.priority or "Normal",

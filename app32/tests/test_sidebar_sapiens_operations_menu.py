@@ -31,11 +31,11 @@ def test_ai_configuration_items_move_from_finance_base_to_sapiens_ia():
     finance_block = sidebar[sidebar.index("Gestão Financeira"):sidebar.index("Sapiens")]
     system_block = sidebar[sidebar.index("Sistema"):sidebar.index("Meu Perfil")]
 
-    assert ">Classificação IA<" not in finance_block
-    assert ">Automação IA<" not in finance_block
-    assert "Fila de Classificação IA" in finance_block
-    assert "Dashboard IA" in finance_block
-    assert "Prestação de contas" in finance_block
+    assert "Entradas / Integrações IA" not in finance_block
+    assert "Fila de Classificação IA" not in finance_block
+    assert "Dashboard IA" not in finance_block
+    assert "Central de Automação" in finance_block
+    assert "Prestação de contas" not in finance_block
 
     assert "IA Corporativa" in system_block
     assert "Configurações de Canais" in system_block
