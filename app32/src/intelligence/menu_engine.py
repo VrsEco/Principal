@@ -50,6 +50,8 @@ from src.intelligence.workflows.handlers import (
     CollaboratorOccupancyRequest,
     CompanyAccessExecutionHandler,
     CompanyAccessExecutionRequest,
+    FinancialReceiptIngestExecutionHandler,
+    FinancialReceiptIngestRequest,
     MeetingCloseExecutionHandler,
     MeetingCloseRequest,
     MeetingScheduleExecutionHandler,
@@ -729,6 +731,70 @@ def _handle_back_navigation(session: AgentMenuSession) -> MenuInterceptResult:
         handled=True,
         response_text=result.response_text,
     )
+
+
+def start_channel_workflow(
+    *,
+    user_id: int,
+    company_id: Optional[int],
+    channel: str,
+    thread_id: str,
+    workflow_code: str,
+    payload: Optional[Dict[str, Any]] = None,
+    user_message: Optional[str] = None,
+) -> MenuInterceptResult:
+    try:
+        _ensure_default_menu_seed()
+        session = _get_or_create_session(
+            user_id=user_id,
+            company_id=company_id,
+            channel=channel,
+            thread_id=thread_id,
+        )
+        option = _find_option_by_code(company_id, str(workflow_code or "").strip())
+        if option is None:
+            return MenuInterceptResult(
+                handled=True,
+                response_text=f"Fluxo {workflow_code} não encontrado na árvore oficial do Sapiens.",
+            )
+
+        session.selected_option_id = option.id
+        session.last_user_message = str(user_message or "").strip() or f"workflow:{workflow_code}"
+        session.status = "idle"
+        session.collected_data = {}
+        session.missing_fields = []
+        db.session.commit()
+
+        collected = dict(payload or {})
+        company_selection_flow = _prepare_company_selection_flow_if_needed(
+            session=session,
+            option=option,
+            collected=collected,
+        )
+        if company_selection_flow is not None:
+            return _attach_menu_intercept_metadata(
+                company_selection_flow,
+                session=session,
+                option=option,
+                intercept_stage=COMPANY_SELECTION_STATUS,
+            )
+
+        return _attach_menu_intercept_metadata(
+            _advance_option_after_payload_collection(
+                session=session,
+                option=option,
+                payload=collected,
+            ),
+            session=session,
+            option=option,
+            intercept_stage="workflow_start",
+        )
+    except Exception:
+        logger.exception("Erro ao iniciar fluxo de canal %s", workflow_code)
+        return MenuInterceptResult(
+            handled=True,
+            response_text="Nao consegui iniciar o fluxo solicitado agora. Tente novamente em seguida.",
+        )
 
 
 def list_menu_options(
@@ -1945,6 +2011,11 @@ def _prepare_company_selection_flow_if_needed(
     collected: Dict[str, Any],
 ) -> Optional[MenuInterceptResult]:
     normalized_channel = str(session.channel or "").strip().lower()
+    preserved_hidden_payload = {
+        key: value
+        for key, value in dict(collected or {}).items()
+        if str(key).startswith("_")
+    }
     coordinator = _build_operation_company_selection_coordinator()
     workflow_state = WorkflowSessionState.from_agent_menu_session(
         session,
@@ -1963,10 +2034,13 @@ def _prepare_company_selection_flow_if_needed(
     if decision.route != COMPANY_SELECTION_ROUTE_PROMPT:
         return None
 
+    next_payload = dict(decision.payload or {})
+    if preserved_hidden_payload:
+        next_payload.update(preserved_hidden_payload)
     _transition_session_state(
         session=session,
         status=COMPANY_SELECTION_STATUS,
-        payload=decision.payload,
+        payload=next_payload,
         missing_fields=[],
     )
     return MenuInterceptResult(
@@ -2661,6 +2735,10 @@ def _build_direct_execution_dispatcher() -> DirectExecutionDispatcher:
                 handler_factory=_build_meeting_send_summary_whatsapp_execution_handler,
                 request_model=MeetingSendSummaryWhatsAppRequest,
             ),
+            "finance.receipt_ingest": build_handler_executor(
+                handler_factory=_build_financial_receipt_ingest_execution_handler,
+                request_model=FinancialReceiptIngestRequest,
+            ),
             "onboarding.status": build_handler_executor(
                 handler_factory=_build_onboarding_status_execution_handler,
                 request_model=OnboardingStatusRequest,
@@ -3315,6 +3393,17 @@ def _build_meeting_send_summary_whatsapp_execution_handler() -> MeetingSendSumma
         user_can_access_company=_user_can_access_company,
         build_summary_text=_build_summary_text,
         send_whatsapp=whatsapp_service.send_message,
+    )
+
+
+def _build_financial_receipt_ingest_execution_handler() -> FinancialReceiptIngestExecutionHandler:
+    from flask import current_app
+
+    from services.financial_automation_channel_service import FinancialAutomationChannelService
+
+    return FinancialReceiptIngestExecutionHandler(
+        upload_root_provider=lambda: current_app.config.get("UPLOAD_FOLDER", "uploads"),
+        stage_channel_document=FinancialAutomationChannelService.stage_channel_document,
     )
 
 
@@ -4439,6 +4528,7 @@ def _default_workflow_description(action_key: str, title: str) -> str:
         "meeting.close": "Encerra uma reuniao registrada com trilha operacional.",
         "meeting.send_summary_email": "Envia o resumo de uma reuniao por e-mail.",
         "meeting.send_summary_whatsapp": "Envia o resumo de uma reuniao por WhatsApp.",
+        "finance.receipt_ingest": "Recebe um recibo/documento por canal e envia para a Central de Automacao Financeira com selecao segura de empresa.",
         "onboarding.diagnose": "Diagnostica o que falta para fazer um fluxo funcionar no ambiente atual.",
         "onboarding.status": "Consulta o status do onboarding e os pontos pendentes.",
         "onboarding.start": "Inicia um onboarding assistido de forma estruturada.",
@@ -5806,6 +5896,7 @@ def _default_menu_seed_items() -> List[Dict[str, Any]]:
         {"code": "34", "title": "Fluxo de Caixa", "parent_code": "3", "sort_order": 34},
         {"code": "35", "title": "Orcamento", "parent_code": "3", "sort_order": 35},
         {"code": "36", "title": "Prestacao de Contas", "parent_code": "3", "sort_order": 36},
+        {"code": "361", "title": "Enviar recibo para automacao", "parent_code": "36", "action_key": "finance.receipt_ingest", "keywords": ["enviar recibo", "mandar recibo", "enviar nota para automacao", "prestacao via whatsapp"], "sort_order": 361},
         {"code": "37", "title": "Consultas Financeiras", "parent_code": "3", "sort_order": 37},
         {"code": "4", "title": "Sapiens", "parent_code": None, "sort_order": 40},
         {"code": "41", "title": "Pergunta Livre", "parent_code": "4", "sort_order": 41},

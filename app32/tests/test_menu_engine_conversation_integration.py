@@ -426,6 +426,105 @@ def test_handle_menu_message_operation_company_selection_executes_routine_consul
     assert captured == {}
 
 
+def test_start_channel_workflow_preserves_hidden_attachment_payload_through_company_selection(monkeypatch):
+    option = AgentMenuOption(
+        code="361",
+        title="Enviar recibo para automacao",
+        action_key="finance.receipt_ingest",
+        required_fields=[],
+    )
+    option.id = 361
+    session = _DummySession(option)
+    captured = {}
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(
+        menu_engine,
+        "_find_option_by_code",
+        lambda company_id, code, include_inactive=False: option if code == option.code else None,
+    )
+    monkeypatch.setattr(menu_engine, "_list_children", lambda company_id, parent_id: [])
+    monkeypatch.setattr(
+        menu_engine,
+        "_load_summary_company_choices",
+        lambda user_id: [
+            {
+                "index": 1,
+                "company_id": 9,
+                "company_name": "Versus Gestao Corporativa",
+                "company_code": "AA",
+                "label": "AA - Versus Gestao Corporativa",
+            },
+            {
+                "index": 2,
+                "company_id": 12,
+                "company_name": "Save Water",
+                "company_code": "AL",
+                "label": "AL - Save Water",
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_resolve_explicit_company_id_from_payload",
+        lambda payload, user_id: payload.get("_selected_company_id") or payload.get("_summary_company_id"),
+    )
+    monkeypatch.setattr(menu_engine, "_user_can_access_company", lambda user_id, company_id: company_id in {9, 12})
+    monkeypatch.setattr(menu_engine, "_resolve_user_first_name", lambda user_id: "Fabiano")
+    monkeypatch.setattr(menu_engine, "_resolve_company_session_label", lambda company_id: "AA - Versus" if company_id else None)
+    monkeypatch.setattr(
+        menu_engine,
+        "_try_execute_direct_option_result",
+        lambda option, payload, company_id, user_id, channel="web": (
+            captured.update({"payload": dict(payload), "company_id": company_id, "channel": channel})
+            or menu_engine.DirectExecutionResult(
+                executed=True,
+                response_text=f"recibo enviado para empresa {company_id}",
+                metadata={},
+            )
+        ),
+    )
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+
+    result = menu_engine.start_channel_workflow(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-receipt",
+        workflow_code="361",
+        user_message="segue recibo",
+        payload={
+            "_attachment": {"file_name": "recibo.pdf", "file_bytes": b"PDF"},
+            "_source_label": "WhatsApp - recibo.pdf",
+        },
+    )
+
+    assert result.handled is True
+    assert "Escolha a empresa para continuar:" in result.response_text
+    assert session.status == menu_engine.COMPANY_SELECTION_STATUS
+    assert session.collected_data["_attachment"]["file_name"] == "recibo.pdf"
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-receipt",
+        message="2",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "recibo enviado para empresa 12"
+    assert captured["company_id"] == 12
+    assert captured["channel"] == "whatsapp"
+    assert captured["payload"]["_selected_company_id"] == 12
+    assert captured["payload"]["_attachment"]["file_name"] == "recibo.pdf"
+    assert captured["payload"]["_attachment"]["file_bytes"] == b"PDF"
+    assert captured["payload"]["_source_label"] == "WhatsApp - recibo.pdf"
+    assert session.status == "idle"
+
+
 def test_handle_menu_message_attaches_discovery_metadata_for_implicit_selection(monkeypatch):
     option = _build_project_task_option()
     session = _DummySession(option)

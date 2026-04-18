@@ -20,6 +20,7 @@ from models.financial import (
     FinancialAutomationRule,
     FinancialBankAccount,
     FinancialChartAccount,
+    FinancialClassificationMemory,
     FinancialCostCenter,
     FinancialCounterparty,
     FinancialSchedule,
@@ -48,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 class FinancialAutomationService:
     MAX_ATTEMPTS = 3
+    HIGH_CONFIDENCE_SUGGESTION_THRESHOLD = Decimal("0.75")
 
     @staticmethod
     def _refresh_batch_summary(batch: Optional[FinancialAutomationBatch]) -> None:
@@ -106,6 +108,364 @@ class FinancialAutomationService:
         if document_type in {"spreadsheet", "ofx"}:
             return 100
         return 10
+
+    @staticmethod
+    def _digits_only(value: Optional[str]) -> str:
+        return re.sub(r"\D", "", str(value or ""))
+
+    @staticmethod
+    def _normalize_text(value: Optional[str]) -> str:
+        return str(value or "").strip()
+
+    @staticmethod
+    def _normalize_text_lower(value: Optional[str]) -> str:
+        return FinancialAutomationService._normalize_text(value).lower()
+
+    @staticmethod
+    def _extract_counterparty_hint(
+        *,
+        entry_direction: Optional[str],
+        structured_payload: Dict[str, Any],
+    ) -> Tuple[Optional[str], Optional[str]]:
+        if str(entry_direction or "").strip().lower() == "receivable":
+            return (
+                FinancialAutomationService._normalize_text(structured_payload.get("recipient_name")) or None,
+                FinancialAutomationService._digits_only(structured_payload.get("recipient_document")) or None,
+            )
+        return (
+            FinancialAutomationService._normalize_text(structured_payload.get("issuer_name")) or None,
+            FinancialAutomationService._digits_only(structured_payload.get("issuer_document")) or None,
+        )
+
+    @staticmethod
+    def _build_record_composite_fingerprint(record_kwargs: Dict[str, Any]) -> Optional[str]:
+        amount = FinancialImportService._parse_decimal(record_kwargs.get("amount"))
+        issue_date = FinancialImportService._parse_date(record_kwargs.get("issue_date"))
+        document_number = FinancialAutomationService._normalize_text(record_kwargs.get("external_document_number"))
+        issuer_document = FinancialAutomationService._digits_only(record_kwargs.get("issuer_document"))
+        recipient_document = FinancialAutomationService._digits_only(record_kwargs.get("recipient_document"))
+        if not amount or not issue_date:
+            return None
+        parts = [
+            document_number or "-",
+            issuer_document or "-",
+            recipient_document or "-",
+            issue_date.isoformat(),
+            f"{Decimal(amount):.2f}",
+        ]
+        if all(part == "-" for part in parts[:3]):
+            return None
+        return "cmp:" + "|".join(parts)
+
+    @staticmethod
+    def _find_duplicate_context(
+        *,
+        company_id: int,
+        batch_id: int,
+        source_document: Optional[FinancialAutomationDocument],
+        record_kwargs: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        document_key = FinancialAutomationService._normalize_text(record_kwargs.get("document_key"))
+        document_group_key = FinancialAutomationService._normalize_text(record_kwargs.get("document_group_key"))
+        sha256 = FinancialAutomationService._normalize_text(getattr(source_document, "sha256", None))
+        composite_key = FinancialAutomationService._build_record_composite_fingerprint(record_kwargs)
+
+        duplicate_context: Dict[str, Any] = {
+            "status": "unique",
+            "reason": None,
+            "matched_record_id": None,
+            "matched_batch_id": None,
+            "matched_document_id": None,
+            "matched_document_group_key": None,
+            "matched_sha256": None,
+            "composite_key": composite_key,
+        }
+
+        existing_record = None
+        if document_key:
+            existing_record = FinancialAutomationRecord.query.filter(
+                FinancialAutomationRecord.company_id == company_id,
+                FinancialAutomationRecord.deleted_at.is_(None),
+                FinancialAutomationRecord.document_key == document_key,
+                FinancialAutomationRecord.batch_id != batch_id,
+            ).order_by(FinancialAutomationRecord.id.desc()).first()
+            if existing_record:
+                duplicate_context.update(
+                    {
+                        "status": "duplicate",
+                        "reason": "document_key",
+                        "matched_record_id": existing_record.id,
+                        "matched_batch_id": existing_record.batch_id,
+                        "matched_document_group_key": existing_record.document_group_key,
+                    }
+                )
+                return duplicate_context
+
+        if document_group_key:
+            existing_record = FinancialAutomationRecord.query.filter(
+                FinancialAutomationRecord.company_id == company_id,
+                FinancialAutomationRecord.deleted_at.is_(None),
+                FinancialAutomationRecord.document_group_key == document_group_key,
+                FinancialAutomationRecord.batch_id != batch_id,
+            ).order_by(FinancialAutomationRecord.id.desc()).first()
+            if existing_record:
+                duplicate_context.update(
+                    {
+                        "status": "duplicate" if document_group_key.startswith(("key:", "sha:")) else "possible_duplicate",
+                        "reason": "document_group_key",
+                        "matched_record_id": existing_record.id,
+                        "matched_batch_id": existing_record.batch_id,
+                        "matched_document_group_key": existing_record.document_group_key,
+                    }
+                )
+                return duplicate_context
+
+        if sha256:
+            duplicate_document = FinancialAutomationDocument.query.filter(
+                FinancialAutomationDocument.company_id == company_id,
+                FinancialAutomationDocument.deleted_at.is_(None),
+                FinancialAutomationDocument.sha256 == sha256,
+                FinancialAutomationDocument.batch_id != batch_id,
+            ).order_by(FinancialAutomationDocument.id.desc()).first()
+            if duplicate_document:
+                existing_record = FinancialAutomationRecord.query.filter(
+                    FinancialAutomationRecord.company_id == company_id,
+                    FinancialAutomationRecord.deleted_at.is_(None),
+                    FinancialAutomationRecord.source_document_id == duplicate_document.id,
+                ).order_by(FinancialAutomationRecord.id.desc()).first()
+                duplicate_context.update(
+                    {
+                        "status": "duplicate",
+                        "reason": "sha256",
+                        "matched_record_id": getattr(existing_record, "id", None),
+                        "matched_batch_id": getattr(existing_record, "batch_id", None) or duplicate_document.batch_id,
+                        "matched_document_id": duplicate_document.id,
+                        "matched_document_group_key": duplicate_document.document_group_key,
+                        "matched_sha256": sha256,
+                    }
+                )
+                return duplicate_context
+
+        if composite_key:
+            candidates = FinancialAutomationRecord.query.filter(
+                FinancialAutomationRecord.company_id == company_id,
+                FinancialAutomationRecord.deleted_at.is_(None),
+                FinancialAutomationRecord.batch_id != batch_id,
+                FinancialAutomationRecord.issue_date == FinancialImportService._parse_date(record_kwargs.get("issue_date")),
+                FinancialAutomationRecord.amount == FinancialImportService._parse_decimal(record_kwargs.get("amount")),
+            ).order_by(FinancialAutomationRecord.id.desc()).all()
+            for candidate in candidates:
+                candidate_key = FinancialAutomationService._build_record_composite_fingerprint(candidate.to_dict())
+                if candidate_key and candidate_key == composite_key:
+                    duplicate_context.update(
+                        {
+                            "status": "possible_duplicate",
+                            "reason": "composite_fingerprint",
+                            "matched_record_id": candidate.id,
+                            "matched_batch_id": candidate.batch_id,
+                            "matched_document_group_key": candidate.document_group_key,
+                        }
+                    )
+                    return duplicate_context
+
+        return duplicate_context
+
+    @staticmethod
+    def _find_classification_memory_suggestion(
+        *,
+        company_id: int,
+        counterparty_name: Optional[str],
+        counterparty_document: Optional[str],
+        description: Optional[str],
+        amount: Optional[Decimal],
+    ) -> Optional[Dict[str, Any]]:
+        memories = FinancialClassificationMemory.query.filter(
+            FinancialClassificationMemory.company_id == company_id,
+            FinancialClassificationMemory.is_active.is_(True),
+            FinancialClassificationMemory.deleted_at.is_(None),
+        ).order_by(
+            FinancialClassificationMemory.times_confirmed.desc(),
+            FinancialClassificationMemory.id.desc(),
+        ).all()
+
+        normalized_counterparty_name = FinancialAutomationService._normalize_text_lower(counterparty_name)
+        normalized_counterparty_document = FinancialAutomationService._digits_only(counterparty_document)
+        normalized_description = FinancialAutomationService._normalize_text_lower(description)
+        normalized_amount = FinancialImportService._parse_decimal(amount)
+
+        best: Optional[Dict[str, Any]] = None
+        for memory in memories:
+            score = Decimal("0")
+            supplier_name = FinancialAutomationService._normalize_text_lower(getattr(memory, "supplier_name", None))
+            supplier_document = FinancialAutomationService._digits_only(getattr(memory, "supplier_document", None))
+            description_pattern = FinancialAutomationService._normalize_text_lower(getattr(memory, "description_pattern", None))
+
+            if supplier_document and normalized_counterparty_document and supplier_document == normalized_counterparty_document:
+                score += Decimal("0.55")
+            elif supplier_name and normalized_counterparty_name and supplier_name == normalized_counterparty_name:
+                score += Decimal("0.50")
+            elif supplier_name and normalized_counterparty_name and supplier_name in normalized_counterparty_name:
+                score += Decimal("0.25")
+
+            if description_pattern and normalized_description and description_pattern in normalized_description:
+                score += Decimal("0.30")
+
+            if (
+                normalized_amount is not None
+                and getattr(memory, "amount_range_min", None) is not None
+                and getattr(memory, "amount_range_max", None) is not None
+                and Decimal(memory.amount_range_min) <= normalized_amount <= Decimal(memory.amount_range_max)
+            ):
+                score += Decimal("0.20")
+
+            if score <= 0:
+                continue
+
+            candidate = {
+                "memory_id": memory.id,
+                "score": min(score, Decimal("1")),
+                "chart_account_id": getattr(memory, "chart_account_id", None),
+                "cost_center_id": getattr(memory, "cost_center_id", None),
+                "counterparty_hint": getattr(memory, "counterparty_hint", None) or getattr(memory, "supplier_name", None),
+                "times_confirmed": getattr(memory, "times_confirmed", 0) or 0,
+                "reason": "memory",
+            }
+            if best is None or candidate["score"] > best["score"] or (
+                candidate["score"] == best["score"] and candidate["times_confirmed"] > best["times_confirmed"]
+            ):
+                best = candidate
+        return best
+
+    @staticmethod
+    def _apply_auto_suggestions_to_record_kwargs(
+        *,
+        company_id: int,
+        source_document: Optional[FinancialAutomationDocument],
+        record_kwargs: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        updated = dict(record_kwargs or {})
+        metadata_json = dict(updated.get("metadata_json") or {})
+        normalized_payload_json = dict(updated.get("normalized_payload_json") or {})
+        structured_payload = dict(updated.get("extracted_fields_json") or {})
+        entry_direction = updated.get("entry_direction")
+        counterparty_name, counterparty_document = FinancialAutomationService._extract_counterparty_hint(
+            entry_direction=entry_direction,
+            structured_payload=structured_payload,
+        )
+
+        normalized_payload_json.setdefault("counterparty_hint", counterparty_document or counterparty_name)
+        enriched = FinancialCatalogService.enrich_reference_payload(
+            company_id=company_id,
+            payload=normalized_payload_json,
+            counterparty_text=counterparty_document or counterparty_name,
+            description_text=updated.get("description"),
+            bank_reference=FinancialAutomationService._normalize_text((getattr(source_document, "metadata_json", {}) or {}).get("bank_reference") if source_document else None),
+        )
+
+        memory_suggestion = FinancialAutomationService._find_classification_memory_suggestion(
+            company_id=company_id,
+            counterparty_name=counterparty_name,
+            counterparty_document=counterparty_document,
+            description=updated.get("description"),
+            amount=FinancialImportService._parse_decimal(updated.get("amount")),
+        )
+        if memory_suggestion and memory_suggestion.get("score", Decimal("0")) >= FinancialAutomationService.HIGH_CONFIDENCE_SUGGESTION_THRESHOLD:
+            memory_payload = dict(enriched or {})
+            if not memory_payload.get("counterparty_id") and memory_suggestion.get("counterparty_hint"):
+                memory_payload["counterparty_hint"] = memory_suggestion.get("counterparty_hint")
+                memory_payload = FinancialCatalogService.enrich_reference_payload(
+                    company_id=company_id,
+                    payload=memory_payload,
+                    counterparty_text=memory_suggestion.get("counterparty_hint"),
+                    description_text=updated.get("description"),
+                )
+            if not memory_payload.get("chart_account_id") and memory_suggestion.get("chart_account_id"):
+                memory_payload["chart_account_id"] = memory_suggestion.get("chart_account_id")
+            if not memory_payload.get("cost_center_id") and memory_suggestion.get("cost_center_id"):
+                memory_payload["cost_center_id"] = memory_suggestion.get("cost_center_id")
+            enriched = memory_payload
+
+        updated["counterparty_id"] = enriched.get("counterparty_id") or updated.get("counterparty_id")
+        updated["bank_account_id"] = enriched.get("bank_account_id") or updated.get("bank_account_id")
+        updated["chart_account_id"] = enriched.get("chart_account_id") or updated.get("chart_account_id")
+        updated["cost_center_id"] = enriched.get("cost_center_id") or updated.get("cost_center_id")
+
+        normalized_payload_json.update(
+            {
+                "counterparty_hint": enriched.get("counterparty_hint") or normalized_payload_json.get("counterparty_hint"),
+                "counterparty_id": updated.get("counterparty_id"),
+                "bank_account_id": updated.get("bank_account_id"),
+                "chart_account_id": updated.get("chart_account_id"),
+                "cost_center_id": updated.get("cost_center_id"),
+            }
+        )
+
+        metadata_json["auto_suggestions"] = {
+            "counterparty": {
+                "counterparty_name": counterparty_name,
+                "counterparty_document": counterparty_document,
+                "suggested_id": updated.get("counterparty_id"),
+                "source": "catalog",
+            },
+            "bank_account": {
+                "suggested_id": updated.get("bank_account_id"),
+                "source": "catalog" if updated.get("bank_account_id") else None,
+            },
+            "chart_account": {
+                "suggested_id": updated.get("chart_account_id"),
+                "source": "catalog_or_memory" if updated.get("chart_account_id") else None,
+                "memory_score": float(memory_suggestion.get("score")) if memory_suggestion and memory_suggestion.get("chart_account_id") else None,
+            },
+            "cost_center": {
+                "suggested_id": updated.get("cost_center_id"),
+                "source": "catalog_or_memory" if updated.get("cost_center_id") else None,
+                "memory_score": float(memory_suggestion.get("score")) if memory_suggestion and memory_suggestion.get("cost_center_id") else None,
+            },
+        }
+        if memory_suggestion:
+            metadata_json["auto_suggestions"]["memory"] = {
+                "memory_id": memory_suggestion.get("memory_id"),
+                "score": float(memory_suggestion.get("score") or 0),
+                "reason": memory_suggestion.get("reason"),
+            }
+
+        updated["normalized_payload_json"] = normalized_payload_json
+        updated["metadata_json"] = metadata_json
+        return updated
+
+    @staticmethod
+    def _apply_duplicate_metadata_to_record_kwargs(
+        *,
+        company_id: int,
+        batch_id: int,
+        source_document: Optional[FinancialAutomationDocument],
+        record_kwargs: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        updated = dict(record_kwargs or {})
+        metadata_json = dict(updated.get("metadata_json") or {})
+        review_flags = list(updated.get("review_flags_json") or [])
+        duplicate_context = FinancialAutomationService._find_duplicate_context(
+            company_id=company_id,
+            batch_id=batch_id,
+            source_document=source_document,
+            record_kwargs=updated,
+        )
+        metadata_json["dedupe"] = duplicate_context
+        if duplicate_context.get("status") == "duplicate" and "duplicate_detected" not in review_flags:
+            review_flags.append("duplicate_detected")
+            updated["validation_notes"] = "Duplicidade exata detectada por chave fiscal ou hash documental."
+        elif duplicate_context.get("status") == "possible_duplicate" and "possible_duplicate_detected" not in review_flags:
+            review_flags.append("possible_duplicate_detected")
+            updated["validation_notes"] = updated.get("validation_notes") or "Possível duplicidade detectada; revisão humana recomendada."
+
+        normalized_payload_json = dict(updated.get("normalized_payload_json") or {})
+        normalized_payload_json["dedupe_status"] = duplicate_context.get("status")
+        normalized_payload_json["dedupe_reason"] = duplicate_context.get("reason")
+
+        updated["review_flags_json"] = review_flags
+        updated["metadata_json"] = metadata_json
+        updated["normalized_payload_json"] = normalized_payload_json
+        return updated
 
     @staticmethod
     def _guess_entry_direction_from_document(
@@ -178,7 +538,7 @@ class FinancialAutomationService:
         issue_date = FinancialImportService._parse_date(structured_payload.get("issue_date"))
         settlement_state = FinancialAutomationService._guess_settlement_state_from_document(document_type, structured_payload)
         review_flags = FinancialAutomationService._build_review_flags(document_type, structured_payload)
-        return {
+        record_kwargs = {
             "company_id": company_id,
             "batch_id": batch_id,
             "source_document_id": anchor_document.id,
@@ -209,6 +569,8 @@ class FinancialAutomationService:
                 "document_type": document_type,
                 "document_key": structured_payload.get("document_key"),
                 "document_number": structured_payload.get("document_number"),
+                "document_group_key": anchor_document.document_group_key,
+                "document_sha256": getattr(anchor_document, "sha256", None),
                 "issuer_name": structured_payload.get("issuer_name"),
                 "issuer_document": structured_payload.get("issuer_document"),
                 "recipient_name": structured_payload.get("recipient_name"),
@@ -224,6 +586,18 @@ class FinancialAutomationService:
                 "related_document_count": len(grouped_documents),
             },
         }
+        record_kwargs = FinancialAutomationService._apply_auto_suggestions_to_record_kwargs(
+            company_id=company_id,
+            source_document=anchor_document,
+            record_kwargs=record_kwargs,
+        )
+        record_kwargs = FinancialAutomationService._apply_duplicate_metadata_to_record_kwargs(
+            company_id=company_id,
+            batch_id=batch_id,
+            source_document=anchor_document,
+            record_kwargs=record_kwargs,
+        )
+        return record_kwargs
 
     @staticmethod
     def _append_history(
@@ -1131,7 +1505,7 @@ class FinancialAutomationService:
         competence_date = getattr(row_input, "occurred_on", None) or getattr(row_input, "due_date", None)
         due_date = getattr(row_input, "due_date", None) or competence_date
         settlement_state = FinancialAutomationService._guess_settlement_state(source_type, normalized_payload)
-        return {
+        record_kwargs = {
             "company_id": company_id,
             "batch_id": batch_id,
             "source_document_id": source_document_id,
@@ -1158,6 +1532,22 @@ class FinancialAutomationService:
                 "counterparty_name": getattr(row_input, "counterparty_name", None),
             },
         }
+        source_document = FinancialAutomationDocument.query.filter(
+            FinancialAutomationDocument.id == source_document_id,
+            FinancialAutomationDocument.company_id == company_id,
+        ).first()
+        record_kwargs = FinancialAutomationService._apply_auto_suggestions_to_record_kwargs(
+            company_id=company_id,
+            source_document=source_document,
+            record_kwargs=record_kwargs,
+        )
+        record_kwargs = FinancialAutomationService._apply_duplicate_metadata_to_record_kwargs(
+            company_id=company_id,
+            batch_id=batch_id,
+            source_document=source_document,
+            record_kwargs=record_kwargs,
+        )
+        return record_kwargs
 
     @staticmethod
     def _extract_decimal_from_text(text: str) -> Optional[Decimal]:
@@ -1180,7 +1570,7 @@ class FinancialAutomationService:
         first_line = next((line.strip() for line in extracted_text.splitlines() if line.strip()), "") if extracted_text else ""
         description = first_line or document.file_name or f"Documento {document.id}"
         amount = FinancialAutomationService._extract_decimal_from_text(extracted_text) or Decimal("0")
-        return {
+        record_kwargs = {
             "company_id": company_id,
             "batch_id": batch_id,
             "source_document_id": document.id,
@@ -1204,6 +1594,18 @@ class FinancialAutomationService:
                 "parser_mode": "document_preview",
             },
         }
+        record_kwargs = FinancialAutomationService._apply_auto_suggestions_to_record_kwargs(
+            company_id=company_id,
+            source_document=document,
+            record_kwargs=record_kwargs,
+        )
+        record_kwargs = FinancialAutomationService._apply_duplicate_metadata_to_record_kwargs(
+            company_id=company_id,
+            batch_id=batch_id,
+            source_document=document,
+            record_kwargs=record_kwargs,
+        )
+        return record_kwargs
 
     @staticmethod
     def parse_batch_documents(
@@ -1707,6 +2109,17 @@ class FinancialAutomationService:
         items = query.order_by(FinancialAutomationRecord.id.asc()).all()
         if not items:
             return {"items": [], "count": 0}, None
+
+        duplicate_blockers = [
+            str(item.id)
+            for item in items
+            if str(((item.metadata_json or {}).get("dedupe") or {}).get("status") or "").strip().lower() == "duplicate"
+        ]
+        if duplicate_blockers:
+            return None, (
+                "Há registros com duplicidade exata detectada por chave fiscal/hash documental. "
+                f"Revise antes de gerar: {', '.join(duplicate_blockers)}."
+            )
 
         generated_items: List[Dict[str, Any]] = []
         try:

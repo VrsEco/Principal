@@ -1,10 +1,13 @@
 import json
 import logging
+import mimetypes
 import os
 import re
 from threading import Thread
 from typing import Any, Dict, Optional, Tuple
+from urllib.parse import urlparse
 
+import requests
 from flask import Blueprint, request, jsonify, current_app
 
 from services.whatsapp_service import whatsapp_service
@@ -16,6 +19,7 @@ from utils.security import consume_rate_limit, get_request_ip, webhook_secret_ve
 whatsapp_webhook_bp = Blueprint('whatsapp_webhook', __name__)
 logger = logging.getLogger(__name__)
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+SUPPORTED_FINANCIAL_ATTACHMENT_EXTENSIONS = {".pdf", ".xml", ".png", ".jpg", ".jpeg", ".webp", ".heic"}
 
 
 
@@ -146,6 +150,112 @@ def _extract_message_text(payload: Dict[str, Any]) -> str:
     )
 
 
+def _extract_attachment_candidate(candidate: Dict[str, Any], media_kind: str) -> Dict[str, Any]:
+    url = _first_non_empty_text(
+        candidate.get("url"),
+        candidate.get("directUrl"),
+        candidate.get("direct_url"),
+        candidate.get("downloadUrl"),
+        candidate.get("download_url"),
+        candidate.get("fileUrl"),
+        candidate.get("file_url"),
+        candidate.get("mediaUrl"),
+        candidate.get("media_url"),
+        candidate.get("documentUrl"),
+        candidate.get("document_url"),
+        candidate.get("link"),
+    )
+    file_name = _first_non_empty_text(
+        candidate.get("fileName"),
+        candidate.get("filename"),
+        candidate.get("name"),
+        candidate.get("title"),
+    )
+    mime_type = _first_non_empty_text(
+        candidate.get("mimeType"),
+        candidate.get("mimetype"),
+        candidate.get("contentType"),
+        candidate.get("content_type"),
+    )
+    if not url and not file_name:
+        return {}
+
+    if not file_name and url:
+        parsed = urlparse(url)
+        file_name = os.path.basename(parsed.path or "") or f"arquivo_{media_kind or 'media'}"
+    extension = os.path.splitext(file_name)[1].lower() if file_name else ""
+    if not mime_type and extension:
+        mime_type = mimetypes.guess_type(file_name)[0] or ""
+
+    return {
+        "media_kind": media_kind,
+        "url": url,
+        "file_name": file_name,
+        "mime_type": mime_type or None,
+        "caption": _first_non_empty_text(candidate.get("caption"), candidate.get("description")),
+    }
+
+
+def _extract_whatsapp_attachment(payload: Dict[str, Any]) -> Dict[str, Any]:
+    candidate_specs = [
+        ("document", payload.get("document")),
+        ("image", payload.get("image")),
+        ("file", payload.get("file")),
+        ("media", payload.get("media")),
+    ]
+
+    message_data = payload.get("messageData")
+    if isinstance(message_data, dict):
+        candidate_specs.extend(
+            [
+                ("document", message_data.get("documentMessageData")),
+                ("image", message_data.get("imageMessageData")),
+                ("file", message_data.get("fileMessageData")),
+                ("media", message_data.get("mediaData")),
+            ]
+        )
+
+    for media_kind, candidate in candidate_specs:
+        if not isinstance(candidate, dict):
+            continue
+        extracted = _extract_attachment_candidate(candidate, media_kind)
+        if extracted.get("url") or extracted.get("file_name"):
+            return extracted
+
+    fallback = _extract_attachment_candidate(payload, "media")
+    return fallback if fallback.get("url") or fallback.get("file_name") else {}
+
+
+def _is_supported_financial_attachment(attachment: Dict[str, Any]) -> bool:
+    if not attachment:
+        return False
+    file_name = str(attachment.get("file_name") or "").strip()
+    mime_type = str(attachment.get("mime_type") or "").strip().lower()
+    extension = os.path.splitext(file_name)[1].lower()
+    if extension in SUPPORTED_FINANCIAL_ATTACHMENT_EXTENSIONS:
+        return True
+    if mime_type.startswith("image/"):
+        return True
+    return mime_type in {"application/pdf", "text/xml", "application/xml"}
+
+
+def _download_attachment_bytes(attachment: Dict[str, Any]) -> Tuple[Optional[bytes], Optional[str]]:
+    url = str(attachment.get("url") or "").strip()
+    if not url:
+        return None, "Arquivo sem URL de download no provedor do WhatsApp."
+    try:
+        response = requests.get(url, timeout=30)
+        if response.status_code != 200:
+            return None, f"Download do arquivo falhou com HTTP {response.status_code}."
+        file_bytes = response.content or b""
+        if not file_bytes:
+            return None, "O provedor retornou o arquivo vazio."
+        return file_bytes, None
+    except Exception as exc:
+        logger.exception("Falha ao baixar anexo do WhatsApp")
+        return None, f"Não foi possível baixar o anexo do provedor: {exc}"
+
+
 def _parse_possible_json_object(value: Any) -> Dict[str, Any]:
     if isinstance(value, dict):
         return value
@@ -219,12 +329,16 @@ def _extract_whatsapp_message(data: Dict[str, Any]) -> Tuple[str, str, Dict[str,
 
     phone = _extract_phone(merged)
     message_text = _extract_message_text(merged)
+    attachment = _extract_whatsapp_attachment(merged)
+    if not message_text and attachment.get("caption"):
+        message_text = str(attachment.get("caption") or "").strip()
 
     metadata = {
         "event_type": _first_non_empty_text(str(merged.get("type") or "")),
         "message_id": _first_non_empty_text(str(merged.get("messageId") or merged.get("message_id") or "")),
         "instance_id": _first_non_empty_text(str(merged.get("instanceId") or merged.get("instance_id") or "")),
         "thread_contact": phone or "unknown",
+        "attachment": attachment if attachment else None,
     }
 
     return phone, message_text, metadata
@@ -309,7 +423,11 @@ def _fallback_root_menu(company_id, channel: str = "whatsapp") -> str:
 
 def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[str, Any]):
     from src.intelligence.identity import resolve_user_identity, get_best_company_id
-    from src.intelligence.execution import run_agent_with_context, extract_response_text
+    from src.intelligence.execution import (
+        _capture_workflow_usage_from_execution,
+        run_agent_with_context,
+        extract_response_text,
+    )
     from models.agent_message import AgentMessage
 
     with app.app_context():
@@ -328,6 +446,8 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
                 return
 
             thread_id = f"wa_{metadata.get('thread_contact') or phone}"
+            attachment = dict(metadata.get("attachment") or {})
+            inbound_content = message_text or (f"[arquivo] {attachment.get('file_name')}" if attachment else "")
 
             try:
                 from services.proactive_service import try_handle_summary_followup
@@ -351,7 +471,7 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
                         agent_name="Usuário",
                         direction="inbound",
                         channel="whatsapp",
-                        content=message_text,
+                        content=inbound_content,
                         metadata_json={
                             "thread_id": thread_id,
                             "contact": "sapiens",
@@ -385,27 +505,102 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
                     logger.error("WHATSAPP: falha ao enviar follow-up do resumo para %s", phone)
                 return
 
-            # 2. Executa o Agente
-            response = run_agent_with_context(
-                user_id=user.id,
-                user_msg=message_text,
-                channel="whatsapp",
-                thread_prefix="wa",
-                thread_id=thread_id,
-                company_id=company_id,
-                metadata={
-                    "phone": phone,
-                    "event_type": metadata.get("event_type"),
-                    "message_id": metadata.get("message_id"),
-                },
-            )
+            response_text = ""
+            final_agent_name = "sapiens"
+            menu_metadata: Dict[str, Any] = {}
 
-            response_text = extract_response_text(response)
-            response_text = _personalize_whatsapp_greeting(response_text, getattr(user, "name", ""))
-            final_agent_name = response.get("next_node") or "sapiens"
-            if final_agent_name == "end":
-                final_agent_name = "sapiens"
-            menu_metadata = dict(response.get("menu_metadata") or {})
+            if attachment and _is_supported_financial_attachment(attachment):
+                from src.intelligence.menu_engine import start_channel_workflow
+
+                file_bytes, download_error = _download_attachment_bytes(attachment)
+                if download_error:
+                    response_text = f"Recebi o arquivo, mas não consegui baixá-lo do provedor: {download_error}"
+                else:
+                    workflow_result = start_channel_workflow(
+                        user_id=user.id,
+                        company_id=company_id,
+                        channel="whatsapp",
+                        thread_id=thread_id,
+                        workflow_code="361",
+                        user_message=message_text or str(attachment.get("file_name") or "recibo"),
+                        payload={
+                            "_attachment": {
+                                **attachment,
+                                "file_bytes": file_bytes,
+                            },
+                            "_channel_label": "WhatsApp",
+                            "_source_label": f"WhatsApp - {attachment.get('file_name') or 'recibo'}",
+                        },
+                    )
+                    if workflow_result and workflow_result.handled:
+                        response_text = workflow_result.response_text or ""
+                        menu_metadata = dict(workflow_result.metadata or {})
+                        _capture_workflow_usage_from_execution(
+                            user_id=user.id,
+                            company_id=company_id,
+                            channel="whatsapp",
+                            thread_id=thread_id,
+                            user_msg=inbound_content,
+                            response_text=response_text,
+                            menu_metadata=menu_metadata,
+                        )
+                    else:
+                        response_text = "Recebi o arquivo, mas não consegui iniciar o fluxo financeiro agora."
+            else:
+                from src.intelligence.menu_engine import handle_menu_message
+
+                menu_like = _is_menu_like_message(message_text)
+                menu_result = None
+                try:
+                    menu_result = handle_menu_message(
+                        user_id=user.id,
+                        company_id=company_id,
+                        channel="whatsapp",
+                        thread_id=thread_id,
+                        message=message_text,
+                    )
+                except Exception as menu_err:
+                    logger.exception("Erro no handle_menu_message do WhatsApp: %s", menu_err)
+
+                if menu_result and menu_result.handled:
+                    response_text = menu_result.response_text or _fallback_root_menu(company_id, channel="whatsapp")
+                    menu_metadata = dict(menu_result.metadata or {})
+                    _capture_workflow_usage_from_execution(
+                        user_id=user.id,
+                        company_id=company_id,
+                        channel="whatsapp",
+                        thread_id=thread_id,
+                        user_msg=message_text,
+                        response_text=response_text,
+                        menu_metadata=menu_metadata,
+                    )
+                elif menu_like:
+                    response_text = _fallback_root_menu(company_id, channel="whatsapp")
+                    logger.warning(
+                        "MENU FALLBACK FORCADO [WHATSAPP]: user=%s company=%s thread=%s message=%r",
+                        user.id, company_id, thread_id, message_text
+                    )
+                else:
+                    response = run_agent_with_context(
+                        user_id=user.id,
+                        user_msg=message_text,
+                        channel="whatsapp",
+                        thread_prefix="wa",
+                        thread_id=thread_id,
+                        company_id=company_id,
+                        metadata={
+                            "phone": phone,
+                            "event_type": metadata.get("event_type"),
+                            "message_id": metadata.get("message_id"),
+                        },
+                    )
+
+                    response_text = extract_response_text(response)
+                    response_text = _personalize_whatsapp_greeting(response_text, getattr(user, "name", ""))
+                    final_agent_name = response.get("next_node") or "sapiens"
+                    if final_agent_name == "end":
+                        final_agent_name = "sapiens"
+                    menu_metadata = dict(response.get("menu_metadata") or {})
 
             # 3. Auditoria em banco (mesmo padrão de Telegram)
             db.session.add(
@@ -416,13 +611,18 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
                     agent_name="Usuário",
                     direction="inbound",
                     channel="whatsapp",
-                    content=message_text,
+                    content=inbound_content,
                     metadata_json={
                         "thread_id": thread_id,
                         "contact": "sapiens",
                         "phone": phone,
                         "event_type": metadata.get("event_type"),
                         "message_id": metadata.get("message_id"),
+                        "attachment": {
+                            "file_name": attachment.get("file_name"),
+                            "mime_type": attachment.get("mime_type"),
+                            "url": attachment.get("url"),
+                        } if attachment else None,
                     },
                 )
             )
@@ -492,6 +692,7 @@ def handle_whatsapp():
         return jsonify({"status": "no data"}), 200
 
     phone, message_text, metadata = _extract_whatsapp_message(data)
+    has_supported_attachment = _is_supported_financial_attachment(dict(metadata.get("attachment") or {}))
 
     ignored_reason = metadata.get("ignored")
     if ignored_reason:
@@ -501,7 +702,7 @@ def handle_whatsapp():
         )
         return jsonify({"status": ignored_reason}), 200
 
-    if not phone or not message_text:
+    if not phone or (not message_text and not has_supported_attachment):
         logger.warning(
             "WHATSAPP PAYLOAD INVALIDO: content_type=%s keys=%s payload=%r",
             request.content_type,

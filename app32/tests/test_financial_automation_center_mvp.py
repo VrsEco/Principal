@@ -484,6 +484,16 @@ def test_parse_batch_documents_groups_xml_and_danfe_into_single_record(monkeypat
     monkeypatch.setattr(automation_module.FinancialAutomationService, "_read_document_bytes", lambda *args, **kwargs: b"fake")
     monkeypatch.setattr(automation_module.FinancialAutomationService, "_append_history", lambda **kwargs: None)
     monkeypatch.setattr(automation_module.FinancialAutomationService, "_refresh_batch_summary", lambda batch: None)
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_apply_auto_suggestions_to_record_kwargs",
+        lambda **kwargs: kwargs["record_kwargs"],
+    )
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_apply_duplicate_metadata_to_record_kwargs",
+        lambda **kwargs: kwargs["record_kwargs"],
+    )
 
     result, error = FinancialAutomationService.parse_batch_documents(
         company_id=9,
@@ -497,3 +507,93 @@ def test_parse_batch_documents_groups_xml_and_danfe_into_single_record(monkeypat
     assert result["count"] == 1
     assert result["records"][0]["document_type"] == "nfe_xml"
     assert result["records"][0]["document_group_key"].startswith("key:")
+
+
+def test_build_record_kwargs_from_document_group_applies_suggestions_and_dedupe(monkeypatch):
+    class _Document:
+        id = 10
+        document_type = "danfe_pdf"
+        document_group_key = "key:123"
+        confidence_score = 0.88
+        sha256 = "abc123"
+        parser_status = "parsed"
+        structured_payload_json = {
+            "document_key": "123",
+            "document_number": "NF-1",
+            "issuer_name": "Fornecedor XPTO",
+            "issuer_document": "12345678000199",
+            "recipient_name": "Cliente",
+            "recipient_document": "99887766000155",
+            "issue_date": "2026-04-17",
+            "total_amount": 99.9,
+        }
+
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_apply_auto_suggestions_to_record_kwargs",
+        lambda **kwargs: {**kwargs["record_kwargs"], "counterparty_id": 77, "chart_account_id": 88, "cost_center_id": 99},
+    )
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_apply_duplicate_metadata_to_record_kwargs",
+        lambda **kwargs: {
+            **kwargs["record_kwargs"],
+            "review_flags_json": list(kwargs["record_kwargs"].get("review_flags_json") or []) + ["duplicate_detected"],
+            "metadata_json": {
+                **dict(kwargs["record_kwargs"].get("metadata_json") or {}),
+                "dedupe": {"status": "duplicate", "reason": "document_key", "matched_record_id": 501},
+            },
+        },
+    )
+
+    payload = FinancialAutomationService._build_record_kwargs_from_document_group(
+        company_id=9,
+        batch_id=3,
+        anchor_document=_Document(),
+        grouped_documents=[_Document()],
+    )
+
+    assert payload["counterparty_id"] == 77
+    assert payload["chart_account_id"] == 88
+    assert payload["cost_center_id"] == 99
+    assert "duplicate_detected" in payload["review_flags_json"]
+    assert payload["metadata_json"]["dedupe"]["matched_record_id"] == 501
+
+
+def test_generate_records_blocks_exact_duplicates(monkeypatch):
+    batch = _Batch()
+    duplicated = _Record(record_id=3, settlement_state="open", batch=batch)
+    duplicated.metadata_json = {"dedupe": {"status": "duplicate", "reason": "sha256"}}
+
+    class _Query:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return [duplicated]
+
+    class _RecordModel:
+        company_id = _Column()
+        deleted_at = _Column()
+        status = _Column()
+        id = _Column()
+        query = _Query()
+
+    monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationGenerateInput,
+        "model_validate",
+        lambda payload: SimpleNamespace(company_id=9, record_ids=[3], only_status="validated", generated_by_user_id=77),
+    )
+    monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+
+    result, error = FinancialAutomationService.generate_records(
+        payload={"company_id": 9, "record_ids": [3]},
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert "duplicidade exata" in error.lower()

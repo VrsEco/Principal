@@ -79,6 +79,11 @@ from .meeting_handler import (
     MeetingSummarizeRequest,
     MeetingSummarizeResult,
 )
+from .financial_receipt_handler import (
+    FinancialReceiptIngestExecutionHandler,
+    FinancialReceiptIngestRequest,
+    FinancialReceiptIngestResult,
+)
 from .summary_handler import SummaryExecutionRequest, SummaryExecutionResult, SummaryWorkflowExecutionHandler
 
 __all__ = [
@@ -112,6 +117,9 @@ __all__ = [
     "MeetingSummarizeExecutionHandler",
     "MeetingSummarizeRequest",
     "MeetingSummarizeResult",
+    "FinancialReceiptIngestExecutionHandler",
+    "FinancialReceiptIngestRequest",
+    "FinancialReceiptIngestResult",
     "MyWorkExecutionHandler",
     "MyWorkExecutionRequest",
     "MyWorkExecutionResult",

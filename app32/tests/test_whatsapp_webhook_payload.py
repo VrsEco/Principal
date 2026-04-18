@@ -88,6 +88,26 @@ def test_extract_whatsapp_message_from_message_data():
     assert metadata["thread_contact"] == "5571999999999"
 
 
+def test_extract_whatsapp_message_supports_document_attachment_without_text():
+    payload = {
+        "phone": "5571999999999",
+        "messageData": {
+            "documentMessageData": {
+                "fileName": "recibo_taxi.pdf",
+                "mimeType": "application/pdf",
+                "url": "https://files.example.com/recibo_taxi.pdf",
+            },
+        },
+    }
+
+    phone, text, metadata = _extract_whatsapp_message(payload)
+
+    assert phone == "5571999999999"
+    assert text == ""
+    assert metadata["attachment"]["file_name"] == "recibo_taxi.pdf"
+    assert metadata["attachment"]["mime_type"] == "application/pdf"
+
+
 def test_load_whatsapp_request_payload_from_form_json_field():
     app = Flask(__name__)
 
