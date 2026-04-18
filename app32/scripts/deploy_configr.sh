@@ -44,7 +44,7 @@ from flask_migrate import upgrade
 from app import create_app
 app = create_app('production')
 with app.app_context():
-    upgrade()
+    upgrade(revision='heads')
 " 2>&1
 EXIT_CODE=$?
 set -e
