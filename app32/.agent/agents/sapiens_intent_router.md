@@ -19,6 +19,10 @@ Classificar a entrada do usuário e selecionar o workflow/tool mais adequado ant
 - desambiguar contexto só quando o conflito for real
 - refletir a arvore oficial do Sapiens por macrodominio, nao a arvore legada
 - aceitar codigos sem ponto como atalho de roteamento, ex: `111`, `124`, `145`, `183`
+- normalizar aliases de dominio antes de decidir policy ou workflow
+- nao rotear leitura financeira executiva para surface `user`; usar surface privilegiada compatível com policy
+- em canal remoto/claude.ai, considerar que a identidade vem do conector/autenticacao remota e nao da sessao web local
+- se o conector remoto nao expuser as tools esperadas, iniciar por discovery/capabilities e nao presumir indisponibilidade de negocio
 
 ## Dominios oficiais
 - `1` Gestao da Rotina
@@ -28,6 +32,12 @@ Classificar a entrada do usuário e selecionar o workflow/tool mais adequado ant
 - `5` Governanca e Aprovacoes
 - `6` Implantacao e Funcionamento
 - `7` Sapiens Factory
+
+## Taxonomia operacional
+- `routine` e o dominio canônico das tarefas/atividade/worklog do dia a dia
+- `work`, `tasks` e `worklog` sao aliases de `routine`
+- `processes` e dominio canônico proprio
+- roteamento nao deve publicar ou propagar dominio legado como se fosse canonico
 
 ## Escopos canonicos na rotina
 - `11x` minhas tarefas
@@ -53,3 +63,5 @@ Classificar a entrada do usuário e selecionar o workflow/tool mais adequado ant
 - se o usuario pedir "tarefas da empresa", priorizar escopo empresa
 - se o usuario citar reuniao e verbo de envio, rotear para envio de resumo e nao para resumo simples
 - se o usuario citar codigo numerico direto, tentar resolver primeiro por codigo e depois por linguagem natural
+- tratar verbos como `me informe`, `informe`, `me diga`, `me traga`, `traga` e `preciso que voce me traga` como gatilhos de consulta operacional quando vierem acompanhados de escopo, status, periodo ou entidade
+- empresa explicita + colaborador explicito + status explicito deve empurrar para workflow deterministico, nao para fallback livre

@@ -29,11 +29,21 @@
 - Arquivo: `tests/test_workflow_<modulo>_handler.py`
 - Priorizar dublês simples e asserts operacionais
 
+## Camada adicional para Sapiens
+Quando o fluxo tambem for conversacional no Sapiens, acrescentar:
+1. intenção canônica
+2. regra de roteamento workflow-first
+3. hidratação de contexto de sessão/canal
+4. política de confirmação
+5. regra de desambiguação de contexto
+6. fallback explícito para LLM apenas se necessário
+
 ## Decisao de integracao
 - **Consulta direta**: integrar em handler + presenter + dispatcher
 - **Wizard**: integrar em coordinator + session runtime + presenter
 - **Acao sensivel**: integrar tambem em `policy.py` e approval flow
 - **Descoberta implicita**: enriquecer `keywords`, `intent_examples` e catalogo
+- **Sapiens operacional**: alinhar com `sapiens-workflow-first`
 
 ## Padrao de nomes
 - modulo: `snake_case`

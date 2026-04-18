@@ -646,6 +646,228 @@ class FinancialAutomationService:
         return error
 
     @staticmethod
+    def _refresh_batch_summary(batch: Optional[FinancialAutomationBatch]) -> None:
+        if not batch:
+            return
+        records = batch.records.filter(FinancialAutomationRecord.deleted_at.is_(None)).all()
+        batch.status_summary_json = {
+            "records_total": len(records),
+            "documents_total": batch.documents.filter(FinancialAutomationDocument.deleted_at.is_(None)).count(),
+            "imported_count": sum(1 for item in records if item.status == "imported"),
+            "validated_count": sum(1 for item in records if item.status == "validated"),
+            "generated_count": sum(1 for item in records if item.status == "generated"),
+            "excluded_count": sum(1 for item in records if item.status == "excluded"),
+        }
+        batch.updated_at = datetime.utcnow()
+
+    @staticmethod
+    def _ensure_company_scope(company_id: int, allowed_company_ids: Optional[Sequence[int]]) -> Optional[str]:
+        return FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+
+    @staticmethod
+    def _serialize_record(record: FinancialAutomationRecord) -> Dict[str, Any]:
+        payload = record.to_dict()
+        payload["document"] = record.source_document.to_dict() if record.source_document else None
+        payload["batch"] = record.batch.to_dict() if getattr(record, "batch", None) else None
+        payload["related_documents"] = FinancialAutomationService._list_related_documents(record)
+        return payload
+
+    @staticmethod
+    def _list_related_documents(record: FinancialAutomationRecord) -> List[Dict[str, Any]]:
+        if not getattr(record, "batch_id", None):
+            return []
+        if getattr(record, "document_group_key", None):
+            try:
+                query = FinancialAutomationDocument.query.filter(
+                    FinancialAutomationDocument.company_id == record.company_id,
+                    FinancialAutomationDocument.batch_id == record.batch_id,
+                    FinancialAutomationDocument.document_group_key == record.document_group_key,
+                    FinancialAutomationDocument.deleted_at.is_(None),
+                )
+                return [item.to_dict() for item in query.order_by(FinancialAutomationDocument.id.asc()).all()]
+            except Exception:
+                return [record.source_document.to_dict()] if getattr(record, "source_document", None) else []
+        if getattr(record, "source_document", None):
+            return [record.source_document.to_dict()]
+        return []
+
+    @staticmethod
+    def _document_priority(document_type: Optional[str]) -> int:
+        if document_type in {"nfe_xml", "nfce_xml", "cte_xml"}:
+            return 300
+        if document_type in {"danfe_pdf", "dacte_pdf"}:
+            return 200
+        if document_type in {"receipt_pdf", "receipt_image"}:
+            return 120
+        if document_type in {"spreadsheet", "ofx"}:
+            return 100
+        return 10
+
+    @staticmethod
+    def _guess_entry_direction_from_document(
+        document_type: Optional[str],
+        structured_payload: Dict[str, Any],
+    ) -> str:
+        operation = str(structured_payload.get("operation_nature") or "").lower()
+        if "receb" in operation or "servi" in operation:
+            return "receivable"
+        if document_type == "receipt_pdf" and "receb" in operation:
+            return "receivable"
+        return "payable"
+
+    @staticmethod
+    def _guess_settlement_state_from_document(
+        document_type: Optional[str],
+        structured_payload: Dict[str, Any],
+    ) -> str:
+        if document_type in {"nfce_xml", "receipt_pdf", "receipt_image"}:
+            return "settled"
+        summary = str(structured_payload.get("summary") or "").lower()
+        if any(token in summary for token in ("pago", "recebido", "quitado")):
+            return "settled"
+        return "open"
+
+    @staticmethod
+    def _build_review_flags(
+        document_type: Optional[str],
+        structured_payload: Dict[str, Any],
+    ) -> List[str]:
+        flags: List[str] = []
+        if not structured_payload.get("document_number"):
+            flags.append("missing_document_number")
+        if not structured_payload.get("issuer_name"):
+            flags.append("missing_issuer")
+        if structured_payload.get("total_amount") in (None, 0, 0.0):
+            flags.append("missing_total_amount")
+        if not structured_payload.get("issue_date"):
+            flags.append("missing_issue_date")
+        if document_type in {"receipt_pdf", "receipt_image", "unknown_document"}:
+            flags.append("manual_review_required")
+        return flags
+
+    @staticmethod
+    def _build_description_from_document(structured_payload: Dict[str, Any], document_type: Optional[str]) -> str:
+        number = structured_payload.get("document_number")
+        issuer = structured_payload.get("issuer_name")
+        if document_type in {"nfe_xml", "danfe_pdf"}:
+            base = "Nota fiscal"
+        elif document_type in {"cte_xml", "dacte_pdf"}:
+            base = "Conhecimento de transporte"
+        elif document_type in {"receipt_pdf", "receipt_image"}:
+            base = "Recibo"
+        else:
+            base = "Documento importado"
+        suffix = " - ".join(part for part in [f"Nº {number}" if number else None, issuer] if part)
+        return f"{base}{f' - {suffix}' if suffix else ''}"[:255]
+
+    @staticmethod
+    def _build_record_kwargs_from_document_group(
+        *,
+        company_id: int,
+        batch_id: int,
+        anchor_document: FinancialAutomationDocument,
+        grouped_documents: Sequence[FinancialAutomationDocument],
+    ) -> Dict[str, Any]:
+        structured_payload = dict(anchor_document.structured_payload_json or {})
+        document_type = anchor_document.document_type
+        amount = FinancialImportService._parse_decimal(structured_payload.get("total_amount")) or Decimal("0")
+        issue_date = FinancialImportService._parse_date(structured_payload.get("issue_date"))
+        settlement_state = FinancialAutomationService._guess_settlement_state_from_document(document_type, structured_payload)
+        review_flags = FinancialAutomationService._build_review_flags(document_type, structured_payload)
+        return {
+            "company_id": company_id,
+            "batch_id": batch_id,
+            "source_document_id": anchor_document.id,
+            "status": "imported",
+            "entry_direction": FinancialAutomationService._guess_entry_direction_from_document(document_type, structured_payload),
+            "settlement_state": settlement_state,
+            "description": FinancialAutomationService._build_description_from_document(structured_payload, document_type),
+            "document_group_key": anchor_document.document_group_key,
+            "document_type": document_type,
+            "document_key": structured_payload.get("document_key"),
+            "external_document_number": structured_payload.get("document_number"),
+            "issuer_name": structured_payload.get("issuer_name"),
+            "issuer_document": structured_payload.get("issuer_document"),
+            "recipient_name": structured_payload.get("recipient_name"),
+            "recipient_document": structured_payload.get("recipient_document"),
+            "issue_date": issue_date,
+            "amount": amount,
+            "competence_date": issue_date,
+            "due_date": issue_date if settlement_state == "settled" else None,
+            "confidence_score": Decimal(str(anchor_document.confidence_score or 0)),
+            "validation_notes": None if not review_flags else "Campos documentais pendentes de revisão humana.",
+            "extracted_fields_json": structured_payload,
+            "review_flags_json": review_flags,
+            "normalized_payload_json": {
+                "description": FinancialAutomationService._build_description_from_document(structured_payload, document_type),
+                "amount": float(amount),
+                "issue_date": issue_date.isoformat() if issue_date else None,
+                "document_type": document_type,
+                "document_key": structured_payload.get("document_key"),
+                "document_number": structured_payload.get("document_number"),
+                "issuer_name": structured_payload.get("issuer_name"),
+                "issuer_document": structured_payload.get("issuer_document"),
+                "recipient_name": structured_payload.get("recipient_name"),
+                "recipient_document": structured_payload.get("recipient_document"),
+                "grouped_document_ids": [item.id for item in grouped_documents],
+            },
+            "metadata_json": {
+                "generate_target": "entry" if settlement_state == "settled" else "schedule",
+                "document_parser": anchor_document.document_type,
+                "parser_mode": anchor_document.parser_status,
+                "document_group_key": anchor_document.document_group_key,
+                "grouped_document_ids": [item.id for item in grouped_documents],
+                "related_document_count": len(grouped_documents),
+            },
+        }
+
+    @staticmethod
+    def _append_history(
+        *,
+        company_id: int,
+        record_id: int,
+        action_type: str,
+        performed_by_user_id: Optional[int],
+        payload_before_json: Optional[Dict[str, Any]] = None,
+        payload_after_json: Optional[Dict[str, Any]] = None,
+        metadata_json: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        history_data = FinancialAutomationHistoryCreateInput(
+            company_id=company_id,
+            record_id=record_id,
+            action_type=action_type,
+            performed_by_user_id=performed_by_user_id,
+            payload_before_json=payload_before_json or {},
+            payload_after_json=payload_after_json or {},
+            metadata_json=metadata_json or {},
+        )
+        db.session.add(FinancialAutomationHistory(**history_data.model_dump()))
+
+    @staticmethod
+    def _validate_catalog_links(
+        *,
+        company_id: int,
+        bank_account_id: Optional[int],
+        counterparty_id: Optional[int],
+        chart_account_id: Optional[int],
+        cost_center_id: Optional[int],
+    ) -> Optional[str]:
+        return FinancialCatalogService.validate_reference_ids(
+            company_id=company_id,
+            bank_account_id=bank_account_id,
+            counterparty_id=counterparty_id,
+            chart_account_id=chart_account_id,
+            cost_center_id=cost_center_id,
+        )
+
+    @staticmethod
+    def _validate_domain_link(company_id: int, domain_type: Optional[str], domain_source_id: Optional[int]) -> Optional[str]:
+        if not domain_type or not domain_source_id:
+            return None
+        _, error = FinancialDomainEnablementService._load_source(company_id, domain_type, domain_source_id)
+        return error
+
+    @staticmethod
     def _serialize_rule(rule: FinancialAutomationRule) -> Dict[str, Any]:
         payload = rule.to_dict()
         payload["signed_template_amount"] = FinancialService.get_signed_amount(
@@ -2120,7 +2342,6 @@ class FinancialAutomationService:
                 "Há registros com duplicidade exata detectada por chave fiscal/hash documental. "
                 f"Revise antes de gerar: {', '.join(duplicate_blockers)}."
             )
-
         generated_items: List[Dict[str, Any]] = []
         try:
             for item in items:

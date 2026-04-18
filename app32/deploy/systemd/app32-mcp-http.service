@@ -1,0 +1,20 @@
+[Unit]
+Description=APP32 Remote MCP HTTP Server
+After=network.target
+
+[Service]
+Type=simple
+User=app
+Group=app
+WorkingDirectory=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32
+EnvironmentFile=-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/.env
+ExecStart=/bin/bash /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/scripts/start_mcp_http.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/logs/mcp_http_stdout.log
+StandardError=append:/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/logs/mcp_http_stderr.log
+
+[Install]
+WantedBy=multi-user.target
