@@ -15,26 +15,153 @@ on:
 jobs:
   backup:
     name: 💾 Backup PostgreSQL
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      CONFIGR_HOST: ${{ secrets.CONFIGR_HOST }}
+      CONFIGR_USER: ${{ secrets.CONFIGR_USER }}
+      CONFIGR_PORT: ${{ secrets.CONFIGR_PORT }}
+      CONFIGR_SSH_PRIVATE_KEY: ${{ secrets.CONFIGR_SSH_PRIVATE_KEY }}
+      CONFIGR_KNOWN_HOSTS: ${{ secrets.CONFIGR_KNOWN_HOSTS }}
 
     steps:
-      - name: 🔐 Executing remote ssh commands to backup
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.CONFIGR_HOST }}
-          username: ${{ secrets.CONFIGR_USER }}
-          key: ${{ secrets.CONFIGR_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.CONFIGR_PORT }}
-          command_timeout: 12m
-          script_stop: true
-          script: |
+      - name: 🔍 Validar secrets obrigatórios
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_vars=(
+            CONFIGR_HOST
+            CONFIGR_USER
+            CONFIGR_PORT
+            CONFIGR_SSH_PRIVATE_KEY
+          )
+
+          for var_name in "${required_vars[@]}"; do
+            if [ -z "${!var_name:-}" ]; then
+              echo "❌ Secret obrigatório ausente ou vazio: ${var_name}"
+              exit 1
+            fi
+          done
+
+      - name: 🔐 Preparar chave SSH com normalização segura
+        shell: bash
+        env:
+          KEY_FILE: ${{ runner.temp }}/configr_backup_key
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+
+          python3 <<'PY'
+          import base64
+          import binascii
+          import os
+          import pathlib
+          import sys
+
+          raw_key = os.environ.get("CONFIGR_SSH_PRIVATE_KEY", "").strip()
+          key_file = os.environ["KEY_FILE"]
+
+          if not raw_key:
+              raise SystemExit("❌ Secret CONFIGR_SSH_PRIVATE_KEY está vazio.")
+
+          normalized_candidates = []
+
+          def add_candidate(value: str) -> None:
+              candidate = value.strip()
+              if candidate and candidate not in normalized_candidates:
+                  normalized_candidates.append(candidate)
+
+          add_candidate(raw_key)
+          add_candidate(raw_key.replace("\\n", "\n"))
+          add_candidate(raw_key.strip('"').strip("'"))
+          add_candidate(raw_key.strip('"').strip("'").replace("\\n", "\n"))
+
+          compact_key = "".join(raw_key.split())
+          if compact_key and "BEGIN" not in raw_key:
+              try:
+                  decoded_key = base64.b64decode(compact_key, validate=True).decode("utf-8")
+                  add_candidate(decoded_key)
+                  add_candidate(decoded_key.replace("\\n", "\n"))
+              except (binascii.Error, UnicodeDecodeError):
+                  pass
+
+          valid_markers = (
+              "BEGIN OPENSSH PRIVATE KEY",
+              "BEGIN RSA PRIVATE KEY",
+              "BEGIN EC PRIVATE KEY",
+              "BEGIN DSA PRIVATE KEY",
+              "BEGIN PRIVATE KEY",
+          )
+
+          for candidate in normalized_candidates:
+              normalized = candidate.strip() + "\n"
+              if any(marker in normalized for marker in valid_markers):
+                  pathlib.Path(key_file).write_text(normalized, encoding="utf-8")
+                  print("✅ Chave SSH normalizada com sucesso.")
+                  break
+          else:
+              raise SystemExit(
+                  "❌ Não foi possível interpretar CONFIGR_SSH_PRIVATE_KEY. "
+                  "Aceitos: chave multiline normal, texto com \\\\n literal ou base64 da chave privada."
+              )
+          PY
+
+          chmod 600 "$KEY_FILE"
+          ssh-keygen -y -f "$KEY_FILE" > /dev/null
+          echo "✅ Chave SSH validada localmente."
+
+      - name: 🧾 Configurar known_hosts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ssh"
+          KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
+          touch "$KNOWN_HOSTS_FILE"
+          chmod 644 "$KNOWN_HOSTS_FILE"
+
+          if [ -n "${CONFIGR_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$CONFIGR_KNOWN_HOSTS" >> "$KNOWN_HOSTS_FILE"
+            echo "✅ known_hosts carregado via secret CONFIGR_KNOWN_HOSTS."
+          else
+            echo "⚠️ Secret CONFIGR_KNOWN_HOSTS não informado; coletando host key via ssh-keyscan."
+            ssh-keyscan -p "$CONFIGR_PORT" -H "$CONFIGR_HOST" >> "$KNOWN_HOSTS_FILE" 2>/dev/null
+          fi
+
+          if [ ! -s "$KNOWN_HOSTS_FILE" ]; then
+            echo "❌ known_hosts não foi configurado corretamente."
+            exit 1
+          fi
+
+      - name: 💾 Executar backup remoto via SSH nativo
+        shell: bash
+        env:
+          KEY_FILE: ${{ runner.temp }}/configr_backup_key
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -i "$KEY_FILE" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=30 \
+            -p "$CONFIGR_PORT" \
+            "$CONFIGR_USER@$CONFIGR_HOST" \
+            'bash -seuo pipefail' <<'REMOTE_SCRIPT'
             set -euo pipefail
 
             BACKUP_DIR="/home/app2/backups"
             DATE=$(date +%Y%m%d_%H%M%S)
             TMP_FILE="$BACKUP_DIR/db_backup_${DATE}.sql"
+            TMP_GZ_FILE="${TMP_FILE}.gz.partial"
             FINAL_FILE="${TMP_FILE}.gz"
+            umask 077
+
+            cleanup() {
+              rm -f "$TMP_FILE" "$TMP_GZ_FILE"
+            }
+            trap cleanup ERR INT TERM
 
             mkdir -p "$BACKUP_DIR"
 
@@ -55,15 +182,21 @@ jobs:
             fi
 
             echo "🗜️ Compactando backup..."
-            gzip -f "$TMP_FILE"
+            gzip -c "$TMP_FILE" > "$TMP_GZ_FILE"
+            rm -f "$TMP_FILE"
 
-            if [ ! -s "$FINAL_FILE" ]; then
+            if [ ! -s "$TMP_GZ_FILE" ]; then
               echo "❌ Arquivo compactado não foi gerado corretamente"
               exit 1
             fi
+
+            gzip -t "$TMP_GZ_FILE"
+            mv -f "$TMP_GZ_FILE" "$FINAL_FILE"
 
             echo "🧹 Limpando backups antigos (30 dias)..."
             find "$BACKUP_DIR" -name "db_backup_*.sql.gz" -mtime +30 -delete
 
             echo "✅ Backup concluído: $(basename "$FINAL_FILE")"
             ls -lh "$FINAL_FILE"
+            trap - ERR INT TERM
+          REMOTE_SCRIPT
