@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence
 
 from models.agent_menu import AgentMenuOption
 from models.workflow_gap import WorkflowGapCandidate
 from models.workflow_usage import WorkflowExecutionLog
 from services.workflow_contract_registry import resolve_workflow_contracts
-from src.intelligence.workflows.contracts import WorkflowDefinition
 from src.intelligence.workflows.registry import WorkflowRegistry
+
+if TYPE_CHECKING:
+    from src.intelligence.workflows.contracts import WorkflowDefinition
 
 
 def _normalize_text(value: Any) -> str:
@@ -213,7 +215,7 @@ def _build_tool_contracts(logs: Sequence[WorkflowExecutionLog], action_key: str,
     ]
 
 
-def _build_configuration_contracts(workflow: WorkflowDefinition) -> List[Dict[str, Any]]:
+def _build_configuration_contracts(workflow: "WorkflowDefinition") -> List[Dict[str, Any]]:
     items = []
     if getattr(workflow, "confirmation_template", None):
         items.append(
