@@ -43,13 +43,37 @@ class FinancialManagementReportFiltersInput(BaseModel):
 
     include_open: bool = True
     include_settled: bool = True
+    include_partial: bool = True
+    include_bordero: bool = True
     include_receivable: bool = True
     include_payable: bool = True
     include_budget_vs_actual: bool = False
 
     show_code: bool = True
     show_description: bool = True
-    order_by: Literal['code', 'description', 'project'] = 'code'
+    show_title_number: bool = True
+    show_installment: bool = True
+    show_history: bool = True
+    show_counterparty: bool = True
+    show_title_amount: bool = True
+    show_balance_amount: bool = True
+    show_competence_date: bool = True
+    show_due_date: bool = True
+    show_settlement_date: bool = True
+    order_by: Literal[
+        'code',
+        'description',
+        'project',
+        'title_number',
+        'installment',
+        'history',
+        'counterparty',
+        'title_amount',
+        'balance_amount',
+        'competence_date',
+        'due_date',
+        'settlement_date',
+    ] = 'code'
     order_direction: Literal['asc', 'desc'] = 'asc'
     orientation: Literal['portrait', 'landscape'] = 'landscape'
     output_mode: Literal['screen', 'pdf'] = 'screen'
