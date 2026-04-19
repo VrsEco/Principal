@@ -425,7 +425,8 @@
   header,
   nav,
   .workspace-header,
-  .workspace-sidebar-toggle {
+  .workspace-sidebar-toggle,
+  #sapiens-widget-container {
     display: none !important;
   }
 
@@ -443,8 +444,8 @@
     max-width: none;
     border-radius: 0;
     box-shadow: none;
-    padding: 0;
-    min-height: calc(297mm - 16mm);
+    padding: 0 0 8mm;
+    min-height: auto;
   }
 
   .schedule-stats-grid {
@@ -471,8 +472,16 @@
   }
 
   .schedule-footer {
-    margin-top: auto;
-    padding-top: 0.25rem;
+    position: fixed;
+    left: 8mm;
+    right: 8mm;
+    bottom: 0;
+    margin-top: 0;
+    padding-top: 0.2rem;
+    padding-bottom: 0;
+    background: #fff;
     page-break-inside: avoid;
+    grid-template-columns: 1fr auto;
+    font-size: 0.58rem;
   }
 }
