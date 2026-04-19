@@ -12,6 +12,7 @@
   let optionsCache = {
     counterparties: [],
     chart_accounts: [],
+    bank_accounts: [],
     cost_centers: [],
     correction_indexes: [],
     discount_rules: [],
@@ -964,9 +965,13 @@
     const counterpartyField = requireElement('field-counterparty');
     const correctionIndexField = requireElement('field-correction-index');
     const discountRuleField = requireElement('field-discount-rule');
+    const settlementBankAccountField = $('settlement-bank-account');
     counterpartyField.innerHTML = buildOptions(optionsCache.counterparties, 'Selecione...', (item) => item.display_label || item.name || item.code);
     correctionIndexField.innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
     discountRuleField.innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    if (settlementBankAccountField) {
+      settlementBankAccountField.innerHTML = buildOptions(optionsCache.bank_accounts, 'Selecione a conta...', (item) => item.display_label || item.name || item.code);
+    }
     if (!selectedSchedule) {
       suggestDefaultCorrectionIndex(form.entry_type?.value || initialEntryType, { force: true });
     }
@@ -1113,8 +1118,10 @@
   }
 
   function settlementPayload({ explicit = true } = {}) {
+    const bankAccountId = Number(fieldValue('settlement-bank-account') || 0);
     const payload = {
       settlement_date: $('settlement-date')?.value || todayIso(),
+      bank_account_id: bankAccountId || null,
       metadata_json: { source_context: 'schedule_assisted_settlement_modal' },
     };
     if (explicit) {
@@ -1198,6 +1205,7 @@
     const modalEl = requireElement('settlement-composition-modal');
     requireElement('settlement-schedule-id').value = schedule.id;
     requireElement('settlement-date').value = todayIso();
+    setFieldValue('settlement-bank-account', schedule.bank_account_id || selectedSchedule?.bank_account_id || '');
     requireElement('settlement-modal-subtitle').textContent = `${schedule.schedule_code || `Título ${schedule.id}`} · ${schedule.description || schedule.name || 'Sem histórico'}`;
     setSettlementComponentInputs({});
     renderSettlementSimulation(null);
@@ -1218,6 +1226,9 @@
     try {
       const scheduleId = Number($('settlement-schedule-id')?.value || selectedSchedule?.id || 0);
       if (!scheduleId) return;
+      if (!Number(fieldValue('settlement-bank-account') || 0)) {
+        throw new Error('Selecione a conta da baixa antes de confirmar.');
+      }
       await fetchJson(`/api/financial/schedules/${scheduleId}/settlements/assisted?company_id=${companyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1441,6 +1452,9 @@
 
   if ($('settlement-date')) {
     $('settlement-date').addEventListener('change', scheduleSettlementSimulation);
+  }
+  if ($('settlement-bank-account')) {
+    $('settlement-bank-account').addEventListener('change', scheduleSettlementSimulation);
   }
 
   if ($('settlement-composition-form')) {

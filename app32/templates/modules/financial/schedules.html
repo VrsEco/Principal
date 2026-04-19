@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419e') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419f') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -214,15 +214,24 @@
         </div>
         <form id="settlement-composition-form" class="modal-form settlement-composition-form">
             <input type="hidden" id="settlement-schedule-id">
-            <label class="field field-compact">
-                <span>Data da baixa</span>
-                <input id="settlement-date" name="settlement_date" type="date" required>
-            </label>
+
+            <section class="settlement-toolbar" aria-label="Dados da baixa">
+                <label class="field field-compact">
+                    <span>Data da baixa</span>
+                    <input id="settlement-date" name="settlement_date" type="date" required>
+                </label>
+                <label class="field field-compact">
+                    <span>Conta da baixa</span>
+                    <select id="settlement-bank-account" name="bank_account_id" required></select>
+                </label>
+            </section>
 
             <div id="settlement-simulation-status" class="settlement-simulation-status">Simulando composição...</div>
-            <div id="settlement-simulation-summary" class="settlement-simulation-summary"></div>
+            <section class="settlement-section-card">
+                <div id="settlement-simulation-summary" class="settlement-simulation-summary"></div>
+            </section>
 
-            <section class="settlement-composition-grid" aria-label="Composição editável da baixa">
+            <section class="settlement-section-card settlement-composition-grid" aria-label="Composição editável da baixa">
                 <label class="field field-compact">
                     <span>Principal</span>
                     <input id="settlement-component-principal" data-settlement-component="principal" inputmode="numeric" placeholder="0,00">
@@ -241,7 +250,9 @@
                 </label>
             </section>
 
-            <div id="settlement-after-summary" class="settlement-after-summary"></div>
+            <section class="settlement-section-card">
+                <div id="settlement-after-summary" class="settlement-after-summary"></div>
+            </section>
 
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeSettlementCompositionModal()">Cancelar</button>
@@ -294,5 +305,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419e') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419f') }}"></script>
 {% endblock %}

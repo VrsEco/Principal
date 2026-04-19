@@ -497,6 +497,14 @@ class FinancialScheduleOptionsResource(Resource):
         if error:
             return {"error": error}, 400
 
+        bank_accounts, error = FinancialCatalogService.list_items(
+            catalog_type="bank_accounts",
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if error:
+            return {"error": error}, 400
+
         cost_centers, error = FinancialCatalogService.list_items(
             catalog_type="cost_centers",
             company_id=company_id,
@@ -572,6 +580,7 @@ class FinancialScheduleOptionsResource(Resource):
         return {
             "counterparties": counterparties,
             "chart_accounts": chart_accounts,
+            "bank_accounts": bank_accounts,
             "cost_centers": cost_centers,
             "correction_indexes": correction_indexes,
             "discount_rules": discount_rules,

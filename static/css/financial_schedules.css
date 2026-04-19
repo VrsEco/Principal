@@ -582,9 +582,12 @@
 }
 
 .modal-card--settlement {
-  width: min(920px, calc(100vw - 2rem));
+  width: min(980px, calc(100vw - 2rem));
   max-height: 90vh;
   overflow: auto;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--form-tint-strong) 35%, var(--border));
+  box-shadow: 0 28px 56px rgba(15, 23, 42, 0.18);
 }
 
 .modal-head {
@@ -593,6 +596,11 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.modal-card--settlement .modal-head {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--form-tint-strong) 24%, transparent);
 }
 
 .modal-subtitle {
@@ -627,7 +635,24 @@
 }
 
 .settlement-composition-form {
-  gap: 0.85rem;
+  gap: 1rem;
+}
+
+.settlement-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 0.95rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--form-tint-strong) 24%, var(--border));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 88%, var(--form-tint-strong)) 0%, var(--surface-secondary) 100%);
+}
+
+.settlement-section-card {
+  padding: 0.95rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--form-tint-strong) 18%, var(--border));
+  background: color-mix(in srgb, var(--surface) 94%, var(--form-tint-strong));
 }
 
 .settlement-simulation-status {
@@ -690,10 +715,10 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
-  padding: 0.85rem;
-  border: 1px dashed var(--border);
-  border-radius: 14px;
-  background: var(--surface-secondary);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .settlement-total-field input {
@@ -972,6 +997,7 @@
   .settlement-composition-grid,
   .calc-log-summary,
   .calc-log-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settlement-toolbar { grid-template-columns: 1fr; }
   .sched-summary-strip,
   .sched-summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .field-span-4,
@@ -1010,6 +1036,7 @@
   .settlement-composition-grid,
   .calc-log-summary,
   .calc-log-grid { grid-template-columns: 1fr; }
+  .settlement-toolbar { grid-template-columns: 1fr; }
   .sched-summary-strip,
   .sched-summary-row { grid-template-columns: 1fr; }
   .field-counterparty,
