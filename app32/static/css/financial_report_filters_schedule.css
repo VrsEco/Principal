@@ -244,6 +244,7 @@
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 0.45rem;
   font-size: 0.62rem;
   color: #94a3b8;
@@ -426,6 +427,25 @@
     border-radius: 0;
     box-shadow: none;
     padding: 0;
+  }
+
+  .schedule-stats-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 0.22rem !important;
+  }
+
+  .schedule-stat {
+    padding: 0.28rem 0.18rem !important;
+  }
+
+  .schedule-stat__value {
+    font-size: 0.68rem !important;
+    margin-bottom: 0.08rem !important;
+  }
+
+  .schedule-stat__label {
+    font-size: 0.46rem !important;
+    line-height: 1.05 !important;
   }
 
   .schedule-section {

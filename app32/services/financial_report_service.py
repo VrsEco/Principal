@@ -1677,17 +1677,21 @@ class FinancialReportService:
                 ]
             )
         if filters.report_type == "schedule_report":
+            competence_explicit = (
+                "competence_start" in raw_filters
+                or "competence_end" in raw_filters
+            )
             default_competence = (
                 filters.competence_start == default_start
                 and filters.competence_end == default_end
             )
-            if filters.competence_start and filters.competence_end and not default_competence:
+            if filters.competence_start and filters.competence_end and (competence_explicit or not default_competence):
                 values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
         elif filters.competence_start and filters.competence_end:
             values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
-        if filters.due_start and filters.due_end:
+        if filters.due_start and filters.due_end and ("due_start" in raw_filters or "due_end" in raw_filters or filters.report_type != "schedule_report"):
             values.append({"label": "Data vencimento", "value": f"{filters.due_start.isoformat()} até {filters.due_end.isoformat()}"})
-        if filters.settlement_start and filters.settlement_end:
+        if filters.settlement_start and filters.settlement_end and ("settlement_start" in raw_filters or "settlement_end" in raw_filters or filters.report_type != "schedule_report"):
             values.append({"label": "Data baixa", "value": f"{filters.settlement_start.isoformat()} até {filters.settlement_end.isoformat()}"})
         if filters.reference_date and filters.report_type != "schedule_report":
             values.append({"label": "Data de referência", "value": filters.reference_date.isoformat()})
@@ -1733,7 +1737,11 @@ class FinancialReportService:
             values.append({"label": "Frequência", "value": filters.frequency})
         if filters.report_type == "schedule_report":
             all_status_enabled = all([filters.include_settled, filters.include_partial, filters.include_open, filters.include_bordero])
-            if not all_status_enabled:
+            status_explicit = any(
+                key in raw_filters
+                for key in ("include_settled", "include_partial", "include_open", "include_bordero")
+            )
+            if status_explicit or not all_status_enabled:
                 values.append({
                     "label": "Status",
                     "value": ", ".join(
@@ -1748,7 +1756,11 @@ class FinancialReportService:
                     ) or "Nenhum",
                 })
             all_types_enabled = all([filters.include_payable, filters.include_receivable])
-            if not all_types_enabled:
+            type_explicit = any(
+                key in raw_filters
+                for key in ("include_payable", "include_receivable")
+            )
+            if type_explicit or not all_types_enabled:
                 values.append({
                     "label": "Tipo",
                     "value": ", ".join(
