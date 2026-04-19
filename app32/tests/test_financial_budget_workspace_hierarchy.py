@@ -425,6 +425,16 @@ def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(mo
     monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_refresh_document_status", lambda *args, **kwargs: None)
     monkeypatch.setattr(workspace_module.FinancialBudgetWorkspaceService, "_serialize_document", lambda item: {"id": item.id})
     monkeypatch.setattr(
+        workspace_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": float(kwargs["template_amount"]),
+            "correction_amount": 0.0,
+            "discount_amount": 0.0,
+            "updated_amount": float(kwargs["template_amount"]),
+        },
+    )
+    monkeypatch.setattr(
         workspace_module.FinancialBudgetSchedulePolicy,
         "get_document_capacity",
         lambda **kwargs: (
@@ -481,9 +491,9 @@ def test_create_document_schedules_aligns_payload_with_schedule_form_defaults(mo
     assert payload["budget_document_id"] == 30
     assert payload["name"] == "Parcela única"
     assert payload["start_date"] == date(2026, 4, 1)
+    assert payload["competence_date"] == date(2026, 4, 1)
     assert payload["chart_account_id"] == 101
     assert payload["cost_center_id"] == 202
-    assert payload["metadata_json"]["competence_mode"] == "keep_first_competence"
     assert payload["metadata_json"]["correction_index_id"] == 88
     assert payload["metadata_json"]["discount_rule_id"] is None
     assert payload["metadata_json"]["discount_amount_override"] == 0
@@ -672,11 +682,11 @@ def test_update_document_schedule_rebuilds_payload_with_document_inheritance(mon
     assert payload["status"] == "paused"
     assert payload["template_amount"] == Decimal("45.00")
     assert payload["start_date"] == date(2026, 5, 1)
+    assert payload["competence_date"] == date(2026, 5, 1)
     assert payload["first_due_date"] == date(2026, 5, 10)
     assert payload["chart_account_id"] == 101
     assert payload["cost_center_id"] == 202
     assert payload["counterparty_id"] == 900
-    assert payload["metadata_json"]["competence_mode"] == "keep_first_competence"
     assert payload["metadata_json"]["correction_index_id"] == 88
     assert payload["metadata_json"]["discount_rule_id"] == 901
     allocation = payload["metadata_json"]["allocations"][0]

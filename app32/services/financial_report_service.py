@@ -719,8 +719,8 @@ class FinancialReportService:
         )
         if filters.competence_start and filters.competence_end:
             query = query.filter(
-                FinancialSchedule.start_date >= filters.competence_start,
-                FinancialSchedule.start_date <= filters.competence_end,
+                FinancialSchedule.competence_date >= filters.competence_start,
+                FinancialSchedule.competence_date <= filters.competence_end,
             )
         if filters.due_start and filters.due_end:
             query = query.filter(
@@ -893,7 +893,7 @@ class FinancialReportService:
             title_number_value = schedule.document_number_prefix or schedule.schedule_code or str(schedule.id)
             history_value = schedule.name or schedule.description or "-"
             counterparty_value = counterparty_names.get(schedule.counterparty_id) or metadata.get("counterparty_name") or "Não informado"
-            competence_date_value = schedule.start_date.isoformat() if schedule.start_date else "-"
+            competence_date_value = schedule.competence_date.isoformat() if getattr(schedule, "competence_date", None) else "-"
             due_date_value = (schedule.next_due_date or schedule.first_due_date).isoformat() if (schedule.next_due_date or schedule.first_due_date) else "-"
             settlement_date_value = latest_settlement_date.isoformat() if latest_settlement_date else "-"
             status_label = {

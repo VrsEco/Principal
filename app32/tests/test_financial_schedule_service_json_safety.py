@@ -119,6 +119,7 @@ def test_create_schedule_sanitizes_metadata_json_before_insert(monkeypatch):
             "frequency": "monthly",
             "interval_value": 1,
             "start_date": date(2026, 3, 22),
+            "competence_date": date(2026, 3, 21),
             "first_due_date": date(2026, 3, 22),
             "description": "Teste Lcto Rapido",
             "template_amount": Decimal("1000.00"),
@@ -139,6 +140,7 @@ def test_create_schedule_sanitizes_metadata_json_before_insert(monkeypatch):
     assert error is None
     assert result is not None
     assert captured["committed"] is True
+    assert captured["kwargs"]["competence_date"] == date(2026, 3, 21)
     allocation = captured["kwargs"]["metadata_json"]["allocations"][0]
     assert allocation["allocated_amount"] == 1000.0
     assert allocation["competence_date"] == "2026-03-22"
@@ -443,8 +445,8 @@ def test_build_budget_document_schedule_payload_preserves_budget_hierarchy_witho
         line=line,
         label="Parcela 1/2",
         amount=Decimal("250.00"),
-        due_date=date(2026, 4, 10),
-        competence_date=date(2026, 4, 10),
+        due_date=date(2026, 4, 30),
+        competence_date=date(2026, 4, 30),
         notes=None,
         status="active",
         auto_post=False,
@@ -460,6 +462,7 @@ def test_build_budget_document_schedule_payload_preserves_budget_hierarchy_witho
     assert payload["budget_document_id"] == 30
     assert payload["entry_type"] == "payable"
     assert payload["movement_nature"] == "debit"
+    assert payload["competence_date"] == date(2026, 4, 30)
     assert payload["counterparty_id"] == 91
     assert "activity_id" not in payload
     assert "process_instance_id" not in payload
@@ -587,6 +590,7 @@ def test_build_entry_payload_propagates_budget_links():
         company_id = 9
         id = 77
         schedule_code = "SCH-077"
+        competence_date = date(2026, 3, 5)
         next_due_date = date(2026, 3, 22)
         first_due_date = date(2026, 3, 22)
         auto_post = False
@@ -623,6 +627,7 @@ def test_build_entry_payload_propagates_budget_links():
     assert payload["budget_line_id"] == 10
     assert payload["budget_contract_id"] == 20
     assert payload["budget_document_id"] == 30
+    assert payload["competence_date"] == date(2026, 3, 5)
     assert payload["metadata_json"]["budget_line_id"] == 10
     assert payload["metadata_json"]["budget_contract_id"] == 20
     assert payload["metadata_json"]["budget_document_id"] == 30

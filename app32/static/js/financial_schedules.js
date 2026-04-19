@@ -65,15 +65,15 @@
 
   const normalizeDateInput = (value) => {
     const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 4)}/${digits.slice(4)}`;
+    return `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
   };
 
   const parseDateToIso = (value) => {
     const digits = String(value || '').replace(/\D/g, '');
     if (digits.length !== 8) return null;
-    const [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)];
+    const [year, month, day] = [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6)];
     const candidate = new Date(Number(year), Number(month) - 1, Number(day));
     if (candidate.getFullYear() !== Number(year) || candidate.getMonth() + 1 !== Number(month) || candidate.getDate() !== Number(day)) return null;
     return `${year}-${month}-${day}`;
@@ -82,7 +82,7 @@
   const formatIso = (value) => {
     if (!value) return '';
     const [year, month, day] = String(value).split('-');
-    return year && month && day ? `${day}/${month}/${year}` : value;
+    return year && month && day ? `${year}/${month}/${day}` : value;
   };
   const compareIsoDates = (left, right) => {
     if (!left || !right) return 0;
@@ -621,7 +621,7 @@
     $('field-document-number').value = schedule.document_number || '';
     $('field-counterparty').value = schedule.counterparty_id || '';
     $('field-amount').value = Number(schedule.template_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    $('field-competence').value = formatIso(schedule.start_date || schedule.first_due_date);
+    $('field-competence').value = formatIso(schedule.competence_date || schedule.start_date || schedule.first_due_date);
     $('field-due-date').value = formatIso(schedule.first_due_date || schedule.next_due_date);
     $('field-correction-index').value = schedule.correction_index_id || '';
     $('field-discount-rule').value = schedule.discount_rule_id || '';
@@ -634,7 +634,6 @@
     $('field-frequency').value = schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly';
     $('field-interval-value').value = schedule.interval_value || 1;
     $('field-repeat-count').value = schedule.metadata_json?.repeat_count || 1;
-    $('field-competence-mode').value = schedule.competence_mode || 'same_as_due';
     clearPendingAttachments();
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
@@ -698,6 +697,7 @@
       frequency,
       interval_value: Number($('field-interval-value').value || 1),
       start_date: competenceIso,
+      competence_date: competenceIso,
       first_due_date: dueIso,
       next_due_date: dueIso,
       end_date: null,
@@ -717,7 +717,6 @@
         correction_index_id: Number($('field-correction-index').value || 0) || null,
         discount_rule_id: Number($('field-discount-rule').value || 0) || null,
         discount_amount_override: $('field-discount-amount')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
-        competence_mode: $('field-competence-mode').value,
         repeat_count: Number($('field-repeat-count').value || 1),
         attachments: selectedSchedule?.attachments || [],
         counterparty_name: $('field-counterparty').selectedOptions?.[0]?.textContent || null,

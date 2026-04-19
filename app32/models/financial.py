@@ -524,6 +524,7 @@ class FinancialSchedule(db.Model):
     frequency = db.Column(db.String(20), nullable=False, default="monthly", index=True)
     interval_value = db.Column(db.Integer, nullable=False, default=1)
     start_date = db.Column(db.Date, nullable=False, index=True)
+    competence_date = db.Column(db.Date, nullable=False, index=True)
     end_date = db.Column(db.Date, index=True)
     first_due_date = db.Column(db.Date, nullable=False, index=True)
     next_due_date = db.Column(db.Date, nullable=False, index=True)
@@ -575,6 +576,7 @@ class FinancialSchedule(db.Model):
             "frequency": self.frequency,
             "interval_value": self.interval_value,
             "start_date": self.start_date.isoformat() if self.start_date else None,
+            "competence_date": self.competence_date.isoformat() if self.competence_date else None,
             "end_date": self.end_date.isoformat() if self.end_date else None,
             "first_due_date": self.first_due_date.isoformat() if self.first_due_date else None,
             "next_due_date": self.next_due_date.isoformat() if self.next_due_date else None,

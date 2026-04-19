@@ -743,6 +743,7 @@ class FinancialScheduleCreateInput(BaseModel):
     frequency: str = Field("monthly", pattern=_choices_pattern(SCHEDULE_FREQUENCY_VALUES))
     interval_value: int = Field(default=1, ge=1)
     start_date: date
+    competence_date: Optional[date] = None
     end_date: Optional[date] = None
     first_due_date: date
     next_due_date: Optional[date] = None
@@ -773,10 +774,13 @@ class FinancialScheduleCreateInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_dates(self):
+        effective_competence_date = self.competence_date or self.start_date
+        if self.competence_date is None:
+            self.competence_date = effective_competence_date
         if self.end_date and self.end_date < self.start_date:
             raise ValueError("end_date não pode ser menor que start_date.")
-        if self.first_due_date < self.start_date:
-            raise ValueError("first_due_date não pode ser menor que start_date.")
+        if self.first_due_date < effective_competence_date:
+            raise ValueError("first_due_date não pode ser menor que competence_date.")
         if self.next_due_date and self.next_due_date < self.first_due_date:
             raise ValueError("next_due_date não pode ser menor que first_due_date.")
         if self.frequency == "monthly" and self.day_of_month is None:
@@ -798,6 +802,7 @@ class FinancialScheduleUpdateInput(BaseModel):
     frequency: Optional[str] = Field(None, pattern=_choices_pattern(SCHEDULE_FREQUENCY_VALUES))
     interval_value: Optional[int] = Field(None, ge=1)
     start_date: Optional[date] = None
+    competence_date: Optional[date] = None
     end_date: Optional[date] = None
     first_due_date: Optional[date] = None
     next_due_date: Optional[date] = None

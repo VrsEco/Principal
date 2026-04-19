@@ -60,15 +60,15 @@
                             </label>
                             <label class="field field-span-1">
                                 <span>Valor</span>
-                                <input id="field-amount" name="template_amount_display" inputmode="numeric" autocomplete="off" placeholder="0,00" required>
+                                <input id="field-amount" name="template_amount_display" inputmode="numeric" data-format="currency" autocomplete="off" placeholder="0,00" required>
                             </label>
                             <label class="field field-span-1 field-compact">
                                 <span>Competência</span>
-                                <input id="field-competence" name="competence_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                                <input id="field-competence" name="competence_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="AAAA/MM/DD" required>
                             </label>
                             <label class="field field-span-1 field-compact">
                                 <span>Vencimento</span>
-                                <input id="field-due-date" name="due_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                                <input id="field-due-date" name="due_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="AAAA/MM/DD" required>
                             </label>
                             <label class="field field-span-2 field-compact">
                                 <span>Correção Financeira</span>
@@ -86,7 +86,7 @@
                             </label>
                             <label class="field field-summary field-compact">
                                 <span>Valor do Desconto</span>
-                                <input id="field-discount-amount" name="discount_amount_display" value="0,00" inputmode="numeric" autocomplete="off" placeholder="0,00">
+                                <input id="field-discount-amount" name="discount_amount_display" value="0,00" inputmode="numeric" data-format="currency" autocomplete="off" placeholder="0,00">
                             </label>
                             <label class="field field-summary field-compact">
                                 <span>Valor das Baixas</span>
@@ -159,13 +159,6 @@
                             <label class="field repeat-field">
                                 <span>Nº de repetições</span>
                                 <input id="field-repeat-count" type="number" min="1" step="1" value="1">
-                            </label>
-                            <label class="field field-span-2 repeat-field">
-                                <span>Quanto à data de competência?</span>
-                                <select id="field-competence-mode">
-                                    <option value="same_as_due">Mudar competência conforme muda o vencimento</option>
-                                    <option value="keep_first_competence">Manter competência em todas as parcelas</option>
-                                </select>
                             </label>
                         </div>
                     </section>

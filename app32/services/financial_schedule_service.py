@@ -55,7 +55,7 @@ class FinancialScheduleService:
     @staticmethod
     def _format_schedule_payload_error(exc: Exception, *, operation: str) -> str:
         message = str(exc)
-        if "first_due_date não pode ser menor que start_date" in message:
+        if "first_due_date não pode ser menor que competence_date" in message:
             return (
                 f"Payload inválido para {operation} do agendamento: "
                 "o vencimento não pode ser anterior à competência."
@@ -153,7 +153,6 @@ class FinancialScheduleService:
         effective_notes = notes if notes is not None else (getattr(current_schedule, "notes", None) or None)
         effective_due_date = due_date
         effective_competence_date = competence_date or due_date
-        competence_mode = "same_as_due" if effective_competence_date == effective_due_date else "keep_first_competence"
         effective_domain_type = domain_type
         effective_domain_source_id = domain_source_id
         effective_domain_label = domain_label
@@ -169,7 +168,6 @@ class FinancialScheduleService:
             **base_metadata,
             "budget_schedule_source": "financial_budget_workspace",
             "document_number": document.document_number or document.document_code,
-            "competence_mode": competence_mode,
             "correction_index_id": correction_index_id,
             "discount_rule_id": base_metadata.get("discount_rule_id"),
             "discount_amount_override": base_metadata.get("discount_amount_override", 0),
@@ -191,6 +189,7 @@ class FinancialScheduleService:
             "domain_label": effective_domain_label,
             "domain_value": domain_value,
         }
+        metadata_json.pop("competence_mode", None)
         metadata_json["allocations"] = FinancialScheduleService._build_budget_document_schedule_allocations(
             company_id=company_id,
             line=line,
@@ -219,6 +218,7 @@ class FinancialScheduleService:
             "frequency": "one_time",
             "interval_value": 1,
             "start_date": effective_competence_date,
+            "competence_date": effective_competence_date,
             "first_due_date": effective_due_date,
             "next_due_date": effective_due_date,
             "description": allocation_notes,
@@ -482,12 +482,14 @@ class FinancialScheduleService:
 
         normalized = data.model_dump()
         normalized.update(budget_links or {})
+        normalized["competence_date"] = normalized.get("competence_date") or normalized.get("start_date")
         normalized["metadata_json"] = FinancialScheduleService._sanitize_json(
             FinancialService._merge_budget_metadata(
                 normalized.get("metadata_json") or {},
                 budget_links,
             )
         )
+        normalized["metadata_json"].pop("competence_mode", None)
         normalized["next_due_date"] = normalized.get("next_due_date") or normalized["first_due_date"]
         max_attempts = FinancialScheduleService.AUTO_GENERATED_SCHEDULE_CODE_MAX_ATTEMPTS if auto_generated_code else 1
         current_schedule_code = normalized["schedule_code"]
@@ -617,24 +619,27 @@ class FinancialScheduleService:
             return None, budget_document_error
 
         start_date = merged.get("start_date", schedule.start_date)
+        competence_date = merged.get("competence_date", getattr(schedule, "competence_date", None) or start_date)
         end_date = merged.get("end_date", schedule.end_date)
         first_due_date = merged.get("first_due_date", schedule.first_due_date)
         next_due_date = merged.get("next_due_date", schedule.next_due_date)
         if end_date and start_date and end_date < start_date:
             return None, "end_date não pode ser menor que start_date."
-        if first_due_date and start_date and first_due_date < start_date:
-            return None, "first_due_date não pode ser menor que start_date."
+        if first_due_date and competence_date and first_due_date < competence_date:
+            return None, "first_due_date não pode ser menor que competence_date."
         if next_due_date and first_due_date and next_due_date < first_due_date:
             return None, "next_due_date não pode ser menor que first_due_date."
 
         try:
             merged.update(budget_links or {})
+            merged["competence_date"] = competence_date
             merged["metadata_json"] = FinancialScheduleService._sanitize_json(
                 FinancialService._merge_budget_metadata(
                     merged.get("metadata_json", schedule.metadata_json),
                     budget_links,
                 )
             )
+            merged["metadata_json"].pop("competence_mode", None)
             for key, value in merged.items():
                 setattr(schedule, key, value)
             if auto_commit:
@@ -1064,7 +1069,7 @@ class FinancialScheduleService:
             "external_reference": f"financial_schedule:{schedule.id}",
             "origin_reference": schedule.schedule_code,
             "issue_date": due_date,
-            "competence_date": FinancialScheduleService._resolve_competence_date(schedule, due_date),
+            "competence_date": getattr(schedule, "competence_date", None) or due_date,
             "due_date": due_date,
             "occurred_on": due_date if (schedule.auto_post or force_posted) else None,
             "original_amount": Decimal(str(adjustment_totals.get("updated_amount") or schedule.template_amount or 0)),
@@ -1309,7 +1314,6 @@ class FinancialScheduleService:
         payload["document_number"] = metadata.get("document_number")
         payload["correction_index_id"] = metadata.get("correction_index_id")
         payload["discount_rule_id"] = metadata.get("discount_rule_id")
-        payload["competence_mode"] = metadata.get("competence_mode") or "same_as_due"
         payload["related_entries"] = []
         payload["has_entries"] = False
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(
@@ -1512,14 +1516,6 @@ class FinancialScheduleService:
             "settlement_state": settlement_state,
             "counterparty_name": metadata.get("counterparty_name"),
         }
-
-    @staticmethod
-    def _resolve_competence_date(schedule: FinancialSchedule, due_date: Optional[date]) -> Optional[date]:
-        metadata = dict(schedule.metadata_json or {})
-        mode = metadata.get("competence_mode") or "same_as_due"
-        if mode == "keep_first_competence" and schedule.start_date:
-            return schedule.start_date
-        return due_date
 
     @staticmethod
     def _find_schedule_by_code(*, company_id: int, schedule_code: str) -> Optional[FinancialSchedule]:
