@@ -61,6 +61,14 @@ SETTLEMENT_TYPE_VALUES = (
 )
 
 SETTLEMENT_STATUS_VALUES = ("draft", "posted", "reversed", "cancelled")
+SETTLEMENT_COMPONENT_TYPE_VALUES = (
+    "principal",
+    "monetary_correction",
+    "interest",
+    "fine",
+    "discount",
+    "manual_adjustment",
+)
 
 RECONCILIATION_STATUS_VALUES = ("pending", "suggested", "matched", "reconciled", "rejected")
 MATCH_STATUS_VALUES = ("suggested", "confirmed", "rejected")
@@ -1255,6 +1263,60 @@ class FinancialSettlement(db.Model):
             "created_by_agent": self.created_by_agent,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialSettlementComponent(db.Model):
+    __tablename__ = "financial_settlement_components"
+    __table_args__ = (
+        db.CheckConstraint(
+            f"component_type IN {SETTLEMENT_COMPONENT_TYPE_VALUES}",
+            name="ck_financial_settlement_components_type",
+        ),
+        db.CheckConstraint(
+            "amount >= 0",
+            name="ck_financial_settlement_components_amount_nonneg",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    financial_settlement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_settlements.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    financial_schedule_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_schedules.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    component_type = db.Column(db.String(30), nullable=False, index=True)
+    amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    competence_date = db.Column(db.Date, nullable=False, index=True)
+    due_date = db.Column(db.Date, index=True)
+    source = db.Column(db.String(20), nullable=False, default="system", index=True)
+    origin_adjustment_id = db.Column(db.Integer, index=True)
+
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "financial_settlement_id": self.financial_settlement_id,
+            "financial_schedule_id": self.financial_schedule_id,
+            "component_type": self.component_type,
+            "amount": float(self.amount or 0),
+            "competence_date": self.competence_date.isoformat() if self.competence_date else None,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+            "source": self.source,
+            "origin_adjustment_id": self.origin_adjustment_id,
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
