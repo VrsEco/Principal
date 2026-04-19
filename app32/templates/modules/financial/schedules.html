@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419f') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419g') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -205,56 +205,85 @@
 <div id="settlement-composition-modal" class="modal-shell hidden" aria-hidden="true">
     <div class="modal-backdrop" onclick="closeSettlementCompositionModal()"></div>
     <div class="modal-card modal-card--settlement">
-        <div class="modal-head">
-            <div>
+        <div class="modal-header settlement-modal-header">
+            <div class="settlement-modal-title">
                 <h2>Composição da baixa</h2>
                 <p id="settlement-modal-subtitle" class="modal-subtitle">Confira o que será baixado como principal e como ajustes.</p>
             </div>
-            <button type="button" class="btn btn-ghost" onclick="closeSettlementCompositionModal()">Fechar</button>
+            <button type="button" class="btn-icon settlement-modal-close" onclick="closeSettlementCompositionModal()" aria-label="Fechar composição da baixa">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
         </div>
         <form id="settlement-composition-form" class="modal-form settlement-composition-form">
             <input type="hidden" id="settlement-schedule-id">
+            <div class="modal-body settlement-modal-body">
+                <section class="settlement-panel settlement-panel--status">
+                    <div id="settlement-simulation-status" class="settlement-simulation-status">Simulando composição...</div>
+                </section>
 
-            <section class="settlement-toolbar" aria-label="Dados da baixa">
-                <label class="field field-compact">
-                    <span>Data da baixa</span>
-                    <input id="settlement-date" name="settlement_date" type="date" required>
-                </label>
-                <label class="field field-compact">
-                    <span>Conta da baixa</span>
-                    <select id="settlement-bank-account" name="bank_account_id" required></select>
-                </label>
-            </section>
+                <section class="settlement-panel" aria-label="Dados da baixa">
+                    <header class="settlement-panel-header">
+                        <h3>Dados da baixa</h3>
+                        <p>Informe quando a baixa foi realizada e em qual conta bancária o movimento será registrado.</p>
+                    </header>
+                    <div class="settlement-toolbar">
+                        <label class="field field-compact">
+                            <span>Data da baixa</span>
+                            <input id="settlement-date" name="settlement_date" type="date" required>
+                        </label>
+                        <label class="field field-compact">
+                            <span>Conta da baixa</span>
+                            <select id="settlement-bank-account" name="bank_account_id" required></select>
+                        </label>
+                    </div>
+                </section>
 
-            <div id="settlement-simulation-status" class="settlement-simulation-status">Simulando composição...</div>
-            <section class="settlement-section-card">
-                <div id="settlement-simulation-summary" class="settlement-simulation-summary"></div>
-            </section>
+                <section class="settlement-panel">
+                    <header class="settlement-panel-header">
+                        <h3>Posição atual do título</h3>
+                        <p>Resumo do principal, ajustes acumulados, total devido e valor bruto estimado antes da confirmação.</p>
+                    </header>
+                    <div id="settlement-simulation-summary" class="settlement-simulation-summary"></div>
+                </section>
 
-            <section class="settlement-section-card settlement-composition-grid" aria-label="Composição editável da baixa">
-                <label class="field field-compact">
-                    <span>Principal</span>
-                    <input id="settlement-component-principal" data-settlement-component="principal" inputmode="numeric" placeholder="0,00">
-                </label>
-                <label class="field field-compact">
-                    <span>Correção Financeira</span>
-                    <input id="settlement-component-financial-correction" data-settlement-component="financial_correction" inputmode="numeric" placeholder="0,00">
-                </label>
-                <label class="field field-compact">
-                    <span>Desconto</span>
-                    <input id="settlement-component-discount" data-settlement-component="discount" inputmode="numeric" placeholder="0,00">
-                </label>
-                <label class="field field-compact settlement-total-field">
-                    <span>Valor da Baixa</span>
-                    <input id="settlement-component-gross" inputmode="numeric" placeholder="0,00" readonly tabindex="-1">
-                </label>
-            </section>
+                <section class="settlement-panel" aria-label="Composição editável da baixa">
+                    <header class="settlement-panel-header">
+                        <h3>Composição da baixa</h3>
+                        <p>Edite os valores diretamente. O principal não pode ultrapassar o saldo principal em aberto do título.</p>
+                    </header>
+                    <div class="settlement-composition-grid">
+                        <label class="field field-compact">
+                            <span>Principal</span>
+                            <input id="settlement-component-principal" data-settlement-component="principal" inputmode="numeric" placeholder="0,00">
+                        </label>
+                        <label class="field field-compact">
+                            <span>Correção Financeira</span>
+                            <input id="settlement-component-financial-correction" data-settlement-component="financial_correction" inputmode="numeric" placeholder="0,00">
+                        </label>
+                        <label class="field field-compact">
+                            <span>Desconto</span>
+                            <input id="settlement-component-discount" data-settlement-component="discount" inputmode="numeric" placeholder="0,00">
+                        </label>
+                        <label class="field field-compact settlement-total-field">
+                            <span>Valor da Baixa</span>
+                            <input id="settlement-component-gross" inputmode="numeric" placeholder="0,00" readonly tabindex="-1">
+                        </label>
+                    </div>
+                </section>
 
-            <section class="settlement-section-card">
-                <div id="settlement-after-summary" class="settlement-after-summary"></div>
-            </section>
+                <section class="settlement-panel">
+                    <header class="settlement-panel-header">
+                        <h3>Saldos após a baixa</h3>
+                        <p>Prévia dos saldos residuais para principal, ajustes e total em aberto após a confirmação.</p>
+                    </header>
+                    <div id="settlement-after-summary" class="settlement-after-summary"></div>
+                </section>
+            </div>
 
-            <div class="modal-actions">
+            <div class="modal-footer settlement-modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeSettlementCompositionModal()">Cancelar</button>
                 <button type="button" id="settlement-confirm-button" class="btn btn-success" onclick="confirmAssistedSettlement()">Confirmar baixa</button>
             </div>
@@ -305,5 +334,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419f') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419g') }}"></script>
 {% endblock %}

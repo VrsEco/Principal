@@ -582,25 +582,72 @@
 }
 
 .modal-card--settlement {
-  width: min(980px, calc(100vw - 2rem));
+  width: min(860px, calc(100vw - 2rem));
   max-height: 90vh;
-  overflow: auto;
-  border-radius: 24px;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 22px;
   border: 1px solid color-mix(in srgb, var(--form-tint-strong) 35%, var(--border));
   box-shadow: 0 28px 56px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
 }
 
+.modal-header,
 .modal-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+}
+
+.modal-head {
   margin-bottom: 1rem;
+}
+
+.modal-body {
+  padding: 1.5rem 1.75rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.75rem 1.5rem;
 }
 
 .modal-card--settlement .modal-head {
   padding-bottom: 0.85rem;
   border-bottom: 1px solid color-mix(in srgb, var(--form-tint-strong) 24%, transparent);
+}
+
+.settlement-modal-header {
+  padding: 1.4rem 1.75rem;
+  background: color-mix(in srgb, var(--surface-secondary) 88%, #eff6ff);
+  border-bottom: 1px solid color-mix(in srgb, var(--form-tint-strong) 24%, var(--border));
+}
+
+.settlement-modal-title h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.settlement-modal-title .modal-subtitle {
+  margin-top: 0.35rem;
+  max-width: 560px;
+}
+
+.settlement-modal-close {
+  width: 40px !important;
+  height: 40px !important;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, #fff);
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .modal-subtitle {
@@ -635,32 +682,69 @@
 }
 
 .settlement-composition-form {
-  gap: 1rem;
+  gap: 0;
+  min-height: 0;
+}
+
+.settlement-modal-body {
+  display: grid;
+  gap: 1.1rem;
+  min-height: 0;
+  max-height: calc(90vh - 176px);
+  overflow-y: auto;
+}
+
+.settlement-modal-footer {
+  border-top: 1px solid color-mix(in srgb, var(--form-tint-strong) 18%, var(--border));
+  background: color-mix(in srgb, var(--surface-secondary) 86%, #fff);
+}
+
+.settlement-panel {
+  padding: 1.15rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--form-tint-strong) 18%, var(--border));
+  background: color-mix(in srgb, var(--surface) 96%, var(--form-tint-strong));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.settlement-panel--status {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settlement-panel-header {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.settlement-panel-header h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.settlement-panel-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .settlement-toolbar {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-  padding: 0.95rem;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--form-tint-strong) 24%, var(--border));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 88%, var(--form-tint-strong)) 0%, var(--surface-secondary) 100%);
-}
-
-.settlement-section-card {
-  padding: 0.95rem;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--form-tint-strong) 18%, var(--border));
-  background: color-mix(in srgb, var(--surface) 94%, var(--form-tint-strong));
+  gap: 1rem;
 }
 
 .settlement-simulation-status {
-  padding: 0.75rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-secondary);
-  color: var(--text-secondary);
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, #fff);
+  border-radius: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface-secondary) 84%, #fff) 0%, color-mix(in srgb, var(--surface) 84%, var(--form-tint-strong)) 100%);
+  color: var(--text-primary);
   font-weight: 800;
 }
 
@@ -679,8 +763,8 @@
 .settlement-simulation-summary,
 .settlement-after-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .settlement-after-summary {
@@ -689,10 +773,11 @@
 
 .settlement-simulation-summary article,
 .settlement-after-summary article {
-  padding: 0.75rem 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--border) 84%, var(--form-tint-strong));
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 90%, var(--form-tint-strong));
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, var(--form-tint-strong));
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
 }
 
 .settlement-simulation-summary span,
@@ -713,18 +798,24 @@
 
 .settlement-composition-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
   padding: 0;
   border: none;
   border-radius: 0;
   background: transparent;
 }
 
+.settlement-composition-grid .field,
+.settlement-toolbar .field {
+  min-width: 0;
+}
+
 .settlement-total-field input {
   font-weight: 900;
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--surface) 82%, var(--form-tint-strong));
+  background: color-mix(in srgb, var(--surface) 78%, var(--form-tint-strong));
+  border-color: color-mix(in srgb, var(--form-tint-strong) 38%, var(--form-border));
 }
 
 .calc-log-shell {
@@ -997,7 +1088,7 @@
   .settlement-composition-grid,
   .calc-log-summary,
   .calc-log-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .settlement-toolbar { grid-template-columns: 1fr; }
+  .settlement-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sched-summary-strip,
   .sched-summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .field-span-4,
@@ -1022,6 +1113,13 @@
   }
 
   .sched-grid { grid-template-columns: 1fr; }
+  .modal-body { padding: 1rem; }
+  .modal-footer { padding: 1rem; }
+  .settlement-modal-header { padding: 1rem; }
+  .settlement-modal-close {
+    width: 38px !important;
+    height: 38px !important;
+  }
   .title-balance-head {
     flex-direction: column;
   }
@@ -1050,6 +1148,12 @@
   .sched-header-actions .btn,
   .sched-footer-actions .btn,
   .attachments-upload-row .btn { width: 100%; }
+  .settlement-modal-footer {
+    flex-direction: column-reverse;
+  }
+  .settlement-modal-footer .btn {
+    width: 100%;
+  }
   .rateio-summary { flex-direction: column; }
   .attachments-upload-row input[type="file"] { width: 100%; }
   .calc-log-card__head {
@@ -1075,6 +1179,7 @@
   .sched-page { padding: 0 0.75rem 1rem; }
   .sched-card,
   .modal-card { border-radius: 14px; }
+  .settlement-panel { padding: 1rem; }
   .sched-form,
   .rail-card { padding: 0.9rem; }
   .sched-tabs { padding: 0.75rem 0.75rem 0; }
