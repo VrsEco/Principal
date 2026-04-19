@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
@@ -229,6 +230,36 @@ class FinancialReportService:
         amount = FinancialReportService._serialize_money(value)
         inteiro, decimal = f"{amount:,.2f}".split(".")
         return f"R$ {inteiro.replace(',', '.')},{decimal}"
+
+    @staticmethod
+    def _format_signed_currency(value: Decimal | float | int, *, positive_sign: bool = False) -> str:
+        amount = Decimal(value or 0)
+        signal = ""
+        if amount < 0:
+            signal = "- "
+        elif positive_sign and amount > 0:
+            signal = "+ "
+        return f"{signal}{FinancialReportService._format_currency(abs(amount))}"
+
+    @staticmethod
+    def _reconciliation_status_label(value: Optional[str]) -> str:
+        return {
+            "pending": "Pendente",
+            "suggested": "Sugerida",
+            "matched": "Casada",
+            "reconciled": "Conciliada",
+            "rejected": "Rejeitada",
+        }.get(str(value or "").strip().lower(), "Não informada")
+
+    @staticmethod
+    def _reconciliation_status_tone(value: Optional[str]) -> str:
+        return {
+            "pending": "neutral",
+            "suggested": "primary",
+            "matched": "primary",
+            "reconciled": "positive",
+            "rejected": "negative",
+        }.get(str(value or "").strip().lower(), "neutral")
 
     @staticmethod
     def _name_map(model, company_id: int) -> Dict[int, str]:
@@ -900,6 +931,7 @@ class FinancialReportService:
             if not entry:
                 continue
             amount = Decimal(settlement.net_amount or 0)
+            movement_tone = "positive" if entry.movement_nature == "credit" else "negative"
             if entry.movement_nature == "credit":
                 inflow += amount
                 running += amount
@@ -915,23 +947,31 @@ class FinancialReportService:
                     "descricao": entry.description,
                     "favorecido": counterparty_names.get(entry.counterparty_id, "Não informado"),
                     "movimento": "Entrada" if entry.movement_nature == "credit" else "Saída",
+                    "movimento_tone": movement_tone,
                     "valor": FinancialReportService._serialize_money(amount),
+                    "valor_label": FinancialReportService._format_signed_currency(amount, positive_sign=entry.movement_nature == "credit"),
                     "conciliacao": settlement.reconciliation_status,
+                    "conciliacao_label": FinancialReportService._reconciliation_status_label(settlement.reconciliation_status),
+                    "conciliacao_tone": FinancialReportService._reconciliation_status_tone(settlement.reconciliation_status),
                     "saldo": FinancialReportService._serialize_money(running),
+                    "saldo_label": FinancialReportService._format_currency(running),
+                    "saldo_tone": "negative" if running < 0 else "neutral",
                 }
             )
         return {
             "title": definition["label"],
             "subtitle": definition["description"],
             "summary_cards": [
-                {"label": "Saldo inicial", "value": FinancialReportService._format_currency(balance_base)},
-                {"label": "Entradas", "value": FinancialReportService._format_currency(inflow)},
-                {"label": "Saídas", "value": FinancialReportService._format_currency(outflow)},
-                {"label": "Saldo final", "value": FinancialReportService._format_currency(running)},
+                {"label": "Saldo inicial", "value": FinancialReportService._format_currency(balance_base), "tone": "neutral"},
+                {"label": "Entradas", "value": FinancialReportService._format_currency(inflow), "tone": "positive"},
+                {"label": "Saídas", "value": FinancialReportService._format_currency(outflow), "tone": "negative"},
+                {"label": "Saldo final", "value": FinancialReportService._format_currency(running), "tone": "primary" if running >= 0 else "negative"},
             ],
             "general_info": [
                 {"label": "Janela analisada", "value": f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"},
                 {"label": "Recorte", "value": bank_names.get(filters.bank_account_id, "Todas as contas bancárias")},
+                {"label": "Movimentos", "value": str(len(rows))},
+                {"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"},
             ],
             "columns": [
                 {"key": "data", "label": "Data"},
@@ -1772,6 +1812,10 @@ class FinancialReportService:
                         ]
                     ) or "Nenhum",
                 })
+        elif filters.report_type == "bank_statement":
+            include_reconciled_explicit = "include_reconciled_only" in raw_filters
+            if include_reconciled_explicit or filters.include_reconciled_only:
+                values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
         else:
             values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
             values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
@@ -1874,8 +1918,24 @@ class FinancialReportService:
     def export_pdf(report_payload: Dict[str, Any]) -> bytes:
         buffer = io.BytesIO()
         pagesize = landscape(A4) if report_payload.get("orientation", "landscape") == "landscape" else A4
-        doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=24, rightMargin=24, topMargin=28, bottomMargin=24)
+        doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=24, rightMargin=24, topMargin=26, bottomMargin=36)
         styles = getSampleStyleSheet()
+        available_width = pagesize[0] - doc.leftMargin - doc.rightMargin
+
+        if report_payload.get("report_type") == "schedule_report":
+            elements = FinancialReportService._build_schedule_pdf_elements(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+            )
+            doc.build(
+                elements,
+                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            )
+            buffer.seek(0)
+            return buffer.getvalue()
+
         title_style = ParagraphStyle("FinancialReportTitle", parent=styles["Heading1"], fontSize=18, textColor=colors.HexColor("#0f172a"), spaceAfter=10)
         subtitle_style = ParagraphStyle("FinancialReportSubtitle", parent=styles["BodyText"], fontSize=9, textColor=colors.HexColor("#475569"), spaceAfter=8)
 
@@ -1921,6 +1981,317 @@ class FinancialReportService:
             )
             elements.append(table)
 
-        doc.build(elements)
+        doc.build(
+            elements,
+            onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+        )
         buffer.seek(0)
         return buffer.getvalue()
+
+    @staticmethod
+    def _pdf_generated_at_label(report_payload: Dict[str, Any]) -> str:
+        generated_at = str(report_payload.get("generated_at") or "-").strip()
+        if generated_at == "-":
+            return generated_at
+        if " às " in generated_at:
+            return generated_at
+        if " " in generated_at:
+            date_part, time_part = generated_at.split(" ", 1)
+            return f"{date_part} às {time_part}"
+        return generated_at
+
+    @staticmethod
+    def _draw_default_pdf_footer(canvas, doc, report_payload: Dict[str, Any]) -> None:
+        canvas.saveState()
+        width, _ = doc.pagesize
+        footer_y = 18
+        line_y = footer_y + 10
+        canvas.setStrokeColor(colors.HexColor("#cbd5e1"))
+        canvas.setLineWidth(0.6)
+        canvas.line(doc.leftMargin, line_y, width - doc.rightMargin, line_y)
+        canvas.setFillColor(colors.HexColor("#0f172a"))
+        canvas.setFont("Helvetica", 8)
+        canvas.drawString(doc.leftMargin, footer_y, "Versus Gestão Corporativa - Todos os direitos reservados.")
+        canvas.drawRightString(
+            width - doc.rightMargin,
+            footer_y,
+            f"Emitido em: {FinancialReportService._pdf_generated_at_label(report_payload)}",
+        )
+        canvas.restoreState()
+
+    @staticmethod
+    def _build_schedule_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
+        title_style = ParagraphStyle(
+            "SchedulePdfTitle",
+            parent=styles["Heading1"],
+            fontSize=18,
+            leading=21,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#0f172a"),
+            spaceAfter=4,
+        )
+        section_title_style = ParagraphStyle(
+            "SchedulePdfSectionTitle",
+            parent=styles["BodyText"],
+            fontSize=10,
+            leading=12,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0f172a"),
+            spaceAfter=6,
+        )
+        filter_cell_style = ParagraphStyle(
+            "SchedulePdfFilterCell",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            alignment=TA_LEFT,
+            textColor=colors.HexColor("#0f172a"),
+        )
+        stat_label_style = ParagraphStyle(
+            "SchedulePdfStatLabel",
+            parent=styles["BodyText"],
+            fontSize=7,
+            leading=8,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#334155"),
+        )
+        stat_value_style = ParagraphStyle(
+            "SchedulePdfStatValue",
+            parent=styles["BodyText"],
+            fontSize=11,
+            leading=13,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0f172a"),
+        )
+        table_header_style = ParagraphStyle(
+            "SchedulePdfTableHeader",
+            parent=styles["BodyText"],
+            fontSize=7,
+            leading=8,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.white,
+        )
+        table_cell_style = ParagraphStyle(
+            "SchedulePdfTableCell",
+            parent=styles["BodyText"],
+            fontSize=7,
+            leading=8,
+            textColor=colors.HexColor("#0f172a"),
+        )
+        table_cell_center_style = ParagraphStyle(
+            "SchedulePdfTableCellCenter",
+            parent=table_cell_style,
+            alignment=TA_CENTER,
+        )
+        table_cell_currency_style = ParagraphStyle(
+            "SchedulePdfTableCellCurrency",
+            parent=table_cell_style,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+        )
+
+        elements: List[Any] = [
+            Paragraph(report_payload.get("title", "Relatório financeiro"), title_style),
+            Spacer(1, 8),
+        ]
+
+        report_filters = report_payload.get("filters") or []
+        elements.append(Paragraph("FILTROS APLICADOS", section_title_style))
+        elements.append(
+            FinancialReportService._build_schedule_pdf_filter_cards(
+                report_filters=report_filters,
+                available_width=available_width,
+                content_style=filter_cell_style,
+            )
+        )
+        elements.append(Spacer(1, 8))
+
+        report_summary_cards = report_payload.get("summary_cards") or []
+        elements.append(
+            FinancialReportService._build_schedule_pdf_summary_cards(
+                report_summary_cards=report_summary_cards,
+                available_width=available_width,
+                label_style=stat_label_style,
+                value_style=stat_value_style,
+            )
+        )
+        elements.append(Spacer(1, 8))
+
+        report_columns = report_payload.get("columns") or []
+        report_rows = report_payload.get("rows") or []
+        if report_columns:
+            elements.append(
+                FinancialReportService._build_schedule_pdf_data_table(
+                    report_columns=report_columns,
+                    report_rows=report_rows,
+                    available_width=available_width,
+                    header_style=table_header_style,
+                    cell_style=table_cell_style,
+                    cell_center_style=table_cell_center_style,
+                    cell_currency_style=table_cell_currency_style,
+                )
+            )
+        else:
+            empty_style = ParagraphStyle(
+                "SchedulePdfEmpty",
+                parent=styles["BodyText"],
+                fontSize=9,
+                leading=11,
+                alignment=TA_CENTER,
+                textColor=colors.HexColor("#475569"),
+            )
+            elements.append(Paragraph("Nenhum dado encontrado para os filtros informados.", empty_style))
+
+        return elements
+
+    @staticmethod
+    def _build_schedule_pdf_filter_cards(*, report_filters: List[Dict[str, Any]], available_width: float, content_style) -> Table:
+        items = report_filters or [{"label": "Resumo", "value": "Sem filtros adicionais."}]
+        cols = 3
+        gutter = 6
+        col_width = (available_width - (gutter * (cols - 1))) / cols
+        cells: List[Any] = []
+        for item in items:
+            label = str(item.get("label") or "").strip()
+            value = str(item.get("value") or "-").strip()
+            cells.append(Paragraph(f"<b>{label}</b><br/>{value}", content_style))
+        while len(cells) % cols != 0:
+            cells.append(Paragraph("", content_style))
+        matrix = [cells[index:index + cols] for index in range(0, len(cells), cols)]
+        table = Table(matrix, colWidths=[col_width] * cols, hAlign="LEFT")
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                    ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor("#cbd5e1")),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#e2e8f0")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        return table
+
+    @staticmethod
+    def _build_schedule_pdf_summary_cards(*, report_summary_cards: List[Dict[str, Any]], available_width: float, label_style, value_style) -> Table:
+        cards = report_summary_cards or []
+        cols = 4
+        gutter = 6
+        col_width = (available_width - (gutter * (cols - 1))) / cols
+        rows: List[List[Any]] = []
+        current_row: List[Any] = []
+        tone_color_codes = {
+            "positive": "#16a34a",
+            "negative": "#dc2626",
+            "primary": "#2563eb",
+            "neutral": "#0f172a",
+        }
+        for card in cards:
+            tone = str(card.get("tone") or "neutral").lower()
+            value = Paragraph(
+                f"<font color='{tone_color_codes.get(tone, '#0f172a')}'>{card.get('value', '-')}</font>",
+                value_style,
+            )
+            label = Paragraph(str(card.get("label") or "-").upper(), label_style)
+            current_row.append(Table([[value], [label]], colWidths=[col_width]))
+            if len(current_row) == cols:
+                rows.append(current_row)
+                current_row = []
+        if current_row:
+            while len(current_row) < cols:
+                current_row.append(Paragraph("", value_style))
+            rows.append(current_row)
+
+        table = Table(rows, colWidths=[col_width] * cols, hAlign="LEFT")
+        base_styles = [
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]
+        for row_index, row in enumerate(rows):
+            for col_index, cell in enumerate(row):
+                if isinstance(cell, Table):
+                    cell.setStyle(
+                        TableStyle(
+                            [
+                                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ffffff")),
+                                ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#cbd5e1")),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                            ]
+                        )
+                    )
+        table.setStyle(TableStyle(base_styles))
+        return table
+
+    @staticmethod
+    def _build_schedule_pdf_data_table(
+        *,
+        report_columns: List[Dict[str, Any]],
+        report_rows: List[Dict[str, Any]],
+        available_width: float,
+        header_style,
+        cell_style,
+        cell_center_style,
+        cell_currency_style,
+    ) -> Table:
+        width_ratio_map = {
+            "title_number": 1.0,
+            "counterparty": 1.7,
+            "title_amount": 1.0,
+            "balance_amount": 1.0,
+            "competence_date": 1.0,
+            "due_date": 1.0,
+            "settlement_date": 1.15,
+        }
+        total_ratio = sum(width_ratio_map.get(column.get("key"), 1.0) for column in report_columns) or 1.0
+        col_widths = [
+            available_width * (width_ratio_map.get(column.get("key"), 1.0) / total_ratio)
+            for column in report_columns
+        ]
+
+        header_row = [Paragraph(str(column.get("label") or ""), header_style) for column in report_columns]
+        body_rows: List[List[Any]] = []
+        for item in report_rows:
+            row_cells: List[Any] = []
+            for column in report_columns:
+                key = column.get("key")
+                raw_value = str(item.get(key, "") or "")
+                if key in {"title_amount", "balance_amount"}:
+                    style = cell_currency_style
+                elif key in {"competence_date", "due_date", "settlement_date"}:
+                    style = cell_center_style
+                else:
+                    style = cell_style
+                row_cells.append(Paragraph(raw_value, style))
+            body_rows.append(row_cells)
+
+        data = [header_row] + body_rows
+        table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
+        table_styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#cbd5e1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]
+        for row_index in range(1, len(data)):
+            background = colors.HexColor("#ffffff") if row_index % 2 else colors.HexColor("#f8fafc")
+            table_styles.append(("BACKGROUND", (0, row_index), (-1, row_index), background))
+        table.setStyle(TableStyle(table_styles))
+        return table
