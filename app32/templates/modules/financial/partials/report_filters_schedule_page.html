@@ -5,6 +5,8 @@
 {% set selected_schedule_status = (filters.get('schedule_status', ['']) | first) %}
 {% set selected_frequency = (filters.get('frequency', ['']) | first) %}
 {% set selected_movement_nature = (filters.get('movement_nature', ['']) | first) %}
+{% set selected_orientation = (filters.get('orientation', ['landscape']) | first) %}
+{% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
 
 {% set bank_ns = namespace(label='Todas as contas bancárias') %}
 {% if selected_bank_account_id %}

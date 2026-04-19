@@ -744,6 +744,7 @@
 
 {% block sidebar_right %}
 {% if report_definition.code == 'schedule_report' %}
+{% set filters = current_filters or {} %}
 {% include 'modules/financial/partials/report_filters_schedule_sidebar.html' %}
 {% endif %}
 {% endblock %}
