@@ -241,6 +241,7 @@ jobs:
             'bash -seuo pipefail' <<'REMOTE_SCRIPT'
             set -euo pipefail
 
+            APP_DIR="/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32"
             BACKUP_DIR="$HOME/backups"
             DATE=$(date +%Y%m%d_%H%M%S)
             TMP_FILE="$BACKUP_DIR/db_backup_${DATE}.sql"
@@ -260,10 +261,77 @@ jobs:
               exit 1
             fi
 
+            if [ ! -f "$APP_DIR/.env" ]; then
+              echo "❌ Arquivo .env da aplicação não encontrado em $APP_DIR/.env"
+              exit 1
+            fi
+
+            echo "🔐 Carregando credenciais PostgreSQL do .env da aplicação..."
+            eval "$(
+              APP_ENV_FILE="$APP_DIR/.env" python3 <<'PY'
+          import os
+          import shlex
+          from pathlib import Path
+          from urllib.parse import unquote, urlparse
+          
+          env_file = Path(os.environ["APP_ENV_FILE"])
+          values = {}
+          
+          for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+              line = raw_line.strip()
+              if not line or line.startswith("#") or "=" not in line:
+                  continue
+              key, value = line.split("=", 1)
+              key = key.strip()
+              value = value.strip().strip('"').strip("'")
+              values[key] = value
+          
+          database_url = (
+              values.get("DATABASE_URL")
+              or values.get("SQLALCHEMY_DATABASE_URI")
+              or values.get("POSTGRES_URL")
+          )
+          
+          if database_url:
+              parsed = urlparse(database_url)
+              db_name = unquote((parsed.path or "").lstrip("/"))
+              db_user = unquote(parsed.username or "")
+              db_password = unquote(parsed.password or "")
+              db_host = parsed.hostname or "127.0.0.1"
+              db_port = str(parsed.port or 5432)
+          else:
+              db_name = values.get("DB_NAME") or values.get("POSTGRES_DB") or "bd_app_versus"
+              db_user = values.get("DB_USER") or values.get("POSTGRES_USER") or "mff2000"
+              db_password = values.get("DB_PASSWORD") or values.get("POSTGRES_PASSWORD") or ""
+              db_host = values.get("DB_HOST") or values.get("POSTGRES_HOST") or "127.0.0.1"
+              db_port = values.get("DB_PORT") or values.get("POSTGRES_PORT") or "5432"
+          
+          required = {
+              "DB_NAME": db_name,
+              "DB_USER": db_user,
+              "DB_PASSWORD": db_password,
+              "DB_HOST": db_host,
+              "DB_PORT": db_port,
+          }
+          missing = [key for key, value in required.items() if not value]
+          if missing:
+              raise SystemExit(f"Credenciais PostgreSQL incompletas no .env: {', '.join(missing)}")
+          
+          for key, value in required.items():
+              print(f"{key}={shlex.quote(value)}")
+          PY
+            )"
+
             rm -f "$TMP_FILE" "$FINAL_FILE"
 
             echo "📦 Gerando dump PostgreSQL..."
-            PGCONNECT_TIMEOUT=10 pg_dump -h 127.0.0.1 -U mff2000 --no-owner --no-privileges bd_app_versus > "$TMP_FILE"
+            PGCONNECT_TIMEOUT=10 PGPASSWORD="$DB_PASSWORD" pg_dump \
+              -h "$DB_HOST" \
+              -p "$DB_PORT" \
+              -U "$DB_USER" \
+              --no-owner \
+              --no-privileges \
+              "$DB_NAME" > "$TMP_FILE"
 
             if [ ! -s "$TMP_FILE" ]; then
               echo "❌ Dump gerado vazio"
