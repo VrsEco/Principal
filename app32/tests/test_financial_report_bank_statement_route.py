@@ -182,3 +182,19 @@ def test_income_statement_view_redirects_to_filters(monkeypatch):
     assert response.headers["Location"].endswith(
         "/financial/reports/demonstrativo-resultados?competence_start=2026-04-01&competence_end=2026-04-19"
     )
+
+
+def test_income_statement_2_view_redirects_to_filters(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+
+    client = app.test_client()
+    response = client.get(
+        "/financial/reports/demonstrativo-resultados-02/view?competence_start=2026-04-01&competence_end=2026-04-19",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith(
+        "/financial/reports/demonstrativo-resultados-02?competence_start=2026-04-01&competence_end=2026-04-19"
+    )

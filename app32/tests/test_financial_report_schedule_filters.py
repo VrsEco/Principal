@@ -100,3 +100,51 @@ def test_income_statement_normalize_forces_fixed_identification_and_sorting():
     assert filters.show_description is True
     assert filters.order_by == "code"
     assert filters.order_direction == "asc"
+
+
+def test_income_statement_resolve_roots_promotes_nodes_with_missing_parent():
+    root_ids = FinancialReportService._resolve_income_statement_root_ids(
+        {
+            20: {"codigo": "5.02", "descricao": "Despesas", "parent_id": 10},
+            30: {"codigo": "5.03", "descricao": "Operacionais", "parent_id": None},
+        }
+    )
+
+    assert root_ids == [20, 30]
+
+
+def test_income_statement_sort_roots_keeps_code_order():
+    root_ids = FinancialReportService._sort_income_statement_account_ids(
+        [2, 1],
+        {
+            1: {"codigo": "4.01", "descricao": "Receitas"},
+            2: {"codigo": "5.01", "descricao": "Custos"},
+        },
+    )
+
+    assert root_ids == [1, 2]
+
+
+def test_income_statement_2_normalize_forces_fixed_identification_and_sorting():
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement_2",
+        {
+            "competence_start": "2026-04-01",
+            "competence_end": "2026-04-30",
+            "include_settled": "true",
+            "include_open": "true",
+            "include_payable": "true",
+            "include_receivable": "true",
+            "show_code": "false",
+            "show_description": "false",
+            "order_by": "description",
+            "order_direction": "desc",
+        },
+    )
+
+    assert error is None
+    assert filters is not None
+    assert filters.show_code is True
+    assert filters.show_description is True
+    assert filters.order_by == "code"
+    assert filters.order_direction == "asc"

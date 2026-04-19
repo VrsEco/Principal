@@ -1,5 +1,9 @@
-{% set period_start = (filters.get('period_start', [default_period_start]) | first) %}
-{% set period_end = (filters.get('period_end', [default_period_end]) | first) %}
+{% set competence_start = (filters.get('competence_start', [default_period_start]) | first) %}
+{% set competence_end = (filters.get('competence_end', [default_period_end]) | first) %}
+{% set due_start = (filters.get('due_start', ['']) | first) %}
+{% set due_end = (filters.get('due_end', ['']) | first) %}
+{% set settlement_start = (filters.get('settlement_start', ['']) | first) %}
+{% set settlement_end = (filters.get('settlement_end', ['']) | first) %}
 {% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
 {% set selected_cost_centers = filters.get('cost_center_ids', []) %}
 {% set selected_projects = filters.get('project_ids', []) %}
@@ -11,7 +15,7 @@
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
-    <p class="dre-report-sidebar-subtitle">Parâmetros da Demonstração de Resultados 01.</p>
+    <p class="dre-report-sidebar-subtitle">Parâmetros da Demonstração de Resultados 02.</p>
 </div>
 
 <div class="sidebar-content-ws report-workspace-sidebar dre-report-sidebar">
@@ -30,23 +34,47 @@
         <input type="hidden" name="order_direction" value="asc">
 
         <section class="report-workspace-sidebar__section dre-sidebar-section">
-            <p class="filter-label">Período</p>
+            <p class="filter-label">Data Competência</p>
             <div class="report-workspace-date-pair">
                 <label>
                     <span>De</span>
-                    <input type="date" name="period_start" value="{{ period_start }}" data-filter-input data-default-value="{{ default_period_start }}">
+                    <input type="date" name="competence_start" value="{{ competence_start }}" data-filter-input data-default-value="{{ default_period_start }}">
                 </label>
                 <label>
                     <span>Até</span>
-                    <input type="date" name="period_end" value="{{ period_end }}" data-filter-input data-default-value="{{ default_period_end }}">
+                    <input type="date" name="competence_end" value="{{ competence_end }}" data-filter-input data-default-value="{{ default_period_end }}">
+                </label>
+            </div>
+
+            <p class="filter-label">Data Vencimento</p>
+            <div class="report-workspace-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="due_start" value="{{ due_start }}" data-filter-input data-default-value="">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="due_end" value="{{ due_end }}" data-filter-input data-default-value="">
+                </label>
+            </div>
+
+            <p class="filter-label">Data Baixa</p>
+            <div class="report-workspace-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="settlement_start" value="{{ settlement_start }}" data-filter-input data-default-value="">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="settlement_end" value="{{ settlement_end }}" data-filter-input data-default-value="">
                 </label>
             </div>
         </section>
 
         <section class="report-workspace-sidebar__section dre-sidebar-section">
             <div class="filter-group">
-                <label class="filter-label" for="dre-report-chart-accounts">Planos de Conta</label>
-                <select id="dre-report-chart-accounts" name="chart_account_ids" multiple size="8" data-filter-input data-default-value="">
+                <label class="filter-label" for="dre2-report-chart-accounts">Planos de Conta</label>
+                <select id="dre2-report-chart-accounts" name="chart_account_ids" multiple size="8" data-filter-input data-default-value="">
                     {% for item in options.chart_accounts %}
                     {% set option_id = item.id|string %}
                     {% set is_selectable = item.get('selectable', true) %}
@@ -57,8 +85,8 @@
             </div>
 
             <div class="filter-group">
-                <label class="filter-label" for="dre-report-cost-centers">Centros de Resultado</label>
-                <select id="dre-report-cost-centers" name="cost_center_ids" multiple size="7" data-filter-input data-default-value="">
+                <label class="filter-label" for="dre2-report-cost-centers">Centros de Resultado</label>
+                <select id="dre2-report-cost-centers" name="cost_center_ids" multiple size="7" data-filter-input data-default-value="">
                     {% for item in options.cost_centers %}
                     {% set option_id = item.id|string %}
                     {% set is_selectable = item.get('selectable', true) %}
@@ -69,8 +97,8 @@
             </div>
 
             <div class="filter-group">
-                <label class="filter-label" for="dre-report-projects">Projetos</label>
-                <select id="dre-report-projects" name="project_ids" multiple size="6" data-filter-input data-default-value="">
+                <label class="filter-label" for="dre2-report-projects">Projetos</label>
+                <select id="dre2-report-projects" name="project_ids" multiple size="6" data-filter-input data-default-value="">
                     {% for item in options.projects %}
                     {% set option_id = item.id|string %}
                     <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>

@@ -56,6 +56,7 @@ class FinancialReportService:
         "schedule_report",
         "bank_statement",
         "income_statement",
+        "income_statement_2",
         "cash_flow",
         "ledger",
         "working_capital",
@@ -79,7 +80,20 @@ class FinancialReportService:
         "income_statement": {
             "code": "income_statement",
             "slug": "demonstrativo-resultados",
-            "label": "Demonstrações de Resultados",
+            "label": "Demonstração de Resultados 01",
+            "description": "DRE contábil com período único e apuração independente por competência, vencimento e liquidação.",
+            "filters": (
+                "period",
+                "chart_account_multi",
+                "cost_center_multi",
+                "project_multi",
+                "income_statement_config",
+            ),
+        },
+        "income_statement_2": {
+            "code": "income_statement_2",
+            "slug": "demonstrativo-resultados-02",
+            "label": "Demonstração de Resultados 02",
             "description": "DRE contábil hierárquica nas visões de competência, vencimento e liquidação por conta contábil.",
             "filters": (
                 "competence_period",
@@ -164,7 +178,7 @@ class FinancialReportService:
             period_end = period_end or data.competence_end or default_end
             data = data.model_copy(update={"period_start": period_start, "period_end": period_end})
 
-        if data.report_type == "income_statement":
+        if data.report_type == "income_statement_2":
             updates = {}
             if not data.competence_start:
                 updates["competence_start"] = data.period_start
@@ -186,7 +200,7 @@ class FinancialReportService:
             if start_value and end_value and start_value > end_value:
                 return None, f"Faixa de {label.lower()} inválida para relatório."
 
-        if data.report_type == "income_statement":
+        if data.report_type in {"income_statement", "income_statement_2"}:
             data = data.model_copy(update={
                 "show_code": True,
                 "show_description": True,
@@ -515,6 +529,47 @@ class FinancialReportService:
         if not selected:
             return True
         return bool(selected.intersection(FinancialReportService._entry_project_ids(entry)))
+
+    @staticmethod
+    def _sort_income_statement_account_ids(
+        account_ids: Sequence[int],
+        hierarchy_nodes: Dict[int, Dict[str, Any]],
+        *,
+        order_by: str = "code",
+        reverse: bool = False,
+    ) -> List[int]:
+        sorted_ids = [account_id for account_id in account_ids if account_id in hierarchy_nodes]
+        sorted_ids.sort(
+            key=lambda account_id: (
+                (hierarchy_nodes.get(account_id) or {}).get("codigo")
+                if order_by == "code"
+                else (hierarchy_nodes.get(account_id) or {}).get("descricao"),
+                (hierarchy_nodes.get(account_id) or {}).get("descricao"),
+            ),
+            reverse=reverse,
+        )
+        return sorted_ids
+
+    @staticmethod
+    def _resolve_income_statement_root_ids(
+        hierarchy_nodes: Dict[int, Dict[str, Any]],
+        *,
+        order_by: str = "code",
+        reverse: bool = False,
+    ) -> List[int]:
+        root_ids: List[int] = []
+        for account_id, node in hierarchy_nodes.items():
+            parent_id = node.get("parent_id")
+            if not parent_id or parent_id not in hierarchy_nodes:
+                root_ids.append(account_id)
+        if not root_ids:
+            root_ids = list(hierarchy_nodes.keys())
+        return FinancialReportService._sort_income_statement_account_ids(
+            root_ids,
+            hierarchy_nodes,
+            order_by=order_by,
+            reverse=reverse,
+        )
 
     @staticmethod
     def _schedule_project_ids(schedule: FinancialSchedule) -> List[int]:
@@ -1030,6 +1085,19 @@ class FinancialReportService:
 
     @staticmethod
     def _build_income_statement(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
+        return FinancialReportService._build_income_statement_base(company_id, filters, consolidated_by_period=True)
+
+    @staticmethod
+    def _build_income_statement_2(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
+        return FinancialReportService._build_income_statement_base(company_id, filters, consolidated_by_period=False)
+
+    @staticmethod
+    def _build_income_statement_base(
+        company_id: int,
+        filters: FinancialManagementReportFiltersInput,
+        *,
+        consolidated_by_period: bool,
+    ) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
         chart_accounts = FinancialChartAccount.query.filter(
             FinancialChartAccount.company_id == company_id,
@@ -1053,6 +1121,8 @@ class FinancialReportService:
         center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
         project_names = FinancialReportService._name_map(Project, company_id)
 
+        period_start = filters.period_start
+        period_end = filters.period_end
         competence_start = filters.competence_start or filters.period_start
         competence_end = filters.competence_end or filters.period_end
         due_start = filters.due_start
@@ -1063,9 +1133,12 @@ class FinancialReportService:
         query = FinancialEntry.query.filter(
             FinancialEntry.company_id == company_id,
             FinancialEntry.deleted_at.is_(None),
-            FinancialEntry.competence_date >= competence_start,
-            FinancialEntry.competence_date <= competence_end,
         )
+        if not consolidated_by_period:
+            query = query.filter(
+                FinancialEntry.competence_date >= competence_start,
+                FinancialEntry.competence_date <= competence_end,
+            )
         chart_account_ids = FinancialReportService._selected_ids(filters.chart_account_id, filters.chart_account_ids)
         if chart_account_ids:
             query = query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
@@ -1089,6 +1162,7 @@ class FinancialReportService:
 
         entry_ids = [entry.id for entry in entries]
         settlement_totals_by_entry: Dict[int, Decimal] = {}
+        settlement_period_totals_by_entry: Dict[int, Decimal] = {}
         if entry_ids:
             settlement_query = FinancialSettlement.query.filter(
                 FinancialSettlement.company_id == company_id,
@@ -1096,27 +1170,49 @@ class FinancialReportService:
                 FinancialSettlement.deleted_at.is_(None),
                 FinancialSettlement.settlement_status != "cancelled",
             )
-            if settlement_start:
-                settlement_query = settlement_query.filter(FinancialSettlement.settlement_date >= settlement_start)
-            if settlement_end:
-                settlement_query = settlement_query.filter(FinancialSettlement.settlement_date <= settlement_end)
-            for settlement in settlement_query.all():
+            settlements = settlement_query.all()
+            for settlement in settlements:
                 settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
                 settlement_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
+                if consolidated_by_period:
+                    if period_start and period_end and settlement.settlement_date and period_start <= settlement.settlement_date <= period_end:
+                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                        settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
+                else:
+                    if settlement_start and settlement_end:
+                        if settlement.settlement_date and settlement_start <= settlement.settlement_date <= settlement_end:
+                            settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                            settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
+                    else:
+                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                        settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
 
         grouped: Dict[int, Dict[str, Any]] = {}
         for entry in entries:
-            settlement_total = settlement_totals_by_entry.get(entry.id, Decimal("0"))
-            is_settled = entry.status == "settled" or settlement_total >= Decimal(entry.original_amount or 0)
+            total_settlement_amount = settlement_totals_by_entry.get(entry.id, Decimal("0"))
+            period_settlement_amount = settlement_period_totals_by_entry.get(entry.id, Decimal("0"))
+            original_amount = Decimal(entry.original_amount or 0)
+            is_settled = entry.status == "settled" or total_settlement_amount >= original_amount
             is_open = not is_settled
             if not ((filters.include_settled and is_settled) or (filters.include_open and is_open)):
                 continue
-            if due_start and ((not entry.due_date) or entry.due_date < due_start):
-                continue
-            if due_end and ((not entry.due_date) or entry.due_date > due_end):
-                continue
 
-            signed_original = Decimal(entry.original_amount or 0) if entry.movement_nature == "credit" else -Decimal(entry.original_amount or 0)
+            if consolidated_by_period:
+                in_competence = bool(entry.competence_date and period_start <= entry.competence_date <= period_end)
+                in_due = bool(entry.due_date and period_start <= entry.due_date <= period_end)
+                in_liquidation = period_settlement_amount != Decimal("0")
+                if not any([in_competence, in_due, in_liquidation]):
+                    continue
+            else:
+                in_competence = True
+                in_due = True
+                if due_start and ((not entry.due_date) or entry.due_date < due_start):
+                    in_due = False
+                if due_end and ((not entry.due_date) or entry.due_date > due_end):
+                    in_due = False
+                in_liquidation = period_settlement_amount != Decimal("0")
+
+            signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
             account = chart_map.get(entry.chart_account_id, {"id": entry.chart_account_id or 0, "parent_id": None, "code": f"CTA-{entry.chart_account_id or 0}", "name": "Sem conta contábil", "accepts_posting": True})
             slot = grouped.setdefault(
                 entry.chart_account_id or 0,
@@ -1136,11 +1232,12 @@ class FinancialReportService:
                     "accepts_posting": account["accepts_posting"],
                 },
             )
-            slot["competencia"] += signed_original
-            if entry.due_date:
+            if in_competence:
+                slot["competencia"] += signed_original
+            if in_due:
                 slot["vencimento"] += signed_original
-            if settlement_total:
-                signed_settlement = settlement_total if entry.movement_nature == "credit" else -settlement_total
+            if period_settlement_amount:
+                signed_settlement = period_settlement_amount if entry.movement_nature == "credit" else -period_settlement_amount
                 slot["liquidacao"] += signed_settlement
             if is_open:
                 slot["aberto"] += signed_original
@@ -1180,9 +1277,31 @@ class FinancialReportService:
                 "children": list(chart_children_map.get(account.id, [])),
             }
 
+        for account_id, data in grouped.items():
+            if account_id in hierarchy_nodes:
+                continue
+            hierarchy_nodes[account_id] = {
+                "id": account_id,
+                "parent_id": data.get("parent_id"),
+                "codigo": data.get("codigo") or f"CTA-{account_id}",
+                "descricao": data.get("descricao") or "Sem conta contábil",
+                "competencia": Decimal(data.get("competencia", Decimal("0"))),
+                "vencimento": Decimal(data.get("vencimento", Decimal("0"))),
+                "liquidacao": Decimal(data.get("liquidacao", Decimal("0"))),
+                "aberto": Decimal(data.get("aberto", Decimal("0"))),
+                "liquidado": Decimal(data.get("liquidado", Decimal("0"))),
+                "centros": set(data.get("centros", set())),
+                "projetos": set(data.get("projetos", set())),
+                "tipos": set(data.get("tipos", set())),
+                "accepts_posting": bool(data.get("accepts_posting", True)),
+                "children": [],
+            }
+
         def _aggregate_node(account_id: int) -> Dict[str, Any]:
             node = hierarchy_nodes[account_id]
             for child_id in node["children"]:
+                if child_id not in hierarchy_nodes:
+                    continue
                 child = _aggregate_node(child_id)
                 node["competencia"] += child["competencia"]
                 node["vencimento"] += child["vencimento"]
@@ -1194,7 +1313,12 @@ class FinancialReportService:
                 node["tipos"].update(child["tipos"])
             return node
 
-        for root_id in chart_children_map.get(None, []):
+        root_ids = FinancialReportService._resolve_income_statement_root_ids(
+            hierarchy_nodes,
+            order_by=filters.order_by,
+            reverse=filters.order_direction == "desc",
+        )
+        for root_id in root_ids:
             _aggregate_node(root_id)
 
         def _node_has_value(node: Dict[str, Any]) -> bool:
@@ -1251,14 +1375,6 @@ class FinancialReportService:
             for child_id in node["children"]:
                 _append_node(child_id, level + 1, row_id)
 
-        root_ids = [account_id for account_id in chart_children_map.get(None, []) if account_id in hierarchy_nodes]
-        root_ids.sort(
-            key=lambda account_id: (
-                (hierarchy_nodes.get(account_id) or {}).get("codigo") if filters.order_by == "code" else (hierarchy_nodes.get(account_id) or {}).get("descricao"),
-                (hierarchy_nodes.get(account_id) or {}).get("descricao"),
-            ),
-            reverse=filters.order_direction == "desc",
-        )
         for root_id in root_ids:
             _append_node(root_id)
 
@@ -1278,24 +1394,24 @@ class FinancialReportService:
             total_open += node["aberto"]
             total_settled += node["liquidado"]
         for item in hierarchy_rows:
-            rows.append(
-                {
-                    "codigo": item["codigo"],
-                    "descricao": item["descricao"],
-                    "account_label": item["account_label"],
-                    "level": item["level"],
-                    "row_type": item["row_type"],
-                    "has_children": item["has_children"],
-                    "competencia": item["competencia_label"],
-                    "vencimento": item["vencimento_label"],
-                    "liquidacao": item["liquidacao_label"],
-                    "aberto": item["aberto_label"],
-                    "liquidado": item["liquidado_label"],
-                    "centros": item["centros"],
-                    "projetos": item["projetos"],
-                    "tipos": item["tipos"],
-                }
-            )
+            row_payload = {
+                "codigo": item["codigo"],
+                "descricao": item["descricao"],
+                "account_label": item["account_label"],
+                "level": item["level"],
+                "row_type": item["row_type"],
+                "has_children": item["has_children"],
+                "competencia": item["competencia_label"],
+                "vencimento": item["vencimento_label"],
+                "liquidacao": item["liquidacao_label"],
+                "centros": item["centros"],
+                "projetos": item["projetos"],
+                "tipos": item["tipos"],
+            }
+            if not consolidated_by_period:
+                row_payload["aberto"] = item["aberto_label"]
+                row_payload["liquidado"] = item["liquidado_label"]
+            rows.append(row_payload)
 
         columns: List[Dict[str, str]] = []
         if filters.show_code:
@@ -1307,16 +1423,42 @@ class FinancialReportService:
                 {"key": "competencia", "label": "Competência"},
                 {"key": "vencimento", "label": "Vencimento"},
                 {"key": "liquidacao", "label": "Liquidação"},
-                {"key": "aberto", "label": "Em aberto"},
-                {"key": "liquidado", "label": "Liquidado"},
+            ]
+        )
+        if not consolidated_by_period:
+            columns.extend(
+                [
+                    {"key": "aberto", "label": "Em aberto"},
+                    {"key": "liquidado", "label": "Liquidado"},
+                ]
+            )
+        columns.extend(
+            [
                 {"key": "centros", "label": "Centros de resultado"},
                 {"key": "projetos", "label": "Projetos"},
                 {"key": "tipos", "label": "Tipos"},
             ]
         )
 
-        due_window = f"{due_start.isoformat()} até {due_end.isoformat()}" if due_start and due_end else "Livre"
-        settlement_window = f"{settlement_start.isoformat()} até {settlement_end.isoformat()}" if settlement_start and settlement_end else "Livre"
+        if consolidated_by_period:
+            general_info = [
+                FinancialReportService._report_info("Período", f"{period_start.isoformat()} até {period_end.isoformat()}"),
+                FinancialReportService._report_info("Ordenação", f"{filters.order_by} / {filters.order_direction}"),
+                FinancialReportService._report_info("Orientação PDF", "Paisagem" if filters.orientation == "landscape" else "Retrato"),
+                FinancialReportService._report_info("Contas consolidadas", len(hierarchy_rows)),
+            ]
+        else:
+            due_window = f"{due_start.isoformat()} até {due_end.isoformat()}" if due_start and due_end else "Livre"
+            settlement_window = f"{settlement_start.isoformat()} até {settlement_end.isoformat()}" if settlement_start and settlement_end else "Livre"
+            general_info = [
+                FinancialReportService._report_info("Competência", f"{competence_start.isoformat()} até {competence_end.isoformat()}"),
+                FinancialReportService._report_info("Vencimento", due_window),
+                FinancialReportService._report_info("Baixa", settlement_window),
+                FinancialReportService._report_info("Ordenação", f"{filters.order_by} / {filters.order_direction}"),
+                FinancialReportService._report_info("Orientação PDF", "Paisagem" if filters.orientation == "landscape" else "Retrato"),
+                FinancialReportService._report_info("Contas consolidadas", len(hierarchy_rows)),
+            ]
+
         return FinancialReportService._report_payload(
             definition,
             summary_cards=[
@@ -1325,14 +1467,7 @@ class FinancialReportService:
                 FinancialReportService._report_card("Resultado liquidação", FinancialReportService._format_currency(total_set)),
                 FinancialReportService._report_card("Linhas da DRE", len(hierarchy_rows)),
             ],
-            general_info=[
-                FinancialReportService._report_info("Competência", f"{competence_start.isoformat()} até {competence_end.isoformat()}"),
-                FinancialReportService._report_info("Vencimento", due_window),
-                FinancialReportService._report_info("Baixa", settlement_window),
-                FinancialReportService._report_info("Ordenação", f"{filters.order_by} / {filters.order_direction}"),
-                FinancialReportService._report_info("Orientação PDF", "Paisagem" if filters.orientation == "landscape" else "Retrato"),
-                FinancialReportService._report_info("Contas consolidadas", len(hierarchy_rows)),
-            ],
+            general_info=general_info,
             columns=columns,
             rows=rows,
             totals={
@@ -1347,7 +1482,11 @@ class FinancialReportService:
                 "open_label": FinancialReportService._format_currency(total_open),
                 "settled_label": FinancialReportService._format_currency(total_settled),
             },
-            extra={"orientation": filters.orientation, "hierarchy_rows": hierarchy_rows},
+            extra={
+                "orientation": filters.orientation,
+                "hierarchy_rows": hierarchy_rows,
+                "show_status_columns": not consolidated_by_period,
+            },
         )
 
     @staticmethod
@@ -1863,7 +2002,7 @@ class FinancialReportService:
         }
         default_start, default_end = FinancialReportService.default_period()
         values: List[Dict[str, str]] = []
-        if filters.report_type not in {"schedule_report", "income_statement"}:
+        if filters.report_type not in {"schedule_report", "income_statement", "income_statement_2"}:
             values.extend(
                 [
                     {"label": "Período inicial", "value": filters.period_start.isoformat()},
@@ -1882,6 +2021,9 @@ class FinancialReportService:
             if filters.competence_start and filters.competence_end and (competence_explicit or not default_competence):
                 values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
         elif filters.report_type == "income_statement":
+            if filters.period_start and filters.period_end:
+                values.append({"label": "Período", "value": f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"})
+        elif filters.report_type == "income_statement_2":
             if (
                 filters.competence_start and filters.competence_end
                 and ("competence_start" in raw_filters or "competence_end" in raw_filters)
@@ -1889,9 +2031,9 @@ class FinancialReportService:
                 values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
         elif filters.competence_start and filters.competence_end:
             values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
-        if filters.due_start and filters.due_end and ("due_start" in raw_filters or "due_end" in raw_filters or filters.report_type not in {"schedule_report", "income_statement"}):
+        if filters.due_start and filters.due_end and ("due_start" in raw_filters or "due_end" in raw_filters or filters.report_type not in {"schedule_report", "income_statement", "income_statement_2"}):
             values.append({"label": "Data vencimento", "value": f"{filters.due_start.isoformat()} até {filters.due_end.isoformat()}"})
-        if filters.settlement_start and filters.settlement_end and ("settlement_start" in raw_filters or "settlement_end" in raw_filters or filters.report_type not in {"schedule_report", "income_statement"}):
+        if filters.settlement_start and filters.settlement_end and ("settlement_start" in raw_filters or "settlement_end" in raw_filters or filters.report_type not in {"schedule_report", "income_statement", "income_statement_2"}):
             values.append({"label": "Data baixa", "value": f"{filters.settlement_start.isoformat()} até {filters.settlement_end.isoformat()}"})
         if filters.reference_date and filters.report_type != "schedule_report":
             values.append({"label": "Data de referência", "value": filters.reference_date.isoformat()})
@@ -1976,7 +2118,7 @@ class FinancialReportService:
             include_reconciled_explicit = "include_reconciled_only" in raw_filters
             if include_reconciled_explicit or filters.include_reconciled_only:
                 values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
-        elif filters.report_type == "income_statement":
+        elif filters.report_type in {"income_statement", "income_statement_2"}:
             status_explicit = any(key in raw_filters for key in ("include_settled", "include_open"))
             if status_explicit:
                 values.append({
@@ -2023,6 +2165,7 @@ class FinancialReportService:
             "schedule_report": FinancialReportService._build_schedule_report,
             "bank_statement": FinancialReportService._build_bank_statement,
             "income_statement": FinancialReportService._build_income_statement,
+            "income_statement_2": FinancialReportService._build_income_statement_2,
             "cash_flow": FinancialReportService._build_cash_flow,
             "ledger": FinancialReportService._build_ledger,
             "working_capital": FinancialReportService._build_working_capital,

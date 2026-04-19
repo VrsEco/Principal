@@ -2,6 +2,7 @@
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
 {% set report_filters = report.filters if report else [] %}
 {% set hierarchy_rows = report.hierarchy_rows if report else [] %}
+{% set show_status_columns = report.extra.show_status_columns if report and report.extra is defined else true %}
 
 <div class="report-workspace-page dre-report-page fade-in"
      data-report-workspace-root
@@ -24,7 +25,7 @@
     <div class="report-workspace-viewer dre-report-viewer">
         <article class="report-workspace-sheet dre-report-sheet">
             {{ report_macros.workspace_sheet_header(
-                'Demonstrações de Resultados',
+                report_definition.label,
                 company.name if company and company.name else 'Empresa ativa',
                 'dre-section dre-section--header',
                 'dre-report-title-main',
@@ -55,8 +56,10 @@
                                 <th class="col-value">Competência</th>
                                 <th class="col-value">Vencimento</th>
                                 <th class="col-value">Liquidação</th>
+                                {% if show_status_columns %}
                                 <th class="col-value">Em aberto</th>
                                 <th class="col-value">Liquidado</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -85,8 +88,10 @@
                                 <td class="col-value dre-value">{{ row.competencia_label }}</td>
                                 <td class="col-value dre-value">{{ row.vencimento_label }}</td>
                                 <td class="col-value dre-value">{{ row.liquidacao_label }}</td>
+                                {% if show_status_columns %}
                                 <td class="col-value dre-value">{{ row.aberto_label }}</td>
                                 <td class="col-value dre-value">{{ row.liquidado_label }}</td>
+                                {% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -96,8 +101,10 @@
                                 <th>{{ report.totals.competence_label if report and report.totals else '-' }}</th>
                                 <th>{{ report.totals.due_label if report and report.totals else '-' }}</th>
                                 <th>{{ report.totals.liquidation_label if report and report.totals else '-' }}</th>
+                                {% if show_status_columns %}
                                 <th>{{ report.totals.open_label if report and report.totals else '-' }}</th>
                                 <th>{{ report.totals.settled_label if report and report.totals else '-' }}</th>
+                                {% endif %}
                             </tr>
                         </tfoot>
                     </table>
