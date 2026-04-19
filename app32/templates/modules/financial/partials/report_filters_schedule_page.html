@@ -13,8 +13,8 @@
         </div>
         <div class="schedule-report-header-actions">
             <a class="btn btn-secondary" href="/financial/schedules{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir agendamentos</a>
-            <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export.xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
-            <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export.pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
+            <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
+            <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
             <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
         </div>
     </header>

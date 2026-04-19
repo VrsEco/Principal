@@ -35,7 +35,7 @@
           method="get"
           action="/financial/reports/{{ report_definition.slug }}"
           data-view-action="/financial/reports/{{ report_definition.slug }}"
-          data-pdf-action="/financial/reports/{{ report_definition.slug }}/export.pdf"
+          data-pdf-action="/financial/reports/{{ report_definition.slug }}/export-pdf"
           data-clear-url="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">
         {% if company_id %}
         <input type="hidden" name="company_id" value="{{ company_id }}">

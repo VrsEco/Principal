@@ -76,7 +76,7 @@
               action="/financial/reports/{{ report_definition.slug }}/view"
               class="report-filter-grid{% if is_dre %} report-filter-grid--dre{% endif %}{% if is_cash_flow %} report-filter-grid--cash-flow{% endif %}{% if is_ledger %} report-filter-grid--ledger{% endif %}{% if is_working_capital %} report-filter-grid--working-capital{% endif %}"
               data-view-action="/financial/reports/{{ report_definition.slug }}/view"
-              data-pdf-action="/financial/reports/{{ report_definition.slug }}/export.pdf">
+              data-pdf-action="/financial/reports/{{ report_definition.slug }}/export-pdf">
             {% if is_schedule_report %}
             <div class="dre-dates-grid">
                 <div class="date-card">

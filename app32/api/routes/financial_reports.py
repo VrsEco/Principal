@@ -169,6 +169,7 @@ def financial_report_view_page(report_slug: str):
 
 
 @financial_bp.route('/financial/reports/<report_slug>/export.xlsx')
+@financial_bp.route('/financial/reports/<report_slug>/export-xlsx')
 @permission_required('financial', 'view')
 def financial_report_export_xlsx(report_slug: str):
     company, report = _build_financial_report_or_abort(report_slug)
@@ -182,6 +183,7 @@ def financial_report_export_xlsx(report_slug: str):
 
 
 @financial_bp.route('/financial/reports/<report_slug>/export.pdf')
+@financial_bp.route('/financial/reports/<report_slug>/export-pdf')
 @permission_required('financial', 'view')
 def financial_report_export_pdf(report_slug: str):
     company, report = _build_financial_report_or_abort(report_slug)

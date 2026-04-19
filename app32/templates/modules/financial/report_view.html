@@ -22,8 +22,8 @@
         </div>
         <div class="rv-actions no-print">
             <a href="/financial/reports/{{ report.report_slug }}{% if request.query_string %}?{{ request.query_string.decode('utf-8') }}{% elif company_id %}?company_id={{ company_id }}{% endif %}" class="rv-btn rv-btn--secondary">Filtros</a>
-            <a href="/financial/reports/{{ report.report_slug }}/export.pdf?{{ request.query_string.decode('utf-8') }}" class="rv-btn rv-btn--secondary">Exportar PDF</a>
-            <a href="/financial/reports/{{ report.report_slug }}/export.xlsx?{{ request.query_string.decode('utf-8') }}" class="rv-btn rv-btn--secondary">Exportar XLSX</a>
+            <a href="/financial/reports/{{ report.report_slug }}/export-pdf?{{ request.query_string.decode('utf-8') }}" class="rv-btn rv-btn--secondary">Exportar PDF</a>
+            <a href="/financial/reports/{{ report.report_slug }}/export-xlsx?{{ request.query_string.decode('utf-8') }}" class="rv-btn rv-btn--secondary">Exportar XLSX</a>
             <button type="button" onclick="window.print()" class="rv-btn rv-btn--primary">Imprimir</button>
         </div>
     </section>
