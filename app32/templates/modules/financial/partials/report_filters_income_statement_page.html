@@ -2,7 +2,7 @@
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
 {% set report_filters = report.filters if report else [] %}
 {% set hierarchy_rows = report.hierarchy_rows if report else [] %}
-{% set show_status_columns = report.extra.show_status_columns if report and report.extra is defined else true %}
+{% set show_status_columns = report.show_status_columns if report and report.show_status_columns is defined else true %}
 
 <div class="report-workspace-page dre-report-page fade-in"
      data-report-workspace-root
