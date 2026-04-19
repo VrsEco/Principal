@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      CONFIGR_HOST: ${{ secrets.CONFIGR_HOST }}
-      CONFIGR_USER: ${{ secrets.CONFIGR_USER }}
-      CONFIGR_PORT: ${{ secrets.CONFIGR_PORT }}
+      CONFIGR_HOST: 69.164.205.75
+      CONFIGR_USER: app
+      CONFIGR_PORT: 22122
       CONFIGR_SSH_PRIVATE_KEY: ${{ secrets.CONFIGR_SSH_PRIVATE_KEY }}
       CONFIGR_SSH_PASSPHRASE: ${{ secrets.CONFIGR_SSH_PASSPHRASE }}
       CONFIGR_KNOWN_HOSTS: ${{ secrets.CONFIGR_KNOWN_HOSTS }}
@@ -241,7 +241,7 @@ jobs:
             'bash -seuo pipefail' <<'REMOTE_SCRIPT'
             set -euo pipefail
 
-            BACKUP_DIR="/home/app2/backups"
+            BACKUP_DIR="$HOME/backups"
             DATE=$(date +%Y%m%d_%H%M%S)
             TMP_FILE="$BACKUP_DIR/db_backup_${DATE}.sql"
             TMP_GZ_FILE="${TMP_FILE}.gz.partial"
