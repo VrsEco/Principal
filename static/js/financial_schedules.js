@@ -25,9 +25,31 @@
   let allocationRows = [];
   let pendingAttachments = [];
   let borderoLocked = false;
+  let selectedCalculationLogs = [];
+  let settlementSimulation = null;
+  let settlementSimulationTimer = null;
+  let settlementCompositionHydrating = false;
 
   const $ = (id) => document.getElementById(id);
+  const missingElementMessage = (id) => `A interface de agendamento está desatualizada: campo ${id} não encontrado. Atualize a página e tente novamente.`;
+  const requireElement = (id) => {
+    const element = $(id);
+    if (!element) {
+      throw new Error(missingElementMessage(id));
+    }
+    return element;
+  };
+  const fieldValue = (id, fallback = '') => {
+    const element = $(id);
+    return element ? element.value : fallback;
+  };
+  const requireFieldValue = (id) => requireElement(id).value;
+  const setFieldValue = (id, value) => {
+    const element = $(id);
+    if (element) element.value = value;
+  };
   const form = $('schedule-form');
+  if (!form) return;
   const entryTypeBanner = $('entry-type-banner');
   const rateioSummary = $('rateio-summary');
   const scheduleListEl = $('schedule-list');
@@ -65,15 +87,15 @@
 
   const normalizeDateInput = (value) => {
     const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 4)}/${digits.slice(4)}`;
+    return `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
   };
 
   const parseDateToIso = (value) => {
     const digits = String(value || '').replace(/\D/g, '');
     if (digits.length !== 8) return null;
-    const [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)];
+    const [year, month, day] = [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6)];
     const candidate = new Date(Number(year), Number(month) - 1, Number(day));
     if (candidate.getFullYear() !== Number(year) || candidate.getMonth() + 1 !== Number(month) || candidate.getDate() !== Number(day)) return null;
     return `${year}-${month}-${day}`;
@@ -82,7 +104,7 @@
   const formatIso = (value) => {
     if (!value) return '';
     const [year, month, day] = String(value).split('-');
-    return year && month && day ? `${day}/${month}/${year}` : value;
+    return year && month && day ? `${year}/${month}/${day}` : value;
   };
   const compareIsoDates = (left, right) => {
     if (!left || !right) return 0;
@@ -95,6 +117,16 @@
     return movementNature === 'debit' ? normalized * -1 : normalized;
   };
   const amountClass = (value) => Number(value || 0) < 0 ? 'amount-negative' : 'amount-positive';
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  const asMoneyValue = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const toCurrencyInput = (value) => asMoneyValue(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const todayIso = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   const statusLabel = (status) => ({ active: 'Ativo', paused: 'Pausado', draft: 'Rascunho', completed: 'Concluído', cancelled: 'Cancelado' }[status] || status || 'Sem status');
   const statusClass = (status) => status === 'active' ? 'badge badge--active' : status === 'completed' ? 'badge badge--completed' : status === 'cancelled' ? 'badge badge--cancelled' : 'badge badge--draft';
 
@@ -125,7 +157,9 @@
 
   function applyEntryType(entryType, { locked = false } = {}) {
     entryTypeLocked = locked;
-    form.querySelector('input[name="entry_type"]').value = entryType;
+    const entryTypeInput = form.querySelector('input[name="entry_type"]');
+    if (!entryTypeInput) throw new Error(missingElementMessage('entry_type'));
+    entryTypeInput.value = entryType;
     document.querySelectorAll('.type-chip').forEach((chip) => {
       const isActive = chip.dataset.entryType === entryType;
       chip.classList.toggle('active', isActive);
@@ -145,7 +179,7 @@
   };
 
   window.toggleRepeatFields = () => {
-    const enabled = $('field-repeat-toggle').value === 'true';
+    const enabled = fieldValue('field-repeat-toggle', 'false') === 'true';
     document.querySelectorAll('.repeat-field').forEach((field) => field.classList.toggle('hidden', !enabled));
   };
 
@@ -306,10 +340,10 @@
     const updatedAmount = round2(amount + correctionAmount - discountAmount);
     const liquidatedAmount = calculateLiquidatedAmount();
     const openBalance = round2(updatedAmount - liquidatedAmount);
-    if ($('field-correction-amount')) $('field-correction-amount').value = correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if ($('field-liquidated-amount')) $('field-liquidated-amount').value = liquidatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if ($('field-updated-amount')) $('field-updated-amount').value = updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if ($('field-open-balance')) $('field-open-balance').value = openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    setFieldValue('field-correction-amount', correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-liquidated-amount', liquidatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-updated-amount', updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-open-balance', openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   }
 
   function getEffectiveScheduleAmount() {
@@ -317,7 +351,7 @@
   }
 
   function getTopAmount() {
-    return round2(parseCurrency($('field-amount').value));
+    return round2(parseCurrency(fieldValue('field-amount')));
   }
 
   function recalculateRowFromPercentage(index) {
@@ -581,6 +615,175 @@
       </article>`).join('');
   }
 
+  async function loadCalculationLogs(scheduleId) {
+    if (!scheduleId) return [];
+    const payload = await fetchJson(`/api/financial/schedules/${scheduleId}/calculation-logs?company_id=${companyId}&limit=50`);
+    return Array.isArray(payload.logs) ? payload.logs : [];
+  }
+
+  function eventLabel(eventType) {
+    return ({
+      settlement_posted: 'Baixa registrada',
+      settlement_updated: 'Baixa atualizada',
+      settlement_deleted: 'Baixa removida',
+      adjustment_released: 'Ajuste liberado',
+      recalculation: 'Recálculo',
+    }[eventType] || eventType || 'Evento financeiro');
+  }
+
+  function renderTitleBalance(schedule) {
+    const panelEl = $('title-balance-panel');
+    if (!panelEl) return;
+    const hasSchedule = Boolean(schedule?.id);
+    panelEl.classList.toggle('hidden', !hasSchedule);
+    if (!hasSchedule) {
+      panelEl.innerHTML = '';
+      return;
+    }
+
+    const summary = schedule.summary || {};
+    const nature = schedule.movement_nature;
+    const principalAmount = asMoneyValue(summary.principal_amount ?? summary.template_amount ?? schedule.template_amount);
+    const principalOpen = asMoneyValue(summary.principal_open ?? summary.open_principal ?? schedule.template_amount);
+    const adjustmentsGenerated = asMoneyValue(summary.adjustments_generated ?? summary.correction_amount ?? 0);
+    const adjustmentsSettled = asMoneyValue(summary.adjustments_settled ?? 0);
+    const adjustmentsOpen = asMoneyValue(summary.adjustments_open ?? Math.max(adjustmentsGenerated - adjustmentsSettled, 0));
+    const discountsOpen = asMoneyValue(summary.discounts_open ?? summary.discount_amount ?? 0);
+    const totalOpen = asMoneyValue(summary.total_open ?? (principalOpen + adjustmentsOpen - discountsOpen));
+    const settledTotal = asMoneyValue(summary.principal_settled ?? summary.liquidated_amount ?? 0);
+
+    panelEl.innerHTML = `
+      <header class="title-balance-head">
+        <div>
+          <span>Saldo analítico do título</span>
+          <h3>${escapeHtml(schedule.schedule_code || `Título ${schedule.id}`)} · ${escapeHtml(schedule.description || schedule.name || 'Sem histórico')}</h3>
+          <p>Composição operacional do principal, correções financeiras, descontos e saldo ainda alterável.</p>
+        </div>
+        <strong class="${amountClass(signedAmount(totalOpen, nature))}">${money(signedAmount(totalOpen, nature))}</strong>
+      </header>
+      <div class="title-balance-grid">
+        <article class="title-balance-card title-balance-card--principal">
+          <span>Principal original</span>
+          <strong>${money(signedAmount(principalAmount, nature))}</strong>
+          <small>Valor base do título financeiro.</small>
+        </article>
+        <article class="title-balance-card">
+          <span>Principal em aberto</span>
+          <strong>${money(signedAmount(principalOpen, nature))}</strong>
+          <small>Parcela do principal ainda pendente.</small>
+        </article>
+        <article class="title-balance-card title-balance-card--adjustment">
+          <span>Ajustes em aberto</span>
+          <strong>${money(signedAmount(adjustmentsOpen, nature))}</strong>
+          <small>Correções/descontos ainda não baixados.</small>
+        </article>
+        <article class="title-balance-card">
+          <span>Principal baixado</span>
+          <strong>${money(signedAmount(settledTotal, nature))}</strong>
+          <small>Principal liquidado até o momento.</small>
+        </article>
+      </div>
+    `;
+  }
+
+  function ledgerMetric(label, value, movementNature, { invert = false } = {}) {
+    const numeric = asMoneyValue(value) * (invert ? -1 : 1);
+    const signed = signedAmount(numeric, movementNature);
+    return `<div class="ledger-component"><span>${label}</span><strong class="${amountClass(signed)}">${money(signed)}</strong></div>`;
+  }
+
+  function ledgerStep(title, subtitle, metrics, tone = '') {
+    return `
+      <section class="ledger-step ${tone}">
+        <header><span>${title}</span><small>${subtitle}</small></header>
+        <div class="ledger-components">${metrics.join('')}</div>
+      </section>
+    `;
+  }
+
+  function renderCalculationLogs(schedule, logs) {
+    const emptyEl = $('calculation-log-empty');
+    const shellEl = $('calculation-log-shell');
+    const summaryEl = $('calculation-log-summary');
+    const listEl = $('calculation-log-list');
+    const tabButton = $('calculation-log-tab-button');
+    const hasSchedule = Boolean(schedule?.id);
+    const normalizedLogs = Array.isArray(logs) ? logs : [];
+    selectedCalculationLogs = normalizedLogs;
+
+    renderTitleBalance(schedule);
+    tabButton?.classList.toggle('hidden', !hasSchedule);
+    emptyEl?.classList.toggle('hidden', normalizedLogs.length > 0 || !hasSchedule);
+    shellEl?.classList.toggle('hidden', !hasSchedule || !normalizedLogs.length);
+
+    if (!hasSchedule) {
+      if (summaryEl) summaryEl.innerHTML = '';
+      if (listEl) listEl.innerHTML = '';
+      return;
+    }
+
+    const latest = normalizedLogs[0] || null;
+    const summary = schedule.summary || {};
+    const signedTotalOpen = signedAmount(summary.total_open ?? latest?.total_due_after ?? latest?.open_principal_after ?? 0, schedule?.movement_nature);
+    const signedAdjustmentsOpen = signedAmount(summary.adjustments_open ?? latest?.adjustments_open_after ?? 0, schedule?.movement_nature);
+
+    if (summaryEl) {
+      summaryEl.innerHTML = latest ? [
+        `<article class="calc-log-kpi"><span>Último evento</span><strong>${formatIso(latest.calculation_date)}</strong><small>${eventLabel(latest.event_type)}</small></article>`,
+        `<article class="calc-log-kpi"><span>Total em aberto</span><strong class="${amountClass(signedTotalOpen)}">${money(signedTotalOpen)}</strong><small>Principal + ajustes pendentes</small></article>`,
+        `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correção financeira/descontos a liquidar</small></article>`,
+        `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias estruturadas registradas</small></article>`,
+      ].join('') : '';
+    }
+
+    if (listEl) {
+      listEl.innerHTML = normalizedLogs.map((log, index) => {
+        const meta = log.metadata_json || {};
+        const snapshot = log.snapshot_json || meta.snapshot || {};
+        const settlementCode = meta.settlement_code || snapshot.settlement_code || '-';
+        const entryCode = snapshot.entry_code || '-';
+        const beforeTotal = log.total_due_before ?? ((log.principal_before || 0) + (log.adjustments_open_before || 0));
+        const afterTotal = log.total_due_after ?? ((log.principal_after || 0) + (log.adjustments_open_after || 0));
+        return `
+          <article class="calc-log-card calc-log-card--ledger">
+            <header class="calc-log-card__head">
+              <div>
+                <span class="calc-log-step">Evento ${index + 1}</span>
+                <h3>${formatIso(log.calculation_date)} · ${escapeHtml(eventLabel(log.event_type))}</h3>
+                <p>Título ${escapeHtml(schedule.schedule_code || schedule.id || '-')} · Baixa ${escapeHtml(settlementCode)} · Lançamento ${escapeHtml(entryCode)}</p>
+              </div>
+              <div class="calc-log-card__badges">
+                <span class="calc-log-badge">Principal ${money(signedAmount(log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Ajustes ${money(signedAmount(log.adjustments_settled_now ?? log.correction_amount ?? 0, schedule?.movement_nature))}</span>
+              </div>
+            </header>
+            <div class="ledger-flow">
+              ${ledgerStep('Antes', 'Saldo calculado antes da baixa', [
+                ledgerMetric('Principal aberto', log.principal_before ?? log.template_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes abertos', log.adjustments_open_before ?? log.correction_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Total devido', beforeTotal, schedule?.movement_nature),
+              ], 'ledger-step--before')}
+              ${ledgerStep('Agora', 'Composição realizada neste evento', [
+                ledgerMetric('Principal baixado', log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes baixados', log.adjustments_settled_now ?? 0, schedule?.movement_nature),
+                ledgerMetric('Desconto liberado', log.discount_now ?? log.discount_amount ?? 0, schedule?.movement_nature, { invert: true }),
+              ], 'ledger-step--current')}
+              ${ledgerStep('Depois', 'Saldo remanescente editável do título', [
+                ledgerMetric('Principal aberto', log.principal_after ?? log.open_principal_after ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes abertos', log.adjustments_open_after ?? 0, schedule?.movement_nature),
+                ledgerMetric('Total devido', afterTotal, schedule?.movement_nature),
+              ], 'ledger-step--after')}
+            </div>
+            <details class="calc-log-snapshot">
+              <summary>Ver snapshot técnico do cálculo</summary>
+              <pre>${escapeHtml(JSON.stringify(snapshot || {}, null, 2))}</pre>
+            </details>
+          </article>
+        `;
+      }).join('');
+    }
+  }
+
   function hydrateAllocations(schedule) {
     allocationRows = (schedule.allocations || []).map((item) => createAllocationRow({
       chart_account_id: item.chart_account_id || '',
@@ -617,28 +820,28 @@
     form.schedule_code.value = schedule.schedule_code || '';
     form.status.value = schedule.status || 'active';
     applyEntryType(schedule.entry_type || '', { locked: true });
-    $('field-description').value = schedule.description || schedule.name || '';
-    $('field-document-number').value = schedule.document_number || '';
-    $('field-counterparty').value = schedule.counterparty_id || '';
-    $('field-amount').value = Number(schedule.template_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    $('field-competence').value = formatIso(schedule.start_date || schedule.first_due_date);
-    $('field-due-date').value = formatIso(schedule.first_due_date || schedule.next_due_date);
-    $('field-correction-index').value = schedule.correction_index_id || '';
-    $('field-discount-rule').value = schedule.discount_rule_id || '';
+    setFieldValue('field-description', schedule.description || schedule.name || '');
+    setFieldValue('field-document-number', schedule.document_number || '');
+    setFieldValue('field-counterparty', schedule.counterparty_id || '');
+    setFieldValue('field-amount', Number(schedule.template_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-competence', formatIso(schedule.competence_date || schedule.start_date || schedule.first_due_date));
+    setFieldValue('field-due-date', formatIso(schedule.first_due_date || schedule.next_due_date));
+    setFieldValue('field-correction-index', schedule.correction_index_id || '');
+    setFieldValue('field-discount-rule', schedule.discount_rule_id || '');
     if (Number(schedule.metadata_json?.discount_amount_override || 0) > 0) {
       setDiscountAmountField(schedule.metadata_json?.discount_amount_override || 0, { manual: true });
     } else {
       setDiscountAmountField(0, { manual: false });
     }
-    $('field-repeat-toggle').value = (schedule.frequency || 'one_time') === 'one_time' ? 'false' : 'true';
-    $('field-frequency').value = schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly';
-    $('field-interval-value').value = schedule.interval_value || 1;
-    $('field-repeat-count').value = schedule.metadata_json?.repeat_count || 1;
-    $('field-competence-mode').value = schedule.competence_mode || 'same_as_due';
+    setFieldValue('field-repeat-toggle', (schedule.frequency || 'one_time') === 'one_time' ? 'false' : 'true');
+    setFieldValue('field-frequency', schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly');
+    setFieldValue('field-interval-value', schedule.interval_value || 1);
+    setFieldValue('field-repeat-count', schedule.metadata_json?.repeat_count || 1);
     clearPendingAttachments();
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
     renderBaixas(schedule.related_entries || []);
+    renderCalculationLogs(schedule, selectedCalculationLogs);
     $('baixas-tab-button').classList.toggle('hidden', !(schedule.related_entries || []).length);
     Array.from(form.elements).forEach((field) => {
       if (!field || ['schedule_id', 'schedule_code'].includes(field.name)) return;
@@ -666,13 +869,14 @@
   }
 
   function buildPayload() {
-    if (!form.entry_type.value) {
+    const entryType = form.entry_type?.value || '';
+    if (!entryType) {
       throw new Error('Escolha primeiro se o agendamento é de Recebimentos ou Pagamentos.');
     }
-    const description = $('field-description').value.trim();
-    const counterpartyId = Number($('field-counterparty').value || 0);
-    const competenceIso = parseDateToIso($('field-competence').value);
-    const dueIso = parseDateToIso($('field-due-date').value);
+    const description = requireFieldValue('field-description').trim();
+    const counterpartyId = Number(requireFieldValue('field-counterparty') || 0);
+    const competenceIso = parseDateToIso(requireFieldValue('field-competence'));
+    const dueIso = parseDateToIso(requireFieldValue('field-due-date'));
     const amount = getTopAmount();
     if (!description) throw new Error('Informe o histórico do agendamento.');
     if (!counterpartyId) throw new Error('Selecione um favorecido.');
@@ -683,21 +887,22 @@
     if (!amount || amount <= 0) throw new Error('Informe um valor válido.');
     syncAdjustmentAllocationRows();
     validateAllocationSummary();
-    const frequency = $('field-repeat-toggle').value === 'true' ? $('field-frequency').value : 'one_time';
+    const frequency = fieldValue('field-repeat-toggle', 'false') === 'true' ? fieldValue('field-frequency', 'weekly') : 'one_time';
     const primaryAllocation = getBaseAllocationRows()[0] || allocationRows[0] || {};
-    const isUpdate = Boolean(form.schedule_id.value);
+    const isUpdate = Boolean(form.schedule_id?.value);
     return {
-      schedule_code: isUpdate ? undefined : (form.schedule_code.value || undefined),
+      schedule_code: isUpdate ? undefined : (form.schedule_code?.value || undefined),
       name: description.slice(0, 120),
       description,
       memo: null,
-      entry_type: form.entry_type.value,
-      movement_nature: form.entry_type.value === 'receivable' ? 'credit' : 'debit',
+      entry_type: entryType,
+      movement_nature: entryType === 'receivable' ? 'credit' : 'debit',
       origin_type: 'manual',
-      status: form.status.value || 'active',
+      status: form.status?.value || 'active',
       frequency,
-      interval_value: Number($('field-interval-value').value || 1),
+      interval_value: Number(fieldValue('field-interval-value', '1') || 1),
       start_date: competenceIso,
+      competence_date: competenceIso,
       first_due_date: dueIso,
       next_due_date: dueIso,
       end_date: null,
@@ -713,14 +918,13 @@
       notes: null,
       metadata_json: {
         ...(selectedSchedule?.metadata_json || {}),
-        document_number: $('field-document-number').value.trim() || null,
-        correction_index_id: Number($('field-correction-index').value || 0) || null,
-        discount_rule_id: Number($('field-discount-rule').value || 0) || null,
+        document_number: fieldValue('field-document-number').trim() || null,
+        correction_index_id: Number(fieldValue('field-correction-index') || 0) || null,
+        discount_rule_id: Number(fieldValue('field-discount-rule') || 0) || null,
         discount_amount_override: $('field-discount-amount')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
-        competence_mode: $('field-competence-mode').value,
-        repeat_count: Number($('field-repeat-count').value || 1),
+        repeat_count: Number(fieldValue('field-repeat-count', '1') || 1),
         attachments: selectedSchedule?.attachments || [],
-        counterparty_name: $('field-counterparty').selectedOptions?.[0]?.textContent || null,
+        counterparty_name: $('field-counterparty')?.selectedOptions?.[0]?.textContent || null,
         allocations: allocationRows.map((row) => ({
           chart_account_id: Number(row.chart_account_id || 0) || null,
           cost_center_id: Number(row.cost_center_id || 0) || null,
@@ -757,11 +961,14 @@
 
   async function loadOptions() {
     optionsCache = await fetchJson(`/api/financial/schedules/options?company_id=${companyId}`);
-    $('field-counterparty').innerHTML = buildOptions(optionsCache.counterparties, 'Selecione...', (item) => item.display_label || item.name || item.code);
-    $('field-correction-index').innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
-    $('field-discount-rule').innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    const counterpartyField = requireElement('field-counterparty');
+    const correctionIndexField = requireElement('field-correction-index');
+    const discountRuleField = requireElement('field-discount-rule');
+    counterpartyField.innerHTML = buildOptions(optionsCache.counterparties, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    correctionIndexField.innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    discountRuleField.innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
     if (!selectedSchedule) {
-      suggestDefaultCorrectionIndex(form.entry_type.value || initialEntryType, { force: true });
+      suggestDefaultCorrectionIndex(form.entry_type?.value || initialEntryType, { force: true });
     }
     refreshSuggestedDiscountAmountField();
     if (allocationRows.length) {
@@ -779,7 +986,12 @@
   }
 
   window.selectSchedule = async (scheduleId) => {
-    selectedSchedule = await fetchJson(`/api/financial/schedules/${scheduleId}?company_id=${companyId}`);
+    const [schedule, calculationLogs] = await Promise.all([
+      fetchJson(`/api/financial/schedules/${scheduleId}?company_id=${companyId}`),
+      loadCalculationLogs(scheduleId),
+    ]);
+    selectedSchedule = schedule;
+    selectedCalculationLogs = calculationLogs;
     fillForm(selectedSchedule);
     renderList();
   };
@@ -787,6 +999,7 @@
   window.startNewSchedule = (entryType = initialEntryType) => {
     borderoLocked = false;
     selectedSchedule = null;
+    selectedCalculationLogs = [];
     form.reset();
     Array.from(form.elements).forEach((field) => {
       if (field) field.disabled = false;
@@ -794,9 +1007,9 @@
     document.querySelectorAll('.sched-footer-actions button').forEach((button) => {
       button.disabled = false;
     });
-    form.schedule_id.value = '';
-    form.schedule_code.value = '';
-    form.status.value = 'active';
+    if (form.schedule_id) form.schedule_id.value = '';
+    if (form.schedule_code) form.schedule_code.value = '';
+    if (form.status) form.status.value = 'active';
     applyEntryType(entryType || '', { locked: !!entryType });
     clearPendingAttachments();
     allocationRows = [createAllocationRow({ percentage: '100' })];
@@ -804,8 +1017,10 @@
     renderAllocations();
     renderAttachments([]);
     renderBaixas([]);
-    $('baixas-tab-button').classList.add('hidden');
-    $('field-frequency').value = 'weekly';
+    renderCalculationLogs(null, []);
+    $('baixas-tab-button')?.classList.add('hidden');
+    $('calculation-log-tab-button')?.classList.add('hidden');
+    setFieldValue('field-frequency', 'weekly');
     setDiscountAmountField(0, { manual: false });
     window.toggleRepeatFields();
     syncAdjustmentAllocationRows();
@@ -817,7 +1032,7 @@
 
   async function saveSchedule() {
     const payload = buildPayload();
-    const scheduleId = form.schedule_id.value;
+    const scheduleId = form.schedule_id?.value || '';
     const saved = await fetchJson(scheduleId ? `/api/financial/schedules/${scheduleId}?company_id=${companyId}` : `/api/financial/schedules?company_id=${companyId}`, {
       method: scheduleId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -836,6 +1051,151 @@
     return saved;
   }
 
+  function getSettlementCompositionFromForm() {
+    const result = {};
+    document.querySelectorAll('[data-settlement-component]').forEach((input) => {
+      result[input.dataset.settlementComponent] = round2(parseCurrency(input.value));
+    });
+    return result;
+  }
+
+  function setSettlementComponentInputs(composition = {}) {
+    settlementCompositionHydrating = true;
+    const mapping = {
+      principal: 'settlement-component-principal',
+      monetary_correction: 'settlement-component-monetary-correction',
+      interest: 'settlement-component-interest',
+      fine: 'settlement-component-fine',
+      manual_adjustment: 'settlement-component-manual-adjustment',
+      discount: 'settlement-component-discount',
+    };
+    Object.entries(mapping).forEach(([key, elementId]) => {
+      const input = $(elementId);
+      if (input) input.value = toCurrencyInput(composition[key] || 0);
+    });
+    settlementCompositionHydrating = false;
+  }
+
+  function settlementPayload({ explicit = true } = {}) {
+    const payload = {
+      settlement_date: $('settlement-date')?.value || todayIso(),
+      metadata_json: { source_context: 'schedule_assisted_settlement_modal' },
+    };
+    if (explicit) {
+      payload.composition = getSettlementCompositionFromForm();
+    } else {
+      const summary = selectedSchedule?.summary || {};
+      payload.gross_amount = round2(summary.total_open ?? summary.open_balance ?? getEffectiveScheduleAmount());
+    }
+    return payload;
+  }
+
+  function renderSettlementSimulation(simulation) {
+    settlementSimulation = simulation || null;
+    const statusEl = $('settlement-simulation-status');
+    const summaryEl = $('settlement-simulation-summary');
+    const afterEl = $('settlement-after-summary');
+    const confirmButton = $('settlement-confirm-button');
+    if (!simulation) {
+      if (statusEl) statusEl.textContent = 'Informe a composição para simular a baixa.';
+      if (summaryEl) summaryEl.innerHTML = '';
+      if (afterEl) afterEl.innerHTML = '';
+      if (confirmButton) confirmButton.disabled = true;
+      return;
+    }
+
+    const composition = simulation.composition || {};
+    const before = simulation.before || {};
+    const after = simulation.after || {};
+    const errors = simulation.errors || [];
+    if (statusEl) {
+      statusEl.textContent = simulation.valid ? 'Composição válida para baixa.' : errors.join(' ');
+      statusEl.classList.toggle('is-invalid', !simulation.valid);
+      statusEl.classList.toggle('is-valid', !!simulation.valid);
+    }
+    if (confirmButton) confirmButton.disabled = !simulation.valid;
+    if (summaryEl) {
+      summaryEl.innerHTML = [
+        ['Principal antes', before.principal_open],
+        ['Ajustes antes', before.adjustments_open],
+        ['Total devido antes', before.total_due],
+        ['Valor bruto da baixa', composition.gross_amount],
+      ].map(([label, value]) => `<article><span>${label}</span><strong>${money(signedAmount(value || 0, selectedSchedule?.movement_nature))}</strong></article>`).join('');
+    }
+    if (afterEl) {
+      afterEl.innerHTML = `
+        <article><span>Principal após</span><strong>${money(signedAmount(after.principal_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+        <article><span>Ajustes após</span><strong>${money(signedAmount(after.adjustments_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+        <article><span>Total em aberto após</span><strong>${money(signedAmount(after.total_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+      `;
+    }
+  }
+
+  async function simulateSettlementComposition({ explicit = true, hydrate = false } = {}) {
+    const scheduleId = Number($('settlement-schedule-id')?.value || selectedSchedule?.id || 0);
+    if (!scheduleId) return;
+    const statusEl = $('settlement-simulation-status');
+    if (statusEl) {
+      statusEl.textContent = 'Simulando composição...';
+      statusEl.classList.remove('is-invalid', 'is-valid');
+    }
+    const simulation = await fetchJson(`/api/financial/schedules/${scheduleId}/settlements/simulate?company_id=${companyId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settlementPayload({ explicit })),
+    });
+    if (hydrate) setSettlementComponentInputs(simulation.composition || {});
+    renderSettlementSimulation(simulation);
+  }
+
+  function scheduleSettlementSimulation() {
+    if (settlementCompositionHydrating) return;
+    window.clearTimeout(settlementSimulationTimer);
+    settlementSimulationTimer = window.setTimeout(() => {
+      simulateSettlementComposition({ explicit: true }).catch((error) => {
+        renderSettlementSimulation({ valid: false, errors: [error.message], composition: getSettlementCompositionFromForm() });
+      });
+    }, 350);
+  }
+
+  async function openSettlementCompositionModal(schedule) {
+    if (!schedule?.id) throw new Error('Salve o título financeiro antes de baixar.');
+    const modalEl = requireElement('settlement-composition-modal');
+    requireElement('settlement-schedule-id').value = schedule.id;
+    requireElement('settlement-date').value = todayIso();
+    requireElement('settlement-modal-subtitle').textContent = `${schedule.schedule_code || `Título ${schedule.id}`} · ${schedule.description || schedule.name || 'Sem histórico'}`;
+    setSettlementComponentInputs({});
+    renderSettlementSimulation(null);
+    modalEl.classList.remove('hidden');
+    modalEl.setAttribute('aria-hidden', 'false');
+    await simulateSettlementComposition({ explicit: false, hydrate: true });
+  }
+
+  window.closeSettlementCompositionModal = () => {
+    window.clearTimeout(settlementSimulationTimer);
+    const modalEl = $('settlement-composition-modal');
+    if (!modalEl) return;
+    modalEl.classList.add('hidden');
+    modalEl.setAttribute('aria-hidden', 'true');
+  };
+
+  window.confirmAssistedSettlement = async () => {
+    try {
+      const scheduleId = Number($('settlement-schedule-id')?.value || selectedSchedule?.id || 0);
+      if (!scheduleId) return;
+      await fetchJson(`/api/financial/schedules/${scheduleId}/settlements/assisted?company_id=${companyId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settlementPayload({ explicit: true })),
+      });
+      window.closeSettlementCompositionModal();
+      await window.selectSchedule(scheduleId);
+      switchTab('baixas');
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   window.handleScheduleAction = async (action) => {
     try {
       if (borderoLocked) throw new Error(`Agendamento bloqueado pelo ${selectedSchedule?.bordero?.code || 'borderô'}.`);
@@ -844,8 +1204,7 @@
       if (action === 'save_and_new') return window.startNewSchedule(initialEntryType);
       if (action === 'save_and_back') return window.location.href = '/financial/schedules';
       if (action === 'save_and_settle') {
-        const result = await fetchJson(`/api/financial/schedules/${saved.id}/create-entry?company_id=${companyId}`, { method: 'POST' });
-        if (result.entry?.id) window.location.href = `/financial/entries/${result.entry.id}`;
+        await openSettlementCompositionModal(saved);
       }
     } catch (error) {
       alert(error.message);
@@ -872,7 +1231,7 @@
           formData.append('file', file);
           await fetchJson(`/api/financial/schedules/${selectedSchedule.id}/attachments?company_id=${companyId}`, { method: 'POST', body: formData });
         }
-        $('schedule-attachment-input').value = '';
+        setFieldValue('schedule-attachment-input', '');
         await window.selectSchedule(selectedSchedule.id);
         switchTab('anexos');
         return;
@@ -886,7 +1245,7 @@
           url: URL.createObjectURL(file),
         });
       });
-      $('schedule-attachment-input').value = '';
+      setFieldValue('schedule-attachment-input', '');
       renderAttachments(selectedSchedule?.attachments || []);
       switchTab('anexos');
     } catch (error) {
@@ -948,7 +1307,7 @@
         body: JSON.stringify(payload),
       });
       await loadOptions();
-      $('field-counterparty').value = created.id;
+      setFieldValue('field-counterparty', created.id);
       window.closeCounterpartyModal();
     } catch (error) {
       alert(error.message);
@@ -981,8 +1340,8 @@
   });
 
   $('field-competence').addEventListener('blur', () => {
-    const competenceIso = parseDateToIso($('field-competence').value);
-    const dueIso = parseDateToIso($('field-due-date').value);
+    const competenceIso = parseDateToIso(fieldValue('field-competence'));
+    const dueIso = parseDateToIso(fieldValue('field-due-date'));
     if (competenceIso && dueIso && compareIsoDates(dueIso, competenceIso) < 0) {
       $('field-due-date').setCustomValidity('O vencimento não pode ser anterior à competência.');
       $('field-due-date').reportValidity();
@@ -992,8 +1351,8 @@
   });
 
   $('field-due-date').addEventListener('blur', () => {
-    const competenceIso = parseDateToIso($('field-competence').value);
-    const dueIso = parseDateToIso($('field-due-date').value);
+    const competenceIso = parseDateToIso(fieldValue('field-competence'));
+    const dueIso = parseDateToIso(fieldValue('field-due-date'));
     if (competenceIso && dueIso && compareIsoDates(dueIso, competenceIso) < 0) {
       $('field-due-date').setCustomValidity('O vencimento não pode ser anterior à competência.');
       $('field-due-date').reportValidity();
@@ -1036,6 +1395,21 @@
     renderAllocations();
     updateFinancialTotals();
   });
+
+  document.querySelectorAll('[data-settlement-component]').forEach((input) => {
+    input.addEventListener('input', (event) => {
+      event.target.value = formatCurrencyFromDigits(event.target.value);
+      scheduleSettlementSimulation();
+    });
+  });
+
+  if ($('settlement-date')) {
+    $('settlement-date').addEventListener('change', scheduleSettlementSimulation);
+  }
+
+  if ($('settlement-composition-form')) {
+    $('settlement-composition-form').addEventListener('submit', (event) => event.preventDefault());
+  }
 
   $('counterparty-document').addEventListener('input', (event) => {
     const digits = String(event.target.value || '').replace(/\D/g, '').slice(0, 14);

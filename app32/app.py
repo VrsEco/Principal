@@ -84,7 +84,12 @@ def _sync_public_static_assets(app: Flask) -> None:
             should_copy = not os.path.exists(target_file)
             if not should_copy:
                 try:
-                    should_copy = os.path.getmtime(source_file) > os.path.getmtime(target_file)
+                    source_stat = os.stat(source_file)
+                    target_stat = os.stat(target_file)
+                    should_copy = (
+                        source_stat.st_size != target_stat.st_size
+                        or source_stat.st_mtime > target_stat.st_mtime
+                    )
                 except OSError:
                     should_copy = True
 
