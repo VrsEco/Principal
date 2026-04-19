@@ -445,7 +445,7 @@
     max-width: none;
     border-radius: 0;
     box-shadow: none;
-    padding: 0 0 12mm;
+    padding: 0;
   }
 
   .schedule-stats-grid {
@@ -472,12 +472,8 @@
   }
 
   .schedule-footer {
-    position: fixed;
-    left: 8mm;
-    right: 8mm;
-    bottom: 0;
-    padding-top: 4px;
-    background: #fff;
-    border-top: 1px solid var(--border);
+    margin-top: 0.35rem;
+    padding-top: 0.25rem;
+    page-break-inside: avoid;
   }
 }
