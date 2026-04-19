@@ -35,6 +35,7 @@ from services.financial_catalog_service import FinancialCatalogService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
 from services.financial_report_service import FinancialReportService
 from services.financial_schedule_service import FinancialScheduleService
+from services.financial_title_calculation_service import FinancialTitleCalculationService
 from services.financial_automation_service import FinancialAutomationService
 from services.financial_process_trigger_service import FinancialProcessTriggerService
 from services.financial_executive_dashboard_service import FinancialExecutiveDashboardService
@@ -733,6 +734,24 @@ class FinancialScheduleSettlementResource(Resource):
         if error:
             return {"error": error}, 400
         return result, 201
+
+
+class FinancialScheduleCalculationLogListResource(Resource):
+    @permission_required("financial", "view")
+    def get(self, schedule_id: int):
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "Empresa não informada."}, 400
+
+        result, error = FinancialTitleCalculationService.list_title_calculation_logs(
+            company_id=company_id,
+            schedule_id=schedule_id,
+            allowed_company_ids=get_accessible_company_ids(),
+            limit=request.args.get("limit", type=int),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
 
 
 class FinancialScheduleAttachmentListResource(Resource):

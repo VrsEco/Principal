@@ -21,6 +21,7 @@ from models.financial import (
     FinancialDiscountRule,
     FinancialDomainEnablement,
     FinancialEntry,
+    FinancialEntryAllocation,
     FinancialSchedule,
     FinancialSettlement,
 )
@@ -714,19 +715,37 @@ class FinancialScheduleService:
         if active_bordero:
             return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
-        has_entries = (
-            FinancialEntry.query.filter(
-                FinancialEntry.company_id == company_id,
-                FinancialEntry.external_reference == f"financial_schedule:{schedule.id}",
-                FinancialEntry.deleted_at.is_(None),
-            ).first()
-            is not None
-        )
-        if has_entries:
-            return None, "Não é possível excluir um agendamento que já gerou lançamentos. Cancele-o ou edite-o."
+        generated_entries = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.external_reference == f"financial_schedule:{schedule.id}",
+            FinancialEntry.deleted_at.is_(None),
+        ).all()
+        now = datetime.utcnow()
+        for entry in generated_entries:
+            has_active_settlement = (
+                FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id == entry.id,
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                ).first()
+                is not None
+            )
+            if has_active_settlement:
+                return None, "Não é possível excluir um agendamento que já possui baixas. Cancele-o ou edite-o."
 
         try:
-            schedule.deleted_at = datetime.utcnow()
+            schedule.deleted_at = now
+            for entry in generated_entries:
+                entry.deleted_at = now
+                metadata = dict(getattr(entry, "metadata_json", None) or {})
+                metadata["deleted_with_schedule"] = True
+                entry.metadata_json = metadata
+                FinancialEntryAllocation.query.filter(
+                    FinancialEntryAllocation.company_id == company_id,
+                    FinancialEntryAllocation.financial_entry_id == entry.id,
+                    FinancialEntryAllocation.deleted_at.is_(None),
+                ).update({"deleted_at": now}, synchronize_session=False)
             db.session.commit()
             return {"message": "Agendamento removido com sucesso.", "id": schedule_id}, None
         except Exception as exc:
@@ -817,6 +836,66 @@ class FinancialScheduleService:
             schedule.status = "active"
         db.session.commit()
         return {"entry": FinancialService.serialize_entry(entry), "created": True}, None
+
+    @staticmethod
+    def create_settlement_from_schedule(
+        *,
+        schedule_id: int,
+        company_id: int,
+        payload: Dict[str, Any],
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        schedule = FinancialSchedule.query.filter(
+            FinancialSchedule.id == schedule_id,
+            FinancialSchedule.company_id == company_id,
+            FinancialSchedule.deleted_at.is_(None),
+        ).first()
+        if not schedule:
+            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+
+        entry_result, entry_error = FinancialScheduleService.create_entry_from_schedule(
+            schedule_id=schedule_id,
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+            ignore_bordero_lock=True,
+        )
+        if entry_error:
+            return None, entry_error
+
+        entry_payload = entry_result.get("entry") if isinstance(entry_result, dict) else None
+        entry_id = entry_payload.get("id") if isinstance(entry_payload, dict) else None
+        if not entry_id:
+            return None, "Não foi possível identificar o lançamento vinculado ao título financeiro."
+
+        entry = FinancialEntry.query.filter(
+            FinancialEntry.id == entry_id,
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        ).first()
+        if not entry:
+            return None, "Lançamento financeiro gerado não encontrado no escopo da empresa."
+
+        settlement_payload = dict(payload or {})
+        settlement_payload["company_id"] = company_id
+        settlement_payload["financial_entry_id"] = entry_id
+        settlement_payload["external_reference"] = f"financial_schedule:{schedule.id}"
+
+        settlement, settlement_error = FinancialService.create_settlement(
+            payload=settlement_payload,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if settlement_error:
+            return None, settlement_error
+
+        return {
+            "entry": FinancialService.serialize_entry(entry),
+            "settlement": settlement.to_dict() if hasattr(settlement, "to_dict") else settlement,
+            "created_entry": bool(entry_result.get("created")) if isinstance(entry_result, dict) else False,
+        }, None
 
     @staticmethod
     def generate_due_entries(
