@@ -32,6 +32,7 @@ from services.financial_catalog_service import FinancialCatalogService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
 from services.financial_service import FinancialService
 from services.financial_title_amount_service import FinancialTitleAmountService
+from services.financial_title_balance_service import FinancialTitleBalanceService
 
 
 logger = logging.getLogger(__name__)
@@ -1477,73 +1478,35 @@ class FinancialScheduleService:
     @staticmethod
     def _build_schedule_summary(schedule: FinancialSchedule) -> Dict[str, Any]:
         metadata = dict(schedule.metadata_json or {})
-        entries = (
-            FinancialEntry.query.filter(
-                FinancialEntry.company_id == schedule.company_id,
-                FinancialEntry.external_reference == f"financial_schedule:{schedule.id}",
-                FinancialEntry.deleted_at.is_(None),
-            )
-            .order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc())
-            .all()
-        )
-        original_total = Decimal("0")
-        settled_total = Decimal("0")
-        open_total = Decimal("0")
-        settled_entries = 0
-        partial_entries = 0
-        open_entries = 0
-
-        if not entries:
-            template_amount = Decimal(str(schedule.template_amount or 0))
-            original_total = template_amount
-            if schedule.status not in {"completed", "cancelled"} and template_amount > 0:
-                open_total = template_amount
-                open_entries = 1
-
-        for entry in entries:
-            original_amount = Decimal(str(entry.original_amount or 0))
-            settlements_total = (
-                db.session.query(db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0))
-                .filter(
-                    FinancialSettlement.company_id == schedule.company_id,
-                    FinancialSettlement.financial_entry_id == entry.id,
-                    FinancialSettlement.deleted_at.is_(None),
-                    FinancialSettlement.settlement_status != "cancelled",
-                )
-                .scalar()
-            ) or 0
-            settlements_total = Decimal(str(settlements_total or 0))
-            outstanding = max(original_amount - settlements_total, Decimal("0"))
-            original_total += original_amount
-            settled_total += settlements_total
-            open_total += outstanding
-
-            if outstanding == 0 and original_amount > 0:
-                settled_entries += 1
-            elif settlements_total > 0:
-                partial_entries += 1
-            else:
-                open_entries += 1
-
-        settlement_state = "open"
-        if entries:
-            if open_entries == 0 and partial_entries == 0:
-                settlement_state = "settled"
-            elif partial_entries > 0 or settled_entries > 0:
-                settlement_state = "partial"
-
+        balance = FinancialTitleBalanceService.calculate_for_schedule(schedule=schedule)
+        original_total = Decimal(str(balance.get("principal_amount") or 0))
+        settled_total = Decimal(str(balance.get("principal_settled") or 0))
+        open_total = Decimal(str(balance.get("total_open") or balance.get("principal_open") or 0))
+        settlement_state = str(balance.get("settlement_state") or "open")
+        settled_entries = 1 if settlement_state == "settled" and original_total > 0 else 0
+        partial_entries = 1 if settlement_state == "partial" else 0
+        open_entries = 1 if settlement_state == "open" and open_total > 0 else 0
         return {
-            "entry_count": len(entries),
+            "entry_count": int(balance.get("entry_count") or 0),
             "settled_entries": settled_entries,
             "partial_entries": partial_entries,
             "open_entries": open_entries,
             "original_total": float(original_total),
             "settled_total": float(settled_total),
             "open_total": float(open_total),
-            "signed_original_total": FinancialService.get_signed_amount(original_total, schedule.movement_nature),
-            "signed_settled_total": FinancialService.get_signed_amount(settled_total, schedule.movement_nature),
-            "signed_open_total": FinancialService.get_signed_amount(open_total, schedule.movement_nature),
+            "signed_original_total": balance.get("signed_principal_amount"),
+            "signed_settled_total": balance.get("signed_principal_settled"),
+            "signed_open_total": balance.get("signed_total_open"),
             "settlement_state": settlement_state,
+            "principal_amount": balance.get("principal_amount"),
+            "principal_settled": balance.get("principal_settled"),
+            "principal_open": balance.get("principal_open"),
+            "adjustments_generated": balance.get("adjustments_generated"),
+            "adjustments_settled": balance.get("adjustments_settled"),
+            "adjustments_open": balance.get("adjustments_open"),
+            "discounts_open": balance.get("discounts_open"),
+            "total_open": balance.get("total_open"),
+            "signed_total_open": balance.get("signed_total_open"),
             "counterparty_name": metadata.get("counterparty_name"),
         }
 

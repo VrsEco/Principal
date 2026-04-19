@@ -183,6 +183,16 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
 
     entry = _FakeEntry()
     monkeypatch.setattr(financial_module, "FinancialTitleCalculationLog", _FakeTitleCalculationLog)
+    monkeypatch.setattr(
+        financial_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda **kwargs: {
+            "principal_settled": 100.0,
+            "principal_open": 375.0,
+            "adjustments_open": 0.0,
+            "total_open": 375.0,
+        },
+    )
     monkeypatch.setattr(financial_module, "FinancialEntry", type("FinancialEntryStub", (), {
         "id": _Column(),
         "company_id": _Column(),
@@ -400,6 +410,16 @@ def test_create_settlement_persists_gross_amount_and_component_breakdown(monkeyp
             self.__dict__.update(kwargs)
 
     entry = _FakeEntry()
+    monkeypatch.setattr(
+        financial_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda **kwargs: {
+            "principal_settled": 0.0,
+            "principal_open": 500.0,
+            "adjustments_open": 0.0,
+            "total_open": 500.0,
+        },
+    )
     monkeypatch.setattr(financial_module, "FinancialEntry", type("FinancialEntryStub", (), {
         "id": _Column(),
         "company_id": _Column(),

@@ -31,6 +31,7 @@ from schemas.financial import (
 )
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_title_amount_service import FinancialTitleAmountService
+from services.financial_title_balance_service import FinancialTitleBalanceService
 from utils.permissions import is_administrator
 
 logger = logging.getLogger(__name__)
@@ -709,8 +710,12 @@ class FinancialService:
             due_date=due_date,
             reference_date=settlement_data.settlement_date or date.today(),
         )
+        balance_before = FinancialTitleBalanceService.calculate_for_schedule(
+            schedule=schedule,
+            reference_date=settlement_data.settlement_date or date.today(),
+        )
         title_amount = Decimal(str(amount_totals.get("updated_amount") or schedule.template_amount or 0))
-        settled_before = Decimal(total_liquidated_before or 0)
+        settled_before = Decimal(str(balance_before.get("principal_settled") or total_liquidated_before or 0))
         settled_after = settled_before + Decimal(settlement_data.principal_amount or 0)
         open_after = max(title_amount - settled_after, Decimal("0"))
         return {
@@ -727,6 +732,9 @@ class FinancialService:
             "settled_principal_current": float(Decimal(settlement_data.principal_amount or 0).quantize(Decimal("0.01"))),
             "settled_principal_after": float(settled_after.quantize(Decimal("0.01"))),
             "open_principal_after": float(open_after.quantize(Decimal("0.01"))),
+            "principal_open_before": balance_before.get("principal_open"),
+            "adjustments_open_before": balance_before.get("adjustments_open"),
+            "total_open_before": balance_before.get("total_open"),
         }
 
 
