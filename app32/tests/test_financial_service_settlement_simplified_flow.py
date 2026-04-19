@@ -345,3 +345,117 @@ def test_create_settlement_rejects_zero_principal_amount(monkeypatch):
     assert settlement is None
     assert error == "Baixa inválida: o valor principal deve ser maior que zero."
     assert entry.status == "posted"
+
+
+def test_create_settlement_persists_gross_amount_and_component_breakdown(monkeypatch):
+    captured = {"added": []}
+
+    class _FakeEntry:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+
+        def __init__(self):
+            self.id = 99
+            self.company_id = 7
+            self.original_amount = Decimal("500.00")
+            self.status = "posted"
+            self.financial_schedule_id = 77
+            self.competence_date = date(2026, 4, 1)
+
+    class _FakeSchedule:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(type("Schedule", (), {
+            "id": 77,
+            "company_id": 7,
+            "schedule_code": "TIT-077",
+            "template_amount": Decimal("500.00"),
+            "metadata_json": {},
+            "competence_date": date(2026, 4, 1),
+            "start_date": date(2026, 4, 1),
+            "first_due_date": date(2026, 4, 10),
+            "next_due_date": date(2026, 4, 10),
+        })())
+
+    class _FakeSettlement:
+        company_id = _Column()
+        settlement_code = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        principal_amount = _Column()
+        financial_entry_id = _Column()
+        settlement_status = _Column()
+        query = _SequenceQueryStub([type("PreviousSettlement", (), {"settlement_code": "LIQ-000030", "id": 30})(), None])
+
+        def __init__(self, **kwargs):
+            captured["settlement_kwargs"] = kwargs
+            self.id = 601
+            self.__dict__.update(kwargs)
+
+    class _FakeSettlementComponent:
+        def __init__(self, **kwargs):
+            captured.setdefault("component_kwargs", []).append(kwargs)
+            self.__dict__.update(kwargs)
+
+    entry = _FakeEntry()
+    monkeypatch.setattr(financial_module, "FinancialEntry", type("FinancialEntryStub", (), {
+        "id": _Column(),
+        "company_id": _Column(),
+        "deleted_at": _Column(),
+        "query": _QueryStub(entry),
+    }))
+    monkeypatch.setattr(financial_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(financial_module, "FinancialSettlement", _FakeSettlement)
+    monkeypatch.setattr(financial_module, "FinancialSettlementComponent", _FakeSettlementComponent)
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialCatalogService, "validate_reference_ids", lambda **kwargs: None)
+    monkeypatch.setattr(
+        financial_module.db.session,
+        "query",
+        lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("0")})(),
+    )
+    monkeypatch.setattr(financial_module.db.session, "add", lambda obj: captured["added"].append(obj))
+    monkeypatch.setattr(financial_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
+    monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_entry", lambda **kwargs: None)
+
+    settlement, error = FinancialService.create_settlement(
+        payload={
+            "company_id": 7,
+            "financial_entry_id": 99,
+            "settlement_type": "manual",
+            "settlement_date": date(2026, 4, 20),
+            "principal_amount": Decimal("200.00"),
+            "interest_amount": Decimal("50.00"),
+            "gross_amount": Decimal("250.00"),
+            "settlement_components": [
+                {
+                    "component_type": "principal",
+                    "amount": Decimal("200.00"),
+                    "competence_date": date(2026, 4, 1),
+                    "due_date": date(2026, 4, 10),
+                    "source": "user",
+                },
+                {
+                    "component_type": "interest",
+                    "amount": Decimal("50.00"),
+                    "competence_date": date(2026, 4, 20),
+                    "due_date": date(2026, 4, 20),
+                    "source": "user",
+                },
+            ],
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert settlement is not None
+    assert captured["settlement_kwargs"]["gross_amount"] == Decimal("250.00")
+    assert len(captured["component_kwargs"]) == 2
+    assert captured["component_kwargs"][0]["financial_settlement_id"] == 601
+    assert captured["component_kwargs"][0]["component_type"] == "principal"
+    assert captured["component_kwargs"][1]["component_type"] == "interest"
+    assert captured["committed"] is True

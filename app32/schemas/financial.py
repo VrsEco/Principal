@@ -31,6 +31,7 @@ from models.financial import (
     REVIEW_STATUS_VALUES,
     SCHEDULE_FREQUENCY_VALUES,
     SCHEDULE_STATUS_VALUES,
+    SETTLEMENT_COMPONENT_TYPE_VALUES,
     SETTLEMENT_STATUS_VALUES,
     SETTLEMENT_TYPE_VALUES,
 )
@@ -79,6 +80,7 @@ class FinancialSettlementSchema(ma.SQLAlchemyAutoSchema):
     discount_amount = fields.Float()
     fee_amount = fields.Float()
     other_adjustments_amount = fields.Float()
+    gross_amount = fields.Float()
     net_amount = fields.Float()
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
@@ -1093,6 +1095,18 @@ class FinancialAllocationInput(BaseModel):
         return self
 
 
+class FinancialSettlementComponentInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    component_type: str = Field(..., pattern=_choices_pattern(SETTLEMENT_COMPONENT_TYPE_VALUES))
+    amount: Decimal = Field(..., ge=0)
+    competence_date: Optional[date] = None
+    due_date: Optional[date] = None
+    source: str = Field("system", min_length=3, max_length=20)
+    origin_adjustment_id: Optional[int] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+
 class FinancialSettlementInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1109,7 +1123,9 @@ class FinancialSettlementInput(BaseModel):
     discount_amount: Decimal = Field(default=Decimal("0"), ge=0)
     fee_amount: Decimal = Field(default=Decimal("0"), ge=0)
     other_adjustments_amount: Decimal = Field(default=Decimal("0"), ge=0)
+    gross_amount: Optional[Decimal] = Field(default=None, ge=0)
     net_amount: Optional[Decimal] = Field(default=None, ge=0)
+    settlement_components: List[FinancialSettlementComponentInput] = Field(default_factory=list)
     external_reference: Optional[str] = Field(None, max_length=120)
     import_batch_id: Optional[int] = None
     reconciliation_status: str = Field("pending", pattern=_choices_pattern(RECONCILIATION_STATUS_VALUES))
@@ -1120,8 +1136,8 @@ class FinancialSettlementInput(BaseModel):
     created_by_agent: Optional[str] = Field(None, max_length=50)
 
     @model_validator(mode="after")
-    def calculate_net_amount(self):
-        expected = (
+    def calculate_amounts(self):
+        expected_net = (
             self.principal_amount
             + self.interest_amount
             + self.penalty_amount
@@ -1130,9 +1146,23 @@ class FinancialSettlementInput(BaseModel):
             - self.discount_amount
         )
         if self.net_amount is None:
-            self.net_amount = expected
-        elif self.net_amount != expected:
+            self.net_amount = expected_net
+        elif self.net_amount != expected_net:
             raise ValueError("net_amount inconsistente com a composição da liquidação.")
+
+        if self.gross_amount is None:
+            self.gross_amount = expected_net
+
+        if self.settlement_components:
+            component_total = Decimal("0")
+            for component in self.settlement_components:
+                signed_amount = component.amount * (Decimal("-1") if component.component_type == "discount" else Decimal("1"))
+                component_total += signed_amount
+            if self.gross_amount != component_total:
+                raise ValueError("gross_amount inconsistente com a soma dos componentes da liquidação.")
+        elif self.gross_amount != expected_net:
+            raise ValueError("gross_amount inconsistente com a composição agregada da liquidação.")
+
         return self
 
 

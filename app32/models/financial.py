@@ -1204,7 +1204,7 @@ class FinancialSettlement(db.Model):
             """
             principal_amount >= 0 AND interest_amount >= 0 AND penalty_amount >= 0
             AND discount_amount >= 0 AND fee_amount >= 0 AND other_adjustments_amount >= 0
-            AND net_amount >= 0
+            AND net_amount >= 0 AND gross_amount >= 0
             """,
             name="ck_financial_settlements_amounts_nonneg",
         ),
@@ -1228,6 +1228,7 @@ class FinancialSettlement(db.Model):
     discount_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     fee_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     other_adjustments_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    gross_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     net_amount = db.Column(db.Numeric(14, 2), nullable=False)
 
     external_reference = db.Column(db.String(120))
@@ -1260,6 +1261,7 @@ class FinancialSettlement(db.Model):
             "discount_amount": float(self.discount_amount or 0),
             "fee_amount": float(self.fee_amount or 0),
             "other_adjustments_amount": float(self.other_adjustments_amount or 0),
+            "gross_amount": float(self.gross_amount or 0),
             "net_amount": float(self.net_amount or 0),
             "external_reference": self.external_reference,
             "import_batch_id": self.import_batch_id,

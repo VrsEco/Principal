@@ -14,6 +14,7 @@ from models.financial import (
     FinancialEntryAllocation,
     FinancialSchedule,
     FinancialSettlement,
+    FinancialSettlementComponent,
     FinancialTitleCalculationLog,
 )
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine
@@ -175,7 +176,7 @@ class FinancialService:
                 },
             )
             summary["settled_principal_amount"] += float(settlement.principal_amount or 0)
-            summary["settled_net_amount"] += float(settlement.net_amount or 0)
+            summary["settled_net_amount"] += float(getattr(settlement, "gross_amount", None) or settlement.net_amount or 0)
             summary["settlement_count"] += 1
 
         bank_accounts = {
@@ -759,6 +760,99 @@ class FinancialService:
         }
 
     @staticmethod
+    def _resolve_settlement_schedule_context(
+        *,
+        entry: FinancialEntry,
+        title_snapshot: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[Optional[int], Optional[date], Optional[date]]:
+        schedule_id = getattr(entry, "financial_schedule_id", None)
+        competence_date = None
+        due_date = None
+
+        snapshot = dict(title_snapshot or {})
+        if not schedule_id and snapshot.get("financial_schedule_id") is not None:
+            try:
+                schedule_id = int(snapshot.get("financial_schedule_id"))
+            except (TypeError, ValueError):
+                schedule_id = None
+
+        raw_competence = snapshot.get("competence_date")
+        raw_due_date = snapshot.get("due_date")
+        if raw_competence:
+            try:
+                competence_date = date.fromisoformat(str(raw_competence))
+            except ValueError:
+                competence_date = None
+        if raw_due_date:
+            try:
+                due_date = date.fromisoformat(str(raw_due_date))
+            except ValueError:
+                due_date = None
+
+        return schedule_id, competence_date, due_date
+
+    @staticmethod
+    def _build_settlement_component_payloads(
+        *,
+        entry: FinancialEntry,
+        settlement_data: FinancialSettlementInput,
+        title_snapshot: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        schedule_id, title_competence_date, title_due_date = FinancialService._resolve_settlement_schedule_context(
+            entry=entry,
+            title_snapshot=title_snapshot,
+        )
+        default_competence_date = settlement_data.settlement_date or title_competence_date or date.today()
+        default_due_date = title_due_date or settlement_data.settlement_date
+
+        if settlement_data.settlement_components:
+            payloads: List[Dict[str, Any]] = []
+            for component in settlement_data.settlement_components:
+                component_due_date = component.due_date or default_due_date
+                payloads.append(
+                    {
+                        "company_id": settlement_data.company_id,
+                        "financial_schedule_id": schedule_id,
+                        "component_type": component.component_type,
+                        "amount": Decimal(str(component.amount or 0)).quantize(Decimal("0.01")),
+                        "competence_date": component.competence_date or default_competence_date,
+                        "due_date": component_due_date,
+                        "source": component.source or "system",
+                        "origin_adjustment_id": component.origin_adjustment_id,
+                        "metadata_json": dict(component.metadata_json or {}),
+                    }
+                )
+            return payloads
+
+        amount_map = (
+            ("principal", settlement_data.principal_amount, title_competence_date or default_competence_date, default_due_date),
+            ("interest", settlement_data.interest_amount, settlement_data.settlement_date or default_competence_date, settlement_data.settlement_date or default_due_date),
+            ("fine", settlement_data.penalty_amount, settlement_data.settlement_date or default_competence_date, settlement_data.settlement_date or default_due_date),
+            ("discount", settlement_data.discount_amount, settlement_data.settlement_date or default_competence_date, settlement_data.settlement_date or default_due_date),
+            ("manual_adjustment", settlement_data.fee_amount + settlement_data.other_adjustments_amount, settlement_data.settlement_date or default_competence_date, settlement_data.settlement_date or default_due_date),
+        )
+        payloads = []
+        for component_type, raw_amount, competence_date_value, due_date_value in amount_map:
+            amount = Decimal(str(raw_amount or 0)).quantize(Decimal("0.01"))
+            if amount <= Decimal("0"):
+                continue
+            payloads.append(
+                {
+                    "company_id": settlement_data.company_id,
+                    "financial_schedule_id": schedule_id,
+                    "component_type": component_type,
+                    "amount": amount,
+                    "competence_date": competence_date_value or default_competence_date,
+                    "due_date": due_date_value,
+                    "source": "system",
+                    "origin_adjustment_id": None,
+                    "metadata_json": {"source_context": "aggregated_settlement_fields"},
+                }
+            )
+        return payloads
+
+
+    @staticmethod
     def create_settlement(
         *,
         payload: Dict[str, Any],
@@ -827,24 +921,41 @@ class FinancialService:
                     f"Liquidado atual: {total_liquidated}. Original: {entry.original_amount}."
                 )
 
-            settlement_payload = data.model_dump()
+            settlement_payload = data.model_dump(exclude={"settlement_components"})
             title_snapshot = FinancialService._build_title_settlement_snapshot(
                 entry=entry,
                 settlement_data=data,
                 total_liquidated_before=Decimal(total_liquidated),
+            )
+            component_payloads = FinancialService._build_settlement_component_payloads(
+                entry=entry,
+                settlement_data=data,
+                title_snapshot=title_snapshot,
             )
             if title_snapshot:
                 settlement_payload["metadata_json"] = {
                     **dict(settlement_payload.get("metadata_json") or {}),
                     "financial_title_snapshot": title_snapshot,
                 }
+            if component_payloads:
+                settlement_payload["metadata_json"] = {
+                    **dict(settlement_payload.get("metadata_json") or {}),
+                    "settlement_component_count": len(component_payloads),
+                }
 
             settlement = FinancialSettlement(**settlement_payload)
             db.session.add(settlement)
+            flush = getattr(db.session, "flush", None)
+            if callable(flush):
+                flush()
+            for component_payload in component_payloads:
+                db.session.add(
+                    FinancialSettlementComponent(
+                        financial_settlement_id=getattr(settlement, "id", None),
+                        **component_payload,
+                    )
+                )
             if title_snapshot:
-                flush = getattr(db.session, "flush", None)
-                if callable(flush):
-                    flush()
                 db.session.add(
                     FinancialTitleCalculationLog(
                         **FinancialService._build_title_calculation_log_payload(
