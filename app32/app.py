@@ -664,6 +664,8 @@ def register_api_resources(api):
         FinancialScheduleGenerateResource,
         FinancialScheduleCreateEntryResource,
         FinancialScheduleSettlementResource,
+        FinancialScheduleSettlementSimulationResource,
+        FinancialScheduleAssistedSettlementResource,
         FinancialScheduleCalculationLogListResource,
         FinancialScheduleAttachmentListResource,
         FinancialScheduleAttachmentResource,
@@ -860,6 +862,8 @@ def register_api_resources(api):
     api.add_resource(FinancialScheduleGenerateResource, '/api/financial/schedules/generate-due')
     api.add_resource(FinancialScheduleCreateEntryResource, '/api/financial/schedules/<int:schedule_id>/create-entry')
     api.add_resource(FinancialScheduleSettlementResource, '/api/financial/schedules/<int:schedule_id>/settlements')
+    api.add_resource(FinancialScheduleSettlementSimulationResource, '/api/financial/schedules/<int:schedule_id>/settlements/simulate', '/api/financial/titles/<int:schedule_id>/settlements/simulate')
+    api.add_resource(FinancialScheduleAssistedSettlementResource, '/api/financial/schedules/<int:schedule_id>/settlements/assisted', '/api/financial/titles/<int:schedule_id>/settlements')
     api.add_resource(FinancialScheduleCalculationLogListResource, '/api/financial/schedules/<int:schedule_id>/calculation-logs')
     api.add_resource(FinancialScheduleAttachmentListResource, '/api/financial/schedules/<int:schedule_id>/attachments')
     api.add_resource(FinancialScheduleAttachmentResource, '/api/financial/schedules/<int:schedule_id>/attachments/<string:attachment_id>')

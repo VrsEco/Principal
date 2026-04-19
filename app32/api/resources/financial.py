@@ -36,6 +36,7 @@ from services.financial_domain_enablement_service import FinancialDomainEnableme
 from services.financial_report_service import FinancialReportService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_title_calculation_service import FinancialTitleCalculationService
+from services.financial_settlement_composition_service import FinancialSettlementCompositionService
 from services.financial_automation_service import FinancialAutomationService
 from services.financial_process_trigger_service import FinancialProcessTriggerService
 from services.financial_executive_dashboard_service import FinancialExecutiveDashboardService
@@ -728,6 +729,42 @@ class FinancialScheduleSettlementResource(Resource):
         result, error = FinancialScheduleService.create_settlement_from_schedule(
             schedule_id=schedule_id,
             company_id=company_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
+class FinancialScheduleSettlementSimulationResource(Resource):
+    @permission_required("financial", "view")
+    def post(self, schedule_id: int):
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "Empresa não informada."}, 400
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialSettlementCompositionService.simulate_settlement(
+            company_id=company_id,
+            schedule_id=schedule_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
+class FinancialScheduleAssistedSettlementResource(Resource):
+    @permission_required("financial", "create")
+    def post(self, schedule_id: int):
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "Empresa não informada."}, 400
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialSettlementCompositionService.create_assisted_settlement(
+            company_id=company_id,
+            schedule_id=schedule_id,
             payload=payload,
             allowed_company_ids=get_accessible_company_ids(),
         )
