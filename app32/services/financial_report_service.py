@@ -193,7 +193,7 @@ class FinancialReportService:
             if not any([data.show_code, data.show_description]):
                 return None, "Selecione ao menos uma coluna de identificação para o DRE."
         if data.report_type == "schedule_report":
-            updates = {}
+            updates = {"orientation": "portrait"}
             if not data.competence_start:
                 updates["competence_start"] = data.period_start
             if not data.competence_end:
@@ -825,14 +825,12 @@ class FinancialReportService:
         columns = []
         for key, label, enabled in [
             ("title_number", "Nº Título", filters.show_title_number),
-            ("installment", "Parcela", filters.show_installment),
-            ("history", "Histórico", filters.show_history),
             ("counterparty", "Favorecido", filters.show_counterparty),
             ("title_amount", "Valor Título", filters.show_title_amount),
             ("balance_amount", "Valor Saldo", filters.show_balance_amount),
             ("competence_date", "Competência", filters.show_competence_date),
             ("due_date", "Vencimento", filters.show_due_date),
-            ("settlement_date", "Data da Liquidação", filters.show_settlement_date),
+            ("settlement_date", "Dt. da Última Liquid.", filters.show_settlement_date),
         ]:
             if enabled:
                 columns.append({"key": key, "label": label})
@@ -1643,13 +1641,18 @@ class FinancialReportService:
         }
 
     @staticmethod
-    def _build_filter_labels(filters: FinancialManagementReportFiltersInput, company_id: int) -> List[Dict[str, str]]:
+    def _build_filter_labels(
+        filters: FinancialManagementReportFiltersInput,
+        company_id: int,
+        raw_filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, str]]:
         bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
         chart_names = FinancialReportService._name_map(FinancialChartAccount, company_id)
         center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
         counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
         project_names = FinancialReportService._name_map(Project, company_id)
         process_names = FinancialReportService._name_map(Process, company_id)
+        raw_filters = raw_filters or {}
         order_labels = {
             "code": "Código",
             "description": "Descrição",
@@ -1662,16 +1665,31 @@ class FinancialReportService:
             "balance_amount": "Valor Saldo",
             "competence_date": "Competência",
             "due_date": "Vencimento",
-            "settlement_date": "Data da Liquidação",
+            "settlement_date": "Dt. da Última Liquid.",
         }
-        values = [{"label": "Período inicial", "value": filters.period_start.isoformat()}, {"label": "Período final", "value": filters.period_end.isoformat()}]
-        if filters.competence_start and filters.competence_end:
+        default_start, default_end = FinancialReportService.default_period()
+        values: List[Dict[str, str]] = []
+        if filters.report_type != "schedule_report":
+            values.extend(
+                [
+                    {"label": "Período inicial", "value": filters.period_start.isoformat()},
+                    {"label": "Período final", "value": filters.period_end.isoformat()},
+                ]
+            )
+        if filters.report_type == "schedule_report":
+            default_competence = (
+                filters.competence_start == default_start
+                and filters.competence_end == default_end
+            )
+            if filters.competence_start and filters.competence_end and not default_competence:
+                values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
+        elif filters.competence_start and filters.competence_end:
             values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
         if filters.due_start and filters.due_end:
             values.append({"label": "Data vencimento", "value": f"{filters.due_start.isoformat()} até {filters.due_end.isoformat()}"})
         if filters.settlement_start and filters.settlement_end:
             values.append({"label": "Data baixa", "value": f"{filters.settlement_start.isoformat()} até {filters.settlement_end.isoformat()}"})
-        if filters.reference_date:
+        if filters.reference_date and filters.report_type != "schedule_report":
             values.append({"label": "Data de referência", "value": filters.reference_date.isoformat()})
         for current, label, names in [
             (filters.bank_account_id, "Conta bancária", bank_names),
@@ -1714,48 +1732,34 @@ class FinancialReportService:
         if filters.frequency:
             values.append({"label": "Frequência", "value": filters.frequency})
         if filters.report_type == "schedule_report":
-            values.append({
-                "label": "Status considerados",
-                "value": ", ".join(
-                    [
-                        label for enabled, label in [
-                            (filters.include_settled, "Liquidado"),
-                            (filters.include_partial, "Liquidado Parcial"),
-                            (filters.include_open, "Aberto"),
-                            (filters.include_bordero, "Borderô"),
-                        ] if enabled
-                    ]
-                ) or "Nenhum",
-            })
-            values.append({
-                "label": "Tipos considerados",
-                "value": ", ".join(
-                    [
-                        label for enabled, label in [
-                            (filters.include_payable, "Pagamento"),
-                            (filters.include_receivable, "Recebimento"),
-                        ] if enabled
-                    ]
-                ) or "Nenhum",
-            })
-            values.append({
-                "label": "Exibir",
-                "value": ", ".join(
-                    [
-                        label for enabled, label in [
-                            (filters.show_title_number, "Nº Título"),
-                            (filters.show_installment, "Parcela"),
-                            (filters.show_history, "Histórico"),
-                            (filters.show_counterparty, "Favorecido"),
-                            (filters.show_title_amount, "Valor Título"),
-                            (filters.show_balance_amount, "Valor Saldo"),
-                            (filters.show_competence_date, "Competência"),
-                            (filters.show_due_date, "Vencimento"),
-                            (filters.show_settlement_date, "Data da Liquidação"),
-                        ] if enabled
-                    ]
-                ) or "Nenhum",
-            })
+            all_status_enabled = all([filters.include_settled, filters.include_partial, filters.include_open, filters.include_bordero])
+            if not all_status_enabled:
+                values.append({
+                    "label": "Status",
+                    "value": ", ".join(
+                        [
+                            label for enabled, label in [
+                                (filters.include_settled, "Liquidado"),
+                                (filters.include_partial, "Liquidado Parcial"),
+                                (filters.include_open, "Aberto"),
+                                (filters.include_bordero, "Borderô"),
+                            ] if enabled
+                        ]
+                    ) or "Nenhum",
+                })
+            all_types_enabled = all([filters.include_payable, filters.include_receivable])
+            if not all_types_enabled:
+                values.append({
+                    "label": "Tipo",
+                    "value": ", ".join(
+                        [
+                            label for enabled, label in [
+                                (filters.include_payable, "Pagamento"),
+                                (filters.include_receivable, "Recebimento"),
+                            ] if enabled
+                        ]
+                    ) or "Nenhum",
+                })
         else:
             values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
             values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
@@ -1763,9 +1767,9 @@ class FinancialReportService:
             values.append({"label": "Status considerados", "value": ", ".join([label for enabled, label in [(filters.include_settled, "Liquidado"), (filters.include_open, "Aberto")] if enabled]) or "Nenhum"})
             values.append({"label": "Tipos considerados", "value": ", ".join([label for enabled, label in [(filters.include_receivable, "Recebimento"), (filters.include_payable, "Pagamento"), (filters.include_budget_vs_actual, "Orçado x Realizado")] if enabled]) or "Nenhum"})
             values.append({"label": "Exibir", "value": ", ".join([label for enabled, label in [(filters.show_code, "Código"), (filters.show_description, "Descrição")] if enabled]) or "Nenhum"})
-        values.append({"label": "Ordenar por", "value": order_labels.get(filters.order_by, filters.order_by)})
-        values.append({"label": "Direção", "value": filters.order_direction})
-        values.append({"label": "Orientação", "value": "Paisagem" if filters.orientation == "landscape" else "Retrato"})
+            values.append({"label": "Ordenar por", "value": order_labels.get(filters.order_by, filters.order_by)})
+            values.append({"label": "Direção", "value": filters.order_direction})
+            values.append({"label": "Orientação", "value": "Paisagem" if filters.orientation == "landscape" else "Retrato"})
         return values
 
     @staticmethod
@@ -1793,7 +1797,7 @@ class FinancialReportService:
                 "report_type": definition["code"],
                 "report_slug": definition["slug"],
                 "generated_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "filters": FinancialReportService._build_filter_labels(normalized_filters, company_id),
+                "filters": FinancialReportService._build_filter_labels(normalized_filters, company_id, raw_filters=filters),
                 "period_start": normalized_filters.period_start.isoformat(),
                 "period_end": normalized_filters.period_end.isoformat(),
                 "orientation": normalized_filters.orientation,

@@ -23,16 +23,8 @@
     <div class="schedule-report-viewer">
         <article class="schedule-report-sheet">
             <section class="schedule-section schedule-section--header">
-                <div class="schedule-sheet-header-main">
-                    <h2>{{ report.title if report else report_definition.label }}</h2>
-                    <div class="schedule-sheet-meta">
-                        <div><strong>Empresa:</strong> {{ company.name if company and company.name else 'Empresa ativa' }}</div>
-                        <div><strong>Gerado em:</strong> {{ report.generated_at if report else '-' }}</div>
-                    </div>
-                </div>
-                <div class="schedule-sheet-logo-box">
-                    <img class="schedule-sheet-logo" src="{{ url_for('static', filename='img/logo-versus.png') }}" alt="Versus Gestão Corporativa">
-                </div>
+                <h2 class="schedule-report-title-main">{{ report.title if report else report_definition.label }}</h2>
+                <div class="schedule-report-company-name">{{ company.name if company and company.name else 'Empresa ativa' }}</div>
             </section>
 
             <section class="schedule-section schedule-section--filters">
@@ -40,12 +32,10 @@
                 <div class="schedule-filters-grid">
                     {% if report_filters %}
                         {% for item in report_filters %}
-                        <div class="schedule-filter-item">
-                            <strong>{{ item.label }}:</strong> {{ item.value }}
-                        </div>
+                        <div class="schedule-filter-item"><strong>{{ item.label }}:</strong> {{ item.value }}</div>
                         {% endfor %}
                     {% else %}
-                        <div class="schedule-filter-item"><strong>Resumo:</strong> sem filtros acionados.</div>
+                        <div class="schedule-filter-item"><strong>Resumo:</strong> sem filtros adicionais.</div>
                     {% endif %}
                 </div>
             </section>
@@ -68,7 +58,7 @@
                         <thead>
                             <tr>
                                 {% for column in report_columns %}
-                                <th>{{ column.label }}</th>
+                                <th class="col-{{ column.key }}">{{ column.label }}</th>
                                 {% endfor %}
                             </tr>
                         </thead>
@@ -76,7 +66,7 @@
                             {% for row in report_rows %}
                             <tr>
                                 {% for column in report_columns %}
-                                <td class="{% if column.key in ['title_amount', 'balance_amount'] %}is-currency{% endif %}">{{ row[column.key] }}</td>
+                                <td class="col-{{ column.key }} {% if column.key in ['title_amount', 'balance_amount'] %}is-currency{% endif %}">{{ row[column.key] }}</td>
                                 {% endfor %}
                             </tr>
                             {% endfor %}
@@ -87,6 +77,11 @@
                 <div class="schedule-empty">Nenhum dado encontrado para os filtros informados.</div>
                 {% endif %}
             </section>
+
+            <footer class="schedule-footer">
+                <span>Versus Gestão Corporativa - Todos os direitos reservados.</span>
+                <span>www.gestaoversus.com.br</span>
+            </footer>
         </article>
     </div>
 </div>
