@@ -1,0 +1,77 @@
+{% macro workspace_header(report_definition, header_class='', eyebrow_class='', subtitle_class='', actions_class='', eyebrow_text='Gestão Financeira · Relatório Definitivo') -%}
+<header class="report-workspace-header {{ header_class }}">
+    <div>
+        <p class="report-workspace-eyebrow {{ eyebrow_class }}">{{ eyebrow_text }}</p>
+        <h1>{{ report_definition.label }}</h1>
+        <p class="report-workspace-subtitle {{ subtitle_class }}">{{ report_definition.description }}</p>
+    </div>
+    <div class="report-workspace-header-actions {{ actions_class }}">
+        {{ caller() }}
+    </div>
+</header>
+{%- endmacro %}
+
+{% macro workspace_sheet_header(title, company_name, section_class='', title_class='', company_class='') -%}
+<section class="report-workspace-section report-workspace-section--header {{ section_class }}">
+    <h2 class="report-workspace-title-main {{ title_class }}">{{ title }}</h2>
+    <div class="report-workspace-company-name {{ company_class }}">{{ company_name }}</div>
+</section>
+{%- endmacro %}
+
+{% macro workspace_filters(report_filters, empty_text='Sem filtros adicionais.', section_class='', section_title_class='', grid_class='', item_class='') -%}
+<section class="report-workspace-section report-workspace-section--filters {{ section_class }}">
+    <div class="report-workspace-section-title {{ section_title_class }}">Filtros aplicados</div>
+    <div class="report-workspace-filters-grid {{ grid_class }}">
+        {% if report_filters %}
+            {% for item in report_filters %}
+            <div class="report-workspace-filter-item {{ item_class }}"><strong>{{ item.label }}:</strong> {{ item.value }}</div>
+            {% endfor %}
+        {% else %}
+            <div class="report-workspace-filter-item {{ item_class }}"><strong>Resumo:</strong> {{ empty_text }}</div>
+        {% endif %}
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro workspace_stats(report_summary_cards, section_class='', grid_class='', card_class='', card_tone_prefix='', value_class='', label_class='') -%}
+<section class="report-workspace-section {{ section_class }}">
+    <div class="report-workspace-stats-grid {{ grid_class }}">
+        {% for item in report_summary_cards %}
+        {% set tone = item.get('tone', 'neutral') %}
+        <article class="report-workspace-stat report-workspace-stat--{{ tone }} {{ card_class }} {% if card_tone_prefix %}{{ card_tone_prefix }}--{{ tone }}{% endif %}">
+            <div class="report-workspace-stat__value {{ value_class }}">{{ item.value }}</div>
+            <div class="report-workspace-stat__label {{ label_class }}">{{ item.label }}</div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{%- endmacro %}
+
+{% macro workspace_info(report_general_info, section_title='Visão operacional', section_class='', section_title_class='', grid_class='', card_class='') -%}
+{% if report_general_info %}
+<section class="report-workspace-section {{ section_class }}">
+    <div class="report-workspace-section-title {{ section_title_class }}">{{ section_title }}</div>
+    <div class="report-workspace-info-grid {{ grid_class }}">
+        {% for item in report_general_info %}
+        <article class="report-workspace-info-card {{ card_class }}">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{%- endmacro %}
+
+{% macro workspace_footer(generated_at, footer_class='') -%}
+<footer class="report-workspace-footer {{ footer_class }}">
+    <span>Versus Gestão Corporativa - Todos os direitos reservados.</span>
+    <span>
+        {% if generated_at %}
+        Emitido em: {{ generated_at | replace(' ', ' às ') }}
+        {% else %}
+        Emitido em: -
+        {% endif %}
+    </span>
+</footer>
+{%- endmacro %}

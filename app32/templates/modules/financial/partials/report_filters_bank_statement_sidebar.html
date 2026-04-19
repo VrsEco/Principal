@@ -1,0 +1,65 @@
+{% set period_start = (filters.get('period_start', [default_period_start]) | first) %}
+{% set period_end = (filters.get('period_end', [default_period_end]) | first) %}
+{% set selected_bank_account_id = (filters.get('bank_account_id', ['']) | first) %}
+{% set include_reconciled_only = (filters.get('include_reconciled_only', ['false']) | first) == 'true' %}
+
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="bank-report-sidebar-subtitle">Parâmetros executivos do extrato bancário.</p>
+</div>
+
+<div class="sidebar-content-ws report-workspace-sidebar bank-report-sidebar">
+    <form id="bank-report-filter-form"
+          data-report-filter-form
+          method="get"
+          action="/financial/reports/{{ report_definition.slug }}"
+          data-view-action="/financial/reports/{{ report_definition.slug }}"
+          data-clear-url="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">
+        {% if company_id %}
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        {% endif %}
+
+        <section class="report-workspace-sidebar__section br-sidebar-section">
+            <p class="filter-label">Período</p>
+            <div class="report-workspace-date-pair br-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="period_start" value="{{ period_start }}" data-filter-input data-default-value="{{ default_period_start }}">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="period_end" value="{{ period_end }}" data-filter-input data-default-value="{{ default_period_end }}">
+                </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section br-sidebar-section">
+            <div class="filter-group">
+                <label class="filter-label" for="bank-report-bank-account">Conta bancária</label>
+                <select id="bank-report-bank-account" name="bank_account_id" data-filter-input data-default-value="">
+                    <option value="">Todas as contas bancárias</option>
+                    {% for item in options.bank_accounts %}
+                    <option value="{{ item.id }}" {% if selected_bank_account_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+                <small class="report-workspace-field-help br-field-help">Sem seleção = consolida todas as contas ativas da empresa.</small>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section br-sidebar-section">
+            <p class="filter-label">Conciliação</p>
+            <div class="report-workspace-choice-grid br-checkbox-grid">
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_reconciled_only" value="false">
+                    <input type="checkbox" name="include_reconciled_only" value="true" {% if include_reconciled_only %}checked{% endif %} data-filter-input data-default-value="false">
+                    <span>Somente movimentos conciliados</span>
+                </label>
+            </div>
+        </section>
+
+        <div class="report-workspace-sidebar__footer br-sidebar-footer">
+            <button type="submit" class="btn btn-primary w-100">Gerar relatório</button>
+            <button type="button" class="btn btn-secondary w-100" id="bank-report-clear-filters" data-report-clear-filters>Limpar filtros</button>
+        </div>
+    </form>
+</div>

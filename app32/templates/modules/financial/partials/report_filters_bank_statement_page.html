@@ -1,0 +1,105 @@
+{% import 'modules/financial/partials/_report_workspace_macros.html' as report_macros %}
+{% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
+{% set report_filters = report.filters if report else [] %}
+{% set report_summary_cards = report.summary_cards if report else [] %}
+{% set report_general_info = report.general_info if report else [] %}
+{% set report_rows = report.rows if report else [] %}
+
+<div class="report-workspace-page bank-report-page fade-in"
+     data-report-workspace-root
+     data-filter-count-target="bank-report-filter-count">
+    {% call report_macros.workspace_header(report_definition, 'bank-report-header', 'bank-report-eyebrow', 'bank-report-subtitle', 'bank-report-header-actions') %}
+    <a class="btn btn-secondary" href="/financial/reconciliation{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir conciliação</a>
+    <a class="btn btn-secondary" href="/financial/catalogs/bank-accounts{% if company_id %}?company_id={{ company_id }}{% endif %}">Contas bancárias</a>
+    <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
+    <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
+    <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
+    {% endcall %}
+
+    <div class="report-workspace-viewer bank-report-viewer">
+        <article class="report-workspace-sheet bank-report-sheet">
+            {{ report_macros.workspace_sheet_header(
+                report.title if report else report_definition.label,
+                company.name if company and company.name else 'Empresa ativa',
+                'bank-section bank-section--header',
+                'bank-report-title-main',
+                'bank-report-company-name'
+            ) }}
+
+            {{ report_macros.workspace_filters(
+                report_filters,
+                'relatório emitido com configuração padrão.',
+                'bank-section bank-section--filters',
+                'bank-section-title',
+                'bank-filters-grid',
+                'bank-filter-item'
+            ) }}
+
+            {{ report_macros.workspace_stats(
+                report_summary_cards,
+                'bank-section bank-section--stats',
+                'bank-stats-grid',
+                'bank-stat',
+                'bank-stat',
+                'bank-stat__value',
+                'bank-stat__label'
+            ) }}
+
+            {{ report_macros.workspace_info(
+                report_general_info,
+                'Visão operacional',
+                'bank-section bank-section--info',
+                'bank-section-title',
+                'bank-info-grid',
+                'bank-info-card'
+            ) }}
+
+            <section class="report-workspace-section bank-section bank-section--table">
+                {% if report_rows %}
+                <div class="report-workspace-table-wrap bank-table-wrap">
+                    <table class="report-workspace-table bank-table">
+                        <thead>
+                            <tr>
+                                <th class="col-data">Data</th>
+                                <th class="col-codigo">Liquidação</th>
+                                <th class="col-conta_bancaria">Conta bancária</th>
+                                <th class="col-lancamento">Lançamento</th>
+                                <th class="col-descricao">Descrição</th>
+                                <th class="col-favorecido">Favorecido</th>
+                                <th class="col-movimento">Movimento</th>
+                                <th class="col-valor">Valor</th>
+                                <th class="col-conciliacao">Conciliação</th>
+                                <th class="col-saldo">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report_rows %}
+                            <tr>
+                                <td class="col-data">{{ row.data }}</td>
+                                <td class="col-codigo">{{ row.codigo }}</td>
+                                <td class="col-conta_bancaria">{{ row.conta_bancaria }}</td>
+                                <td class="col-lancamento">{{ row.lancamento }}</td>
+                                <td class="col-descricao">{{ row.descricao }}</td>
+                                <td class="col-favorecido">{{ row.favorecido }}</td>
+                                <td class="col-movimento">
+                                    <span class="bank-chip bank-chip--{{ row.movimento_tone }}">{{ row.movimento }}</span>
+                                </td>
+                                <td class="col-valor bank-value bank-value--{{ row.movimento_tone }}">{{ row.valor_label or row.valor }}</td>
+                                <td class="col-conciliacao">
+                                    <span class="bank-chip bank-chip--{{ row.conciliacao_tone }}">{{ row.conciliacao_label or row.conciliacao }}</span>
+                                </td>
+                                <td class="col-saldo bank-value bank-value--{{ row.saldo_tone }}">{{ row.saldo_label or row.saldo }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="report-workspace-empty bank-empty">Nenhum movimento liquidado encontrado para os filtros informados.</div>
+                {% endif %}
+            </section>
+
+            {{ report_macros.workspace_footer(report.generated_at if report else None, 'bank-footer') }}
+        </article>
+    </div>
+</div>

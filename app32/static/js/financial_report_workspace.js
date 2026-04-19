@@ -1,15 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const root = document.querySelector('[data-schedule-report-root]');
-  const form = document.getElementById('schedule-report-filter-form');
+  const root = document.querySelector('[data-report-workspace-root]');
+  const form = document.querySelector('[data-report-filter-form]');
 
   if (!root || !form) {
     return;
   }
 
-  const badge = document.getElementById('schedule-report-filter-count');
-  const inlineCounter = document.getElementById('schedule-report-active-filters-inline');
-  const clearButton = document.getElementById('schedule-report-clear-filters');
+  const clearButton = form.querySelector('[data-report-clear-filters]');
   const trackedInputs = Array.from(form.querySelectorAll('[data-filter-input]'));
+  const countTargets = [
+    root.dataset.filterCountTarget,
+    root.dataset.filterCountSecondaryTarget,
+  ]
+    .filter(Boolean)
+    .map((id) => document.getElementById(id))
+    .filter(Boolean);
 
   const resolveFormAction = () => {
     form.action = form.dataset.viewAction || form.getAttribute('action') || window.location.pathname;
@@ -57,12 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    if (badge) {
-      badge.textContent = String(total);
-    }
-    if (inlineCounter) {
-      inlineCounter.textContent = String(total);
-    }
+    countTargets.forEach((target) => {
+      target.textContent = String(total);
+    });
   };
 
   form.addEventListener('submit', resolveFormAction);

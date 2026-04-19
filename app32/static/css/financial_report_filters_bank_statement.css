@@ -1,0 +1,108 @@
+.bank-report-page {
+  --report-sheet-min-height: calc(210mm - 16mm);
+  --report-filters-bg: #f8fbff;
+  --report-stats-columns: 4;
+  --report-info-columns: 4;
+  --report-print-size: A4 landscape;
+}
+
+.bank-table {
+  min-width: 1220px;
+}
+
+.bank-table .col-data,
+.bank-table .col-codigo,
+.bank-table .col-lancamento,
+.bank-table .col-movimento,
+.bank-table .col-conciliacao,
+.bank-table .col-valor,
+.bank-table .col-saldo {
+  white-space: nowrap;
+}
+
+.bank-table .col-data {
+  width: 8.5%;
+}
+
+.bank-table .col-codigo {
+  width: 10%;
+}
+
+.bank-table .col-conta_bancaria {
+  width: 14%;
+}
+
+.bank-table .col-lancamento {
+  width: 9%;
+}
+
+.bank-table .col-descricao {
+  width: 20%;
+}
+
+.bank-table .col-favorecido {
+  width: 16%;
+}
+
+.bank-table .col-movimento {
+  width: 7%;
+}
+
+.bank-table .col-valor,
+.bank-table .col-saldo {
+  width: 8%;
+  text-align: right;
+}
+
+.bank-table .col-conciliacao {
+  width: 9%;
+}
+
+.bank-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.bank-chip--positive {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.bank-chip--negative {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
+.bank-chip--primary {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.bank-chip--neutral {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+}
+
+.bank-value {
+  font-weight: 800;
+}
+
+.bank-value--positive {
+  color: #15803d !important;
+}
+
+.bank-value--negative {
+  color: #b91c1c !important;
+}
+
+.bank-value--neutral,
+.bank-value--primary {
+  color: var(--text-primary) !important;
+}
