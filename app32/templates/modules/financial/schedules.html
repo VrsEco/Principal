@@ -202,6 +202,63 @@
     </section>
 </div>
 
+<div id="settlement-composition-modal" class="modal-shell hidden" aria-hidden="true">
+    <div class="modal-backdrop" onclick="closeSettlementCompositionModal()"></div>
+    <div class="modal-card modal-card--settlement">
+        <div class="modal-head">
+            <div>
+                <h2>Composição da baixa</h2>
+                <p id="settlement-modal-subtitle" class="modal-subtitle">Confira o que será baixado como principal e como ajustes.</p>
+            </div>
+            <button type="button" class="btn btn-ghost" onclick="closeSettlementCompositionModal()">Fechar</button>
+        </div>
+        <form id="settlement-composition-form" class="modal-form settlement-composition-form">
+            <input type="hidden" id="settlement-schedule-id">
+            <label class="field field-compact">
+                <span>Data da baixa</span>
+                <input id="settlement-date" name="settlement_date" type="date" required>
+            </label>
+
+            <div id="settlement-simulation-status" class="settlement-simulation-status">Simulando composição...</div>
+            <div id="settlement-simulation-summary" class="settlement-simulation-summary"></div>
+
+            <section class="settlement-composition-grid" aria-label="Composição editável da baixa">
+                <label class="field field-compact">
+                    <span>Principal</span>
+                    <input id="settlement-component-principal" data-settlement-component="principal" inputmode="numeric" placeholder="0,00">
+                </label>
+                <label class="field field-compact">
+                    <span>Correção monetária</span>
+                    <input id="settlement-component-monetary-correction" data-settlement-component="monetary_correction" inputmode="numeric" placeholder="0,00">
+                </label>
+                <label class="field field-compact">
+                    <span>Juros</span>
+                    <input id="settlement-component-interest" data-settlement-component="interest" inputmode="numeric" placeholder="0,00">
+                </label>
+                <label class="field field-compact">
+                    <span>Multa</span>
+                    <input id="settlement-component-fine" data-settlement-component="fine" inputmode="numeric" placeholder="0,00">
+                </label>
+                <label class="field field-compact">
+                    <span>Ajuste manual</span>
+                    <input id="settlement-component-manual-adjustment" data-settlement-component="manual_adjustment" inputmode="numeric" placeholder="0,00">
+                </label>
+                <label class="field field-compact">
+                    <span>Desconto liberado</span>
+                    <input id="settlement-component-discount" data-settlement-component="discount" inputmode="numeric" placeholder="0,00">
+                </label>
+            </section>
+
+            <div id="settlement-after-summary" class="settlement-after-summary"></div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeSettlementCompositionModal()">Cancelar</button>
+                <button type="button" id="settlement-confirm-button" class="btn btn-success" onclick="confirmAssistedSettlement()">Confirmar baixa</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="attachment-preview-modal" class="modal-shell hidden" aria-hidden="true">
     <div class="modal-backdrop" onclick="closeAttachmentPreview()"></div>
     <div class="modal-card modal-card--preview">

@@ -26,6 +26,9 @@
   let pendingAttachments = [];
   let borderoLocked = false;
   let selectedCalculationLogs = [];
+  let settlementSimulation = null;
+  let settlementSimulationTimer = null;
+  let settlementCompositionHydrating = false;
 
   const $ = (id) => document.getElementById(id);
   const form = $('schedule-form');
@@ -98,6 +101,14 @@
   const amountClass = (value) => Number(value || 0) < 0 ? 'amount-negative' : 'amount-positive';
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const asMoneyValue = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const toCurrencyInput = (value) => asMoneyValue(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const todayIso = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   const statusLabel = (status) => ({ active: 'Ativo', paused: 'Pausado', draft: 'Rascunho', completed: 'Concluído', cancelled: 'Cancelado' }[status] || status || 'Sem status');
   const statusClass = (status) => status === 'active' ? 'badge badge--active' : status === 'completed' ? 'badge badge--completed' : status === 'cancelled' ? 'badge badge--cancelled' : 'badge badge--draft';
 
@@ -647,7 +658,7 @@
           <small>Correções/descontos ainda não baixados.</small>
         </article>
         <article class="title-balance-card">
-          <span>Baixado do principal</span>
+          <span>Principal baixado</span>
           <strong>${money(signedAmount(settledTotal, nature))}</strong>
           <small>Principal liquidado até o momento.</small>
         </article>
@@ -1016,6 +1027,148 @@
     return saved;
   }
 
+  function getSettlementCompositionFromForm() {
+    const result = {};
+    document.querySelectorAll('[data-settlement-component]').forEach((input) => {
+      result[input.dataset.settlementComponent] = round2(parseCurrency(input.value));
+    });
+    return result;
+  }
+
+  function setSettlementComponentInputs(composition = {}) {
+    settlementCompositionHydrating = true;
+    const mapping = {
+      principal: 'settlement-component-principal',
+      monetary_correction: 'settlement-component-monetary-correction',
+      interest: 'settlement-component-interest',
+      fine: 'settlement-component-fine',
+      manual_adjustment: 'settlement-component-manual-adjustment',
+      discount: 'settlement-component-discount',
+    };
+    Object.entries(mapping).forEach(([key, elementId]) => {
+      const input = $(elementId);
+      if (input) input.value = toCurrencyInput(composition[key] || 0);
+    });
+    settlementCompositionHydrating = false;
+  }
+
+  function settlementPayload({ explicit = true } = {}) {
+    const payload = {
+      settlement_date: $('settlement-date')?.value || todayIso(),
+      metadata_json: { source_context: 'schedule_assisted_settlement_modal' },
+    };
+    if (explicit) {
+      payload.composition = getSettlementCompositionFromForm();
+    } else {
+      const summary = selectedSchedule?.summary || {};
+      payload.gross_amount = round2(summary.total_open ?? summary.open_balance ?? getEffectiveScheduleAmount());
+    }
+    return payload;
+  }
+
+  function renderSettlementSimulation(simulation) {
+    settlementSimulation = simulation || null;
+    const statusEl = $('settlement-simulation-status');
+    const summaryEl = $('settlement-simulation-summary');
+    const afterEl = $('settlement-after-summary');
+    const confirmButton = $('settlement-confirm-button');
+    if (!simulation) {
+      if (statusEl) statusEl.textContent = 'Informe a composição para simular a baixa.';
+      if (summaryEl) summaryEl.innerHTML = '';
+      if (afterEl) afterEl.innerHTML = '';
+      if (confirmButton) confirmButton.disabled = true;
+      return;
+    }
+
+    const composition = simulation.composition || {};
+    const before = simulation.before || {};
+    const after = simulation.after || {};
+    const errors = simulation.errors || [];
+    if (statusEl) {
+      statusEl.textContent = simulation.valid ? 'Composição válida para baixa.' : errors.join(' ');
+      statusEl.classList.toggle('is-invalid', !simulation.valid);
+      statusEl.classList.toggle('is-valid', !!simulation.valid);
+    }
+    if (confirmButton) confirmButton.disabled = !simulation.valid;
+    if (summaryEl) {
+      summaryEl.innerHTML = [
+        ['Principal antes', before.principal_open],
+        ['Ajustes antes', before.adjustments_open],
+        ['Total devido antes', before.total_due],
+        ['Valor bruto da baixa', composition.gross_amount],
+      ].map(([label, value]) => `<article><span>${label}</span><strong>${money(signedAmount(value || 0, selectedSchedule?.movement_nature))}</strong></article>`).join('');
+    }
+    if (afterEl) {
+      afterEl.innerHTML = `
+        <article><span>Principal após</span><strong>${money(signedAmount(after.principal_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+        <article><span>Ajustes após</span><strong>${money(signedAmount(after.adjustments_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+        <article><span>Total em aberto após</span><strong>${money(signedAmount(after.total_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+      `;
+    }
+  }
+
+  async function simulateSettlementComposition({ explicit = true, hydrate = false } = {}) {
+    const scheduleId = Number($('settlement-schedule-id')?.value || selectedSchedule?.id || 0);
+    if (!scheduleId) return;
+    const statusEl = $('settlement-simulation-status');
+    if (statusEl) {
+      statusEl.textContent = 'Simulando composição...';
+      statusEl.classList.remove('is-invalid', 'is-valid');
+    }
+    const simulation = await fetchJson(`/api/financial/schedules/${scheduleId}/settlements/simulate?company_id=${companyId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settlementPayload({ explicit })),
+    });
+    if (hydrate) setSettlementComponentInputs(simulation.composition || {});
+    renderSettlementSimulation(simulation);
+  }
+
+  function scheduleSettlementSimulation() {
+    if (settlementCompositionHydrating) return;
+    window.clearTimeout(settlementSimulationTimer);
+    settlementSimulationTimer = window.setTimeout(() => {
+      simulateSettlementComposition({ explicit: true }).catch((error) => {
+        renderSettlementSimulation({ valid: false, errors: [error.message], composition: getSettlementCompositionFromForm() });
+      });
+    }, 350);
+  }
+
+  async function openSettlementCompositionModal(schedule) {
+    if (!schedule?.id) throw new Error('Salve o título financeiro antes de baixar.');
+    $('settlement-schedule-id').value = schedule.id;
+    $('settlement-date').value = todayIso();
+    $('settlement-modal-subtitle').textContent = `${schedule.schedule_code || `Título ${schedule.id}`} · ${schedule.description || schedule.name || 'Sem histórico'}`;
+    setSettlementComponentInputs({});
+    renderSettlementSimulation(null);
+    $('settlement-composition-modal').classList.remove('hidden');
+    $('settlement-composition-modal').setAttribute('aria-hidden', 'false');
+    await simulateSettlementComposition({ explicit: false, hydrate: true });
+  }
+
+  window.closeSettlementCompositionModal = () => {
+    window.clearTimeout(settlementSimulationTimer);
+    $('settlement-composition-modal').classList.add('hidden');
+    $('settlement-composition-modal').setAttribute('aria-hidden', 'true');
+  };
+
+  window.confirmAssistedSettlement = async () => {
+    try {
+      const scheduleId = Number($('settlement-schedule-id')?.value || selectedSchedule?.id || 0);
+      if (!scheduleId) return;
+      await fetchJson(`/api/financial/schedules/${scheduleId}/settlements/assisted?company_id=${companyId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settlementPayload({ explicit: true })),
+      });
+      window.closeSettlementCompositionModal();
+      await window.selectSchedule(scheduleId);
+      switchTab('baixas');
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   window.handleScheduleAction = async (action) => {
     try {
       if (borderoLocked) throw new Error(`Agendamento bloqueado pelo ${selectedSchedule?.bordero?.code || 'borderô'}.`);
@@ -1024,8 +1177,7 @@
       if (action === 'save_and_new') return window.startNewSchedule(initialEntryType);
       if (action === 'save_and_back') return window.location.href = '/financial/schedules';
       if (action === 'save_and_settle') {
-        const result = await fetchJson(`/api/financial/schedules/${saved.id}/create-entry?company_id=${companyId}`, { method: 'POST' });
-        if (result.entry?.id) window.location.href = `/financial/entries/${result.entry.id}`;
+        await openSettlementCompositionModal(saved);
       }
     } catch (error) {
       alert(error.message);
@@ -1216,6 +1368,21 @@
     renderAllocations();
     updateFinancialTotals();
   });
+
+  document.querySelectorAll('[data-settlement-component]').forEach((input) => {
+    input.addEventListener('input', (event) => {
+      event.target.value = formatCurrencyFromDigits(event.target.value);
+      scheduleSettlementSimulation();
+    });
+  });
+
+  if ($('settlement-date')) {
+    $('settlement-date').addEventListener('change', scheduleSettlementSimulation);
+  }
+
+  if ($('settlement-composition-form')) {
+    $('settlement-composition-form').addEventListener('submit', (event) => event.preventDefault());
+  }
 
   $('counterparty-document').addEventListener('input', (event) => {
     const digits = String(event.target.value || '').replace(/\D/g, '').slice(0, 14);

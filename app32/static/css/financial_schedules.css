@@ -581,12 +581,23 @@
   width: min(1100px, calc(100vw - 2rem));
 }
 
+.modal-card--settlement {
+  width: min(920px, calc(100vw - 2rem));
+  max-height: 90vh;
+  overflow: auto;
+}
+
 .modal-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.modal-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
 }
 
 .modal-form {
@@ -613,6 +624,76 @@
   width: 100%;
   border-collapse: collapse;
   margin-top: 0.75rem;
+}
+
+.settlement-composition-form {
+  gap: 0.85rem;
+}
+
+.settlement-simulation-status {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+
+.settlement-simulation-status.is-valid {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.settlement-simulation-status.is-invalid {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.settlement-simulation-summary,
+.settlement-after-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.settlement-after-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settlement-simulation-summary article,
+.settlement-after-summary article {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--border) 84%, var(--form-tint-strong));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 90%, var(--form-tint-strong));
+}
+
+.settlement-simulation-summary span,
+.settlement-after-summary span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.settlement-simulation-summary strong,
+.settlement-after-summary strong {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.settlement-composition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--surface-secondary);
 }
 
 .calc-log-shell {
@@ -880,6 +961,9 @@
   .sched-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .title-balance-grid,
   .ledger-flow,
+  .settlement-simulation-summary,
+  .settlement-after-summary,
+  .settlement-composition-grid,
   .calc-log-summary,
   .calc-log-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sched-summary-strip,
@@ -915,6 +999,9 @@
   }
   .title-balance-grid,
   .ledger-flow,
+  .settlement-simulation-summary,
+  .settlement-after-summary,
+  .settlement-composition-grid,
   .calc-log-summary,
   .calc-log-grid { grid-template-columns: 1fr; }
   .sched-summary-strip,
