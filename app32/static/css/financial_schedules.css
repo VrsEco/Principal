@@ -615,11 +615,112 @@
   margin-top: 0.75rem;
 }
 
+.calc-log-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.calc-log-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.calc-log-kpi,
+.calc-log-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-secondary);
+  padding: 0.95rem 1rem;
+}
+
+.calc-log-kpi span,
+.calc-log-metric span,
+.calc-log-step {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.calc-log-kpi strong,
+.calc-log-metric strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1rem;
+}
+
+.calc-log-kpi small,
+.calc-log-card__head p {
+  color: var(--text-secondary);
+}
+
+.calc-log-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.calc-log-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--form-tint-strong) 22%, var(--surface)) 0%, var(--surface-secondary) 100%);
+}
+
+.calc-log-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.9rem;
+}
+
+.calc-log-card__head h3 {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.calc-log-card__head p {
+  margin: 0;
+}
+
+.calc-log-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.calc-log-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--form-tint-strong) 75%, var(--surface));
+  color: var(--form-tint-text);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.calc-log-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.calc-log-metric {
+  padding: 0.8rem 0.85rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--form-tint-strong));
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--form-tint-strong));
+}
+
 @media (max-width: 1100px) {
   .sched-shell { grid-template-columns: 1fr; }
   .sched-rail { position: static; }
   .schedule-list { max-height: 280px; }
   .sched-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calc-log-summary,
+  .calc-log-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sched-summary-strip,
   .sched-summary-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .field-span-4,
@@ -644,6 +745,8 @@
   }
 
   .sched-grid { grid-template-columns: 1fr; }
+  .calc-log-summary,
+  .calc-log-grid { grid-template-columns: 1fr; }
   .sched-summary-strip,
   .sched-summary-row { grid-template-columns: 1fr; }
   .field-counterparty,
@@ -659,6 +762,12 @@
   .attachments-upload-row .btn { width: 100%; }
   .rateio-summary { flex-direction: column; }
   .attachments-upload-row input[type="file"] { width: 100%; }
+  .calc-log-card__head {
+    flex-direction: column;
+  }
+  .calc-log-card__badges {
+    justify-content: flex-start;
+  }
 
   .sched-page .field-compact > span,
   .sched-page .field-summary.field-compact input[readonly] {

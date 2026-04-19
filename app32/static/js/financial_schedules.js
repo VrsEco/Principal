@@ -25,6 +25,7 @@
   let allocationRows = [];
   let pendingAttachments = [];
   let borderoLocked = false;
+  let selectedCalculationLogs = [];
 
   const $ = (id) => document.getElementById(id);
   const form = $('schedule-form');
@@ -581,6 +582,95 @@
       </article>`).join('');
   }
 
+  async function loadCalculationLogs(scheduleId) {
+    if (!scheduleId) return [];
+    const payload = await fetchJson(`/api/financial/schedules/${scheduleId}/calculation-logs?company_id=${companyId}&limit=50`);
+    return Array.isArray(payload.logs) ? payload.logs : [];
+  }
+
+  function renderCalculationLogs(schedule, logs) {
+    const emptyEl = $('calculation-log-empty');
+    const shellEl = $('calculation-log-shell');
+    const summaryEl = $('calculation-log-summary');
+    const listEl = $('calculation-log-list');
+    const tabButton = $('calculation-log-tab-button');
+    const hasSchedule = Boolean(schedule?.id);
+    const normalizedLogs = Array.isArray(logs) ? logs : [];
+    selectedCalculationLogs = normalizedLogs;
+
+    tabButton?.classList.toggle('hidden', !hasSchedule);
+    emptyEl?.classList.toggle('hidden', normalizedLogs.length > 0 || !hasSchedule);
+    shellEl?.classList.toggle('hidden', !normalizedLogs.length);
+
+    if (!hasSchedule) {
+      if (summaryEl) summaryEl.innerHTML = '';
+      if (listEl) listEl.innerHTML = '';
+      return;
+    }
+
+    const latest = normalizedLogs[0] || null;
+    const signedUpdatedAmount = signedAmount(latest?.updated_amount || 0, schedule?.movement_nature);
+    const signedOpenAmount = signedAmount(latest?.open_principal_after || 0, schedule?.movement_nature);
+
+    if (summaryEl) {
+      summaryEl.innerHTML = latest ? [
+        `<article class="calc-log-kpi"><span>Último cálculo</span><strong>${formatIso(latest.calculation_date)}</strong><small>${latest.event_type || 'settlement_posted'}</small></article>`,
+        `<article class="calc-log-kpi"><span>Valor atualizado</span><strong class="${amountClass(signedUpdatedAmount)}">${money(signedUpdatedAmount)}</strong><small>Título após correções e descontos</small></article>`,
+        `<article class="calc-log-kpi"><span>Saldo em aberto</span><strong class="${amountClass(signedOpenAmount)}">${money(signedOpenAmount)}</strong><small>Saldo após a última baixa</small></article>`,
+        `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias de cálculo registradas</small></article>`,
+      ].join('') : '';
+    }
+
+    if (listEl) {
+      listEl.innerHTML = normalizedLogs.map((log, index) => {
+        const meta = log.metadata_json || {};
+        const snapshot = meta.snapshot || {};
+        const settlementCode = meta.settlement_code || snapshot.settlement_code || '-';
+        const entryCode = snapshot.entry_code || '-';
+        const signedCurrent = signedAmount(log.settled_principal_current || 0, schedule?.movement_nature);
+        const signedAfter = signedAmount(log.settled_principal_after || 0, schedule?.movement_nature);
+        const signedOpen = signedAmount(log.open_principal_after || 0, schedule?.movement_nature);
+        return `
+          <article class="calc-log-card">
+            <header class="calc-log-card__head">
+              <div>
+                <span class="calc-log-step">Evento ${index + 1}</span>
+                <h3>${formatIso(log.calculation_date)} · ${log.event_type || 'settlement_posted'}</h3>
+                <p>Título ${schedule.schedule_code || schedule.id || '-'} · Baixa ${settlementCode} · Lançamento ${entryCode}</p>
+              </div>
+              <div class="calc-log-card__badges">
+                <span class="calc-log-badge">Template ${money(signedAmount(log.template_amount || 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Atualizado ${money(signedAmount(log.updated_amount || 0, schedule?.movement_nature))}</span>
+              </div>
+            </header>
+            <div class="calc-log-grid">
+              <div class="calc-log-metric">
+                <span>Correção financeira</span>
+                <strong class="${amountClass(signedAmount(log.correction_amount || 0, schedule?.movement_nature))}">${money(signedAmount(log.correction_amount || 0, schedule?.movement_nature))}</strong>
+              </div>
+              <div class="calc-log-metric">
+                <span>Desconto</span>
+                <strong class="${amountClass(signedAmount((log.discount_amount || 0) * -1, schedule?.movement_nature))}">${money(signedAmount((log.discount_amount || 0) * -1, schedule?.movement_nature))}</strong>
+              </div>
+              <div class="calc-log-metric">
+                <span>Baixa atual</span>
+                <strong class="${amountClass(signedCurrent)}">${money(signedCurrent)}</strong>
+              </div>
+              <div class="calc-log-metric">
+                <span>Baixas acumuladas</span>
+                <strong class="${amountClass(signedAfter)}">${money(signedAfter)}</strong>
+              </div>
+              <div class="calc-log-metric">
+                <span>Saldo após o cálculo</span>
+                <strong class="${amountClass(signedOpen)}">${money(signedOpen)}</strong>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+  }
+
   function hydrateAllocations(schedule) {
     allocationRows = (schedule.allocations || []).map((item) => createAllocationRow({
       chart_account_id: item.chart_account_id || '',
@@ -638,6 +728,7 @@
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
     renderBaixas(schedule.related_entries || []);
+    renderCalculationLogs(schedule, selectedCalculationLogs);
     $('baixas-tab-button').classList.toggle('hidden', !(schedule.related_entries || []).length);
     Array.from(form.elements).forEach((field) => {
       if (!field || ['schedule_id', 'schedule_code'].includes(field.name)) return;
@@ -778,7 +869,12 @@
   }
 
   window.selectSchedule = async (scheduleId) => {
-    selectedSchedule = await fetchJson(`/api/financial/schedules/${scheduleId}?company_id=${companyId}`);
+    const [schedule, calculationLogs] = await Promise.all([
+      fetchJson(`/api/financial/schedules/${scheduleId}?company_id=${companyId}`),
+      loadCalculationLogs(scheduleId),
+    ]);
+    selectedSchedule = schedule;
+    selectedCalculationLogs = calculationLogs;
     fillForm(selectedSchedule);
     renderList();
   };
@@ -786,6 +882,7 @@
   window.startNewSchedule = (entryType = initialEntryType) => {
     borderoLocked = false;
     selectedSchedule = null;
+    selectedCalculationLogs = [];
     form.reset();
     Array.from(form.elements).forEach((field) => {
       if (field) field.disabled = false;
@@ -803,7 +900,9 @@
     renderAllocations();
     renderAttachments([]);
     renderBaixas([]);
+    renderCalculationLogs(null, []);
     $('baixas-tab-button').classList.add('hidden');
+    $('calculation-log-tab-button').classList.add('hidden');
     $('field-frequency').value = 'weekly';
     setDiscountAmountField(0, { manual: false });
     window.toggleRepeatFields();

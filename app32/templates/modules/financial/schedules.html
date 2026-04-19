@@ -31,6 +31,7 @@
                     <button type="button" class="sched-tab" data-tab="recorrencia" onclick="switchScheduleTab('recorrencia')">Recorrência</button>
                     <button type="button" class="sched-tab" data-tab="anexos" onclick="switchScheduleTab('anexos')">Anexos</button>
                     <button type="button" class="sched-tab hidden" data-tab="baixas" id="baixas-tab-button" onclick="switchScheduleTab('baixas')">Baixas</button>
+                    <button type="button" class="sched-tab hidden" data-tab="memoria-calculo" id="calculation-log-tab-button" onclick="switchScheduleTab('memoria-calculo')">Memória de cálculo</button>
                 </div>
 
                 <form id="schedule-form" class="sched-form">
@@ -178,6 +179,14 @@
                     <section class="sched-tab-panel" data-panel="baixas">
                         <div id="baixas-empty" class="empty-state">Nenhuma baixa vinculada a este agendamento.</div>
                         <div id="baixas-list" class="baixas-list"></div>
+                    </section>
+
+                    <section class="sched-tab-panel" data-panel="memoria-calculo">
+                        <div id="calculation-log-empty" class="empty-state">Nenhum evento de cálculo registrado para este título financeiro.</div>
+                        <div id="calculation-log-shell" class="calc-log-shell hidden">
+                            <div id="calculation-log-summary" class="calc-log-summary"></div>
+                            <div id="calculation-log-list" class="calc-log-list"></div>
+                        </div>
                     </section>
 
                     <footer class="sched-footer-actions">
