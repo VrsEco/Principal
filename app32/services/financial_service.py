@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -12,6 +12,7 @@ from models.financial import (
     FinancialCounterparty,
     FinancialEntry,
     FinancialEntryAllocation,
+    FinancialSchedule,
     FinancialSettlement,
 )
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine
@@ -27,6 +28,7 @@ from schemas.financial import (
     FinancialSettlementInput,
 )
 from services.financial_catalog_service import FinancialCatalogService
+from services.financial_title_amount_service import FinancialTitleAmountService
 from utils.permissions import is_administrator
 
 logger = logging.getLogger(__name__)
@@ -677,6 +679,54 @@ class FinancialService:
             logger.exception("Erro ao substituir rateios do lançamento %s", entry.id)
             return None, f"Erro ao persistir rateio: {str(exc)}"
 
+
+    @staticmethod
+    def _build_title_settlement_snapshot(
+        *,
+        entry: FinancialEntry,
+        settlement_data: FinancialSettlementInput,
+        total_liquidated_before: Decimal,
+    ) -> Optional[Dict[str, Any]]:
+        schedule_id = getattr(entry, "financial_schedule_id", None)
+        if not schedule_id:
+            return None
+
+        schedule = FinancialSchedule.query.filter(
+            FinancialSchedule.id == schedule_id,
+            FinancialSchedule.company_id == entry.company_id,
+            FinancialSchedule.deleted_at.is_(None),
+        ).first()
+        if not schedule:
+            return None
+
+        due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
+        amount_totals = FinancialTitleAmountService.calculate(
+            company_id=schedule.company_id,
+            template_amount=schedule.template_amount,
+            metadata_json=schedule.metadata_json,
+            due_date=due_date,
+            reference_date=settlement_data.settlement_date or date.today(),
+        )
+        title_amount = Decimal(str(amount_totals.get("updated_amount") or schedule.template_amount or 0))
+        settled_before = Decimal(total_liquidated_before or 0)
+        settled_after = settled_before + Decimal(settlement_data.principal_amount or 0)
+        open_after = max(title_amount - settled_after, Decimal("0"))
+        return {
+            "financial_schedule_id": schedule.id,
+            "schedule_code": schedule.schedule_code,
+            "calculation_date": (settlement_data.settlement_date or date.today()).isoformat(),
+            "competence_date": schedule.competence_date.isoformat() if schedule.competence_date else None,
+            "due_date": due_date.isoformat() if due_date else None,
+            "template_amount": amount_totals.get("template_amount"),
+            "correction_amount": amount_totals.get("correction_amount"),
+            "discount_amount": amount_totals.get("discount_amount"),
+            "updated_amount": amount_totals.get("updated_amount"),
+            "settled_principal_before": float(settled_before.quantize(Decimal("0.01"))),
+            "settled_principal_current": float(Decimal(settlement_data.principal_amount or 0).quantize(Decimal("0.01"))),
+            "settled_principal_after": float(settled_after.quantize(Decimal("0.01"))),
+            "open_principal_after": float(open_after.quantize(Decimal("0.01"))),
+        }
+
     @staticmethod
     def create_settlement(
         *,
@@ -746,7 +796,19 @@ class FinancialService:
                     f"Liquidado atual: {total_liquidated}. Original: {entry.original_amount}."
                 )
 
-            settlement = FinancialSettlement(**data.model_dump())
+            settlement_payload = data.model_dump()
+            title_snapshot = FinancialService._build_title_settlement_snapshot(
+                entry=entry,
+                settlement_data=data,
+                total_liquidated_before=Decimal(total_liquidated),
+            )
+            if title_snapshot:
+                settlement_payload["metadata_json"] = {
+                    **dict(settlement_payload.get("metadata_json") or {}),
+                    "financial_title_snapshot": title_snapshot,
+                }
+
+            settlement = FinancialSettlement(**settlement_payload)
             db.session.add(settlement)
 
             if projected_total == Decimal(entry.original_amount or 0):

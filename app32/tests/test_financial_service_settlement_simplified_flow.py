@@ -24,6 +24,9 @@ class _Column:
     def like(self, other):
         return ("like", other)
 
+    def in_(self, other):
+        return ("in", other)
+
     def desc(self):
         return self
 
@@ -124,6 +127,94 @@ def test_create_settlement_generates_code_when_not_informed(monkeypatch):
     assert captured["kwargs"]["metadata_json"]["history"] == "Baixa simplificada"
     assert captured["committed"] is True
     assert entry.status == "partially_settled"
+
+
+def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
+    captured = {}
+
+    class _FakeEntry:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+
+        def __init__(self):
+            self.id = 99
+            self.company_id = 7
+            self.original_amount = Decimal("475.00")
+            self.status = "posted"
+            self.financial_schedule_id = 77
+
+    class _FakeSchedule:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(type("Schedule", (), {
+            "id": 77,
+            "company_id": 7,
+            "schedule_code": "TIT-077",
+            "template_amount": Decimal("500.00"),
+            "metadata_json": {"discount_amount_override": "25"},
+            "competence_date": date(2026, 3, 5),
+            "start_date": date(2026, 3, 5),
+            "first_due_date": date(2026, 3, 22),
+            "next_due_date": date(2026, 3, 22),
+        })())
+
+    class _FakeSettlement:
+        company_id = _Column()
+        settlement_code = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        principal_amount = _Column()
+        financial_entry_id = _Column()
+        settlement_status = _Column()
+        query = _SequenceQueryStub([type("PreviousSettlement", (), {"settlement_code": "LIQ-000020", "id": 20})(), None])
+
+        def __init__(self, **kwargs):
+            captured["kwargs"] = kwargs
+            self.__dict__.update(kwargs)
+
+    entry = _FakeEntry()
+    monkeypatch.setattr(financial_module, "FinancialEntry", type("FinancialEntryStub", (), {
+        "id": _Column(),
+        "company_id": _Column(),
+        "deleted_at": _Column(),
+        "query": _QueryStub(entry),
+    }))
+    monkeypatch.setattr(financial_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(financial_module, "FinancialSettlement", _FakeSettlement)
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialCatalogService, "validate_reference_ids", lambda **kwargs: None)
+    monkeypatch.setattr(
+        financial_module.db.session,
+        "query",
+        lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("100")})(),
+    )
+    monkeypatch.setattr(financial_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
+    monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_entry", lambda **kwargs: None)
+
+    settlement, error = FinancialService.create_settlement(
+        payload={
+            "company_id": 7,
+            "financial_entry_id": 99,
+            "settlement_type": "manual",
+            "settlement_date": date(2026, 3, 29),
+            "principal_amount": Decimal("120.00"),
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert settlement is not None
+    snapshot = captured["kwargs"]["metadata_json"]["financial_title_snapshot"]
+    assert snapshot["financial_schedule_id"] == 77
+    assert snapshot["updated_amount"] == 475.0
+    assert snapshot["settled_principal_before"] == 100.0
+    assert snapshot["settled_principal_current"] == 120.0
+    assert snapshot["settled_principal_after"] == 220.0
+    assert snapshot["open_principal_after"] == 255.0
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):
