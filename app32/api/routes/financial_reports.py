@@ -10,6 +10,31 @@ from utils.permissions import permission_required
 from .financial import financial_bp, get_active_company
 
 
+_BOOLEAN_FILTER_KEYS = {
+    "include_projected",
+    "include_reconciled_only",
+    "include_overdraft",
+    "include_open",
+    "include_settled",
+    "include_partial",
+    "include_bordero",
+    "include_receivable",
+    "include_payable",
+    "include_budget_vs_actual",
+    "show_code",
+    "show_description",
+    "show_title_number",
+    "show_installment",
+    "show_history",
+    "show_counterparty",
+    "show_title_amount",
+    "show_balance_amount",
+    "show_competence_date",
+    "show_due_date",
+    "show_settlement_date",
+}
+
+
 def _request_filters_payload():
     payload = {}
     manual_values = {}
@@ -20,6 +45,9 @@ def _request_filters_payload():
         manual_match = re.match(r'^manual_value_(\d+)$', key)
         if manual_match:
             manual_values[int(manual_match.group(1))] = values[-1]
+            continue
+        if key in _BOOLEAN_FILTER_KEYS:
+            payload[key] = values[-1]
             continue
         payload[key] = values if len(values) > 1 else values[0]
     if manual_values:

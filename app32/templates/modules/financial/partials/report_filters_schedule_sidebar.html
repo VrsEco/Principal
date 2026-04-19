@@ -2,15 +2,29 @@
 {% set period_end = (filters.get('period_end', [default_period_end]) | first) %}
 {% set selected_bank_account_id = (filters.get('bank_account_id', ['']) | first) %}
 {% set selected_counterparty_id = (filters.get('counterparty_id', ['']) | first) %}
-{% set selected_schedule_status = (filters.get('schedule_status', ['']) | first) %}
-{% set selected_frequency = (filters.get('frequency', ['']) | first) %}
-{% set selected_movement_nature = (filters.get('movement_nature', ['']) | first) %}
+{% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
+{% set selected_cost_centers = filters.get('cost_center_ids', []) %}
+{% set selected_projects = filters.get('project_ids', []) %}
+{% set competence_start = (filters.get('competence_start', [default_period_start]) | first) %}
+{% set competence_end = (filters.get('competence_end', [default_period_end]) | first) %}
+{% set due_start = (filters.get('due_start', ['']) | first) %}
+{% set due_end = (filters.get('due_end', ['']) | first) %}
+{% set settlement_start = (filters.get('settlement_start', ['']) | first) %}
+{% set settlement_end = (filters.get('settlement_end', ['']) | first) %}
 {% set selected_orientation = (filters.get('orientation', ['landscape']) | first) %}
 {% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
+{% set selected_order_by = (filters.get('order_by', ['title_number']) | first) %}
+{% set selected_order_direction = (filters.get('order_direction', ['asc']) | first) %}
+{% set include_settled = 'include_settled' not in filters or (filters.get('include_settled', ['true']) | first) == 'true' %}
+{% set include_partial = 'include_partial' not in filters or (filters.get('include_partial', ['true']) | first) == 'true' %}
+{% set include_open = 'include_open' not in filters or (filters.get('include_open', ['true']) | first) == 'true' %}
+{% set include_bordero = 'include_bordero' not in filters or (filters.get('include_bordero', ['true']) | first) == 'true' %}
+{% set include_payable = 'include_payable' not in filters or (filters.get('include_payable', ['true']) | first) == 'true' %}
+{% set include_receivable = 'include_receivable' not in filters or (filters.get('include_receivable', ['true']) | first) == 'true' %}
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
-    <p class="schedule-report-sidebar-subtitle">Relatório de agendamentos no padrão app32.</p>
+    <p class="schedule-report-sidebar-subtitle">Parâmetros completos do relatório de agendamentos.</p>
 </div>
 
 <div class="sidebar-content-ws schedule-report-sidebar">
@@ -20,74 +34,49 @@
           data-view-action="/financial/reports/{{ report_definition.slug }}/view"
           data-pdf-action="/financial/reports/{{ report_definition.slug }}/export.pdf"
           data-clear-url="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">
+        {% if company_id %}
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        {% endif %}
 
         <section class="sr-sidebar-section">
-            <div class="filter-group">
-                <label class="filter-label" for="schedule-report-period-start">Período inicial</label>
-                <input id="schedule-report-period-start"
-                       type="date"
-                       name="period_start"
-                       value="{{ period_start }}"
-                       required
-                       data-filter-input
-                       data-default-value="{{ default_period_start }}">
+            <p class="filter-label">Data Competência</p>
+            <div class="sr-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="competence_start" value="{{ competence_start }}" data-filter-input data-default-value="{{ default_period_start }}">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="competence_end" value="{{ competence_end }}" data-filter-input data-default-value="{{ default_period_end }}">
+                </label>
             </div>
 
-            <div class="filter-group">
-                <label class="filter-label" for="schedule-report-period-end">Período final</label>
-                <input id="schedule-report-period-end"
-                       type="date"
-                       name="period_end"
-                       value="{{ period_end }}"
-                       required
-                       data-filter-input
-                       data-default-value="{{ default_period_end }}">
+            <p class="filter-label">Data Vencimento</p>
+            <div class="sr-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="due_start" value="{{ due_start }}" data-filter-input data-default-value="">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="due_end" value="{{ due_end }}" data-filter-input data-default-value="">
+                </label>
+            </div>
+
+            <p class="filter-label">Data Baixa</p>
+            <div class="sr-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="settlement_start" value="{{ settlement_start }}" data-filter-input data-default-value="">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="settlement_end" value="{{ settlement_end }}" data-filter-input data-default-value="">
+                </label>
             </div>
         </section>
 
         <section class="sr-sidebar-section">
-            <div class="filter-group">
-                <label class="filter-label" for="schedule-report-movement">Movimento</label>
-                <select id="schedule-report-movement" name="movement_nature" data-filter-input data-default-value="">
-                    <option value="">Entradas e saídas</option>
-                    {% for item in options.movement_natures %}
-                    <option value="{{ item.id }}" {% if selected_movement_nature == item.id %}selected{% endif %}>{{ item.label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label class="filter-label" for="schedule-report-status">Status</label>
-                <select id="schedule-report-status" name="schedule_status" data-filter-input data-default-value="">
-                    <option value="">Todos</option>
-                    {% for item in options.schedule_statuses %}
-                    <option value="{{ item.id }}" {% if selected_schedule_status == item.id %}selected{% endif %}>{{ item.label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label class="filter-label" for="schedule-report-frequency">Frequência</label>
-                <select id="schedule-report-frequency" name="frequency" data-filter-input data-default-value="">
-                    <option value="">Todas</option>
-                    {% for item in options.frequencies %}
-                    <option value="{{ item.id }}" {% if selected_frequency == item.id %}selected{% endif %}>{{ item.label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </section>
-
-        <section class="sr-sidebar-section">
-            <div class="filter-group">
-                <label class="filter-label" for="schedule-report-bank-account">Conta bancária</label>
-                <select id="schedule-report-bank-account" name="bank_account_id" data-filter-input data-default-value="">
-                    <option value="">Todas</option>
-                    {% for item in options.bank_accounts %}
-                    <option value="{{ item.id }}" {% if selected_bank_account_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-counterparty">Favorecido</label>
                 <select id="schedule-report-counterparty" name="counterparty_id" data-filter-input data-default-value="">
@@ -97,18 +86,139 @@
                     {% endfor %}
                 </select>
             </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-chart-accounts">Planos de Conta</label>
+                <select id="schedule-report-chart-accounts" name="chart_account_ids" multiple size="6" data-filter-input data-default-value="">
+                    {% for item in options.chart_accounts %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+                <small class="sr-field-help">Segure Ctrl para múltipla seleção.</small>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-cost-centers">Centros de Resultado</label>
+                <select id="schedule-report-cost-centers" name="cost_center_ids" multiple size="5" data-filter-input data-default-value="">
+                    {% for item in options.cost_centers %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-projects">Projetos</label>
+                <select id="schedule-report-projects" name="project_ids" multiple size="5" data-filter-input data-default-value="">
+                    {% for item in options.projects %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </section>
 
         <section class="sr-sidebar-section">
-            <p class="filter-label">Orientação</p>
-            <div class="sr-radio-grid">
+            <p class="filter-label">Status</p>
+            <div class="sr-checkbox-grid">
                 <label class="sr-choice-card">
-                    <input type="radio" name="orientation" value="portrait" {% if selected_orientation == 'portrait' %}checked{% endif %} data-filter-input data-default-value="landscape">
-                    <span>Retrato</span>
+                    <input type="hidden" name="include_settled" value="false">
+                    <input type="checkbox" name="include_settled" value="true" {% if include_settled %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Liquidado</span>
                 </label>
                 <label class="sr-choice-card">
-                    <input type="radio" name="orientation" value="landscape" {% if selected_orientation == 'landscape' %}checked{% endif %} data-filter-input data-default-value="landscape">
-                    <span>Paisagem</span>
+                    <input type="hidden" name="include_partial" value="false">
+                    <input type="checkbox" name="include_partial" value="true" {% if include_partial %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Liquidado Parcial</span>
+                </label>
+                <label class="sr-choice-card">
+                    <input type="hidden" name="include_open" value="false">
+                    <input type="checkbox" name="include_open" value="true" {% if include_open %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Aberto</span>
+                </label>
+                <label class="sr-choice-card">
+                    <input type="hidden" name="include_bordero" value="false">
+                    <input type="checkbox" name="include_bordero" value="true" {% if include_bordero %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Borderô</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="sr-sidebar-section">
+            <p class="filter-label">Tipo</p>
+            <div class="sr-checkbox-grid">
+                <label class="sr-choice-card">
+                    <input type="hidden" name="include_payable" value="false">
+                    <input type="checkbox" name="include_payable" value="true" {% if include_payable %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Pagamento</span>
+                </label>
+                <label class="sr-choice-card">
+                    <input type="hidden" name="include_receivable" value="false">
+                    <input type="checkbox" name="include_receivable" value="true" {% if include_receivable %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Recebimento</span>
+                </label>
+            </div>
+        </section>
+
+        {% set display_fields = [
+            ('show_title_number', 'Nº Título'),
+            ('show_installment', 'Parcela'),
+            ('show_history', 'Histórico'),
+            ('show_counterparty', 'Favorecido'),
+            ('show_title_amount', 'Valor Título'),
+            ('show_balance_amount', 'Valor Saldo'),
+            ('show_competence_date', 'Competência'),
+            ('show_due_date', 'Vencimento'),
+            ('show_settlement_date', 'Data da Liquidação')
+        ] %}
+        <section class="sr-sidebar-section">
+            <p class="filter-label">Exibir</p>
+            <div class="sr-checkbox-grid">
+                {% for field_name, field_label in display_fields %}
+                {% set field_checked = field_name not in filters or (filters.get(field_name, ['true']) | first) == 'true' %}
+                <label class="sr-choice-card">
+                    <input type="hidden" name="{{ field_name }}" value="false">
+                    <input type="checkbox" name="{{ field_name }}" value="true" {% if field_checked %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>{{ field_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% set order_fields = [
+            ('title_number', 'Nº Título'),
+            ('installment', 'Parcela'),
+            ('history', 'Histórico'),
+            ('counterparty', 'Favorecido'),
+            ('title_amount', 'Valor Título'),
+            ('balance_amount', 'Valor Saldo'),
+            ('competence_date', 'Competência'),
+            ('due_date', 'Vencimento'),
+            ('settlement_date', 'Data da Liquidação')
+        ] %}
+        <section class="sr-sidebar-section">
+            <p class="filter-label">Ordenar Por</p>
+            <div class="sr-checkbox-grid sr-checkbox-grid--compact">
+                {% for field_value, field_label in order_fields %}
+                <label class="sr-choice-card">
+                    <input type="radio" name="order_by" value="{{ field_value }}" {% if selected_order_by == field_value %}checked{% endif %} data-filter-input data-default-value="title_number">
+                    <span>{{ field_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="sr-sidebar-section">
+            <p class="filter-label">Ordenação</p>
+            <div class="sr-radio-grid">
+                <label class="sr-choice-card">
+                    <input type="radio" name="order_direction" value="asc" {% if selected_order_direction == 'asc' %}checked{% endif %} data-filter-input data-default-value="asc">
+                    <span>Ascendente</span>
+                </label>
+                <label class="sr-choice-card">
+                    <input type="radio" name="order_direction" value="desc" {% if selected_order_direction == 'desc' %}checked{% endif %} data-filter-input data-default-value="asc">
+                    <span>Descendente</span>
                 </label>
             </div>
         </section>

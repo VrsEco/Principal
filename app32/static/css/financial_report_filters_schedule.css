@@ -225,10 +225,41 @@
   background: var(--surface);
 }
 
+.sr-date-pair,
 .sr-radio-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+.sr-date-pair {
+  margin-bottom: 0.85rem;
+}
+
+.sr-date-pair label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.sr-field-help {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.sr-checkbox-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+.sr-checkbox-grid--compact {
+  gap: 0.5rem;
 }
 
 .sr-choice-card {
