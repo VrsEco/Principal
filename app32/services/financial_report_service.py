@@ -262,6 +262,38 @@ class FinancialReportService:
         }.get(str(value or "").strip().lower(), "neutral")
 
     @staticmethod
+    def _report_card(label: str, value: Any, tone: str = "neutral") -> Dict[str, Any]:
+        return {"label": label, "value": value, "tone": tone}
+
+    @staticmethod
+    def _report_info(label: str, value: Any) -> Dict[str, Any]:
+        return {"label": label, "value": value}
+
+    @staticmethod
+    def _report_payload(
+        definition: Dict[str, Any],
+        *,
+        summary_cards: List[Dict[str, Any]],
+        general_info: List[Dict[str, Any]],
+        columns: List[Dict[str, Any]],
+        rows: List[Dict[str, Any]],
+        totals: Dict[str, Any],
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        payload = {
+            "title": definition["label"],
+            "subtitle": definition["description"],
+            "summary_cards": summary_cards,
+            "general_info": general_info,
+            "columns": columns,
+            "rows": rows,
+            "totals": totals,
+        }
+        if extra:
+            payload.update(extra)
+        return payload
+
+    @staticmethod
     def _name_map(model, company_id: int) -> Dict[int, str]:
         query = model.query.filter(model.company_id == company_id)
         if hasattr(model, "deleted_at"):
@@ -869,26 +901,25 @@ class FinancialReportService:
         total_general = receivable_title_total - payable_title_total
         total_general_net = receivable_open_total + payable_open_total
 
-        return {
-            "title": definition["label"],
-            "subtitle": definition["description"],
-            "summary_cards": [
-                {"label": "Quantidade de registros", "value": len(rows), "tone": "neutral"},
-                {"label": "Total a receber", "value": FinancialReportService._format_currency(receivable_title_total), "tone": "positive"},
-                {"label": "Total líquido a receber", "value": FinancialReportService._format_currency(receivable_open_total), "tone": "positive"},
-                {"label": "Total a pagar", "value": FinancialReportService._format_currency(payable_title_total), "tone": "negative"},
-                {"label": "Total líquido a pagar", "value": FinancialReportService._format_currency(abs(payable_open_total)), "tone": "negative"},
-                {"label": "Total geral", "value": FinancialReportService._format_currency(total_general), "tone": "primary"},
-                {"label": "Total geral líquido", "value": FinancialReportService._format_currency(total_general_net), "tone": "primary"},
+        return FinancialReportService._report_payload(
+            definition,
+            summary_cards=[
+                FinancialReportService._report_card("Quantidade de registros", len(rows)),
+                FinancialReportService._report_card("Total a receber", FinancialReportService._format_currency(receivable_title_total), "positive"),
+                FinancialReportService._report_card("Total líquido a receber", FinancialReportService._format_currency(receivable_open_total), "positive"),
+                FinancialReportService._report_card("Total a pagar", FinancialReportService._format_currency(payable_title_total), "negative"),
+                FinancialReportService._report_card("Total líquido a pagar", FinancialReportService._format_currency(abs(payable_open_total)), "negative"),
+                FinancialReportService._report_card("Total geral", FinancialReportService._format_currency(total_general), "primary"),
+                FinancialReportService._report_card("Total geral líquido", FinancialReportService._format_currency(total_general_net), "primary"),
             ],
-            "general_info": [
-                {"label": "Competência base", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"},
-                {"label": "Critério principal", "value": "Agendamento operacional por título e saldo"},
-                {"label": "Em aberto / borderô", "value": f"{open_count} / {bordero_count}"},
+            general_info=[
+                FinancialReportService._report_info("Competência base", f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"),
+                FinancialReportService._report_info("Critério principal", "Agendamento operacional por título e saldo"),
+                FinancialReportService._report_info("Em aberto / borderô", f"{open_count} / {bordero_count}"),
             ],
-            "columns": columns,
-            "rows": rows,
-            "totals": {
+            columns=columns,
+            rows=rows,
+            totals={
                 "count": len(rows),
                 "receivable_title_total": FinancialReportService._serialize_money(receivable_title_total),
                 "receivable_open_total": FinancialReportService._serialize_money(receivable_open_total),
@@ -897,7 +928,7 @@ class FinancialReportService:
                 "total_general": FinancialReportService._serialize_money(total_general),
                 "total_general_net": FinancialReportService._serialize_money(total_general_net),
             },
-        }
+        )
 
     @staticmethod
     def _build_bank_statement(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
@@ -958,22 +989,21 @@ class FinancialReportService:
                     "saldo_tone": "negative" if running < 0 else "neutral",
                 }
             )
-        return {
-            "title": definition["label"],
-            "subtitle": definition["description"],
-            "summary_cards": [
-                {"label": "Saldo inicial", "value": FinancialReportService._format_currency(balance_base), "tone": "neutral"},
-                {"label": "Entradas", "value": FinancialReportService._format_currency(inflow), "tone": "positive"},
-                {"label": "Saídas", "value": FinancialReportService._format_currency(outflow), "tone": "negative"},
-                {"label": "Saldo final", "value": FinancialReportService._format_currency(running), "tone": "primary" if running >= 0 else "negative"},
+        return FinancialReportService._report_payload(
+            definition,
+            summary_cards=[
+                FinancialReportService._report_card("Saldo inicial", FinancialReportService._format_currency(balance_base)),
+                FinancialReportService._report_card("Entradas", FinancialReportService._format_currency(inflow), "positive"),
+                FinancialReportService._report_card("Saídas", FinancialReportService._format_currency(outflow), "negative"),
+                FinancialReportService._report_card("Saldo final", FinancialReportService._format_currency(running), "primary" if running >= 0 else "negative"),
             ],
-            "general_info": [
-                {"label": "Janela analisada", "value": f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"},
-                {"label": "Recorte", "value": bank_names.get(filters.bank_account_id, "Todas as contas bancárias")},
-                {"label": "Movimentos", "value": str(len(rows))},
-                {"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"},
+            general_info=[
+                FinancialReportService._report_info("Janela analisada", f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"),
+                FinancialReportService._report_info("Recorte", bank_names.get(filters.bank_account_id, "Todas as contas bancárias")),
+                FinancialReportService._report_info("Movimentos", str(len(rows))),
+                FinancialReportService._report_info("Somente conciliados", "Sim" if filters.include_reconciled_only else "Não"),
             ],
-            "columns": [
+            columns=[
                 {"key": "data", "label": "Data"},
                 {"key": "codigo", "label": "Liquidação"},
                 {"key": "conta_bancaria", "label": "Conta bancária"},
@@ -985,14 +1015,14 @@ class FinancialReportService:
                 {"key": "conciliacao", "label": "Conciliação"},
                 {"key": "saldo", "label": "Saldo"},
             ],
-            "rows": rows,
-            "totals": {
+            rows=rows,
+            totals={
                 "opening_balance": FinancialReportService._serialize_money(balance_base),
                 "inflow": FinancialReportService._serialize_money(inflow),
                 "outflow": FinancialReportService._serialize_money(outflow),
                 "closing_balance": FinancialReportService._serialize_money(running),
             },
-        }
+        )
 
     @staticmethod
     def _build_income_statement(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
@@ -1168,33 +1198,32 @@ class FinancialReportService:
 
         due_window = f"{due_start.isoformat()} até {due_end.isoformat()}" if due_start and due_end else "Livre"
         settlement_window = f"{settlement_start.isoformat()} até {settlement_end.isoformat()}" if settlement_start and settlement_end else "Livre"
-        return {
-            "title": definition["label"],
-            "subtitle": definition["description"],
-            "summary_cards": [
-                {"label": "Resultado competência", "value": FinancialReportService._format_currency(total_comp)},
-                {"label": "Resultado vencimento", "value": FinancialReportService._format_currency(total_due)},
-                {"label": "Resultado liquidação", "value": FinancialReportService._format_currency(total_set)},
-                {"label": "Linhas da DRE", "value": len(rows)},
+        return FinancialReportService._report_payload(
+            definition,
+            summary_cards=[
+                FinancialReportService._report_card("Resultado competência", FinancialReportService._format_currency(total_comp)),
+                FinancialReportService._report_card("Resultado vencimento", FinancialReportService._format_currency(total_due)),
+                FinancialReportService._report_card("Resultado liquidação", FinancialReportService._format_currency(total_set)),
+                FinancialReportService._report_card("Linhas da DRE", len(rows)),
             ],
-            "general_info": [
-                {"label": "Competência", "value": f"{competence_start.isoformat()} até {competence_end.isoformat()}"},
-                {"label": "Vencimento", "value": due_window},
-                {"label": "Baixa", "value": settlement_window},
-                {"label": "Ordenação", "value": f"{filters.order_by} / {filters.order_direction}"},
-                {"label": "Orientação PDF", "value": "Paisagem" if filters.orientation == "landscape" else "Retrato"},
+            general_info=[
+                FinancialReportService._report_info("Competência", f"{competence_start.isoformat()} até {competence_end.isoformat()}"),
+                FinancialReportService._report_info("Vencimento", due_window),
+                FinancialReportService._report_info("Baixa", settlement_window),
+                FinancialReportService._report_info("Ordenação", f"{filters.order_by} / {filters.order_direction}"),
+                FinancialReportService._report_info("Orientação PDF", "Paisagem" if filters.orientation == "landscape" else "Retrato"),
             ],
-            "columns": columns,
-            "rows": rows,
-            "totals": {
+            columns=columns,
+            rows=rows,
+            totals={
                 "competence": FinancialReportService._serialize_money(total_comp),
                 "due": FinancialReportService._serialize_money(total_due),
                 "liquidation": FinancialReportService._serialize_money(total_set),
                 "open": FinancialReportService._serialize_money(total_open),
                 "settled": FinancialReportService._serialize_money(total_settled),
             },
-            "orientation": filters.orientation,
-        }
+            extra={"orientation": filters.orientation},
+        )
 
     @staticmethod
     def _build_cash_flow(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
@@ -2031,6 +2060,16 @@ class FinancialReportService:
             textColor=colors.HexColor("#0f172a"),
             spaceAfter=4,
         )
+        company_style = ParagraphStyle(
+            "SchedulePdfCompany",
+            parent=styles["BodyText"],
+            fontSize=10,
+            leading=12,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#334155"),
+            spaceAfter=8,
+        )
         section_title_style = ParagraphStyle(
             "SchedulePdfSectionTitle",
             parent=styles["BodyText"],
@@ -2051,8 +2090,8 @@ class FinancialReportService:
         stat_label_style = ParagraphStyle(
             "SchedulePdfStatLabel",
             parent=styles["BodyText"],
-            fontSize=7,
-            leading=8,
+            fontSize=6,
+            leading=7,
             alignment=TA_CENTER,
             fontName="Helvetica-Bold",
             textColor=colors.HexColor("#334155"),
@@ -2060,8 +2099,8 @@ class FinancialReportService:
         stat_value_style = ParagraphStyle(
             "SchedulePdfStatValue",
             parent=styles["BodyText"],
-            fontSize=11,
-            leading=13,
+            fontSize=8.5,
+            leading=10,
             alignment=TA_CENTER,
             fontName="Helvetica-Bold",
             textColor=colors.HexColor("#0f172a"),
@@ -2096,8 +2135,11 @@ class FinancialReportService:
 
         elements: List[Any] = [
             Paragraph(report_payload.get("title", "Relatório financeiro"), title_style),
-            Spacer(1, 8),
         ]
+        company_name = str(report_payload.get("company_name") or "").strip()
+        if company_name:
+            elements.append(Paragraph(company_name, company_style))
+        elements.append(Spacer(1, 6))
 
         report_filters = report_payload.get("filters") or []
         elements.append(Paragraph("FILTROS APLICADOS", section_title_style))
@@ -2182,8 +2224,8 @@ class FinancialReportService:
     @staticmethod
     def _build_schedule_pdf_summary_cards(*, report_summary_cards: List[Dict[str, Any]], available_width: float, label_style, value_style) -> Table:
         cards = report_summary_cards or []
-        cols = 4
-        gutter = 6
+        cols = min(max(len(cards), 1), 7)
+        gutter = 4
         col_width = (available_width - (gutter * (cols - 1))) / cols
         rows: List[List[Any]] = []
         current_row: List[Any] = []
@@ -2225,10 +2267,10 @@ class FinancialReportService:
                             [
                                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ffffff")),
                                 ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#cbd5e1")),
-                                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                             ]
                         )
                     )
