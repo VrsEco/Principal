@@ -5,7 +5,7 @@
 {% block head %}
 {{ super() }}
 {% if report_definition.code == 'schedule_report' %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_schedule.css', v='20260418b') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_schedule.css', v='20260418c') }}">
 {% endif %}
 {% endblock %}
 
@@ -752,7 +752,7 @@
 {% block scripts %}
 {{ super() }}
 {% if report_definition.code == 'schedule_report' %}
-<script src="{{ url_for('static', filename='js/financial_report_filters_schedule.js', v='20260418b') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_report_filters_schedule.js', v='20260418c') }}"></script>
 {% else %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {

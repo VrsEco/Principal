@@ -1,7 +1,6 @@
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
 {% set report_filters = report.filters if report else [] %}
 {% set report_summary_cards = report.summary_cards if report else [] %}
-{% set report_general_info = report.general_info if report else [] %}
 {% set report_columns = report.columns if report else [] %}
 {% set report_rows = report.rows if report else [] %}
 
@@ -23,84 +22,49 @@
 
     <div class="schedule-report-viewer">
         <article class="schedule-report-sheet">
-            <section class="schedule-sheet-header">
-                <div>
-                    <p class="schedule-sheet-kicker">Relatório operacional</p>
+            <section class="schedule-section schedule-section--header">
+                <div class="schedule-sheet-header-main">
                     <h2>{{ report.title if report else report_definition.label }}</h2>
                     <div class="schedule-sheet-meta">
-                        <span>Empresa: {{ company.name if company and company.name else 'Empresa ativa' }}</span>
-                        <span>Gerado em: {{ report.generated_at if report else '-' }}</span>
-                        <span>{{ report_rows | length }} linha(s)</span>
+                        <div><strong>Empresa:</strong> {{ company.name if company and company.name else 'Empresa ativa' }}</div>
+                        <div><strong>Gerado em:</strong> {{ report.generated_at if report else '-' }}</div>
                     </div>
                 </div>
-                <div class="schedule-sheet-logo">
-                    <span>versus</span>
-                    <small>gestão corporativa</small>
+                <div class="schedule-sheet-logo-box">
+                    <img class="schedule-sheet-logo" src="{{ url_for('static', filename='img/logo-versus.png') }}" alt="Versus Gestão Corporativa">
                 </div>
             </section>
 
-            <section class="schedule-sheet-stats">
-                {% for item in report_summary_cards %}
-                <article class="schedule-sheet-stat{% if loop.first %} schedule-sheet-stat--accent{% endif %}">
-                    <strong>{{ item.value }}</strong>
-                    <span>{{ item.label }}</span>
-                </article>
-                {% endfor %}
-            </section>
-
-            <section class="schedule-sheet-grid">
-                <article class="schedule-sheet-panel schedule-sheet-panel--filters">
-                    <div class="schedule-sheet-panel-head">
-                        <div>
-                            <p class="schedule-sheet-panel-kicker">Filtros aplicados</p>
-                            <h3>Escopo consolidado</h3>
-                        </div>
-                        <span class="schedule-sheet-badge" id="schedule-report-active-filters-inline">{{ report_filters | length }}</span>
-                    </div>
-                    <div class="schedule-sheet-filters-grid">
+            <section class="schedule-section schedule-section--filters">
+                <div class="schedule-section-title">Filtros aplicados</div>
+                <div class="schedule-filters-grid">
+                    {% if report_filters %}
                         {% for item in report_filters %}
-                        <div class="schedule-sheet-filter-item">
-                            <span>{{ item.label }}</span>
-                            <strong>{{ item.value }}</strong>
+                        <div class="schedule-filter-item">
+                            <strong>{{ item.label }}:</strong> {{ item.value }}
                         </div>
                         {% endfor %}
-                    </div>
-                </article>
-
-                <article class="schedule-sheet-panel">
-                    <div class="schedule-sheet-panel-head">
-                        <div>
-                            <p class="schedule-sheet-panel-kicker">Resumo executivo</p>
-                            <h3>Informações da emissão</h3>
-                        </div>
-                    </div>
-                    <div class="schedule-sheet-info-list">
-                        <div>
-                            <span>Gerado em</span>
-                            <strong>{{ report.generated_at if report else '-' }}</strong>
-                        </div>
-                        {% for item in report_general_info %}
-                        <div>
-                            <span>{{ item.label }}</span>
-                            <strong>{{ item.value }}</strong>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </article>
+                    {% else %}
+                        <div class="schedule-filter-item"><strong>Resumo:</strong> sem filtros acionados.</div>
+                    {% endif %}
+                </div>
             </section>
 
-            <section class="schedule-sheet-panel">
-                <div class="schedule-sheet-panel-head">
-                    <div>
-                        <p class="schedule-sheet-panel-kicker">Dados</p>
-                        <h3>Mapa de títulos e saldos</h3>
-                    </div>
-                    <span class="schedule-sheet-badge">{{ report_rows | length }} registro(s)</span>
+            <section class="schedule-section schedule-section--stats">
+                <div class="schedule-stats-grid">
+                    {% for item in report_summary_cards %}
+                    <article class="schedule-stat schedule-stat--{{ item.get('tone', 'neutral') }}">
+                        <div class="schedule-stat__value">{{ item.value }}</div>
+                        <div class="schedule-stat__label">{{ item.label }}</div>
+                    </article>
+                    {% endfor %}
                 </div>
+            </section>
 
+            <section class="schedule-section schedule-section--table">
                 {% if report_rows and report_columns %}
-                <div class="schedule-sheet-table-wrap">
-                    <table class="schedule-sheet-table">
+                <div class="schedule-table-wrap">
+                    <table class="schedule-table">
                         <thead>
                             <tr>
                                 {% for column in report_columns %}
@@ -112,18 +76,7 @@
                             {% for row in report_rows %}
                             <tr>
                                 {% for column in report_columns %}
-                                {% set cell_value = row[column.key] %}
-                                <td class="{% if column.key in ['title_amount', 'balance_amount'] %}is-currency{% endif %}">
-                                    {% if loop.first %}
-                                    <div class="schedule-cell-main">{{ cell_value }}</div>
-                                    <div class="schedule-cell-tags">
-                                        <span class="schedule-inline-badge">{{ row.type }}</span>
-                                        <span class="schedule-inline-badge">{{ row.status }}</span>
-                                    </div>
-                                    {% else %}
-                                    <div class="schedule-cell-main">{{ cell_value }}</div>
-                                    {% endif %}
-                                </td>
+                                <td class="{% if column.key in ['title_amount', 'balance_amount'] %}is-currency{% endif %}">{{ row[column.key] }}</td>
                                 {% endfor %}
                             </tr>
                             {% endfor %}
@@ -131,17 +84,9 @@
                     </table>
                 </div>
                 {% else %}
-                <div class="schedule-sheet-empty">
-                    Nenhum dado encontrado para os filtros informados.
-                </div>
+                <div class="schedule-empty">Nenhum dado encontrado para os filtros informados.</div>
                 {% endif %}
             </section>
-
-            <footer class="schedule-sheet-footer">
-                <span>{{ report.title if report else report_definition.label }}</span>
-                <span>Padrão app32 · Financeiro</span>
-                <span>{{ report.generated_at if report else '-' }}</span>
-            </footer>
         </article>
     </div>
 </div>

@@ -679,7 +679,9 @@ class FinancialReportService:
                 active_borderos_by_schedule.setdefault(bordero_item.financial_schedule_id, bordero)
 
         rows: List[Dict[str, Any]] = []
+        receivable_title_total = Decimal("0")
         receivable_open_total = Decimal("0")
+        payable_title_total = Decimal("0")
         payable_open_total = Decimal("0")
         open_count = 0
         bordero_count = 0
@@ -748,8 +750,10 @@ class FinancialReportService:
             signed_title_amount = Decimal(str(FinancialService.get_signed_amount(original_total, schedule.movement_nature)))
             signed_open_amount = Decimal(str(FinancialService.get_signed_amount(open_total, schedule.movement_nature)))
             if schedule.entry_type == "receivable":
+                receivable_title_total += original_total
                 receivable_open_total += signed_open_amount
             else:
+                payable_title_total += original_total
                 payable_open_total += signed_open_amount
             if report_state != "settled":
                 open_count += 1
@@ -833,25 +837,36 @@ class FinancialReportService:
             if enabled:
                 columns.append({"key": key, "label": label})
 
+        total_general = receivable_title_total - payable_title_total
+        total_general_net = receivable_open_total + payable_open_total
+
         return {
             "title": definition["label"],
             "subtitle": definition["description"],
             "summary_cards": [
-                {"label": "Agendamentos filtrados", "value": len(rows)},
-                {"label": "Saldo a receber", "value": FinancialReportService._format_currency(receivable_open_total)},
-                {"label": "Saldo a pagar", "value": FinancialReportService._format_currency(payable_open_total)},
-                {"label": "Em aberto / borderô", "value": f"{open_count} / {bordero_count}"},
+                {"label": "Quantidade de registros", "value": len(rows), "tone": "neutral"},
+                {"label": "Total a receber", "value": FinancialReportService._format_currency(receivable_title_total), "tone": "positive"},
+                {"label": "Total líquido a receber", "value": FinancialReportService._format_currency(receivable_open_total), "tone": "positive"},
+                {"label": "Total a pagar", "value": FinancialReportService._format_currency(payable_title_total), "tone": "negative"},
+                {"label": "Total líquido a pagar", "value": FinancialReportService._format_currency(abs(payable_open_total)), "tone": "negative"},
+                {"label": "Total geral", "value": FinancialReportService._format_currency(total_general), "tone": "primary"},
+                {"label": "Total geral líquido", "value": FinancialReportService._format_currency(total_general_net), "tone": "primary"},
             ],
             "general_info": [
                 {"label": "Competência base", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"},
                 {"label": "Critério principal", "value": "Agendamento operacional por título e saldo"},
+                {"label": "Em aberto / borderô", "value": f"{open_count} / {bordero_count}"},
             ],
             "columns": columns,
             "rows": rows,
             "totals": {
                 "count": len(rows),
+                "receivable_title_total": FinancialReportService._serialize_money(receivable_title_total),
                 "receivable_open_total": FinancialReportService._serialize_money(receivable_open_total),
-                "payable_open_total": FinancialReportService._serialize_money(payable_open_total),
+                "payable_title_total": FinancialReportService._serialize_money(payable_title_total),
+                "payable_open_total": FinancialReportService._serialize_money(abs(payable_open_total)),
+                "total_general": FinancialReportService._serialize_money(total_general),
+                "total_general_net": FinancialReportService._serialize_money(total_general_net),
             },
         }
 
