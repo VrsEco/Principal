@@ -69,6 +69,14 @@ SETTLEMENT_COMPONENT_TYPE_VALUES = (
     "discount",
     "manual_adjustment",
 )
+TITLE_ADJUSTMENT_TYPE_VALUES = (
+    "monetary_correction",
+    "interest",
+    "fine",
+    "discount",
+    "writeoff",
+)
+TITLE_ADJUSTMENT_STATUS_VALUES = ("open", "partial", "settled", "cancelled")
 
 RECONCILIATION_STATUS_VALUES = ("pending", "suggested", "matched", "reconciled", "rejected")
 MATCH_STATUS_VALUES = ("suggested", "confirmed", "rejected")
@@ -1298,7 +1306,11 @@ class FinancialSettlementComponent(db.Model):
     competence_date = db.Column(db.Date, nullable=False, index=True)
     due_date = db.Column(db.Date, index=True)
     source = db.Column(db.String(20), nullable=False, default="system", index=True)
-    origin_adjustment_id = db.Column(db.Integer, index=True)
+    origin_adjustment_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_title_adjustments.id", ondelete="SET NULL"),
+        index=True,
+    )
 
     metadata_json = db.Column(JSONB, nullable=False, default=dict)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -1317,6 +1329,72 @@ class FinancialSettlementComponent(db.Model):
             "origin_adjustment_id": self.origin_adjustment_id,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class FinancialTitleAdjustment(db.Model):
+    __tablename__ = "financial_title_adjustments"
+    __table_args__ = (
+        db.CheckConstraint(
+            f"adjustment_type IN {TITLE_ADJUSTMENT_TYPE_VALUES}",
+            name="ck_financial_title_adjustments_type",
+        ),
+        db.CheckConstraint(
+            f"status IN {TITLE_ADJUSTMENT_STATUS_VALUES}",
+            name="ck_financial_title_adjustments_status",
+        ),
+        db.CheckConstraint(
+            "base_amount >= 0 AND generated_amount >= 0 AND settled_amount >= 0 AND open_amount >= 0",
+            name="ck_financial_title_adjustments_amounts_nonneg",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    financial_schedule_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_schedules.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    adjustment_type = db.Column(db.String(30), nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, default="open", index=True)
+
+    calculation_date = db.Column(db.Date, nullable=False, index=True)
+    competence_date = db.Column(db.Date, nullable=False, index=True)
+    due_date_reference = db.Column(db.Date, index=True)
+
+    base_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    generated_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    settled_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    open_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+
+    rule_snapshot_json = db.Column(JSONB, nullable=False, default=dict)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "financial_schedule_id": self.financial_schedule_id,
+            "adjustment_type": self.adjustment_type,
+            "status": self.status,
+            "calculation_date": self.calculation_date.isoformat() if self.calculation_date else None,
+            "competence_date": self.competence_date.isoformat() if self.competence_date else None,
+            "due_date_reference": self.due_date_reference.isoformat() if self.due_date_reference else None,
+            "base_amount": float(self.base_amount or 0),
+            "generated_amount": float(self.generated_amount or 0),
+            "settled_amount": float(self.settled_amount or 0),
+            "open_amount": float(self.open_amount or 0),
+            "rule_snapshot_json": self.rule_snapshot_json or {},
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
         }
 
 
