@@ -22,6 +22,7 @@ jobs:
       CONFIGR_USER: ${{ secrets.CONFIGR_USER }}
       CONFIGR_PORT: ${{ secrets.CONFIGR_PORT }}
       CONFIGR_SSH_PRIVATE_KEY: ${{ secrets.CONFIGR_SSH_PRIVATE_KEY }}
+      CONFIGR_SSH_PASSPHRASE: ${{ secrets.CONFIGR_SSH_PASSPHRASE }}
       CONFIGR_KNOWN_HOSTS: ${{ secrets.CONFIGR_KNOWN_HOSTS }}
 
     steps:
@@ -148,14 +149,20 @@ jobs:
 
           chmod 600 "$KEY_FILE"
 
-          if ! ssh-keygen -y -f "$KEY_FILE" > "$RUNNER_TEMP/configr_backup_key.pub" 2>"$RUNNER_TEMP/configr_backup_key_error.log"; then
+          if [ -n "${CONFIGR_SSH_PASSPHRASE:-}" ]; then
+            SSH_KEYGEN_CMD=(ssh-keygen -y -P "$CONFIGR_SSH_PASSPHRASE" -f "$KEY_FILE")
+          else
+            SSH_KEYGEN_CMD=(ssh-keygen -y -f "$KEY_FILE")
+          fi
+
+          if ! "${SSH_KEYGEN_CMD[@]}" > "$RUNNER_TEMP/configr_backup_key.pub" 2>"$RUNNER_TEMP/configr_backup_key_error.log"; then
             echo "❌ CONFIGR_SSH_PRIVATE_KEY foi reconhecida como chave privada, mas o OpenSSH não conseguiu carregá-la."
             echo "Detalhe técnico:"
             sed 's/^/  /' "$RUNNER_TEMP/configr_backup_key_error.log"
             echo ""
             echo "Causas prováveis:"
             echo "  1. secret contém uma chave privada incompleta/corrompida;"
-            echo "  2. secret contém uma chave com passphrase, não adequada para automação sem agente;"
+            echo "  2. secret contém uma chave com passphrase e CONFIGR_SSH_PASSPHRASE está ausente/incorreto;"
             echo "  3. secret foi salvo com escapes incomuns não recuperáveis."
             echo ""
             echo "Correção recomendada: gerar uma chave ED25519 exclusiva para o GitHub Actions, sem passphrase,"
@@ -194,13 +201,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          ssh \
-            -i "$KEY_FILE" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=yes \
-            -o ConnectTimeout=30 \
-            -p "$CONFIGR_PORT" \
+          SSH_BASE_CMD=(
+            ssh
+            -i "$KEY_FILE"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o ConnectTimeout=30
+            -p "$CONFIGR_PORT"
+          )
+
+          if [ -n "${CONFIGR_SSH_PASSPHRASE:-}" ]; then
+            eval "$(ssh-agent -s)"
+            trap 'ssh-agent -k >/dev/null 2>&1 || true' EXIT
+
+            cat > "$RUNNER_TEMP/configr_ssh_askpass.sh" <<'ASKPASS'
+          #!/usr/bin/env bash
+          printf '%s\n' "$CONFIGR_SSH_PASSPHRASE"
+          ASKPASS
+            chmod 700 "$RUNNER_TEMP/configr_ssh_askpass.sh"
+
+            SSH_ASKPASS_REQUIRE=force \
+            SSH_ASKPASS="$RUNNER_TEMP/configr_ssh_askpass.sh" \
+            DISPLAY=:0 \
+            setsid ssh-add "$KEY_FILE" >/dev/null < /dev/null
+
+            SSH_BASE_CMD=(
+              ssh
+              -o BatchMode=yes
+              -o IdentitiesOnly=no
+              -o StrictHostKeyChecking=yes
+              -o ConnectTimeout=30
+              -p "$CONFIGR_PORT"
+            )
+          fi
+
+          "${SSH_BASE_CMD[@]}" \
             "$CONFIGR_USER@$CONFIGR_HOST" \
             'bash -seuo pipefail' <<'REMOTE_SCRIPT'
             set -euo pipefail
