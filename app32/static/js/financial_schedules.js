@@ -31,14 +31,25 @@
   let settlementCompositionHydrating = false;
 
   const $ = (id) => document.getElementById(id);
+  const missingElementMessage = (id) => `A interface de agendamento está desatualizada: campo ${id} não encontrado. Atualize a página e tente novamente.`;
   const requireElement = (id) => {
     const element = $(id);
     if (!element) {
-      throw new Error('A interface de agendamento está desatualizada. Atualize a página e tente novamente.');
+      throw new Error(missingElementMessage(id));
     }
     return element;
   };
+  const fieldValue = (id, fallback = '') => {
+    const element = $(id);
+    return element ? element.value : fallback;
+  };
+  const requireFieldValue = (id) => requireElement(id).value;
+  const setFieldValue = (id, value) => {
+    const element = $(id);
+    if (element) element.value = value;
+  };
   const form = $('schedule-form');
+  if (!form) return;
   const entryTypeBanner = $('entry-type-banner');
   const rateioSummary = $('rateio-summary');
   const scheduleListEl = $('schedule-list');
@@ -146,7 +157,9 @@
 
   function applyEntryType(entryType, { locked = false } = {}) {
     entryTypeLocked = locked;
-    form.querySelector('input[name="entry_type"]').value = entryType;
+    const entryTypeInput = form.querySelector('input[name="entry_type"]');
+    if (!entryTypeInput) throw new Error(missingElementMessage('entry_type'));
+    entryTypeInput.value = entryType;
     document.querySelectorAll('.type-chip').forEach((chip) => {
       const isActive = chip.dataset.entryType === entryType;
       chip.classList.toggle('active', isActive);
@@ -166,7 +179,7 @@
   };
 
   window.toggleRepeatFields = () => {
-    const enabled = $('field-repeat-toggle').value === 'true';
+    const enabled = fieldValue('field-repeat-toggle', 'false') === 'true';
     document.querySelectorAll('.repeat-field').forEach((field) => field.classList.toggle('hidden', !enabled));
   };
 
@@ -327,10 +340,10 @@
     const updatedAmount = round2(amount + correctionAmount - discountAmount);
     const liquidatedAmount = calculateLiquidatedAmount();
     const openBalance = round2(updatedAmount - liquidatedAmount);
-    if ($('field-correction-amount')) $('field-correction-amount').value = correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if ($('field-liquidated-amount')) $('field-liquidated-amount').value = liquidatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if ($('field-updated-amount')) $('field-updated-amount').value = updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if ($('field-open-balance')) $('field-open-balance').value = openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    setFieldValue('field-correction-amount', correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-liquidated-amount', liquidatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-updated-amount', updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-open-balance', openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   }
 
   function getEffectiveScheduleAmount() {
@@ -338,7 +351,7 @@
   }
 
   function getTopAmount() {
-    return round2(parseCurrency($('field-amount').value));
+    return round2(parseCurrency(fieldValue('field-amount')));
   }
 
   function recalculateRowFromPercentage(index) {
@@ -807,23 +820,23 @@
     form.schedule_code.value = schedule.schedule_code || '';
     form.status.value = schedule.status || 'active';
     applyEntryType(schedule.entry_type || '', { locked: true });
-    $('field-description').value = schedule.description || schedule.name || '';
-    $('field-document-number').value = schedule.document_number || '';
-    $('field-counterparty').value = schedule.counterparty_id || '';
-    $('field-amount').value = Number(schedule.template_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    $('field-competence').value = formatIso(schedule.competence_date || schedule.start_date || schedule.first_due_date);
-    $('field-due-date').value = formatIso(schedule.first_due_date || schedule.next_due_date);
-    $('field-correction-index').value = schedule.correction_index_id || '';
-    $('field-discount-rule').value = schedule.discount_rule_id || '';
+    setFieldValue('field-description', schedule.description || schedule.name || '');
+    setFieldValue('field-document-number', schedule.document_number || '');
+    setFieldValue('field-counterparty', schedule.counterparty_id || '');
+    setFieldValue('field-amount', Number(schedule.template_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-competence', formatIso(schedule.competence_date || schedule.start_date || schedule.first_due_date));
+    setFieldValue('field-due-date', formatIso(schedule.first_due_date || schedule.next_due_date));
+    setFieldValue('field-correction-index', schedule.correction_index_id || '');
+    setFieldValue('field-discount-rule', schedule.discount_rule_id || '');
     if (Number(schedule.metadata_json?.discount_amount_override || 0) > 0) {
       setDiscountAmountField(schedule.metadata_json?.discount_amount_override || 0, { manual: true });
     } else {
       setDiscountAmountField(0, { manual: false });
     }
-    $('field-repeat-toggle').value = (schedule.frequency || 'one_time') === 'one_time' ? 'false' : 'true';
-    $('field-frequency').value = schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly';
-    $('field-interval-value').value = schedule.interval_value || 1;
-    $('field-repeat-count').value = schedule.metadata_json?.repeat_count || 1;
+    setFieldValue('field-repeat-toggle', (schedule.frequency || 'one_time') === 'one_time' ? 'false' : 'true');
+    setFieldValue('field-frequency', schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly');
+    setFieldValue('field-interval-value', schedule.interval_value || 1);
+    setFieldValue('field-repeat-count', schedule.metadata_json?.repeat_count || 1);
     clearPendingAttachments();
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
@@ -856,13 +869,14 @@
   }
 
   function buildPayload() {
-    if (!form.entry_type.value) {
+    const entryType = form.entry_type?.value || '';
+    if (!entryType) {
       throw new Error('Escolha primeiro se o agendamento é de Recebimentos ou Pagamentos.');
     }
-    const description = $('field-description').value.trim();
-    const counterpartyId = Number($('field-counterparty').value || 0);
-    const competenceIso = parseDateToIso($('field-competence').value);
-    const dueIso = parseDateToIso($('field-due-date').value);
+    const description = requireFieldValue('field-description').trim();
+    const counterpartyId = Number(requireFieldValue('field-counterparty') || 0);
+    const competenceIso = parseDateToIso(requireFieldValue('field-competence'));
+    const dueIso = parseDateToIso(requireFieldValue('field-due-date'));
     const amount = getTopAmount();
     if (!description) throw new Error('Informe o histórico do agendamento.');
     if (!counterpartyId) throw new Error('Selecione um favorecido.');
@@ -873,20 +887,20 @@
     if (!amount || amount <= 0) throw new Error('Informe um valor válido.');
     syncAdjustmentAllocationRows();
     validateAllocationSummary();
-    const frequency = $('field-repeat-toggle').value === 'true' ? $('field-frequency').value : 'one_time';
+    const frequency = fieldValue('field-repeat-toggle', 'false') === 'true' ? fieldValue('field-frequency', 'weekly') : 'one_time';
     const primaryAllocation = getBaseAllocationRows()[0] || allocationRows[0] || {};
-    const isUpdate = Boolean(form.schedule_id.value);
+    const isUpdate = Boolean(form.schedule_id?.value);
     return {
-      schedule_code: isUpdate ? undefined : (form.schedule_code.value || undefined),
+      schedule_code: isUpdate ? undefined : (form.schedule_code?.value || undefined),
       name: description.slice(0, 120),
       description,
       memo: null,
-      entry_type: form.entry_type.value,
-      movement_nature: form.entry_type.value === 'receivable' ? 'credit' : 'debit',
+      entry_type: entryType,
+      movement_nature: entryType === 'receivable' ? 'credit' : 'debit',
       origin_type: 'manual',
-      status: form.status.value || 'active',
+      status: form.status?.value || 'active',
       frequency,
-      interval_value: Number($('field-interval-value').value || 1),
+      interval_value: Number(fieldValue('field-interval-value', '1') || 1),
       start_date: competenceIso,
       competence_date: competenceIso,
       first_due_date: dueIso,
@@ -904,13 +918,13 @@
       notes: null,
       metadata_json: {
         ...(selectedSchedule?.metadata_json || {}),
-        document_number: $('field-document-number').value.trim() || null,
-        correction_index_id: Number($('field-correction-index').value || 0) || null,
-        discount_rule_id: Number($('field-discount-rule').value || 0) || null,
+        document_number: fieldValue('field-document-number').trim() || null,
+        correction_index_id: Number(fieldValue('field-correction-index') || 0) || null,
+        discount_rule_id: Number(fieldValue('field-discount-rule') || 0) || null,
         discount_amount_override: $('field-discount-amount')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
-        repeat_count: Number($('field-repeat-count').value || 1),
+        repeat_count: Number(fieldValue('field-repeat-count', '1') || 1),
         attachments: selectedSchedule?.attachments || [],
-        counterparty_name: $('field-counterparty').selectedOptions?.[0]?.textContent || null,
+        counterparty_name: $('field-counterparty')?.selectedOptions?.[0]?.textContent || null,
         allocations: allocationRows.map((row) => ({
           chart_account_id: Number(row.chart_account_id || 0) || null,
           cost_center_id: Number(row.cost_center_id || 0) || null,
@@ -947,11 +961,14 @@
 
   async function loadOptions() {
     optionsCache = await fetchJson(`/api/financial/schedules/options?company_id=${companyId}`);
-    $('field-counterparty').innerHTML = buildOptions(optionsCache.counterparties, 'Selecione...', (item) => item.display_label || item.name || item.code);
-    $('field-correction-index').innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
-    $('field-discount-rule').innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    const counterpartyField = requireElement('field-counterparty');
+    const correctionIndexField = requireElement('field-correction-index');
+    const discountRuleField = requireElement('field-discount-rule');
+    counterpartyField.innerHTML = buildOptions(optionsCache.counterparties, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    correctionIndexField.innerHTML = buildOptions(optionsCache.correction_indexes, 'Selecione...', (item) => item.display_label || item.name || item.code);
+    discountRuleField.innerHTML = buildOptions(optionsCache.discount_rules, 'Selecione...', (item) => item.display_label || item.name || item.code);
     if (!selectedSchedule) {
-      suggestDefaultCorrectionIndex(form.entry_type.value || initialEntryType, { force: true });
+      suggestDefaultCorrectionIndex(form.entry_type?.value || initialEntryType, { force: true });
     }
     refreshSuggestedDiscountAmountField();
     if (allocationRows.length) {
@@ -990,9 +1007,9 @@
     document.querySelectorAll('.sched-footer-actions button').forEach((button) => {
       button.disabled = false;
     });
-    form.schedule_id.value = '';
-    form.schedule_code.value = '';
-    form.status.value = 'active';
+    if (form.schedule_id) form.schedule_id.value = '';
+    if (form.schedule_code) form.schedule_code.value = '';
+    if (form.status) form.status.value = 'active';
     applyEntryType(entryType || '', { locked: !!entryType });
     clearPendingAttachments();
     allocationRows = [createAllocationRow({ percentage: '100' })];
@@ -1001,9 +1018,9 @@
     renderAttachments([]);
     renderBaixas([]);
     renderCalculationLogs(null, []);
-    $('baixas-tab-button').classList.add('hidden');
-    $('calculation-log-tab-button').classList.add('hidden');
-    $('field-frequency').value = 'weekly';
+    $('baixas-tab-button')?.classList.add('hidden');
+    $('calculation-log-tab-button')?.classList.add('hidden');
+    setFieldValue('field-frequency', 'weekly');
     setDiscountAmountField(0, { manual: false });
     window.toggleRepeatFields();
     syncAdjustmentAllocationRows();
@@ -1015,7 +1032,7 @@
 
   async function saveSchedule() {
     const payload = buildPayload();
-    const scheduleId = form.schedule_id.value;
+    const scheduleId = form.schedule_id?.value || '';
     const saved = await fetchJson(scheduleId ? `/api/financial/schedules/${scheduleId}?company_id=${companyId}` : `/api/financial/schedules?company_id=${companyId}`, {
       method: scheduleId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1214,7 +1231,7 @@
           formData.append('file', file);
           await fetchJson(`/api/financial/schedules/${selectedSchedule.id}/attachments?company_id=${companyId}`, { method: 'POST', body: formData });
         }
-        $('schedule-attachment-input').value = '';
+        setFieldValue('schedule-attachment-input', '');
         await window.selectSchedule(selectedSchedule.id);
         switchTab('anexos');
         return;
@@ -1228,7 +1245,7 @@
           url: URL.createObjectURL(file),
         });
       });
-      $('schedule-attachment-input').value = '';
+      setFieldValue('schedule-attachment-input', '');
       renderAttachments(selectedSchedule?.attachments || []);
       switchTab('anexos');
     } catch (error) {
@@ -1290,7 +1307,7 @@
         body: JSON.stringify(payload),
       });
       await loadOptions();
-      $('field-counterparty').value = created.id;
+      setFieldValue('field-counterparty', created.id);
       window.closeCounterpartyModal();
     } catch (error) {
       alert(error.message);
@@ -1323,8 +1340,8 @@
   });
 
   $('field-competence').addEventListener('blur', () => {
-    const competenceIso = parseDateToIso($('field-competence').value);
-    const dueIso = parseDateToIso($('field-due-date').value);
+    const competenceIso = parseDateToIso(fieldValue('field-competence'));
+    const dueIso = parseDateToIso(fieldValue('field-due-date'));
     if (competenceIso && dueIso && compareIsoDates(dueIso, competenceIso) < 0) {
       $('field-due-date').setCustomValidity('O vencimento não pode ser anterior à competência.');
       $('field-due-date').reportValidity();
@@ -1334,8 +1351,8 @@
   });
 
   $('field-due-date').addEventListener('blur', () => {
-    const competenceIso = parseDateToIso($('field-competence').value);
-    const dueIso = parseDateToIso($('field-due-date').value);
+    const competenceIso = parseDateToIso(fieldValue('field-competence'));
+    const dueIso = parseDateToIso(fieldValue('field-due-date'));
     if (competenceIso && dueIso && compareIsoDates(dueIso, competenceIso) < 0) {
       $('field-due-date').setCustomValidity('O vencimento não pode ser anterior à competência.');
       $('field-due-date').reportValidity();
