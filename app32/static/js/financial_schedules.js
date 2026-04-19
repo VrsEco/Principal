@@ -96,6 +96,8 @@
     return movementNature === 'debit' ? normalized * -1 : normalized;
   };
   const amountClass = (value) => Number(value || 0) < 0 ? 'amount-negative' : 'amount-positive';
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  const asMoneyValue = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const statusLabel = (status) => ({ active: 'Ativo', paused: 'Pausado', draft: 'Rascunho', completed: 'Concluído', cancelled: 'Cancelado' }[status] || status || 'Sem status');
   const statusClass = (status) => status === 'active' ? 'badge badge--active' : status === 'completed' ? 'badge badge--completed' : status === 'cancelled' ? 'badge badge--cancelled' : 'badge badge--draft';
 
@@ -588,6 +590,86 @@
     return Array.isArray(payload.logs) ? payload.logs : [];
   }
 
+  function eventLabel(eventType) {
+    return ({
+      settlement_posted: 'Baixa registrada',
+      settlement_updated: 'Baixa atualizada',
+      settlement_deleted: 'Baixa removida',
+      adjustment_released: 'Ajuste liberado',
+      recalculation: 'Recálculo',
+    }[eventType] || eventType || 'Evento financeiro');
+  }
+
+  function renderTitleBalance(schedule) {
+    const panelEl = $('title-balance-panel');
+    if (!panelEl) return;
+    const hasSchedule = Boolean(schedule?.id);
+    panelEl.classList.toggle('hidden', !hasSchedule);
+    if (!hasSchedule) {
+      panelEl.innerHTML = '';
+      return;
+    }
+
+    const summary = schedule.summary || {};
+    const nature = schedule.movement_nature;
+    const principalAmount = asMoneyValue(summary.principal_amount ?? summary.template_amount ?? schedule.template_amount);
+    const principalOpen = asMoneyValue(summary.principal_open ?? summary.open_principal ?? schedule.template_amount);
+    const adjustmentsGenerated = asMoneyValue(summary.adjustments_generated ?? summary.correction_amount ?? 0);
+    const adjustmentsSettled = asMoneyValue(summary.adjustments_settled ?? 0);
+    const adjustmentsOpen = asMoneyValue(summary.adjustments_open ?? Math.max(adjustmentsGenerated - adjustmentsSettled, 0));
+    const discountsOpen = asMoneyValue(summary.discounts_open ?? summary.discount_amount ?? 0);
+    const totalOpen = asMoneyValue(summary.total_open ?? (principalOpen + adjustmentsOpen - discountsOpen));
+    const settledTotal = asMoneyValue(summary.principal_settled ?? summary.liquidated_amount ?? 0);
+
+    panelEl.innerHTML = `
+      <header class="title-balance-head">
+        <div>
+          <span>Saldo analítico do título</span>
+          <h3>${escapeHtml(schedule.schedule_code || `Título ${schedule.id}`)} · ${escapeHtml(schedule.description || schedule.name || 'Sem histórico')}</h3>
+          <p>Composição operacional do principal, correções financeiras, descontos e saldo ainda alterável.</p>
+        </div>
+        <strong class="${amountClass(signedAmount(totalOpen, nature))}">${money(signedAmount(totalOpen, nature))}</strong>
+      </header>
+      <div class="title-balance-grid">
+        <article class="title-balance-card title-balance-card--principal">
+          <span>Principal original</span>
+          <strong>${money(signedAmount(principalAmount, nature))}</strong>
+          <small>Valor base do título financeiro.</small>
+        </article>
+        <article class="title-balance-card">
+          <span>Principal em aberto</span>
+          <strong>${money(signedAmount(principalOpen, nature))}</strong>
+          <small>Parcela do principal ainda pendente.</small>
+        </article>
+        <article class="title-balance-card title-balance-card--adjustment">
+          <span>Ajustes em aberto</span>
+          <strong>${money(signedAmount(adjustmentsOpen, nature))}</strong>
+          <small>Correções/descontos ainda não baixados.</small>
+        </article>
+        <article class="title-balance-card">
+          <span>Baixado do principal</span>
+          <strong>${money(signedAmount(settledTotal, nature))}</strong>
+          <small>Principal liquidado até o momento.</small>
+        </article>
+      </div>
+    `;
+  }
+
+  function ledgerMetric(label, value, movementNature, { invert = false } = {}) {
+    const numeric = asMoneyValue(value) * (invert ? -1 : 1);
+    const signed = signedAmount(numeric, movementNature);
+    return `<div class="ledger-component"><span>${label}</span><strong class="${amountClass(signed)}">${money(signed)}</strong></div>`;
+  }
+
+  function ledgerStep(title, subtitle, metrics, tone = '') {
+    return `
+      <section class="ledger-step ${tone}">
+        <header><span>${title}</span><small>${subtitle}</small></header>
+        <div class="ledger-components">${metrics.join('')}</div>
+      </section>
+    `;
+  }
+
   function renderCalculationLogs(schedule, logs) {
     const emptyEl = $('calculation-log-empty');
     const shellEl = $('calculation-log-shell');
@@ -598,9 +680,10 @@
     const normalizedLogs = Array.isArray(logs) ? logs : [];
     selectedCalculationLogs = normalizedLogs;
 
+    renderTitleBalance(schedule);
     tabButton?.classList.toggle('hidden', !hasSchedule);
     emptyEl?.classList.toggle('hidden', normalizedLogs.length > 0 || !hasSchedule);
-    shellEl?.classList.toggle('hidden', !normalizedLogs.length);
+    shellEl?.classList.toggle('hidden', !hasSchedule || !normalizedLogs.length);
 
     if (!hasSchedule) {
       if (summaryEl) summaryEl.innerHTML = '';
@@ -609,62 +692,61 @@
     }
 
     const latest = normalizedLogs[0] || null;
-    const signedUpdatedAmount = signedAmount(latest?.updated_amount || 0, schedule?.movement_nature);
-    const signedOpenAmount = signedAmount(latest?.open_principal_after || 0, schedule?.movement_nature);
+    const summary = schedule.summary || {};
+    const signedTotalOpen = signedAmount(summary.total_open ?? latest?.total_due_after ?? latest?.open_principal_after ?? 0, schedule?.movement_nature);
+    const signedAdjustmentsOpen = signedAmount(summary.adjustments_open ?? latest?.adjustments_open_after ?? 0, schedule?.movement_nature);
 
     if (summaryEl) {
       summaryEl.innerHTML = latest ? [
-        `<article class="calc-log-kpi"><span>Último cálculo</span><strong>${formatIso(latest.calculation_date)}</strong><small>${latest.event_type || 'settlement_posted'}</small></article>`,
-        `<article class="calc-log-kpi"><span>Valor atualizado</span><strong class="${amountClass(signedUpdatedAmount)}">${money(signedUpdatedAmount)}</strong><small>Título após correções e descontos</small></article>`,
-        `<article class="calc-log-kpi"><span>Saldo em aberto</span><strong class="${amountClass(signedOpenAmount)}">${money(signedOpenAmount)}</strong><small>Saldo após a última baixa</small></article>`,
-        `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias de cálculo registradas</small></article>`,
+        `<article class="calc-log-kpi"><span>Último evento</span><strong>${formatIso(latest.calculation_date)}</strong><small>${eventLabel(latest.event_type)}</small></article>`,
+        `<article class="calc-log-kpi"><span>Total em aberto</span><strong class="${amountClass(signedTotalOpen)}">${money(signedTotalOpen)}</strong><small>Principal + ajustes pendentes</small></article>`,
+        `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correção financeira/descontos a liquidar</small></article>`,
+        `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias estruturadas registradas</small></article>`,
       ].join('') : '';
     }
 
     if (listEl) {
       listEl.innerHTML = normalizedLogs.map((log, index) => {
         const meta = log.metadata_json || {};
-        const snapshot = meta.snapshot || {};
+        const snapshot = log.snapshot_json || meta.snapshot || {};
         const settlementCode = meta.settlement_code || snapshot.settlement_code || '-';
         const entryCode = snapshot.entry_code || '-';
-        const signedCurrent = signedAmount(log.settled_principal_current || 0, schedule?.movement_nature);
-        const signedAfter = signedAmount(log.settled_principal_after || 0, schedule?.movement_nature);
-        const signedOpen = signedAmount(log.open_principal_after || 0, schedule?.movement_nature);
+        const beforeTotal = log.total_due_before ?? ((log.principal_before || 0) + (log.adjustments_open_before || 0));
+        const afterTotal = log.total_due_after ?? ((log.principal_after || 0) + (log.adjustments_open_after || 0));
         return `
-          <article class="calc-log-card">
+          <article class="calc-log-card calc-log-card--ledger">
             <header class="calc-log-card__head">
               <div>
                 <span class="calc-log-step">Evento ${index + 1}</span>
-                <h3>${formatIso(log.calculation_date)} · ${log.event_type || 'settlement_posted'}</h3>
-                <p>Título ${schedule.schedule_code || schedule.id || '-'} · Baixa ${settlementCode} · Lançamento ${entryCode}</p>
+                <h3>${formatIso(log.calculation_date)} · ${escapeHtml(eventLabel(log.event_type))}</h3>
+                <p>Título ${escapeHtml(schedule.schedule_code || schedule.id || '-')} · Baixa ${escapeHtml(settlementCode)} · Lançamento ${escapeHtml(entryCode)}</p>
               </div>
               <div class="calc-log-card__badges">
-                <span class="calc-log-badge">Template ${money(signedAmount(log.template_amount || 0, schedule?.movement_nature))}</span>
-                <span class="calc-log-badge">Atualizado ${money(signedAmount(log.updated_amount || 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Principal ${money(signedAmount(log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Ajustes ${money(signedAmount(log.adjustments_settled_now ?? log.correction_amount ?? 0, schedule?.movement_nature))}</span>
               </div>
             </header>
-            <div class="calc-log-grid">
-              <div class="calc-log-metric">
-                <span>Correção financeira</span>
-                <strong class="${amountClass(signedAmount(log.correction_amount || 0, schedule?.movement_nature))}">${money(signedAmount(log.correction_amount || 0, schedule?.movement_nature))}</strong>
-              </div>
-              <div class="calc-log-metric">
-                <span>Desconto</span>
-                <strong class="${amountClass(signedAmount((log.discount_amount || 0) * -1, schedule?.movement_nature))}">${money(signedAmount((log.discount_amount || 0) * -1, schedule?.movement_nature))}</strong>
-              </div>
-              <div class="calc-log-metric">
-                <span>Baixa atual</span>
-                <strong class="${amountClass(signedCurrent)}">${money(signedCurrent)}</strong>
-              </div>
-              <div class="calc-log-metric">
-                <span>Baixas acumuladas</span>
-                <strong class="${amountClass(signedAfter)}">${money(signedAfter)}</strong>
-              </div>
-              <div class="calc-log-metric">
-                <span>Saldo após o cálculo</span>
-                <strong class="${amountClass(signedOpen)}">${money(signedOpen)}</strong>
-              </div>
+            <div class="ledger-flow">
+              ${ledgerStep('Antes', 'Saldo calculado antes da baixa', [
+                ledgerMetric('Principal aberto', log.principal_before ?? log.template_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes abertos', log.adjustments_open_before ?? log.correction_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Total devido', beforeTotal, schedule?.movement_nature),
+              ], 'ledger-step--before')}
+              ${ledgerStep('Agora', 'Composição realizada neste evento', [
+                ledgerMetric('Principal baixado', log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes baixados', log.adjustments_settled_now ?? 0, schedule?.movement_nature),
+                ledgerMetric('Desconto liberado', log.discount_now ?? log.discount_amount ?? 0, schedule?.movement_nature, { invert: true }),
+              ], 'ledger-step--current')}
+              ${ledgerStep('Depois', 'Saldo remanescente editável do título', [
+                ledgerMetric('Principal aberto', log.principal_after ?? log.open_principal_after ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes abertos', log.adjustments_open_after ?? 0, schedule?.movement_nature),
+                ledgerMetric('Total devido', afterTotal, schedule?.movement_nature),
+              ], 'ledger-step--after')}
             </div>
+            <details class="calc-log-snapshot">
+              <summary>Ver snapshot técnico do cálculo</summary>
+              <pre>${escapeHtml(JSON.stringify(snapshot || {}, null, 2))}</pre>
+            </details>
           </article>
         `;
       }).join('');
