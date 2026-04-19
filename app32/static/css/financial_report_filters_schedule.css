@@ -252,6 +252,12 @@
   font-size: 0.78rem;
 }
 
+.schedule-report-sidebar select[multiple] option:disabled {
+  color: var(--text-muted, #94a3b8);
+  background: rgba(148, 163, 184, 0.12);
+  font-style: italic;
+}
+
 .sr-checkbox-grid {
   display: grid;
   grid-template-columns: 1fr;

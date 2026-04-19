@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -24,6 +25,7 @@ from models.financial import (
     FinancialSchedule,
     FinancialSettlement,
 )
+from models.process import Process
 from models.project import Project
 from schemas.financial_reports import FinancialManagementReportFiltersInput
 from services.financial_dashboard_analytics import FinancialDashboardAnalytics
@@ -312,20 +314,78 @@ class FinancialReportService:
         if scope_error:
             return None, scope_error
 
-        def _list(model):
+        def _natural_sort_parts(value: str) -> Tuple[Any, ...]:
+            return tuple(int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", value or ""))
+
+        def _code_sort_key(item):
+            code = str(getattr(item, "code", "") or "")
+            name = str(getattr(item, "name", "") or "")
+            return (_natural_sort_parts(code), _natural_sort_parts(name), int(getattr(item, "id", 0) or 0))
+
+        def _base_records(model):
             query = model.query.filter(model.company_id == company_id)
             if hasattr(model, "deleted_at"):
                 query = query.filter(model.deleted_at.is_(None))
-            records = query.order_by(model.name.asc()).all()
-            return [{"id": item.id, "label": f"{getattr(item, 'code', '') + ' - ' if getattr(item, 'code', None) else ''}{item.name}"} for item in records]
+            if hasattr(model, "is_active"):
+                query = query.filter(model.is_active.is_(True))
+            return sorted(query.all(), key=_code_sort_key)
+
+        def _label(item, *, level: int = 0) -> str:
+            code = str(getattr(item, "code", "") or "")
+            name = str(getattr(item, "name", "") or "")
+            prefix = "— " * max(level, 0)
+            return f"{prefix}{code} - {name}" if code else f"{prefix}{name}"
+
+        def _flat_list(model):
+            return [
+                {
+                    "id": item.id,
+                    "label": _label(item),
+                    "code": str(getattr(item, "code", "") or ""),
+                    "selectable": True,
+                    "level": 0,
+                }
+                for item in _base_records(model)
+            ]
+
+        def _hierarchical_list(model):
+            records = _base_records(model)
+            by_id = {item.id: item for item in records}
+            parent_ids = {item.parent_id for item in records if getattr(item, "parent_id", None)}
+            level_cache: Dict[int, int] = {}
+
+            def _level(item) -> int:
+                if item.id in level_cache:
+                    return level_cache[item.id]
+                seen = {item.id}
+                current = item
+                level = 0
+                while getattr(current, "parent_id", None) and current.parent_id in by_id and current.parent_id not in seen:
+                    level += 1
+                    seen.add(current.parent_id)
+                    current = by_id[current.parent_id]
+                level_cache[item.id] = level
+                return level
+
+            return [
+                {
+                    "id": item.id,
+                    "label": _label(item, level=_level(item)),
+                    "code": str(getattr(item, "code", "") or ""),
+                    "selectable": bool(getattr(item, "accepts_posting", True)) and item.id not in parent_ids,
+                    "level": _level(item),
+                }
+                for item in records
+            ]
 
         return {
-            "bank_accounts": _list(FinancialBankAccount),
-            "chart_accounts": _list(FinancialChartAccount),
-            "cost_centers": _list(FinancialCostCenter),
-            "projects": _list(Project),
+            "bank_accounts": _flat_list(FinancialBankAccount),
+            "chart_accounts": _hierarchical_list(FinancialChartAccount),
+            "cost_centers": _hierarchical_list(FinancialCostCenter),
+            "projects": _flat_list(Project),
+            "processes": _flat_list(Process),
             "working_capital_accounts": FinancialReportService._get_working_capital_accounts(company_id),
-            "counterparties": _list(FinancialCounterparty),
+            "counterparties": _flat_list(FinancialCounterparty),
             "movement_natures": [{"id": "credit", "label": "Entrada"}, {"id": "debit", "label": "Saída"}],
             "schedule_statuses": [
                 {"id": "draft", "label": "Rascunho"},
@@ -433,6 +493,43 @@ class FinancialReportService:
         return bool(selected.intersection(FinancialReportService._schedule_project_ids(schedule)))
 
     @staticmethod
+    def _schedule_process_ids(schedule: FinancialSchedule) -> List[int]:
+        metadata = dict(getattr(schedule, "metadata_json", None) or {})
+        candidates = [
+            metadata.get("process_id"),
+            metadata.get("app_process_id"),
+            metadata.get("grv_process_id"),
+        ]
+        values = metadata.get("process_ids") or []
+        if isinstance(values, (list, tuple, set)):
+            candidates.extend(values)
+
+        process_instance = getattr(schedule, "process_instance", None)
+        if process_instance is not None:
+            candidates.append(getattr(process_instance, "process_id", None))
+
+        activity = getattr(schedule, "activity", None)
+        if activity is not None:
+            candidates.append(getattr(activity, "process_id", None))
+
+        process_ids: List[int] = []
+        for value in candidates:
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0 and parsed not in process_ids:
+                process_ids.append(parsed)
+        return process_ids
+
+    @staticmethod
+    def _schedule_matches_processes(schedule: FinancialSchedule, process_ids: Sequence[int]) -> bool:
+        selected = {int(item) for item in process_ids if item}
+        if not selected:
+            return True
+        return bool(selected.intersection(FinancialReportService._schedule_process_ids(schedule)))
+
+    @staticmethod
     def _entry_query(company_id: int, filters: FinancialManagementReportFiltersInput):
         query = FinancialEntry.query.filter(
             FinancialEntry.company_id == company_id,
@@ -449,8 +546,9 @@ class FinancialReportService:
         cost_center_ids = FinancialReportService._selected_ids(filters.cost_center_id, filters.cost_center_ids)
         if cost_center_ids:
             query = query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
-        if filters.counterparty_id:
-            query = query.filter(FinancialEntry.counterparty_id == filters.counterparty_id)
+        counterparty_ids = FinancialReportService._selected_ids(filters.counterparty_id, filters.counterparty_ids)
+        if counterparty_ids:
+            query = query.filter(FinancialEntry.counterparty_id.in_(counterparty_ids))
         if filters.movement_nature:
             query = query.filter(FinancialEntry.movement_nature == filters.movement_nature)
         return query
@@ -509,8 +607,9 @@ class FinancialReportService:
             )
         if filters.bank_account_id:
             query = query.filter(FinancialSchedule.bank_account_id == filters.bank_account_id)
-        if filters.counterparty_id:
-            query = query.filter(FinancialSchedule.counterparty_id == filters.counterparty_id)
+        counterparty_ids = FinancialReportService._selected_ids(filters.counterparty_id, filters.counterparty_ids)
+        if counterparty_ids:
+            query = query.filter(FinancialSchedule.counterparty_id.in_(counterparty_ids))
         chart_account_ids = FinancialReportService._selected_ids(filters.chart_account_id, filters.chart_account_ids)
         if chart_account_ids:
             query = query.filter(FinancialSchedule.chart_account_id.in_(chart_account_ids))
@@ -526,6 +625,8 @@ class FinancialReportService:
             query = query.filter(FinancialSchedule.entry_type.in_(allowed_entry_types))
 
         schedules = query.order_by(FinancialSchedule.next_due_date.asc(), FinancialSchedule.id.asc()).all()
+        if filters.process_ids:
+            schedules = [item for item in schedules if FinancialReportService._schedule_matches_processes(item, filters.process_ids)]
         if filters.project_ids:
             schedules = [item for item in schedules if FinancialReportService._schedule_matches_projects(item, filters.project_ids)]
 
@@ -1533,6 +1634,7 @@ class FinancialReportService:
         center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
         counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
         project_names = FinancialReportService._name_map(Project, company_id)
+        process_names = FinancialReportService._name_map(Process, company_id)
         order_labels = {
             "code": "Código",
             "description": "Descrição",
@@ -1560,7 +1662,6 @@ class FinancialReportService:
             (filters.bank_account_id, "Conta bancária", bank_names),
             (filters.chart_account_id, "Conta contábil", chart_names),
             (filters.cost_center_id, "Centro de resultados", center_names),
-            (filters.counterparty_id, "Favorecido", counterparty_names),
         ]:
             if current:
                 values.append({"label": label, "value": names.get(current, str(current))})
@@ -1570,6 +1671,11 @@ class FinancialReportService:
             values.append({"label": "Planos de conta", "value": ", ".join(chart_names.get(item, str(item)) for item in filters.chart_account_ids)})
         if filters.cost_center_ids:
             values.append({"label": "Centros de resultado", "value": ", ".join(center_names.get(item, str(item)) for item in filters.cost_center_ids)})
+        counterparty_ids = FinancialReportService._selected_ids(filters.counterparty_id, filters.counterparty_ids)
+        if counterparty_ids:
+            values.append({"label": "Favorecidos", "value": ", ".join(counterparty_names.get(item, str(item)) for item in counterparty_ids)})
+        if filters.process_ids:
+            values.append({"label": "Processos", "value": ", ".join(process_names.get(item, str(item)) for item in filters.process_ids)})
         if filters.project_ids:
             values.append({"label": "Projetos", "value": ", ".join(project_names.get(item, str(item)) for item in filters.project_ids)})
         if filters.working_capital_accounts:
@@ -1645,7 +1751,6 @@ class FinancialReportService:
         values.append({"label": "Ordenar por", "value": order_labels.get(filters.order_by, filters.order_by)})
         values.append({"label": "Direção", "value": filters.order_direction})
         values.append({"label": "Orientação", "value": "Paisagem" if filters.orientation == "landscape" else "Retrato"})
-        values.append({"label": "Saída inicial", "value": "PDF" if filters.output_mode == "pdf" else "Na tela"})
         return values
 
     @staticmethod

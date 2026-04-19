@@ -29,9 +29,11 @@ class FinancialManagementReportFiltersInput(BaseModel):
     cost_center_id: Optional[int] = Field(default=None, ge=1)
     cost_center_ids: list[int] = Field(default_factory=list)
     project_ids: list[int] = Field(default_factory=list)
+    process_ids: list[int] = Field(default_factory=list)
     working_capital_accounts: list[int] = Field(default_factory=list)
     manual_values: dict[int, Decimal] = Field(default_factory=dict)
     counterparty_id: Optional[int] = Field(default=None, ge=1)
+    counterparty_ids: list[int] = Field(default_factory=list)
 
     movement_nature: Optional[str] = None
     schedule_status: Optional[str] = None

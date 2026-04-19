@@ -34,6 +34,16 @@ _BOOLEAN_FILTER_KEYS = {
     "show_settlement_date",
 }
 
+_LIST_FILTER_KEYS = {
+    "bank_account_ids",
+    "chart_account_ids",
+    "cost_center_ids",
+    "project_ids",
+    "process_ids",
+    "working_capital_accounts",
+    "counterparty_ids",
+}
+
 
 def _request_filters_payload():
     payload = {}
@@ -48,6 +58,9 @@ def _request_filters_payload():
             continue
         if key in _BOOLEAN_FILTER_KEYS:
             payload[key] = values[-1]
+            continue
+        if key in _LIST_FILTER_KEYS:
+            payload[key] = values
             continue
         payload[key] = values if len(values) > 1 else values[0]
     if manual_values:

@@ -2,8 +2,13 @@
 {% set period_end = (filters.get('period_end', [default_period_end]) | first) %}
 {% set selected_bank_account_id = (filters.get('bank_account_id', ['']) | first) %}
 {% set selected_counterparty_id = (filters.get('counterparty_id', ['']) | first) %}
+{% set selected_counterparties = filters.get('counterparty_ids', []) %}
+{% if selected_counterparty_id %}
+{% set selected_counterparties = selected_counterparties + [selected_counterparty_id] %}
+{% endif %}
 {% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
 {% set selected_cost_centers = filters.get('cost_center_ids', []) %}
+{% set selected_processes = filters.get('process_ids', []) %}
 {% set selected_projects = filters.get('project_ids', []) %}
 {% set competence_start = (filters.get('competence_start', [default_period_start]) | first) %}
 {% set competence_end = (filters.get('competence_end', [default_period_end]) | first) %}
@@ -11,8 +16,6 @@
 {% set due_end = (filters.get('due_end', ['']) | first) %}
 {% set settlement_start = (filters.get('settlement_start', ['']) | first) %}
 {% set settlement_end = (filters.get('settlement_end', ['']) | first) %}
-{% set selected_orientation = (filters.get('orientation', ['landscape']) | first) %}
-{% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
 {% set selected_order_by = (filters.get('order_by', ['title_number']) | first) %}
 {% set selected_order_direction = (filters.get('order_direction', ['asc']) | first) %}
 {% set include_settled = 'include_settled' not in filters or (filters.get('include_settled', ['true']) | first) == 'true' %}
@@ -78,34 +81,50 @@
 
         <section class="sr-sidebar-section">
             <div class="filter-group">
-                <label class="filter-label" for="schedule-report-counterparty">Favorecido</label>
-                <select id="schedule-report-counterparty" name="counterparty_id" data-filter-input data-default-value="">
-                    <option value="">Todos</option>
+                <label class="filter-label" for="schedule-report-counterparties">Favorecido</label>
+                <select id="schedule-report-counterparties" name="counterparty_ids" multiple size="6" data-filter-input data-default-value="">
+                    <option value="" disabled {% if not selected_counterparties %}selected{% endif %}>Todos os favorecidos</option>
                     {% for item in options.counterparties %}
-                    <option value="{{ item.id }}" {% if selected_counterparty_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_counterparties %}selected{% endif %}>{{ item.label }}</option>
                     {% endfor %}
                 </select>
+                <small class="sr-field-help">Sem seleção = todos. Selecione um ou vários com Ctrl/Cmd.</small>
             </div>
 
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-chart-accounts">Planos de Conta</label>
-                <select id="schedule-report-chart-accounts" name="chart_account_ids" multiple size="6" data-filter-input data-default-value="">
+                <select id="schedule-report-chart-accounts" name="chart_account_ids" multiple size="7" data-filter-input data-default-value="">
                     {% for item in options.chart_accounts %}
                     {% set option_id = item.id|string %}
-                    <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %}>{{ item.label }}</option>
+                    {% set is_selectable = item.get('selectable', true) %}
+                    <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %} {% if not is_selectable %}disabled aria-disabled="true"{% endif %}>{{ item.label }}{% if not is_selectable %} · sintética{% endif %}</option>
                     {% endfor %}
                 </select>
-                <small class="sr-field-help">Segure Ctrl para múltipla seleção.</small>
+                <small class="sr-field-help">Ordenado por código. Todos os níveis aparecem; apenas contas analíticas são selecionáveis.</small>
             </div>
 
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-cost-centers">Centros de Resultado</label>
-                <select id="schedule-report-cost-centers" name="cost_center_ids" multiple size="5" data-filter-input data-default-value="">
+                <select id="schedule-report-cost-centers" name="cost_center_ids" multiple size="6" data-filter-input data-default-value="">
                     {% for item in options.cost_centers %}
                     {% set option_id = item.id|string %}
-                    <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %}>{{ item.label }}</option>
+                    {% set is_selectable = item.get('selectable', true) %}
+                    <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %} {% if not is_selectable %}disabled aria-disabled="true"{% endif %}>{{ item.label }}{% if not is_selectable %} · sintética{% endif %}</option>
                     {% endfor %}
                 </select>
+                <small class="sr-field-help">Ordenado por código. Todos os níveis aparecem; apenas contas analíticas são selecionáveis.</small>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="schedule-report-processes">Processos</label>
+                <select id="schedule-report-processes" name="process_ids" multiple size="5" data-filter-input data-default-value="">
+                    {% for item in options.processes %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_processes %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+                <small class="sr-field-help">Ordenado por código. Sem seleção = todos.</small>
             </div>
 
             <div class="filter-group">
@@ -116,6 +135,7 @@
                     <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>
                     {% endfor %}
                 </select>
+                <small class="sr-field-help">Ordenado por código. Sem seleção = todos.</small>
             </div>
         </section>
 
@@ -219,20 +239,6 @@
                 <label class="sr-choice-card">
                     <input type="radio" name="order_direction" value="desc" {% if selected_order_direction == 'desc' %}checked{% endif %} data-filter-input data-default-value="asc">
                     <span>Descendente</span>
-                </label>
-            </div>
-        </section>
-
-        <section class="sr-sidebar-section">
-            <p class="filter-label">Saída</p>
-            <div class="sr-radio-grid">
-                <label class="sr-choice-card">
-                    <input type="radio" name="output_mode" value="screen" {% if selected_output_mode == 'screen' %}checked{% endif %} data-filter-input data-default-value="screen">
-                    <span>Na tela</span>
-                </label>
-                <label class="sr-choice-card">
-                    <input type="radio" name="output_mode" value="pdf" {% if selected_output_mode == 'pdf' %}checked{% endif %} data-filter-input data-default-value="screen">
-                    <span>PDF</span>
                 </label>
             </div>
         </section>
