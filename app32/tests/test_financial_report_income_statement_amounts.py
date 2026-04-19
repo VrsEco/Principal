@@ -58,6 +58,7 @@ class _FakeModel:
     entry_type = _Column()
     competence_date = _Column()
     external_reference = _Column()
+    financial_schedule_id = _Column()
     financial_entry_id = _Column()
     settlement_status = _Column()
     id = _Column()
@@ -116,6 +117,7 @@ def test_income_statement_uses_financial_title_dates_and_settlement_date(monkeyp
     entry = SimpleNamespace(
         id=120,
         external_reference="financial_schedule:34",
+        financial_schedule_id=34,
         original_amount=Decimal("100"),
         status="posted",
         movement_nature="credit",

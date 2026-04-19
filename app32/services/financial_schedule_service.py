@@ -1068,6 +1068,7 @@ class FinancialScheduleService:
             "document_number": document_number,
             "external_reference": f"financial_schedule:{schedule.id}",
             "origin_reference": schedule.schedule_code,
+            "financial_schedule_id": schedule.id,
             "issue_date": due_date,
             "competence_date": getattr(schedule, "competence_date", None) or due_date,
             "due_date": due_date,

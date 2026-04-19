@@ -995,6 +995,7 @@ class FinancialEntryCreateInput(BaseModel):
     document_number: Optional[str] = Field(None, max_length=80)
     external_reference: Optional[str] = Field(None, max_length=120)
     origin_reference: Optional[str] = Field(None, max_length=120)
+    financial_schedule_id: Optional[int] = None
     issue_date: Optional[date] = None
     competence_date: date
     due_date: Optional[date] = None
@@ -1042,6 +1043,7 @@ class FinancialEntryUpdateInput(BaseModel):
     document_number: Optional[str] = Field(None, max_length=80)
     external_reference: Optional[str] = Field(None, max_length=120)
     origin_reference: Optional[str] = Field(None, max_length=120)
+    financial_schedule_id: Optional[int] = None
     issue_date: Optional[date] = None
     competence_date: Optional[date] = None
     due_date: Optional[date] = None

@@ -1012,6 +1012,7 @@ class FinancialEntry(db.Model):
     document_number = db.Column(db.String(80))
     external_reference = db.Column(db.String(120))
     origin_reference = db.Column(db.String(120))
+    financial_schedule_id = db.Column(db.Integer, db.ForeignKey("financial_schedules.id", ondelete="SET NULL"), index=True)
 
     issue_date = db.Column(db.Date)
     competence_date = db.Column(db.Date, nullable=False, index=True)
@@ -1062,6 +1063,7 @@ class FinancialEntry(db.Model):
     process_instance = db.relationship("ProcessInstance", foreign_keys=[process_instance_id])
     routine = db.relationship("Routine", foreign_keys=[routine_id])
     activity = db.relationship("ProcessRoutine", foreign_keys=[activity_id])
+    financial_schedule = db.relationship("FinancialSchedule", foreign_keys=[financial_schedule_id], backref=db.backref("generated_entries", lazy="dynamic"))
 
     def to_dict(self):
         return {
@@ -1077,6 +1079,7 @@ class FinancialEntry(db.Model):
             "document_number": self.document_number,
             "external_reference": self.external_reference,
             "origin_reference": self.origin_reference,
+            "financial_schedule_id": self.financial_schedule_id,
             "issue_date": self.issue_date.isoformat() if self.issue_date else None,
             "competence_date": self.competence_date.isoformat() if self.competence_date else None,
             "due_date": self.due_date.isoformat() if self.due_date else None,

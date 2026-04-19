@@ -11,6 +11,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from sqlalchemy import or_
 
 from models import db
 from models.financial import (
@@ -753,18 +754,22 @@ class FinancialReportService:
             schedules = [item for item in schedules if FinancialReportService._schedule_matches_projects(item, filters.project_ids)]
 
         schedule_map = {item.id: item for item in schedules}
+        schedule_ids = list(schedule_map.keys())
         entry_refs = {f"financial_schedule:{item.id}": item.id for item in schedules}
         entries = []
-        if entry_refs:
+        if schedule_ids:
             entries = FinancialEntry.query.filter(
                 FinancialEntry.company_id == company_id,
-                FinancialEntry.external_reference.in_(list(entry_refs.keys())),
                 FinancialEntry.deleted_at.is_(None),
+                or_(
+                    FinancialEntry.financial_schedule_id.in_(schedule_ids),
+                    FinancialEntry.external_reference.in_(list(entry_refs.keys())),
+                ),
             ).all()
 
         entries_by_schedule: Dict[int, List[FinancialEntry]] = {item.id: [] for item in schedules}
         for entry in entries:
-            schedule_id = entry_refs.get(entry.external_reference)
+            schedule_id = getattr(entry, "financial_schedule_id", None) or entry_refs.get(entry.external_reference)
             if schedule_id and schedule_id in entries_by_schedule:
                 entries_by_schedule[schedule_id].append(entry)
 
@@ -1202,19 +1207,23 @@ class FinancialReportService:
             if filters.project_ids:
                 schedules = [item for item in schedules if FinancialReportService._schedule_matches_projects(item, filters.project_ids)]
 
+            schedule_ids = [item.id for item in schedules]
             schedule_refs = {f"financial_schedule:{item.id}": item.id for item in schedules}
             linked_entries: List[FinancialEntry] = []
-            if schedule_refs:
+            if schedule_ids:
                 linked_entries = FinancialEntry.query.filter(
                     FinancialEntry.company_id == company_id,
                     FinancialEntry.deleted_at.is_(None),
-                    FinancialEntry.external_reference.in_(list(schedule_refs.keys())),
+                    or_(
+                        FinancialEntry.financial_schedule_id.in_(schedule_ids),
+                        FinancialEntry.external_reference.in_(list(schedule_refs.keys())),
+                    ),
                 ).all()
 
             entries_by_schedule: Dict[int, List[FinancialEntry]] = {item.id: [] for item in schedules}
             linked_entry_ids: List[int] = []
             for entry in linked_entries:
-                schedule_id = schedule_refs.get(entry.external_reference)
+                schedule_id = getattr(entry, "financial_schedule_id", None) or schedule_refs.get(entry.external_reference)
                 if schedule_id in entries_by_schedule:
                     entries_by_schedule[schedule_id].append(entry)
                     linked_entry_ids.append(entry.id)
@@ -1287,7 +1296,7 @@ class FinancialReportService:
                 manual_query = manual_query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
             if allowed_entry_types:
                 manual_query = manual_query.filter(FinancialEntry.entry_type.in_(allowed_entry_types))
-            manual_entries = [entry for entry in manual_query.order_by(FinancialEntry.chart_account_id.asc(), FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all() if not str(entry.external_reference or "").startswith("financial_schedule:")]
+            manual_entries = [entry for entry in manual_query.order_by(FinancialEntry.chart_account_id.asc(), FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all() if not getattr(entry, "financial_schedule_id", None) and not str(entry.external_reference or "").startswith("financial_schedule:")]
             if filters.project_ids:
                 manual_entries = [entry for entry in manual_entries if FinancialReportService._entry_matches_projects(entry, filters.project_ids)]
 

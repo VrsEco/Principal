@@ -628,6 +628,9 @@ def test_build_entry_payload_propagates_budget_links():
     assert payload["budget_contract_id"] == 20
     assert payload["budget_document_id"] == 30
     assert payload["competence_date"] == date(2026, 3, 5)
+    assert payload["due_date"] == date(2026, 3, 22)
+    assert payload["financial_schedule_id"] == 77
+    assert payload["external_reference"] == "financial_schedule:77"
     assert payload["metadata_json"]["budget_line_id"] == 10
     assert payload["metadata_json"]["budget_contract_id"] == 20
     assert payload["metadata_json"]["budget_document_id"] == 30
