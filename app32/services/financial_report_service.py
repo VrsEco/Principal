@@ -66,8 +66,8 @@ class FinancialReportService:
         "schedule_report": {
             "code": "schedule_report",
             "slug": "agendamento",
-            "label": "Relatório de Agendamentos",
-            "description": "Mapa operacional dos agendamentos financeiros com títulos, saldos, liquidação e vínculo com borderô.",
+            "label": "Relatório de Títulos Financeiros",
+            "description": "Mapa operacional dos títulos financeiros com saldos, baixas e vínculo com borderô.",
             "filters": ("schedule_report_config",),
         },
         "bank_statement": {
@@ -1130,22 +1130,8 @@ class FinancialReportService:
         settlement_start = filters.settlement_start
         settlement_end = filters.settlement_end
 
-        query = FinancialEntry.query.filter(
-            FinancialEntry.company_id == company_id,
-            FinancialEntry.deleted_at.is_(None),
-        )
-        if not consolidated_by_period:
-            query = query.filter(
-                FinancialEntry.competence_date >= competence_start,
-                FinancialEntry.competence_date <= competence_end,
-            )
         chart_account_ids = FinancialReportService._selected_ids(filters.chart_account_id, filters.chart_account_ids)
-        if chart_account_ids:
-            query = query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
         cost_center_ids = FinancialReportService._selected_ids(filters.cost_center_id, filters.cost_center_ids)
-        if cost_center_ids:
-            query = query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
-
         allowed_entry_types = []
         if filters.include_receivable:
             allowed_entry_types.append("receivable")
@@ -1153,69 +1139,14 @@ class FinancialReportService:
             allowed_entry_types.append("payable")
         if filters.include_budget_vs_actual:
             allowed_entry_types.append("forecast")
-        if allowed_entry_types:
-            query = query.filter(FinancialEntry.entry_type.in_(allowed_entry_types))
-
-        entries = query.order_by(FinancialEntry.chart_account_id.asc(), FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all()
-        if filters.project_ids:
-            entries = [entry for entry in entries if FinancialReportService._entry_matches_projects(entry, filters.project_ids)]
-
-        entry_ids = [entry.id for entry in entries]
-        settlement_totals_by_entry: Dict[int, Decimal] = {}
-        settlement_period_totals_by_entry: Dict[int, Decimal] = {}
-        if entry_ids:
-            settlement_query = FinancialSettlement.query.filter(
-                FinancialSettlement.company_id == company_id,
-                FinancialSettlement.financial_entry_id.in_(entry_ids),
-                FinancialSettlement.deleted_at.is_(None),
-                FinancialSettlement.settlement_status != "cancelled",
-            )
-            settlements = settlement_query.all()
-            for settlement in settlements:
-                settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
-                settlement_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
-                if consolidated_by_period:
-                    if period_start and period_end and settlement.settlement_date and period_start <= settlement.settlement_date <= period_end:
-                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
-                        settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
-                else:
-                    if settlement_start and settlement_end:
-                        if settlement.settlement_date and settlement_start <= settlement.settlement_date <= settlement_end:
-                            settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
-                            settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
-                    else:
-                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
-                        settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
 
         grouped: Dict[int, Dict[str, Any]] = {}
-        for entry in entries:
-            total_settlement_amount = settlement_totals_by_entry.get(entry.id, Decimal("0"))
-            period_settlement_amount = settlement_period_totals_by_entry.get(entry.id, Decimal("0"))
-            original_amount = Decimal(entry.original_amount or 0)
-            is_settled = entry.status == "settled" or total_settlement_amount >= original_amount
-            is_open = not is_settled
-            if not ((filters.include_settled and is_settled) or (filters.include_open and is_open)):
-                continue
 
-            if consolidated_by_period:
-                in_competence = bool(entry.competence_date and period_start <= entry.competence_date <= period_end)
-                in_due = bool(entry.due_date and period_start <= entry.due_date <= period_end)
-                in_liquidation = period_settlement_amount != Decimal("0")
-                if not any([in_competence, in_due, in_liquidation]):
-                    continue
-            else:
-                in_competence = True
-                in_due = True
-                if due_start and ((not entry.due_date) or entry.due_date < due_start):
-                    in_due = False
-                if due_end and ((not entry.due_date) or entry.due_date > due_end):
-                    in_due = False
-                in_liquidation = period_settlement_amount != Decimal("0")
-
-            signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
-            account = chart_map.get(entry.chart_account_id, {"id": entry.chart_account_id or 0, "parent_id": None, "code": f"CTA-{entry.chart_account_id or 0}", "name": "Sem conta contábil", "accepts_posting": True})
-            slot = grouped.setdefault(
-                entry.chart_account_id or 0,
+        def _account_slot(chart_account_id: Optional[int]) -> Dict[str, Any]:
+            account_id = chart_account_id or 0
+            account = chart_map.get(account_id, {"id": account_id, "parent_id": None, "code": f"CTA-{account_id}", "name": "Sem conta contábil", "accepts_posting": True})
+            return grouped.setdefault(
+                account_id,
                 {
                     "id": account["id"],
                     "parent_id": account["parent_id"],
@@ -1232,30 +1163,257 @@ class FinancialReportService:
                     "accepts_posting": account["accepts_posting"],
                 },
             )
-            if in_competence:
-                slot["competencia"] += signed_original
-            if in_due:
-                slot["vencimento"] += signed_original
-            if period_settlement_amount:
-                signed_settlement = period_settlement_amount if entry.movement_nature == "credit" else -period_settlement_amount
-                slot["liquidacao"] += signed_settlement
-            if is_open:
-                slot["aberto"] += signed_original
+
+        def _passes_financial_status(total_amount: Decimal, settled_amount: Decimal, explicit_status: Optional[str] = None) -> Tuple[bool, bool]:
+            normalized_status = str(explicit_status or "").strip().lower()
+            is_settled = normalized_status in {"settled", "completed"} or (total_amount > Decimal("0") and settled_amount >= total_amount)
+            is_partial = not is_settled and settled_amount > Decimal("0")
+            is_open = not is_settled
             if is_settled:
-                slot["liquidado"] += signed_original
-            if entry.cost_center_id:
-                slot["centros"].add(center_names.get(entry.cost_center_id, str(entry.cost_center_id)))
-            for project_id in FinancialReportService._entry_project_ids(entry):
-                if not filters.project_ids or project_id in filters.project_ids:
-                    slot["projetos"].add(project_names.get(project_id, str(project_id)))
-            if entry.entry_type == "forecast":
+                return bool(filters.include_settled), is_open
+            if is_partial:
+                return bool(filters.include_partial or filters.include_open), is_open
+            return bool(filters.include_open), is_open
+
+        def _add_type(slot: Dict[str, Any], entry_type: Optional[str]) -> None:
+            if entry_type == "forecast":
                 slot["tipos"].add("Orçado")
-            elif entry.entry_type == "receivable":
+            elif entry_type == "receivable":
                 slot["tipos"].add("Recebimento")
-            elif entry.entry_type == "payable":
+            elif entry_type == "payable":
                 slot["tipos"].add("Pagamento")
-            else:
-                slot["tipos"].add(entry.entry_type)
+            elif entry_type:
+                slot["tipos"].add(entry_type)
+
+        if consolidated_by_period:
+            schedule_query = FinancialSchedule.query.filter(
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.deleted_at.is_(None),
+                FinancialSchedule.status.notin_(["draft", "cancelled"]),
+            )
+            if chart_account_ids:
+                schedule_query = schedule_query.filter(FinancialSchedule.chart_account_id.in_(chart_account_ids))
+            if cost_center_ids:
+                schedule_query = schedule_query.filter(FinancialSchedule.cost_center_id.in_(cost_center_ids))
+            if allowed_entry_types:
+                schedule_query = schedule_query.filter(FinancialSchedule.entry_type.in_(allowed_entry_types))
+
+            schedules = schedule_query.order_by(FinancialSchedule.chart_account_id.asc(), FinancialSchedule.competence_date.asc(), FinancialSchedule.id.asc()).all()
+            if filters.project_ids:
+                schedules = [item for item in schedules if FinancialReportService._schedule_matches_projects(item, filters.project_ids)]
+
+            schedule_refs = {f"financial_schedule:{item.id}": item.id for item in schedules}
+            linked_entries: List[FinancialEntry] = []
+            if schedule_refs:
+                linked_entries = FinancialEntry.query.filter(
+                    FinancialEntry.company_id == company_id,
+                    FinancialEntry.deleted_at.is_(None),
+                    FinancialEntry.external_reference.in_(list(schedule_refs.keys())),
+                ).all()
+
+            entries_by_schedule: Dict[int, List[FinancialEntry]] = {item.id: [] for item in schedules}
+            linked_entry_ids: List[int] = []
+            for entry in linked_entries:
+                schedule_id = schedule_refs.get(entry.external_reference)
+                if schedule_id in entries_by_schedule:
+                    entries_by_schedule[schedule_id].append(entry)
+                    linked_entry_ids.append(entry.id)
+
+            settlement_totals_by_entry: Dict[int, Decimal] = {}
+            settlement_period_totals_by_entry: Dict[int, Decimal] = {}
+            if linked_entry_ids:
+                for settlement in FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id.in_(linked_entry_ids),
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                ).all():
+                    settlement_principal = Decimal(settlement.principal_amount or 0)
+                    settlement_amount = Decimal(settlement.net_amount or 0)
+                    settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                    settlement_totals_by_entry[settlement.financial_entry_id] += settlement_principal
+                    if period_start and period_end and settlement.settlement_date and period_start <= settlement.settlement_date <= period_end:
+                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                        settlement_period_totals_by_entry[settlement.financial_entry_id] += settlement_amount
+
+            for schedule in schedules:
+                if str(schedule.status or "").strip().lower() in {"draft", "cancelled"}:
+                    continue
+                schedule_entries = entries_by_schedule.get(schedule.id, [])
+                title_amount = Decimal(str(schedule.template_amount or 0))
+                if title_amount <= Decimal("0") and schedule_entries:
+                    title_amount = sum((Decimal(entry.original_amount or 0) for entry in schedule_entries), Decimal("0"))
+                settled_total = sum((settlement_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
+                period_settlement = sum((settlement_period_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
+                passes_status, is_open = _passes_financial_status(title_amount, settled_total, schedule.status)
+                if not passes_status:
+                    continue
+
+                competence_date = schedule.competence_date or schedule.start_date
+                due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
+                in_competence = bool(competence_date and period_start <= competence_date <= period_end)
+                in_due = bool(due_date and period_start <= due_date <= period_end)
+                in_liquidation = period_settlement != Decimal("0")
+                if not any([in_competence, in_due, in_liquidation]):
+                    continue
+
+                signed_title = Decimal(str(FinancialService.get_signed_amount(title_amount, schedule.movement_nature)))
+                signed_settlement = Decimal(str(FinancialService.get_signed_amount(period_settlement, schedule.movement_nature)))
+                slot = _account_slot(schedule.chart_account_id)
+                if in_competence:
+                    slot["competencia"] += signed_title
+                if in_due:
+                    slot["vencimento"] += signed_title
+                if in_liquidation:
+                    slot["liquidacao"] += signed_settlement
+                if is_open:
+                    slot["aberto"] += signed_title
+                else:
+                    slot["liquidado"] += signed_title
+                if schedule.cost_center_id:
+                    slot["centros"].add(center_names.get(schedule.cost_center_id, str(schedule.cost_center_id)))
+                for project_id in FinancialReportService._schedule_project_ids(schedule):
+                    if not filters.project_ids or project_id in filters.project_ids:
+                        slot["projetos"].add(project_names.get(project_id, str(project_id)))
+                _add_type(slot, schedule.entry_type)
+
+            manual_query = FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            )
+            if chart_account_ids:
+                manual_query = manual_query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
+            if cost_center_ids:
+                manual_query = manual_query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
+            if allowed_entry_types:
+                manual_query = manual_query.filter(FinancialEntry.entry_type.in_(allowed_entry_types))
+            manual_entries = [entry for entry in manual_query.order_by(FinancialEntry.chart_account_id.asc(), FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all() if not str(entry.external_reference or "").startswith("financial_schedule:")]
+            if filters.project_ids:
+                manual_entries = [entry for entry in manual_entries if FinancialReportService._entry_matches_projects(entry, filters.project_ids)]
+
+            manual_entry_ids = [entry.id for entry in manual_entries]
+            manual_settlement_totals: Dict[int, Decimal] = {}
+            manual_settlement_period_totals: Dict[int, Decimal] = {}
+            if manual_entry_ids:
+                for settlement in FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id.in_(manual_entry_ids),
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                ).all():
+                    settlement_principal = Decimal(settlement.principal_amount or 0)
+                    settlement_amount = Decimal(settlement.net_amount or 0)
+                    manual_settlement_totals.setdefault(settlement.financial_entry_id, Decimal("0"))
+                    manual_settlement_totals[settlement.financial_entry_id] += settlement_principal
+                    if period_start and period_end and settlement.settlement_date and period_start <= settlement.settlement_date <= period_end:
+                        manual_settlement_period_totals.setdefault(settlement.financial_entry_id, Decimal("0"))
+                        manual_settlement_period_totals[settlement.financial_entry_id] += settlement_amount
+
+            for entry in manual_entries:
+                original_amount = Decimal(entry.original_amount or 0)
+                total_settlement_amount = manual_settlement_totals.get(entry.id, Decimal("0"))
+                period_settlement_amount = manual_settlement_period_totals.get(entry.id, Decimal("0"))
+                passes_status, is_open = _passes_financial_status(original_amount, total_settlement_amount, entry.status)
+                if not passes_status:
+                    continue
+                in_competence = bool(entry.competence_date and period_start <= entry.competence_date <= period_end)
+                in_due = bool(entry.due_date and period_start <= entry.due_date <= period_end)
+                in_liquidation = period_settlement_amount != Decimal("0")
+                if not any([in_competence, in_due, in_liquidation]):
+                    continue
+                signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
+                signed_settlement = period_settlement_amount if entry.movement_nature == "credit" else -period_settlement_amount
+                slot = _account_slot(entry.chart_account_id)
+                if in_competence:
+                    slot["competencia"] += signed_original
+                if in_due:
+                    slot["vencimento"] += signed_original
+                if in_liquidation:
+                    slot["liquidacao"] += signed_settlement
+                if is_open:
+                    slot["aberto"] += signed_original
+                else:
+                    slot["liquidado"] += signed_original
+                if entry.cost_center_id:
+                    slot["centros"].add(center_names.get(entry.cost_center_id, str(entry.cost_center_id)))
+                for project_id in FinancialReportService._entry_project_ids(entry):
+                    if not filters.project_ids or project_id in filters.project_ids:
+                        slot["projetos"].add(project_names.get(project_id, str(project_id)))
+                _add_type(slot, entry.entry_type)
+        else:
+            query = FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+                FinancialEntry.competence_date >= competence_start,
+                FinancialEntry.competence_date <= competence_end,
+            )
+            if chart_account_ids:
+                query = query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
+            if cost_center_ids:
+                query = query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
+            if allowed_entry_types:
+                query = query.filter(FinancialEntry.entry_type.in_(allowed_entry_types))
+
+            entries = query.order_by(FinancialEntry.chart_account_id.asc(), FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all()
+            if filters.project_ids:
+                entries = [entry for entry in entries if FinancialReportService._entry_matches_projects(entry, filters.project_ids)]
+
+            entry_ids = [entry.id for entry in entries]
+            settlement_totals_by_entry: Dict[int, Decimal] = {}
+            settlement_period_totals_by_entry: Dict[int, Decimal] = {}
+            if entry_ids:
+                settlement_query = FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id.in_(entry_ids),
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                )
+                settlements = settlement_query.all()
+                for settlement in settlements:
+                    settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                    settlement_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.principal_amount or 0)
+                    if settlement_start and settlement_end:
+                        if settlement.settlement_date and settlement_start <= settlement.settlement_date <= settlement_end:
+                            settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                            settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
+                    else:
+                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                        settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
+
+            for entry in entries:
+                total_settlement_amount = settlement_totals_by_entry.get(entry.id, Decimal("0"))
+                period_settlement_amount = settlement_period_totals_by_entry.get(entry.id, Decimal("0"))
+                original_amount = Decimal(entry.original_amount or 0)
+                passes_status, is_open = _passes_financial_status(original_amount, total_settlement_amount, entry.status)
+                if not passes_status:
+                    continue
+
+                in_competence = True
+                in_due = True
+                if due_start and ((not entry.due_date) or entry.due_date < due_start):
+                    in_due = False
+                if due_end and ((not entry.due_date) or entry.due_date > due_end):
+                    in_due = False
+
+                signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
+                slot = _account_slot(entry.chart_account_id)
+                if in_competence:
+                    slot["competencia"] += signed_original
+                if in_due:
+                    slot["vencimento"] += signed_original
+                if period_settlement_amount:
+                    signed_settlement = period_settlement_amount if entry.movement_nature == "credit" else -period_settlement_amount
+                    slot["liquidacao"] += signed_settlement
+                if is_open:
+                    slot["aberto"] += signed_original
+                else:
+                    slot["liquidado"] += signed_original
+                if entry.cost_center_id:
+                    slot["centros"].add(center_names.get(entry.cost_center_id, str(entry.cost_center_id)))
+                for project_id in FinancialReportService._entry_project_ids(entry):
+                    if not filters.project_ids or project_id in filters.project_ids:
+                        slot["projetos"].add(project_names.get(project_id, str(project_id)))
+                _add_type(slot, entry.entry_type)
 
         hierarchy_nodes: Dict[int, Dict[str, Any]] = {}
         for account in chart_accounts:
