@@ -80,6 +80,13 @@
 
             <footer class="schedule-footer">
                 <span>www.gestaoversus.com.br</span>
+                <span>
+                    {% if report and report.generated_at %}
+                    Emitido em: {{ report.generated_at | replace(' ', ' às ') }}
+                    {% else %}
+                    Emitido em: -
+                    {% endif %}
+                </span>
                 <span>Versus Gestão Corporativa - Todos os direitos reservados.</span>
             </footer>
         </article>

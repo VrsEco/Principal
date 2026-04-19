@@ -51,15 +51,20 @@
   border-radius: 14px;
   padding: 0.75rem;
   overflow: auto;
+  display: flex;
 }
 
 .schedule-report-sheet {
   background: #fff;
-  max-width: 820px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   border-radius: 10px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, .18);
   padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .schedule-section {
@@ -242,13 +247,25 @@
   margin-top: 0.5rem;
   padding-top: 0.35rem;
   border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   gap: 0.45rem;
   font-size: 0.62rem;
   color: #94a3b8;
   font-weight: 600;
+}
+
+.schedule-footer span:nth-child(1) {
+  text-align: left;
+}
+
+.schedule-footer span:nth-child(2) {
+  text-align: center;
+}
+
+.schedule-footer span:nth-child(3) {
+  text-align: right;
 }
 
 .schedule-report-sidebar {
@@ -390,10 +407,12 @@
   .schedule-filters-grid,
   .schedule-stats-grid,
   .sr-date-pair,
-  .sr-radio-grid,
+  .sr-radio-grid {
+    grid-template-columns: 1fr;
+  }
+
   .schedule-footer {
     grid-template-columns: 1fr;
-    flex-direction: column;
   }
 }
 
@@ -426,7 +445,7 @@
     max-width: none;
     border-radius: 0;
     box-shadow: none;
-    padding: 0;
+    padding: 0 0 12mm;
   }
 
   .schedule-stats-grid {
@@ -450,5 +469,15 @@
 
   .schedule-section {
     break-inside: avoid;
+  }
+
+  .schedule-footer {
+    position: fixed;
+    left: 8mm;
+    right: 8mm;
+    bottom: 0;
+    padding-top: 4px;
+    background: #fff;
+    border-top: 1px solid var(--border);
   }
 }
