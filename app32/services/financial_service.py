@@ -950,8 +950,10 @@ class FinancialService:
                 .scalar()
             ) or Decimal("0")
 
-            if data.principal_amount <= Decimal("0"):
-                return None, "Baixa inválida: o valor principal deve ser maior que zero."
+            if data.principal_amount < Decimal("0"):
+                return None, "Baixa inválida: o valor principal não pode ser negativo."
+            if (data.gross_amount or data.net_amount or Decimal("0")) <= Decimal("0"):
+                return None, "Baixa inválida: o valor da baixa deve ser maior que zero."
 
             projected_total = Decimal(total_liquidated) + data.principal_amount
             if projected_total > Decimal(entry.original_amount or 0):

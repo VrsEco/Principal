@@ -688,12 +688,18 @@
 
 .settlement-composition-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.75rem;
   padding: 0.85rem;
   border: 1px dashed var(--border);
   border-radius: 14px;
   background: var(--surface-secondary);
+}
+
+.settlement-total-field input {
+  font-weight: 900;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--surface) 82%, var(--form-tint-strong));
 }
 
 .calc-log-shell {

@@ -104,7 +104,39 @@ def test_simulate_settlement_rejects_components_above_available_balance(monkeypa
 
     assert error is None
     assert result["valid"] is False
-    assert "Valor de principal da baixa excede o principal em aberto do título." in result["errors"]
+    assert "Valor de principal da baixa não pode superar o principal em aberto do título." in result["errors"]
+
+
+def test_simulate_settlement_accepts_free_financial_correction(monkeypatch):
+    schedule = _Schedule()
+    monkeypatch.setattr(composition_module.FinancialSettlementCompositionService, "_fetch_schedule", lambda **kwargs: schedule)
+    monkeypatch.setattr(composition_module.FinancialSettlementCompositionService, "_list_open_adjustments", lambda **kwargs: [])
+    monkeypatch.setattr(
+        composition_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda **kwargs: {"principal_open": 1000.0, "adjustments_open": 0.0, "total_open": 1000.0},
+    )
+
+    result, error = FinancialSettlementCompositionService.simulate_settlement(
+        company_id=7,
+        schedule_id=34,
+        payload={
+            "settlement_date": "2026-04-20",
+            "composition": {"principal": 200, "financial_correction": 50, "discount": 10},
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert result["valid"] is True
+    assert result["composition"]["financial_correction"] == 50.0
+    assert result["composition"]["gross_amount"] == 240.0
+    assert result["settlement_payload"]["principal_amount"] == 200.0
+    assert result["settlement_payload"]["other_adjustments_amount"] == 50.0
+    assert result["settlement_payload"]["discount_amount"] == 10.0
+    components = result["settlement_payload"]["settlement_components"]
+    assert [item["component_type"] for item in components] == ["principal", "manual_adjustment", "discount"]
+    assert components[1]["metadata_json"]["free_value_adjustment"] is True
 
 
 def test_create_assisted_settlement_forwards_component_payload_and_updates_adjustments(monkeypatch):

@@ -18,6 +18,7 @@ class FinancialSettlementCompositionService:
     """
 
     POSITIVE_ADJUSTMENT_COMPONENTS = {"monetary_correction", "interest", "fine", "manual_adjustment"}
+    AGGREGATED_CORRECTION_KEYS = {"financial_correction", "correction_financial", "correction"}
     SETTLEMENT_COMPONENTS = {"principal", "monetary_correction", "interest", "fine", "discount", "manual_adjustment"}
 
     @staticmethod
@@ -79,12 +80,32 @@ class FinancialSettlementCompositionService:
     @staticmethod
     def _requested_amounts(payload: Dict[str, Any], *, balance: Dict[str, Any], open_by_type: Dict[str, Decimal]) -> Dict[str, Decimal]:
         composition = dict(payload.get("composition") or {})
-        explicit = any(key in composition for key in FinancialSettlementCompositionService.SETTLEMENT_COMPONENTS)
+        explicit = any(
+            key in composition
+            for key in FinancialSettlementCompositionService.SETTLEMENT_COMPONENTS
+            | FinancialSettlementCompositionService.AGGREGATED_CORRECTION_KEYS
+        )
         if explicit:
-            return {
+            amounts = {
                 component_type: FinancialSettlementCompositionService._money(composition.get(component_type))
                 for component_type in FinancialSettlementCompositionService.SETTLEMENT_COMPONENTS
             }
+            has_aggregated_correction = any(
+                key in composition for key in FinancialSettlementCompositionService.AGGREGATED_CORRECTION_KEYS
+            )
+            if has_aggregated_correction:
+                correction_total = FinancialSettlementCompositionService._money(
+                    composition.get("financial_correction")
+                    if "financial_correction" in composition
+                    else composition.get("correction_financial")
+                    if "correction_financial" in composition
+                    else composition.get("correction")
+                )
+                amounts["monetary_correction"] = Decimal("0.00")
+                amounts["interest"] = Decimal("0.00")
+                amounts["fine"] = Decimal("0.00")
+                amounts["manual_adjustment"] = correction_total
+            return amounts
 
         gross_amount = FinancialSettlementCompositionService._money(
             payload.get("gross_amount") or payload.get("net_amount") or payload.get("amount")
@@ -111,19 +132,16 @@ class FinancialSettlementCompositionService:
     def _validate_amounts(*, amounts: Dict[str, Decimal], balance: Dict[str, Any], open_by_type: Dict[str, Decimal]) -> List[str]:
         errors: List[str] = []
         principal_open = FinancialSettlementCompositionService._money(balance.get("principal_open"))
+        for component_type, amount in amounts.items():
+            if amount < 0:
+                errors.append(f"Valor de {component_type} não pode ser negativo.")
         if amounts.get("principal", Decimal("0.00")) > principal_open:
-            errors.append("Valor de principal da baixa excede o principal em aberto do título.")
-        for component_type in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS:
-            amount = amounts.get(component_type, Decimal("0.00"))
-            if amount <= 0:
-                continue
-            if amount > open_by_type.get(component_type, Decimal("0.00")):
-                errors.append(f"Valor de {component_type} excede o ajuste em aberto disponível.")
+            errors.append("Valor de principal da baixa não pode superar o principal em aberto do título.")
         positive_total = sum((value for key, value in amounts.items() if key != "discount"), Decimal("0.00"))
         if amounts.get("discount", Decimal("0.00")) > positive_total:
             errors.append("Desconto informado não pode superar a soma dos componentes positivos da baixa.")
         if FinancialSettlementCompositionService._gross_from_amounts(amounts) <= 0:
-            errors.append("Valor bruto da baixa deve ser maior que zero.")
+            errors.append("Valor da baixa deve ser maior que zero.")
         return errors
 
     @staticmethod
@@ -185,6 +203,18 @@ class FinancialSettlementCompositionService:
                     "metadata_json": {"source_context": "assisted_settlement_composition"},
                 })
                 remaining -= applied
+            if remaining > 0:
+                components.append({
+                    "component_type": component_type,
+                    "amount": remaining,
+                    "competence_date": settlement_date,
+                    "due_date": settlement_date,
+                    "source": "user",
+                    "metadata_json": {
+                        "source_context": "assisted_settlement_composition",
+                        "free_value_adjustment": True,
+                    },
+                })
         return components
 
     @staticmethod
@@ -249,6 +279,10 @@ class FinancialSettlementCompositionService:
             "available_adjustments": {key: float(value) for key, value in open_by_type.items()},
             "composition": {
                 **{key: float(FinancialSettlementCompositionService._money(value)) for key, value in amounts.items()},
+                "financial_correction": float(FinancialSettlementCompositionService._money(sum(
+                    (amounts.get(item, Decimal("0.00")) for item in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS),
+                    Decimal("0.00"),
+                ))),
                 "gross_amount": float(gross_amount),
             },
             "settlement_payload": {

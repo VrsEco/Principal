@@ -1051,28 +1051,64 @@
     return saved;
   }
 
+  function calculateSettlementGross(composition = getSettlementCompositionFromForm()) {
+    return round2(Number(composition.principal || 0) + Number(composition.financial_correction || 0) - Number(composition.discount || 0));
+  }
+
+  function refreshSettlementGrossField(composition = getSettlementCompositionFromForm()) {
+    setFieldValue('settlement-component-gross', toCurrencyInput(calculateSettlementGross(composition)));
+  }
+
   function getSettlementCompositionFromForm() {
-    const result = {};
+    const result = { principal: 0, financial_correction: 0, discount: 0 };
     document.querySelectorAll('[data-settlement-component]').forEach((input) => {
       result[input.dataset.settlementComponent] = round2(parseCurrency(input.value));
     });
+    result.gross_amount = calculateSettlementGross(result);
     return result;
+  }
+
+  function getDefaultSettlementComposition(schedule = selectedSchedule) {
+    const summary = schedule?.summary || {};
+    const principalOpen = summary.principal_open ?? summary.open_total ?? getTopAmount();
+    const backendAdjustments = Number(summary.adjustments_open || 0);
+    const financialCorrection = backendAdjustments > 0 ? backendAdjustments : calculateCorrectionAmount();
+    const backendDiscount = Number(summary.discounts_open || 0);
+    const discount = backendDiscount > 0 ? backendDiscount : calculateDiscountAmount();
+    const composition = {
+      principal: round2(principalOpen || 0),
+      financial_correction: round2(financialCorrection || 0),
+      discount: round2(discount || 0),
+    };
+    composition.gross_amount = calculateSettlementGross(composition);
+    return composition;
   }
 
   function setSettlementComponentInputs(composition = {}) {
     settlementCompositionHydrating = true;
+    const normalized = {
+      principal: composition.principal || 0,
+      financial_correction: composition.financial_correction
+        ?? composition.correction_financial
+        ?? composition.correction
+        ?? round2(
+          Number(composition.monetary_correction || 0)
+          + Number(composition.interest || 0)
+          + Number(composition.fine || 0)
+          + Number(composition.manual_adjustment || 0)
+        ),
+      discount: composition.discount || 0,
+    };
     const mapping = {
       principal: 'settlement-component-principal',
-      monetary_correction: 'settlement-component-monetary-correction',
-      interest: 'settlement-component-interest',
-      fine: 'settlement-component-fine',
-      manual_adjustment: 'settlement-component-manual-adjustment',
+      financial_correction: 'settlement-component-financial-correction',
       discount: 'settlement-component-discount',
     };
     Object.entries(mapping).forEach(([key, elementId]) => {
       const input = $(elementId);
-      if (input) input.value = toCurrencyInput(composition[key] || 0);
+      if (input) input.value = toCurrencyInput(normalized[key] || 0);
     });
+    refreshSettlementGrossField(normalized);
     settlementCompositionHydrating = false;
   }
 
@@ -1084,8 +1120,7 @@
     if (explicit) {
       payload.composition = getSettlementCompositionFromForm();
     } else {
-      const summary = selectedSchedule?.summary || {};
-      payload.gross_amount = round2(summary.total_open ?? summary.open_balance ?? getEffectiveScheduleAmount());
+      payload.composition = getDefaultSettlementComposition();
     }
     return payload;
   }
@@ -1117,15 +1152,15 @@
     if (summaryEl) {
       summaryEl.innerHTML = [
         ['Principal antes', before.principal_open],
-        ['Ajustes antes', before.adjustments_open],
+        ['Correção Financeira antes', before.adjustments_open],
         ['Total devido antes', before.total_due],
-        ['Valor bruto da baixa', composition.gross_amount],
+        ['Valor da Baixa', composition.gross_amount],
       ].map(([label, value]) => `<article><span>${label}</span><strong>${money(signedAmount(value || 0, selectedSchedule?.movement_nature))}</strong></article>`).join('');
     }
     if (afterEl) {
       afterEl.innerHTML = `
         <article><span>Principal após</span><strong>${money(signedAmount(after.principal_open || 0, selectedSchedule?.movement_nature))}</strong></article>
-        <article><span>Ajustes após</span><strong>${money(signedAmount(after.adjustments_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+        <article><span>Correção Financeira após</span><strong>${money(signedAmount(after.adjustments_open || 0, selectedSchedule?.movement_nature))}</strong></article>
         <article><span>Total em aberto após</span><strong>${money(signedAmount(after.total_open || 0, selectedSchedule?.movement_nature))}</strong></article>
       `;
     }
@@ -1399,6 +1434,7 @@
   document.querySelectorAll('[data-settlement-component]').forEach((input) => {
     input.addEventListener('input', (event) => {
       event.target.value = formatCurrencyFromDigits(event.target.value);
+      refreshSettlementGrossField();
       scheduleSettlementSimulation();
     });
   });

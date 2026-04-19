@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419d') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419e') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -228,24 +228,16 @@
                     <input id="settlement-component-principal" data-settlement-component="principal" inputmode="numeric" placeholder="0,00">
                 </label>
                 <label class="field field-compact">
-                    <span>Correção monetária</span>
-                    <input id="settlement-component-monetary-correction" data-settlement-component="monetary_correction" inputmode="numeric" placeholder="0,00">
+                    <span>Correção Financeira</span>
+                    <input id="settlement-component-financial-correction" data-settlement-component="financial_correction" inputmode="numeric" placeholder="0,00">
                 </label>
                 <label class="field field-compact">
-                    <span>Juros</span>
-                    <input id="settlement-component-interest" data-settlement-component="interest" inputmode="numeric" placeholder="0,00">
-                </label>
-                <label class="field field-compact">
-                    <span>Multa</span>
-                    <input id="settlement-component-fine" data-settlement-component="fine" inputmode="numeric" placeholder="0,00">
-                </label>
-                <label class="field field-compact">
-                    <span>Ajuste manual</span>
-                    <input id="settlement-component-manual-adjustment" data-settlement-component="manual_adjustment" inputmode="numeric" placeholder="0,00">
-                </label>
-                <label class="field field-compact">
-                    <span>Desconto liberado</span>
+                    <span>Desconto</span>
                     <input id="settlement-component-discount" data-settlement-component="discount" inputmode="numeric" placeholder="0,00">
+                </label>
+                <label class="field field-compact settlement-total-field">
+                    <span>Valor da Baixa</span>
+                    <input id="settlement-component-gross" inputmode="numeric" placeholder="0,00" readonly tabindex="-1">
                 </label>
             </section>
 
@@ -302,5 +294,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419d') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419e') }}"></script>
 {% endblock %}
