@@ -31,6 +31,13 @@
   let settlementCompositionHydrating = false;
 
   const $ = (id) => document.getElementById(id);
+  const requireElement = (id) => {
+    const element = $(id);
+    if (!element) {
+      throw new Error('A interface de agendamento está desatualizada. Atualize a página e tente novamente.');
+    }
+    return element;
+  };
   const form = $('schedule-form');
   const entryTypeBanner = $('entry-type-banner');
   const rateioSummary = $('rateio-summary');
@@ -1136,20 +1143,23 @@
 
   async function openSettlementCompositionModal(schedule) {
     if (!schedule?.id) throw new Error('Salve o título financeiro antes de baixar.');
-    $('settlement-schedule-id').value = schedule.id;
-    $('settlement-date').value = todayIso();
-    $('settlement-modal-subtitle').textContent = `${schedule.schedule_code || `Título ${schedule.id}`} · ${schedule.description || schedule.name || 'Sem histórico'}`;
+    const modalEl = requireElement('settlement-composition-modal');
+    requireElement('settlement-schedule-id').value = schedule.id;
+    requireElement('settlement-date').value = todayIso();
+    requireElement('settlement-modal-subtitle').textContent = `${schedule.schedule_code || `Título ${schedule.id}`} · ${schedule.description || schedule.name || 'Sem histórico'}`;
     setSettlementComponentInputs({});
     renderSettlementSimulation(null);
-    $('settlement-composition-modal').classList.remove('hidden');
-    $('settlement-composition-modal').setAttribute('aria-hidden', 'false');
+    modalEl.classList.remove('hidden');
+    modalEl.setAttribute('aria-hidden', 'false');
     await simulateSettlementComposition({ explicit: false, hydrate: true });
   }
 
   window.closeSettlementCompositionModal = () => {
     window.clearTimeout(settlementSimulationTimer);
-    $('settlement-composition-modal').classList.add('hidden');
-    $('settlement-composition-modal').setAttribute('aria-hidden', 'true');
+    const modalEl = $('settlement-composition-modal');
+    if (!modalEl) return;
+    modalEl.classList.add('hidden');
+    modalEl.setAttribute('aria-hidden', 'true');
   };
 
   window.confirmAssistedSettlement = async () => {
