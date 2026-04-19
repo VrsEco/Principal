@@ -79,6 +79,7 @@ def test_create_settlement_generates_code_when_not_informed(monkeypatch):
 
         def __init__(self, **kwargs):
             captured["kwargs"] = kwargs
+            self.id = 501
             self.__dict__.update(kwargs)
 
     entry = _FakeEntry()
@@ -99,6 +100,7 @@ def test_create_settlement_generates_code_when_not_informed(monkeypatch):
         lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("0")})(),
     )
     monkeypatch.setattr(financial_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
+    monkeypatch.setattr(financial_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
     monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
     monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
     monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_entry", lambda **kwargs: None)
@@ -174,7 +176,13 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
             captured["kwargs"] = kwargs
             self.__dict__.update(kwargs)
 
+    class _FakeTitleCalculationLog:
+        def __init__(self, **kwargs):
+            captured["log_kwargs"] = kwargs
+            self.__dict__.update(kwargs)
+
     entry = _FakeEntry()
+    monkeypatch.setattr(financial_module, "FinancialTitleCalculationLog", _FakeTitleCalculationLog)
     monkeypatch.setattr(financial_module, "FinancialEntry", type("FinancialEntryStub", (), {
         "id": _Column(),
         "company_id": _Column(),
@@ -191,6 +199,7 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
         lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("100")})(),
     )
     monkeypatch.setattr(financial_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
+    monkeypatch.setattr(financial_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
     monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
     monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
     monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_entry", lambda **kwargs: None)
@@ -215,6 +224,11 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert snapshot["settled_principal_current"] == 120.0
     assert snapshot["settled_principal_after"] == 220.0
     assert snapshot["open_principal_after"] == 255.0
+    assert captured["flushed"] is True
+    assert captured["log_kwargs"]["financial_schedule_id"] == 77
+    assert captured["log_kwargs"]["financial_entry_id"] == 99
+    assert captured["log_kwargs"]["event_type"] == "settlement_posted"
+    assert captured["log_kwargs"]["updated_amount"] == Decimal("475.0")
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):

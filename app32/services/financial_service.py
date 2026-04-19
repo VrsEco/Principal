@@ -14,6 +14,7 @@ from models.financial import (
     FinancialEntryAllocation,
     FinancialSchedule,
     FinancialSettlement,
+    FinancialTitleCalculationLog,
 )
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine
 from models.process import ProcessInstance, ProcessRoutine
@@ -727,6 +728,36 @@ class FinancialService:
             "open_principal_after": float(open_after.quantize(Decimal("0.01"))),
         }
 
+
+    @staticmethod
+    def _build_title_calculation_log_payload(
+        *,
+        entry: FinancialEntry,
+        settlement: FinancialSettlement,
+        snapshot: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        return {
+            "company_id": entry.company_id,
+            "financial_schedule_id": int(snapshot["financial_schedule_id"]),
+            "financial_entry_id": entry.id,
+            "financial_settlement_id": getattr(settlement, "id", None),
+            "event_type": "settlement_posted",
+            "calculation_date": settlement.settlement_date,
+            "template_amount": Decimal(str(snapshot.get("template_amount") or 0)),
+            "correction_amount": Decimal(str(snapshot.get("correction_amount") or 0)),
+            "discount_amount": Decimal(str(snapshot.get("discount_amount") or 0)),
+            "updated_amount": Decimal(str(snapshot.get("updated_amount") or 0)),
+            "settled_principal_before": Decimal(str(snapshot.get("settled_principal_before") or 0)),
+            "settled_principal_current": Decimal(str(snapshot.get("settled_principal_current") or 0)),
+            "settled_principal_after": Decimal(str(snapshot.get("settled_principal_after") or 0)),
+            "open_principal_after": Decimal(str(snapshot.get("open_principal_after") or 0)),
+            "metadata_json": {
+                "source": "create_settlement",
+                "settlement_code": settlement.settlement_code,
+                "snapshot": snapshot,
+            },
+        }
+
     @staticmethod
     def create_settlement(
         *,
@@ -810,6 +841,19 @@ class FinancialService:
 
             settlement = FinancialSettlement(**settlement_payload)
             db.session.add(settlement)
+            if title_snapshot:
+                flush = getattr(db.session, "flush", None)
+                if callable(flush):
+                    flush()
+                db.session.add(
+                    FinancialTitleCalculationLog(
+                        **FinancialService._build_title_calculation_log_payload(
+                            entry=entry,
+                            settlement=settlement,
+                            snapshot=title_snapshot,
+                        )
+                    )
+                )
 
             if projected_total == Decimal(entry.original_amount or 0):
                 entry.status = "settled"

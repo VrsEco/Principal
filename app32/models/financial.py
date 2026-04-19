@@ -1258,6 +1258,53 @@ class FinancialSettlement(db.Model):
         }
 
 
+class FinancialTitleCalculationLog(db.Model):
+    __tablename__ = "financial_title_calculation_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    financial_schedule_id = db.Column(db.Integer, db.ForeignKey("financial_schedules.id", ondelete="CASCADE"), nullable=False, index=True)
+    financial_entry_id = db.Column(db.Integer, db.ForeignKey("financial_entries.id", ondelete="SET NULL"), index=True)
+    financial_settlement_id = db.Column(db.Integer, db.ForeignKey("financial_settlements.id", ondelete="SET NULL"), index=True)
+    event_type = db.Column(db.String(40), nullable=False, default="settlement_posted", index=True)
+    calculation_date = db.Column(db.Date, nullable=False, index=True)
+    template_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    correction_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    discount_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    updated_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    settled_principal_before = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    settled_principal_current = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    settled_principal_after = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    open_principal_after = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    schedule = db.relationship("FinancialSchedule", foreign_keys=[financial_schedule_id])
+    entry = db.relationship("FinancialEntry", foreign_keys=[financial_entry_id])
+    settlement = db.relationship("FinancialSettlement", foreign_keys=[financial_settlement_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "financial_schedule_id": self.financial_schedule_id,
+            "financial_entry_id": self.financial_entry_id,
+            "financial_settlement_id": self.financial_settlement_id,
+            "event_type": self.event_type,
+            "calculation_date": self.calculation_date.isoformat() if self.calculation_date else None,
+            "template_amount": float(self.template_amount or 0),
+            "correction_amount": float(self.correction_amount or 0),
+            "discount_amount": float(self.discount_amount or 0),
+            "updated_amount": float(self.updated_amount or 0),
+            "settled_principal_before": float(self.settled_principal_before or 0),
+            "settled_principal_current": float(self.settled_principal_current or 0),
+            "settled_principal_after": float(self.settled_principal_after or 0),
+            "open_principal_after": float(self.open_principal_after or 0),
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class FinancialImportBatch(db.Model):
     __tablename__ = "financial_import_batches"
     __table_args__ = (
