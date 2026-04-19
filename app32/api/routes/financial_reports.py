@@ -69,6 +69,19 @@ def _request_filters_payload():
     return payload
 
 
+def _current_filters_state():
+    state = {}
+    for key in request.args.keys():
+        values = [value for value in request.args.getlist(key) if value != '']
+        if not values:
+            continue
+        if key in _BOOLEAN_FILTER_KEYS:
+            state[key] = [values[-1]]
+            continue
+        state[key] = values
+    return state
+
+
 @financial_bp.route('/financial/reports')
 @permission_required('financial', 'view')
 def financial_reports_page():
@@ -97,7 +110,17 @@ def financial_report_filters_page(report_slug: str):
         abort(403, description=error)
 
     default_period_start, default_period_end = FinancialReportService.default_period()
-    current_filters = {key: request.args.getlist(key) for key in request.args.keys()}
+    current_filters = _current_filters_state()
+    report = None
+    if report_definition["code"] == "schedule_report":
+        report, error = FinancialReportService.build_management_report(
+            company_id=company.id,
+            report_type=report_definition["code"],
+            filters=_request_filters_payload(),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            abort(400, description=error)
     return render_template(
         'modules/financial/report_filters.html',
         company=company,
@@ -107,6 +130,7 @@ def financial_report_filters_page(report_slug: str):
         default_period_start=default_period_start.isoformat(),
         default_period_end=default_period_end.isoformat(),
         current_filters=current_filters,
+        report=report,
     )
 
 
@@ -129,6 +153,12 @@ def _build_financial_report_or_abort(report_slug: str):
 @financial_bp.route('/financial/reports/<report_slug>/view')
 @permission_required('financial', 'view')
 def financial_report_view_page(report_slug: str):
+    if str(report_slug or '').strip().lower() == 'agendamento':
+        target = url_for('financial.financial_report_filters_page', report_slug=report_slug)
+        query_string = request.query_string.decode('utf-8')
+        if query_string:
+            target = f'{target}?{query_string}'
+        return redirect(target)
     company, report = _build_financial_report_or_abort(report_slug)
     return render_template(
         'modules/financial/report_view.html',

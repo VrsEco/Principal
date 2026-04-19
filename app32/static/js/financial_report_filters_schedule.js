@@ -11,11 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearButton = document.getElementById('schedule-report-clear-filters');
   const trackedInputs = Array.from(form.querySelectorAll('[data-filter-input]'));
 
-  const resolveOutputAction = () => {
-    const selectedOutput = form.querySelector('input[name="output_mode"]:checked');
-    form.action = selectedOutput && selectedOutput.value === 'pdf'
-      ? form.dataset.pdfAction
-      : form.dataset.viewAction;
+  const resolveFormAction = () => {
+    form.action = form.dataset.viewAction || form.getAttribute('action') || window.location.pathname;
   };
 
   const countActiveFilters = () => {
@@ -44,6 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      if (input.tagName === 'SELECT' && input.multiple) {
+        const selectedValues = Array.from(input.selectedOptions)
+          .map((option) => option.value)
+          .filter((value) => value !== '');
+        if (selectedValues.length > 0) {
+          total += 1;
+        }
+        return;
+      }
+
       const defaultValue = input.dataset.defaultValue || '';
       if ((input.value || '') !== defaultValue) {
         total += 1;
@@ -58,14 +65,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  form.addEventListener('submit', resolveOutputAction);
+  form.addEventListener('submit', resolveFormAction);
 
   trackedInputs.forEach((input) => {
     const eventName = input.tagName === 'SELECT' || input.type === 'radio' || input.type === 'checkbox'
       ? 'change'
       : 'input';
     input.addEventListener(eventName, () => {
-      resolveOutputAction();
+      resolveFormAction();
       countActiveFilters();
     });
   });
@@ -79,6 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  resolveOutputAction();
+  resolveFormAction();
   countActiveFilters();
 });

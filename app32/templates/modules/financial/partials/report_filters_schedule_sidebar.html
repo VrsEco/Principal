@@ -33,8 +33,8 @@
 <div class="sidebar-content-ws schedule-report-sidebar">
     <form id="schedule-report-filter-form"
           method="get"
-          action="/financial/reports/{{ report_definition.slug }}/view"
-          data-view-action="/financial/reports/{{ report_definition.slug }}/view"
+          action="/financial/reports/{{ report_definition.slug }}"
+          data-view-action="/financial/reports/{{ report_definition.slug }}"
           data-pdf-action="/financial/reports/{{ report_definition.slug }}/export.pdf"
           data-clear-url="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">
         {% if company_id %}
