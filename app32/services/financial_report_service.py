@@ -187,12 +187,16 @@ class FinancialReportService:
                 return None, f"Faixa de {label.lower()} inválida para relatório."
 
         if data.report_type == "income_statement":
+            data = data.model_copy(update={
+                "show_code": True,
+                "show_description": True,
+                "order_by": "code",
+                "order_direction": "asc",
+            })
             if not any([data.include_open, data.include_settled]):
                 return None, "Selecione ao menos um status para o DRE."
             if not any([data.include_receivable, data.include_payable, data.include_budget_vs_actual]):
                 return None, "Selecione ao menos um tipo para o DRE."
-            if not any([data.show_code, data.show_description]):
-                return None, "Selecione ao menos uma coluna de identificação para o DRE."
         if data.report_type == "schedule_report":
             updates = {"orientation": "portrait"}
             if not data.competence_start:
@@ -1859,7 +1863,7 @@ class FinancialReportService:
         }
         default_start, default_end = FinancialReportService.default_period()
         values: List[Dict[str, str]] = []
-        if filters.report_type != "schedule_report":
+        if filters.report_type not in {"schedule_report", "income_statement"}:
             values.extend(
                 [
                     {"label": "Período inicial", "value": filters.period_start.isoformat()},
@@ -1877,11 +1881,17 @@ class FinancialReportService:
             )
             if filters.competence_start and filters.competence_end and (competence_explicit or not default_competence):
                 values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
+        elif filters.report_type == "income_statement":
+            if (
+                filters.competence_start and filters.competence_end
+                and ("competence_start" in raw_filters or "competence_end" in raw_filters)
+            ):
+                values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
         elif filters.competence_start and filters.competence_end:
             values.append({"label": "Data competência", "value": f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"})
-        if filters.due_start and filters.due_end and ("due_start" in raw_filters or "due_end" in raw_filters or filters.report_type != "schedule_report"):
+        if filters.due_start and filters.due_end and ("due_start" in raw_filters or "due_end" in raw_filters or filters.report_type not in {"schedule_report", "income_statement"}):
             values.append({"label": "Data vencimento", "value": f"{filters.due_start.isoformat()} até {filters.due_end.isoformat()}"})
-        if filters.settlement_start and filters.settlement_end and ("settlement_start" in raw_filters or "settlement_end" in raw_filters or filters.report_type != "schedule_report"):
+        if filters.settlement_start and filters.settlement_end and ("settlement_start" in raw_filters or "settlement_end" in raw_filters or filters.report_type not in {"schedule_report", "income_statement"}):
             values.append({"label": "Data baixa", "value": f"{filters.settlement_start.isoformat()} até {filters.settlement_end.isoformat()}"})
         if filters.reference_date and filters.report_type != "schedule_report":
             values.append({"label": "Data de referência", "value": filters.reference_date.isoformat()})
@@ -1966,6 +1976,26 @@ class FinancialReportService:
             include_reconciled_explicit = "include_reconciled_only" in raw_filters
             if include_reconciled_explicit or filters.include_reconciled_only:
                 values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
+        elif filters.report_type == "income_statement":
+            status_explicit = any(key in raw_filters for key in ("include_settled", "include_open"))
+            if status_explicit:
+                values.append({
+                    "label": "Status",
+                    "value": ", ".join([label for enabled, label in [
+                        (filters.include_settled, "Liquidado"),
+                        (filters.include_open, "Aberto"),
+                    ] if enabled]) or "Nenhum",
+                })
+            type_explicit = any(key in raw_filters for key in ("include_receivable", "include_payable", "include_budget_vs_actual"))
+            if type_explicit:
+                values.append({
+                    "label": "Tipo",
+                    "value": ", ".join([label for enabled, label in [
+                        (filters.include_receivable, "Recebimento"),
+                        (filters.include_payable, "Pagamento"),
+                        (filters.include_budget_vs_actual, "Orçado x Realizado"),
+                    ] if enabled]) or "Nenhum",
+                })
         else:
             values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
             values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})

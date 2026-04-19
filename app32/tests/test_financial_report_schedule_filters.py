@@ -75,3 +75,28 @@ def test_schedule_report_normalize_rejects_without_display_columns():
 
     assert filters is None
     assert error == "Selecione ao menos uma coluna para exibir no relatório de agendamentos."
+
+
+def test_income_statement_normalize_forces_fixed_identification_and_sorting():
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "competence_start": "2026-04-01",
+            "competence_end": "2026-04-30",
+            "include_settled": "true",
+            "include_open": "true",
+            "include_payable": "true",
+            "include_receivable": "true",
+            "show_code": "false",
+            "show_description": "false",
+            "order_by": "description",
+            "order_direction": "desc",
+        },
+    )
+
+    assert error is None
+    assert filters is not None
+    assert filters.show_code is True
+    assert filters.show_description is True
+    assert filters.order_by == "code"
+    assert filters.order_direction == "asc"

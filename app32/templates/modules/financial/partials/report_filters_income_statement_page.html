@@ -1,8 +1,6 @@
 {% import 'modules/financial/partials/_report_workspace_macros.html' as report_macros %}
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
 {% set report_filters = report.filters if report else [] %}
-{% set report_summary_cards = report.summary_cards if report else [] %}
-{% set report_general_info = report.general_info if report else [] %}
 {% set hierarchy_rows = report.hierarchy_rows if report else [] %}
 
 <div class="report-workspace-page dre-report-page fade-in"
@@ -41,26 +39,6 @@
                 'dre-filters-grid',
                 'dre-filter-item'
             ) }}
-
-            {{ report_macros.workspace_stats(
-                report_summary_cards,
-                'dre-section dre-section--stats',
-                'dre-stats-grid',
-                'dre-stat',
-                'dre-stat',
-                'dre-stat__value',
-                'dre-stat__label'
-            ) }}
-
-            {{ report_macros.workspace_info(
-                report_general_info,
-                'Parâmetros da demonstração',
-                'dre-section dre-section--info',
-                'dre-section-title',
-                'dre-info-grid',
-                'dre-info-card'
-            ) }}
-
             <section class="report-workspace-section dre-section dre-section--table">
                 <div class="dre-table-toolbar no-print">
                     <span class="dre-table-toolbar__hint">Filtros ativos: <strong id="dre-report-active-filters-inline">0</strong></span>

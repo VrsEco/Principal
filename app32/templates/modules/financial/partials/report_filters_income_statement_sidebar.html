@@ -7,15 +7,11 @@
 {% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
 {% set selected_cost_centers = filters.get('cost_center_ids', []) %}
 {% set selected_projects = filters.get('project_ids', []) %}
-{% set selected_order_by = (filters.get('order_by', ['code']) | first) %}
-{% set selected_order_direction = (filters.get('order_direction', ['asc']) | first) %}
 {% set include_settled = 'include_settled' not in filters or (filters.get('include_settled', ['true']) | first) == 'true' %}
 {% set include_open = 'include_open' not in filters or (filters.get('include_open', ['true']) | first) == 'true' %}
 {% set include_receivable = 'include_receivable' not in filters or (filters.get('include_receivable', ['true']) | first) == 'true' %}
 {% set include_payable = 'include_payable' not in filters or (filters.get('include_payable', ['true']) | first) == 'true' %}
 {% set include_budget_vs_actual = (filters.get('include_budget_vs_actual', ['false']) | first) == 'true' %}
-{% set show_code = 'show_code' not in filters or (filters.get('show_code', ['true']) | first) == 'true' %}
-{% set show_description = 'show_description' not in filters or (filters.get('show_description', ['true']) | first) == 'true' %}
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
@@ -32,6 +28,10 @@
         {% if company_id %}
         <input type="hidden" name="company_id" value="{{ company_id }}">
         {% endif %}
+        <input type="hidden" name="show_code" value="true">
+        <input type="hidden" name="show_description" value="true">
+        <input type="hidden" name="order_by" value="code">
+        <input type="hidden" name="order_direction" value="asc">
 
         <section class="report-workspace-sidebar__section dre-sidebar-section">
             <p class="filter-label">Data Competência</p>
@@ -141,46 +141,6 @@
                     <input type="hidden" name="include_budget_vs_actual" value="false">
                     <input type="checkbox" name="include_budget_vs_actual" value="true" {% if include_budget_vs_actual %}checked{% endif %} data-filter-input data-default-value="false">
                     <span>Orçado x Realizado</span>
-                </label>
-            </div>
-        </section>
-
-        <section class="report-workspace-sidebar__section dre-sidebar-section">
-            <p class="filter-label">Identificação</p>
-            <div class="report-workspace-choice-grid">
-                <label class="report-workspace-choice-card">
-                    <input type="hidden" name="show_code" value="false">
-                    <input type="checkbox" name="show_code" value="true" {% if show_code %}checked{% endif %} data-filter-input data-default-value="true">
-                    <span>Código</span>
-                </label>
-                <label class="report-workspace-choice-card">
-                    <input type="hidden" name="show_description" value="false">
-                    <input type="checkbox" name="show_description" value="true" {% if show_description %}checked{% endif %} data-filter-input data-default-value="true">
-                    <span>Descrição</span>
-                </label>
-            </div>
-        </section>
-
-        <section class="report-workspace-sidebar__section dre-sidebar-section">
-            <p class="filter-label">Ordenação</p>
-            <div class="report-workspace-choice-grid report-workspace-choice-grid--compact">
-                <label class="report-workspace-choice-card">
-                    <input type="radio" name="order_by" value="code" {% if selected_order_by == 'code' %}checked{% endif %} data-filter-input data-default-value="code">
-                    <span>Código</span>
-                </label>
-                <label class="report-workspace-choice-card">
-                    <input type="radio" name="order_by" value="description" {% if selected_order_by == 'description' %}checked{% endif %} data-filter-input data-default-value="code">
-                    <span>Descrição</span>
-                </label>
-            </div>
-            <div class="report-workspace-radio-grid">
-                <label class="report-workspace-choice-card">
-                    <input type="radio" name="order_direction" value="asc" {% if selected_order_direction == 'asc' %}checked{% endif %} data-filter-input data-default-value="asc">
-                    <span>Ascendente</span>
-                </label>
-                <label class="report-workspace-choice-card">
-                    <input type="radio" name="order_direction" value="desc" {% if selected_order_direction == 'desc' %}checked{% endif %} data-filter-input data-default-value="asc">
-                    <span>Descendente</span>
                 </label>
             </div>
         </section>
