@@ -16,7 +16,6 @@
             <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export.xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
             <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export.pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
             <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
-            <button type="button" class="btn btn-primary" onclick="toggleSidebar('right')">Filtros</button>
         </div>
     </header>
 
