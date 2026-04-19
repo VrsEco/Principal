@@ -1475,6 +1475,16 @@ class FinancialTitleCalculationLog(db.Model):
     settled_principal_current = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     settled_principal_after = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     open_principal_after = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    principal_before = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    adjustments_open_before = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    total_due_before = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    principal_settled_now = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    adjustments_settled_now = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    discount_now = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    principal_after = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    adjustments_open_after = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    total_due_after = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    snapshot_json = db.Column(JSONB, nullable=False, default=dict)
     metadata_json = db.Column(JSONB, nullable=False, default=dict)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -1499,6 +1509,16 @@ class FinancialTitleCalculationLog(db.Model):
             "settled_principal_current": float(self.settled_principal_current or 0),
             "settled_principal_after": float(self.settled_principal_after or 0),
             "open_principal_after": float(self.open_principal_after or 0),
+            "principal_before": float(self.principal_before or 0),
+            "adjustments_open_before": float(self.adjustments_open_before or 0),
+            "total_due_before": float(self.total_due_before or 0),
+            "principal_settled_now": float(self.principal_settled_now or 0),
+            "adjustments_settled_now": float(self.adjustments_settled_now or 0),
+            "discount_now": float(self.discount_now or 0),
+            "principal_after": float(self.principal_after or 0),
+            "adjustments_open_after": float(self.adjustments_open_after or 0),
+            "total_due_after": float(self.total_due_after or 0),
+            "snapshot_json": self.snapshot_json or {},
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

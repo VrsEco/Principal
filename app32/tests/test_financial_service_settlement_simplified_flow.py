@@ -239,6 +239,14 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["financial_entry_id"] == 99
     assert captured["log_kwargs"]["event_type"] == "settlement_posted"
     assert captured["log_kwargs"]["updated_amount"] == Decimal("475.0")
+    assert captured["log_kwargs"]["principal_before"] == Decimal("375.00")
+    assert captured["log_kwargs"]["principal_settled_now"] == Decimal("120.00")
+    assert captured["log_kwargs"]["principal_after"] == Decimal("255.00")
+    assert captured["log_kwargs"]["adjustments_open_before"] == Decimal("0.00")
+    assert captured["log_kwargs"]["total_due_before"] == Decimal("375.00")
+    assert captured["log_kwargs"]["total_due_after"] == Decimal("255.00")
+    assert captured["log_kwargs"]["snapshot_json"]["financial_schedule_id"] == 77
+    assert captured["log_kwargs"]["metadata_json"]["ledger_version"] == "structured_v1"
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):

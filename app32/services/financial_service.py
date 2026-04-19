@@ -745,6 +745,26 @@ class FinancialService:
         settlement: FinancialSettlement,
         snapshot: Dict[str, Any],
     ) -> Dict[str, Any]:
+        principal_before = Decimal(str(snapshot.get("principal_open_before") or 0))
+        if principal_before <= 0:
+            principal_before = Decimal(str(snapshot.get("open_principal_after") or 0)) + Decimal(
+                str(snapshot.get("settled_principal_current") or 0)
+            )
+        principal_settled_now = Decimal(str(snapshot.get("settled_principal_current") or 0))
+        principal_after = max(principal_before - principal_settled_now, Decimal("0"))
+        adjustments_open_before = Decimal(str(snapshot.get("adjustments_open_before") or 0))
+        adjustments_settled_now = (
+            Decimal(str(getattr(settlement, "interest_amount", 0) or 0))
+            + Decimal(str(getattr(settlement, "penalty_amount", 0) or 0))
+            + Decimal(str(getattr(settlement, "fee_amount", 0) or 0))
+            + Decimal(str(getattr(settlement, "other_adjustments_amount", 0) or 0))
+        )
+        discount_now = Decimal(str(getattr(settlement, "discount_amount", 0) or 0))
+        adjustments_open_after = max(adjustments_open_before - adjustments_settled_now, Decimal("0"))
+        total_due_before = Decimal(str(snapshot.get("total_open_before") or 0))
+        if total_due_before <= 0:
+            total_due_before = principal_before + adjustments_open_before
+        total_due_after = max(principal_after + adjustments_open_after - discount_now, Decimal("0"))
         return {
             "company_id": entry.company_id,
             "financial_schedule_id": int(snapshot["financial_schedule_id"]),
@@ -760,10 +780,21 @@ class FinancialService:
             "settled_principal_current": Decimal(str(snapshot.get("settled_principal_current") or 0)),
             "settled_principal_after": Decimal(str(snapshot.get("settled_principal_after") or 0)),
             "open_principal_after": Decimal(str(snapshot.get("open_principal_after") or 0)),
+            "principal_before": principal_before.quantize(Decimal("0.01")),
+            "adjustments_open_before": adjustments_open_before.quantize(Decimal("0.01")),
+            "total_due_before": total_due_before.quantize(Decimal("0.01")),
+            "principal_settled_now": principal_settled_now.quantize(Decimal("0.01")),
+            "adjustments_settled_now": adjustments_settled_now.quantize(Decimal("0.01")),
+            "discount_now": discount_now.quantize(Decimal("0.01")),
+            "principal_after": principal_after.quantize(Decimal("0.01")),
+            "adjustments_open_after": adjustments_open_after.quantize(Decimal("0.01")),
+            "total_due_after": total_due_after.quantize(Decimal("0.01")),
+            "snapshot_json": snapshot,
             "metadata_json": {
                 "source": "create_settlement",
                 "settlement_code": settlement.settlement_code,
                 "snapshot": snapshot,
+                "ledger_version": "structured_v1",
             },
         }
 
