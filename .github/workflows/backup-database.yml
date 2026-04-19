@@ -57,7 +57,9 @@ jobs:
           import binascii
           import os
           import pathlib
+          import re
           import sys
+          import textwrap
 
           raw_key = os.environ.get("CONFIGR_SSH_PRIVATE_KEY", "").strip()
           key_file = os.environ["KEY_FILE"]
@@ -68,23 +70,56 @@ jobs:
           normalized_candidates = []
 
           def add_candidate(value: str) -> None:
-              candidate = value.strip()
+              candidate = value.strip().strip('"').strip("'").strip()
               if candidate and candidate not in normalized_candidates:
                   normalized_candidates.append(candidate)
 
-          add_candidate(raw_key)
-          add_candidate(raw_key.replace("\\n", "\n"))
-          add_candidate(raw_key.strip('"').strip("'"))
-          add_candidate(raw_key.strip('"').strip("'").replace("\\n", "\n"))
+          def normalize_line_endings(value: str) -> str:
+              return (
+                  value
+                  .replace("\\r\\n", "\n")
+                  .replace("\\n", "\n")
+                  .replace("\\r", "\n")
+                  .replace("\r\n", "\n")
+                  .replace("\r", "\n")
+              )
+
+          def rebuild_single_line_pem(value: str) -> str | None:
+              compact = "".join(value.strip().split())
+              match = re.fullmatch(
+                  r"(-{5}BEGIN ([A-Z0-9 ]+) KEY-{5})(.+)(-{5}END \2 KEY-{5})",
+                  compact,
+              )
+              if not match:
+                  return None
+              header, _key_type, body, footer = match.groups()
+              return "\n".join([header, *textwrap.wrap(body, 70), footer])
+
+          raw_variants = [
+              raw_key,
+              normalize_line_endings(raw_key),
+          ]
+
+          for variant in list(raw_variants):
+              rebuilt = rebuild_single_line_pem(variant)
+              if rebuilt:
+                  raw_variants.append(rebuilt)
 
           compact_key = "".join(raw_key.split())
           if compact_key and "BEGIN" not in raw_key:
-              try:
-                  decoded_key = base64.b64decode(compact_key, validate=True).decode("utf-8")
-                  add_candidate(decoded_key)
-                  add_candidate(decoded_key.replace("\\n", "\n"))
-              except (binascii.Error, UnicodeDecodeError):
-                  pass
+              for decoder in (
+                  lambda value: base64.b64decode(value, validate=True),
+                  lambda value: base64.urlsafe_b64decode(value + "=" * (-len(value) % 4)),
+              ):
+                  try:
+                      decoded_key = decoder(compact_key).decode("utf-8")
+                  except (binascii.Error, UnicodeDecodeError, ValueError):
+                      continue
+                  raw_variants.append(decoded_key)
+                  raw_variants.append(normalize_line_endings(decoded_key))
+
+          for variant in raw_variants:
+              add_candidate(variant)
 
           valid_markers = (
               "BEGIN OPENSSH PRIVATE KEY",
@@ -95,10 +130,14 @@ jobs:
           )
 
           for candidate in normalized_candidates:
-              normalized = candidate.strip() + "\n"
-              if any(marker in normalized for marker in valid_markers):
+              normalized = normalize_line_endings(candidate).strip() + "\n"
+              if (
+                  any(marker in normalized for marker in valid_markers)
+                  and "-----END " in normalized
+              ):
                   pathlib.Path(key_file).write_text(normalized, encoding="utf-8")
                   print("✅ Chave SSH normalizada com sucesso.")
+                  print(f"ℹ️ Linhas normalizadas da chave: {len(normalized.splitlines())}")
                   break
           else:
               raise SystemExit(
@@ -108,7 +147,22 @@ jobs:
           PY
 
           chmod 600 "$KEY_FILE"
-          ssh-keygen -y -f "$KEY_FILE" > /dev/null
+
+          if ! ssh-keygen -y -f "$KEY_FILE" > "$RUNNER_TEMP/configr_backup_key.pub" 2>"$RUNNER_TEMP/configr_backup_key_error.log"; then
+            echo "❌ CONFIGR_SSH_PRIVATE_KEY foi reconhecida como chave privada, mas o OpenSSH não conseguiu carregá-la."
+            echo "Detalhe técnico:"
+            sed 's/^/  /' "$RUNNER_TEMP/configr_backup_key_error.log"
+            echo ""
+            echo "Causas prováveis:"
+            echo "  1. secret contém uma chave privada incompleta/corrompida;"
+            echo "  2. secret contém uma chave com passphrase, não adequada para automação sem agente;"
+            echo "  3. secret foi salvo com escapes incomuns não recuperáveis."
+            echo ""
+            echo "Correção recomendada: gerar uma chave ED25519 exclusiva para o GitHub Actions, sem passphrase,"
+            echo "cadastrar a chave pública no servidor e salvar a chave privada completa em CONFIGR_SSH_PRIVATE_KEY."
+            exit 1
+          fi
+
           echo "✅ Chave SSH validada localmente."
 
       - name: 🧾 Configurar known_hosts
