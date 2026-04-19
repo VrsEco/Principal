@@ -1398,6 +1398,63 @@ class FinancialTitleAdjustment(db.Model):
         }
 
 
+class FinancialTitleAdjustmentAllocation(db.Model):
+    __tablename__ = "financial_title_adjustment_allocations"
+    __table_args__ = (
+        db.CheckConstraint(
+            "(percentage IS NULL) OR (percentage >= 0 AND percentage <= 100)",
+            name="ck_financial_title_adjustment_allocations_percentage_range",
+        ),
+        db.CheckConstraint(
+            "amount >= 0",
+            name="ck_financial_title_adjustment_allocations_amount_nonneg",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    financial_title_adjustment_id = db.Column(
+        db.Integer,
+        db.ForeignKey("financial_title_adjustments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    chart_account_id = db.Column(db.Integer, index=True)
+    cost_center_id = db.Column(db.Integer, index=True)
+    budget_document_id = db.Column(db.Integer, db.ForeignKey("financial_budget_documents.id"), index=True)
+    activity_id = db.Column(db.Integer, db.ForeignKey("process_routines.id"), index=True)
+    process_instance_id = db.Column(db.Integer, db.ForeignKey("process_instances.id"), index=True)
+    routine_id = db.Column(db.Integer, db.ForeignKey("routines.id"), index=True)
+
+    percentage = db.Column(db.Numeric(9, 4))
+    amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    process_instance = db.relationship("ProcessInstance", foreign_keys=[process_instance_id])
+    routine = db.relationship("Routine", foreign_keys=[routine_id])
+    activity = db.relationship("ProcessRoutine", foreign_keys=[activity_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "financial_title_adjustment_id": self.financial_title_adjustment_id,
+            "chart_account_id": self.chart_account_id,
+            "cost_center_id": self.cost_center_id,
+            "budget_document_id": self.budget_document_id,
+            "activity_id": self.activity_id,
+            "process_instance_id": self.process_instance_id,
+            "routine_id": self.routine_id,
+            "percentage": float(self.percentage) if self.percentage is not None else None,
+            "amount": float(self.amount or 0),
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class FinancialTitleCalculationLog(db.Model):
     __tablename__ = "financial_title_calculation_logs"
 
