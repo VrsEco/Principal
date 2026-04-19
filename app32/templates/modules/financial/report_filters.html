@@ -7,6 +7,9 @@
 {% if report_definition.code == 'schedule_report' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419b') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_schedule.css', v='20260419b') }}">
+{% elif report_definition.code == 'income_statement' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419d') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260419d') }}">
 {% elif report_definition.code == 'bank_statement' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419b') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_bank_statement.css', v='20260419b') }}">
@@ -44,6 +47,17 @@
     </button>
     <div class="user-avatar-mini" title="Meu Perfil">MV</div>
 </div>
+{% elif report_definition.code == 'income_statement' %}
+<div style="display:flex;align-items:center;gap:.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="report-workspace-filter-count dre-navbar-filter-count" id="dre-report-filter-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
 {% else %}
 {{ super() }}
 {% endif %}
@@ -77,6 +91,8 @@
 {% set selected_reference_date = (filters.get('reference_date', [default_period_end]) | first) %}
 {% if is_schedule_report %}
 {% include 'modules/financial/partials/report_filters_schedule_page.html' %}
+{% elif is_dre %}
+{% include 'modules/financial/partials/report_filters_income_statement_page.html' %}
 {% elif is_bank_statement %}
 {% include 'modules/financial/partials/report_filters_bank_statement_page.html' %}
 {% else %}
@@ -764,6 +780,9 @@
 {% if report_definition.code == 'schedule_report' %}
 {% set filters = current_filters or {} %}
 {% include 'modules/financial/partials/report_filters_schedule_sidebar.html' %}
+{% elif report_definition.code == 'income_statement' %}
+{% set filters = current_filters or {} %}
+{% include 'modules/financial/partials/report_filters_income_statement_sidebar.html' %}
 {% elif report_definition.code == 'bank_statement' %}
 {% set filters = current_filters or {} %}
 {% include 'modules/financial/partials/report_filters_bank_statement_sidebar.html' %}
@@ -774,6 +793,9 @@
 {{ super() }}
 {% if report_definition.code == 'schedule_report' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419b') }}"></script>
+{% elif report_definition.code == 'income_statement' %}
+<script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419d') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260419d') }}"></script>
 {% elif report_definition.code == 'bank_statement' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419b') }}"></script>
 {% else %}

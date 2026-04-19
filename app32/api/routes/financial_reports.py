@@ -112,7 +112,7 @@ def financial_report_filters_page(report_slug: str):
     default_period_start, default_period_end = FinancialReportService.default_period()
     current_filters = _current_filters_state()
     report = None
-    if report_definition["code"] in {"schedule_report", "bank_statement"}:
+    if report_definition["code"] in {"schedule_report", "bank_statement", "income_statement"}:
         report, error = FinancialReportService.build_management_report(
             company_id=company.id,
             report_type=report_definition["code"],
@@ -153,7 +153,7 @@ def _build_financial_report_or_abort(report_slug: str):
 @financial_bp.route('/financial/reports/<report_slug>/view')
 @permission_required('financial', 'view')
 def financial_report_view_page(report_slug: str):
-    if str(report_slug or '').strip().lower() in {'agendamento', 'extrato-bancario'}:
+    if str(report_slug or '').strip().lower() in {'agendamento', 'extrato-bancario', 'demonstrativo-resultados'}:
         target = url_for('financial.financial_report_filters_page', report_slug=report_slug)
         query_string = request.query_string.decode('utf-8')
         if query_string:

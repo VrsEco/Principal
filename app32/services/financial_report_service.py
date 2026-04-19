@@ -79,8 +79,8 @@ class FinancialReportService:
         "income_statement": {
             "code": "income_statement",
             "slug": "demonstrativo-resultados",
-            "label": "Demonstrativo de Resultados",
-            "description": "DRE gerencial nas visões de competência, vencimento e liquidação por conta contábil.",
+            "label": "Demonstrações de Resultados",
+            "description": "DRE contábil hierárquica nas visões de competência, vencimento e liquidação por conta contábil.",
             "filters": (
                 "competence_period",
                 "due_period",
@@ -1030,14 +1030,22 @@ class FinancialReportService:
         chart_accounts = FinancialChartAccount.query.filter(
             FinancialChartAccount.company_id == company_id,
             FinancialChartAccount.deleted_at.is_(None),
-        ).all()
+        ).order_by(FinancialChartAccount.code.asc(), FinancialChartAccount.name.asc()).all()
         chart_map = {
             item.id: {
+                "id": item.id,
+                "parent_id": item.parent_id,
                 "code": getattr(item, "code", None) or f"CTA-{item.id}",
                 "name": item.name,
+                "accepts_posting": bool(getattr(item, "accepts_posting", False)),
             }
             for item in chart_accounts
         }
+        chart_children_map: Dict[Optional[int], List[int]] = {}
+        for item in chart_accounts:
+            chart_children_map.setdefault(item.parent_id, []).append(item.id)
+        for child_ids in chart_children_map.values():
+            child_ids.sort(key=lambda account_id: ((chart_map.get(account_id) or {}).get("code") or "", (chart_map.get(account_id) or {}).get("name") or ""))
         center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
         project_names = FinancialReportService._name_map(Project, company_id)
 
@@ -1105,10 +1113,12 @@ class FinancialReportService:
                 continue
 
             signed_original = Decimal(entry.original_amount or 0) if entry.movement_nature == "credit" else -Decimal(entry.original_amount or 0)
-            account = chart_map.get(entry.chart_account_id, {"code": f"CTA-{entry.chart_account_id or 0}", "name": "Sem conta contábil"})
+            account = chart_map.get(entry.chart_account_id, {"id": entry.chart_account_id or 0, "parent_id": None, "code": f"CTA-{entry.chart_account_id or 0}", "name": "Sem conta contábil", "accepts_posting": True})
             slot = grouped.setdefault(
                 entry.chart_account_id or 0,
                 {
+                    "id": account["id"],
+                    "parent_id": account["parent_id"],
                     "codigo": account["code"],
                     "descricao": account["name"],
                     "competencia": Decimal("0"),
@@ -1119,6 +1129,7 @@ class FinancialReportService:
                     "centros": set(),
                     "projetos": set(),
                     "tipos": set(),
+                    "accepts_posting": account["accepts_posting"],
                 },
             )
             slot["competencia"] += signed_original
@@ -1145,11 +1156,107 @@ class FinancialReportService:
             else:
                 slot["tipos"].add(entry.entry_type)
 
-        grouped_values = list(grouped.values())
-        grouped_values.sort(
-            key=lambda item: (str(item["codigo"]) if filters.order_by == "code" else str(item["descricao"])).lower(),
+        hierarchy_nodes: Dict[int, Dict[str, Any]] = {}
+        for account in chart_accounts:
+            data = grouped.get(account.id, {})
+            hierarchy_nodes[account.id] = {
+                "id": account.id,
+                "parent_id": account.parent_id,
+                "codigo": getattr(account, "code", None) or f"CTA-{account.id}",
+                "descricao": account.name,
+                "competencia": Decimal(data.get("competencia", Decimal("0"))),
+                "vencimento": Decimal(data.get("vencimento", Decimal("0"))),
+                "liquidacao": Decimal(data.get("liquidacao", Decimal("0"))),
+                "aberto": Decimal(data.get("aberto", Decimal("0"))),
+                "liquidado": Decimal(data.get("liquidado", Decimal("0"))),
+                "centros": set(data.get("centros", set())),
+                "projetos": set(data.get("projetos", set())),
+                "tipos": set(data.get("tipos", set())),
+                "accepts_posting": bool(getattr(account, "accepts_posting", False)),
+                "children": list(chart_children_map.get(account.id, [])),
+            }
+
+        def _aggregate_node(account_id: int) -> Dict[str, Any]:
+            node = hierarchy_nodes[account_id]
+            for child_id in node["children"]:
+                child = _aggregate_node(child_id)
+                node["competencia"] += child["competencia"]
+                node["vencimento"] += child["vencimento"]
+                node["liquidacao"] += child["liquidacao"]
+                node["aberto"] += child["aberto"]
+                node["liquidado"] += child["liquidado"]
+                node["centros"].update(child["centros"])
+                node["projetos"].update(child["projetos"])
+                node["tipos"].update(child["tipos"])
+            return node
+
+        for root_id in chart_children_map.get(None, []):
+            _aggregate_node(root_id)
+
+        def _node_has_value(node: Dict[str, Any]) -> bool:
+            return any(
+                Decimal(node[key] or 0) != Decimal("0")
+                for key in ("competencia", "vencimento", "liquidacao", "aberto", "liquidado")
+            )
+
+        hierarchy_rows: List[Dict[str, Any]] = []
+
+        def _append_node(account_id: int, level: int = 0, parent_path: str = "") -> None:
+            node = hierarchy_nodes.get(account_id)
+            if not node or not _node_has_value(node):
+                return
+            row_id = f"dre-{account_id}"
+            parent_row_id = parent_path or None
+            has_children = any(_node_has_value(hierarchy_nodes.get(child_id, {})) for child_id in node["children"])
+            if level <= 0:
+                row_type = "group"
+            elif has_children and not node["accepts_posting"]:
+                row_type = "subgroup"
+            elif has_children:
+                row_type = "account-group"
+            else:
+                row_type = "account"
+
+            hierarchy_rows.append(
+                {
+                    "id": row_id,
+                    "parent_id": parent_row_id,
+                    "chart_account_id": account_id,
+                    "codigo": node["codigo"],
+                    "descricao": node["descricao"],
+                    "account_label": f"{node['codigo']} - {node['descricao']}",
+                    "level": level,
+                    "row_type": row_type,
+                    "is_leaf": not has_children,
+                    "has_children": has_children,
+                    "competencia": FinancialReportService._serialize_money(node["competencia"]),
+                    "competencia_label": FinancialReportService._format_currency(node["competencia"]),
+                    "vencimento": FinancialReportService._serialize_money(node["vencimento"]),
+                    "vencimento_label": FinancialReportService._format_currency(node["vencimento"]),
+                    "liquidacao": FinancialReportService._serialize_money(node["liquidacao"]),
+                    "liquidacao_label": FinancialReportService._format_currency(node["liquidacao"]),
+                    "aberto": FinancialReportService._serialize_money(node["aberto"]),
+                    "aberto_label": FinancialReportService._format_currency(node["aberto"]),
+                    "liquidado": FinancialReportService._serialize_money(node["liquidado"]),
+                    "liquidado_label": FinancialReportService._format_currency(node["liquidado"]),
+                    "centros": ", ".join(sorted(node["centros"])) or "Todos",
+                    "projetos": ", ".join(sorted(node["projetos"])) or "Todos",
+                    "tipos": ", ".join(sorted(node["tipos"])) or "N/D",
+                }
+            )
+            for child_id in node["children"]:
+                _append_node(child_id, level + 1, row_id)
+
+        root_ids = [account_id for account_id in chart_children_map.get(None, []) if account_id in hierarchy_nodes]
+        root_ids.sort(
+            key=lambda account_id: (
+                (hierarchy_nodes.get(account_id) or {}).get("codigo") if filters.order_by == "code" else (hierarchy_nodes.get(account_id) or {}).get("descricao"),
+                (hierarchy_nodes.get(account_id) or {}).get("descricao"),
+            ),
             reverse=filters.order_direction == "desc",
         )
+        for root_id in root_ids:
+            _append_node(root_id)
 
         rows = []
         total_comp = Decimal("0")
@@ -1157,24 +1264,32 @@ class FinancialReportService:
         total_set = Decimal("0")
         total_open = Decimal("0")
         total_settled = Decimal("0")
-        for item in grouped_values:
-            total_comp += item["competencia"]
-            total_due += item["vencimento"]
-            total_set += item["liquidacao"]
-            total_open += item["aberto"]
-            total_settled += item["liquidado"]
+        for root_id in root_ids:
+            node = hierarchy_nodes.get(root_id)
+            if not node or not _node_has_value(node):
+                continue
+            total_comp += node["competencia"]
+            total_due += node["vencimento"]
+            total_set += node["liquidacao"]
+            total_open += node["aberto"]
+            total_settled += node["liquidado"]
+        for item in hierarchy_rows:
             rows.append(
                 {
                     "codigo": item["codigo"],
                     "descricao": item["descricao"],
-                    "competencia": FinancialReportService._serialize_money(item["competencia"]),
-                    "vencimento": FinancialReportService._serialize_money(item["vencimento"]),
-                    "liquidacao": FinancialReportService._serialize_money(item["liquidacao"]),
-                    "aberto": FinancialReportService._serialize_money(item["aberto"]),
-                    "liquidado": FinancialReportService._serialize_money(item["liquidado"]),
-                    "centros": ", ".join(sorted(item["centros"])) or "Todos",
-                    "projetos": ", ".join(sorted(item["projetos"])) or "Todos",
-                    "tipos": ", ".join(sorted(item["tipos"])) or "N/D",
+                    "account_label": item["account_label"],
+                    "level": item["level"],
+                    "row_type": item["row_type"],
+                    "has_children": item["has_children"],
+                    "competencia": item["competencia_label"],
+                    "vencimento": item["vencimento_label"],
+                    "liquidacao": item["liquidacao_label"],
+                    "aberto": item["aberto_label"],
+                    "liquidado": item["liquidado_label"],
+                    "centros": item["centros"],
+                    "projetos": item["projetos"],
+                    "tipos": item["tipos"],
                 }
             )
 
@@ -1204,7 +1319,7 @@ class FinancialReportService:
                 FinancialReportService._report_card("Resultado competência", FinancialReportService._format_currency(total_comp)),
                 FinancialReportService._report_card("Resultado vencimento", FinancialReportService._format_currency(total_due)),
                 FinancialReportService._report_card("Resultado liquidação", FinancialReportService._format_currency(total_set)),
-                FinancialReportService._report_card("Linhas da DRE", len(rows)),
+                FinancialReportService._report_card("Linhas da DRE", len(hierarchy_rows)),
             ],
             general_info=[
                 FinancialReportService._report_info("Competência", f"{competence_start.isoformat()} até {competence_end.isoformat()}"),
@@ -1212,6 +1327,7 @@ class FinancialReportService:
                 FinancialReportService._report_info("Baixa", settlement_window),
                 FinancialReportService._report_info("Ordenação", f"{filters.order_by} / {filters.order_direction}"),
                 FinancialReportService._report_info("Orientação PDF", "Paisagem" if filters.orientation == "landscape" else "Retrato"),
+                FinancialReportService._report_info("Contas consolidadas", len(hierarchy_rows)),
             ],
             columns=columns,
             rows=rows,
@@ -1221,8 +1337,13 @@ class FinancialReportService:
                 "liquidation": FinancialReportService._serialize_money(total_set),
                 "open": FinancialReportService._serialize_money(total_open),
                 "settled": FinancialReportService._serialize_money(total_settled),
+                "competence_label": FinancialReportService._format_currency(total_comp),
+                "due_label": FinancialReportService._format_currency(total_due),
+                "liquidation_label": FinancialReportService._format_currency(total_set),
+                "open_label": FinancialReportService._format_currency(total_open),
+                "settled_label": FinancialReportService._format_currency(total_settled),
             },
-            extra={"orientation": filters.orientation},
+            extra={"orientation": filters.orientation, "hierarchy_rows": hierarchy_rows},
         )
 
     @staticmethod

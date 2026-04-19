@@ -1,0 +1,127 @@
+{% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
+{% set hierarchy_rows = report.hierarchy_rows or [] %}
+
+<div class="report-workspace-page dre-report-page fade-in">
+    <header class="report-workspace-header dre-report-header">
+        <div>
+            <p class="report-workspace-eyebrow dre-report-eyebrow">Gestão Financeira · DRE Contábil</p>
+            <h1>{{ report.title }}</h1>
+            <p class="report-workspace-subtitle dre-report-subtitle">{{ report.subtitle }}</p>
+        </div>
+        <div class="report-workspace-header-actions dre-report-header-actions no-print">
+            <a class="btn btn-secondary" href="/financial/reports/{{ report.report_slug }}{% if report_query %}?{{ report_query }}{% endif %}">Filtros</a>
+            <a class="btn btn-secondary" href="/financial/reports/{{ report.report_slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
+            <a class="btn btn-secondary" href="/financial/reports/{{ report.report_slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
+            <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
+        </div>
+    </header>
+
+    <div class="report-workspace-viewer dre-report-viewer">
+        <article class="report-workspace-sheet dre-report-sheet">
+            {{ report_macros.workspace_sheet_header(
+                'Demonstrações de Resultados',
+                company.name if company and company.name else 'Empresa ativa',
+                'dre-section dre-section--header',
+                'dre-report-title-main',
+                'dre-report-company-name'
+            ) }}
+
+            {{ report_macros.workspace_filters(
+                report.filters,
+                'sem filtros adicionais.',
+                'dre-section dre-section--filters',
+                'dre-section-title',
+                'dre-filters-grid',
+                'dre-filter-item'
+            ) }}
+
+            {{ report_macros.workspace_stats(
+                report.summary_cards,
+                'dre-section dre-section--stats',
+                'dre-stats-grid',
+                'dre-stat',
+                'dre-stat',
+                'dre-stat__value',
+                'dre-stat__label'
+            ) }}
+
+            {{ report_macros.workspace_info(
+                report.general_info,
+                'Parâmetros da demonstração',
+                'dre-section dre-section--info',
+                'dre-section-title',
+                'dre-info-grid',
+                'dre-info-card'
+            ) }}
+
+            <section class="report-workspace-section dre-section dre-section--table">
+                <div class="dre-table-toolbar no-print">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dre-action="expand-all">Expandir tudo</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dre-action="collapse-all">Recolher tudo</button>
+                </div>
+
+                {% if hierarchy_rows %}
+                <div class="report-workspace-table-wrap dre-table-wrap">
+                    <table class="report-workspace-table dre-table">
+                        <thead>
+                            <tr>
+                                <th class="col-account">Conta contábil</th>
+                                <th class="col-value">Competência</th>
+                                <th class="col-value">Vencimento</th>
+                                <th class="col-value">Liquidação</th>
+                                <th class="col-value">Em aberto</th>
+                                <th class="col-value">Liquidado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in hierarchy_rows %}
+                            <tr class="dre-row dre-row--{{ row.row_type }}{% if row.level > 0 %} is-child{% endif %}"
+                                data-row-id="{{ row.id }}"
+                                data-parent-id="{{ row.parent_id or '' }}"
+                                data-level="{{ row.level }}"
+                                {% if row.has_children %}data-has-children="true" data-collapsed="false"{% endif %}>
+                                <td class="col-account">
+                                    <div class="dre-account-cell level-{{ row.level }}">
+                                        {% if row.has_children %}
+                                        <button type="button" class="dre-toggle no-print" data-dre-toggle="{{ row.id }}" aria-label="Alternar grupo">
+                                            <span class="dre-toggle__icon">▾</span>
+                                        </button>
+                                        {% else %}
+                                        <span class="dre-toggle dre-toggle--ghost"></span>
+                                        {% endif %}
+                                        <div class="dre-account-content">
+                                            <span class="dre-account-code">{{ row.codigo }}</span>
+                                            <span class="dre-account-sep"> - </span>
+                                            <span class="dre-account-name">{{ row.descricao }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="col-value dre-value">{{ row.competencia_label }}</td>
+                                <td class="col-value dre-value">{{ row.vencimento_label }}</td>
+                                <td class="col-value dre-value">{{ row.liquidacao_label }}</td>
+                                <td class="col-value dre-value">{{ row.aberto_label }}</td>
+                                <td class="col-value dre-value">{{ row.liquidado_label }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>Total consolidado</th>
+                                <th>{{ report.totals.competence_label if report.totals else '-' }}</th>
+                                <th>{{ report.totals.due_label if report.totals else '-' }}</th>
+                                <th>{{ report.totals.liquidation_label if report.totals else '-' }}</th>
+                                <th>{{ report.totals.open_label if report.totals else '-' }}</th>
+                                <th>{{ report.totals.settled_label if report.totals else '-' }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="report-workspace-empty dre-empty">Nenhuma conta encontrada para os filtros informados.</div>
+                {% endif %}
+            </section>
+
+            {{ report_macros.workspace_footer(report.generated_at if report else None, 'dre-footer') }}
+        </article>
+    </div>
+</div>
