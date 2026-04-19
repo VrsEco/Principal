@@ -32,6 +32,7 @@ from models.project import Project
 from schemas.financial_reports import FinancialManagementReportFiltersInput
 from services.financial_dashboard_analytics import FinancialDashboardAnalytics
 from services.financial_service import FinancialService
+from services.financial_title_amount_service import FinancialTitleAmountService
 
 
 class FinancialReportService:
@@ -1249,7 +1250,15 @@ class FinancialReportService:
                 if str(schedule.status or "").strip().lower() in {"draft", "cancelled"}:
                     continue
                 schedule_entries = entries_by_schedule.get(schedule.id, [])
-                title_amount = Decimal(str(schedule.template_amount or 0))
+                competence_date = schedule.competence_date or schedule.start_date
+                due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
+                amount_totals = FinancialTitleAmountService.calculate(
+                    company_id=schedule.company_id,
+                    template_amount=schedule.template_amount,
+                    metadata_json=schedule.metadata_json,
+                    due_date=due_date,
+                )
+                title_amount = Decimal(str(amount_totals.get("updated_amount") or schedule.template_amount or 0))
                 if title_amount <= Decimal("0") and schedule_entries:
                     title_amount = sum((Decimal(entry.original_amount or 0) for entry in schedule_entries), Decimal("0"))
                 settled_total = sum((settlement_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
@@ -1258,8 +1267,6 @@ class FinancialReportService:
                 if not passes_status:
                     continue
 
-                competence_date = schedule.competence_date or schedule.start_date
-                due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
                 in_competence = bool(competence_date and period_start <= competence_date <= period_end)
                 in_due = bool(due_date and period_start <= due_date <= period_end)
                 in_liquidation = period_settlement != Decimal("0")

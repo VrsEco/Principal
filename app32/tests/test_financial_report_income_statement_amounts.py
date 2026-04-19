@@ -112,7 +112,7 @@ def test_income_statement_uses_financial_title_dates_and_settlement_date(monkeyp
         template_amount=Decimal("100"),
         chart_account_id=11,
         cost_center_id=None,
-        metadata_json={},
+        metadata_json={"discount_amount_override": "10"},
     )
     entry = SimpleNamespace(
         id=120,
@@ -138,7 +138,7 @@ def test_income_statement_uses_financial_title_dates_and_settlement_date(monkeyp
 
     payload = FinancialReportService._build_income_statement(7, _income_statement_filters())
 
-    assert payload["totals"]["competence"] == 100.0
+    assert payload["totals"]["competence"] == 90.0
     assert payload["totals"]["due"] == 0.0
     assert payload["totals"]["liquidation"] == 30.0
 

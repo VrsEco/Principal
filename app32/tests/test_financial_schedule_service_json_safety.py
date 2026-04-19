@@ -617,7 +617,7 @@ def test_build_entry_payload_propagates_budget_links():
         created_by_employee_id = 6
         created_by_agent = "agent"
         notes = "notes"
-        metadata_json = {"document_number": "NF-123"}
+        metadata_json = {"document_number": "NF-123", "discount_amount_override": "25"}
 
     payload = FinancialScheduleService._build_entry_payload(
         schedule=_Schedule(),
@@ -631,6 +631,8 @@ def test_build_entry_payload_propagates_budget_links():
     assert payload["due_date"] == date(2026, 3, 22)
     assert payload["financial_schedule_id"] == 77
     assert payload["external_reference"] == "financial_schedule:77"
+    assert payload["original_amount"] == Decimal("475.0")
+    assert payload["metadata_json"]["schedule_discount_amount"] == 25.0
     assert payload["metadata_json"]["budget_line_id"] == 10
     assert payload["metadata_json"]["budget_contract_id"] == 20
     assert payload["metadata_json"]["budget_document_id"] == 30
