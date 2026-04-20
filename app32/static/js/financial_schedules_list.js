@@ -41,6 +41,7 @@
     const settlementLabel = (state, item) => {
       if (state === 'bordero_item' && item?.bordero?.code) return `Bord. - ${item.bordero.code}`;
       if (state === 'bordero') return 'Borderô';
+      if (item?.summary?.operational_state_label) return item.summary.operational_state_label;
       return ({ open: 'Em aberto', partial: 'Liquidado parcial', settled: 'Liquidado' }[state] || 'Em aberto');
     };
     const settlementClass = (state) => ({ open: 'sched-pill--open', partial: 'sched-pill--partial', settled: 'sched-pill--settled', bordero_item: 'sched-pill--bordero-item', bordero: 'sched-pill--bordero' }[state] || 'sched-pill--open');
@@ -153,7 +154,7 @@
 
       tbody.innerHTML = items.map((item) => {
         const summary = item.summary || {};
-        const settlementState = item.is_bordero_virtual ? 'bordero' : (item.bordero && !item.is_bordero_virtual ? 'bordero_item' : (summary.settlement_state || 'open'));
+        const settlementState = item.is_bordero_virtual ? 'bordero' : (item.bordero && !item.is_bordero_virtual ? 'bordero_item' : (summary.operational_state || summary.settlement_state || 'open'));
         const hasOpenBalance = Number(summary.open_total || 0) > 0;
         const borderoCode = item.bordero?.code || summary.bordero_code || '';
         const isBorderoLocked = Boolean(item.is_bordero_locked || summary.is_bordero_locked);

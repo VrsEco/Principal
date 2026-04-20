@@ -8,6 +8,10 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from financial_domain import (
+    FINANCIAL_OPERATIONAL_GLOSSARY,
+    build_title_operational_state_metadata,
+)
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from werkzeug.datastructures import FileStorage
@@ -1388,6 +1392,8 @@ class FinancialScheduleService:
             payload.get("template_amount"),
             schedule.movement_nature,
         )
+        payload["entity_label"] = FINANCIAL_OPERATIONAL_GLOSSARY["schedule"]["singular"]
+        payload["entity_legacy_label"] = FINANCIAL_OPERATIONAL_GLOSSARY["schedule"]["legacy_singular"]
         payload["display_variant"] = "negative" if payload["signed_template_amount"] < 0 else "positive"
         metadata = dict(schedule.metadata_json or {})
         payload["metadata_json"] = metadata
@@ -1479,6 +1485,12 @@ class FinancialScheduleService:
     def _build_schedule_summary(schedule: FinancialSchedule) -> Dict[str, Any]:
         metadata = dict(schedule.metadata_json or {})
         balance = FinancialTitleBalanceService.calculate_for_schedule(schedule=schedule)
+        operational_state = build_title_operational_state_metadata(
+            schedule_status=schedule.status,
+            settlement_state=balance.get("settlement_state"),
+            entry_type=schedule.entry_type,
+            metadata_json=schedule.metadata_json,
+        )
         original_total = Decimal(str(balance.get("principal_amount") or 0))
         settled_total = Decimal(str(balance.get("principal_settled") or 0))
         open_total = Decimal(str(balance.get("total_open") or balance.get("principal_open") or 0))
@@ -1508,6 +1520,10 @@ class FinancialScheduleService:
             "total_open": balance.get("total_open"),
             "signed_total_open": balance.get("signed_total_open"),
             "counterparty_name": metadata.get("counterparty_name"),
+            "operational_state": operational_state["code"],
+            "operational_state_label": operational_state["label"],
+            "include_in_accounting_reports": operational_state["include_in_accounting_reports"],
+            "include_in_projected_reports": operational_state["include_in_projected_reports"],
         }
 
     @staticmethod

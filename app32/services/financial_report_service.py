@@ -6,6 +6,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from financial_domain import build_title_operational_state_metadata
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4, landscape
@@ -1172,6 +1173,10 @@ class FinancialReportService:
 
         def _passes_financial_status(total_amount: Decimal, settled_amount: Decimal, explicit_status: Optional[str] = None) -> Tuple[bool, bool]:
             normalized_status = str(explicit_status or "").strip().lower()
+            if normalized_status in {"draft", "cancelled"}:
+                return False, False
+            if normalized_status == "forecast":
+                return bool(filters.include_budget_vs_actual), True
             is_settled = normalized_status in {"settled", "completed"} or (total_amount > Decimal("0") and settled_amount >= total_amount)
             is_partial = not is_settled and settled_amount > Decimal("0")
             is_open = not is_settled
@@ -1195,7 +1200,6 @@ class FinancialReportService:
             schedule_query = FinancialSchedule.query.filter(
                 FinancialSchedule.company_id == company_id,
                 FinancialSchedule.deleted_at.is_(None),
-                FinancialSchedule.status.notin_(["draft", "cancelled"]),
             )
             if chart_account_ids:
                 schedule_query = schedule_query.filter(FinancialSchedule.chart_account_id.in_(chart_account_ids))
@@ -1247,8 +1251,6 @@ class FinancialReportService:
                         settlement_period_totals_by_entry[settlement.financial_entry_id] += settlement_amount
 
             for schedule in schedules:
-                if str(schedule.status or "").strip().lower() in {"draft", "cancelled"}:
-                    continue
                 schedule_entries = entries_by_schedule.get(schedule.id, [])
                 competence_date = schedule.competence_date or schedule.start_date
                 due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
@@ -1263,7 +1265,18 @@ class FinancialReportService:
                     title_amount = sum((Decimal(entry.original_amount or 0) for entry in schedule_entries), Decimal("0"))
                 settled_total = sum((settlement_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
                 period_settlement = sum((settlement_period_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
-                passes_status, is_open = _passes_financial_status(title_amount, settled_total, schedule.status)
+                derived_settlement_state = "open"
+                if title_amount > Decimal("0") and settled_total >= title_amount:
+                    derived_settlement_state = "settled"
+                elif settled_total > Decimal("0"):
+                    derived_settlement_state = "partial"
+                operational_state = build_title_operational_state_metadata(
+                    schedule_status=schedule.status,
+                    settlement_state=derived_settlement_state,
+                    entry_type=schedule.entry_type,
+                    metadata_json=schedule.metadata_json,
+                )
+                passes_status, is_open = _passes_financial_status(title_amount, settled_total, operational_state["code"])
                 if not passes_status:
                     continue
 

@@ -5,6 +5,10 @@ from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from financial_domain import (
+    TITLE_ADJUSTMENT_OPEN_STATUSES,
+    build_title_operational_state_metadata,
+)
 from models import db
 from models.financial import (
     FinancialEntry,
@@ -23,9 +27,6 @@ class FinancialTitleBalanceService:
     principal em aberto, ajustes em aberto e total exigível.
     """
 
-    ACTIVE_TITLE_STATUSES = {"open", "partial", "settled"}
-    NON_OPEN_TITLE_STATUSES = {"draft", "cancelled"}
-    ACTIVE_ADJUSTMENT_STATUSES = {"open", "partial"}
     POSITIVE_ADJUSTMENT_TYPES = {"monetary_correction", "interest", "fine", "manual_adjustment"}
     DISCOUNT_ADJUSTMENT_TYPES = {"discount", "writeoff"}
     POSITIVE_COMPONENT_TYPES = {"monetary_correction", "interest", "fine", "manual_adjustment"}
@@ -164,7 +165,7 @@ class FinancialTitleBalanceService:
             settled = max(stored_settled, component_settled)
             open_amount = max(generated - settled, Decimal("0"))
             stored_open = FinancialTitleBalanceService._money(getattr(adjustment, "open_amount", open_amount))
-            if status in FinancialTitleBalanceService.ACTIVE_ADJUSTMENT_STATUSES:
+            if status in TITLE_ADJUSTMENT_OPEN_STATUSES:
                 open_amount = stored_open if stored_open > 0 else open_amount
             else:
                 open_amount = Decimal("0")
@@ -187,6 +188,12 @@ class FinancialTitleBalanceService:
             settlement_state = "partial"
 
         movement_nature = getattr(schedule, "movement_nature", None)
+        operational_state = build_title_operational_state_metadata(
+            schedule_status=getattr(schedule, "status", None),
+            settlement_state=settlement_state,
+            entry_type=getattr(schedule, "entry_type", None),
+            metadata_json=getattr(schedule, "metadata_json", None),
+        )
         result = {
             "financial_schedule_id": getattr(schedule, "id", None),
             "company_id": getattr(schedule, "company_id", None),
@@ -211,6 +218,10 @@ class FinancialTitleBalanceService:
             "entry_count": len(entries),
             "settlement_count": len(settlements),
             "settlement_state": settlement_state,
+            "operational_state": operational_state["code"],
+            "operational_state_label": operational_state["label"],
+            "include_in_accounting_reports": operational_state["include_in_accounting_reports"],
+            "include_in_projected_reports": operational_state["include_in_projected_reports"],
         }
         return result
 
