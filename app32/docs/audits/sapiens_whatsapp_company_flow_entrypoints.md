@@ -84,3 +84,25 @@ Mapear os arquivos e pontos de entrada envolvidos no recebimento de mensagens Sa
 ### Saída segura para logs
 
 `trace.to_safe_dict()` registra canal, identificador normalizado, estratégia, quantidade de variantes, `user_id`, status de match e motivo. O identificador bruto não é exposto no dicionário seguro.
+
+
+## Passo 3/4 — Resolução de empresas vinculadas
+
+### Contrato operacional
+
+- A empresa efetiva deve nascer exclusivamente dos vínculos do usuário em `Employee`.
+- Vínculos `active` têm prioridade sobre vínculos inativos/legados.
+- Quando houver múltiplos vínculos ativos, a seleção atual é determinística por `company_id ASC, employee_id ASC`.
+- Admin sem vínculo explícito não recebe fallback para a primeira empresa ativa do banco, pois isso cria risco de tenant crossing.
+- A ausência de vínculo encerra o fluxo antes de menu/agente, mantendo `company_id` obrigatório.
+
+### Pontos de rastreabilidade implementados
+
+- `src.intelligence.identity.CompanyResolutionTrace` registra origem da seleção, candidato escolhido e motivo.
+- `src.intelligence.identity.get_company_resolution_with_trace(user)` retorna `(company_id, trace)`.
+- `src.intelligence.identity.get_best_company_id(user)` passa a reutilizar o contrato rastreável e emitir `SAPIENS COMPANY RESOLUTION TRACE`.
+- A resolução não importa nem consulta `Company` diretamente; a fronteira tenant-safe é a vinculação do usuário em `Employee`.
+
+### Lacuna remanescente para evolução posterior
+
+Quando o usuário possuir múltiplas empresas ativas e a intenção não deixar claro o contexto, o canal deve pedir seleção explícita antes da confirmação final. O passo 4 consolida essa proposta mínima.

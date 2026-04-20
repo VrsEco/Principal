@@ -43,6 +43,30 @@ class IdentityResolutionTrace:
         }
 
 
+@dataclass(frozen=True)
+class CompanyResolutionTrace:
+    """Rastro da resolução tenant-safe de empresa a partir do usuário vinculado."""
+
+    user_id: Optional[int]
+    user_role: str
+    selected_company_id: Optional[int]
+    selected_employee_id: Optional[int]
+    source: str
+    candidate_count: int = 0
+    reason: str = "not_resolved"
+
+    def to_safe_dict(self) -> Dict[str, Any]:
+        return {
+            "user_id": self.user_id,
+            "user_role": self.user_role,
+            "selected_company_id": self.selected_company_id,
+            "selected_employee_id": self.selected_employee_id,
+            "source": self.source,
+            "candidate_count": self.candidate_count,
+            "reason": self.reason,
+        }
+
+
 def _normalize_text(value: str) -> str:
     return (value or "").strip()
 
@@ -276,35 +300,78 @@ def resolve_user_identity(identifier: str, channel: str) -> Optional[User]:
     return None
 
 
+def get_company_resolution_with_trace(user: User) -> Tuple[Optional[int], CompanyResolutionTrace]:
+    """Resolve empresa vinculada ao usuário sem fallback global cross-tenant.
+
+    A seleção é determinística e limitada aos vínculos do próprio usuário em
+    `Employee`. Admin sem vínculo explícito não recebe empresa por aproximação.
+    """
+
+    if not user:
+        trace = CompanyResolutionTrace(
+            user_id=None,
+            user_role="",
+            selected_company_id=None,
+            selected_employee_id=None,
+            source="no_user",
+            reason="user_not_resolved",
+        )
+        return None, trace
+
+    user_id = getattr(user, "id", None)
+    user_role = getattr(user, "role", "") or ""
+
+    active_employees = (
+        Employee.query.filter_by(user_id=user_id, status="active")
+        .order_by(Employee.company_id.asc(), Employee.id.asc())
+        .all()
+    )
+    if active_employees:
+        selected = active_employees[0]
+        trace = CompanyResolutionTrace(
+            user_id=user_id,
+            user_role=user_role,
+            selected_company_id=selected.company_id,
+            selected_employee_id=selected.id,
+            source="active_employee_link",
+            candidate_count=len(active_employees),
+            reason="matched_active_employee",
+        )
+        return selected.company_id, trace
+
+    employees = (
+        Employee.query.filter_by(user_id=user_id)
+        .order_by(Employee.company_id.asc(), Employee.id.asc())
+        .all()
+    )
+    if employees:
+        selected = employees[0]
+        trace = CompanyResolutionTrace(
+            user_id=user_id,
+            user_role=user_role,
+            selected_company_id=selected.company_id,
+            selected_employee_id=selected.id,
+            source="employee_link",
+            candidate_count=len(employees),
+            reason="matched_any_employee",
+        )
+        return selected.company_id, trace
+
+    trace = CompanyResolutionTrace(
+        user_id=user_id,
+        user_role=user_role,
+        selected_company_id=None,
+        selected_employee_id=None,
+        source="no_employee_link",
+        candidate_count=0,
+        reason="admin_without_employee_link" if user_role == "admin" else "user_without_employee_link",
+    )
+    return None, trace
+
+
 def get_best_company_id(user: User) -> Optional[int]:
     """Retorna a empresa mais relevante para o contexto do usuario."""
-    if not user:
-        return None
 
-    # 1) Preferencia por vinculo ativo do proprio usuario.
-    active_employee = (
-        Employee.query.filter_by(user_id=user.id, status="active")
-        .order_by(Employee.company_id.asc(), Employee.id.asc())
-        .first()
-    )
-    if active_employee:
-        return active_employee.company_id
-
-    # 2) Fallback para qualquer vinculo do usuario, mantendo determinismo.
-    employee = (
-        Employee.query.filter_by(user_id=user.id)
-        .order_by(Employee.company_id.asc(), Employee.id.asc())
-        .first()
-    )
-    if employee:
-        return employee.company_id
-
-    # 3) Admin sem vinculo explicito: primeira empresa ativa do tenant.
-    if user.role == "admin":
-        from models.company import Company
-
-        first_company = Company.query.filter_by(is_active=True).order_by(Company.id.asc()).first()
-        if first_company:
-            return first_company.id
-
-    return None
+    company_id, trace = get_company_resolution_with_trace(user)
+    logger.info("SAPIENS COMPANY RESOLUTION TRACE: %s", trace.to_safe_dict())
+    return company_id
