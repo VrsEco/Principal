@@ -116,10 +116,16 @@ class FinancialBorderoService:
                 ).first()
                 if not schedule:
                     db.session.rollback()
-                    return None, f"Agendamento {item_input.financial_schedule_id} não encontrado no escopo da empresa."
+                    return None, f"Título Financeiro {item_input.financial_schedule_id} não encontrado no escopo da empresa."
                 if schedule.entry_type != data.bordero_type:
                     db.session.rollback()
-                    return None, "Não é permitido misturar agendamentos a pagar e a receber no mesmo borderô."
+                    return None, "Não é permitido misturar Títulos Financeiros a pagar e a receber no mesmo borderô."
+
+                snapshot = FinancialBorderoService._build_schedule_snapshot(schedule)
+                operational_state = str(((snapshot.get("summary") or {}).get("operational_state") or "")).strip().lower()
+                if operational_state in {"draft", "cancelled", "forecast"}:
+                    db.session.rollback()
+                    return None, "Somente Títulos Financeiros operacionais com saldo aberto podem entrar em borderô."
 
                 lock_error = FinancialBorderoService._ensure_schedule_is_available(
                     company_id=data.company_id,
@@ -130,21 +136,20 @@ class FinancialBorderoService:
                     db.session.rollback()
                     return None, lock_error
 
-                snapshot = FinancialBorderoService._build_schedule_snapshot(schedule)
                 open_amount = Decimal(str(snapshot["summary"]["open_total"]))
                 if open_amount <= 0:
                     db.session.rollback()
-                    return None, f"O agendamento {schedule.schedule_code} não possui saldo aberto para borderô."
+                    return None, f"O Título Financeiro {schedule.schedule_code} não possui saldo aberto para borderô."
 
                 selected_amount = item_input.selected_amount if item_input.selected_amount is not None else open_amount
                 selected_amount = Decimal(str(selected_amount)).quantize(Decimal("0.01"))
                 if selected_amount <= 0:
                     db.session.rollback()
-                    return None, f"O valor selecionado do agendamento {schedule.schedule_code} deve ser maior que zero."
+                    return None, f"O valor selecionado do Título Financeiro {schedule.schedule_code} deve ser maior que zero."
                 if selected_amount > open_amount:
                     db.session.rollback()
                     return None, (
-                        f"O valor selecionado do agendamento {schedule.schedule_code} excede o saldo aberto. "
+                        f"O valor selecionado do Título Financeiro {schedule.schedule_code} excede o saldo aberto. "
                         f"Saldo: {open_amount}."
                     )
 
@@ -433,7 +438,7 @@ class FinancialBorderoService:
     def _ensure_schedule_is_available(*, company_id: int, schedule_id: int, exclude_bordero_id: Optional[int] = None) -> Optional[str]:
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule_id)
         if active_bordero and active_bordero.id != exclude_bordero_id:
-            return f"Agendamento já participa do borderô {active_bordero.bordero_code}."
+            return f"Título Financeiro já participa do borderô {active_bordero.bordero_code}."
         return None
 
     @staticmethod
@@ -560,7 +565,7 @@ class FinancialBorderoService:
             if outstanding > Decimal("0.00"):
                 outstanding_items.append({"id": entry.id, "weight": outstanding, "entry": entry})
         if not outstanding_items:
-            return None, "Os lançamentos do agendamento selecionado não possuem saldo aberto para baixa."
+            return None, "Os lançamentos do Título Financeiro selecionado não possuem saldo aberto para baixa."
 
         allocations = FinancialBorderoService._allocate_amount(amount, outstanding_items)
         created_payload: List[Dict[str, Any]] = []
