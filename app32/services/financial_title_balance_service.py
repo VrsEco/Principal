@@ -182,6 +182,19 @@ class FinancialTitleBalanceService:
                 adjustments_open += open_amount
 
         total_open = max(principal_open + adjustments_open - discounts_open, Decimal("0"))
+        editable_open = {
+            "principal": FinancialTitleBalanceService._float(principal_open),
+            "financial_correction": FinancialTitleBalanceService._float(adjustments_open),
+            "discount": FinancialTitleBalanceService._float(discounts_open),
+            "gross_amount": FinancialTitleBalanceService._float(max(principal_open + adjustments_open - discounts_open, Decimal("0"))),
+            "total_open": FinancialTitleBalanceService._float(total_open),
+        }
+        editable_rules = {
+            "principal_max": editable_open["principal"],
+            "allows_free_financial_correction": True,
+            "allows_free_discount": True,
+            "requires_principal_within_open_balance": True,
+        }
         settlement_state = resolve_title_settlement_state(
             principal_amount=principal_amount,
             principal_settled=principal_settled,
@@ -218,6 +231,8 @@ class FinancialTitleBalanceService:
             "signed_principal_open": FinancialTitleBalanceService._signed(principal_open, movement_nature),
             "signed_adjustments_open": FinancialTitleBalanceService._signed(adjustments_open, movement_nature),
             "signed_total_open": FinancialTitleBalanceService._signed(total_open, movement_nature),
+            "editable_open": editable_open,
+            "editable_rules": editable_rules,
             "entry_count": len(entries),
             "settlement_count": len(settlements),
             "settlement_state": settlement_state,

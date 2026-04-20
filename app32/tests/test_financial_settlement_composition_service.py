@@ -76,7 +76,11 @@ def test_simulate_settlement_suggests_adjustment_first_then_principal(monkeypatc
     assert result["composition"]["interest"] == 30.0
     assert result["composition"]["principal"] == 270.0
     assert result["composition"]["gross_amount"] == 300.0
-    assert result["after"] == {"principal_open": 530.0, "adjustments_open": 0.0, "total_open": 530.0}
+    assert result["before"]["editable_open"]["principal"] == 800.0
+    assert result["editable_before"]["total_open"] == 830.0
+    assert result["editable_rules"]["principal_max"] == 800.0
+    assert result["after"]["principal_open"] == 530.0
+    assert result["after"]["editable_open"]["total_open"] == 530.0
     components = result["settlement_payload"]["settlement_components"]
     assert components[0]["component_type"] == "principal"
     assert components[1]["component_type"] == "interest"

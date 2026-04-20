@@ -259,6 +259,26 @@ class FinancialSettlementCompositionService:
         adjustments_after = max(FinancialSettlementCompositionService._money(balance.get("adjustments_open")) - sum((amounts.get(item, Decimal("0.00")) for item in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS), Decimal("0.00")), Decimal("0.00"))
         discount = amounts.get("discount", Decimal("0.00"))
         total_after = max(principal_after + adjustments_after - discount, Decimal("0.00"))
+        editable_before = dict(balance.get("editable_open") or {
+            "principal": float(FinancialSettlementCompositionService._money(balance.get("principal_open"))),
+            "financial_correction": float(FinancialSettlementCompositionService._money(balance.get("adjustments_open"))),
+            "discount": 0.0,
+            "gross_amount": float(FinancialSettlementCompositionService._money(balance.get("total_open"))),
+            "total_open": float(FinancialSettlementCompositionService._money(balance.get("total_open"))),
+        })
+        editable_rules = dict(balance.get("editable_rules") or {
+            "principal_max": editable_before.get("principal", 0.0),
+            "allows_free_financial_correction": True,
+            "allows_free_discount": True,
+            "requires_principal_within_open_balance": True,
+        })
+        editable_after = {
+            "principal": float(FinancialSettlementCompositionService._money(principal_after)),
+            "financial_correction": float(FinancialSettlementCompositionService._money(adjustments_after)),
+            "discount": 0.0,
+            "gross_amount": float(FinancialSettlementCompositionService._money(total_after)),
+            "total_open": float(FinancialSettlementCompositionService._money(total_after)),
+        }
 
         components = FinancialSettlementCompositionService._build_component_payloads(
             amounts=amounts,
@@ -275,6 +295,8 @@ class FinancialSettlementCompositionService:
                 "principal_open": balance.get("principal_open"),
                 "adjustments_open": balance.get("adjustments_open"),
                 "total_due": balance.get("total_open"),
+                "editable_open": editable_before,
+                "editable_rules": editable_rules,
             },
             "available_adjustments": {key: float(value) for key, value in open_by_type.items()},
             "composition": {
@@ -303,7 +325,11 @@ class FinancialSettlementCompositionService:
                 "principal_open": float(FinancialSettlementCompositionService._money(principal_after)),
                 "adjustments_open": float(FinancialSettlementCompositionService._money(adjustments_after)),
                 "total_open": float(FinancialSettlementCompositionService._money(total_after)),
+                "editable_open": editable_after,
             },
+            "editable_before": editable_before,
+            "editable_after": editable_after,
+            "editable_rules": editable_rules,
             "valid": not validation_errors,
             "errors": validation_errors,
         }, None

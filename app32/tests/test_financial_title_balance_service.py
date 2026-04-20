@@ -62,6 +62,10 @@ def test_calculate_from_records_exposes_principal_adjustments_and_total_open():
     assert result["operational_state_label"] == "Parcial"
     assert result["include_in_accounting_reports"] is True
     assert result["include_in_projected_reports"] is False
+    assert result["editable_open"]["principal"] == 800.0
+    assert result["editable_open"]["financial_correction"] == 30.0
+    assert result["editable_open"]["total_open"] == 830.0
+    assert result["editable_rules"]["principal_max"] == 800.0
 
 
 def test_calculate_from_records_uses_legacy_settlement_fields_when_components_absent():

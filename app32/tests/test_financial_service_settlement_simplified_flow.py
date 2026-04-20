@@ -256,11 +256,15 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert snapshot["open_principal_after"] == 255.0
     assert snapshot["before"]["principal_open"] == 375.0
     assert snapshot["before"]["total_open"] == 375.0
+    assert snapshot["before"]["editable_open"]["principal"] == 375.0
+    assert snapshot["before"]["editable_rules"]["principal_max"] == 375.0
     assert snapshot["current"]["principal_settled"] == 120.0
     assert snapshot["current"]["financial_correction"] == 0.0
     assert snapshot["current"]["discount"] == 0.0
     assert snapshot["current"]["gross_amount"] == 120.0
     assert snapshot["after"]["principal_open"] == 255.0
+    assert snapshot["after"]["editable_open"]["principal"] == 255.0
+    assert snapshot["after"]["editable_open"]["total_open"] == 255.0
     assert snapshot["after"]["total_open"] == 255.0
     assert snapshot["after"]["operational_state"]["code"] == "partial"
     assert captured["flushed"] is True
@@ -291,6 +295,9 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["metadata_json"]["component_summary"]["principal"] == 120.0
     assert captured["log_kwargs"]["metadata_json"]["component_summary"]["gross_amount"] == 120.0
     assert captured["log_kwargs"]["metadata_json"]["component_summary"]["count"] == 1
+    assert captured["log_kwargs"]["metadata_json"]["editable_before"]["principal"] == 375.0
+    assert captured["log_kwargs"]["metadata_json"]["editable_after"]["principal"] == 255.0
+    assert captured["log_kwargs"]["metadata_json"]["editable_rules"]["principal_max"] == 375.0
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):

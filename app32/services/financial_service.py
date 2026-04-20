@@ -1110,6 +1110,26 @@ class FinancialService:
             entry_type=schedule.entry_type,
             metadata_json=schedule.metadata_json,
         )
+        editable_before = {
+            "principal": FinancialService._money_float(principal_open_before),
+            "financial_correction": FinancialService._money_float(adjustments_open_before),
+            "discount": FinancialService._money_float(discounts_open_before),
+            "gross_amount": FinancialService._money_float(total_open_before),
+            "total_open": FinancialService._money_float(total_open_before),
+        }
+        editable_after = {
+            "principal": FinancialService._money_float(open_after),
+            "financial_correction": FinancialService._money_float(adjustments_open_after),
+            "discount": FinancialService._money_float(discounts_open_after),
+            "gross_amount": FinancialService._money_float(total_open_after),
+            "total_open": FinancialService._money_float(total_open_after),
+        }
+        editable_rules = {
+            "principal_max": editable_before["principal"],
+            "allows_free_financial_correction": True,
+            "allows_free_discount": True,
+            "requires_principal_within_open_balance": True,
+        }
         return {
             "contract_version": FINANCIAL_TITLE_MEMORY_VERSION,
             "financial_schedule_id": schedule.id,
@@ -1154,6 +1174,8 @@ class FinancialService:
                 "principal_settled": FinancialService._money_float(settled_before),
                 "settlement_state": settlement_state_before,
                 "operational_state": operational_state_before,
+                "editable_open": editable_before,
+                "editable_rules": editable_rules,
             },
             "current": {
                 "principal_settled": FinancialService._money_float(principal_now),
@@ -1169,6 +1191,7 @@ class FinancialService:
                 "principal_settled": FinancialService._money_float(settled_after),
                 "settlement_state": settlement_state_after,
                 "operational_state": operational_state_after,
+                "editable_open": editable_after,
             },
         }
 
@@ -1265,6 +1288,9 @@ class FinancialService:
                 "actor": actor_payload,
                 "evidence": evidence_payload,
                 "component_summary": component_summary,
+                "editable_before": before_block.get("editable_open") or snapshot.get("editable_before") or {},
+                "editable_after": after_block.get("editable_open") or snapshot.get("editable_after") or {},
+                "editable_rules": before_block.get("editable_rules") or snapshot.get("editable_rules") or {},
             },
         }
 

@@ -657,6 +657,7 @@
     }
 
     const summary = schedule.summary || {};
+    const editableOpen = summary.editable_open || {};
     const nature = schedule.movement_nature;
     const principalAmount = asMoneyValue(summary.principal_amount ?? summary.template_amount ?? schedule.template_amount);
     const principalOpen = asMoneyValue(summary.principal_open ?? summary.open_principal ?? schedule.template_amount);
@@ -666,6 +667,10 @@
     const discountsOpen = asMoneyValue(summary.discounts_open ?? summary.discount_amount ?? 0);
     const totalOpen = asMoneyValue(summary.total_open ?? (principalOpen + adjustmentsOpen - discountsOpen));
     const settledTotal = asMoneyValue(summary.principal_settled ?? summary.liquidated_amount ?? 0);
+    const editableTotal = asMoneyValue(editableOpen.total_open ?? totalOpen);
+    const editablePrincipal = asMoneyValue(editableOpen.principal ?? principalOpen);
+    const editableCorrection = asMoneyValue(editableOpen.financial_correction ?? adjustmentsOpen);
+    const editableDiscount = asMoneyValue(editableOpen.discount ?? discountsOpen);
 
     panelEl.innerHTML = `
       <header class="title-balance-head">
@@ -696,6 +701,11 @@
           <span>Principal baixado</span>
           <strong>${money(signedAmount(settledTotal, nature))}</strong>
           <small>Principal liquidado até o momento.</small>
+        </article>
+        <article class="title-balance-card title-balance-card--editable">
+          <span>Saldo ainda alterável</span>
+          <strong>${money(signedAmount(editableTotal, nature))}</strong>
+          <small>Principal ${money(signedAmount(editablePrincipal, nature))} · Correção ${money(signedAmount(editableCorrection, nature))} · Desconto ${money(signedAmount(editableDiscount, nature))}</small>
         </article>
       </div>
     `;
@@ -740,15 +750,18 @@
     const latest = normalizedLogs[0] || null;
     const latestTimeline = latest?.memory_timeline || {};
     const latestAfter = latestTimeline.after || latest?.after || {};
+    const latestEditableAfter = latestAfter.editable_open || latest?.metadata_json?.editable_after || {};
     const summary = schedule.summary || {};
     const signedTotalOpen = signedAmount(summary.total_open ?? latestAfter.total_open ?? latest?.total_due_after ?? latest?.open_principal_after ?? 0, schedule?.movement_nature);
     const signedAdjustmentsOpen = signedAmount(summary.adjustments_open ?? latestAfter.adjustments_open ?? latest?.adjustments_open_after ?? 0, schedule?.movement_nature);
+    const signedEditableOpen = signedAmount(summary.editable_open?.total_open ?? latestEditableAfter.total_open ?? latestAfter.total_open ?? 0, schedule?.movement_nature);
 
     if (summaryEl) {
       summaryEl.innerHTML = latest ? [
         `<article class="calc-log-kpi"><span>Último evento</span><strong>${formatIso(latest.calculation_date)}</strong><small>${eventLabel(latest.event_type)}</small></article>`,
         `<article class="calc-log-kpi"><span>Total em aberto</span><strong class="${amountClass(signedTotalOpen)}">${money(signedTotalOpen)}</strong><small>Principal + ajustes pendentes</small></article>`,
         `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correção financeira/descontos a liquidar</small></article>`,
+        `<article class="calc-log-kpi"><span>Saldo ainda alterável</span><strong class="${amountClass(signedEditableOpen)}">${money(signedEditableOpen)}</strong><small>Janela restante para novas baixas e ajustes</small></article>`,
         `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias estruturadas registradas</small></article>`,
       ].join('') : '';
     }
@@ -767,6 +780,8 @@
         const afterTotal = afterBlock.total_open ?? log.total_due_after ?? ((log.principal_after || 0) + (log.adjustments_open_after || 0));
         const beforeState = beforeBlock.operational_state?.label || beforeBlock.operational_state_label || '';
         const afterState = afterBlock.operational_state?.label || afterBlock.operational_state_label || '';
+        const beforeEditable = beforeBlock.editable_open || meta.editable_before || {};
+        const afterEditable = afterBlock.editable_open || meta.editable_after || {};
         return `
           <article class="calc-log-card calc-log-card--ledger">
             <header class="calc-log-card__head">
@@ -786,7 +801,7 @@
                 ledgerMetric('Principal aberto', beforeBlock.principal_open ?? log.principal_before ?? log.template_amount ?? 0, schedule?.movement_nature),
                 ledgerMetric('Ajustes abertos', beforeBlock.adjustments_open ?? log.adjustments_open_before ?? log.correction_amount ?? 0, schedule?.movement_nature),
                 ledgerMetric('Descontos abertos', beforeBlock.discounts_open ?? 0, schedule?.movement_nature, { invert: true }),
-                ledgerMetric('Total devido', beforeTotal, schedule?.movement_nature),
+                ledgerMetric('Saldo alterável', beforeEditable.total_open ?? beforeTotal, schedule?.movement_nature),
               ], 'ledger-step--before')}${beforeState ? `<small class="calc-log-state">Estado: ${escapeHtml(beforeState)}</small>` : ''}
               ${ledgerStep('Agora', 'Composição realizada neste evento', [
                 ledgerMetric('Principal baixado', currentBlock.principal_settled ?? log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature),
@@ -798,7 +813,7 @@
                 ledgerMetric('Principal aberto', afterBlock.principal_open ?? log.principal_after ?? log.open_principal_after ?? 0, schedule?.movement_nature),
                 ledgerMetric('Ajustes abertos', afterBlock.adjustments_open ?? log.adjustments_open_after ?? 0, schedule?.movement_nature),
                 ledgerMetric('Descontos abertos', afterBlock.discounts_open ?? 0, schedule?.movement_nature, { invert: true }),
-                ledgerMetric('Total devido', afterTotal, schedule?.movement_nature),
+                ledgerMetric('Saldo alterável', afterEditable.total_open ?? afterTotal, schedule?.movement_nature),
               ], 'ledger-step--after')}${afterState ? `<small class="calc-log-state">Estado: ${escapeHtml(afterState)}</small>` : ''}
             </div>
             <details class="calc-log-snapshot">
@@ -1176,6 +1191,8 @@
     const composition = simulation.composition || {};
     const before = simulation.before || {};
     const after = simulation.after || {};
+    const editableBefore = simulation.editable_before || before.editable_open || {};
+    const editableAfter = simulation.editable_after || after.editable_open || {};
     const errors = simulation.errors || [];
     if (statusEl) {
       statusEl.textContent = simulation.valid ? 'Composição válida para baixa.' : errors.join(' ');
@@ -1188,6 +1205,7 @@
         ['Principal antes', before.principal_open],
         ['Correção Financeira antes', before.adjustments_open],
         ['Total devido antes', before.total_due],
+        ['Saldo alterável antes', editableBefore.total_open ?? before.total_due],
         ['Valor da Baixa', composition.gross_amount],
       ].map(([label, value]) => `<article><span>${label}</span><strong>${money(signedAmount(value || 0, selectedSchedule?.movement_nature))}</strong></article>`).join('');
     }
@@ -1196,6 +1214,7 @@
         <article><span>Principal após</span><strong>${money(signedAmount(after.principal_open || 0, selectedSchedule?.movement_nature))}</strong></article>
         <article><span>Correção Financeira após</span><strong>${money(signedAmount(after.adjustments_open || 0, selectedSchedule?.movement_nature))}</strong></article>
         <article><span>Total em aberto após</span><strong>${money(signedAmount(after.total_open || 0, selectedSchedule?.movement_nature))}</strong></article>
+        <article><span>Saldo alterável após</span><strong>${money(signedAmount(editableAfter.total_open || after.total_open || 0, selectedSchedule?.movement_nature))}</strong></article>
       `;
     }
   }
