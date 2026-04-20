@@ -309,3 +309,60 @@ class FinancialBudgetActualService:
             "status": FinancialBudgetActualService._status_for(planned, actual),
             "status_counts": dict(sorted(status_counts.items())),
         }
+
+    @staticmethod
+    def build_rollout_contract() -> Dict[str, Any]:
+        """Contrato de governança para publicar o Orçado x Realizado.
+
+        O rollout deixa explícito que a tela gerencial é uma compilação de
+        fontes financeiras e não substitui relatórios contábeis como DRE.
+        """
+
+        workspace = FinancialBudgetActualService.build_workspace_model()
+        return {
+            "contract_version": "financial_budget_actual_rollout_v1",
+            "workspace_contract": workspace["contract_version"],
+            "canonical_name": "Orçado x Realizado",
+            "tenant_guardrails": {
+                "requires_company_id": True,
+                "cross_tenant_records": "blocked",
+                "route_business_logic": "forbidden",
+            },
+            "data_sources": [
+                {
+                    "key": "planned",
+                    "label": "Orçamento",
+                    "description": "Itens orçados aprovados para comparação gerencial.",
+                    "date_basis": "period/competence conforme visão selecionada",
+                },
+                {
+                    "key": "actual_titles",
+                    "label": "Títulos Financeiros",
+                    "description": "Realizado por competência ou vencimento quando o relatório exigir saldo operacional.",
+                    "date_basis": "campos próprios do título financeiro",
+                },
+                {
+                    "key": "actual_settlements",
+                    "label": "Baixas",
+                    "description": "Realizado por liquidação quando a visão exigir efetivação financeira.",
+                    "date_basis": "data da baixa",
+                },
+            ],
+            "views": [view["key"] for view in workspace["views"]],
+            "required_dimensions": [dimension["key"] for dimension in workspace["dimensions"]],
+            "required_measures": [measure["key"] for measure in workspace["measures"]],
+            "statuses": {
+                "on_track": "Dentro do esperado",
+                "attention": "Consumo próximo do limite",
+                "overrun": "Realizado acima do orçamento",
+                "no_budget": "Realizado sem orçamento",
+            },
+            "qa_checklist": [
+                "validar isolamento por company_id",
+                "validar totais planejado, realizado, variação e consumo",
+                "validar visão por período",
+                "validar visão por competência",
+                "validar resumo executivo",
+                "validar linguagem canônica: Títulos Financeiros e Baixas",
+            ],
+        }
