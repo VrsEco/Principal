@@ -61,6 +61,7 @@ def test_list_title_calculation_logs_exposes_memory_timeline(monkeypatch):
                     "actor": {"user_id": 19, "user_name": "Fabiano Diretor", "agent": "app32"},
                     "evidence": {"settlement_code": "LIQ-000123", "attachments_count": 1},
                     "component_summary": {"count": 2, "gross_amount": 55.0},
+                    "tenant_scope": {"company_id": 7, "financial_schedule_id": 77, "scope_consistent": True},
                 },
             }
         },
@@ -102,3 +103,19 @@ def test_list_title_calculation_logs_exposes_memory_timeline(monkeypatch):
     assert result["logs"][0]["actor"]["user_name"] == "Fabiano Diretor"
     assert result["logs"][0]["evidence"]["settlement_code"] == "LIQ-000123"
     assert result["logs"][0]["component_summary"]["count"] == 2
+    assert result["logs"][0]["tenant_scope"]["company_id"] == 7
+    assert result["logs"][0]["tenant_scope"]["scope_consistent"] is True
+
+
+def test_list_title_calculation_logs_blocks_cross_tenant_scope(monkeypatch):
+    monkeypatch.setattr(calc_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: "Acesso negado ao escopo da empresa.")
+
+    result, error = FinancialTitleCalculationService.list_title_calculation_logs(
+        company_id=7,
+        schedule_id=77,
+        allowed_company_ids=[9],
+        limit=10,
+    )
+
+    assert result is None
+    assert error == "Acesso negado ao escopo da empresa."

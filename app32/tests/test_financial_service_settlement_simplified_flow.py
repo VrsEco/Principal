@@ -298,6 +298,9 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["metadata_json"]["editable_before"]["principal"] == 375.0
     assert captured["log_kwargs"]["metadata_json"]["editable_after"]["principal"] == 255.0
     assert captured["log_kwargs"]["metadata_json"]["editable_rules"]["principal_max"] == 375.0
+    assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["company_id"] == 7
+    assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["financial_schedule_id"] == 77
+    assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["scope_consistent"] is True
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):

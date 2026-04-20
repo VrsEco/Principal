@@ -120,3 +120,35 @@ def test_schedule_assisted_settlement_resource_injects_actor_context(monkeypatch
     assert captured["payload"]["created_by_agent"] == "app32"
     assert captured["payload"]["metadata_json"]["audit"]["actor"]["user_name"] == "Usuário Financeiro"
     assert captured["payload"]["metadata_json"]["audit"]["channel"] == "app32"
+
+
+def test_schedule_calculation_logs_resource_forwards_company_scope(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(financial_resource, "get_request_company_id", lambda: 9)
+    monkeypatch.setattr(financial_resource, "get_accessible_company_ids", lambda: [9, 10])
+
+    captured = {}
+
+    def _fake_list_title_calculation_logs(**kwargs):
+        captured.update(kwargs)
+        return {"ok": True}, None
+
+    monkeypatch.setattr(
+        financial_resource.FinancialTitleCalculationService,
+        "list_title_calculation_logs",
+        _fake_list_title_calculation_logs,
+    )
+
+    resource = financial_resource.FinancialScheduleCalculationLogListResource()
+    with app.test_request_context(
+        "/api/financial/schedules/15/calculation-logs?company_id=9&limit=25",
+        method="GET",
+    ):
+        response, status = resource.get.__wrapped__(resource, 15)
+
+    assert status == 200
+    assert response == {"ok": True}
+    assert captured["company_id"] == 9
+    assert captured["schedule_id"] == 15
+    assert captured["allowed_company_ids"] == [9, 10]
+    assert captured["limit"] == 25

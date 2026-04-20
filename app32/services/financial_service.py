@@ -1251,6 +1251,19 @@ class FinancialService:
             metadata_json=settlement_metadata,
             component_summary=component_summary,
         )
+        tenant_scope = {
+            "company_id": entry.company_id,
+            "financial_schedule_id": int(snapshot["financial_schedule_id"]),
+            "financial_entry_id": entry.id,
+            "financial_settlement_id": getattr(settlement, "id", None),
+            "schedule_company_id": snapshot.get("company_id") or entry.company_id,
+            "entry_company_id": getattr(entry, "company_id", None),
+            "settlement_company_id": getattr(settlement, "company_id", None),
+            "scope_consistent": (
+                int(snapshot.get("company_id") or entry.company_id) == int(entry.company_id)
+                and int(getattr(settlement, "company_id", entry.company_id) or entry.company_id) == int(entry.company_id)
+            ),
+        }
         return {
             "company_id": entry.company_id,
             "financial_schedule_id": int(snapshot["financial_schedule_id"]),
@@ -1288,6 +1301,7 @@ class FinancialService:
                 "actor": actor_payload,
                 "evidence": evidence_payload,
                 "component_summary": component_summary,
+                "tenant_scope": tenant_scope,
                 "editable_before": before_block.get("editable_open") or snapshot.get("editable_before") or {},
                 "editable_after": after_block.get("editable_open") or snapshot.get("editable_after") or {},
                 "editable_rules": before_block.get("editable_rules") or snapshot.get("editable_rules") or {},
