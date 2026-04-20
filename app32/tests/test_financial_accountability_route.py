@@ -87,7 +87,7 @@ def test_financial_accountability_route_redirects_to_automation_center(monkeypat
     response = client.get("/financial/accountability?company_id=9", follow_redirects=False)
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/financial/automation")
+    assert response.headers["Location"].endswith("/financial/automation?origin_type=accountability")
 
 
 def test_legacy_financial_ingestions_route_redirects_to_automation_center(monkeypatch):

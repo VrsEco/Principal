@@ -1636,6 +1636,61 @@ class FinancialAutomationService:
             return None, f"Erro ao fazer upload de arquivos da Central: {exc}"
 
     @staticmethod
+    def ingest_accountability_documents(
+        *,
+        company_id: int,
+        files: Sequence[Any],
+        upload_root: str,
+        source_label: Optional[str] = None,
+        created_by_user_id: Optional[int] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        """Integra Prestação de Contas ao pipeline da Central.
+
+        Cria lote com origem canônica `accountability`, armazena documentos no
+        contrato da Central e executa imediatamente o parsing para gerar
+        registros financeiros revisáveis.
+        """
+
+        upload_result, upload_error = FinancialAutomationService.upload_batch_files(
+            company_id=company_id,
+            origin_type="accountability",
+            source_label=source_label or "Prestação de contas",
+            files=files,
+            upload_root=upload_root,
+            created_by_user_id=created_by_user_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if upload_error:
+            return None, upload_error
+
+        batch = dict((upload_result or {}).get("batch") or {})
+        batch_id = batch.get("id")
+        if not batch_id:
+            return None, "Lote de Prestação de Contas não retornou identificador para parsing."
+
+        parse_result, parse_error = FinancialAutomationService.parse_batch_documents(
+            company_id=company_id,
+            batch_id=int(batch_id),
+            upload_root=upload_root,
+            allowed_company_ids=allowed_company_ids,
+            performed_by_user_id=created_by_user_id,
+        )
+        if parse_error:
+            return None, parse_error
+
+        return {
+            "contract_version": "financial_accountability_central_v1",
+            "origin_type": "accountability",
+            "batch": (parse_result or {}).get("batch") or batch,
+            "documents": (upload_result or {}).get("documents", []),
+            "records": (parse_result or {}).get("records", []),
+            "parsed_documents": (parse_result or {}).get("parsed_documents", 0),
+            "skipped_documents": (parse_result or {}).get("skipped_documents", 0),
+            "count": (parse_result or {}).get("count", 0),
+        }, None
+
+    @staticmethod
     def _load_batch_for_company(company_id: int, batch_id: int) -> Optional[FinancialAutomationBatch]:
         return FinancialAutomationBatch.query.filter(
             FinancialAutomationBatch.id == batch_id,

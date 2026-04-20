@@ -385,7 +385,7 @@ def financial_ingestions_page():
 @financial_bp.route("/financial/accountability")
 @permission_required("financial", "view")
 def financial_accountability_page():
-    return redirect("/financial/automation", code=302)
+    return redirect("/financial/automation?origin_type=accountability", code=302)
 
 
 @financial_bp.route("/financial/schedules")
