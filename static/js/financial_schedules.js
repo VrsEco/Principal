@@ -8,6 +8,14 @@
   const pageParams = new URLSearchParams(window.location.search);
   const autoOpenSettlement = pageParams.get('open_settlement') === '1';
   const initialOpenTab = String(pageParams.get('open_tab') || '').trim().toLowerCase();
+  const settlementFocusSelector = [
+    '#settlement-date',
+    '#settlement-bank-account',
+    '#settlement-component-principal',
+    '#settlement-component-financial-correction',
+    '#settlement-component-discount',
+    '#settlement-confirm-button',
+  ].join(', ');
   const isFormMode = page.classList.contains('sched-page--form');
   let schedules = [];
   let selectedSchedule = null;
@@ -33,6 +41,7 @@
   let settlementSimulation = null;
   let settlementSimulationTimer = null;
   let settlementCompositionHydrating = false;
+  let settlementLastFocus = null;
 
   const $ = (id) => document.getElementById(id);
   const missingElementMessage = (id) => `A interface de títulos financeiros está desatualizada: campo ${id} não encontrado. Atualize a página e tente novamente.`;
@@ -1249,6 +1258,7 @@
   async function openSettlementCompositionModal(schedule) {
     if (!schedule?.id) throw new Error('Salve o título financeiro antes de baixar.');
     const modalEl = requireElement('settlement-composition-modal');
+    settlementLastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     requireElement('settlement-schedule-id').value = schedule.id;
     requireElement('settlement-date').value = todayIso();
     setFieldValue('settlement-bank-account', schedule.bank_account_id || selectedSchedule?.bank_account_id || '');
@@ -1268,12 +1278,26 @@
     window.setTimeout(() => $('settlement-date')?.focus(), 0);
   }
 
+  function settlementFocusableElements() {
+    const modalEl = $('settlement-composition-modal');
+    if (!modalEl || modalEl.classList.contains('hidden')) return [];
+    return Array.from(modalEl.querySelectorAll(settlementFocusSelector)).filter((element) => (
+      element instanceof HTMLElement
+      && !element.disabled
+      && element.tabIndex !== -1
+      && !element.hasAttribute('hidden')
+    ));
+  }
+
   window.closeSettlementCompositionModal = () => {
     window.clearTimeout(settlementSimulationTimer);
     const modalEl = $('settlement-composition-modal');
     if (!modalEl) return;
     modalEl.classList.add('hidden');
     modalEl.setAttribute('aria-hidden', 'true');
+    if (settlementLastFocus && typeof settlementLastFocus.focus === 'function') {
+      window.setTimeout(() => settlementLastFocus.focus(), 0);
+    }
   };
 
   window.confirmAssistedSettlement = async () => {
@@ -1511,6 +1535,17 @@
 
   if ($('settlement-composition-form')) {
     $('settlement-composition-form').addEventListener('keydown', (event) => {
+      if (event.key === 'Tab') {
+        const focusable = settlementFocusableElements();
+        if (!focusable.length) return;
+        const currentIndex = focusable.indexOf(document.activeElement);
+        const nextIndex = event.shiftKey
+          ? (currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1)
+          : (currentIndex === -1 || currentIndex >= focusable.length - 1 ? 0 : currentIndex + 1);
+        event.preventDefault();
+        focusable[nextIndex]?.focus();
+        return;
+      }
       if (event.key !== 'Enter') return;
       const activeId = document.activeElement?.id || '';
       if (activeId !== 'settlement-confirm-button') {
