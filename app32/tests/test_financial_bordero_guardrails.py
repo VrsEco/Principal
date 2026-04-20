@@ -75,3 +75,40 @@ def test_create_bordero_rejects_non_operational_title(monkeypatch):
 
     assert result is None
     assert error == 'Somente Títulos Financeiros operacionais com saldo aberto podem entrar em borderô.'
+
+
+def test_bordero_settlement_audit_metadata_is_complete():
+    bordero = SimpleNamespace(id=31, company_id=9, bordero_code='B-31')
+    settlement = SimpleNamespace(id=55, settlement_code='B-31-BX-001')
+    metadata = FinancialBorderoService._build_bordero_settlement_audit_metadata(
+        base_metadata={'origin': 'qa'},
+        bordero=bordero,
+        settlement=settlement,
+        gross_amount=Decimal('300.00'),
+        allocated_total=Decimal('300.00'),
+        variance_amount=Decimal('0.00'),
+        allocation_payload=[
+            {
+                'bordero_item_id': 1,
+                'financial_schedule_id': 101,
+                'allocated_amount': 200.0,
+                'entry_allocations': [{'financial_entry_id': 900, 'allocated_amount': 200.0}],
+            },
+            {
+                'bordero_item_id': 2,
+                'financial_schedule_id': 102,
+                'allocated_amount': 100.0,
+                'entry_allocations': [{'financial_entry_id': 901, 'allocated_amount': 100.0}],
+            },
+        ],
+        created_by_user_id=7,
+        created_by_employee_id=8,
+        created_by_agent='app32',
+    )
+
+    assert metadata['traceability_contract'] == 'financial_bordero_settlement_v2'
+    assert metadata['reconcile_via_bordero'] is True
+    assert metadata['allocation_summary']['title_count'] == 2
+    assert metadata['allocation_summary']['entry_settlement_count'] == 2
+    assert metadata['audit']['tenant_scope']['company_id'] == 9
+    assert metadata['audit']['actor']['user_id'] == 7

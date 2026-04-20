@@ -382,12 +382,18 @@ class FinancialBorderoService:
 
             settlement.allocated_amount = allocated_total
             settlement.variance_amount = max(gross_amount - allocated_total, Decimal("0.00"))
-            settlement.metadata_json = {
-                **dict(settlement.metadata_json or {}),
-                "bordero_code": bordero.bordero_code,
-                "allocations": allocation_payload,
-                "reconcile_via_bordero": True,
-            }
+            settlement.metadata_json = FinancialBorderoService._build_bordero_settlement_audit_metadata(
+                base_metadata=dict(settlement.metadata_json or {}),
+                bordero=bordero,
+                settlement=settlement,
+                gross_amount=gross_amount,
+                allocated_total=allocated_total,
+                variance_amount=settlement.variance_amount,
+                allocation_payload=allocation_payload,
+                created_by_user_id=data.created_by_user_id,
+                created_by_employee_id=data.created_by_employee_id,
+                created_by_agent=data.created_by_agent,
+            )
 
             bordero.settled_amount = Decimal(str(bordero.settled_amount or 0)) + allocated_total
             bordero.open_amount = max(Decimal(str(bordero.total_amount or 0)) - Decimal(str(bordero.settled_amount or 0)), Decimal("0.00"))
@@ -519,6 +525,56 @@ class FinancialBorderoService:
         return payload
 
     @staticmethod
+    def _build_bordero_settlement_audit_metadata(
+        *,
+        base_metadata: Dict[str, Any],
+        bordero: FinancialBordero,
+        settlement: FinancialBorderoSettlement,
+        gross_amount: Decimal,
+        allocated_total: Decimal,
+        variance_amount: Decimal,
+        allocation_payload: List[Dict[str, Any]],
+        created_by_user_id: Optional[int],
+        created_by_employee_id: Optional[int],
+        created_by_agent: Optional[str],
+    ) -> Dict[str, Any]:
+        schedules = [item.get("financial_schedule_id") for item in allocation_payload if item.get("financial_schedule_id")]
+        entry_allocations = [
+            entry_allocation
+            for item in allocation_payload
+            for entry_allocation in (item.get("entry_allocations") or [])
+        ]
+        return {
+            **dict(base_metadata or {}),
+            "bordero_id": bordero.id,
+            "bordero_code": bordero.bordero_code,
+            "bordero_settlement_id": settlement.id,
+            "bordero_settlement_code": settlement.settlement_code,
+            "reconcile_via_bordero": True,
+            "traceability_contract": "financial_bordero_settlement_v2",
+            "allocation_summary": {
+                "gross_amount": float(gross_amount or 0),
+                "allocated_amount": float(allocated_total or 0),
+                "variance_amount": float(variance_amount or 0),
+                "title_count": len(set(schedules)),
+                "entry_settlement_count": len(entry_allocations),
+            },
+            "allocations": allocation_payload,
+            "audit": {
+                "actor": {
+                    "user_id": created_by_user_id,
+                    "employee_id": created_by_employee_id,
+                    "agent": created_by_agent or "app32",
+                },
+                "tenant_scope": {
+                    "company_id": bordero.company_id,
+                },
+                "channel": "app32",
+                "captured_at": datetime.utcnow().isoformat(),
+            },
+        }
+
+    @staticmethod
     def _extract_schedule_id_from_entry(entry: FinancialEntry) -> Optional[int]:
         external_reference = str(entry.external_reference or "").strip()
         prefix = "financial_schedule:"
@@ -599,6 +655,16 @@ class FinancialBorderoService:
                     "bordero_code": bordero.bordero_code,
                     "bordero_settlement_id": bordero_settlement.id,
                     "bordero_settlement_code": bordero_settlement.settlement_code,
+                    "bordero_item_schedule_id": schedule_id,
+                    "bordero_allocation_amount": float(allocated),
+                    "bordero_trace": {
+                        "source": "bordero_settlement",
+                        "bordero_id": bordero.id,
+                        "bordero_code": bordero.bordero_code,
+                        "bordero_settlement_id": bordero_settlement.id,
+                        "bordero_settlement_code": bordero_settlement.settlement_code,
+                        "financial_schedule_id": schedule_id,
+                    },
                     "reconcile_via_bordero": True,
                 },
                 created_by_user_id=created_by_user_id,
