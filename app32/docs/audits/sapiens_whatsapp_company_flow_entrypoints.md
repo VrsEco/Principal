@@ -106,3 +106,45 @@ Mapear os arquivos e pontos de entrada envolvidos no recebimento de mensagens Sa
 ### Lacuna remanescente para evolução posterior
 
 Quando o usuário possuir múltiplas empresas ativas e a intenção não deixar claro o contexto, o canal deve pedir seleção explícita antes da confirmação final. O passo 4 consolida essa proposta mínima.
+
+
+## Passo 4/4 — Lacunas consolidadas e proposta mínima
+
+### Diagnóstico final
+
+O fluxo Sapiens WhatsApp/Instagram está funcionalmente mapeado e passou a ter rastreabilidade explícita em dois pontos críticos: identificação do usuário por canal e resolução tenant-safe de empresa vinculada. O webhook não deve executar menu, agente ou ação operacional sem `user_id` e `company_id` resolvidos.
+
+### Lacunas consolidadas
+
+| Lacuna | Risco | Proposta mínima |
+|---|---|---|
+| Usuário com múltiplas empresas ativas | Executar consulta/ação no tenant errado quando a mensagem não explicita a empresa. | Introduzir estado de seleção de empresa por `thread_id` antes da confirmação final. |
+| Persistência de contexto de empresa por conversa | Usuário precisa repetir seleção ou o sistema pode depender apenas da seleção determinística. | Persistir contexto curto por canal/thread com expiração e invalidar ao usuário trocar explicitamente de empresa. |
+| Observabilidade operacional | Logs existem, mas ainda não há métrica/consulta central para falhas de identidade/empresa. | Criar painel/sinalização para `identity_trace.reason` e `company_trace.reason`. |
+| Ambiguidade entre leitura simples e mutação | Canal pode encaminhar ação sensível sem etapa clara de confirmação. | Exigir confirmação explícita quando houver mutação ou impacto financeiro/governança. |
+
+### Proposta mínima de evolução
+
+1. **Resolver usuário** por `(identifier, channel)` e gerar `IdentityResolutionTrace`.
+2. **Resolver empresas vinculadas** via `Employee`, gerando `CompanyResolutionTrace`.
+3. **Se nenhuma empresa for resolvida**, encerrar com mensagem orientativa e não chamar menu/agente.
+4. **Se houver uma única empresa ativa**, seguir automaticamente com `company_id` resolvido.
+5. **Se houver múltiplas empresas ativas**, perguntar a empresa antes de executar comandos que dependam de tenant.
+6. **Persistir seleção temporária** por `thread_id` + `user_id` + `channel` para reduzir fricção.
+7. **Confirmar mutações sensíveis** antes de executar ferramentas administrativas, financeiras ou de governança.
+8. **Medir falhas** de identidade/empresa em observabilidade própria para suporte e evolução.
+
+### Critério de aceite para próxima implementação
+
+- Nenhuma resposta operacional sem `company_id` resolvido.
+- Nenhum fallback global para empresa ativa do banco.
+- Toda seleção automática deve ser explicável via trace.
+- Todo usuário multiempresa deve ter caminho claro para escolher/trocar empresa no canal.
+- Fluxos de leitura podem ser fluidos; fluxos de mutação sensível exigem confirmação.
+
+### Estado após esta auditoria
+
+- Entry points mapeados e protegidos por testes contratuais.
+- Identificação por canal rastreável.
+- Resolução de empresa vinculada rastreável e sem fallback cross-tenant.
+- Próxima frente recomendada: implementar seleção explícita de empresa por thread para usuários multiempresa.
