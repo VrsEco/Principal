@@ -987,6 +987,73 @@ class FinancialService:
         }
 
     @staticmethod
+    def _build_schedule_component_allocation_breakdown(
+        *,
+        schedule: Optional[FinancialSchedule],
+        settlement: FinancialSettlement,
+        component_kind: str,
+        component_amount: Any,
+    ) -> Dict[str, Any]:
+        schedule_metadata = dict(getattr(schedule, "metadata_json", {}) or {})
+        raw_allocations = list(schedule_metadata.get("allocations") or [])
+        amount = abs(FinancialService._money_float(component_amount))
+        if amount <= 0 or not raw_allocations:
+            return {"component_kind": component_kind, "items": [], "total_allocated_amount": 0.0}
+
+        normalized_kind = str(component_kind or "").strip().lower()
+        filtered_allocations = []
+        for item in raw_allocations:
+            item_metadata = dict(item.get("metadata_json") or {})
+            adjustment_kind = str(item_metadata.get("adjustment_kind") or "principal").strip().lower()
+            if normalized_kind == "financial_correction" and adjustment_kind != "correction":
+                continue
+            if normalized_kind == "discount" and adjustment_kind != "discount":
+                continue
+            filtered_allocations.append(dict(item))
+
+        if not filtered_allocations:
+            return {"component_kind": component_kind, "items": [], "total_allocated_amount": 0.0}
+
+        total_basis = sum(abs(FinancialService._money_float(item.get("allocated_amount"))) for item in filtered_allocations)
+        if total_basis <= 0:
+            return {"component_kind": component_kind, "items": [], "total_allocated_amount": 0.0}
+
+        settlement_date = getattr(settlement, "settlement_date", None)
+        settlement_date_iso = settlement_date.isoformat() if hasattr(settlement_date, "isoformat") else settlement_date
+        items: List[Dict[str, Any]] = []
+        distributed_total = 0.0
+        for index, item in enumerate(filtered_allocations, start=1):
+            base_amount = abs(FinancialService._money_float(item.get("allocated_amount")))
+            proportional_amount = round((base_amount / total_basis) * amount, 2)
+            if index == len(filtered_allocations):
+                proportional_amount = round(amount - distributed_total, 2)
+            distributed_total = round(distributed_total + proportional_amount, 2)
+            items.append({
+                "chart_account_id": item.get("chart_account_id"),
+                "cost_center_id": item.get("cost_center_id"),
+                "allocation_type": item.get("allocation_type"),
+                "percentage": item.get("percentage"),
+                "source_allocated_amount": round(base_amount, 2),
+                "settled_allocated_amount": proportional_amount,
+                "notes": item.get("notes"),
+                "competence_date": settlement_date_iso if normalized_kind == "financial_correction" else None,
+                "due_date": settlement_date_iso if normalized_kind == "financial_correction" else None,
+                "metadata_json": {
+                    **dict(item.get("metadata_json") or {}),
+                    "component_kind": normalized_kind,
+                    "source": "schedule_allocations",
+                },
+            })
+
+        return {
+            "component_kind": normalized_kind,
+            "basis_schedule_id": getattr(schedule, "id", None),
+            "basis_component_amount": round(amount, 2),
+            "total_allocated_amount": round(distributed_total, 2),
+            "items": items,
+        }
+
+    @staticmethod
     def replace_allocations(
         *,
         payload: Dict[str, Any],
@@ -1574,13 +1641,38 @@ class FinancialService:
                 entry=entry,
                 settlement=settlement,
             )
+            correction_amount = sum(
+                FinancialService._money_float(component.get("amount"))
+                for component in component_payloads
+                if str(component.get("component_type") or "").strip().lower() in set(SETTLEMENT_CORRECTION_COMPONENT_TYPES)
+            )
+            schedule_for_allocations = None
+            if getattr(entry, "financial_schedule_id", None):
+                try:
+                    schedule_for_allocations = FinancialSchedule.query.filter(
+                        FinancialSchedule.id == entry.financial_schedule_id,
+                        FinancialSchedule.company_id == entry.company_id,
+                        FinancialSchedule.deleted_at.is_(None),
+                    ).first()
+                except Exception:
+                    schedule_for_allocations = None
+            correction_allocation_breakdown = FinancialService._build_schedule_component_allocation_breakdown(
+                schedule=schedule_for_allocations,
+                settlement=settlement,
+                component_kind="financial_correction",
+                component_amount=correction_amount,
+            )
+            settlement_allocation_breakdown = {
+                **dict((getattr(settlement, "metadata_json", {}) or {}).get("settlement_allocation_breakdown") or {}),
+            }
             if principal_allocation_breakdown.get("items"):
+                settlement_allocation_breakdown["principal"] = principal_allocation_breakdown
+            if correction_allocation_breakdown.get("items"):
+                settlement_allocation_breakdown["financial_correction"] = correction_allocation_breakdown
+            if settlement_allocation_breakdown:
                 settlement.metadata_json = {
                     **dict(getattr(settlement, "metadata_json", {}) or {}),
-                    "settlement_allocation_breakdown": {
-                        **dict((getattr(settlement, "metadata_json", {}) or {}).get("settlement_allocation_breakdown") or {}),
-                        "principal": principal_allocation_breakdown,
-                    },
+                    "settlement_allocation_breakdown": settlement_allocation_breakdown,
                 }
 
             if title_snapshot:

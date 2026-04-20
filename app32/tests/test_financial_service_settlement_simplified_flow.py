@@ -575,3 +575,52 @@ def test_create_settlement_persists_gross_amount_and_component_breakdown(monkeyp
     assert captured["component_kwargs"][0]["component_type"] == "principal"
     assert captured["component_kwargs"][1]["component_type"] == "interest"
     assert captured["committed"] is True
+
+
+def test_build_schedule_component_allocation_breakdown_for_financial_correction():
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 77,
+            "metadata_json": {
+                "allocations": [
+                    {
+                        "chart_account_id": 701,
+                        "cost_center_id": 801,
+                        "allocation_type": "amount",
+                        "allocated_amount": 24.3,
+                        "percentage": None,
+                        "notes": "Correcao A",
+                        "metadata_json": {"adjustment_kind": "correction"},
+                    },
+                    {
+                        "chart_account_id": 702,
+                        "cost_center_id": 802,
+                        "allocation_type": "amount",
+                        "allocated_amount": 10.7,
+                        "percentage": None,
+                        "notes": "Correcao B",
+                        "metadata_json": {"adjustment_kind": "correction"},
+                    },
+                ]
+            },
+        },
+    )()
+    settlement = type("Settlement", (), {"settlement_date": date(2026, 4, 20)})()
+
+    result = FinancialService._build_schedule_component_allocation_breakdown(
+        schedule=schedule,
+        settlement=settlement,
+        component_kind="financial_correction",
+        component_amount=35.0,
+    )
+
+    assert result["component_kind"] == "financial_correction"
+    assert result["basis_schedule_id"] == 77
+    assert result["total_allocated_amount"] == 35.0
+    assert result["items"][0]["chart_account_id"] == 701
+    assert result["items"][0]["competence_date"] == "2026-04-20"
+    assert result["items"][0]["due_date"] == "2026-04-20"
+    assert result["items"][1]["settled_allocated_amount"] == 10.7
+    assert result["items"][0]["metadata_json"]["component_kind"] == "financial_correction"
