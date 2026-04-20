@@ -226,6 +226,20 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
             "settlement_type": "manual",
             "settlement_date": date(2026, 3, 29),
             "principal_amount": Decimal("120.00"),
+            "bank_account_id": 3,
+            "notes": "Baixa com trilha auditável",
+            "created_by_user_id": 19,
+            "created_by_employee_id": 27,
+            "created_by_agent": "app32",
+            "metadata_json": {
+                "history": "Liquidação realizada via fluxo assistido",
+                "payment_method_id": 8,
+                "payment_method_label": "PIX",
+                "attachments": [
+                    {"id": "att-1", "name": "comprovante.pdf", "content_type": "application/pdf", "size": 2048}
+                ],
+                "audit": {"actor": {"user_name": "Fabiano Diretor"}, "channel": "app32-web"},
+            },
         },
         allowed_company_ids=[7],
     )
@@ -263,6 +277,20 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["snapshot_json"]["financial_schedule_id"] == 77
     assert captured["log_kwargs"]["metadata_json"]["ledger_version"] == "financial_title_memory_v2"
     assert captured["log_kwargs"]["metadata_json"]["memory_contract_version"] == "financial_title_memory_v2"
+    assert captured["log_kwargs"]["metadata_json"]["actor"] == {
+        "user_id": 19,
+        "employee_id": 27,
+        "agent": "app32",
+        "user_name": "Fabiano Diretor",
+        "channel": "app32-web",
+    }
+    assert captured["log_kwargs"]["metadata_json"]["evidence"]["bank_account_id"] == 3
+    assert captured["log_kwargs"]["metadata_json"]["evidence"]["history"] == "Liquidação realizada via fluxo assistido"
+    assert captured["log_kwargs"]["metadata_json"]["evidence"]["payment_method"] == {"id": 8, "label": "PIX"}
+    assert captured["log_kwargs"]["metadata_json"]["evidence"]["attachments_count"] == 1
+    assert captured["log_kwargs"]["metadata_json"]["component_summary"]["principal"] == 120.0
+    assert captured["log_kwargs"]["metadata_json"]["component_summary"]["gross_amount"] == 120.0
+    assert captured["log_kwargs"]["metadata_json"]["component_summary"]["count"] == 1
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):

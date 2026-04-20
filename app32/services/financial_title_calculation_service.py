@@ -42,6 +42,9 @@ class FinancialTitleCalculationService:
             "current": current,
             "after": after,
         }
+        payload["actor"] = dict(metadata.get("actor") or {})
+        payload["evidence"] = dict(metadata.get("evidence") or {})
+        payload["component_summary"] = dict(metadata.get("component_summary") or {})
         return payload
 
     @staticmethod

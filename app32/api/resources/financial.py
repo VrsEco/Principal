@@ -61,6 +61,34 @@ def _sanitize_update_payload(payload: dict | None, *extra_fields: str) -> dict:
     return sanitized
 
 
+def _attach_financial_actor_context(payload: dict | None, *, default_agent: str = "app32") -> dict:
+    normalized = dict(payload or {})
+    user_id = getattr(current_user, "id", None)
+    employee_id = getattr(current_user, "employee_id", None)
+    actor_name = str(getattr(current_user, "name", "") or getattr(current_user, "email", "") or "").strip() or None
+    normalized.setdefault("created_by_user_id", user_id)
+    if employee_id is not None:
+        normalized.setdefault("created_by_employee_id", employee_id)
+    normalized.setdefault("created_by_agent", default_agent)
+
+    metadata = dict(normalized.get("metadata_json") or {})
+    audit = dict(metadata.get("audit") or {})
+    actor = dict(audit.get("actor") or {})
+    if user_id is not None:
+        actor.setdefault("user_id", user_id)
+    if employee_id is not None:
+        actor.setdefault("employee_id", employee_id)
+    if actor_name:
+        actor.setdefault("user_name", actor_name)
+    if normalized.get("created_by_agent"):
+        actor.setdefault("agent", normalized.get("created_by_agent"))
+    audit["actor"] = actor
+    audit.setdefault("channel", default_agent)
+    metadata["audit"] = audit
+    normalized["metadata_json"] = metadata
+    return normalized
+
+
 def _serialize_entry(entry: FinancialEntry) -> dict:
     return FinancialService.serialize_entry(entry)
 
@@ -732,7 +760,7 @@ class FinancialScheduleSettlementResource(Resource):
     @permission_required("financial", "edit")
     def post(self, schedule_id: int):
         company_id = get_request_company_id()
-        payload = request.get_json(silent=True) or {}
+        payload = _attach_financial_actor_context(request.get_json(silent=True) or {})
         result, error = FinancialScheduleService.create_settlement_from_schedule(
             schedule_id=schedule_id,
             company_id=company_id,
@@ -768,7 +796,7 @@ class FinancialScheduleAssistedSettlementResource(Resource):
         company_id = get_request_company_id()
         if not company_id:
             return {"error": "Empresa não informada."}, 400
-        payload = request.get_json(silent=True) or {}
+        payload = _attach_financial_actor_context(request.get_json(silent=True) or {})
         result, error = FinancialSettlementCompositionService.create_assisted_settlement(
             company_id=company_id,
             schedule_id=schedule_id,
@@ -1113,7 +1141,7 @@ class FinancialEntrySettlementListResource(Resource):
 
     @permission_required("financial", "create")
     def post(self, entry_id: int):
-        payload = request.get_json() or {}
+        payload = _attach_financial_actor_context(request.get_json() or {})
         company_id = get_request_company_id()
         entry = FinancialEntry.query.filter(
             FinancialEntry.id == entry_id,

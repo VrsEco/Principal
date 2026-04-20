@@ -85,3 +85,38 @@ def test_entry_settlement_post_blocks_legacy_manual_flow_for_linked_title(monkey
     assert status == 409
     assert response["error"] == "Este lançamento está vinculado a um Título Financeiro. Faça a baixa pelo fluxo do título."
     assert response["redirect_url"].endswith("/financial/schedules/15?company_id=9&open_tab=baixas&entry_id=88")
+
+
+def test_schedule_assisted_settlement_resource_injects_actor_context(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(financial_resource, "get_request_company_id", lambda: 9)
+    monkeypatch.setattr(financial_resource, "get_accessible_company_ids", lambda: [9])
+    monkeypatch.setattr(financial_resource, "current_user", SimpleNamespace(id=77, employee_id=88, name="Usuário Financeiro"))
+
+    captured = {}
+
+    def _fake_create_assisted_settlement(**kwargs):
+        captured.update(kwargs)
+        return {"ok": True}, None
+
+    monkeypatch.setattr(
+        financial_resource.FinancialSettlementCompositionService,
+        "create_assisted_settlement",
+        _fake_create_assisted_settlement,
+    )
+
+    resource = financial_resource.FinancialScheduleAssistedSettlementResource()
+    with app.test_request_context(
+        "/api/financial/schedules/15/assisted-settlement?company_id=9",
+        method="POST",
+        json={"principal_amount": 100},
+    ):
+        response, status = resource.post.__wrapped__(resource, 15)
+
+    assert status == 201
+    assert response == {"ok": True}
+    assert captured["payload"]["created_by_user_id"] == 77
+    assert captured["payload"]["created_by_employee_id"] == 88
+    assert captured["payload"]["created_by_agent"] == "app32"
+    assert captured["payload"]["metadata_json"]["audit"]["actor"]["user_name"] == "Usuário Financeiro"
+    assert captured["payload"]["metadata_json"]["audit"]["channel"] == "app32"

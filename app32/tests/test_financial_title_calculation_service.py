@@ -56,7 +56,12 @@ def test_list_title_calculation_logs_exposes_memory_timeline(monkeypatch):
                     "current": {"principal_settled": 50.0, "gross_amount": 55.0},
                     "after": {"principal_open": 50.0, "total_open": 65.0},
                 },
-                "metadata_json": {"ledger_version": "financial_title_memory_v2"},
+                "metadata_json": {
+                    "ledger_version": "financial_title_memory_v2",
+                    "actor": {"user_id": 19, "user_name": "Fabiano Diretor", "agent": "app32"},
+                    "evidence": {"settlement_code": "LIQ-000123", "attachments_count": 1},
+                    "component_summary": {"count": 2, "gross_amount": 55.0},
+                },
             }
         },
     )()
@@ -94,3 +99,6 @@ def test_list_title_calculation_logs_exposes_memory_timeline(monkeypatch):
     assert result["logs"][0]["memory_timeline"]["before"]["principal_open"] == 100.0
     assert result["logs"][0]["memory_timeline"]["current"]["gross_amount"] == 55.0
     assert result["logs"][0]["memory_timeline"]["after"]["total_open"] == 65.0
+    assert result["logs"][0]["actor"]["user_name"] == "Fabiano Diretor"
+    assert result["logs"][0]["evidence"]["settlement_code"] == "LIQ-000123"
+    assert result["logs"][0]["component_summary"]["count"] == 2

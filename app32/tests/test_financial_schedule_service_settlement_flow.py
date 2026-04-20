@@ -98,7 +98,14 @@ def test_create_settlement_from_schedule_forwards_entry_and_external_reference(m
     result, error = FinancialScheduleService.create_settlement_from_schedule(
         schedule_id=15,
         company_id=9,
-        payload={"settlement_type": "manual", "settlement_date": "2026-03-29", "principal_amount": 10},
+        payload={
+            "settlement_type": "manual",
+            "settlement_date": "2026-03-29",
+            "principal_amount": 10,
+            "created_by_user_id": 501,
+            "created_by_agent": "app32",
+            "metadata_json": {"audit": {"actor": {"user_name": "Usuário Teste"}}},
+        },
         allowed_company_ids=[9],
     )
 
@@ -115,6 +122,9 @@ def test_create_settlement_from_schedule_forwards_entry_and_external_reference(m
     }
     assert captured["payload"]["financial_entry_id"] == 88
     assert captured["payload"]["external_reference"] == "financial_schedule:15"
+    assert captured["payload"]["created_by_user_id"] == 501
+    assert captured["payload"]["created_by_agent"] == "app32"
+    assert captured["payload"]["metadata_json"]["audit"]["actor"]["user_name"] == "Usuário Teste"
 
 
 def test_delete_schedule_soft_deletes_generated_entries_without_settlements(monkeypatch):

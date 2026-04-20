@@ -59,6 +59,175 @@ class FinancialService:
         return float(FinancialService._money_decimal(value))
 
     @staticmethod
+    def _build_settlement_actor_payload(
+        settlement: FinancialSettlement,
+        metadata_json: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        metadata = dict(metadata_json or getattr(settlement, "metadata_json", {}) or {})
+        audit = dict(metadata.get("audit") or {})
+        actor_metadata = dict(audit.get("actor") or metadata.get("actor") or {})
+        actor_payload = {
+            "user_id": actor_metadata.get("user_id", getattr(settlement, "created_by_user_id", None)),
+            "employee_id": actor_metadata.get("employee_id", getattr(settlement, "created_by_employee_id", None)),
+            "agent": actor_metadata.get("agent", getattr(settlement, "created_by_agent", None)),
+            "user_name": actor_metadata.get("user_name") or actor_metadata.get("name") or metadata.get("actor_name"),
+            "channel": audit.get("channel") or metadata.get("source_channel") or "app32",
+        }
+        return {key: value for key, value in actor_payload.items() if value not in (None, "", [], {})}
+
+    @staticmethod
+    def _build_settlement_component_audit_payload(
+        *,
+        component_payloads: Optional[Sequence[Dict[str, Any]]],
+        current_block: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        items: List[Dict[str, Any]] = []
+        totals_by_type: Dict[str, float] = {}
+        sources: List[str] = []
+        origin_adjustment_ids: List[int] = []
+
+        for component_payload in component_payloads or []:
+            component = dict(component_payload or {})
+            component_type = str(component.get("component_type") or "unknown").strip().lower()
+            amount = FinancialService._money_float(component.get("amount"))
+            totals_by_type[component_type] = round(totals_by_type.get(component_type, 0.0) + amount, 2)
+            source = str(component.get("source") or "system").strip().lower() or "system"
+            if source and source not in sources:
+                sources.append(source)
+            origin_adjustment_id = component.get("origin_adjustment_id")
+            if origin_adjustment_id is not None:
+                try:
+                    normalized_origin_adjustment_id = int(origin_adjustment_id)
+                except (TypeError, ValueError):
+                    normalized_origin_adjustment_id = None
+                if normalized_origin_adjustment_id is not None and normalized_origin_adjustment_id not in origin_adjustment_ids:
+                    origin_adjustment_ids.append(normalized_origin_adjustment_id)
+            items.append(
+                {
+                    "component_type": component_type,
+                    "amount": amount,
+                    "competence_date": component.get("competence_date").isoformat() if hasattr(component.get("competence_date"), "isoformat") else component.get("competence_date"),
+                    "due_date": component.get("due_date").isoformat() if hasattr(component.get("due_date"), "isoformat") else component.get("due_date"),
+                    "source": source,
+                    "origin_adjustment_id": origin_adjustment_id,
+                    "metadata_json": dict(component.get("metadata_json") or {}),
+                }
+            )
+
+        normalized_current = dict(current_block or {})
+        if not items:
+            fallback_components = [
+                ("principal", normalized_current.get("principal_settled")),
+                ("financial_correction", normalized_current.get("financial_correction")),
+                ("discount", normalized_current.get("discount")),
+            ]
+            for component_type, raw_amount in fallback_components:
+                amount = FinancialService._money_float(raw_amount)
+                if amount <= 0:
+                    continue
+                totals_by_type[component_type] = round(totals_by_type.get(component_type, 0.0) + amount, 2)
+                items.append(
+                    {
+                        "component_type": component_type,
+                        "amount": amount,
+                        "competence_date": None,
+                        "due_date": None,
+                        "source": "snapshot",
+                        "origin_adjustment_id": None,
+                        "metadata_json": {},
+                    }
+                )
+                if "snapshot" not in sources:
+                    sources.append("snapshot")
+
+        gross_amount = FinancialService._money_float(normalized_current.get("gross_amount"))
+        if gross_amount <= 0:
+            gross_amount = max(
+                totals_by_type.get("principal", 0.0)
+                + sum(
+                    amount
+                    for component_type, amount in totals_by_type.items()
+                    if component_type not in {"principal", "discount"}
+                )
+                - totals_by_type.get("discount", 0.0),
+                0.0,
+            )
+
+        return {
+            "count": len(items),
+            "gross_amount": round(gross_amount, 2),
+            "principal": round(totals_by_type.get("principal", 0.0), 2),
+            "financial_correction": round(
+                sum(
+                    amount
+                    for component_type, amount in totals_by_type.items()
+                    if component_type in set(SETTLEMENT_CORRECTION_COMPONENT_TYPES) or component_type == "financial_correction"
+                ),
+                2,
+            ),
+            "discount": round(totals_by_type.get("discount", 0.0), 2),
+            "by_type": totals_by_type,
+            "sources": sources,
+            "origin_adjustment_ids": origin_adjustment_ids,
+            "items": items,
+        }
+
+    @staticmethod
+    def _build_settlement_evidence_payload(
+        *,
+        entry: FinancialEntry,
+        settlement: FinancialSettlement,
+        metadata_json: Optional[Dict[str, Any]] = None,
+        component_summary: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        metadata = dict(metadata_json or getattr(settlement, "metadata_json", {}) or {})
+        attachments = list(metadata.get("attachments") or [])
+        bank_account_name = None
+        bank_account_id = getattr(settlement, "bank_account_id", None)
+        if bank_account_id is not None:
+            try:
+                bank_account = FinancialBankAccount.query.filter(
+                    FinancialBankAccount.company_id == settlement.company_id,
+                    FinancialBankAccount.id == bank_account_id,
+                    FinancialBankAccount.deleted_at.is_(None),
+                ).first()
+                bank_account_name = getattr(bank_account, "name", None)
+            except Exception:
+                bank_account_name = None
+
+        evidence_payload = {
+            "settlement_code": getattr(settlement, "settlement_code", None),
+            "settlement_date": settlement.settlement_date.isoformat() if getattr(settlement, "settlement_date", None) else None,
+            "bank_account_id": bank_account_id,
+            "bank_account_name": bank_account_name,
+            "entry_id": getattr(entry, "id", None),
+            "entry_code": getattr(entry, "entry_code", None),
+            "entry_status_before_commit": getattr(entry, "status", None),
+            "external_reference": getattr(settlement, "external_reference", None),
+            "notes": getattr(settlement, "notes", None),
+            "history": metadata.get("history") or getattr(settlement, "notes", None),
+            "payment_method": {
+                "id": metadata.get("payment_method_id"),
+                "label": metadata.get("payment_method_label"),
+            },
+            "attachments_count": len(attachments),
+            "attachments": [
+                {
+                    "id": attachment.get("id"),
+                    "name": attachment.get("name"),
+                    "content_type": attachment.get("content_type"),
+                    "size": attachment.get("size"),
+                }
+                for attachment in attachments
+            ],
+            "component_count": int((component_summary or {}).get("count", 0) or 0),
+            "gross_amount": FinancialService._money_float(getattr(settlement, "gross_amount", None) or getattr(settlement, "net_amount", None) or 0),
+        }
+        if not evidence_payload["payment_method"]["id"] and not evidence_payload["payment_method"]["label"]:
+            evidence_payload.pop("payment_method", None)
+        return {key: value for key, value in evidence_payload.items() if value not in (None, "")}
+
+    @staticmethod
     def get_signed_amount(amount: Decimal | float | int | None, movement_nature: str | None) -> float:
         normalized_amount = Decimal(str(amount or 0))
         absolute_amount = abs(normalized_amount)
@@ -1010,6 +1179,7 @@ class FinancialService:
         entry: FinancialEntry,
         settlement: FinancialSettlement,
         snapshot: Dict[str, Any],
+        component_payloads: Optional[Sequence[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         before_block = dict(snapshot.get("before") or {})
         current_block = dict(snapshot.get("current") or {})
@@ -1045,6 +1215,19 @@ class FinancialService:
         total_due_after = Decimal(str(after_block.get("total_open") or snapshot.get("total_open_after") or 0))
         if total_due_after <= 0 and (principal_after > Decimal("0") or adjustments_open_after > Decimal("0") or discounts_open_after > Decimal("0")):
             total_due_after = max(principal_after + adjustments_open_after - discounts_open_after, Decimal("0"))
+
+        settlement_metadata = dict(getattr(settlement, "metadata_json", {}) or {})
+        actor_payload = FinancialService._build_settlement_actor_payload(settlement, metadata_json=settlement_metadata)
+        component_summary = FinancialService._build_settlement_component_audit_payload(
+            component_payloads=component_payloads,
+            current_block=current_block,
+        )
+        evidence_payload = FinancialService._build_settlement_evidence_payload(
+            entry=entry,
+            settlement=settlement,
+            metadata_json=settlement_metadata,
+            component_summary=component_summary,
+        )
         return {
             "company_id": entry.company_id,
             "financial_schedule_id": int(snapshot["financial_schedule_id"]),
@@ -1079,6 +1262,9 @@ class FinancialService:
                 "before": before_block,
                 "current": current_block,
                 "after": after_block,
+                "actor": actor_payload,
+                "evidence": evidence_payload,
+                "component_summary": component_summary,
             },
         }
 
@@ -1287,6 +1473,7 @@ class FinancialService:
                             entry=entry,
                             settlement=settlement,
                             snapshot=title_snapshot,
+                            component_payloads=component_payloads,
                         )
                     )
                 )
