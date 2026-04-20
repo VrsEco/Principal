@@ -395,14 +395,7 @@ class FinancialBorderoService:
                 created_by_agent=data.created_by_agent,
             )
 
-            bordero.settled_amount = Decimal(str(bordero.settled_amount or 0)) + allocated_total
-            bordero.open_amount = max(Decimal(str(bordero.total_amount or 0)) - Decimal(str(bordero.settled_amount or 0)), Decimal("0.00"))
-            if bordero.open_amount == Decimal("0.00"):
-                bordero.status = "settled"
-            elif bordero.settled_amount > Decimal("0.00"):
-                bordero.status = "partially_settled"
-            else:
-                bordero.status = "open"
+            FinancialBorderoService._sync_bordero_totals_from_items(bordero, items)
 
             db.session.commit()
             return {
@@ -572,6 +565,29 @@ class FinancialBorderoService:
                 "channel": "app32",
                 "captured_at": datetime.utcnow().isoformat(),
             },
+        }
+
+    @staticmethod
+    def _sync_bordero_totals_from_items(bordero: FinancialBordero, items: Sequence[FinancialBorderoItem]) -> Dict[str, Any]:
+        selected_total = sum((Decimal(str(item.selected_amount or 0)) for item in items), Decimal("0.00")).quantize(Decimal("0.01"))
+        settled_total = sum((Decimal(str(item.settled_amount or 0)) for item in items), Decimal("0.00")).quantize(Decimal("0.01"))
+        open_total = sum((Decimal(str(item.open_amount or 0)) for item in items), Decimal("0.00")).quantize(Decimal("0.01"))
+        if open_total <= Decimal("0.00") and selected_total > Decimal("0.00"):
+            status = "settled"
+            open_total = Decimal("0.00")
+        elif settled_total > Decimal("0.00"):
+            status = "partially_settled"
+        else:
+            status = "open"
+        bordero.total_amount = selected_total
+        bordero.settled_amount = settled_total
+        bordero.open_amount = open_total
+        bordero.status = status
+        return {
+            "total_amount": selected_total,
+            "settled_amount": settled_total,
+            "open_amount": open_total,
+            "status": status,
         }
 
     @staticmethod

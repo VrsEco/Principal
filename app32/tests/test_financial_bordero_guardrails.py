@@ -112,3 +112,31 @@ def test_bordero_settlement_audit_metadata_is_complete():
     assert metadata['allocation_summary']['entry_settlement_count'] == 2
     assert metadata['audit']['tenant_scope']['company_id'] == 9
     assert metadata['audit']['actor']['user_id'] == 7
+
+
+def test_sync_bordero_totals_from_items_marks_partial_and_settled():
+    bordero = SimpleNamespace(total_amount=Decimal('0'), settled_amount=Decimal('0'), open_amount=Decimal('0'), status='open')
+    items = [
+        SimpleNamespace(selected_amount=Decimal('200.00'), settled_amount=Decimal('50.00'), open_amount=Decimal('150.00')),
+        SimpleNamespace(selected_amount=Decimal('100.00'), settled_amount=Decimal('0.00'), open_amount=Decimal('100.00')),
+    ]
+
+    summary = FinancialBorderoService._sync_bordero_totals_from_items(bordero, items)
+
+    assert summary['total_amount'] == Decimal('300.00')
+    assert summary['settled_amount'] == Decimal('50.00')
+    assert summary['open_amount'] == Decimal('250.00')
+    assert summary['status'] == 'partially_settled'
+    assert bordero.status == 'partially_settled'
+
+    items[0].settled_amount = Decimal('200.00')
+    items[0].open_amount = Decimal('0.00')
+    items[1].settled_amount = Decimal('100.00')
+    items[1].open_amount = Decimal('0.00')
+
+    summary = FinancialBorderoService._sync_bordero_totals_from_items(bordero, items)
+
+    assert summary['settled_amount'] == Decimal('300.00')
+    assert summary['open_amount'] == Decimal('0.00')
+    assert summary['status'] == 'settled'
+    assert bordero.status == 'settled'
