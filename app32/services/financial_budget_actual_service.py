@@ -58,3 +58,43 @@ class FinancialBudgetActualService:
                 "empty_state": "Nenhum item orçado ou realizado encontrado para os filtros informados.",
             },
         }
+
+    @staticmethod
+    def _dimension_key(record: Mapping[str, Any], dimensions: Sequence[str] | None = None) -> Tuple[Any, ...]:
+        selected_dimensions = tuple(dimensions or FinancialBudgetActualService.DIMENSIONS)
+        return tuple(record.get(dimension) for dimension in selected_dimensions)
+
+    @staticmethod
+    def aggregate_actual_records(
+        records: Iterable[Mapping[str, Any]],
+        *,
+        dimensions: Sequence[str] | None = None,
+    ) -> Dict[Tuple[Any, ...], Dict[str, Any]]:
+        selected_dimensions = tuple(dimensions or FinancialBudgetActualService.DIMENSIONS)
+        grouped: Dict[Tuple[Any, ...], Dict[str, Any]] = {}
+        for record in records:
+            key = FinancialBudgetActualService._dimension_key(record, selected_dimensions)
+            slot = grouped.setdefault(
+                key,
+                {
+                    "dimensions": dict(zip(selected_dimensions, key)),
+                    "actual_amount": Decimal("0.00"),
+                    "record_count": 0,
+                    "sources": set(),
+                },
+            )
+            slot["actual_amount"] += FinancialBudgetActualService._decimal(
+                record.get("signed_amount", record.get("actual_amount", record.get("amount")))
+            )
+            slot["record_count"] += 1
+            if record.get("source"):
+                slot["sources"].add(str(record.get("source")))
+
+        return {
+            key: {
+                **value,
+                "actual_amount": FinancialBudgetActualService._float(value["actual_amount"]),
+                "sources": sorted(value["sources"]),
+            }
+            for key, value in grouped.items()
+        }
