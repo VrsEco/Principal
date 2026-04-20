@@ -277,3 +277,67 @@ def test_income_statement_02_compiles_due_and_settlement_independently_from_comp
     assert payload["totals"]["competence"] == 0.0
     assert payload["totals"]["due"] == 150.0
     assert payload["totals"]["liquidation"] == 150.0
+
+
+def test_income_statement_reports_keep_totals_consistent_between_dre01_and_dre02(monkeypatch):
+    schedule = SimpleNamespace(
+        id=44,
+        company_id=7,
+        status="active",
+        entry_type="receivable",
+        movement_nature="credit",
+        competence_date=date(2026, 4, 5),
+        start_date=date(2026, 4, 5),
+        first_due_date=date(2026, 4, 12),
+        next_due_date=date(2026, 4, 12),
+        template_amount=Decimal("100"),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    entry = SimpleNamespace(
+        id=144,
+        company_id=7,
+        external_reference="financial_schedule:44",
+        financial_schedule_id=44,
+        original_amount=Decimal("100"),
+        status="posted",
+        movement_nature="credit",
+        entry_type="receivable",
+        competence_date=date(2026, 4, 5),
+        due_date=date(2026, 4, 12),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    settlement = SimpleNamespace(
+        financial_entry_id=144,
+        settlement_date=date(2026, 4, 18),
+        principal_amount=Decimal("100"),
+        net_amount=Decimal("100"),
+    )
+    _install_income_statement_fakes(monkeypatch, schedules=[schedule], entries=[entry], settlements=[settlement])
+
+    dre01 = FinancialReportService._build_income_statement(7, _income_statement_filters())
+    dre02_filters, error = FinancialReportService._normalize_filters(
+        "income_statement_2",
+        {
+            "competence_start": "2026-04-01",
+            "competence_end": "2026-04-30",
+            "due_start": "2026-04-01",
+            "due_end": "2026-04-30",
+            "settlement_start": "2026-04-01",
+            "settlement_end": "2026-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+    dre02 = FinancialReportService._build_income_statement_2(7, dre02_filters)
+
+    assert dre01["totals"]["competence"] == dre02["totals"]["competence"] == 100.0
+    assert dre01["totals"]["due"] == dre02["totals"]["due"] == 100.0
+    assert dre01["totals"]["liquidation"] == dre02["totals"]["liquidation"] == 100.0
