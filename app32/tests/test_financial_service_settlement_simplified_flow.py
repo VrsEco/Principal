@@ -361,7 +361,7 @@ def test_create_settlement_rejects_zero_principal_amount(monkeypatch):
     )
 
     assert settlement is None
-    assert error == "Baixa inválida: o valor principal deve ser maior que zero."
+    assert error == "Baixa inválida: o valor da baixa deve ser maior que zero."
     assert entry.status == "posted"
 
 

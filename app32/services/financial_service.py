@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from flask import current_app
+from financial_domain import build_financial_settlement_contract_payload
 from models import db
 from models.financial import (
     FinancialBankAccount,
@@ -115,17 +116,160 @@ class FinancialService:
             .order_by(FinancialEntryAllocation.id.asc())
             .all()
         ]
-        payload["settlements"] = [
-            settlement.to_dict()
-            for settlement in FinancialSettlement.query.filter(
+        settlements = (
+            FinancialSettlement.query.filter(
                 FinancialSettlement.company_id == entry.company_id,
                 FinancialSettlement.financial_entry_id == entry.id,
                 FinancialSettlement.deleted_at.is_(None),
             )
             .order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc())
             .all()
-        ]
+        )
+        schedule = None
+        if getattr(entry, "financial_schedule_id", None):
+            schedule = FinancialSchedule.query.filter(
+                FinancialSchedule.id == entry.financial_schedule_id,
+                FinancialSchedule.company_id == entry.company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            ).first()
+        payload["settlements"] = FinancialService.serialize_settlement_list(
+            settlements,
+            include_components=True,
+            entry_by_id={entry.id: entry},
+            schedule_by_id={schedule.id: schedule} if schedule else None,
+        )
         return payload
+
+    @staticmethod
+    def serialize_settlement(
+        settlement: FinancialSettlement,
+        *,
+        include_components: bool = True,
+        entry: Optional[FinancialEntry] = None,
+        schedule: Optional[FinancialSchedule] = None,
+        settlement_components: Optional[Sequence[FinancialSettlementComponent]] = None,
+    ) -> Dict[str, Any]:
+        if settlement is None:
+            return {}
+
+        payload = settlement.to_dict() if hasattr(settlement, "to_dict") else dict(settlement or {})
+        if entry is None and getattr(settlement, "financial_entry_id", None):
+            entry = FinancialEntry.query.filter(
+                FinancialEntry.id == settlement.financial_entry_id,
+                FinancialEntry.company_id == settlement.company_id,
+                FinancialEntry.deleted_at.is_(None),
+            ).first()
+        if schedule is None and entry is not None and getattr(entry, "financial_schedule_id", None):
+            schedule = FinancialSchedule.query.filter(
+                FinancialSchedule.id == entry.financial_schedule_id,
+                FinancialSchedule.company_id == entry.company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            ).first()
+
+        serialized_components: List[Dict[str, Any]] = []
+        if include_components:
+            components = settlement_components
+            if components is None and getattr(settlement, "id", None) is not None:
+                components = (
+                    FinancialSettlementComponent.query.filter(
+                        FinancialSettlementComponent.company_id == settlement.company_id,
+                        FinancialSettlementComponent.financial_settlement_id == settlement.id,
+                    )
+                    .order_by(FinancialSettlementComponent.id.asc())
+                    .all()
+                )
+            serialized_components = [
+                component.to_dict() if hasattr(component, "to_dict") else dict(component or {})
+                for component in (components or [])
+            ]
+
+        entry_payload = None
+        if entry is not None:
+            entry_payload = entry.to_dict() if hasattr(entry, "to_dict") else dict(entry or {})
+
+        schedule_payload = None
+        if schedule is not None:
+            schedule_payload = schedule.to_dict() if hasattr(schedule, "to_dict") else dict(schedule or {})
+
+        return build_financial_settlement_contract_payload(
+            payload,
+            entry_payload=entry_payload,
+            schedule_payload=schedule_payload,
+            settlement_components=serialized_components,
+        )
+
+    @staticmethod
+    def serialize_settlement_list(
+        settlements: Sequence[FinancialSettlement],
+        *,
+        include_components: bool = True,
+        entry_by_id: Optional[Dict[int, FinancialEntry]] = None,
+        schedule_by_id: Optional[Dict[int, FinancialSchedule]] = None,
+    ) -> List[Dict[str, Any]]:
+        if not settlements:
+            return []
+
+        normalized_settlements = [item for item in settlements if item is not None]
+        if not normalized_settlements:
+            return []
+
+        settlement_ids = [int(item.id) for item in normalized_settlements if getattr(item, "id", None) is not None]
+        company_ids = {int(item.company_id) for item in normalized_settlements if getattr(item, "company_id", None) is not None}
+        entry_ids = {int(item.financial_entry_id) for item in normalized_settlements if getattr(item, "financial_entry_id", None) is not None}
+
+        resolved_entries = dict(entry_by_id or {})
+        missing_entry_ids = [entry_id for entry_id in entry_ids if entry_id not in resolved_entries]
+        if missing_entry_ids:
+            for entry in FinancialEntry.query.filter(
+                FinancialEntry.company_id.in_(company_ids),
+                FinancialEntry.id.in_(missing_entry_ids),
+                FinancialEntry.deleted_at.is_(None),
+            ).all():
+                resolved_entries[int(entry.id)] = entry
+
+        resolved_schedules = dict(schedule_by_id or {})
+        schedule_ids = {
+            int(entry.financial_schedule_id)
+            for entry in resolved_entries.values()
+            if getattr(entry, "financial_schedule_id", None) is not None and int(entry.financial_schedule_id) not in resolved_schedules
+        }
+        if schedule_ids:
+            for schedule in FinancialSchedule.query.filter(
+                FinancialSchedule.company_id.in_(company_ids),
+                FinancialSchedule.id.in_(schedule_ids),
+                FinancialSchedule.deleted_at.is_(None),
+            ).all():
+                resolved_schedules[int(schedule.id)] = schedule
+
+        components_by_settlement: Dict[int, List[FinancialSettlementComponent]] = {}
+        if include_components and settlement_ids:
+            components = (
+                FinancialSettlementComponent.query.filter(
+                    FinancialSettlementComponent.company_id.in_(company_ids),
+                    FinancialSettlementComponent.financial_settlement_id.in_(settlement_ids),
+                )
+                .order_by(
+                    FinancialSettlementComponent.financial_settlement_id.asc(),
+                    FinancialSettlementComponent.id.asc(),
+                )
+                .all()
+            )
+            for component in components:
+                settlement_id = int(getattr(component, "financial_settlement_id", 0) or 0)
+                components_by_settlement.setdefault(settlement_id, []).append(component)
+
+        return [
+            FinancialService.serialize_settlement(
+                settlement,
+                include_components=include_components,
+                entry=resolved_entries.get(int(getattr(settlement, "financial_entry_id", 0) or 0)),
+                schedule=resolved_schedules.get(
+                    int(getattr(resolved_entries.get(int(getattr(settlement, "financial_entry_id", 0) or 0)), "financial_schedule_id", 0) or 0)
+                ),
+                settlement_components=components_by_settlement.get(int(getattr(settlement, "id", 0) or 0)),
+            )
+            for settlement in normalized_settlements
+        ]
 
     @staticmethod
     def serialize_entry_list(entries: Sequence[FinancialEntry]) -> List[Dict[str, Any]]:

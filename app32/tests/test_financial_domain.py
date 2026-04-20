@@ -4,6 +4,8 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from financial_domain import (
+    build_financial_settlement_contract_payload,
+    build_financial_title_contract_payload,
     build_title_operational_state_metadata,
     resolve_title_operational_state,
     title_state_in_accounting_reports,
@@ -57,3 +59,67 @@ def test_title_state_predicates_follow_canonical_rule():
     assert title_state_in_accounting_reports("forecast") is False
     assert title_state_in_projected_reports("forecast") is True
     assert title_state_in_projected_reports("settled") is False
+
+
+def test_build_financial_title_contract_payload_exposes_canonical_aliases():
+    payload = build_financial_title_contract_payload(
+        {
+            "id": 15,
+            "schedule_code": "TIT-000015",
+            "status": "active",
+            "summary": {
+                "operational_state": "partial",
+                "operational_state_label": "Parcial",
+            },
+        }
+    )
+
+    assert payload["contract_version"] == "financial_contract_v2"
+    assert payload["entity_type"] == "financial_title"
+    assert payload["financial_title_id"] == 15
+    assert payload["financial_title_code"] == "TIT-000015"
+    assert payload["financial_title_status"] == "partial"
+    assert payload["financial_title_status_label"] == "Parcial"
+
+
+def test_build_financial_settlement_contract_payload_links_title_and_correction_summary():
+    payload = build_financial_settlement_contract_payload(
+        {
+            "id": 901,
+            "settlement_code": "LIQ-000901",
+            "financial_entry_id": 88,
+            "external_reference": "financial_schedule:15",
+            "gross_amount": 235,
+            "interest_amount": 20,
+            "penalty_amount": 5,
+            "other_adjustments_amount": 10,
+            "metadata_json": {
+                "financial_title_snapshot": {
+                    "financial_schedule_id": 15,
+                    "schedule_code": "TIT-000015",
+                }
+            },
+        },
+        entry_payload={
+            "id": 88,
+            "entry_code": "LAN-000088",
+            "financial_schedule_id": 15,
+        },
+        settlement_components=[
+            {"component_type": "principal", "amount": 200},
+            {"component_type": "interest", "amount": 20},
+            {"component_type": "fine", "amount": 5},
+            {"component_type": "manual_adjustment", "amount": 10},
+        ],
+    )
+
+    assert payload["contract_version"] == "financial_contract_v2"
+    assert payload["entity_type"] == "settlement"
+    assert payload["financial_settlement_id"] == 901
+    assert payload["financial_settlement_code"] == "LIQ-000901"
+    assert payload["financial_title_id"] == 15
+    assert payload["financial_title_code"] == "TIT-000015"
+    assert payload["financial_entry_code"] == "LAN-000088"
+    assert payload["financial_correction_amount"] == 35.0
+    assert payload["total_amount"] == 235.0
+    assert payload["settlement_component_summary"]["financial_correction"] == 35.0

@@ -38,7 +38,7 @@ class _QueryStub:
 
 
 def test_create_settlement_from_schedule_forwards_entry_and_external_reference(monkeypatch):
-    schedule = type("Schedule", (), {"id": 15, "company_id": 9})()
+    schedule = type("Schedule", (), {"id": 15, "company_id": 9, "schedule_code": "TIT-000015"})()
 
     class _FakeScheduleModel:
         id = _Column()
@@ -58,7 +58,15 @@ def test_create_settlement_from_schedule_forwards_entry_and_external_reference(m
 
     def _fake_create_settlement(*, payload, allowed_company_ids=None):
         captured["payload"] = payload
-        return type("Settlement", (), {"to_dict": lambda self: {"id": 901, "financial_entry_id": 88}})(), None
+        return type(
+            "Settlement",
+            (),
+            {
+                "id": 901,
+                "financial_entry_id": 88,
+                "to_dict": lambda self: {"id": 901, "financial_entry_id": 88},
+            },
+        )(), None
 
     monkeypatch.setattr(schedule_module.FinancialService, "create_settlement", _fake_create_settlement)
     monkeypatch.setattr(
@@ -76,6 +84,16 @@ def test_create_settlement_from_schedule_forwards_entry_and_external_reference(m
         ),
     )
     monkeypatch.setattr(schedule_module.FinancialService, "serialize_entry", lambda entry: {"id": entry.id})
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "serialize_settlement",
+        lambda settlement, **kwargs: {
+            "id": settlement.id,
+            "financial_entry_id": settlement.financial_entry_id,
+            "financial_title_id": kwargs["schedule"].id,
+            "financial_title_code": kwargs["schedule"].schedule_code,
+        },
+    )
 
     result, error = FinancialScheduleService.create_settlement_from_schedule(
         schedule_id=15,
@@ -87,7 +105,12 @@ def test_create_settlement_from_schedule_forwards_entry_and_external_reference(m
     assert error is None
     assert result == {
         "entry": {"id": 88},
-        "settlement": {"id": 901, "financial_entry_id": 88},
+        "settlement": {
+            "id": 901,
+            "financial_entry_id": 88,
+            "financial_title_id": 15,
+            "financial_title_code": "TIT-000015",
+        },
         "created_entry": True,
     }
     assert captured["payload"]["financial_entry_id"] == 88

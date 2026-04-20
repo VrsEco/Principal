@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from financial_domain import (
     FINANCIAL_OPERATIONAL_GLOSSARY,
+    build_financial_title_contract_payload,
     build_title_operational_state_metadata,
 )
 from flask import current_app
@@ -898,7 +899,12 @@ class FinancialScheduleService:
 
         return {
             "entry": FinancialService.serialize_entry(entry),
-            "settlement": settlement.to_dict() if hasattr(settlement, "to_dict") else settlement,
+            "settlement": FinancialService.serialize_settlement(
+                settlement,
+                entry=entry,
+                schedule=schedule,
+                include_components=True,
+            ),
             "created_entry": bool(entry_result.get("created")) if isinstance(entry_result, dict) else False,
         }, None
 
@@ -1433,7 +1439,7 @@ class FinancialScheduleService:
             if payload["summary"] is not None:
                 payload["summary"]["bordero_code"] = active_bordero.bordero_code if active_bordero else None
                 payload["summary"]["is_bordero_locked"] = bool(active_bordero)
-        return payload
+        return build_financial_title_contract_payload(payload)
 
     @staticmethod
     def _derive_budget_links_from_allocations(

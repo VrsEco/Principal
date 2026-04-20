@@ -21,8 +21,6 @@ from models import (
 from schemas.financial import (
     financial_entry_allocation_schema,
     financial_entry_allocations_schema,
-    financial_settlement_schema,
-    financial_settlements_schema,
 )
 from services.financial_service import FinancialService
 from services.financial_import_service import FinancialImportService
@@ -1107,7 +1105,11 @@ class FinancialEntrySettlementListResource(Resource):
             FinancialSettlement.financial_entry_id == entry.id,
             FinancialSettlement.deleted_at.is_(None),
         ).order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc()).all()
-        return financial_settlements_schema.dump(settlements), 200
+        return FinancialService.serialize_settlement_list(
+            settlements,
+            include_components=True,
+            entry_by_id={entry.id: entry},
+        ), 200
 
     @permission_required("financial", "create")
     def post(self, entry_id: int):
@@ -1123,7 +1125,7 @@ class FinancialEntrySettlementListResource(Resource):
         if error:
             return {"error": error}, 400
 
-        return financial_settlement_schema.dump(settlement), 201
+        return FinancialService.serialize_settlement(settlement, include_components=True), 201
 
 
 class FinancialSettlementResource(Resource):
@@ -1135,7 +1137,7 @@ class FinancialSettlementResource(Resource):
             FinancialSettlement.company_id == company_id,
             FinancialSettlement.deleted_at.is_(None),
         ).first_or_404()
-        return financial_settlement_schema.dump(settlement), 200
+        return FinancialService.serialize_settlement(settlement, include_components=True), 200
 
     @permission_required("financial", "delete")
     def delete(self, settlement_id: int):
