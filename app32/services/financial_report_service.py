@@ -1040,6 +1040,9 @@ class FinancialReportService:
             entry = entries.get(settlement.financial_entry_id)
             if not entry:
                 continue
+            settlement_payload = FinancialService.serialize_settlement(settlement, entry=entry, include_components=True)
+            component_summary = dict(settlement_payload.get("settlement_component_summary") or {})
+            allocation_breakdown = dict(settlement_payload.get("settlement_allocation_breakdown") or {})
             amount = Decimal(settlement.net_amount or 0)
             movement_tone = "positive" if entry.movement_nature == "credit" else "negative"
             if entry.movement_nature == "credit":
@@ -1060,6 +1063,12 @@ class FinancialReportService:
                     "movimento_tone": movement_tone,
                     "valor": FinancialReportService._serialize_money(amount),
                     "valor_label": FinancialReportService._format_signed_currency(amount, positive_sign=entry.movement_nature == "credit"),
+                    "valor_principal": FinancialReportService._serialize_money(component_summary.get("principal") or settlement.principal_amount or 0),
+                    "valor_correcao": FinancialReportService._serialize_money(component_summary.get("financial_correction") or 0),
+                    "valor_desconto": FinancialReportService._serialize_money(component_summary.get("discount") or 0),
+                    "rateio_principal_itens": len(dict(allocation_breakdown.get("principal") or {}).get("items") or []),
+                    "rateio_correcao_itens": len(dict(allocation_breakdown.get("financial_correction") or {}).get("items") or []),
+                    "rateio_desconto_itens": len(dict(allocation_breakdown.get("discount") or {}).get("items") or []),
                     "conciliacao": settlement.reconciliation_status,
                     "conciliacao_label": FinancialReportService._reconciliation_status_label(settlement.reconciliation_status),
                     "conciliacao_tone": FinancialReportService._reconciliation_status_tone(settlement.reconciliation_status),
