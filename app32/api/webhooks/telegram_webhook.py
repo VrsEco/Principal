@@ -38,12 +38,24 @@ def _is_menu_like_message(text: str) -> bool:
 def _is_non_critical_telegram_delivery_error(exc: Exception) -> bool:
     text = _normalize_text_basic(str(exc))
     known_fragments = (
+        "bad request: message to be replied not found",
+        "message to be replied not found",
+        "reply message not found",
         "chat not found",
         "bot was blocked by the user",
         "user is deactivated",
         "have no rights to send a message",
     )
     return any(fragment in text for fragment in known_fragments)
+
+
+def _is_reply_reference_telegram_error(exc: Exception) -> bool:
+    text = _normalize_text_basic(str(exc))
+    return (
+        "message to be replied not found" in text
+        or "reply message not found" in text
+        or "reply_to_message_id" in text
+    )
 
 
 def _safe_send_telegram_message(
@@ -68,6 +80,19 @@ def _safe_send_telegram_message(
         bot.send_message(**payload)
         return True
     except Exception as exc:
+        if reply_to_message_id is not None and _is_reply_reference_telegram_error(exc):
+            logger.info(
+                "Telegram rejeitou reply_to_message_id=%s no chat %s; reenviando sem vínculo de resposta.",
+                reply_to_message_id,
+                chat_id,
+            )
+            return _safe_send_telegram_message(
+                chat_id,
+                text,
+                parse_mode=parse_mode,
+                reply_to_message_id=None,
+                log_level=log_level,
+            )
         if _is_non_critical_telegram_delivery_error(exc):
             logger.warning(
                 "Entrega Telegram ignorada para chat %s: %s",
@@ -109,6 +134,25 @@ def _safe_send_chat_action(chat_id, action: str) -> bool:
             return False
         logger.debug("Falha ao enviar chat action Telegram: %s", exc)
         return False
+
+
+def _resolve_action_company_id(user=None) -> int | None:
+    """Resolve empresa para escalonamentos técnicos sem furar multi-tenancy.
+
+    O AgentAction exige `company_id`. Antes havia fallback para a primeira
+    empresa da base, o que podia registrar incidente em tenant incorreto. Agora
+    só escalonamos quando a empresa puder ser derivada do usuário/canal.
+    """
+
+    if not user:
+        return None
+    try:
+        from src.intelligence.identity import get_best_company_id
+
+        return get_best_company_id(user)
+    except Exception as exc:
+        logger.exception("Falha ao resolver company_id tenant-safe para AgentAction: %s", exc)
+        return None
 
 
 def _fallback_root_menu(company_id):
@@ -383,42 +427,39 @@ def process_telegram_message(app, message: telebot.types.Message):
                     error_msg = f"Crash no Webhook do Telegram: {str(e)}"
 
                     # 🔍 Recuperar company_id para conformidade multi-tenancy (@ARQUITETO)
-                    from models.company import Company
                     from models.agent_action import AgentAction
                     from models import db
 
-                    effective_company_id = None
-                    if 'user' in locals() and user:
-                        from src.intelligence.identity import get_best_company_id
-                        effective_company_id = get_best_company_id(user)
-
+                    effective_company_id = _resolve_action_company_id(user if 'user' in locals() else None)
                     if not effective_company_id:
-                        first_company = Company.query.first()
-                        effective_company_id = first_company.id if first_company else 1
-
-                    action = AgentAction(
-                        type='technical_fix',
-                        status='pending',
-                        requesting_agent='telegram_webhook',
-                        handling_agent='engineering_squad',
-                        title='Crash no Webhook do Telegram',
-                        description=error_msg,
-                        payload={"error": str(e), "traceback": tb, "telegram_id": telegram_id, "file": "api/webhooks/telegram_webhook.py"},
-                        company_id=effective_company_id,
-                        user_id=getattr(user, 'id', None) if 'user' in locals() and user else None
-                    )
-                    db.session.add(action)
-                    db.session.commit()
-                    try:
-                        from services.agent_action_backlog_service import ensure_backlog_task_for_action
-
-                        ensure_backlog_task_for_action(action, autocommit=True)
-                    except Exception:
-                        logger.exception(
-                            "Falha ao espelhar technical_fix #%s no backlog AA.J.31",
-                            action.id,
+                        logger.error(
+                            "Crash Telegram sem company_id tenant-safe; AgentAction não será criado. telegram_id=%s",
+                            telegram_id if 'telegram_id' in locals() else None,
                         )
-                    logger.info(f"✅ Erro escalonado via Ticket #{action.id}")
+                    else:
+                        action = AgentAction(
+                            type='technical_fix',
+                            status='pending',
+                            requesting_agent='telegram_webhook',
+                            handling_agent='engineering_squad',
+                            title='Crash no Webhook do Telegram',
+                            description=error_msg,
+                            payload={"error": str(e), "traceback": tb, "telegram_id": telegram_id, "file": "api/webhooks/telegram_webhook.py"},
+                            company_id=effective_company_id,
+                            user_id=getattr(user, 'id', None) if 'user' in locals() and user else None
+                        )
+                        db.session.add(action)
+                        db.session.commit()
+                        try:
+                            from services.agent_action_backlog_service import ensure_backlog_task_for_action
+
+                            ensure_backlog_task_for_action(action, autocommit=True)
+                        except Exception:
+                            logger.exception(
+                                "Falha ao espelhar technical_fix #%s no backlog AA.J.31",
+                                action.id,
+                            )
+                        logger.info(f"✅ Erro escalonado via Ticket #{action.id}")
             except Exception as esc_err:
                 logger.error(f"Falha catastrófica ao escalonar erro: {esc_err}")
 
