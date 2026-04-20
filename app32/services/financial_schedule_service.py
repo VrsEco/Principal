@@ -12,6 +12,7 @@ from financial_domain import (
     FINANCIAL_OPERATIONAL_GLOSSARY,
     build_financial_title_contract_payload,
     build_title_operational_state_metadata,
+    title_state_has_open_balance,
 )
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
@@ -1501,9 +1502,10 @@ class FinancialScheduleService:
         settled_total = Decimal(str(balance.get("principal_settled") or 0))
         open_total = Decimal(str(balance.get("total_open") or balance.get("principal_open") or 0))
         settlement_state = str(balance.get("settlement_state") or "open")
-        settled_entries = 1 if settlement_state == "settled" and original_total > 0 else 0
-        partial_entries = 1 if settlement_state == "partial" else 0
-        open_entries = 1 if settlement_state == "open" and open_total > 0 else 0
+        operational_state_code = str(operational_state["code"] or "open")
+        settled_entries = 1 if operational_state_code == "settled" and original_total > 0 else 0
+        partial_entries = 1 if operational_state_code == "partial" else 0
+        open_entries = 1 if operational_state_code == "open" and open_total > 0 else 0
         return {
             "entry_count": int(balance.get("entry_count") or 0),
             "settled_entries": settled_entries,
@@ -1528,6 +1530,8 @@ class FinancialScheduleService:
             "counterparty_name": metadata.get("counterparty_name"),
             "operational_state": operational_state["code"],
             "operational_state_label": operational_state["label"],
+            "has_open_balance": bool(balance.get("has_open_balance")) or title_state_has_open_balance(operational_state_code),
+            "enters_transactional_views": bool(balance.get("enters_transactional_views")),
             "include_in_accounting_reports": operational_state["include_in_accounting_reports"],
             "include_in_projected_reports": operational_state["include_in_projected_reports"],
         }

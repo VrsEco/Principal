@@ -25,6 +25,9 @@ TITLE_OPERATIONAL_STATE_LABELS = {
 TITLE_ACCOUNTING_REPORT_INCLUDED_STATES = frozenset({"open", "partial", "settled"})
 TITLE_PROJECTED_REPORT_INCLUDED_STATES = frozenset({"forecast"})
 TITLE_ADJUSTMENT_OPEN_STATUSES = frozenset({"open", "partial"})
+TITLE_SETTLEMENT_STATE_VALUES = ("open", "partial", "settled")
+TITLE_OPEN_BALANCE_STATES = frozenset({"open", "partial"})
+TITLE_ENTERS_TRANSACTIONAL_VIEWS = frozenset({"open", "partial", "settled", "forecast"})
 FINANCIAL_CONTRACT_VERSION = "financial_contract_v2"
 SETTLEMENT_CORRECTION_COMPONENT_TYPES = frozenset({"monetary_correction", "interest", "fine", "manual_adjustment"})
 
@@ -70,6 +73,33 @@ def _extract_schedule_id_from_reference(external_reference: Any) -> Optional[int
     return int(raw_id)
 
 
+def resolve_title_settlement_state(
+    *,
+    principal_amount: Any = None,
+    principal_settled: Any = None,
+    adjustments_settled: Any = None,
+    discounts_applied: Any = None,
+    total_open: Any = None,
+) -> str:
+    principal_amount_decimal = Decimal(str(_money_float(principal_amount)))
+    principal_settled_decimal = Decimal(str(_money_float(principal_settled)))
+    adjustments_settled_decimal = Decimal(str(_money_float(adjustments_settled)))
+    discounts_applied_decimal = Decimal(str(_money_float(discounts_applied)))
+    total_open_decimal = Decimal(str(_money_float(total_open)))
+
+    if total_open_decimal <= Decimal("0.00"):
+        return "settled"
+
+    settled_activity = principal_settled_decimal + adjustments_settled_decimal + discounts_applied_decimal
+    if settled_activity > Decimal("0.00"):
+        return "partial"
+
+    if principal_amount_decimal <= Decimal("0.00") and total_open_decimal <= Decimal("0.00"):
+        return "settled"
+
+    return "open"
+
+
 def is_forecast_title(*, entry_type: Optional[str] = None, metadata_json: Optional[Dict[str, Any]] = None) -> bool:
     metadata = dict(metadata_json or {})
     normalized_entry_type = _normalized(entry_type)
@@ -113,6 +143,14 @@ def title_state_in_accounting_reports(state: Optional[str]) -> bool:
 
 def title_state_in_projected_reports(state: Optional[str]) -> bool:
     return _normalized(state) in TITLE_PROJECTED_REPORT_INCLUDED_STATES
+
+
+def title_state_has_open_balance(state: Optional[str]) -> bool:
+    return _normalized(state) in TITLE_OPEN_BALANCE_STATES
+
+
+def title_state_enters_transactional_views(state: Optional[str]) -> bool:
+    return _normalized(state) in TITLE_ENTERS_TRANSACTIONAL_VIEWS
 
 
 def build_title_operational_state_metadata(

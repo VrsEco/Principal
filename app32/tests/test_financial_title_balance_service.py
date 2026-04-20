@@ -111,3 +111,40 @@ def test_get_title_balance_rejects_company_out_of_scope():
 
     assert result is None
     assert error == "A operação financeira está fora do escopo da empresa autorizada."
+
+
+def test_calculate_from_records_marks_discount_only_settlement_as_partial():
+    schedule = _Obj(
+        id=36,
+        company_id=7,
+        schedule_code="TIT-036",
+        status="open",
+        movement_nature="debit",
+        template_amount=Decimal("1000.00"),
+    )
+    settlement = _Obj(
+        id=602,
+        settlement_status="posted",
+        deleted_at=None,
+        principal_amount=Decimal("0.00"),
+        discount_amount=Decimal("100.00"),
+    )
+    components = [
+        _Obj(financial_settlement_id=602, component_type="discount", amount=Decimal("100.00")),
+    ]
+
+    result = FinancialTitleBalanceService.calculate_from_records(
+        schedule=schedule,
+        entries=[],
+        settlements=[settlement],
+        components=components,
+        adjustments=[],
+        reference_date=date(2026, 4, 20),
+    )
+
+    assert result["principal_open"] == 1000.0
+    assert result["discounts_applied"] == 100.0
+    assert result["total_open"] == 1000.0
+    assert result["settlement_state"] == "partial"
+    assert result["operational_state"] == "partial"
+    assert result["has_open_balance"] is True

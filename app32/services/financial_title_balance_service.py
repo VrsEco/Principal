@@ -8,6 +8,9 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from financial_domain import (
     TITLE_ADJUSTMENT_OPEN_STATUSES,
     build_title_operational_state_metadata,
+    resolve_title_settlement_state,
+    title_state_enters_transactional_views,
+    title_state_has_open_balance,
 )
 from models import db
 from models.financial import (
@@ -179,13 +182,13 @@ class FinancialTitleBalanceService:
                 adjustments_open += open_amount
 
         total_open = max(principal_open + adjustments_open - discounts_open, Decimal("0"))
-        settlement_state = "open"
-        if principal_amount <= 0 and adjustments_open <= 0:
-            settlement_state = "settled"
-        elif total_open == 0 and principal_amount > 0:
-            settlement_state = "settled"
-        elif principal_settled > 0 or adjustments_settled > 0:
-            settlement_state = "partial"
+        settlement_state = resolve_title_settlement_state(
+            principal_amount=principal_amount,
+            principal_settled=principal_settled,
+            adjustments_settled=adjustments_settled,
+            discounts_applied=discounts_applied_by_components,
+            total_open=total_open,
+        )
 
         movement_nature = getattr(schedule, "movement_nature", None)
         operational_state = build_title_operational_state_metadata(
@@ -220,6 +223,8 @@ class FinancialTitleBalanceService:
             "settlement_state": settlement_state,
             "operational_state": operational_state["code"],
             "operational_state_label": operational_state["label"],
+            "has_open_balance": title_state_has_open_balance(operational_state["code"]) and FinancialTitleBalanceService._float(total_open) > 0,
+            "enters_transactional_views": title_state_enters_transactional_views(operational_state["code"]),
             "include_in_accounting_reports": operational_state["include_in_accounting_reports"],
             "include_in_projected_reports": operational_state["include_in_projected_reports"],
         }

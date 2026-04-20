@@ -8,7 +8,9 @@ from financial_domain import (
     build_financial_title_contract_payload,
     build_title_operational_state_metadata,
     resolve_title_operational_state,
+    resolve_title_settlement_state,
     title_state_in_accounting_reports,
+    title_state_has_open_balance,
     title_state_in_projected_reports,
 )
 
@@ -59,6 +61,25 @@ def test_title_state_predicates_follow_canonical_rule():
     assert title_state_in_accounting_reports("forecast") is False
     assert title_state_in_projected_reports("forecast") is True
     assert title_state_in_projected_reports("settled") is False
+    assert title_state_has_open_balance("partial") is True
+    assert title_state_has_open_balance("settled") is False
+
+
+def test_resolve_title_settlement_state_marks_discounted_title_as_partial_until_zero_balance():
+    assert resolve_title_settlement_state(
+        principal_amount=1000,
+        principal_settled=0,
+        adjustments_settled=0,
+        discounts_applied=100,
+        total_open=900,
+    ) == "partial"
+    assert resolve_title_settlement_state(
+        principal_amount=1000,
+        principal_settled=1000,
+        adjustments_settled=0,
+        discounts_applied=0,
+        total_open=0,
+    ) == "settled"
 
 
 def test_build_financial_title_contract_payload_exposes_canonical_aliases():

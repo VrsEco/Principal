@@ -860,12 +860,22 @@ class FinancialReportService:
                     settlement_state = "partial"
 
             active_bordero = active_borderos_by_schedule.get(schedule.id)
-            report_state = "bordero" if active_bordero else settlement_state
+            operational_state = build_title_operational_state_metadata(
+                schedule_status=schedule.status,
+                settlement_state=settlement_state,
+                entry_type=schedule.entry_type,
+                metadata_json=schedule.metadata_json,
+            )
+            report_state = "bordero" if active_bordero else operational_state["code"]
             if report_state == "settled" and not filters.include_settled:
                 continue
             if report_state == "partial" and not filters.include_partial:
                 continue
             if report_state == "open" and not filters.include_open:
+                continue
+            if report_state in {"draft", "cancelled"}:
+                continue
+            if report_state == "forecast" and not bool(filters.include_budget_vs_actual):
                 continue
             if report_state == "bordero" and not filters.include_bordero:
                 continue
@@ -884,7 +894,7 @@ class FinancialReportService:
             else:
                 payable_title_total += original_total
                 payable_open_total += signed_open_amount
-            if report_state != "settled":
+            if report_state not in {"settled", "cancelled", "draft"}:
                 open_count += 1
             if report_state == "bordero":
                 bordero_count += 1
@@ -904,9 +914,12 @@ class FinancialReportService:
             due_date_value = (schedule.next_due_date or schedule.first_due_date).isoformat() if (schedule.next_due_date or schedule.first_due_date) else "-"
             settlement_date_value = latest_settlement_date.isoformat() if latest_settlement_date else "-"
             status_label = {
+                "draft": "Rascunho",
+                "forecast": "Projetado",
                 "settled": "Liquidado",
                 "partial": "Liquidado Parcial",
                 "open": "Aberto",
+                "cancelled": "Cancelado",
                 "bordero": "Borderô",
             }[report_state]
             type_label = "Recebimento" if schedule.entry_type == "receivable" else "Pagamento"

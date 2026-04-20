@@ -38,13 +38,18 @@
     const amountClass = (value) => Number(value || 0) < 0 ? 'sched-amount sched-amount--negative' : 'sched-amount sched-amount--positive';
     const typeLabel = (entryType) => entryType === 'payable' ? 'Pagamento' : 'Recebimento';
     const typeClass = (entryType) => entryType === 'payable' ? 'sched-pill--payable' : 'sched-pill--receivable';
+    const resolveScheduleState = (summary = {}, item = {}) => {
+      if (item.is_bordero_virtual) return 'bordero';
+      if (item.bordero && !item.is_bordero_virtual) return 'bordero_item';
+      return summary.operational_state || summary.settlement_state || 'open';
+    };
     const settlementLabel = (state, item) => {
       if (state === 'bordero_item' && item?.bordero?.code) return `Bord. - ${item.bordero.code}`;
       if (state === 'bordero') return 'Borderô';
       if (item?.summary?.operational_state_label) return item.summary.operational_state_label;
-      return ({ open: 'Em aberto', partial: 'Liquidado parcial', settled: 'Liquidado' }[state] || 'Em aberto');
+      return ({ draft: 'Rascunho', forecast: 'Projetado', open: 'Em aberto', partial: 'Liquidado parcial', settled: 'Liquidado', cancelled: 'Cancelado' }[state] || 'Em aberto');
     };
-    const settlementClass = (state) => ({ open: 'sched-pill--open', partial: 'sched-pill--partial', settled: 'sched-pill--settled', bordero_item: 'sched-pill--bordero-item', bordero: 'sched-pill--bordero' }[state] || 'sched-pill--open');
+    const settlementClass = (state) => ({ draft: 'sched-pill--open', forecast: 'sched-pill--partial', open: 'sched-pill--open', partial: 'sched-pill--partial', settled: 'sched-pill--settled', cancelled: 'sched-pill--bordero-item', bordero_item: 'sched-pill--bordero-item', bordero: 'sched-pill--bordero' }[state] || 'sched-pill--open');
 
     const numberMatches = (filterValue, targetValue) => {
       if (filterValue === '' || filterValue == null) return true;
@@ -96,13 +101,14 @@
 
       return scheduleItems.filter((item) => {
         const summary = item.summary || {};
+        const effectiveState = resolveScheduleState(summary, item);
         const itemCounterparty = String(summary.counterparty_name || item.metadata_json?.counterparty_name || '').trim().toLowerCase();
         const itemCompetence = item.start_date || item.first_due_date || item.created_date || '';
         const itemDueDate = item.next_due_date || item.first_due_date || item.created_date || '';
         const haystack = `${item.schedule_code || ''} ${item.description || item.name || ''} ${itemCounterparty}`.toLowerCase();
         if (search && !haystack.includes(search)) return false;
         if (type && item.entry_type !== type) return false;
-        if (settlement && (summary.settlement_state || 'open') !== settlement) return false;
+        if (settlement && effectiveState !== settlement) return false;
         if (borderoFilter === 'bordero' && !item.is_bordero_virtual) return false;
         if (borderoFilter === 'item' && (!item.bordero || item.is_bordero_virtual)) return false;
         if (borderoFilter === 'free' && (item.bordero || item.is_bordero_virtual)) return false;
@@ -123,7 +129,10 @@
       const payableTotal = items
         .filter((item) => item.entry_type === 'payable')
         .reduce((acc, item) => acc + Number(item.summary?.signed_open_total ?? item.signed_template_amount ?? 0), 0);
-      const openCount = items.filter((item) => (item.summary?.settlement_state || 'open') !== 'settled').length;
+      const openCount = items.filter((item) => {
+        const effectiveState = resolveScheduleState(item.summary || {}, item);
+        return !['settled', 'cancelled', 'draft'].includes(effectiveState);
+      }).length;
 
       if (kpis[0]) {
         kpis[0].querySelector('strong').textContent = String(items.length);
@@ -154,8 +163,10 @@
 
       tbody.innerHTML = items.map((item) => {
         const summary = item.summary || {};
-        const settlementState = item.is_bordero_virtual ? 'bordero' : (item.bordero && !item.is_bordero_virtual ? 'bordero_item' : (summary.operational_state || summary.settlement_state || 'open'));
-        const hasOpenBalance = Number(summary.open_total || 0) > 0;
+        const settlementState = resolveScheduleState(summary, item);
+        const hasOpenBalance = summary.has_open_balance != null
+          ? Boolean(summary.has_open_balance)
+          : Number(summary.open_total || 0) > 0;
         const borderoCode = item.bordero?.code || summary.bordero_code || '';
         const isBorderoLocked = Boolean(item.is_bordero_locked || summary.is_bordero_locked);
         const isBorderoVirtual = Boolean(item.is_bordero_virtual);
