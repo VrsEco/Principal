@@ -76,12 +76,12 @@
     page.dataset.borderoType = type || '';
     typeInfo.textContent = type ? typeLabel(type) : 'Tipo não definido';
     if (!type) {
-      banner.textContent = 'Selecione o tipo do borderô e os agendamentos elegíveis.';
-      $('bordero-schedule-body').innerHTML = '<tr><td colspan="6" class="empty-state">Selecione um tipo para carregar os agendamentos.</td></tr>';
+      banner.textContent = 'Selecione o tipo do borderô e os títulos financeiros elegíveis.';
+      $('bordero-schedule-body').innerHTML = '<tr><td colspan="6" class="empty-state">Selecione um tipo para carregar os títulos financeiros.</td></tr>';
       renderSelectionSummary();
       return;
     }
-    banner.textContent = `${typeLabel(type)} · somente agendamentos com saldo aberto e sem outro borderô ativo ficam elegíveis para agrupamento.`;
+    banner.textContent = `${typeLabel(type)} · somente títulos financeiros com saldo aberto e sem outro borderô ativo ficam elegíveis para agrupamento.`;
     renderEligibleSchedules();
   }
 
@@ -113,7 +113,7 @@
     const tbody = $('bordero-schedule-body');
     const items = eligibleSchedules();
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum agendamento elegível para este tipo.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum título financeiro elegível para este tipo.</td></tr>';
       renderSelectionSummary();
       return;
     }
@@ -252,7 +252,7 @@
     if (!state.selectedType) throw new Error('Selecione o tipo do borderô.');
     const name = $('bordero-name').value.trim();
     if (!name) throw new Error('Informe o nome do borderô.');
-    if (!items.length) throw new Error('Selecione ao menos um agendamento.');
+    if (!items.length) throw new Error('Selecione ao menos um título financeiro.');
     const payload = {
       bordero_type: state.selectedType,
       name,

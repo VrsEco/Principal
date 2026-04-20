@@ -149,6 +149,25 @@
     return (optionsCache.cost_centers || []).filter((item) => !parentIds.has(Number(item.id)));
   };
 
+  const normalizeScheduleTab = (rawTab) => ({
+    agendamento: 'agendamento',
+    schedule: 'agendamento',
+    titulo: 'agendamento',
+    title: 'agendamento',
+    recorrencia: 'recorrencia',
+    recurrence: 'recorrencia',
+    anexos: 'anexos',
+    attachments: 'anexos',
+    baixas: 'baixas',
+    settlement: 'baixas',
+    settlements: 'baixas',
+    liquidacao: 'baixas',
+    liquidacoes: 'baixas',
+    memoria: 'memoria-calculo',
+    'memoria-calculo': 'memoria-calculo',
+    'calculation-log': 'memoria-calculo',
+  }[String(rawTab || '').trim().toLowerCase()] || 'agendamento');
+
   function switchTab(tab) {
     document.querySelectorAll('.sched-tab').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab));
     document.querySelectorAll('.sched-tab-panel').forEach((el) => el.classList.toggle('active', el.dataset.panel === tab));
@@ -157,13 +176,16 @@
 
   function applyInitialOpenTab() {
     if (!initialOpenTab) return;
-    if (initialOpenTab === 'baixas' && !($('baixas-tab-button')?.classList.contains('hidden'))) {
+    const normalizedTab = normalizeScheduleTab(initialOpenTab);
+    if (normalizedTab === 'baixas' && !($('baixas-tab-button')?.classList.contains('hidden'))) {
       switchTab('baixas');
       return;
     }
-    if (initialOpenTab === 'memoria' && !($('calculation-log-tab-button')?.classList.contains('hidden'))) {
-      switchTab('memoria');
+    if (normalizedTab === 'memoria-calculo' && !($('calculation-log-tab-button')?.classList.contains('hidden'))) {
+      switchTab('memoria-calculo');
+      return;
     }
+    switchTab(normalizedTab);
   }
 
   function updateEntryTypePresentation(entryType) {

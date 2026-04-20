@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260402e') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260420f') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -32,7 +32,7 @@
     <section class="bordero-shell">
         <div class="bordero-main">
             <section class="panel bordero-card">
-                <div id="bordero-banner" class="bordero-banner">Selecione o tipo do borderô e os agendamentos elegíveis.</div>
+                <div id="bordero-banner" class="bordero-banner">Selecione o tipo do borderô e os títulos financeiros elegíveis.</div>
 
                 <div class="bordero-grid bordero-grid-top">
                     <label class="field">
@@ -60,7 +60,7 @@
                 <section id="bordero-create-section">
                     <div class="bordero-section-head">
                         <div>
-                            <h2>Agendamentos elegíveis</h2>
+                            <h2>Títulos Financeiros elegíveis</h2>
                             <p>Somente títulos com saldo aberto e sem borderô ativo podem ser selecionados.</p>
                         </div>
                     </div>
@@ -73,7 +73,7 @@
                             <thead>
                                 <tr>
                                     <th>Selecionar</th>
-                                    <th>Agendamento</th>
+                                    <th>Título Financeiro</th>
                                     <th>Favorecido</th>
                                     <th>Vencimento</th>
                                     <th>Saldo aberto</th>
@@ -81,7 +81,7 @@
                                 </tr>
                             </thead>
                             <tbody id="bordero-schedule-body">
-                                <tr><td colspan="6" class="empty-state">Selecione um tipo para carregar os agendamentos.</td></tr>
+                                <tr><td colspan="6" class="empty-state">Selecione um tipo para carregar os títulos financeiros.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -102,7 +102,7 @@
                     <div class="bordero-section-head">
                         <div>
                             <h2>Itens do borderô</h2>
-                            <p>Snapshot congelado dos agendamentos participantes.</p>
+                            <p>Snapshot congelado dos títulos financeiros participantes.</p>
                         </div>
                     </div>
                     <div class="bordero-table-wrap">
@@ -110,7 +110,7 @@
                             <thead>
                                 <tr>
                                     <th>Item</th>
-                                    <th>Agendamento</th>
+                                    <th>Título Financeiro</th>
                                     <th>Favorecido</th>
                                     <th>Selecionado</th>
                                     <th>Liquidado</th>
@@ -174,5 +174,5 @@
     </section>
 </div>
 
-<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260402e') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260420f') }}"></script>
 {% endblock %}
