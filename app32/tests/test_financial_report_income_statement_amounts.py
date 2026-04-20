@@ -229,3 +229,51 @@ def test_income_statement_02_keeps_summary_cards_general_info_and_status_columns
     assert len(payload["summary_cards"]) == 4
     assert len(payload["general_info"]) >= 1
     assert payload["show_status_columns"] is True
+
+
+def test_income_statement_02_compiles_due_and_settlement_independently_from_competence(monkeypatch):
+    entry = SimpleNamespace(
+        id=220,
+        company_id=7,
+        external_reference="",
+        financial_schedule_id=None,
+        original_amount=Decimal("150"),
+        status="posted",
+        movement_nature="credit",
+        entry_type="receivable",
+        competence_date=date(2026, 3, 31),
+        due_date=date(2026, 4, 12),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    settlement = SimpleNamespace(
+        financial_entry_id=220,
+        settlement_date=date(2026, 4, 18),
+        principal_amount=Decimal("150"),
+        net_amount=Decimal("150"),
+    )
+    _install_income_statement_fakes(monkeypatch, schedules=[], entries=[entry], settlements=[settlement])
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement_2",
+        {
+            "competence_start": "2026-04-01",
+            "competence_end": "2026-04-30",
+            "due_start": "2026-04-01",
+            "due_end": "2026-04-30",
+            "settlement_start": "2026-04-01",
+            "settlement_end": "2026-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+
+    payload = FinancialReportService._build_income_statement_2(7, filters)
+
+    assert payload["totals"]["competence"] == 0.0
+    assert payload["totals"]["due"] == 150.0
+    assert payload["totals"]["liquidation"] == 150.0

@@ -1395,8 +1395,6 @@ class FinancialReportService:
             query = FinancialEntry.query.filter(
                 FinancialEntry.company_id == company_id,
                 FinancialEntry.deleted_at.is_(None),
-                FinancialEntry.competence_date >= competence_start,
-                FinancialEntry.competence_date <= competence_end,
             )
             if chart_account_ids:
                 query = query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
@@ -1440,11 +1438,20 @@ class FinancialReportService:
                     continue
 
                 in_competence = True
+                if competence_start and ((not entry.competence_date) or entry.competence_date < competence_start):
+                    in_competence = False
+                if competence_end and ((not entry.competence_date) or entry.competence_date > competence_end):
+                    in_competence = False
+
                 in_due = True
                 if due_start and ((not entry.due_date) or entry.due_date < due_start):
                     in_due = False
                 if due_end and ((not entry.due_date) or entry.due_date > due_end):
                     in_due = False
+
+                in_liquidation = period_settlement_amount != Decimal("0")
+                if not any([in_competence, in_due, in_liquidation]):
+                    continue
 
                 signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
                 slot = _account_slot(entry.chart_account_id)
@@ -1452,7 +1459,7 @@ class FinancialReportService:
                     slot["competencia"] += signed_original
                 if in_due:
                     slot["vencimento"] += signed_original
-                if period_settlement_amount:
+                if in_liquidation:
                     signed_settlement = period_settlement_amount if entry.movement_nature == "credit" else -period_settlement_amount
                     slot["liquidacao"] += signed_settlement
                 if is_open:
