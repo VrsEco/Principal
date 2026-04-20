@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419h') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260419i') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -210,7 +210,7 @@
                 <h2>Composição da baixa</h2>
                 <p id="settlement-modal-subtitle" class="modal-subtitle">Confira o que será baixado como principal e como ajustes.</p>
             </div>
-            <button type="button" class="btn-icon settlement-modal-close" onclick="closeSettlementCompositionModal()" aria-label="Fechar composição da baixa">
+            <button type="button" class="btn-icon settlement-modal-close" onclick="closeSettlementCompositionModal()" aria-label="Fechar composição da baixa" tabindex="-1">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -224,7 +224,7 @@
                     <div id="settlement-simulation-status" class="settlement-simulation-status">Simulando composição...</div>
                 </section>
 
-                <section class="settlement-panel" aria-label="Dados da baixa">
+                <section class="settlement-panel settlement-panel--data" aria-label="Dados da baixa">
                     <header class="settlement-panel-header">
                         <h3>Dados da baixa</h3>
                         <p>Informe quando a baixa foi realizada e em qual conta bancária o movimento será registrado.</p>
@@ -241,7 +241,7 @@
                     </div>
                 </section>
 
-                <section class="settlement-panel">
+                <section class="settlement-panel settlement-panel--before">
                     <header class="settlement-panel-header">
                         <h3>Posição atual do título</h3>
                         <p>Resumo do principal, ajustes acumulados, total devido e valor bruto estimado antes da confirmação.</p>
@@ -249,7 +249,7 @@
                     <div id="settlement-simulation-summary" class="settlement-simulation-summary"></div>
                 </section>
 
-                <section class="settlement-panel" aria-label="Composição editável da baixa">
+                <section class="settlement-panel settlement-panel--composition" aria-label="Composição editável da baixa">
                     <header class="settlement-panel-header">
                         <h3>Composição da baixa</h3>
                         <p>Edite os valores diretamente. O principal não pode ultrapassar o saldo principal em aberto do título.</p>
@@ -274,7 +274,7 @@
                     </div>
                 </section>
 
-                <section class="settlement-panel">
+                <section class="settlement-panel settlement-panel--after">
                     <header class="settlement-panel-header">
                         <h3>Saldos após a baixa</h3>
                         <p>Prévia dos saldos residuais para principal, ajustes e total em aberto após a confirmação.</p>
@@ -285,7 +285,7 @@
 
             <div class="modal-footer settlement-modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeSettlementCompositionModal()">Cancelar</button>
-                <button type="button" id="settlement-confirm-button" class="btn btn-success" onclick="confirmAssistedSettlement()">Confirmar baixa</button>
+                <button type="submit" id="settlement-confirm-button" class="btn btn-success">Confirmar baixa</button>
             </div>
         </form>
     </div>
@@ -334,5 +334,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419h') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260419i') }}"></script>
 {% endblock %}

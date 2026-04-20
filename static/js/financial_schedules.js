@@ -1212,6 +1212,7 @@
     modalEl.classList.remove('hidden');
     modalEl.setAttribute('aria-hidden', 'false');
     await simulateSettlementComposition({ explicit: false, hydrate: true });
+    window.setTimeout(() => $('settlement-date')?.focus(), 0);
   }
 
   window.closeSettlementCompositionModal = () => {
@@ -1234,9 +1235,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settlementPayload({ explicit: true })),
       });
-      window.closeSettlementCompositionModal();
-      await window.selectSchedule(scheduleId);
-      switchTab('baixas');
+      window.location.href = '/financial/schedules';
     } catch (error) {
       alert(error.message);
     }
@@ -1458,8 +1457,25 @@
   }
 
   if ($('settlement-composition-form')) {
-    $('settlement-composition-form').addEventListener('submit', (event) => event.preventDefault());
+    $('settlement-composition-form').addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      const activeId = document.activeElement?.id || '';
+      if (activeId !== 'settlement-confirm-button') {
+        event.preventDefault();
+      }
+    });
+    $('settlement-composition-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await window.confirmAssistedSettlement();
+    });
   }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const modalEl = $('settlement-composition-modal');
+    if (!modalEl || modalEl.classList.contains('hidden')) return;
+    window.closeSettlementCompositionModal();
+  });
 
   $('counterparty-document').addEventListener('input', (event) => {
     const digits = String(event.target.value || '').replace(/\D/g, '').slice(0, 14);
