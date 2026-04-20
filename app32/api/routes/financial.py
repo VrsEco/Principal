@@ -212,15 +212,9 @@ def financial_entry_manage(entry_id: int):
 @permission_required("financial", "view")
 def financial_schedule_settle(schedule_id: int):
     schedule = _get_schedule_with_access(schedule_id)
-    company = Company.query.get(schedule.company_id)
-    return render_template(
-        "modules/financial/entry_manage.html",
-        company=company,
-        company_id=schedule.company_id,
-        entry_id=None,
-        entry=None,
-        schedule_id=schedule.id,
-        schedule=schedule,
+    return redirect(
+        f"/financial/schedules/{schedule.id}?company_id={schedule.company_id}&open_settlement=1",
+        code=302,
     )
 
 

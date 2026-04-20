@@ -235,7 +235,7 @@
     }
 
     async function liquidateSchedule(scheduleId) {
-      window.location.href = `/financial/schedules/${scheduleId}/settle?company_id=${companyId}`;
+      window.location.href = `/financial/schedules/${scheduleId}?company_id=${companyId}&open_settlement=1`;
     }
 
     async function deleteSchedule(scheduleId) {

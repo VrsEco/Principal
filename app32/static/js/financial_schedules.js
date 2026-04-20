@@ -5,6 +5,8 @@
   const companyId = Number(page.dataset.companyId || 0);
   const initialScheduleId = Number(page.dataset.scheduleId || 0);
   const initialEntryType = String(page.dataset.initialEntryType || '').trim().toLowerCase();
+  const pageParams = new URLSearchParams(window.location.search);
+  const autoOpenSettlement = pageParams.get('open_settlement') === '1';
   const isFormMode = page.classList.contains('sched-page--form');
   let schedules = [];
   let selectedSchedule = null;
@@ -1212,6 +1214,13 @@
     modalEl.classList.remove('hidden');
     modalEl.setAttribute('aria-hidden', 'false');
     await simulateSettlementComposition({ explicit: false, hydrate: true });
+    if (autoOpenSettlement && window.history?.replaceState) {
+      const nextParams = new URLSearchParams(window.location.search);
+      nextParams.delete('open_settlement');
+      const nextQuery = nextParams.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+      window.history.replaceState({}, document.title, nextUrl);
+    }
     window.setTimeout(() => $('settlement-date')?.focus(), 0);
   }
 
@@ -1613,6 +1622,9 @@
       if (isFormMode) {
         if (initialScheduleId) {
           await window.selectSchedule(initialScheduleId);
+          if (autoOpenSettlement && selectedSchedule?.id) {
+            await openSettlementCompositionModal(selectedSchedule);
+          }
         } else {
           window.startNewSchedule(initialEntryType);
         }

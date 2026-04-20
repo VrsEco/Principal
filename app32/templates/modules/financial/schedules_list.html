@@ -141,7 +141,7 @@
 
     <div class="filter-group">
         <label class="filter-label">Valor do título</label>
-        <input id="schedule-filter-title-amount" type="number" min="0" step="0.01" placeholder="Valor original">
+        <input id="schedule-filter-title-amount" type="text" data-format="currency" placeholder="Valor original">
     </div>
 
     <div class="sched-sidebar-actions">
@@ -152,5 +152,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260402a') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260419a') }}"></script>
 {% endblock %}
