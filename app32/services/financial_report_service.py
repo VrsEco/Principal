@@ -77,7 +77,7 @@ class FinancialReportService:
             "code": "bank_statement",
             "slug": "extrato-bancario",
             "label": "Extrato Bancário",
-            "description": "Extrato gerencial dos movimentos liquidados por conta bancária com saldo inicial, entradas, saídas e saldo final.",
+            "description": "Extrato gerencial das baixas por conta bancária com saldo inicial, entradas, saídas, saldo final e composição consolidada.",
             "filters": ("period", "bank_account", "include_reconciled_only"),
         },
         "income_statement": {
@@ -223,9 +223,9 @@ class FinancialReportService:
             if updates:
                 data = data.model_copy(update=updates)
             if not any([data.include_settled, data.include_partial, data.include_open, data.include_bordero]):
-                return None, "Selecione ao menos um status para o relatório de agendamentos."
+                return None, "Selecione ao menos um status para o relatório de títulos financeiros."
             if not any([data.include_receivable, data.include_payable]):
-                return None, "Selecione ao menos um tipo para o relatório de agendamentos."
+                return None, "Selecione ao menos um tipo para o relatório de títulos financeiros."
             if not any([
                 data.show_title_number,
                 data.show_installment,
@@ -237,7 +237,7 @@ class FinancialReportService:
                 data.show_due_date,
                 data.show_settlement_date,
             ]):
-                return None, "Selecione ao menos uma coluna para exibir no relatório de agendamentos."
+                return None, "Selecione ao menos uma coluna para exibir no relatório de títulos financeiros."
         if data.report_type == "working_capital" and data.reference_date:
             data = data.model_copy(update={"period_end": data.reference_date, "period_start": data.reference_date})
         return data, None
@@ -993,7 +993,7 @@ class FinancialReportService:
             ],
             general_info=[
                 FinancialReportService._report_info("Competência base", f"{filters.competence_start.isoformat()} até {filters.competence_end.isoformat()}"),
-                FinancialReportService._report_info("Critério principal", "Agendamento operacional por título e saldo"),
+                FinancialReportService._report_info("Critério principal", "Título financeiro operacional por saldo e baixa"),
                 FinancialReportService._report_info("Em aberto / borderô", f"{open_count} / {bordero_count}"),
             ],
             columns=columns,
@@ -2287,7 +2287,7 @@ class FinancialReportService:
         if filters.movement_nature:
             values.append({"label": "Movimento", "value": "Entrada" if filters.movement_nature == "credit" else "Saída"})
         if filters.schedule_status:
-            values.append({"label": "Status do agendamento", "value": filters.schedule_status})
+            values.append({"label": "Status do título", "value": filters.schedule_status})
         if filters.frequency:
             values.append({"label": "Frequência", "value": filters.frequency})
         if filters.report_type == "schedule_report":

@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -46,7 +47,7 @@ def test_schedule_report_normalize_rejects_without_status():
     )
 
     assert filters is None
-    assert error == "Selecione ao menos um status para o relatório de agendamentos."
+    assert error == "Selecione ao menos um status para o relatório de títulos financeiros."
 
 
 def test_schedule_report_normalize_rejects_without_display_columns():
@@ -74,7 +75,7 @@ def test_schedule_report_normalize_rejects_without_display_columns():
     )
 
     assert filters is None
-    assert error == "Selecione ao menos uma coluna para exibir no relatório de agendamentos."
+    assert error == "Selecione ao menos uma coluna para exibir no relatório de títulos financeiros."
 
 
 def test_income_statement_normalize_forces_fixed_identification_and_sorting():
@@ -148,3 +149,10 @@ def test_income_statement_2_normalize_forces_fixed_identification_and_sorting():
     assert filters.show_description is True
     assert filters.order_by == "code"
     assert filters.order_direction == "asc"
+
+
+def test_schedule_report_templates_use_titulos_financeiros_copy():
+    page = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\partials\report_filters_schedule_page.html").read_text(encoding="utf-8")
+    sidebar = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\partials\report_filters_schedule_sidebar.html").read_text(encoding="utf-8")
+    assert "Abrir títulos financeiros" in page
+    assert "relatório de títulos financeiros" in sidebar

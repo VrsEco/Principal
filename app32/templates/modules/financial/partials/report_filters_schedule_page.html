@@ -10,7 +10,7 @@
      data-filter-count-target="schedule-report-filter-count"
      data-filter-count-secondary-target="schedule-report-active-filters-inline">
     {% call report_macros.workspace_header(report_definition, 'schedule-report-header', 'schedule-report-eyebrow', 'schedule-report-subtitle', 'schedule-report-header-actions') %}
-    <a class="btn btn-secondary" href="/financial/schedules{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir agendamentos</a>
+    <a class="btn btn-secondary" href="/financial/schedules{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir títulos financeiros</a>
     <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
     <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
     <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
