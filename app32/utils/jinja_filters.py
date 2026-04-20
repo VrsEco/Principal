@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 def format_date_br(value, include_time=False):
     """
@@ -42,9 +43,21 @@ def format_currency_br(value):
     if value is None:
         return "0,00"
     try:
-        # Format with 2 decimal places, using comma as decimal separator and dot as thousand separator
-        return "{:,.2f}".format(float(value)).replace(",", "X").replace(".", ",").replace("X", ".")
-    except (ValueError, TypeError):
+        raw = str(value).strip()
+        if not raw:
+            return "0,00"
+        if "," in raw:
+            raw = raw.replace(".", "").replace(",", ".")
+        amount = Decimal(raw).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        signal = "-" if amount < 0 else ""
+        amount = abs(amount)
+        integer_part, decimal_part = f"{amount:.2f}".split(".")
+        groups = []
+        while integer_part:
+            groups.insert(0, integer_part[-3:])
+            integer_part = integer_part[:-3]
+        return f"{signal}{'.'.join(groups)},{decimal_part}"
+    except (ValueError, TypeError, InvalidOperation):
         return value
 
 def register_filters(app):
