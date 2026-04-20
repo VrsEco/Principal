@@ -172,14 +172,15 @@
         const isBorderoVirtual = Boolean(item.is_bordero_virtual);
         const actionsHtml = isBorderoVirtual
           ? `<div class="sched-row-actions">
-              <a class="btn btn-secondary" href="/financial/borderos/${item.bordero_id}?company_id=${companyId}">Consultar</a>
+              <a class="btn btn-primary" href="/financial/borderos/${item.bordero_id}?company_id=${companyId}">Abrir borderô</a>
             </div>`
           : isBorderoLocked
             ? `<div class="sched-row-actions">
-                <a class="btn btn-secondary" href="/financial/schedules/${item.id}?company_id=${companyId}">Consultar</a>
+                <a class="btn btn-primary" href="/financial/borderos/${item.bordero?.id || item.bordero_id}?company_id=${companyId}">Abrir borderô</a>
+                <a class="btn btn-secondary" href="/financial/schedules/${item.id}?company_id=${companyId}">Consultar título</a>
               </div>`
             : `<div class="sched-row-actions">
-                <button type="button" class="btn btn-secondary" data-action="settle" data-id="${item.id}" ${(hasOpenBalance && !isBorderoLocked) ? '' : 'disabled'}>${isBorderoLocked ? 'No borderô' : 'Liquidar'}</button>
+                <button type="button" class="btn btn-primary" data-action="settle" data-id="${item.id}" ${(hasOpenBalance && !isBorderoLocked) ? '' : 'disabled'}>Baixar</button>
                 <a class="btn btn-secondary" href="/financial/schedules/${item.id}?company_id=${companyId}">Editar</a>
                 <button type="button" class="btn btn-danger" data-action="delete" data-id="${item.id}" ${isBorderoLocked ? 'disabled' : ''}>Excluir</button>
               </div>`;

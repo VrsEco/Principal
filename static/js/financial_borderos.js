@@ -125,10 +125,10 @@
       return `
         <tr data-schedule-id="${item.id}">
           <td data-label="Selecionar"><input type="checkbox" class="bordero-schedule-selector"></td>
-          <td data-label="Agendamento">
+          <td data-label="Título financeiro">
             <div class="bordero-row-title">
               <strong>${item.description || 'Sem histórico'}</strong>
-              <small>${item.schedule_code || '-'} · ${item.status || '-'}</small>
+              <small><a href="/financial/schedules/${item.id}?company_id=${companyId}">${item.schedule_code || '-'}</a> · ${item.status || '-'}</small>
             </div>
           </td>
           <td data-label="Favorecido">${counterparty}</td>
@@ -200,10 +200,10 @@
         return `
           <tr>
             <td data-label="Item">${item.item_code || '-'}</td>
-            <td data-label="Agendamento">
+            <td data-label="Título financeiro">
               <div class="bordero-row-title">
                 <strong>${snap.description || 'Sem histórico'}</strong>
-                <small>${snap.schedule_code || summary.schedule_code || '-'} · agendamento ${item.financial_schedule_id}</small>
+                <small><a href="/financial/schedules/${item.financial_schedule_id}?company_id=${companyId}&open_tab=baixas">${snap.schedule_code || summary.schedule_code || '-'}</a> · título ${item.financial_schedule_id}</small>
               </div>
             </td>
             <td data-label="Favorecido">${summary.counterparty_name || snap.metadata_json?.counterparty_name || '-'}</td>
