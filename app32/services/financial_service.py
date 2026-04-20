@@ -1646,6 +1646,11 @@ class FinancialService:
                 for component in component_payloads
                 if str(component.get("component_type") or "").strip().lower() in set(SETTLEMENT_CORRECTION_COMPONENT_TYPES)
             )
+            discount_amount = sum(
+                abs(FinancialService._money_float(component.get("amount")))
+                for component in component_payloads
+                if str(component.get("component_type") or "").strip().lower() == "discount"
+            )
             schedule_for_allocations = None
             if getattr(entry, "financial_schedule_id", None):
                 try:
@@ -1662,6 +1667,12 @@ class FinancialService:
                 component_kind="financial_correction",
                 component_amount=correction_amount,
             )
+            discount_allocation_breakdown = FinancialService._build_schedule_component_allocation_breakdown(
+                schedule=schedule_for_allocations,
+                settlement=settlement,
+                component_kind="discount",
+                component_amount=discount_amount,
+            )
             settlement_allocation_breakdown = {
                 **dict((getattr(settlement, "metadata_json", {}) or {}).get("settlement_allocation_breakdown") or {}),
             }
@@ -1669,6 +1680,8 @@ class FinancialService:
                 settlement_allocation_breakdown["principal"] = principal_allocation_breakdown
             if correction_allocation_breakdown.get("items"):
                 settlement_allocation_breakdown["financial_correction"] = correction_allocation_breakdown
+            if discount_allocation_breakdown.get("items"):
+                settlement_allocation_breakdown["discount"] = discount_allocation_breakdown
             if settlement_allocation_breakdown:
                 settlement.metadata_json = {
                     **dict(getattr(settlement, "metadata_json", {}) or {}),

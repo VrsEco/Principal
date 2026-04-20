@@ -624,3 +624,50 @@ def test_build_schedule_component_allocation_breakdown_for_financial_correction(
     assert result["items"][0]["due_date"] == "2026-04-20"
     assert result["items"][1]["settled_allocated_amount"] == 10.7
     assert result["items"][0]["metadata_json"]["component_kind"] == "financial_correction"
+
+
+def test_build_schedule_component_allocation_breakdown_for_discount():
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 77,
+            "metadata_json": {
+                "allocations": [
+                    {
+                        "chart_account_id": 901,
+                        "cost_center_id": 951,
+                        "allocation_type": "amount",
+                        "allocated_amount": -15.0,
+                        "percentage": None,
+                        "notes": "Desconto A",
+                        "metadata_json": {"adjustment_kind": "discount"},
+                    },
+                    {
+                        "chart_account_id": 902,
+                        "cost_center_id": 952,
+                        "allocation_type": "amount",
+                        "allocated_amount": -5.0,
+                        "percentage": None,
+                        "notes": "Desconto B",
+                        "metadata_json": {"adjustment_kind": "discount"},
+                    },
+                ]
+            },
+        },
+    )()
+    settlement = type("Settlement", (), {"settlement_date": date(2026, 4, 20)})()
+
+    result = FinancialService._build_schedule_component_allocation_breakdown(
+        schedule=schedule,
+        settlement=settlement,
+        component_kind="discount",
+        component_amount=20.0,
+    )
+
+    assert result["component_kind"] == "discount"
+    assert result["total_allocated_amount"] == 20.0
+    assert result["items"][0]["chart_account_id"] == 901
+    assert result["items"][0]["competence_date"] is None
+    assert result["items"][0]["metadata_json"]["component_kind"] == "discount"
+    assert result["items"][1]["settled_allocated_amount"] == 5.0
