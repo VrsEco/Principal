@@ -246,6 +246,7 @@ def build_financial_settlement_contract_payload(
     schedule_data = dict(schedule_payload or {})
     metadata = dict(contract.get("metadata_json") or {})
     title_snapshot = dict(metadata.get("financial_title_snapshot") or {})
+    allocation_breakdown = dict(metadata.get("settlement_allocation_breakdown") or {})
     components = [dict(component or {}) for component in (settlement_components or contract.get("settlement_components") or [])]
     component_summary = _summarize_settlement_components(components)
 
@@ -292,5 +293,6 @@ def build_financial_settlement_contract_payload(
         "total_amount": _money_float(total_amount),
         "settlement_components": components,
         "settlement_component_summary": component_summary,
+        "settlement_allocation_breakdown": allocation_breakdown or None,
         "financial_title_snapshot": title_snapshot or None,
     }

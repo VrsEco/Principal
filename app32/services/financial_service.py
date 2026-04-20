@@ -923,6 +923,70 @@ class FinancialService:
             return None, f"Erro ao atualizar lançamento financeiro: {str(exc)}"
 
     @staticmethod
+    def _build_principal_allocation_breakdown(
+        *,
+        entry: FinancialEntry,
+        settlement: FinancialSettlement,
+    ) -> Dict[str, Any]:
+        try:
+            allocations = (
+                FinancialEntryAllocation.query.filter(
+                    FinancialEntryAllocation.company_id == entry.company_id,
+                    FinancialEntryAllocation.financial_entry_id == entry.id,
+                    FinancialEntryAllocation.deleted_at.is_(None),
+                )
+                .order_by(FinancialEntryAllocation.id.asc())
+                .all()
+            )
+        except Exception:
+            allocations = []
+
+        principal_amount = FinancialService._money_float(getattr(settlement, "principal_amount", None))
+        entry_amount = abs(FinancialService._money_float(getattr(entry, "original_amount", None)))
+        if principal_amount <= 0 or entry_amount <= 0 or not allocations:
+            return {"component_kind": "principal", "items": [], "total_allocated_amount": 0.0}
+
+        items: List[Dict[str, Any]] = []
+        distributed_total = 0.0
+        for index, allocation in enumerate(allocations, start=1):
+            allocation_payload = allocation.to_dict() if hasattr(allocation, "to_dict") else dict(allocation or {})
+            raw_amount = allocation_payload.get("allocated_amount")
+            if raw_amount in (None, ""):
+                percentage = FinancialService._money_float(allocation_payload.get("percentage"))
+                raw_amount = round(entry_amount * (percentage / 100.0), 2)
+            base_amount = abs(FinancialService._money_float(raw_amount))
+            proportional_amount = round((base_amount / entry_amount) * principal_amount, 2) if entry_amount > 0 else 0.0
+            if index == len(allocations):
+                proportional_amount = round(principal_amount - distributed_total, 2)
+            distributed_total = round(distributed_total + proportional_amount, 2)
+            items.append({
+                "allocation_id": allocation_payload.get("id"),
+                "chart_account_id": allocation_payload.get("chart_account_id"),
+                "cost_center_id": allocation_payload.get("cost_center_id"),
+                "activity_id": allocation_payload.get("activity_id"),
+                "process_instance_id": allocation_payload.get("process_instance_id"),
+                "routine_id": allocation_payload.get("routine_id"),
+                "allocation_type": allocation_payload.get("allocation_type"),
+                "percentage": allocation_payload.get("percentage"),
+                "entry_allocated_amount": round(base_amount, 2),
+                "settled_allocated_amount": proportional_amount,
+                "notes": allocation_payload.get("notes"),
+                "metadata_json": {
+                    **dict(allocation_payload.get("metadata_json") or {}),
+                    "component_kind": "principal",
+                    "source_allocation_id": allocation_payload.get("id"),
+                },
+            })
+
+        return {
+            "component_kind": "principal",
+            "basis_entry_amount": round(entry_amount, 2),
+            "basis_settlement_principal_amount": round(principal_amount, 2),
+            "total_allocated_amount": round(distributed_total, 2),
+            "items": items,
+        }
+
+    @staticmethod
     def replace_allocations(
         *,
         payload: Dict[str, Any],
@@ -1506,6 +1570,19 @@ class FinancialService:
                         **component_payload,
                     )
                 )
+            principal_allocation_breakdown = FinancialService._build_principal_allocation_breakdown(
+                entry=entry,
+                settlement=settlement,
+            )
+            if principal_allocation_breakdown.get("items"):
+                settlement.metadata_json = {
+                    **dict(getattr(settlement, "metadata_json", {}) or {}),
+                    "settlement_allocation_breakdown": {
+                        **dict((getattr(settlement, "metadata_json", {}) or {}).get("settlement_allocation_breakdown") or {}),
+                        "principal": principal_allocation_breakdown,
+                    },
+                }
+
             if title_snapshot:
                 db.session.add(
                     FinancialTitleCalculationLog(

@@ -30,6 +30,9 @@ class _Column:
     def desc(self):
         return self
 
+    def asc(self):
+        return self
+
 
 class _QueryStub:
     def __init__(self, result):
@@ -43,6 +46,11 @@ class _QueryStub:
 
     def first(self):
         return self._result
+
+    def all(self):
+        if isinstance(self._result, list):
+            return list(self._result)
+        return [] if self._result is None else [self._result]
 
 
 class _SequenceQueryStub(_QueryStub):
@@ -206,6 +214,24 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     }))
     monkeypatch.setattr(financial_module, "FinancialSchedule", _FakeSchedule)
     monkeypatch.setattr(financial_module, "FinancialSettlement", _FakeSettlement)
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntryAllocation",
+        type(
+            "FinancialEntryAllocationStub",
+            (),
+            {
+                "company_id": _Column(),
+                "financial_entry_id": _Column(),
+                "deleted_at": _Column(),
+                "id": _Column(),
+                "query": _QueryStub([
+                    type("AllocationA", (), {"to_dict": lambda self: {"id": 1, "chart_account_id": 501, "cost_center_id": 601, "allocation_type": "amount", "allocated_amount": 300.0, "percentage": None, "notes": "Principal A", "metadata_json": {}}})(),
+                    type("AllocationB", (), {"to_dict": lambda self: {"id": 2, "chart_account_id": 502, "cost_center_id": 602, "allocation_type": "amount", "allocated_amount": 175.0, "percentage": None, "notes": "Principal B", "metadata_json": {}}})(),
+                ]),
+            },
+        ),
+    )
     monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
     monkeypatch.setattr(financial_module.FinancialCatalogService, "validate_reference_ids", lambda **kwargs: None)
     monkeypatch.setattr(
@@ -267,6 +293,9 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert snapshot["after"]["editable_open"]["total_open"] == 255.0
     assert snapshot["after"]["total_open"] == 255.0
     assert snapshot["after"]["operational_state"]["code"] == "partial"
+    assert settlement.metadata_json["settlement_allocation_breakdown"]["principal"]["total_allocated_amount"] == 120.0
+    assert settlement.metadata_json["settlement_allocation_breakdown"]["principal"]["items"][0]["chart_account_id"] == 501
+    assert settlement.metadata_json["settlement_allocation_breakdown"]["principal"]["items"][1]["settled_allocated_amount"] == 44.21
     assert captured["flushed"] is True
     assert captured["log_kwargs"]["financial_schedule_id"] == 77
     assert captured["log_kwargs"]["financial_entry_id"] == 99
