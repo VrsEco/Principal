@@ -1,0 +1,79 @@
+.schedule-report-page {
+  --report-sheet-min-height: calc(297mm - 16mm);
+  --report-filters-bg: #f8fffd;
+  --report-stats-columns: 7;
+  --report-print-size: A4 portrait;
+  --report-print-stats-columns: 7;
+}
+
+.schedule-table {
+  table-layout: fixed;
+}
+
+.schedule-table thead th {
+  padding: 0.34rem 0.32rem;
+}
+
+.schedule-table tbody td {
+  font-size: 0.62rem;
+  padding: 0.28rem 0.32rem;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.schedule-table tbody td.is-currency {
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.schedule-table .col-title_number {
+  width: 11%;
+}
+
+.schedule-table .col-counterparty {
+  width: 22%;
+}
+
+.schedule-table .col-title_amount,
+.schedule-table .col-balance_amount {
+  width: 13%;
+}
+
+.schedule-table .col-competence_date,
+.schedule-table .col-due_date,
+.schedule-table .col-settlement_date {
+  width: 13.5%;
+}
+
+.sr-date-pair {
+  margin-bottom: 0.55rem;
+}
+
+.schedule-report-sidebar select[multiple] option:disabled {
+  color: var(--text-muted, #94a3b8);
+  background: rgba(148, 163, 184, 0.12);
+  font-style: italic;
+}
+
+@media print {
+  .schedule-stats-grid {
+    gap: 0.22rem !important;
+  }
+
+  .schedule-stat {
+    padding: 0.28rem 0.18rem !important;
+  }
+
+  .schedule-stat__value {
+    font-size: 0.68rem !important;
+    margin-bottom: 0.08rem !important;
+  }
+
+  .schedule-stat__label {
+    font-size: 0.46rem !important;
+    line-height: 1.05 !important;
+  }
+}

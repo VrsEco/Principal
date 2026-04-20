@@ -94,9 +94,28 @@
   }
 
   function pendingLabel(record) {
-    const flags = record.review_flags_json || [];
+    const flags = [...(record.review_flags_json || [])];
+    const dedupe = record.metadata_json?.dedupe || {};
+    if (dedupe.status === 'duplicate' && !flags.includes('duplicate_detected')) flags.unshift('duplicate_detected');
+    if (dedupe.status === 'possible_duplicate' && !flags.includes('possible_duplicate_detected')) flags.unshift('possible_duplicate_detected');
     if (!flags.length) return '<span class="fa-muted">Sem pendências</span>';
     return flags.map((flag) => `<span class="fa-badge fa-badge--excluded">${escapeHtml(flag)}</span>`).join(' ');
+  }
+
+  function suggestionNote(record, field) {
+    const suggestion = record.metadata_json?.auto_suggestions?.[field];
+    if (!suggestion?.suggested_id) return '';
+    const source = suggestion.source ? ` · ${suggestion.source}` : '';
+    const score = suggestion.memory_score ? ` · score ${Number(suggestion.memory_score).toFixed(2)}` : '';
+    return `<div class="fa-muted">Sugestão automática${source}${score}</div>`;
+  }
+
+  function dedupeLabel(record) {
+    const dedupe = record.metadata_json?.dedupe || {};
+    if (!dedupe.status || dedupe.status === 'unique') return '';
+    const reason = dedupe.reason ? ` · ${dedupe.reason}` : '';
+    const match = dedupe.matched_record_id ? ` · ref ${dedupe.matched_record_id}` : '';
+    return `<div class="fa-muted">Dedupe: ${escapeHtml(dedupe.status)}${escapeHtml(reason)}${escapeHtml(match)}</div>`;
   }
 
   function originLabel(record) {
@@ -114,20 +133,20 @@
       <tr data-record-id="${record.id}">
         <td><input type="checkbox" class="fa-record-select" value="${record.id}"></td>
         <td>${badge(record.status)}</td>
-        <td><strong>${documentLabel(record)}</strong><br><span class="fa-muted">${escapeHtml(record.document_group_key || '-')}</span></td>
+        <td><strong>${documentLabel(record)}</strong><br><span class="fa-muted">${escapeHtml(record.document_group_key || '-')}</span>${dedupeLabel(record)}</td>
         <td>${originLabel(record)}</td>
         <td>${escapeHtml(partiesLabel(record))}</td>
         <td>${keyLabel(record)}</td>
         <td>${selectHtml([{id:'payable',name:'Pagar'},{id:'receivable',name:'Receber'}], record.entry_direction, 'Tipo', (item) => item.id, optionLabel, 'entry_direction')}</td>
         <td>${selectHtml([{id:'settled',name:'Já pago/recebido'},{id:'open',name:'Em aberto'}], record.settlement_state, 'Situação', (item) => item.id, optionLabel, 'settlement_state')}</td>
         <td><input type="text" value="${escapeHtml(record.description || '')}" data-field="description"></td>
-        <td>${selectHtml(state.options?.counterparties, record.counterparty_id, 'Favorecido', (item) => item.id, optionLabel, 'counterparty_id')}</td>
+        <td>${selectHtml(state.options?.counterparties, record.counterparty_id, 'Favorecido', (item) => item.id, optionLabel, 'counterparty_id')}${suggestionNote(record, 'counterparty')}</td>
         <td><input type="number" step="0.01" value="${record.amount || 0}" data-field="amount"></td>
         <td><input type="date" value="${record.competence_date || ''}" data-field="competence_date"></td>
         <td><input type="date" value="${record.due_date || ''}" data-field="due_date"></td>
         <td>${selectHtml(state.options?.bank_accounts, record.bank_account_id, 'Conta', (item) => item.id, optionLabel, 'bank_account_id')}</td>
-        <td>${selectHtml(state.options?.chart_accounts, record.chart_account_id, 'Conta contábil', (item) => item.id, optionLabel, 'chart_account_id')}</td>
-        <td>${selectHtml(state.options?.cost_centers, record.cost_center_id, 'Centro', (item) => item.id, optionLabel, 'cost_center_id')}</td>
+        <td>${selectHtml(state.options?.chart_accounts, record.chart_account_id, 'Conta contábil', (item) => item.id, optionLabel, 'chart_account_id')}${suggestionNote(record, 'chart_account')}</td>
+        <td>${selectHtml(state.options?.cost_centers, record.cost_center_id, 'Centro', (item) => item.id, optionLabel, 'cost_center_id')}${suggestionNote(record, 'cost_center')}</td>
         <td>${selectHtml(state.options?.domain_options, domainLabel(record), 'Projeto/Processo', (item) => `${item.domain_type}:${item.source_id}`, (item) => item.label, 'domain_link')}</td>
         <td>${record.confidence_score ?? '-'}</td>
         <td>${pendingLabel(record)}</td>
