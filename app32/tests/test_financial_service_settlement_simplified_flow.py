@@ -154,6 +154,11 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
             "id": 77,
             "company_id": 7,
             "schedule_code": "TIT-077",
+            "status": "active",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "description": "Título teste",
+            "name": "Título teste",
             "template_amount": Decimal("500.00"),
             "metadata_json": {"discount_amount_override": "25"},
             "competence_date": date(2026, 3, 5),
@@ -228,12 +233,22 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert error is None
     assert settlement is not None
     snapshot = captured["kwargs"]["metadata_json"]["financial_title_snapshot"]
+    assert snapshot["contract_version"] == "financial_title_memory_v2"
     assert snapshot["financial_schedule_id"] == 77
     assert snapshot["updated_amount"] == 475.0
     assert snapshot["settled_principal_before"] == 100.0
     assert snapshot["settled_principal_current"] == 120.0
     assert snapshot["settled_principal_after"] == 220.0
     assert snapshot["open_principal_after"] == 255.0
+    assert snapshot["before"]["principal_open"] == 375.0
+    assert snapshot["before"]["total_open"] == 375.0
+    assert snapshot["current"]["principal_settled"] == 120.0
+    assert snapshot["current"]["financial_correction"] == 0.0
+    assert snapshot["current"]["discount"] == 0.0
+    assert snapshot["current"]["gross_amount"] == 120.0
+    assert snapshot["after"]["principal_open"] == 255.0
+    assert snapshot["after"]["total_open"] == 255.0
+    assert snapshot["after"]["operational_state"]["code"] == "partial"
     assert captured["flushed"] is True
     assert captured["log_kwargs"]["financial_schedule_id"] == 77
     assert captured["log_kwargs"]["financial_entry_id"] == 99
@@ -246,7 +261,8 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["total_due_before"] == Decimal("375.00")
     assert captured["log_kwargs"]["total_due_after"] == Decimal("255.00")
     assert captured["log_kwargs"]["snapshot_json"]["financial_schedule_id"] == 77
-    assert captured["log_kwargs"]["metadata_json"]["ledger_version"] == "structured_v1"
+    assert captured["log_kwargs"]["metadata_json"]["ledger_version"] == "financial_title_memory_v2"
+    assert captured["log_kwargs"]["metadata_json"]["memory_contract_version"] == "financial_title_memory_v2"
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):
@@ -389,6 +405,11 @@ def test_create_settlement_persists_gross_amount_and_component_breakdown(monkeyp
             "id": 77,
             "company_id": 7,
             "schedule_code": "TIT-077",
+            "status": "active",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "description": "Título teste",
+            "name": "Título teste",
             "template_amount": Decimal("500.00"),
             "metadata_json": {},
             "competence_date": date(2026, 4, 1),

@@ -6,7 +6,13 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from flask import current_app
-from financial_domain import build_financial_settlement_contract_payload
+from financial_domain import (
+    FINANCIAL_TITLE_MEMORY_VERSION,
+    SETTLEMENT_CORRECTION_COMPONENT_TYPES,
+    build_financial_settlement_contract_payload,
+    build_title_operational_state_metadata,
+    resolve_title_settlement_state,
+)
 from models import db
 from models.financial import (
     FinancialBankAccount,
@@ -40,6 +46,17 @@ logger = logging.getLogger(__name__)
 
 class FinancialService:
     """Serviço determinístico do núcleo financeiro."""
+
+    @staticmethod
+    def _money_decimal(value: Any) -> Decimal:
+        try:
+            return Decimal(str(value or 0)).quantize(Decimal("0.01"))
+        except Exception:
+            return Decimal("0.00")
+
+    @staticmethod
+    def _money_float(value: Any) -> float:
+        return float(FinancialService._money_decimal(value))
 
     @staticmethod
     def get_signed_amount(amount: Decimal | float | int | None, movement_nature: str | None) -> float:
@@ -858,11 +875,74 @@ class FinancialService:
             schedule=schedule,
             reference_date=settlement_data.settlement_date or date.today(),
         )
-        title_amount = Decimal(str(amount_totals.get("updated_amount") or schedule.template_amount or 0))
-        settled_before = Decimal(str(balance_before.get("principal_settled") or total_liquidated_before or 0))
-        settled_after = settled_before + Decimal(settlement_data.principal_amount or 0)
-        open_after = max(title_amount - settled_after, Decimal("0"))
+        title_amount = FinancialService._money_decimal(amount_totals.get("updated_amount") or schedule.template_amount or 0)
+        settled_before = FinancialService._money_decimal(balance_before.get("principal_settled") or total_liquidated_before or 0)
+        principal_open_before = FinancialService._money_decimal(balance_before.get("principal_open"))
+        adjustments_open_before = FinancialService._money_decimal(balance_before.get("adjustments_open"))
+        discounts_open_before = FinancialService._money_decimal(balance_before.get("discounts_open"))
+        total_open_before = FinancialService._money_decimal(balance_before.get("total_open"))
+
+        if settlement_data.settlement_components:
+            component_breakdown: Dict[str, Decimal] = {}
+            for component in settlement_data.settlement_components:
+                component_type = str(getattr(component, "component_type", "") or "").strip().lower()
+                component_breakdown[component_type] = component_breakdown.get(component_type, Decimal("0.00")) + FinancialService._money_decimal(
+                    getattr(component, "amount", 0)
+                )
+            principal_now = FinancialService._money_decimal(component_breakdown.get("principal"))
+            correction_now = sum(
+                (component_breakdown.get(component_type, Decimal("0.00")) for component_type in SETTLEMENT_CORRECTION_COMPONENT_TYPES),
+                Decimal("0.00"),
+            )
+            discount_now = FinancialService._money_decimal(component_breakdown.get("discount"))
+        else:
+            principal_now = FinancialService._money_decimal(settlement_data.principal_amount)
+            correction_now = (
+                FinancialService._money_decimal(settlement_data.interest_amount)
+                + FinancialService._money_decimal(settlement_data.penalty_amount)
+                + FinancialService._money_decimal(settlement_data.fee_amount)
+                + FinancialService._money_decimal(settlement_data.other_adjustments_amount)
+            )
+            discount_now = FinancialService._money_decimal(settlement_data.discount_amount)
+
+        gross_now = FinancialService._money_decimal((settlement_data.gross_amount or settlement_data.net_amount or Decimal("0")))
+        if gross_now <= Decimal("0.00"):
+            gross_now = max(principal_now + correction_now - discount_now, Decimal("0.00"))
+
+        settled_after = settled_before + principal_now
+        open_after = max(title_amount - settled_after, Decimal("0.00"))
+        adjustments_open_after = max(adjustments_open_before - correction_now, Decimal("0.00"))
+        discounts_open_after = max(discounts_open_before - discount_now, Decimal("0.00"))
+        total_open_after = max(open_after + adjustments_open_after - discounts_open_after, Decimal("0.00"))
+
+        settlement_state_before = resolve_title_settlement_state(
+            principal_amount=balance_before.get("principal_amount") or schedule.template_amount or 0,
+            principal_settled=balance_before.get("principal_settled") or total_liquidated_before or 0,
+            adjustments_settled=balance_before.get("adjustments_settled") or 0,
+            discounts_applied=balance_before.get("discounts_applied") or 0,
+            total_open=total_open_before,
+        )
+        settlement_state_after = resolve_title_settlement_state(
+            principal_amount=balance_before.get("principal_amount") or schedule.template_amount or 0,
+            principal_settled=settled_after,
+            adjustments_settled=FinancialService._money_decimal(balance_before.get("adjustments_settled")) + correction_now,
+            discounts_applied=FinancialService._money_decimal(balance_before.get("discounts_applied")) + discount_now,
+            total_open=total_open_after,
+        )
+        operational_state_before = build_title_operational_state_metadata(
+            schedule_status=schedule.status,
+            settlement_state=settlement_state_before,
+            entry_type=schedule.entry_type,
+            metadata_json=schedule.metadata_json,
+        )
+        operational_state_after = build_title_operational_state_metadata(
+            schedule_status=schedule.status,
+            settlement_state=settlement_state_after,
+            entry_type=schedule.entry_type,
+            metadata_json=schedule.metadata_json,
+        )
         return {
+            "contract_version": FINANCIAL_TITLE_MEMORY_VERSION,
             "financial_schedule_id": schedule.id,
             "schedule_code": schedule.schedule_code,
             "calculation_date": (settlement_data.settlement_date or date.today()).isoformat(),
@@ -872,13 +952,55 @@ class FinancialService:
             "correction_amount": amount_totals.get("correction_amount"),
             "discount_amount": amount_totals.get("discount_amount"),
             "updated_amount": amount_totals.get("updated_amount"),
-            "settled_principal_before": float(settled_before.quantize(Decimal("0.01"))),
-            "settled_principal_current": float(Decimal(settlement_data.principal_amount or 0).quantize(Decimal("0.01"))),
-            "settled_principal_after": float(settled_after.quantize(Decimal("0.01"))),
-            "open_principal_after": float(open_after.quantize(Decimal("0.01"))),
-            "principal_open_before": balance_before.get("principal_open"),
-            "adjustments_open_before": balance_before.get("adjustments_open"),
-            "total_open_before": balance_before.get("total_open"),
+            "settled_principal_before": FinancialService._money_float(settled_before),
+            "settled_principal_current": FinancialService._money_float(principal_now),
+            "settled_principal_after": FinancialService._money_float(settled_after),
+            "open_principal_after": FinancialService._money_float(open_after),
+            "principal_open_before": FinancialService._money_float(principal_open_before),
+            "adjustments_open_before": FinancialService._money_float(adjustments_open_before),
+            "discounts_open_before": FinancialService._money_float(discounts_open_before),
+            "total_open_before": FinancialService._money_float(total_open_before),
+            "adjustments_open_after": FinancialService._money_float(adjustments_open_after),
+            "discounts_open_after": FinancialService._money_float(discounts_open_after),
+            "total_open_after": FinancialService._money_float(total_open_after),
+            "title": {
+                "id": schedule.id,
+                "code": schedule.schedule_code,
+                "status": schedule.status,
+                "entry_type": schedule.entry_type,
+                "movement_nature": schedule.movement_nature,
+                "description": schedule.description or schedule.name,
+            },
+            "entry": {
+                "id": getattr(entry, "id", None),
+                "code": getattr(entry, "entry_code", None),
+                "status": getattr(entry, "status", None),
+                "movement_nature": getattr(entry, "movement_nature", None),
+            },
+            "before": {
+                "principal_open": FinancialService._money_float(principal_open_before),
+                "adjustments_open": FinancialService._money_float(adjustments_open_before),
+                "discounts_open": FinancialService._money_float(discounts_open_before),
+                "total_open": FinancialService._money_float(total_open_before),
+                "principal_settled": FinancialService._money_float(settled_before),
+                "settlement_state": settlement_state_before,
+                "operational_state": operational_state_before,
+            },
+            "current": {
+                "principal_settled": FinancialService._money_float(principal_now),
+                "financial_correction": FinancialService._money_float(correction_now),
+                "discount": FinancialService._money_float(discount_now),
+                "gross_amount": FinancialService._money_float(gross_now),
+            },
+            "after": {
+                "principal_open": FinancialService._money_float(open_after),
+                "adjustments_open": FinancialService._money_float(adjustments_open_after),
+                "discounts_open": FinancialService._money_float(discounts_open_after),
+                "total_open": FinancialService._money_float(total_open_after),
+                "principal_settled": FinancialService._money_float(settled_after),
+                "settlement_state": settlement_state_after,
+                "operational_state": operational_state_after,
+            },
         }
 
 
@@ -889,26 +1011,40 @@ class FinancialService:
         settlement: FinancialSettlement,
         snapshot: Dict[str, Any],
     ) -> Dict[str, Any]:
-        principal_before = Decimal(str(snapshot.get("principal_open_before") or 0))
+        before_block = dict(snapshot.get("before") or {})
+        current_block = dict(snapshot.get("current") or {})
+        after_block = dict(snapshot.get("after") or {})
+
+        principal_before = Decimal(str(before_block.get("principal_open") or snapshot.get("principal_open_before") or 0))
         if principal_before <= 0:
             principal_before = Decimal(str(snapshot.get("open_principal_after") or 0)) + Decimal(
                 str(snapshot.get("settled_principal_current") or 0)
             )
         principal_settled_now = Decimal(str(snapshot.get("settled_principal_current") or 0))
         principal_after = max(principal_before - principal_settled_now, Decimal("0"))
-        adjustments_open_before = Decimal(str(snapshot.get("adjustments_open_before") or 0))
-        adjustments_settled_now = (
-            Decimal(str(getattr(settlement, "interest_amount", 0) or 0))
-            + Decimal(str(getattr(settlement, "penalty_amount", 0) or 0))
-            + Decimal(str(getattr(settlement, "fee_amount", 0) or 0))
-            + Decimal(str(getattr(settlement, "other_adjustments_amount", 0) or 0))
-        )
-        discount_now = Decimal(str(getattr(settlement, "discount_amount", 0) or 0))
-        adjustments_open_after = max(adjustments_open_before - adjustments_settled_now, Decimal("0"))
-        total_due_before = Decimal(str(snapshot.get("total_open_before") or 0))
+        adjustments_open_before = Decimal(str(before_block.get("adjustments_open") or snapshot.get("adjustments_open_before") or 0))
+        discounts_open_before = Decimal(str(before_block.get("discounts_open") or snapshot.get("discounts_open_before") or 0))
+        adjustments_settled_now = Decimal(str(current_block.get("financial_correction") or 0))
+        if adjustments_settled_now <= 0:
+            adjustments_settled_now = (
+                Decimal(str(getattr(settlement, "interest_amount", 0) or 0))
+                + Decimal(str(getattr(settlement, "penalty_amount", 0) or 0))
+                + Decimal(str(getattr(settlement, "fee_amount", 0) or 0))
+                + Decimal(str(getattr(settlement, "other_adjustments_amount", 0) or 0))
+            )
+        discount_now = Decimal(str(current_block.get("discount") or getattr(settlement, "discount_amount", 0) or 0))
+        adjustments_open_after = Decimal(str(after_block.get("adjustments_open") or snapshot.get("adjustments_open_after") or 0))
+        if adjustments_open_after <= Decimal("0") and adjustments_open_before > Decimal("0"):
+            adjustments_open_after = max(adjustments_open_before - adjustments_settled_now, Decimal("0"))
+        discounts_open_after = Decimal(str(after_block.get("discounts_open") or snapshot.get("discounts_open_after") or 0))
+        if discounts_open_after <= Decimal("0") and discounts_open_before > Decimal("0"):
+            discounts_open_after = max(discounts_open_before - discount_now, Decimal("0"))
+        total_due_before = Decimal(str(before_block.get("total_open") or snapshot.get("total_open_before") or 0))
         if total_due_before <= 0:
-            total_due_before = principal_before + adjustments_open_before
-        total_due_after = max(principal_after + adjustments_open_after - discount_now, Decimal("0"))
+            total_due_before = principal_before + adjustments_open_before - discounts_open_before
+        total_due_after = Decimal(str(after_block.get("total_open") or snapshot.get("total_open_after") or 0))
+        if total_due_after <= 0 and (principal_after > Decimal("0") or adjustments_open_after > Decimal("0") or discounts_open_after > Decimal("0")):
+            total_due_after = max(principal_after + adjustments_open_after - discounts_open_after, Decimal("0"))
         return {
             "company_id": entry.company_id,
             "financial_schedule_id": int(snapshot["financial_schedule_id"]),
@@ -938,7 +1074,11 @@ class FinancialService:
                 "source": "create_settlement",
                 "settlement_code": settlement.settlement_code,
                 "snapshot": snapshot,
-                "ledger_version": "structured_v1",
+                "ledger_version": FINANCIAL_TITLE_MEMORY_VERSION,
+                "memory_contract_version": snapshot.get("contract_version") or FINANCIAL_TITLE_MEMORY_VERSION,
+                "before": before_block,
+                "current": current_block,
+                "after": after_block,
             },
         }
 

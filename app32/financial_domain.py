@@ -29,6 +29,7 @@ TITLE_SETTLEMENT_STATE_VALUES = ("open", "partial", "settled")
 TITLE_OPEN_BALANCE_STATES = frozenset({"open", "partial"})
 TITLE_ENTERS_TRANSACTIONAL_VIEWS = frozenset({"open", "partial", "settled", "forecast"})
 FINANCIAL_CONTRACT_VERSION = "financial_contract_v2"
+FINANCIAL_TITLE_MEMORY_VERSION = "financial_title_memory_v2"
 SETTLEMENT_CORRECTION_COMPONENT_TYPES = frozenset({"monetary_correction", "interest", "fine", "manual_adjustment"})
 
 FINANCIAL_OPERATIONAL_GLOSSARY = {

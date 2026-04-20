@@ -738,9 +738,11 @@
     }
 
     const latest = normalizedLogs[0] || null;
+    const latestTimeline = latest?.memory_timeline || {};
+    const latestAfter = latestTimeline.after || latest?.after || {};
     const summary = schedule.summary || {};
-    const signedTotalOpen = signedAmount(summary.total_open ?? latest?.total_due_after ?? latest?.open_principal_after ?? 0, schedule?.movement_nature);
-    const signedAdjustmentsOpen = signedAmount(summary.adjustments_open ?? latest?.adjustments_open_after ?? 0, schedule?.movement_nature);
+    const signedTotalOpen = signedAmount(summary.total_open ?? latestAfter.total_open ?? latest?.total_due_after ?? latest?.open_principal_after ?? 0, schedule?.movement_nature);
+    const signedAdjustmentsOpen = signedAmount(summary.adjustments_open ?? latestAfter.adjustments_open ?? latest?.adjustments_open_after ?? 0, schedule?.movement_nature);
 
     if (summaryEl) {
       summaryEl.innerHTML = latest ? [
@@ -755,39 +757,49 @@
       listEl.innerHTML = normalizedLogs.map((log, index) => {
         const meta = log.metadata_json || {};
         const snapshot = log.snapshot_json || meta.snapshot || {};
+        const timeline = log.memory_timeline || {};
+        const beforeBlock = timeline.before || snapshot.before || {};
+        const currentBlock = timeline.current || snapshot.current || {};
+        const afterBlock = timeline.after || snapshot.after || {};
         const settlementCode = meta.settlement_code || snapshot.settlement_code || '-';
-        const entryCode = snapshot.entry_code || '-';
-        const beforeTotal = log.total_due_before ?? ((log.principal_before || 0) + (log.adjustments_open_before || 0));
-        const afterTotal = log.total_due_after ?? ((log.principal_after || 0) + (log.adjustments_open_after || 0));
+        const entryCode = snapshot.entry?.code || snapshot.entry_code || '-';
+        const beforeTotal = beforeBlock.total_open ?? log.total_due_before ?? ((log.principal_before || 0) + (log.adjustments_open_before || 0));
+        const afterTotal = afterBlock.total_open ?? log.total_due_after ?? ((log.principal_after || 0) + (log.adjustments_open_after || 0));
+        const beforeState = beforeBlock.operational_state?.label || beforeBlock.operational_state_label || '';
+        const afterState = afterBlock.operational_state?.label || afterBlock.operational_state_label || '';
         return `
           <article class="calc-log-card calc-log-card--ledger">
             <header class="calc-log-card__head">
               <div>
                 <span class="calc-log-step">Evento ${index + 1}</span>
                 <h3>${formatIso(log.calculation_date)} · ${escapeHtml(eventLabel(log.event_type))}</h3>
-                <p>Título ${escapeHtml(schedule.schedule_code || schedule.id || '-')} · Baixa ${escapeHtml(settlementCode)} · Lançamento ${escapeHtml(entryCode)}</p>
+                <p>Título ${escapeHtml(schedule.schedule_code || schedule.id || '-')} · Baixa ${escapeHtml(settlementCode)} · Lançamento ${escapeHtml(entryCode)}${afterState ? ` · Estado após ${escapeHtml(afterState)}` : ''}</p>
               </div>
               <div class="calc-log-card__badges">
-                <span class="calc-log-badge">Principal ${money(signedAmount(log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature))}</span>
-                <span class="calc-log-badge">Ajustes ${money(signedAmount(log.adjustments_settled_now ?? log.correction_amount ?? 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Principal ${money(signedAmount(currentBlock.principal_settled ?? log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Correção ${money(signedAmount(currentBlock.financial_correction ?? log.adjustments_settled_now ?? log.correction_amount ?? 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Baixa ${money(signedAmount(currentBlock.gross_amount ?? 0, schedule?.movement_nature))}</span>
               </div>
             </header>
             <div class="ledger-flow">
               ${ledgerStep('Antes', 'Saldo calculado antes da baixa', [
-                ledgerMetric('Principal aberto', log.principal_before ?? log.template_amount ?? 0, schedule?.movement_nature),
-                ledgerMetric('Ajustes abertos', log.adjustments_open_before ?? log.correction_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Principal aberto', beforeBlock.principal_open ?? log.principal_before ?? log.template_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes abertos', beforeBlock.adjustments_open ?? log.adjustments_open_before ?? log.correction_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Descontos abertos', beforeBlock.discounts_open ?? 0, schedule?.movement_nature, { invert: true }),
                 ledgerMetric('Total devido', beforeTotal, schedule?.movement_nature),
-              ], 'ledger-step--before')}
+              ], 'ledger-step--before')}${beforeState ? `<small class="calc-log-state">Estado: ${escapeHtml(beforeState)}</small>` : ''}
               ${ledgerStep('Agora', 'Composição realizada neste evento', [
-                ledgerMetric('Principal baixado', log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature),
-                ledgerMetric('Ajustes baixados', log.adjustments_settled_now ?? 0, schedule?.movement_nature),
-                ledgerMetric('Desconto liberado', log.discount_now ?? log.discount_amount ?? 0, schedule?.movement_nature, { invert: true }),
+                ledgerMetric('Principal baixado', currentBlock.principal_settled ?? log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature),
+                ledgerMetric('Correção financeira', currentBlock.financial_correction ?? log.adjustments_settled_now ?? 0, schedule?.movement_nature),
+                ledgerMetric('Desconto liberado', currentBlock.discount ?? log.discount_now ?? log.discount_amount ?? 0, schedule?.movement_nature, { invert: true }),
+                ledgerMetric('Valor da baixa', currentBlock.gross_amount ?? 0, schedule?.movement_nature),
               ], 'ledger-step--current')}
               ${ledgerStep('Depois', 'Saldo remanescente editável do título', [
-                ledgerMetric('Principal aberto', log.principal_after ?? log.open_principal_after ?? 0, schedule?.movement_nature),
-                ledgerMetric('Ajustes abertos', log.adjustments_open_after ?? 0, schedule?.movement_nature),
+                ledgerMetric('Principal aberto', afterBlock.principal_open ?? log.principal_after ?? log.open_principal_after ?? 0, schedule?.movement_nature),
+                ledgerMetric('Ajustes abertos', afterBlock.adjustments_open ?? log.adjustments_open_after ?? 0, schedule?.movement_nature),
+                ledgerMetric('Descontos abertos', afterBlock.discounts_open ?? 0, schedule?.movement_nature, { invert: true }),
                 ledgerMetric('Total devido', afterTotal, schedule?.movement_nature),
-              ], 'ledger-step--after')}
+              ], 'ledger-step--after')}${afterState ? `<small class="calc-log-state">Estado: ${escapeHtml(afterState)}</small>` : ''}
             </div>
             <details class="calc-log-snapshot">
               <summary>Ver snapshot técnico do cálculo</summary>

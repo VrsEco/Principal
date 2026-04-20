@@ -25,6 +25,26 @@ class FinancialTitleCalculationService:
         return max(1, min(normalized, FinancialTitleCalculationService.MAX_LIMIT))
 
     @staticmethod
+    def _serialize_log(log: FinancialTitleCalculationLog) -> Dict[str, Any]:
+        payload = log.to_dict() if hasattr(log, "to_dict") else dict(log.__dict__)
+        snapshot = dict(payload.get("snapshot_json") or {})
+        metadata = dict(payload.get("metadata_json") or {})
+        before = dict(snapshot.get("before") or metadata.get("before") or {})
+        current = dict(snapshot.get("current") or metadata.get("current") or {})
+        after = dict(snapshot.get("after") or metadata.get("after") or {})
+        payload["memory_contract_version"] = (
+            snapshot.get("contract_version")
+            or metadata.get("memory_contract_version")
+            or metadata.get("ledger_version")
+        )
+        payload["memory_timeline"] = {
+            "before": before,
+            "current": current,
+            "after": after,
+        }
+        return payload
+
+    @staticmethod
     def list_title_calculation_logs(
         *,
         company_id: int,
@@ -67,7 +87,7 @@ class FinancialTitleCalculationService:
                 "company_id": getattr(title, "company_id", company_id),
                 "schedule_code": getattr(title, "schedule_code", None),
             },
-            "logs": [log.to_dict() if hasattr(log, "to_dict") else dict(log.__dict__) for log in logs],
+            "logs": [FinancialTitleCalculationService._serialize_log(log) for log in logs],
             "count": len(logs),
             "limit": normalized_limit,
         }, None
