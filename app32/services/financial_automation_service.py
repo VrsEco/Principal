@@ -774,7 +774,7 @@ class FinancialAutomationService:
         issue_date = FinancialImportService._parse_date(structured_payload.get("issue_date"))
         settlement_state = FinancialAutomationService._guess_settlement_state_from_document(document_type, structured_payload)
         review_flags = FinancialAutomationService._build_review_flags(document_type, structured_payload)
-        return {
+        record_kwargs = {
             "company_id": company_id,
             "batch_id": batch_id,
             "source_document_id": anchor_document.id,
@@ -820,6 +820,18 @@ class FinancialAutomationService:
                 "related_document_count": len(grouped_documents),
             },
         }
+        record_kwargs = FinancialAutomationService._apply_auto_suggestions_to_record_kwargs(
+            company_id=company_id,
+            source_document=anchor_document,
+            record_kwargs=record_kwargs,
+        )
+        record_kwargs = FinancialAutomationService._apply_duplicate_metadata_to_record_kwargs(
+            company_id=company_id,
+            batch_id=batch_id,
+            source_document=anchor_document,
+            record_kwargs=record_kwargs,
+        )
+        return record_kwargs
 
     @staticmethod
     def _append_history(
@@ -1882,6 +1894,19 @@ class FinancialAutomationService:
                                 source_type=source_type,
                             )
                         )
+
+                if (
+                    not record_kwargs_list
+                    and source_type not in {"csv", "xlsx", "ofx"}
+                    and not dict(document.structured_payload_json or {})
+                ):
+                    record_kwargs_list.append(
+                        FinancialAutomationService._build_fallback_record_kwargs_from_document(
+                            company_id=company_id,
+                            batch_id=batch.id,
+                            document=document,
+                        )
+                    )
 
                 for record_kwargs in record_kwargs_list:
                     record = FinancialAutomationRecord(**record_kwargs)
