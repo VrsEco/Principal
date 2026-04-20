@@ -1,0 +1,21 @@
+from pathlib import Path
+
+
+def test_schedule_templates_use_titulo_financeiro_copy():
+    schedule_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\schedules.html").read_text(encoding="utf-8")
+    list_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\schedules_list.html").read_text(encoding="utf-8")
+
+    assert "Títulos Financeiros" in schedule_template
+    assert "Novo Título Financeiro" in schedule_template
+    assert "Títulos Financeiros" in list_template
+    assert "Criar título a pagar" in list_template
+
+
+def test_schedule_javascript_uses_titulo_financeiro_copy():
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+    list_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules_list.js").read_text(encoding="utf-8")
+
+    assert "A interface de títulos financeiros está desatualizada" in schedule_js
+    assert "Informe o histórico do título financeiro." in schedule_js
+    assert "Falha ao carregar títulos financeiros." in list_js
+    assert "Deseja realmente excluir este título financeiro?" in list_js

@@ -35,7 +35,7 @@
   let settlementCompositionHydrating = false;
 
   const $ = (id) => document.getElementById(id);
-  const missingElementMessage = (id) => `A interface de agendamento está desatualizada: campo ${id} não encontrado. Atualize a página e tente novamente.`;
+  const missingElementMessage = (id) => `A interface de títulos financeiros está desatualizada: campo ${id} não encontrado. Atualize a página e tente novamente.`;
   const requireElement = (id) => {
     const element = $(id);
     if (!element) {
@@ -161,13 +161,13 @@
     page.dataset.entryType = entryType;
     if (!entryTypeBanner) return;
     if (!entryType) {
-      entryTypeBanner.textContent = 'Selecione Recebimentos ou Pagamentos para iniciar o agendamento. Após escolher, o tipo fica travado.';
+      entryTypeBanner.textContent = 'Selecione Recebimentos ou Pagamentos para iniciar o título financeiro. Após escolher, o tipo fica travado.';
       return;
     }
     const receivable = entryType === 'receivable';
     entryTypeBanner.textContent = receivable
-      ? `Recebimentos · tipo travado para este agendamento. Para trocar, cancele e crie um novo.`
-      : `Pagamentos · tipo travado para este agendamento. Para trocar, cancele e crie um novo.`;
+      ? `Recebimentos · tipo travado para este título financeiro. Para trocar, cancele e crie um novo.`
+      : `Pagamentos · tipo travado para este título financeiro. Para trocar, cancele e crie um novo.`;
   }
 
   function applyEntryType(entryType, { locked = false } = {}) {
@@ -588,7 +588,7 @@
         <strong>${item.description || item.name || 'Sem histórico'}</strong>
         <small>${item.schedule_code || '-'} · <span class="${amountClass(item.signed_template_amount ?? 0)}">${money(item.signed_template_amount ?? item.template_amount ?? 0)}</span></small>
         <div class="schedule-item-meta"><span class="${statusClass(item.status)}">${statusLabel(item.status)}</span><small>${formatIso(item.next_due_date || item.first_due_date)}</small></div>
-      </article>`).join('') : '<div class="empty-state">Nenhum agendamento encontrado.</div>';
+      </article>`).join('') : '<div class="empty-state">Nenhum título financeiro encontrado.</div>';
   }
 
   function renderAttachments(savedAttachments) {
@@ -908,20 +908,20 @@
   function validateAllocationSummary() {
     const summary = summarizeAllocations();
     if (!summary.percentagesOk) throw new Error('A soma dos percentuais do rateio deve ser exatamente 100%.');
-    if (!summary.valuesOk) throw new Error('A soma dos valores do rateio deve ser igual ao valor atualizado do agendamento.');
+    if (!summary.valuesOk) throw new Error('A soma dos valores do rateio deve ser igual ao valor atualizado do título financeiro.');
   }
 
   function buildPayload() {
     const entryType = form.entry_type?.value || '';
     if (!entryType) {
-      throw new Error('Escolha primeiro se o agendamento é de Recebimentos ou Pagamentos.');
+      throw new Error('Escolha primeiro se o título financeiro é de Recebimentos ou Pagamentos.');
     }
     const description = requireFieldValue('field-description').trim();
     const counterpartyId = Number(requireFieldValue('field-counterparty') || 0);
     const competenceIso = parseDateToIso(requireFieldValue('field-competence'));
     const dueIso = parseDateToIso(requireFieldValue('field-due-date'));
     const amount = getTopAmount();
-    if (!description) throw new Error('Informe o histórico do agendamento.');
+    if (!description) throw new Error('Informe o histórico do título financeiro.');
     if (!counterpartyId) throw new Error('Selecione um favorecido.');
     if (!competenceIso || !dueIso) throw new Error('Informe datas válidas para competência e vencimento.');
     if (compareIsoDates(dueIso, competenceIso) < 0) {
@@ -1296,7 +1296,7 @@
 
   window.handleScheduleAction = async (action) => {
     try {
-      if (borderoLocked) throw new Error(`Agendamento bloqueado pelo ${selectedSchedule?.bordero?.code || 'borderô'}.`);
+      if (borderoLocked) throw new Error(`Título Financeiro bloqueado pelo ${selectedSchedule?.bordero?.code || 'borderô'}.`);
       if (action === 'cancel') return window.location.href = '/financial/schedules';
       const saved = await saveSchedule();
       if (action === 'save_and_new') return window.startNewSchedule(initialEntryType);

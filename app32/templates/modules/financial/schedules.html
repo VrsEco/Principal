@@ -1,25 +1,25 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Financeiro - Agendamentos{% endblock %}
+{% block title %}Financeiro - Títulos Financeiros{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
 <a href="/financial/entries">Financeiro</a>
 <span class="sep">/</span>
-<span class="current">Agendamentos</span>
+<span class="current">Títulos Financeiros</span>
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260420e') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260420f') }}">
 {% endblock %}
 
 {% block workspace_content %}
 <div class="sched-page sched-page--form" data-company-id="{{ company_id or '' }}" data-schedule-id="{{ schedule_id or '' }}" data-entry-type="" data-initial-entry-type="{{ initial_entry_type or '' }}">
     <header class="sched-header">
         <div>
-            <h1>{{ 'Editar Agendamento' if schedule_id else 'Novo Agendamento' }}</h1>
-            <p class="sched-header-subtitle">Cadastro individual do agendamento. O retorno operacional acontece na lista de agendamentos.</p>
+            <h1>{{ 'Editar Título Financeiro' if schedule_id else 'Novo Título Financeiro' }}</h1>
+            <p class="sched-header-subtitle">Cadastro individual do título financeiro no padrão APP32. O retorno operacional acontece na lista de títulos financeiros.</p>
         </div>
     </header>
 
@@ -27,7 +27,7 @@
         <main class="sched-main">
             <section class="sched-card">
                 <div class="sched-tabs">
-                    <button type="button" class="sched-tab active" data-tab="agendamento" onclick="switchScheduleTab('agendamento')">Agendamento</button>
+                    <button type="button" class="sched-tab active" data-tab="agendamento" onclick="switchScheduleTab('agendamento')">Título Financeiro</button>
                     <button type="button" class="sched-tab" data-tab="recorrencia" onclick="switchScheduleTab('recorrencia')">Recorrência</button>
                     <button type="button" class="sched-tab" data-tab="anexos" onclick="switchScheduleTab('anexos')">Anexos</button>
                     <button type="button" class="sched-tab hidden" data-tab="baixas" id="baixas-tab-button" onclick="switchScheduleTab('baixas')">Baixas</button>
@@ -41,7 +41,7 @@
                     <input type="hidden" name="entry_type" value="">
 
                     <section class="sched-tab-panel active" data-panel="agendamento">
-                        <div id="entry-type-banner" class="sched-type-banner">Selecione Recebimentos ou Pagamentos para iniciar o agendamento. Após escolher, o tipo fica travado.</div>
+                        <div id="entry-type-banner" class="sched-type-banner">Selecione Recebimentos ou Pagamentos para iniciar o título financeiro. Após escolher, o tipo fica travado.</div>
 
                         <div class="sched-grid sched-grid-main">
                             <label class="field field-span-4">
@@ -139,7 +139,7 @@
                     <section class="sched-tab-panel" data-panel="recorrencia">
                         <div class="sched-grid">
                             <label class="field field-toggle">
-                                <span>Repetir agendamento?</span>
+                                <span>Duplicar título financeiro?</span>
                                 <select id="field-repeat-toggle" name="repeat_enabled" onchange="toggleRepeatFields()">
                                     <option value="false" selected>Não</option>
                                     <option value="true">Sim</option>
@@ -169,7 +169,7 @@
                             <input id="schedule-attachment-input" type="file" multiple>
                             <button type="button" class="btn btn-primary" onclick="uploadSelectedAttachments()">Adicionar arquivos</button>
                         </div>
-                        <p class="attachments-help">Você pode anexar arquivos antes de salvar. Eles ficam em fila e são enviados automaticamente após salvar o agendamento.</p>
+                        <p class="attachments-help">Você pode anexar arquivos antes de salvar. Eles ficam em fila e são enviados automaticamente após salvar o título financeiro.</p>
                         <div id="attachments-empty" class="empty-state attachments-empty">Nenhum anexo selecionado ou vinculado.</div>
                         <div id="attachments-shell" class="attachments-shell">
                             <div id="attachments-list" class="attachments-list"></div>
@@ -177,7 +177,7 @@
                     </section>
 
                     <section class="sched-tab-panel" data-panel="baixas">
-                        <div id="baixas-empty" class="empty-state">Nenhuma baixa vinculada a este agendamento.</div>
+                        <div id="baixas-empty" class="empty-state">Nenhuma baixa vinculada a este título financeiro.</div>
                         <div id="baixas-list" class="baixas-list"></div>
                     </section>
 
@@ -334,5 +334,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260420e') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260420f') }}"></script>
 {% endblock %}

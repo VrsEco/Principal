@@ -83,7 +83,7 @@
     async function fetchJson(url, options) {
       const response = await fetch(url, options);
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Falha ao carregar agendamentos.');
+      if (!response.ok) throw new Error(payload.error || 'Falha ao carregar títulos financeiros.');
       return payload;
     }
 
@@ -251,7 +251,7 @@
     }
 
     async function deleteSchedule(scheduleId) {
-      const confirmed = window.confirm('Deseja realmente excluir este agendamento?');
+      const confirmed = window.confirm('Deseja realmente excluir este título financeiro?');
       if (!confirmed) return;
       await fetchJson(`/api/financial/schedules/${scheduleId}?company_id=${companyId}`, { method: 'DELETE' });
       await loadSchedules();

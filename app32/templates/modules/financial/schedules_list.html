@@ -1,13 +1,13 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Financeiro - Lista de Agendamentos{% endblock %}
+{% block title %}Financeiro - Títulos Financeiros{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
 <a href="/financial/entries">Financeiro</a>
 <span class="sep">/</span>
-<span class="current">Agendamentos</span>
+<span class="current">Títulos Financeiros</span>
 {% endblock %}
 
 {% block head %}
@@ -31,17 +31,17 @@
 <div class="sched-list-page" data-company-id="{{ company_id or '' }}">
     <header class="sched-list-header">
         <div>
-            <h1>Agendamentos</h1>
-            <p class="sched-list-subtitle">Visão operacional com filtros, subtotais e ações rápidas para pagamento e recebimento.</p>
+            <h1>Títulos Financeiros</h1>
+            <p class="sched-list-subtitle">Visão operacional de títulos financeiros com filtros, subtotais e ações rápidas de baixa no padrão APP32.</p>
         </div>
         <div class="sched-list-actions">
-            <a class="btn btn-secondary" href="/financial/schedules/new?entry_type=receivable">Criar agendamento a receber</a>
-            <a class="btn btn-primary" href="/financial/schedules/new?entry_type=payable">Criar agendamento a pagar</a>
+            <a class="btn btn-secondary" href="/financial/schedules/new?entry_type=receivable">Criar título a receber</a>
+            <a class="btn btn-primary" href="/financial/schedules/new?entry_type=payable">Criar título a pagar</a>
         </div>
     </header>
 
     <section class="sched-list-kpis" id="schedule-kpis">
-        <article class="sched-kpi"><span>Total</span><strong>0</strong><small>Agendamentos filtrados</small></article>
+        <article class="sched-kpi"><span>Total</span><strong>0</strong><small>Títulos filtrados</small></article>
         <article class="sched-kpi"><span>A Receber</span><strong>R$ 0,00</strong><small>Saldo em recebimentos</small></article>
         <article class="sched-kpi"><span>A Pagar</span><strong>R$ 0,00</strong><small>Saldo em pagamentos</small></article>
         <article class="sched-kpi"><span>Em Aberto</span><strong>0</strong><small>Sem baixa integral</small></article>
@@ -65,7 +65,7 @@
                     </tr>
                 </thead>
                 <tbody id="schedule-table-body">
-                    <tr><td colspan="10" class="empty-state">Carregando agendamentos...</td></tr>
+                    <tr><td colspan="10" class="empty-state">Carregando títulos financeiros...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -152,5 +152,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260420c') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260420d') }}"></script>
 {% endblock %}
