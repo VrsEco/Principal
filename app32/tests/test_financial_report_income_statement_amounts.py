@@ -166,3 +166,66 @@ def test_income_statement_ignores_cancelled_financial_titles(monkeypatch):
     assert payload["totals"]["competence"] == 0.0
     assert payload["totals"]["due"] == 0.0
     assert payload["totals"]["liquidation"] == 0.0
+
+
+def test_income_statement_01_hides_summary_cards_general_info_and_status_columns(monkeypatch):
+    schedule = SimpleNamespace(
+        id=36,
+        company_id=7,
+        status="active",
+        entry_type="receivable",
+        movement_nature="credit",
+        competence_date=date(2026, 4, 10),
+        start_date=date(2026, 4, 10),
+        first_due_date=date(2026, 4, 20),
+        next_due_date=date(2026, 4, 20),
+        template_amount=Decimal("100"),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    _install_income_statement_fakes(monkeypatch, schedules=[schedule], entries=[], settlements=[])
+
+    payload = FinancialReportService._build_income_statement(7, _income_statement_filters())
+
+    assert payload["summary_cards"] == []
+    assert payload["general_info"] == []
+    assert payload["show_status_columns"] is False
+
+
+def test_income_statement_02_keeps_summary_cards_general_info_and_status_columns(monkeypatch):
+    schedule = SimpleNamespace(
+        id=37,
+        company_id=7,
+        status="active",
+        entry_type="receivable",
+        movement_nature="credit",
+        competence_date=date(2026, 4, 10),
+        start_date=date(2026, 4, 10),
+        first_due_date=date(2026, 4, 20),
+        next_due_date=date(2026, 4, 20),
+        template_amount=Decimal("100"),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    _install_income_statement_fakes(monkeypatch, schedules=[schedule], entries=[], settlements=[])
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement_2",
+        {
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+
+    payload = FinancialReportService._build_income_statement_2(7, filters)
+
+    assert len(payload["summary_cards"]) == 4
+    assert len(payload["general_info"]) >= 1
+    assert payload["show_status_columns"] is True

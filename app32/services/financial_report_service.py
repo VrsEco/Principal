@@ -1650,13 +1650,15 @@ class FinancialReportService:
         )
 
         if consolidated_by_period:
-            general_info = [
-                FinancialReportService._report_info("Período", f"{period_start.isoformat()} até {period_end.isoformat()}"),
-                FinancialReportService._report_info("Ordenação", f"{filters.order_by} / {filters.order_direction}"),
-                FinancialReportService._report_info("Orientação PDF", "Paisagem" if filters.orientation == "landscape" else "Retrato"),
-                FinancialReportService._report_info("Contas consolidadas", len(hierarchy_rows)),
-            ]
+            summary_cards: List[Dict[str, Any]] = []
+            general_info: List[Dict[str, Any]] = []
         else:
+            summary_cards = [
+                FinancialReportService._report_card("Resultado competência", FinancialReportService._format_currency(total_comp)),
+                FinancialReportService._report_card("Resultado vencimento", FinancialReportService._format_currency(total_due)),
+                FinancialReportService._report_card("Resultado liquidação", FinancialReportService._format_currency(total_set)),
+                FinancialReportService._report_card("Linhas da DRE", len(hierarchy_rows)),
+            ]
             due_window = f"{due_start.isoformat()} até {due_end.isoformat()}" if due_start and due_end else "Livre"
             settlement_window = f"{settlement_start.isoformat()} até {settlement_end.isoformat()}" if settlement_start and settlement_end else "Livre"
             general_info = [
@@ -1670,12 +1672,7 @@ class FinancialReportService:
 
         return FinancialReportService._report_payload(
             definition,
-            summary_cards=[
-                FinancialReportService._report_card("Resultado competência", FinancialReportService._format_currency(total_comp)),
-                FinancialReportService._report_card("Resultado vencimento", FinancialReportService._format_currency(total_due)),
-                FinancialReportService._report_card("Resultado liquidação", FinancialReportService._format_currency(total_set)),
-                FinancialReportService._report_card("Linhas da DRE", len(hierarchy_rows)),
-            ],
+            summary_cards=summary_cards,
             general_info=general_info,
             columns=columns,
             rows=rows,
