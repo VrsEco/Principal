@@ -270,6 +270,10 @@ def permission_required(resource, action):
 
             return f(*args, **kwargs)
 
+        decorated_function._permission_required = {
+            "resource": resource,
+            "action": action,
+        }
         return decorated_function
 
     return decorator
