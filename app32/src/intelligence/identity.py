@@ -1,6 +1,7 @@
 import logging
 import re
-from typing import Optional, Set
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 from sqlalchemy import func
@@ -9,6 +10,37 @@ from models.user import User
 from models.employee import Employee
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class IdentityResolutionTrace:
+    """Rastro seguro da identificação de usuário por canal.
+
+    Mantém apenas dados operacionais necessários para auditoria e troubleshooting,
+    sem carregar o objeto User nem executar decisão de empresa/tenant.
+    """
+
+    channel: str
+    raw_identifier: str
+    normalized_identifier: str
+    supported_channel: bool
+    strategy: str
+    variants: Tuple[str, ...] = field(default_factory=tuple)
+    user_id: Optional[int] = None
+    matched: bool = False
+    reason: str = "not_resolved"
+
+    def to_safe_dict(self) -> Dict[str, Any]:
+        return {
+            "channel": self.channel,
+            "normalized_identifier": self.normalized_identifier,
+            "supported_channel": self.supported_channel,
+            "strategy": self.strategy,
+            "variants_count": len(self.variants),
+            "user_id": self.user_id,
+            "matched": self.matched,
+            "reason": self.reason,
+        }
 
 
 def _normalize_text(value: str) -> str:
@@ -144,6 +176,59 @@ def _find_user_by_instagram(identifier: str) -> Optional[User]:
         .order_by(User.id.asc())
         .first()
     )
+
+
+
+def _identity_variants_for_channel(identifier: str, channel: str) -> Set[str]:
+    channel = _normalize_text(channel).lower()
+    if channel == "whatsapp":
+        return _build_phone_variants(identifier)
+    if channel == "instagram":
+        return _build_instagram_variants(identifier)
+    if channel == "email":
+        normalized = _normalize_email(identifier)
+        return {normalized} if normalized else set()
+    if channel == "telegram":
+        normalized = _normalize_text(identifier)
+        return {normalized} if normalized else set()
+    return set()
+
+
+def build_identity_resolution_trace(identifier: str, channel: str, user: Optional[User] = None) -> IdentityResolutionTrace:
+    """Monta rastro de resolução de identidade sem realizar consulta adicional.
+
+    Deve ser usado por webhooks/canais para registrar o caminho de identificação:
+    canal recebido, identificador normalizado, estratégia aplicada e usuário final.
+    """
+
+    normalized_channel = _normalize_text(channel).lower()
+    normalized_identifier = _normalize_text(identifier)
+    supported = normalized_channel in {"telegram", "whatsapp", "email", "instagram"}
+    variants = tuple(sorted(_identity_variants_for_channel(normalized_identifier, normalized_channel)))
+    strategy = f"{normalized_channel}_identity_lookup" if supported else "unsupported_channel"
+    matched = bool(user)
+    reason = "matched_active_user" if matched else ("empty_identifier" if not normalized_identifier else "not_found")
+    if not supported:
+        reason = "unsupported_channel"
+
+    return IdentityResolutionTrace(
+        channel=normalized_channel,
+        raw_identifier=identifier or "",
+        normalized_identifier=normalized_identifier,
+        supported_channel=supported,
+        strategy=strategy,
+        variants=variants,
+        user_id=getattr(user, "id", None),
+        matched=matched,
+        reason=reason,
+    )
+
+
+def resolve_user_identity_with_trace(identifier: str, channel: str) -> Tuple[Optional[User], IdentityResolutionTrace]:
+    """Resolve usuário e retorna também o rastro seguro da identificação."""
+
+    user = resolve_user_identity(identifier, channel)
+    return user, build_identity_resolution_trace(identifier, channel, user=user)
 
 
 def resolve_user_identity(identifier: str, channel: str) -> Optional[User]:

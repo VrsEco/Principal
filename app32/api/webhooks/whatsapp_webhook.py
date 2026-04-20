@@ -422,7 +422,7 @@ def _fallback_root_menu(company_id, channel: str = "whatsapp") -> str:
 
 
 def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[str, Any]):
-    from src.intelligence.identity import resolve_user_identity, get_best_company_id
+    from src.intelligence.identity import build_identity_resolution_trace, resolve_user_identity, get_best_company_id
     from src.intelligence.execution import (
         _capture_workflow_usage_from_execution,
         run_agent_with_context,
@@ -436,6 +436,8 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
 
             # 1. Resolve identidade (somente users ativos e cadastrados)
             user = resolve_user_identity(phone, "whatsapp")
+            identity_trace = build_identity_resolution_trace(phone, "whatsapp", user=user)
+            logger.info("WHATSAPP IDENTITY TRACE: %s", identity_trace.to_safe_dict())
             if not user:
                 logger.warning("WHATSAPP: Telefone %s nao vinculado a nenhum usuario ativo.", phone)
                 return
@@ -731,7 +733,7 @@ def handle_whatsapp():
 @whatsapp_webhook_bp.route('/instagram', methods=['POST'])
 def handle_instagram():
     """Webhook para recebimento de mensagens do Instagram Direct."""
-    from src.intelligence.identity import resolve_user_identity, get_best_company_id
+    from src.intelligence.identity import build_identity_resolution_trace, resolve_user_identity, get_best_company_id
     from src.intelligence.execution import (
         _capture_workflow_usage_from_execution,
         extract_response_text,
@@ -789,6 +791,8 @@ def handle_instagram():
     logger.info(f"INSTAGRAM INBOUND: From {sender_id} | Msg: {message_text[:50]}...")
 
     user = resolve_user_identity(sender_id, 'instagram')
+    identity_trace = build_identity_resolution_trace(sender_id, 'instagram', user=user)
+    logger.info("INSTAGRAM IDENTITY TRACE: %s", identity_trace.to_safe_dict())
     if not user:
         logger.warning(f"INSTAGRAM: ID {sender_id} não vinculado a nenhum usuário ativo.")
         return jsonify({"status": "user not found"}), 200

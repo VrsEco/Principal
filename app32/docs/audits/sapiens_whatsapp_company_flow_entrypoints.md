@@ -60,3 +60,27 @@ Mapear os arquivos e pontos de entrada envolvidos no recebimento de mensagens Sa
 - Passo 2: rastrear e formalizar o contrato de identificação de usuário por canal.
 - Passo 3: rastrear e formalizar a resolução de empresas vinculadas.
 - Passo 4: consolidar lacunas e proposta mínima de evolução.
+
+
+## Passo 2/4 — Identificação de usuário por canal
+
+### Contrato operacional
+
+- A identificação deve ser iniciada sempre pelo par `(identifier, channel)` recebido do webhook.
+- WhatsApp usa normalização de telefone e variantes com/sem DDI `55`, máscara e nono dígito.
+- Instagram usa normalização de handle, URL de perfil e variações com/sem `@`.
+- Email usa lower-case e trim.
+- Telegram usa trim simples do identificador.
+- Apenas usuários ativos são elegíveis.
+- O rastro seguro fica em `IdentityResolutionTrace`, sem transportar objeto `User` e sem decidir `company_id`.
+
+### Pontos de rastreabilidade implementados
+
+- `src.intelligence.identity.build_identity_resolution_trace(identifier, channel, user)` monta o rastro sem consulta adicional.
+- `src.intelligence.identity.resolve_user_identity_with_trace(identifier, channel)` resolve e retorna `(user, trace)` para novos consumidores.
+- `api.webhooks.whatsapp_webhook.process_whatsapp_message` registra `WHATSAPP IDENTITY TRACE` antes de resolver empresa.
+- `api.webhooks.whatsapp_webhook.handle_instagram` registra `INSTAGRAM IDENTITY TRACE` antes de resolver empresa.
+
+### Saída segura para logs
+
+`trace.to_safe_dict()` registra canal, identificador normalizado, estratégia, quantidade de variantes, `user_id`, status de match e motivo. O identificador bruto não é exposto no dicionário seguro.
