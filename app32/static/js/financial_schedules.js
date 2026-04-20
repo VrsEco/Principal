@@ -7,6 +7,7 @@
   const initialEntryType = String(page.dataset.initialEntryType || '').trim().toLowerCase();
   const pageParams = new URLSearchParams(window.location.search);
   const autoOpenSettlement = pageParams.get('open_settlement') === '1';
+  const initialOpenTab = String(pageParams.get('open_tab') || '').trim().toLowerCase();
   const isFormMode = page.classList.contains('sched-page--form');
   let schedules = [];
   let selectedSchedule = null;
@@ -144,6 +145,17 @@
     document.querySelectorAll('.sched-tab-panel').forEach((el) => el.classList.toggle('active', el.dataset.panel === tab));
   }
   window.switchScheduleTab = switchTab;
+
+  function applyInitialOpenTab() {
+    if (!initialOpenTab) return;
+    if (initialOpenTab === 'baixas' && !($('baixas-tab-button')?.classList.contains('hidden'))) {
+      switchTab('baixas');
+      return;
+    }
+    if (initialOpenTab === 'memoria' && !($('calculation-log-tab-button')?.classList.contains('hidden'))) {
+      switchTab('memoria');
+    }
+  }
 
   function updateEntryTypePresentation(entryType) {
     page.dataset.entryType = entryType;
@@ -856,13 +868,14 @@
     });
     if (borderoLocked && entryTypeBanner) {
       const code = schedule.bordero?.code || schedule.summary?.bordero_code || 'Borderô';
-      entryTypeBanner.textContent = `Agendamento bloqueado pelo ${code}. Consulta liberada; edição e baixa direta indisponíveis.`;
+      entryTypeBanner.textContent = `Título Financeiro bloqueado pelo ${code}. Consulta liberada; edição e baixa direta indisponíveis.`;
     }
     window.toggleRepeatFields();
     refreshSuggestedDiscountAmountField();
     syncAdjustmentAllocationRows();
     renderAllocations();
     updateFinancialTotals();
+    applyInitialOpenTab();
   }
 
   function validateAllocationSummary() {

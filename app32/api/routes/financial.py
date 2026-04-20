@@ -145,6 +145,18 @@ def _get_entry_with_access(entry_id: int) -> FinancialEntry:
     return entry
 
 
+def _extract_entry_schedule_id(entry: FinancialEntry) -> int | None:
+    schedule_id = getattr(entry, "financial_schedule_id", None)
+    if schedule_id:
+        return int(schedule_id)
+    external_reference = str(getattr(entry, "external_reference", "") or "").strip()
+    if external_reference.startswith("financial_schedule:"):
+        raw_id = external_reference.split(":", 1)[1].strip()
+        if raw_id.isdigit():
+            return int(raw_id)
+    return None
+
+
 def _get_schedule_with_access(schedule_id: int) -> FinancialSchedule:
     schedule = FinancialSchedule.query.get_or_404(schedule_id)
     if not current_user.is_authenticated:
@@ -198,6 +210,12 @@ def financial_direct_entry_page():
 @permission_required("financial", "view")
 def financial_entry_manage(entry_id: int):
     entry = _get_entry_with_access(entry_id)
+    linked_schedule_id = _extract_entry_schedule_id(entry)
+    if linked_schedule_id:
+        return redirect(
+            f"/financial/schedules/{linked_schedule_id}?company_id={entry.company_id}&open_tab=baixas&entry_id={entry.id}",
+            code=302,
+        )
     company = Company.query.get(entry.company_id)
     return render_template(
         "modules/financial/entry_manage.html",

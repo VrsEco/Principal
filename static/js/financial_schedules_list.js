@@ -157,7 +157,7 @@
       renderKpis(items);
 
       if (!items.length) {
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhum agendamento encontrado para os filtros informados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhum Título Financeiro encontrado para os filtros informados.</td></tr>';
         return;
       }
 

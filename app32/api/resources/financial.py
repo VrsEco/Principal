@@ -1115,6 +1115,23 @@ class FinancialEntrySettlementListResource(Resource):
     def post(self, entry_id: int):
         payload = request.get_json() or {}
         company_id = get_request_company_id()
+        entry = FinancialEntry.query.filter(
+            FinancialEntry.id == entry_id,
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        ).first_or_404()
+        linked_schedule_id = getattr(entry, "financial_schedule_id", None)
+        if not linked_schedule_id:
+            external_reference = str(getattr(entry, "external_reference", "") or "").strip()
+            if external_reference.startswith("financial_schedule:"):
+                raw_schedule_id = external_reference.split(":", 1)[1].strip()
+                if raw_schedule_id.isdigit():
+                    linked_schedule_id = int(raw_schedule_id)
+        if linked_schedule_id:
+            return {
+                "error": "Este lançamento está vinculado a um Título Financeiro. Faça a baixa pelo fluxo do título.",
+                "redirect_url": f"/financial/schedules/{linked_schedule_id}?company_id={company_id}&open_tab=baixas&entry_id={entry.id}",
+            }, 409
         payload["company_id"] = company_id
         payload["financial_entry_id"] = entry_id
 
@@ -1158,10 +1175,10 @@ class FinancialSettlementResource(Resource):
             if entry:
                 _recalculate_entry_status(entry)
             db.session.commit()
-            return {"message": "Liquidação removida com sucesso.", "id": settlement.id}, 200
+            return {"message": "Baixa removida com sucesso.", "id": settlement.id}, 200
         except Exception:
             db.session.rollback()
-            logger.exception("Erro ao remover liquidação financeira %s", settlement_id)
+            logger.exception("Erro ao remover baixa financeira %s", settlement_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 

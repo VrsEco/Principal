@@ -177,7 +177,7 @@ def test_delete_schedule_soft_deletes_generated_entries_without_settlements(monk
     )
 
     assert error is None
-    assert result == {"message": "Agendamento removido com sucesso.", "id": 21}
+    assert result == {"message": "Título Financeiro removido com sucesso.", "id": 21}
     assert isinstance(schedule.deleted_at, datetime)
     assert isinstance(linked_entry.deleted_at, datetime)
     assert updates["committed"] is True

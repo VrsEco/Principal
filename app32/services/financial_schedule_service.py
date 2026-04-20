@@ -119,7 +119,7 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
 
         return FinancialScheduleService._serialize_schedule(schedule, include_related_entries=True), None
 
@@ -531,14 +531,14 @@ class FinancialScheduleService:
                         continue
                     if FinancialScheduleService._is_schedule_code_unique_violation(exc):
                         return None, (
-                            f"Já existe agendamento com código {payload_to_persist['schedule_code']} para esta empresa."
+                            f"Já existe Título Financeiro com código {payload_to_persist['schedule_code']} para esta empresa."
                         )
                     raise
-            return None, "Não foi possível gerar um código único para o agendamento. Tente novamente."
+            return None, "Não foi possível gerar um código único para o Título Financeiro. Tente novamente."
         except Exception as exc:
             db.session.rollback()
-            logger.exception("Erro ao criar agendamento financeiro")
-            return None, f"Erro ao criar agendamento financeiro: {exc}"
+            logger.exception("Erro ao criar título financeiro")
+            return None, f"Erro ao criar Título Financeiro: {exc}"
 
     @staticmethod
     def update_schedule(
@@ -564,24 +564,24 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
         if active_bordero:
-            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
+            return None, f"Título Financeiro bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         merged = data.model_dump(exclude_unset=True)
         if "schedule_code" in merged:
             if merged["schedule_code"] != schedule.schedule_code:
-                return None, "O código do agendamento não pode ser alterado após a criação."
+                return None, "O código do Título Financeiro não pode ser alterado após a criação."
             merged.pop("schedule_code", None)
         if "metadata_json" in merged:
             merged["metadata_json"] = FinancialScheduleService._sanitize_json(merged.get("metadata_json") or {})
         if "entry_type" in merged and merged["entry_type"] != schedule.entry_type:
-            return None, "O tipo do agendamento (pagamento/recebimento) não pode ser alterado após a criação."
+            return None, "O tipo do Título Financeiro (pagamento/recebimento) não pode ser alterado após a criação."
         if "movement_nature" in merged and merged["movement_nature"] != schedule.movement_nature:
-            return None, "A natureza do movimento do agendamento não pode ser alterada após a criação."
+            return None, "A natureza do movimento do Título Financeiro não pode ser alterada após a criação."
         validation_error = FinancialScheduleService._validate_schedule_links(
             company_id=company_id,
             bank_account_id=merged.get("bank_account_id", schedule.bank_account_id),
@@ -658,8 +658,8 @@ class FinancialScheduleService:
             return FinancialScheduleService._serialize_schedule(schedule), None
         except Exception as exc:
             db.session.rollback()
-            logger.exception("Erro ao atualizar agendamento financeiro %s", schedule_id)
-            return None, f"Erro ao atualizar agendamento financeiro: {exc}"
+            logger.exception("Erro ao atualizar título financeiro %s", schedule_id)
+            return None, f"Erro ao atualizar Título Financeiro: {exc}"
 
     @staticmethod
     def toggle_schedule(
@@ -679,15 +679,15 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
         if active_bordero:
-            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
+            return None, f"Título Financeiro bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         if status not in {"active", "paused", "cancelled", "completed", "draft"}:
-            return None, "Status inválido para o agendamento."
+            return None, "Status inválido para o Título Financeiro."
 
         try:
             schedule.status = status
@@ -695,8 +695,8 @@ class FinancialScheduleService:
             return FinancialScheduleService._serialize_schedule(schedule), None
         except Exception as exc:
             db.session.rollback()
-            logger.exception("Erro ao alterar status do agendamento financeiro %s", schedule_id)
-            return None, f"Erro ao alterar status do agendamento: {exc}"
+            logger.exception("Erro ao alterar status do título financeiro %s", schedule_id)
+            return None, f"Erro ao alterar status do Título Financeiro: {exc}"
 
     @staticmethod
     def delete_schedule(
@@ -715,12 +715,12 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
         if active_bordero:
-            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
+            return None, f"Título Financeiro bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         generated_entries = FinancialEntry.query.filter(
             FinancialEntry.company_id == company_id,
@@ -739,7 +739,7 @@ class FinancialScheduleService:
                 is not None
             )
             if has_active_settlement:
-                return None, "Não é possível excluir um agendamento que já possui baixas. Cancele-o ou edite-o."
+                return None, "Não é possível excluir um Título Financeiro que já possui baixas. Cancele-o ou edite-o."
 
         try:
             schedule.deleted_at = now
@@ -754,11 +754,11 @@ class FinancialScheduleService:
                     FinancialEntryAllocation.deleted_at.is_(None),
                 ).update({"deleted_at": now}, synchronize_session=False)
             db.session.commit()
-            return {"message": "Agendamento removido com sucesso.", "id": schedule_id}, None
+            return {"message": "Título Financeiro removido com sucesso.", "id": schedule_id}, None
         except Exception as exc:
             db.session.rollback()
-            logger.exception("Erro ao remover agendamento financeiro %s", schedule_id)
-            return None, f"Erro ao remover agendamento financeiro: {exc}"
+            logger.exception("Erro ao remover título financeiro %s", schedule_id)
+            return None, f"Erro ao remover Título Financeiro: {exc}"
 
     @staticmethod
     def create_entry_from_schedule(
@@ -778,17 +778,17 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
         if not ignore_bordero_lock:
             from services.financial_bordero_service import FinancialBorderoService
 
             active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
             if active_bordero:
-                return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
+                return None, f"Título Financeiro bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         due_date = schedule.next_due_date or schedule.first_due_date
         if not due_date:
-            return None, "Agendamento sem vencimento disponível para gerar baixa."
+            return None, "Título Financeiro sem vencimento disponível para gerar baixa."
 
         entry_code = f"{schedule.schedule_code}-{due_date.isoformat()}"
         existing = FinancialEntry.query.filter(
@@ -862,7 +862,7 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
 
         entry_result, entry_error = FinancialScheduleService.create_entry_from_schedule(
             schedule_id=schedule_id,
@@ -1029,12 +1029,12 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
         if active_bordero:
-            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
+            return None, f"Título Financeiro bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         if not file or not file.filename:
             return None, "Nenhum arquivo informado."
@@ -1083,12 +1083,12 @@ class FinancialScheduleService:
             FinancialSchedule.deleted_at.is_(None),
         ).first()
         if not schedule:
-            return None, "Agendamento financeiro não encontrado no escopo da empresa."
+            return None, "Título Financeiro não encontrado no escopo da empresa."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
         if active_bordero:
-            return None, f"Agendamento bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
+            return None, f"Título Financeiro bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
 
         metadata = dict(schedule.metadata_json or {})
         attachments = list(metadata.get("attachments") or [])
