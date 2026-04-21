@@ -321,56 +321,6 @@ class FinancialScheduleService:
                 },
             }
         ]
-        adjustment_totals = FinancialScheduleService._calculate_schedule_adjustments(
-            company_id=company_id,
-            template_amount=template_amount,
-            metadata_json=metadata_json,
-            due_date=due_date,
-        )
-        correction_amount = Decimal(str(adjustment_totals.get("correction_amount") or 0))
-        if correction_amount > 0:
-            allocations.append(
-                FinancialScheduleService._build_budget_document_adjustment_allocation(
-                    kind="correction",
-                    label="Correção Financeira",
-                    amount=correction_amount,
-                    chart_account_id=FinancialScheduleService._resolve_adjustment_chart_account_id(
-                        company_id=company_id,
-                        adjustment_kind="correction",
-                        adjustment_source_id=metadata_json.get("correction_index_id"),
-                        fallback_chart_account_id=line.chart_account_id,
-                    ),
-                    cost_center_id=line.cost_center_id,
-                    domain_type=domain_type,
-                    domain_source_id=domain_source_id,
-                    domain_label=domain_label,
-                    domain_value=domain_value,
-                    notes=f"Correção Financeira | {document.title}",
-                )
-            )
-
-        discount_amount = Decimal(str(adjustment_totals.get("discount_amount") or 0))
-        if discount_amount > 0:
-            allocations.append(
-                FinancialScheduleService._build_budget_document_adjustment_allocation(
-                    kind="discount",
-                    label="Desconto",
-                    amount=discount_amount * Decimal("-1"),
-                    chart_account_id=FinancialScheduleService._resolve_adjustment_chart_account_id(
-                        company_id=company_id,
-                        adjustment_kind="discount",
-                        adjustment_source_id=metadata_json.get("discount_rule_id"),
-                        fallback_chart_account_id=line.chart_account_id,
-                    ),
-                    cost_center_id=line.cost_center_id,
-                    domain_type=domain_type,
-                    domain_source_id=domain_source_id,
-                    domain_label=domain_label,
-                    domain_value=domain_value,
-                    notes=f"Desconto | {document.title}",
-                )
-            )
-
         return allocations
 
     @staticmethod
@@ -1331,162 +1281,25 @@ class FinancialScheduleService:
         if not raw_allocations:
             return []
 
-        def _money_decimal(value: Any) -> Decimal:
-            try:
-                return Decimal(str(value or 0)).quantize(Decimal("0.01"))
-            except Exception:
-                return Decimal("0.00")
-
-        def _same_money(left: Decimal, right: Decimal) -> bool:
-            return abs(left - right) <= Decimal("0.01")
-
         normalized_allocations: List[Dict[str, Any]] = []
-        base_allocations: List[Dict[str, Any]] = []
-        adjustment_allocations: Dict[str, Dict[str, Any]] = {}
-        allocation_modes = set()
-        raw_total = Decimal("0.00")
-        base_total = Decimal("0.00")
-
         for item in raw_allocations:
             row = dict(item or {})
-            row["metadata_json"] = dict(row.get("metadata_json") or {})
-            mode = str(
+            row_metadata = dict(row.get("metadata_json") or {})
+            adjustment_kind = str(row_metadata.get("adjustment_kind") or "").strip().lower()
+            if adjustment_kind in {"correction", "discount"}:
+                continue
+            row["metadata_json"] = {
+                **row_metadata,
+                "adjustment_kind": None,
+                "adjustment_label": None,
+            }
+            row["allocation_type"] = str(
                 row.get("allocation_type")
                 or ("amount" if row.get("allocated_amount") not in ("", None) else "percentage")
             ).strip().lower() or "percentage"
-            row["allocation_type"] = mode
-            allocation_modes.add(mode)
-            if mode == "amount":
-                amount = _money_decimal(row.get("allocated_amount"))
-                raw_total += amount
-            else:
-                amount = Decimal("0.00")
-
-            adjustment_kind = str((row.get("metadata_json") or {}).get("adjustment_kind") or "").strip().lower()
-            if adjustment_kind in {"correction", "discount"}:
-                adjustment_allocations[adjustment_kind] = row
-            else:
-                base_allocations.append(row)
-                if mode == "amount":
-                    base_total += amount
             normalized_allocations.append(row)
 
-        if allocation_modes != {"amount"} or not base_allocations:
-            return normalized_allocations
-
-        totals = FinancialScheduleService._calculate_schedule_adjustments(
-            company_id=company_id,
-            template_amount=template_amount,
-            metadata_json=metadata,
-            due_date=due_date,
-        )
-        template_total = _money_decimal(totals.get("template_amount") or template_amount)
-        correction_amount = _money_decimal(totals.get("correction_amount"))
-        discount_amount = _money_decimal(totals.get("discount_amount"))
-        updated_total = _money_decimal(totals.get("updated_amount") or template_amount)
-        has_tagged_adjustments = bool(adjustment_allocations)
-        needs_adjustment_backfill = (
-            not has_tagged_adjustments
-            and not _same_money(updated_total, template_total)
-            and _same_money(raw_total, template_total)
-            and _same_money(base_total, template_total)
-        )
-        if not has_tagged_adjustments and not needs_adjustment_backfill:
-            return normalized_allocations
-
-        principal_row = base_allocations[0]
-        default_domain_type = (
-            principal_row.get("domain_type")
-            or metadata.get("domain_type")
-            or fallback_domain_type
-        )
-        default_domain_source_id = (
-            principal_row.get("domain_source_id")
-            if principal_row.get("domain_source_id") is not None
-            else metadata.get("domain_source_id", fallback_domain_source_id)
-        )
-        default_domain_label = (
-            principal_row.get("domain_label")
-            or metadata.get("domain_label")
-            or fallback_domain_label
-        )
-
-        def _build_adjustment_row(*, kind: str, label: str, amount: Decimal) -> Optional[Dict[str, Any]]:
-            if _same_money(amount, Decimal("0.00")):
-                return None
-
-            existing = adjustment_allocations.get(kind) or {}
-            existing_metadata = dict(existing.get("metadata_json") or {})
-            source_id = metadata.get("correction_index_id" if kind == "correction" else "discount_rule_id")
-            effective_fallback_chart_account_id = (
-                existing.get("chart_account_id")
-                or principal_row.get("chart_account_id")
-                or fallback_chart_account_id
-            )
-            chart_account_id = (
-                existing.get("chart_account_id")
-                or FinancialScheduleService._resolve_adjustment_chart_account_id(
-                    company_id=company_id,
-                    adjustment_kind=kind,
-                    adjustment_source_id=source_id,
-                    fallback_chart_account_id=effective_fallback_chart_account_id,
-                )
-            )
-            cost_center_id = existing.get("cost_center_id") or principal_row.get("cost_center_id") or fallback_cost_center_id
-            domain_type = existing.get("domain_type") or default_domain_type
-            domain_source_id = (
-                existing.get("domain_source_id")
-                if existing.get("domain_source_id") is not None
-                else default_domain_source_id
-            )
-            domain_label = existing.get("domain_label") or default_domain_label
-            domain_value = existing.get("domain_value") or (
-                f"{domain_type}:{domain_source_id}"
-                if domain_type and domain_source_id not in ("", None)
-                else ""
-            )
-            return {
-                "chart_account_id": chart_account_id,
-                "cost_center_id": cost_center_id,
-                "allocation_type": "amount",
-                "percentage": None,
-                "allocated_amount": float(amount),
-                "notes": existing.get("notes") or label,
-                "domain_type": domain_type,
-                "domain_source_id": domain_source_id,
-                "domain_label": domain_label,
-                "domain_value": domain_value,
-                "budget_version_id": None,
-                "budget_version_code": None,
-                "budget_line_id": None,
-                "budget_line_code": None,
-                "budget_contract_id": None,
-                "budget_contract_code": None,
-                "budget_document_id": None,
-                "budget_document_code": None,
-                "metadata_json": {
-                    **existing_metadata,
-                    "adjustment_kind": kind,
-                    "adjustment_label": label,
-                },
-            }
-
-        normalized_with_adjustments = list(base_allocations)
-        correction_row = _build_adjustment_row(
-            kind="correction",
-            label="Correção Financeira",
-            amount=correction_amount,
-        )
-        if correction_row:
-            normalized_with_adjustments.append(correction_row)
-        discount_row = _build_adjustment_row(
-            kind="discount",
-            label="Desconto",
-            amount=discount_amount * Decimal("-1"),
-        )
-        if discount_row:
-            normalized_with_adjustments.append(discount_row)
-        return normalized_with_adjustments
+        return normalized_allocations
 
     @staticmethod
     def _validate_schedule_links(
@@ -1535,7 +1348,7 @@ class FinancialScheduleService:
             metadata_json=metadata_json,
             due_date=due_date,
         )
-        amount_total = Decimal(str(totals.get("updated_amount") or 0))
+        amount_total = Decimal(str(totals.get("template_amount") or template_amount or 0))
         percentage_total = Decimal("0")
         allocated_total = Decimal("0")
         allocation_mode: Optional[str] = None
@@ -1601,18 +1414,12 @@ class FinancialScheduleService:
             elif allocation_mode != current_mode:
                 return "Não é permitido misturar rateio por percentual e por valor no mesmo agendamento."
 
-            adjustment_kind = str((item.get("metadata_json") or {}).get("adjustment_kind") or "").strip().lower()
-
             if current_mode == "percentage" and percentage <= 0:
                 return f"Informe um percentual maior que zero na linha {index} do rateio."
             if current_mode == "amount" and allocated_amount == 0:
                 return f"Informe um valor diferente de zero na linha {index} do rateio."
-            if current_mode == "amount" and adjustment_kind not in {"discount"} and allocated_amount < 0:
+            if current_mode == "amount" and allocated_amount < 0:
                 return f"O valor da linha {index} do rateio não pode ser negativo."
-            if current_mode == "amount" and adjustment_kind == "discount" and allocated_amount > 0:
-                return f"O rateio de desconto deve ser informado com valor negativo na linha {index}."
-            if current_mode == "amount" and adjustment_kind != "discount" and allocated_amount <= 0:
-                return f"Informe um valor maior que zero na linha {index} do rateio."
             if current_mode not in {"percentage", "amount"}:
                 return f"Tipo de rateio inválido na linha {index} do agendamento."
 
@@ -1623,7 +1430,7 @@ class FinancialScheduleService:
             return "A soma dos percentuais do rateio deve ser exatamente 100%."
 
         if allocation_mode == "amount" and abs(allocated_total - amount_total) > Decimal("0.01"):
-            return "A soma dos valores do rateio deve ser igual ao valor atualizado do agendamento."
+            return "A soma dos valores do rateio deve ser igual ao valor principal do agendamento."
 
         return None
 
@@ -1648,7 +1455,14 @@ class FinancialScheduleService:
         metadata = dict(schedule.metadata_json or {})
         payload["metadata_json"] = metadata
         payload["attachments"] = list(metadata.get("attachments") or [])
-        payload["allocations"] = list(metadata.get("allocations") or [])
+        payload["allocations"] = FinancialScheduleService._normalize_schedule_allocations(
+            company_id=schedule.company_id,
+            template_amount=schedule.template_amount,
+            due_date=schedule.next_due_date or schedule.first_due_date,
+            metadata_json=metadata,
+            fallback_chart_account_id=getattr(schedule, "chart_account_id", None),
+            fallback_cost_center_id=getattr(schedule, "cost_center_id", None),
+        )
         payload["document_number"] = metadata.get("document_number")
         payload["correction_index_id"] = metadata.get("correction_index_id")
         payload["discount_rule_id"] = metadata.get("discount_rule_id")

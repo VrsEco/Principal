@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import pytest
 
+import services.financial_title_adjustment_allocation_service as allocation_module
 from models.financial import FinancialSchedule, FinancialTitleAdjustment
 from services.financial_title_adjustment_allocation_service import FinancialTitleAdjustmentAllocationService
 
@@ -65,3 +66,60 @@ def test_build_default_allocations_blocks_cross_company_inheritance():
             adjustment=adjustment,
             schedule=schedule,
         )
+
+
+def test_build_default_allocations_prefers_adjustment_rule_chart_account(monkeypatch):
+    class _Column:
+        def __eq__(self, other):
+            return True
+
+        def is_(self, other):
+            return True
+
+    class _QueryStub:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return type("CorrectionIndex", (), {"metadata_json": {"chart_account_id": 909}})()
+
+    monkeypatch.setattr(
+        allocation_module,
+        "FinancialCorrectionIndex",
+        type(
+            "FinancialCorrectionIndexStub",
+            (),
+            {
+                "company_id": _Column(),
+                "id": _Column(),
+                "deleted_at": _Column(),
+                "is_active": _Column(),
+                "query": _QueryStub(),
+            },
+        ),
+    )
+
+    adjustment = FinancialTitleAdjustment(
+        id=27,
+        company_id=7,
+        generated_amount=Decimal("50.25"),
+        adjustment_type="interest",
+        rule_snapshot_json={"rule_id": 12},
+    )
+    schedule = FinancialSchedule(
+        id=34,
+        company_id=7,
+        chart_account_id=501,
+        cost_center_id=19,
+        metadata_json={"correction_index_id": 12},
+    )
+
+    allocations = FinancialTitleAdjustmentAllocationService.build_default_allocations(
+        adjustment=adjustment,
+        schedule=schedule,
+    )
+
+    assert len(allocations) == 1
+    allocation = allocations[0]
+    assert allocation.chart_account_id == 909
+    assert allocation.metadata_json["chart_account_source"] == "adjustment_rule"

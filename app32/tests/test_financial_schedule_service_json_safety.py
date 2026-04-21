@@ -564,29 +564,15 @@ def test_build_budget_document_schedule_payload_adds_adjustment_allocations_for_
     )
 
     allocations = payload["metadata_json"]["allocations"]
-    assert len(allocations) == 3
+    assert len(allocations) == 1
 
-    base_allocation, correction_allocation, discount_allocation = allocations
+    base_allocation = allocations[0]
     assert base_allocation["allocated_amount"] == 250.0
     assert base_allocation["chart_account_id"] == 301
     assert base_allocation["budget_document_id"] == 30
 
-    assert correction_allocation["allocated_amount"] == 25.0
-    assert correction_allocation["chart_account_id"] == 777
-    assert correction_allocation["cost_center_id"] == 401
-    assert correction_allocation["budget_document_id"] is None
-    assert correction_allocation["metadata_json"]["adjustment_kind"] == "correction"
-    assert correction_allocation["metadata_json"]["adjustment_label"] == "Correção Financeira"
-
-    assert discount_allocation["allocated_amount"] == -12.5
-    assert discount_allocation["chart_account_id"] == 888
-    assert discount_allocation["cost_center_id"] == 401
-    assert discount_allocation["budget_document_id"] is None
-    assert discount_allocation["metadata_json"]["adjustment_kind"] == "discount"
-    assert discount_allocation["metadata_json"]["adjustment_label"] == "Desconto"
-
     allocated_total = sum(Decimal(str(item["allocated_amount"])) for item in allocations)
-    assert allocated_total == Decimal("262.5")
+    assert allocated_total == Decimal("250.0")
 
 
 def test_build_entry_payload_propagates_budget_links():
@@ -1254,7 +1240,7 @@ def test_validate_schedule_allocations_accepts_amount_mode_total_match(monkeypat
     assert error is None
 
 
-def test_validate_schedule_allocations_accepts_adjustment_rows_matching_updated_amount(monkeypatch):
+def test_validate_schedule_allocations_accepts_principal_rows_matching_template_amount(monkeypatch):
     class _FakeChartAccount:
         company_id = _Column()
         deleted_at = _Column()
@@ -1317,20 +1303,6 @@ def test_validate_schedule_allocations_accepts_adjustment_rows_matching_updated_
                     "allocated_amount": Decimal("250.00"),
                     "metadata_json": {"adjustment_kind": None},
                 },
-                {
-                    "chart_account_id": 777,
-                    "cost_center_id": 8,
-                    "allocation_type": "amount",
-                    "allocated_amount": Decimal("25.00"),
-                    "metadata_json": {"adjustment_kind": "correction"},
-                },
-                {
-                    "chart_account_id": 888,
-                    "cost_center_id": 8,
-                    "allocation_type": "amount",
-                    "allocated_amount": Decimal("-12.50"),
-                    "metadata_json": {"adjustment_kind": "discount"},
-                },
             ]
         },
     )
@@ -1338,7 +1310,7 @@ def test_validate_schedule_allocations_accepts_adjustment_rows_matching_updated_
     assert error is None
 
 
-def test_normalize_schedule_allocations_backfills_adjustment_rows_for_legacy_principal_only_payload(monkeypatch):
+def test_normalize_schedule_allocations_removes_legacy_adjustment_rows(monkeypatch):
     monkeypatch.setattr(
         schedule_module.FinancialScheduleService,
         "_calculate_schedule_adjustments",
@@ -1368,6 +1340,13 @@ def test_normalize_schedule_allocations_backfills_adjustment_rows_for_legacy_pri
                     "allocation_type": "amount",
                     "allocated_amount": Decimal("500000.00"),
                     "metadata_json": {"adjustment_kind": None},
+                },
+                {
+                    "chart_account_id": 777,
+                    "cost_center_id": 8,
+                    "allocation_type": "amount",
+                    "allocated_amount": Decimal("12483.33"),
+                    "metadata_json": {"adjustment_kind": "correction"},
                 }
             ],
         },
@@ -1375,17 +1354,13 @@ def test_normalize_schedule_allocations_backfills_adjustment_rows_for_legacy_pri
         fallback_cost_center_id=8,
     )
 
-    assert len(allocations) == 2
+    assert len(allocations) == 1
     assert allocations[0]["allocated_amount"] == Decimal("500000.00")
-    assert allocations[1]["chart_account_id"] == 777
-    assert allocations[1]["cost_center_id"] == 8
-    assert allocations[1]["allocated_amount"] == 12483.33
-    assert allocations[1]["metadata_json"]["adjustment_kind"] == "correction"
     allocated_total = sum(Decimal(str(item["allocated_amount"])) for item in allocations)
-    assert allocated_total == Decimal("512483.33")
+    assert allocated_total == Decimal("500000.00")
 
 
-def test_create_schedule_normalizes_legacy_adjustment_gap_before_validation_and_persist(monkeypatch):
+def test_create_schedule_normalizes_legacy_adjustment_rows_before_validation_and_persist(monkeypatch):
     captured = {}
 
     class _FakeSchedule:
@@ -1474,8 +1449,8 @@ def test_create_schedule_normalizes_legacy_adjustment_gap_before_validation_and_
 
     assert error is None
     assert result is not None
-    assert len(captured["validated_metadata"]["allocations"]) == 2
+    assert len(captured["validated_metadata"]["allocations"]) == 1
     persisted_allocations = captured["kwargs"]["metadata_json"]["allocations"]
-    assert len(persisted_allocations) == 2
-    assert persisted_allocations[1]["chart_account_id"] == 777
-    assert persisted_allocations[1]["allocated_amount"] == 12483.33
+    assert len(persisted_allocations) == 1
+    assert persisted_allocations[0]["chart_account_id"] == 301
+    assert persisted_allocations[0]["allocated_amount"] == 500000.0

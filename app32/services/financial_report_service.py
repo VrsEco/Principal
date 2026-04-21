@@ -1249,20 +1249,58 @@ class FinancialReportService:
                 "allocation_breakdown": dict(metadata.get("settlement_allocation_breakdown") or {}),
             }
 
-        def _add_liquidation_breakdown(
+        def _resolve_entry_principal_amount(
+            entry: FinancialEntry,
+            *,
+            schedule: Optional[FinancialSchedule] = None,
+        ) -> Decimal:
+            metadata = dict(getattr(entry, "metadata_json", {}) or {})
+            schedule_amount = metadata.get("schedule_template_amount")
+            if schedule_amount not in (None, ""):
+                return Decimal(str(schedule_amount or 0))
+            if schedule is not None:
+                return Decimal(str(getattr(schedule, "template_amount", None) or 0))
+            return Decimal(str(getattr(entry, "original_amount", None) or 0))
+
+        def _date_in_bucket(target_date: Optional[date], bucket: str) -> bool:
+            if not target_date:
+                return False
+            if consolidated_by_period:
+                return bool(period_start and period_end and period_start <= target_date <= period_end)
+
+            if bucket == "competencia":
+                if competence_start and target_date < competence_start:
+                    return False
+                if competence_end and target_date > competence_end:
+                    return False
+                return True
+
+            if bucket == "vencimento":
+                if due_start and target_date < due_start:
+                    return False
+                if due_end and target_date > due_end:
+                    return False
+                return True
+
+            if settlement_start and target_date < settlement_start:
+                return False
+            if settlement_end and target_date > settlement_end:
+                return False
+            return True
+
+        def _apply_settlement_breakdown(
             *,
             settlement: FinancialSettlement,
             entry: FinancialEntry,
             fallback_chart_account_id: Optional[int],
             fallback_cost_center_id: Optional[int],
-        ) -> Decimal:
-            """Lança na DRE a baixa destrinchada: principal + correção - desconto."""
-
+        ) -> Dict[str, bool]:
             summary_payload = _settlement_component_summary(settlement, entry)
             component_summary = summary_payload["component_summary"]
             allocation_breakdown = summary_payload["allocation_breakdown"]
             movement_multiplier = Decimal("1") if entry.movement_nature == "credit" else Decimal("-1")
-            total_added = Decimal("0")
+            flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+            settlement_date = getattr(settlement, "settlement_date", None)
 
             component_specs = (
                 ("principal", Decimal("1"), Decimal(getattr(settlement, "principal_amount", None) or 0)),
@@ -1278,34 +1316,80 @@ class FinancialReportService:
                         amount = abs(_decimal_from_item(item_payload, "settled_allocated_amount", "allocated_amount", "amount"))
                         if amount == Decimal("0"):
                             continue
-                        slot = _account_slot(item_payload.get("chart_account_id") or fallback_chart_account_id)
                         signed_amount = amount * movement_multiplier * component_multiplier
-                        slot["liquidacao"] += signed_amount
+                        chart_account_id = item_payload.get("chart_account_id") or fallback_chart_account_id
                         cost_center_id = item_payload.get("cost_center_id") or fallback_cost_center_id
-                        if cost_center_id:
-                            slot["centros"].add(center_names.get(cost_center_id, str(cost_center_id)))
-                        for project_id in FinancialReportService._entry_project_ids(entry):
-                            if not filters.project_ids or project_id in filters.project_ids:
-                                slot["projetos"].add(project_names.get(project_id, str(project_id)))
-                        _add_type(slot, entry.entry_type)
-                        total_added += signed_amount
+
+                        def _register(bucket: str) -> None:
+                            slot = _account_slot(chart_account_id)
+                            slot[bucket] += signed_amount
+                            if cost_center_id:
+                                slot["centros"].add(center_names.get(cost_center_id, str(cost_center_id)))
+                            for project_id in FinancialReportService._entry_project_ids(entry):
+                                if not filters.project_ids or project_id in filters.project_ids:
+                                    slot["projetos"].add(project_names.get(project_id, str(project_id)))
+                            _add_type(slot, entry.entry_type)
+                            flags[bucket] = True
+
+                        if component_key == "principal":
+                            if _date_in_bucket(settlement_date, "liquidacao"):
+                                _register("liquidacao")
+                            continue
+
+                        competence_date = None
+                        due_date_value = None
+                        raw_competence_date = item_payload.get("competence_date")
+                        raw_due_date = item_payload.get("due_date")
+                        if raw_competence_date:
+                            try:
+                                competence_date = date.fromisoformat(str(raw_competence_date))
+                            except ValueError:
+                                competence_date = settlement_date
+                        else:
+                            competence_date = settlement_date
+                        if raw_due_date:
+                            try:
+                                due_date_value = date.fromisoformat(str(raw_due_date))
+                            except ValueError:
+                                due_date_value = settlement_date
+                        else:
+                            due_date_value = settlement_date
+
+                        if _date_in_bucket(competence_date, "competencia"):
+                            _register("competencia")
+                        if _date_in_bucket(due_date_value, "vencimento"):
+                            _register("vencimento")
+                        if _date_in_bucket(settlement_date, "liquidacao"):
+                            _register("liquidacao")
                     continue
 
                 amount = abs(Decimal(str(component_summary.get(component_key) or fallback_amount or 0)))
                 if amount == Decimal("0"):
                     continue
-                slot = _account_slot(fallback_chart_account_id)
                 signed_amount = amount * movement_multiplier * component_multiplier
-                slot["liquidacao"] += signed_amount
+                slot = _account_slot(fallback_chart_account_id)
+                if component_key == "principal":
+                    if _date_in_bucket(settlement_date, "liquidacao"):
+                        slot["liquidacao"] += signed_amount
+                        flags["liquidacao"] = True
+                else:
+                    if _date_in_bucket(settlement_date, "competencia"):
+                        slot["competencia"] += signed_amount
+                        flags["competencia"] = True
+                    if _date_in_bucket(settlement_date, "vencimento"):
+                        slot["vencimento"] += signed_amount
+                        flags["vencimento"] = True
+                    if _date_in_bucket(settlement_date, "liquidacao"):
+                        slot["liquidacao"] += signed_amount
+                        flags["liquidacao"] = True
                 if fallback_cost_center_id:
                     slot["centros"].add(center_names.get(fallback_cost_center_id, str(fallback_cost_center_id)))
                 for project_id in FinancialReportService._entry_project_ids(entry):
                     if not filters.project_ids or project_id in filters.project_ids:
                         slot["projetos"].add(project_names.get(project_id, str(project_id)))
                 _add_type(slot, entry.entry_type)
-                total_added += signed_amount
 
-            return total_added
+            return flags
 
         if consolidated_by_period:
             schedule_query = FinancialSchedule.query.filter(
@@ -1345,8 +1429,7 @@ class FinancialReportService:
                     linked_entry_ids.append(entry.id)
 
             settlement_totals_by_entry: Dict[int, Decimal] = {}
-            settlement_period_totals_by_entry: Dict[int, Decimal] = {}
-            settlement_period_items_by_entry: Dict[int, List[FinancialSettlement]] = {}
+            settlement_items_by_entry: Dict[int, List[FinancialSettlement]] = {}
             if linked_entry_ids:
                 for settlement in FinancialSettlement.query.filter(
                     FinancialSettlement.company_id == company_id,
@@ -1358,26 +1441,20 @@ class FinancialReportService:
                     settlement_amount = Decimal(settlement.net_amount or 0)
                     settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
                     settlement_totals_by_entry[settlement.financial_entry_id] += settlement_principal
-                    if period_start and period_end and settlement.settlement_date and period_start <= settlement.settlement_date <= period_end:
-                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
-                        settlement_period_totals_by_entry[settlement.financial_entry_id] += settlement_amount
-                        settlement_period_items_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
+                    if settlement_amount != Decimal("0"):
+                        settlement_items_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
 
             for schedule in schedules:
                 schedule_entries = entries_by_schedule.get(schedule.id, [])
                 competence_date = schedule.competence_date or schedule.start_date
                 due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
-                amount_totals = FinancialTitleAmountService.calculate(
-                    company_id=schedule.company_id,
-                    template_amount=schedule.template_amount,
-                    metadata_json=schedule.metadata_json,
-                    due_date=due_date,
-                )
-                title_amount = Decimal(str(amount_totals.get("updated_amount") or schedule.template_amount or 0))
+                title_amount = Decimal(str(schedule.template_amount or 0))
                 if title_amount <= Decimal("0") and schedule_entries:
-                    title_amount = sum((Decimal(entry.original_amount or 0) for entry in schedule_entries), Decimal("0"))
+                    title_amount = sum(
+                        (_resolve_entry_principal_amount(entry, schedule=schedule) for entry in schedule_entries),
+                        Decimal("0"),
+                    )
                 settled_total = sum((settlement_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
-                period_settlement = sum((settlement_period_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
                 derived_settlement_state = "open"
                 if title_amount > Decimal("0") and settled_total >= title_amount:
                     derived_settlement_state = "settled"
@@ -1395,8 +1472,21 @@ class FinancialReportService:
 
                 in_competence = bool(competence_date and period_start <= competence_date <= period_end)
                 in_due = bool(due_date and period_start <= due_date <= period_end)
-                in_liquidation = period_settlement != Decimal("0")
-                if not any([in_competence, in_due, in_liquidation]):
+                settlement_flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+                for entry in schedule_entries:
+                    for settlement in settlement_items_by_entry.get(entry.id, []):
+                        current_flags = _apply_settlement_breakdown(
+                            settlement=settlement,
+                            entry=entry,
+                            fallback_chart_account_id=schedule.chart_account_id,
+                            fallback_cost_center_id=schedule.cost_center_id,
+                        )
+                        settlement_flags = {
+                            key: settlement_flags[key] or current_flags[key]
+                            for key in settlement_flags
+                        }
+                in_liquidation = settlement_flags["liquidacao"]
+                if not any([in_competence, in_due, settlement_flags["competencia"], settlement_flags["vencimento"], in_liquidation]):
                     continue
 
                 signed_title = Decimal(str(FinancialService.get_signed_amount(title_amount, schedule.movement_nature)))
@@ -1405,15 +1495,6 @@ class FinancialReportService:
                     slot["competencia"] += signed_title
                 if in_due:
                     slot["vencimento"] += signed_title
-                if in_liquidation:
-                    for entry in schedule_entries:
-                        for settlement in settlement_period_items_by_entry.get(entry.id, []):
-                            _add_liquidation_breakdown(
-                                settlement=settlement,
-                                entry=entry,
-                                fallback_chart_account_id=schedule.chart_account_id,
-                                fallback_cost_center_id=schedule.cost_center_id,
-                            )
                 if is_open:
                     slot["aberto"] += signed_title
                 else:
@@ -1441,8 +1522,7 @@ class FinancialReportService:
 
             manual_entry_ids = [entry.id for entry in manual_entries]
             manual_settlement_totals: Dict[int, Decimal] = {}
-            manual_settlement_period_totals: Dict[int, Decimal] = {}
-            manual_settlement_period_items: Dict[int, List[FinancialSettlement]] = {}
+            manual_settlement_items: Dict[int, List[FinancialSettlement]] = {}
             if manual_entry_ids:
                 for settlement in FinancialSettlement.query.filter(
                     FinancialSettlement.company_id == company_id,
@@ -1454,22 +1534,31 @@ class FinancialReportService:
                     settlement_amount = Decimal(settlement.net_amount or 0)
                     manual_settlement_totals.setdefault(settlement.financial_entry_id, Decimal("0"))
                     manual_settlement_totals[settlement.financial_entry_id] += settlement_principal
-                    if period_start and period_end and settlement.settlement_date and period_start <= settlement.settlement_date <= period_end:
-                        manual_settlement_period_totals.setdefault(settlement.financial_entry_id, Decimal("0"))
-                        manual_settlement_period_totals[settlement.financial_entry_id] += settlement_amount
-                        manual_settlement_period_items.setdefault(settlement.financial_entry_id, []).append(settlement)
+                    if settlement_amount != Decimal("0"):
+                        manual_settlement_items.setdefault(settlement.financial_entry_id, []).append(settlement)
 
             for entry in manual_entries:
                 original_amount = Decimal(entry.original_amount or 0)
                 total_settlement_amount = manual_settlement_totals.get(entry.id, Decimal("0"))
-                period_settlement_amount = manual_settlement_period_totals.get(entry.id, Decimal("0"))
                 passes_status, is_open = _passes_financial_status(original_amount, total_settlement_amount, entry.status)
                 if not passes_status:
                     continue
                 in_competence = bool(entry.competence_date and period_start <= entry.competence_date <= period_end)
                 in_due = bool(entry.due_date and period_start <= entry.due_date <= period_end)
-                in_liquidation = period_settlement_amount != Decimal("0")
-                if not any([in_competence, in_due, in_liquidation]):
+                settlement_flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+                for settlement in manual_settlement_items.get(entry.id, []):
+                    current_flags = _apply_settlement_breakdown(
+                        settlement=settlement,
+                        entry=entry,
+                        fallback_chart_account_id=entry.chart_account_id,
+                        fallback_cost_center_id=entry.cost_center_id,
+                    )
+                    settlement_flags = {
+                        key: settlement_flags[key] or current_flags[key]
+                        for key in settlement_flags
+                    }
+                in_liquidation = settlement_flags["liquidacao"]
+                if not any([in_competence, in_due, settlement_flags["competencia"], settlement_flags["vencimento"], in_liquidation]):
                     continue
                 signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
                 slot = _account_slot(entry.chart_account_id)
@@ -1477,14 +1566,6 @@ class FinancialReportService:
                     slot["competencia"] += signed_original
                 if in_due:
                     slot["vencimento"] += signed_original
-                if in_liquidation:
-                    for settlement in manual_settlement_period_items.get(entry.id, []):
-                        _add_liquidation_breakdown(
-                            settlement=settlement,
-                            entry=entry,
-                            fallback_chart_account_id=entry.chart_account_id,
-                            fallback_cost_center_id=entry.cost_center_id,
-                        )
                 if is_open:
                     slot["aberto"] += signed_original
                 else:
@@ -1513,8 +1594,7 @@ class FinancialReportService:
 
             entry_ids = [entry.id for entry in entries]
             settlement_totals_by_entry: Dict[int, Decimal] = {}
-            settlement_period_totals_by_entry: Dict[int, Decimal] = {}
-            settlement_period_items_by_entry: Dict[int, List[FinancialSettlement]] = {}
+            settlement_items_by_entry: Dict[int, List[FinancialSettlement]] = {}
             if entry_ids:
                 settlement_query = FinancialSettlement.query.filter(
                     FinancialSettlement.company_id == company_id,
@@ -1526,20 +1606,26 @@ class FinancialReportService:
                 for settlement in settlements:
                     settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
                     settlement_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.principal_amount or 0)
-                    if settlement_start and settlement_end:
-                        if settlement.settlement_date and settlement_start <= settlement.settlement_date <= settlement_end:
-                            settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
-                            settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
-                            settlement_period_items_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
-                    else:
-                        settlement_period_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
-                        settlement_period_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
-                        settlement_period_items_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
+                    settlement_items_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
+
+            schedule_by_entry_id: Dict[int, FinancialSchedule] = {}
+            schedule_ids = {
+                int(getattr(entry, "financial_schedule_id", 0) or 0)
+                for entry in entries
+                if getattr(entry, "financial_schedule_id", None)
+            }
+            if schedule_ids:
+                for schedule in FinancialSchedule.query.filter(
+                    FinancialSchedule.company_id == company_id,
+                    FinancialSchedule.id.in_(list(schedule_ids)),
+                    FinancialSchedule.deleted_at.is_(None),
+                ).all():
+                    schedule_by_entry_id[int(getattr(schedule, "id", 0) or 0)] = schedule
 
             for entry in entries:
                 total_settlement_amount = settlement_totals_by_entry.get(entry.id, Decimal("0"))
-                period_settlement_amount = settlement_period_totals_by_entry.get(entry.id, Decimal("0"))
-                original_amount = Decimal(entry.original_amount or 0)
+                linked_schedule = schedule_by_entry_id.get(int(getattr(entry, "financial_schedule_id", 0) or 0))
+                original_amount = _resolve_entry_principal_amount(entry, schedule=linked_schedule)
                 passes_status, is_open = _passes_financial_status(original_amount, total_settlement_amount, entry.status)
                 if not passes_status:
                     continue
@@ -1556,8 +1642,21 @@ class FinancialReportService:
                 if due_end and ((not entry.due_date) or entry.due_date > due_end):
                     in_due = False
 
-                in_liquidation = period_settlement_amount != Decimal("0")
-                if not any([in_competence, in_due, in_liquidation]):
+                settlement_flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+                for settlement in settlement_items_by_entry.get(entry.id, []):
+                    current_flags = _apply_settlement_breakdown(
+                        settlement=settlement,
+                        entry=entry,
+                        fallback_chart_account_id=(linked_schedule.chart_account_id if linked_schedule is not None else entry.chart_account_id),
+                        fallback_cost_center_id=(linked_schedule.cost_center_id if linked_schedule is not None else entry.cost_center_id),
+                    )
+                    settlement_flags = {
+                        key: settlement_flags[key] or current_flags[key]
+                        for key in settlement_flags
+                    }
+
+                in_liquidation = settlement_flags["liquidacao"]
+                if not any([in_competence, in_due, settlement_flags["competencia"], settlement_flags["vencimento"], in_liquidation]):
                     continue
 
                 signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
@@ -1566,14 +1665,6 @@ class FinancialReportService:
                     slot["competencia"] += signed_original
                 if in_due:
                     slot["vencimento"] += signed_original
-                if in_liquidation:
-                    for settlement in settlement_period_items_by_entry.get(entry.id, []):
-                        _add_liquidation_breakdown(
-                            settlement=settlement,
-                            entry=entry,
-                            fallback_chart_account_id=entry.chart_account_id,
-                            fallback_cost_center_id=entry.cost_center_id,
-                        )
                 if is_open:
                     slot["aberto"] += signed_original
                 else:

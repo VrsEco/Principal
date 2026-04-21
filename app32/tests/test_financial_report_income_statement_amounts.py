@@ -69,8 +69,15 @@ class _FakeModel:
         self.query = _Query(rows)
 
 
-def _install_income_statement_fakes(monkeypatch, *, schedules, entries, settlements):
-    accounts = [
+def _install_income_statement_fakes(
+    monkeypatch,
+    *,
+    schedules,
+    entries,
+    settlements,
+    accounts=None,
+):
+    accounts = accounts or [
         SimpleNamespace(id=10, parent_id=None, code="4", name="Receitas", accepts_posting=False),
         SimpleNamespace(id=11, parent_id=10, code="4.01.001", name="Receita teste", accepts_posting=True),
         SimpleNamespace(id=12, parent_id=10, code="4.02.001", name="Correção financeira", accepts_posting=True),
@@ -140,7 +147,7 @@ def test_income_statement_uses_financial_title_dates_and_settlement_date(monkeyp
 
     payload = FinancialReportService._build_income_statement(7, _income_statement_filters())
 
-    assert payload["totals"]["competence"] == 90.0
+    assert payload["totals"]["competence"] == 100.0
     assert payload["totals"]["due"] == 0.0
     assert payload["totals"]["liquidation"] == 30.0
 
@@ -194,7 +201,15 @@ def test_income_statement_liquidation_splits_principal_correction_and_discount(m
     payload = FinancialReportService._build_income_statement(7, _income_statement_filters())
     rows_by_code = {row["codigo"]: row for row in payload["rows"]}
 
+    assert payload["totals"]["competence"] == 115.0
+    assert payload["totals"]["due"] == 115.0
     assert payload["totals"]["liquidation"] == 115.0
+    assert rows_by_code["4.01.001"]["competencia"] == "R$ 100,00"
+    assert rows_by_code["4.01.001"]["vencimento"] == "R$ 100,00"
+    assert rows_by_code["4.02.001"]["competencia"] == "R$ 20,00"
+    assert rows_by_code["4.02.001"]["vencimento"] == "R$ 20,00"
+    assert rows_by_code["4.03.001"]["competencia"] == "R$ -5,00"
+    assert rows_by_code["4.03.001"]["vencimento"] == "R$ -5,00"
     assert rows_by_code["4.01.001"]["liquidacao"] == "R$ 100,00"
     assert rows_by_code["4.02.001"]["liquidacao"] == "R$ 20,00"
     assert rows_by_code["4.03.001"]["liquidacao"] == "R$ -5,00"
@@ -398,3 +413,249 @@ def test_income_statement_reports_keep_totals_consistent_between_dre01_and_dre02
     assert dre01["totals"]["competence"] == dre02["totals"]["competence"] == 100.0
     assert dre01["totals"]["due"] == dre02["totals"]["due"] == 100.0
     assert dre01["totals"]["liquidation"] == dre02["totals"]["liquidation"] == 100.0
+
+
+def test_income_statement_payable_schedule_keeps_principal_and_correction_separate(monkeypatch):
+    accounts = [
+        SimpleNamespace(id=15, parent_id=None, code="5", name="Despesas", accepts_posting=False),
+        SimpleNamespace(id=16, parent_id=15, code="5.2", name="Despesas operacionais", accepts_posting=False),
+        SimpleNamespace(id=17, parent_id=16, code="5.2.01", name="Despesas administrativas", accepts_posting=False),
+        SimpleNamespace(id=19, parent_id=17, code="5.2.01.001", name="Aluguel", accepts_posting=True),
+        SimpleNamespace(id=21, parent_id=17, code="5.2.01.003", name="Multas e Juros por Atrazo no Pagamento", accepts_posting=True),
+    ]
+    schedule = SimpleNamespace(
+        id=42,
+        company_id=9,
+        status="active",
+        entry_type="payable",
+        movement_nature="debit",
+        competence_date=date(2020, 1, 31),
+        start_date=date(2020, 1, 31),
+        first_due_date=date(2020, 2, 28),
+        next_due_date=date(2020, 2, 28),
+        template_amount=Decimal("7500"),
+        chart_account_id=19,
+        cost_center_id=2,
+        metadata_json={},
+    )
+    entry = SimpleNamespace(
+        id=21,
+        company_id=9,
+        external_reference="financial_schedule:42",
+        financial_schedule_id=42,
+        original_amount=Decimal("13134.75"),
+        status="partially_settled",
+        movement_nature="debit",
+        entry_type="payable",
+        competence_date=date(2020, 1, 31),
+        due_date=date(2020, 2, 28),
+        chart_account_id=19,
+        cost_center_id=2,
+        metadata_json={"schedule_template_amount": 7500.0},
+    )
+    settlement = SimpleNamespace(
+        financial_entry_id=21,
+        settlement_date=date(2020, 4, 21),
+        principal_amount=Decimal("2000"),
+        net_amount=Decimal("2100"),
+        metadata_json={
+            "settlement_allocation_breakdown": {
+                "principal": {
+                    "items": [
+                        {
+                            "chart_account_id": 19,
+                            "cost_center_id": 2,
+                            "settled_allocated_amount": 2000.0,
+                        }
+                    ]
+                },
+                "financial_correction": {
+                    "items": [
+                        {
+                            "chart_account_id": 21,
+                            "cost_center_id": 2,
+                            "settled_allocated_amount": 100.0,
+                            "competence_date": "2020-04-21",
+                            "due_date": "2020-04-21",
+                        }
+                    ]
+                },
+            }
+        },
+    )
+    _install_income_statement_fakes(
+        monkeypatch,
+        schedules=[schedule],
+        entries=[entry],
+        settlements=[settlement],
+        accounts=accounts,
+    )
+
+    january_filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "period_start": "2020-01-01",
+            "period_end": "2020-01-31",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+    january_payload = FinancialReportService._build_income_statement(9, january_filters)
+    january_rows = {row["codigo"]: row for row in january_payload["rows"]}
+    assert january_rows["5.2.01.001"]["competencia"] == "R$ -7.500,00"
+    assert january_rows["5.2.01.001"]["vencimento"] == "R$ 0,00"
+    assert january_rows["5.2.01.001"]["liquidacao"] == "R$ 0,00"
+
+    february_filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "period_start": "2020-02-01",
+            "period_end": "2020-02-29",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+    february_payload = FinancialReportService._build_income_statement(9, february_filters)
+    february_rows = {row["codigo"]: row for row in february_payload["rows"]}
+    assert february_rows["5.2.01.001"]["competencia"] == "R$ 0,00"
+    assert february_rows["5.2.01.001"]["vencimento"] == "R$ -7.500,00"
+    assert february_rows["5.2.01.001"]["liquidacao"] == "R$ 0,00"
+
+    april_filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "period_start": "2020-04-01",
+            "period_end": "2020-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+    april_payload = FinancialReportService._build_income_statement(9, april_filters)
+    april_rows = {row["codigo"]: row for row in april_payload["rows"]}
+    assert april_rows["5.2.01.001"]["competencia"] == "R$ 0,00"
+    assert april_rows["5.2.01.001"]["vencimento"] == "R$ 0,00"
+    assert april_rows["5.2.01.001"]["liquidacao"] == "R$ -2.000,00"
+    assert april_rows["5.2.01.003"]["competencia"] == "R$ -100,00"
+    assert april_rows["5.2.01.003"]["vencimento"] == "R$ -100,00"
+    assert april_rows["5.2.01.003"]["liquidacao"] == "R$ -100,00"
+
+
+def test_income_statement_02_correction_uses_settlement_window_for_competence_and_due(monkeypatch):
+    accounts = [
+        SimpleNamespace(id=15, parent_id=None, code="5", name="Despesas", accepts_posting=False),
+        SimpleNamespace(id=16, parent_id=15, code="5.2", name="Despesas operacionais", accepts_posting=False),
+        SimpleNamespace(id=17, parent_id=16, code="5.2.01", name="Despesas administrativas", accepts_posting=False),
+        SimpleNamespace(id=19, parent_id=17, code="5.2.01.001", name="Aluguel", accepts_posting=True),
+        SimpleNamespace(id=21, parent_id=17, code="5.2.01.003", name="Multas e Juros por Atrazo no Pagamento", accepts_posting=True),
+    ]
+    entry = SimpleNamespace(
+        id=21,
+        company_id=9,
+        external_reference="financial_schedule:42",
+        financial_schedule_id=42,
+        original_amount=Decimal("13134.75"),
+        status="partially_settled",
+        movement_nature="debit",
+        entry_type="payable",
+        competence_date=date(2020, 1, 31),
+        due_date=date(2020, 2, 28),
+        chart_account_id=19,
+        cost_center_id=2,
+        metadata_json={"schedule_template_amount": 7500.0},
+    )
+    settlement = SimpleNamespace(
+        financial_entry_id=21,
+        settlement_date=date(2020, 4, 21),
+        principal_amount=Decimal("2000"),
+        net_amount=Decimal("2100"),
+        metadata_json={
+            "settlement_allocation_breakdown": {
+                "principal": {
+                    "items": [
+                        {
+                            "chart_account_id": 19,
+                            "cost_center_id": 2,
+                            "settled_allocated_amount": 2000.0,
+                        }
+                    ]
+                },
+                "financial_correction": {
+                    "items": [
+                        {
+                            "chart_account_id": 21,
+                            "cost_center_id": 2,
+                            "settled_allocated_amount": 100.0,
+                            "competence_date": "2020-04-21",
+                            "due_date": "2020-04-21",
+                        }
+                    ]
+                },
+            }
+        },
+    )
+    _install_income_statement_fakes(
+        monkeypatch,
+        schedules=[],
+        entries=[entry],
+        settlements=[settlement],
+        accounts=accounts,
+    )
+
+    split_filters, error = FinancialReportService._normalize_filters(
+        "income_statement_2",
+        {
+            "competence_start": "2020-01-01",
+            "competence_end": "2020-01-31",
+            "due_start": "2020-02-01",
+            "due_end": "2020-02-29",
+            "settlement_start": "2020-04-01",
+            "settlement_end": "2020-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+    split_payload = FinancialReportService._build_income_statement_2(9, split_filters)
+    split_rows = {row["codigo"]: row for row in split_payload["rows"]}
+    assert split_rows["5.2.01.001"]["competencia"] == "R$ -7.500,00"
+    assert split_rows["5.2.01.001"]["vencimento"] == "R$ -7.500,00"
+    assert split_rows["5.2.01.001"]["liquidacao"] == "R$ -2.000,00"
+    assert split_rows["5.2.01.003"]["competencia"] == "R$ 0,00"
+    assert split_rows["5.2.01.003"]["vencimento"] == "R$ 0,00"
+    assert split_rows["5.2.01.003"]["liquidacao"] == "R$ -100,00"
+
+    april_filters, error = FinancialReportService._normalize_filters(
+        "income_statement_2",
+        {
+            "competence_start": "2020-04-01",
+            "competence_end": "2020-04-30",
+            "due_start": "2020-04-01",
+            "due_end": "2020-04-30",
+            "settlement_start": "2020-04-01",
+            "settlement_end": "2020-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_payable": "true",
+        },
+    )
+    assert error is None
+    april_payload = FinancialReportService._build_income_statement_2(9, april_filters)
+    april_rows = {row["codigo"]: row for row in april_payload["rows"]}
+    assert april_rows["5.2.01.001"]["competencia"] == "R$ 0,00"
+    assert april_rows["5.2.01.001"]["vencimento"] == "R$ 0,00"
+    assert april_rows["5.2.01.001"]["liquidacao"] == "R$ -2.000,00"
+    assert april_rows["5.2.01.003"]["competencia"] == "R$ -100,00"
+    assert april_rows["5.2.01.003"]["vencimento"] == "R$ -100,00"
+    assert april_rows["5.2.01.003"]["liquidacao"] == "R$ -100,00"

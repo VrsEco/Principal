@@ -252,7 +252,7 @@ def test_delete_schedule_soft_deletes_generated_entries_without_settlements(monk
     assert isinstance(updates["allocation_deleted_at"], datetime)
 
 
-def test_apply_schedule_allocations_backfills_legacy_adjustment_gap_before_replace(monkeypatch):
+def test_apply_schedule_allocations_persists_only_principal_rows(monkeypatch):
     captured = {}
     schedule = type(
         "Schedule",
@@ -309,9 +309,9 @@ def test_apply_schedule_allocations_backfills_legacy_adjustment_gap_before_repla
     )
 
     assert error is None
-    assert len(captured["payload"]["allocations"]) == 2
-    assert captured["payload"]["allocations"][1]["allocated_amount"] == 12483.33
-    assert captured["payload"]["allocations"][1]["metadata_json"]["adjustment_kind"] == "correction"
+    assert len(captured["payload"]["allocations"]) == 1
+    assert captured["payload"]["allocations"][0]["allocated_amount"] == 500000.0
+    assert captured["payload"]["allocations"][0]["metadata_json"]["adjustment_kind"] is None
     persisted_allocations = schedule.metadata_json["allocations"]
-    assert len(persisted_allocations) == 2
-    assert persisted_allocations[1]["chart_account_id"] == 777
+    assert len(persisted_allocations) == 1
+    assert persisted_allocations[0]["chart_account_id"] == 301

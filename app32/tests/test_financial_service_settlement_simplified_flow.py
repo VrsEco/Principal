@@ -781,3 +781,119 @@ def test_build_schedule_component_allocation_breakdown_for_discount():
     assert result["items"][0]["metadata_json"]["component_kind"] == "discount"
     assert result["items"][1]["settled_allocated_amount"] == 5.0
 
+
+def test_build_principal_allocation_breakdown_ignores_adjustment_rows(monkeypatch):
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntryAllocation",
+        type(
+            "FinancialEntryAllocationStub",
+            (),
+            {
+                "company_id": _Column(),
+                "financial_entry_id": _Column(),
+                "deleted_at": _Column(),
+                "id": _Column(),
+                "query": _QueryStub(
+                    [
+                        type("AllocationPrincipalA", (), {"to_dict": lambda self: {"id": 1, "chart_account_id": 501, "cost_center_id": 601, "allocation_type": "amount", "allocated_amount": 180.0, "metadata_json": {}}})(),
+                        type("AllocationCorrection", (), {"to_dict": lambda self: {"id": 2, "chart_account_id": 999, "cost_center_id": 699, "allocation_type": "amount", "allocated_amount": 50.0, "metadata_json": {"adjustment_kind": "correction"}}})(),
+                        type("AllocationPrincipalB", (), {"to_dict": lambda self: {"id": 3, "chart_account_id": 502, "cost_center_id": 602, "allocation_type": "amount", "allocated_amount": 120.0, "metadata_json": {}}})(),
+                    ]
+                ),
+            },
+        ),
+    )
+
+    entry = type(
+        "Entry",
+        (),
+        {
+            "company_id": 7,
+            "id": 99,
+            "original_amount": Decimal("350.00"),
+            "metadata_json": {"schedule_template_amount": 300.0},
+        },
+    )()
+    settlement = type("Settlement", (), {"principal_amount": Decimal("120.00")})()
+
+    result = FinancialService._build_principal_allocation_breakdown(
+        entry=entry,
+        settlement=settlement,
+    )
+
+    assert result["basis_entry_amount"] == 300.0
+    assert result["total_allocated_amount"] == 120.0
+    assert len(result["items"]) == 2
+    assert result["items"][0]["chart_account_id"] == 501
+    assert result["items"][0]["settled_allocated_amount"] == 72.0
+    assert result["items"][1]["chart_account_id"] == 502
+    assert result["items"][1]["settled_allocated_amount"] == 48.0
+
+
+def test_create_settlement_uses_schedule_template_amount_as_principal_limit(monkeypatch):
+    class _FakeEntry:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        financial_schedule_id = 77
+
+        def __init__(self):
+            self.original_amount = Decimal("350.00")
+            self.status = "posted"
+            self.company_id = 7
+            self.metadata_json = {"schedule_template_amount": 300.0}
+
+    class _FakeSchedule:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(type("Schedule", (), {"id": 77, "company_id": 7, "template_amount": Decimal("300.00"), "metadata_json": {}, "cost_center_id": None, "chart_account_id": 501})())
+
+    class _FakeSettlement:
+        company_id = _Column()
+        settlement_code = _Column()
+        id = _Column()
+        principal_amount = _Column()
+        financial_entry_id = _Column()
+        deleted_at = _Column()
+        settlement_status = _Column()
+        query = _QueryStub(None)
+
+    entry = _FakeEntry()
+    entry_query = _QueryStub(entry)
+
+    monkeypatch.setattr(financial_module, "FinancialEntry", type("FinancialEntryStub", (), {
+        "id": _Column(),
+        "company_id": _Column(),
+        "deleted_at": _Column(),
+        "query": entry_query,
+    }))
+    monkeypatch.setattr(financial_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(financial_module, "FinancialSettlement", _FakeSettlement)
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialCatalogService, "validate_reference_ids", lambda **kwargs: None)
+    monkeypatch.setattr(
+        financial_module.db.session,
+        "query",
+        lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("250.00")})(),
+    )
+    monkeypatch.setattr(financial_module.db.session, "rollback", lambda: None)
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_entry", lambda **kwargs: None)
+
+    settlement, error = FinancialService.create_settlement(
+        payload={
+            "company_id": 7,
+            "financial_entry_id": 99,
+            "settlement_type": "manual",
+            "settlement_date": date(2026, 4, 20),
+            "principal_amount": Decimal("60.00"),
+            "gross_amount": Decimal("60.00"),
+            "net_amount": Decimal("60.00"),
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert settlement is None
+    assert "valor principal do lançamento" in error
+
