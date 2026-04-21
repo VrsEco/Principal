@@ -218,6 +218,22 @@
   font-weight: 700;
 }
 
+.dre-row--group .dre-value {
+  font-size: 0.83rem;
+  font-weight: 800;
+}
+
+.dre-row--subgroup .dre-value {
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.dre-row--account-group .dre-value,
+.dre-row--account .dre-value {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 .dre-value-button {
   appearance: none;
   border: none;
@@ -427,11 +443,6 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-}
-
-.dre-row--account .dre-value,
-.dre-row--account-group .dre-value {
-  font-weight: 600;
 }
 
 .dre-table tfoot th {
