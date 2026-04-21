@@ -25,94 +25,51 @@
                 'cashflow-report-company-name'
             ) }}
 
-            {{ report_macros.workspace_filters(
-                report.filters,
-                'sem filtros adicionais.',
-                'cashflow-section cashflow-section--filters',
-                'cashflow-section-title',
-                'cashflow-filters-grid',
-                'cashflow-filter-item'
-            ) }}
-
-            {% if report.summary_cards %}
-                {{ report_macros.workspace_stats(
-                    report.summary_cards,
-                    'cashflow-section cashflow-section--stats',
-                    'cashflow-stats-grid',
-                    'cashflow-stat',
-                    'cashflow-stat',
-                    'cashflow-stat__value',
-                    'cashflow-stat__label'
-                ) }}
-            {% endif %}
-
-            <section class="report-workspace-section cashflow-section cashflow-section--overview">
-                <div class="cashflow-overview-grid">
-                    <article class="cashflow-overview-card">
-                        <div class="report-workspace-section-title cashflow-section-title">Visão do período</div>
-                        <div class="cashflow-overview-list">
-                            {% for item in report.general_info %}
-                            <div class="cashflow-overview-item">
-                                <span>{{ item.label }}</span>
-                                <strong>{{ item.value }}</strong>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <p class="cashflow-legend">
-                            Títulos com indicação <strong>Retirado</strong> permanecem nas tabelas analíticas,
-                            mas não entram no saldo projetado do fluxo.
-                        </p>
-                    </article>
-
-                    <article class="cashflow-overview-card">
-                        <div class="cashflow-section-heading">
-                            <div class="report-workspace-section-title cashflow-section-title">Contas Correntes</div>
-                            <span class="cashflow-section-caption">Saldo em {{ report.bank_balance_reference_label }}</span>
-                        </div>
-                        {% if report.bank_account_summary_rows %}
-                        <div class="report-workspace-table-wrap cashflow-table-wrap">
-                            <table class="report-workspace-table cashflow-summary-table">
-                                <thead>
-                                    <tr>
-                                        <th>Descrição</th>
-                                        <th>Limite</th>
-                                        <th>Saldo em {{ report.bank_balance_reference_label }}</th>
-                                        <th>Disp. Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in report.bank_account_summary_rows %}
-                                    <tr>
-                                        <td>{{ row.description }}</td>
-                                        <td>{{ row.limit }}</td>
-                                        <td>{{ row.balance }}</td>
-                                        <td>{{ row.available_total }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <th>Total</th>
-                                        <th>{{ report.bank_account_summary_totals.limit }}</th>
-                                        <th>{{ report.bank_account_summary_totals.balance }}</th>
-                                        <th>{{ report.bank_account_summary_totals.available_total }}</th>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="report-workspace-empty cashflow-inline-empty">
-                            Nenhuma conta corrente selecionada para composição do fluxo.
-                        </div>
-                        {% endif %}
-                    </article>
+            <section class="report-workspace-section cashflow-section cashflow-section--accounts">
+                <div class="cashflow-section-heading">
+                    <div class="report-workspace-section-title cashflow-section-title">Contas Correntes</div>
                 </div>
+                {% if report.bank_account_summary_rows %}
+                <div class="report-workspace-table-wrap cashflow-table-wrap">
+                    <table class="report-workspace-table cashflow-summary-table">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Limite</th>
+                                <th>Saldo em {{ report.bank_balance_reference_label }}</th>
+                                <th>Disp. Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.bank_account_summary_rows %}
+                            <tr>
+                                <td>{{ row.description }}</td>
+                                <td>{{ row.limit }}</td>
+                                <td>{{ row.balance }}</td>
+                                <td>{{ row.available_total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>Total</th>
+                                <th>{{ report.bank_account_summary_totals.limit }}</th>
+                                <th>{{ report.bank_account_summary_totals.balance }}</th>
+                                <th>{{ report.bank_account_summary_totals.available_total }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="report-workspace-empty cashflow-inline-empty">
+                    Nenhuma conta corrente selecionada para composição do fluxo.
+                </div>
+                {% endif %}
             </section>
 
             <section class="report-workspace-section cashflow-section cashflow-section--flow">
                 <div class="cashflow-section-heading">
                     <div class="report-workspace-section-title cashflow-section-title">Fluxo de Caixa</div>
-                    <span class="cashflow-section-caption">{{ report.periodicity_label }}</span>
                 </div>
                 <div class="report-workspace-table-wrap cashflow-table-wrap">
                     <table class="report-workspace-table cashflow-flow-table">

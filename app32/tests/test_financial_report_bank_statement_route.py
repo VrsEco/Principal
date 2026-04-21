@@ -259,6 +259,10 @@ def test_cash_flow_report_view_renders_dedicated_layout():
     assert "Contas a Receber Selecionadas" in html
     assert "Contas a Pagar Selecionadas" in html
     assert "Disp. Total Final" in html
+    assert "Visão do período" not in html
+    assert "Janela analisada" not in html
+    assert "Periodicidade" not in html
+    assert "Títulos financeiros em aberto" not in html
 
 
 def test_income_statement_filters_page_builds_report_context(monkeypatch):
