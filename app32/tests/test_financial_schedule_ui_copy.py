@@ -19,3 +19,11 @@ def test_schedule_javascript_uses_titulo_financeiro_copy():
     assert "Informe o histórico do título financeiro." in schedule_js
     assert "Falha ao carregar títulos financeiros." in list_js
     assert "Deseja realmente excluir este título financeiro?" in list_js
+
+
+def test_settlement_delete_button_is_bound_to_baixas_list():
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert "data-settlement-delete" in schedule_js
+    assert "const baixasListEl = $('baixas-list');" in schedule_js
+    assert "baixasListEl.addEventListener('click'" in schedule_js
