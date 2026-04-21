@@ -108,7 +108,7 @@
         <div class="sub-menu">
             <div class="sidebar-subgroup {{ 'open' if '/financial/catalogs' in request.path or '/financial/domain-enablements' in request.path }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                    Base
+                    Cadastros
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="3">
                         <polyline points="6 9 12 15 18 9"></polyline>
@@ -161,7 +161,7 @@
 
             <div class="sidebar-subgroup {{ 'open' if request.path == '/financial/schedules' or request.path == '/financial/entries' or '/financial/entries/' in request.path or request.path == '/financial/entries/direct' or request.path == '/financial/automation' or request.path == '/financial/budget' or request.path == '/financial/budget/execution' or request.path == '/financial/reconciliation' or request.path == '/financial/borderos' or '/financial/borderos/' in request.path or request.path == '/financial/borderos/new' }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                    Operação
+                    Movimentos
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="3">
                         <polyline points="6 9 12 15 18 9"></polyline>
@@ -191,7 +191,7 @@
 
             <div class="sidebar-subgroup {{ 'open' if request.path == '/financial' or request.path == '/financial/dashboard' or '/financial/reports/' in request.path }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                    Gestão
+                    Relatórios
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="3">
                         <polyline points="6 9 12 15 18 9"></polyline>
