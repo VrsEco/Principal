@@ -21,6 +21,7 @@ def _candidate_key_paths() -> list[Path]:
     candidates: list[Path] = []
     if env_path:
         candidates.append(Path(env_path))
+    candidates.append(repo_root / "deploy_key_SECRETA.txt")
     app_dir = repo_root / "app32"
     if app_dir.exists():
         candidates.append(app_dir / "deploy_key_SECRETA.txt")

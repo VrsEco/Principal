@@ -47,72 +47,17 @@ jobs:
           command_timeout: 10m
           script: |
             set -e
-            # PROJECT_PATH deve ser o diretório /srv/.../www (raiz do git) ou a pasta do app
             echo "📂 Acessando diretório do projeto..."
             cd ${{ secrets.PROJECT_PATH }}
-            
-            echo "📍 Local atual: $(pwd)"
-            echo "📄 Listando arquivos:"
-            ls -F
 
-            echo "🌐 Atualizando código via Git..."
-            git fetch origin main
-            git reset --hard origin/main
-
-            # Detecta se estamos na raiz do repo ou dentro da pasta app32
-            if [ -f "app32/requirements.txt" ]; then
-                APP_DIR="app32"
-                REQ_PATH="app32/requirements.txt"
-                echo "✅ Detectado: Raiz do repositório"
-            elif [ -f "requirements.txt" ]; then
-                APP_DIR="."
-                REQ_PATH="requirements.txt"
-                echo "✅ Detectado: Dentro da pasta do App"
+            if [ -x "app32/scripts/deploy_configr.sh" ]; then
+              echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
+              bash app32/scripts/deploy_configr.sh
+            elif [ -x "scripts/deploy_configr.sh" ]; then
+              echo "🚀 Executando deploy oficial via scripts/deploy_configr.sh"
+              bash scripts/deploy_configr.sh
             else
-                echo "❌ ERRO: requirements.txt não encontrado em $(pwd) ou app32/"
-                ls -R
-                exit 1
+              echo "❌ Script oficial de deploy não encontrado."
+              find . -maxdepth 3 -name "deploy_configr.sh" -print
+              exit 1
             fi
-
-            echo "📦 Instalando dependências ($REQ_PATH)..."
-            PIP=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/pip
-            $PIP install -r $REQ_PATH --quiet
-
-            echo "🗃️ Executando migrations do banco de dados..."
-            PYTHON=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python
-            set +e
-            cd $APP_DIR
-            $PYTHON -c "
-            import sys, os
-            sys.path.insert(0, '.')
-            from dotenv import load_dotenv
-            load_dotenv('.env')
-            os.environ.setdefault('FLASK_CONFIG', 'production')
-            from flask_migrate import upgrade
-            try:
-                from app import create_app
-                app = create_app('production')
-                with app.app_context():
-                    upgrade()
-                print('✅ Migrations OK')
-            except ImportError as e:
-                print(f'⚠️ Erro de import na migration: {e}')
-                print(f'path: {sys.path}')
-            " 2>&1 || echo "⚠️ Migrations falharam ou não há migrações pendentes"
-            
-            # Volta para a base se entramos em app32
-            if [ "$APP_DIR" != "." ]; then cd ..; fi
-            set -e
-
-            echo "🔄 Reiniciando o servidor (Passenger/uWSGI)..."
-            mkdir -p tmp
-            touch tmp/restart.txt
-            if [ -d "app32" ]; then
-                mkdir -p app32/tmp
-                touch app32/tmp/restart.txt
-            fi
-            
-            # Força recarregamento uWSGI se houver arquivo
-            find . -name "uwsgi.ini" -exec touch {} + 2>/dev/null || true
-            
-            echo "✅ Deploy concluído com sucesso!"
