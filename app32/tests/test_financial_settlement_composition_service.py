@@ -188,3 +188,41 @@ def test_create_assisted_settlement_forwards_component_payload_and_updates_adjus
     assert adjustment.open_amount == Decimal("0.00")
     assert adjustment.status == "settled"
     assert captured["committed"] is True
+
+
+def test_create_assisted_settlement_discards_incoming_settlement_code(monkeypatch):
+    captured = {}
+    schedule = _Schedule()
+    monkeypatch.setattr(composition_module.FinancialSettlementCompositionService, "_fetch_schedule", lambda **kwargs: schedule)
+    monkeypatch.setattr(composition_module.FinancialSettlementCompositionService, "_list_open_adjustments", lambda **kwargs: [])
+    monkeypatch.setattr(
+        composition_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda **kwargs: {"principal_open": 1000.0, "adjustments_open": 0.0, "total_open": 1000.0},
+    )
+
+    class _FakeScheduleService:
+        @staticmethod
+        def create_settlement_from_schedule(**kwargs):
+            captured["settlement_payload"] = kwargs["payload"]
+            return {"settlement": {"id": 601}, "entry": {"id": 99}, "created_entry": False}, None
+
+    monkeypatch.setitem(sys.modules, "services.financial_schedule_service", type("Module", (), {"FinancialScheduleService": _FakeScheduleService}))
+    monkeypatch.setattr(composition_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(composition_module.db.session, "rollback", lambda: captured.setdefault("rolled_back", True))
+
+    result, error = FinancialSettlementCompositionService.create_assisted_settlement(
+        company_id=7,
+        schedule_id=34,
+        payload={
+            "settlement_code": "LIQ-000016",
+            "settlement_date": "2026-04-20",
+            "composition": {"principal": 100, "financial_correction": 0, "discount": 0},
+            "settlement_type": "manual",
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert result["settlement"]["id"] == 601
+    assert "settlement_code" not in captured["settlement_payload"]

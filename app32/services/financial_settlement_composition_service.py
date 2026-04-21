@@ -429,6 +429,7 @@ class FinancialSettlementCompositionService:
 
         settlement_payload = dict(payload or {})
         settlement_payload.pop("composition", None)
+        settlement_payload.pop("settlement_code", None)
         settlement_payload.setdefault("settlement_type", "manual")
         settlement_payload["settlement_date"] = simulation["settlement_date"]
         settlement_payload.update(simulation["settlement_payload"])

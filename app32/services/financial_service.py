@@ -1544,8 +1544,11 @@ class FinancialService:
     ) -> Tuple[Optional[FinancialSettlement], Optional[str]]:
         normalized_payload = dict(payload or {})
         company_id = normalized_payload.get("company_id")
-        if company_id and not normalized_payload.get("settlement_code"):
-            normalized_payload["settlement_code"] = FinancialService._generate_settlement_code(int(company_id))
+        if company_id:
+            normalized_payload["settlement_code"] = FinancialService._normalize_requested_settlement_code(
+                company_id=int(company_id),
+                requested_code=normalized_payload.get("settlement_code"),
+            )
 
         try:
             data = FinancialSettlementInput(**normalized_payload)
@@ -1739,6 +1742,36 @@ class FinancialService:
             except Exception:
                 max_number = max(max_number, int(getattr(settlement, "id", 0) or 0))
         return f"BX-{max_number + 1:06d}"
+
+    @staticmethod
+    def _is_auto_generated_settlement_code(code: Optional[str]) -> bool:
+        normalized = str(code or "").strip().upper()
+        if not normalized:
+            return False
+        for prefix in ("BX-", "LIQ-"):
+            if not normalized.startswith(prefix):
+                continue
+            suffix = normalized[len(prefix):]
+            return suffix.isdigit()
+        return False
+
+    @staticmethod
+    def _normalize_requested_settlement_code(company_id: int, requested_code: Optional[str]) -> str:
+        normalized = str(requested_code or "").strip().upper()
+        if not normalized:
+            return FinancialService._generate_settlement_code(company_id)
+
+        existing = FinancialSettlement.query.filter(
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.settlement_code == normalized,
+        ).first()
+        if not existing:
+            return normalized
+
+        if FinancialService._is_auto_generated_settlement_code(normalized):
+            return FinancialService._generate_settlement_code(company_id)
+
+        return normalized
 
     @staticmethod
     def upload_settlement_attachment(

@@ -127,6 +127,64 @@ def test_create_settlement_from_schedule_forwards_entry_and_external_reference(m
     assert captured["payload"]["metadata_json"]["audit"]["actor"]["user_name"] == "Usuário Teste"
 
 
+def test_create_settlement_from_schedule_discards_incoming_settlement_code(monkeypatch):
+    schedule = type("Schedule", (), {"id": 15, "company_id": 9, "schedule_code": "TIT-000015"})()
+
+    class _FakeScheduleModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(first_result=schedule)
+
+    captured = {}
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeScheduleModel)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "create_entry_from_schedule",
+        lambda **kwargs: ({"entry": {"id": 88}, "created": False}, None),
+    )
+    monkeypatch.setattr(
+        schedule_module,
+        "FinancialEntry",
+        type(
+            "FinancialEntryModel",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(first_result=type("Entry", (), {"id": 88})()),
+            },
+        ),
+    )
+    monkeypatch.setattr(schedule_module.FinancialService, "serialize_entry", lambda entry: {"id": entry.id})
+    monkeypatch.setattr(schedule_module.FinancialService, "serialize_settlement", lambda settlement, **kwargs: {"id": settlement.id})
+
+    def _fake_create_settlement(*, payload, allowed_company_ids=None):
+        captured["payload"] = payload
+        return type("Settlement", (), {"id": 901, "financial_entry_id": 88})(), None
+
+    monkeypatch.setattr(schedule_module.FinancialService, "create_settlement", _fake_create_settlement)
+
+    result, error = FinancialScheduleService.create_settlement_from_schedule(
+        schedule_id=15,
+        company_id=9,
+        payload={
+            "settlement_code": "LIQ-000016",
+            "settlement_type": "manual",
+            "settlement_date": "2026-04-20",
+            "principal_amount": 50,
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result["settlement"]["id"] == 901
+    assert "settlement_code" not in captured["payload"]
+
+
 def test_delete_schedule_soft_deletes_generated_entries_without_settlements(monkeypatch):
     schedule = type("Schedule", (), {"id": 21, "company_id": 9, "deleted_at": None})()
     linked_entry = type(

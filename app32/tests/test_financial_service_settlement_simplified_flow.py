@@ -175,6 +175,79 @@ def test_generate_settlement_code_does_not_reuse_soft_deleted_code(monkeypatch):
     assert ("is", None) not in captured_filters
 
 
+def test_create_settlement_regenerates_duplicate_auto_code(monkeypatch):
+    captured = {}
+
+    class _FakeEntry:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+
+        def __init__(self):
+            self.original_amount = Decimal("500.00")
+            self.status = "posted"
+
+    class _FakeSettlement:
+        company_id = _Column()
+        settlement_code = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        principal_amount = _Column()
+        financial_entry_id = _Column()
+        settlement_status = _Column()
+        query = _SequenceQueryStub([type("ExistingSettlement", (), {"id": 16, "settlement_code": "LIQ-000016"})(), None])
+
+        def __init__(self, **kwargs):
+            captured["kwargs"] = kwargs
+            self.id = 777
+            self.__dict__.update(kwargs)
+
+    entry = _FakeEntry()
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntry",
+        type("FinancialEntryStub", (), {
+            "id": _Column(),
+            "company_id": _Column(),
+            "deleted_at": _Column(),
+            "query": _QueryStub(entry),
+        }),
+    )
+    monkeypatch.setattr(financial_module, "FinancialSettlement", _FakeSettlement)
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialCatalogService, "validate_reference_ids", lambda **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialService, "_generate_settlement_code", lambda company_id: "BX-000017")
+    monkeypatch.setattr(
+        financial_module.db.session,
+        "query",
+        lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("0")})(),
+    )
+    monkeypatch.setattr(financial_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
+    monkeypatch.setattr(financial_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
+    monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_entry", lambda **kwargs: None)
+
+    settlement, error = FinancialService.create_settlement(
+        payload={
+            "company_id": 7,
+            "financial_entry_id": 99,
+            "settlement_code": "LIQ-000016",
+            "settlement_type": "manual",
+            "settlement_date": date(2026, 4, 20),
+            "principal_amount": Decimal("100.00"),
+            "bank_account_id": 3,
+            "notes": "Baixa regenerada",
+            "metadata_json": {"history": "Baixa regenerada"},
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert settlement is not None
+    assert captured["kwargs"]["settlement_code"] == "BX-000017"
+
+
 def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     captured = {}
 

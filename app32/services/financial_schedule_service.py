@@ -923,6 +923,7 @@ class FinancialScheduleService:
             return None, "Lançamento financeiro gerado não encontrado no escopo da empresa."
 
         settlement_payload = dict(payload or {})
+        settlement_payload.pop("settlement_code", None)
         settlement_payload["company_id"] = company_id
         settlement_payload["financial_entry_id"] = entry_id
         settlement_payload["external_reference"] = f"financial_schedule:{schedule.id}"
