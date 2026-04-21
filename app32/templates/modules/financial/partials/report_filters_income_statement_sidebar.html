@@ -7,7 +7,9 @@
 {% set include_open = 'include_open' not in filters or (filters.get('include_open', ['true']) | first) == 'true' %}
 {% set include_receivable = 'include_receivable' not in filters or (filters.get('include_receivable', ['true']) | first) == 'true' %}
 {% set include_payable = 'include_payable' not in filters or (filters.get('include_payable', ['true']) | first) == 'true' %}
-{% set include_budget_vs_actual = (filters.get('include_budget_vs_actual', ['false']) | first) == 'true' %}
+{% set show_competence_column = 'show_competence_column' not in filters or (filters.get('show_competence_column', ['true']) | first) == 'true' %}
+{% set show_due_column = 'show_due_column' not in filters or (filters.get('show_due_column', ['true']) | first) == 'true' %}
+{% set show_liquidation_column = 'show_liquidation_column' not in filters or (filters.get('show_liquidation_column', ['true']) | first) == 'true' %}
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
@@ -109,10 +111,26 @@
                     <input type="checkbox" name="include_payable" value="true" {% if include_payable %}checked{% endif %} data-filter-input data-default-value="true">
                     <span>Pagamento</span>
                 </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section dre-sidebar-section">
+            <p class="filter-label">Colunas principais</p>
+            <div class="report-workspace-choice-grid">
                 <label class="report-workspace-choice-card">
-                    <input type="hidden" name="include_budget_vs_actual" value="false">
-                    <input type="checkbox" name="include_budget_vs_actual" value="true" {% if include_budget_vs_actual %}checked{% endif %} data-filter-input data-default-value="false">
-                    <span>Orçado x Realizado</span>
+                    <input type="hidden" name="show_competence_column" value="false">
+                    <input type="checkbox" name="show_competence_column" value="true" {% if show_competence_column %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Competência</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="hidden" name="show_due_column" value="false">
+                    <input type="checkbox" name="show_due_column" value="true" {% if show_due_column %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Vencimento</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="hidden" name="show_liquidation_column" value="false">
+                    <input type="checkbox" name="show_liquidation_column" value="true" {% if show_liquidation_column %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Liquidação</span>
                 </label>
             </div>
         </section>

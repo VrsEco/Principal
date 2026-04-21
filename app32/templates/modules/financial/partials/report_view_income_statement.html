@@ -1,5 +1,8 @@
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
 {% set hierarchy_rows = report.hierarchy_rows or [] %}
+{% set show_competence_column = report.show_competence_column if report.show_competence_column is defined else true %}
+{% set show_due_column = report.show_due_column if report.show_due_column is defined else true %}
+{% set show_liquidation_column = report.show_liquidation_column if report.show_liquidation_column is defined else true %}
 {% macro dre_value_cell(label, tone_class, can_drilldown=false, bucket='', chart_account_id='', account_label='', bucket_label='') -%}
     {% if can_drilldown %}
     <button type="button"
@@ -87,9 +90,15 @@
                         <thead>
                             <tr>
                                 <th class="col-account">Conta contábil</th>
+                                {% if show_competence_column %}
                                 <th class="col-value">Competência</th>
+                                {% endif %}
+                                {% if show_due_column %}
                                 <th class="col-value">Vencimento</th>
+                                {% endif %}
+                                {% if show_liquidation_column %}
                                 <th class="col-value">Liquidação</th>
+                                {% endif %}
                                 {% if report.show_status_columns %}
                                 <th class="col-value">Em aberto</th>
                                 <th class="col-value">Liquidado</th>
@@ -120,6 +129,7 @@
                                         </div>
                                     </div>
                                 </td>
+                                {% if show_competence_column %}
                                 <td class="col-value dre-value">
                                     {{ dre_value_cell(
                                         row.competencia_label,
@@ -131,6 +141,8 @@
                                         'Competência'
                                     ) }}
                                 </td>
+                                {% endif %}
+                                {% if show_due_column %}
                                 <td class="col-value dre-value">
                                     {{ dre_value_cell(
                                         row.vencimento_label,
@@ -142,6 +154,8 @@
                                         'Vencimento'
                                     ) }}
                                 </td>
+                                {% endif %}
+                                {% if show_liquidation_column %}
                                 <td class="col-value dre-value">
                                     {{ dre_value_cell(
                                         row.liquidacao_label,
@@ -153,6 +167,7 @@
                                         'Baixa'
                                     ) }}
                                 </td>
+                                {% endif %}
                                 {% if report.show_status_columns %}
                                 <td class="col-value dre-value">
                                     {{ dre_value_cell(
@@ -183,15 +198,21 @@
                         <tfoot>
                             <tr>
                                 <th>Total consolidado</th>
+                                {% if show_competence_column %}
                                 <th>
                                     <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.competence < 0 %}dre-value-button--negative{% elif report.totals and report.totals.competence > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="competence" data-bucket-label="Competência" data-account-label="Total consolidado">{{ report.totals.competence_label if report.totals else '-' }}</button>
                                 </th>
+                                {% endif %}
+                                {% if show_due_column %}
                                 <th>
                                     <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.due < 0 %}dre-value-button--negative{% elif report.totals and report.totals.due > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="due" data-bucket-label="Vencimento" data-account-label="Total consolidado">{{ report.totals.due_label if report.totals else '-' }}</button>
                                 </th>
+                                {% endif %}
+                                {% if show_liquidation_column %}
                                 <th>
                                     <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.liquidation < 0 %}dre-value-button--negative{% elif report.totals and report.totals.liquidation > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="liquidation" data-bucket-label="Baixa" data-account-label="Total consolidado">{{ report.totals.liquidation_label if report.totals else '-' }}</button>
                                 </th>
+                                {% endif %}
                                 {% if report.show_status_columns %}
                                 <th>
                                     <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.open < 0 %}dre-value-button--negative{% elif report.totals and report.totals.open > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="open" data-bucket-label="Em aberto" data-account-label="Total consolidado">{{ report.totals.open_label if report.totals else '-' }}</button>

@@ -351,6 +351,107 @@ def test_income_statement_02_compiles_due_and_settlement_independently_from_comp
     assert payload["totals"]["liquidation"] == 150.0
 
 
+def test_income_statement_hides_unselected_primary_columns(monkeypatch):
+    schedule = SimpleNamespace(
+        id=38,
+        company_id=7,
+        status="active",
+        entry_type="receivable",
+        movement_nature="credit",
+        competence_date=date(2026, 4, 10),
+        start_date=date(2026, 4, 10),
+        first_due_date=date(2026, 4, 20),
+        next_due_date=date(2026, 4, 20),
+        template_amount=Decimal("100"),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    _install_income_statement_fakes(monkeypatch, schedules=[schedule], entries=[], settlements=[])
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "include_open": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+            "show_competence_column": "false",
+            "show_due_column": "true",
+            "show_liquidation_column": "false",
+        },
+    )
+    assert error is None
+
+    payload = FinancialReportService._build_income_statement(7, filters)
+
+    assert payload["show_competence_column"] is False
+    assert payload["show_due_column"] is True
+    assert payload["show_liquidation_column"] is False
+    column_keys = [column["key"] for column in payload["columns"]]
+    assert "competencia" not in column_keys
+    assert "vencimento" in column_keys
+    assert "liquidacao" not in column_keys
+    assert [column["label"] for column in payload["columns"][:3]] == ["Código", "Descrição", "Vencimento"]
+
+
+def test_income_statement_requires_at_least_one_primary_column():
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "include_open": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+            "show_competence_column": "false",
+            "show_due_column": "false",
+            "show_liquidation_column": "false",
+        },
+    )
+
+    assert filters is None
+    assert error == "Selecione ao menos uma coluna principal para o DRE."
+
+
+def test_income_statement_ignores_legacy_budget_vs_actual_filter():
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "include_open": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+            "include_budget_vs_actual": "true",
+        },
+    )
+
+    assert error is None
+    assert filters.include_budget_vs_actual is False
+
+
+def test_income_statement_no_longer_accepts_budget_as_dre_type():
+    filters, error = FinancialReportService._normalize_filters(
+        "income_statement",
+        {
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "include_open": "true",
+            "include_settled": "true",
+            "include_receivable": "false",
+            "include_payable": "false",
+            "include_budget_vs_actual": "true",
+        },
+    )
+
+    assert filters is None
+    assert error == "Selecione ao menos um tipo para o DRE."
+
+
 def test_income_statement_reports_keep_totals_consistent_between_dre01_and_dre02(monkeypatch):
     schedule = SimpleNamespace(
         id=44,

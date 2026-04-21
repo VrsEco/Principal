@@ -209,11 +209,14 @@ class FinancialReportService:
                 "show_description": True,
                 "order_by": "code",
                 "order_direction": "asc",
+                "include_budget_vs_actual": False,
             })
             if not any([data.include_open, data.include_settled]):
                 return None, "Selecione ao menos um status para o DRE."
-            if not any([data.include_receivable, data.include_payable, data.include_budget_vs_actual]):
+            if not any([data.include_receivable, data.include_payable]):
                 return None, "Selecione ao menos um tipo para o DRE."
+            if not any([data.show_competence_column, data.show_due_column, data.show_liquidation_column]):
+                return None, "Selecione ao menos uma coluna principal para o DRE."
         if data.report_type == "schedule_report":
             updates = {"orientation": "portrait"}
             if not data.competence_start:
@@ -1837,13 +1840,12 @@ class FinancialReportService:
             columns.append({"key": "codigo", "label": "Código"})
         if filters.show_description:
             columns.append({"key": "descricao", "label": "Descrição"})
-        columns.extend(
-            [
-                {"key": "competencia", "label": "Competência"},
-                {"key": "vencimento", "label": "Vencimento"},
-                {"key": "liquidacao", "label": "Baixa"},
-            ]
-        )
+        if filters.show_competence_column:
+            columns.append({"key": "competencia", "label": "Competência"})
+        if filters.show_due_column:
+            columns.append({"key": "vencimento", "label": "Vencimento"})
+        if filters.show_liquidation_column:
+            columns.append({"key": "liquidacao", "label": "Liquidação"})
         if not consolidated_by_period:
             columns.extend(
                 [
@@ -1902,6 +1904,9 @@ class FinancialReportService:
                 "orientation": filters.orientation,
                 "hierarchy_rows": hierarchy_rows,
                 "show_status_columns": not consolidated_by_period,
+                "show_competence_column": filters.show_competence_column,
+                "show_due_column": filters.show_due_column,
+                "show_liquidation_column": filters.show_liquidation_column,
             },
         )
 
@@ -2544,15 +2549,24 @@ class FinancialReportService:
                         (filters.include_open, "Aberto"),
                     ] if enabled]) or "Nenhum",
                 })
-            type_explicit = any(key in raw_filters for key in ("include_receivable", "include_payable", "include_budget_vs_actual"))
+            type_explicit = any(key in raw_filters for key in ("include_receivable", "include_payable"))
             if type_explicit:
                 values.append({
                     "label": "Tipo",
                     "value": ", ".join([label for enabled, label in [
                         (filters.include_receivable, "Recebimento"),
                         (filters.include_payable, "Pagamento"),
-                        (filters.include_budget_vs_actual, "Orçado x Realizado"),
                     ] if enabled]) or "Nenhum",
+                })
+            column_explicit = any(key in raw_filters for key in ("show_competence_column", "show_due_column", "show_liquidation_column"))
+            if column_explicit:
+                values.append({
+                    "label": "Colunas DRE",
+                    "value": ", ".join([label for enabled, label in [
+                        (filters.show_competence_column, "Competência"),
+                        (filters.show_due_column, "Vencimento"),
+                        (filters.show_liquidation_column, "Liquidação"),
+                    ] if enabled]) or "Nenhuma",
                 })
         else:
             values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})

@@ -423,3 +423,111 @@ def test_income_statement_filters_page_only_keeps_drilldown_on_analytical_rows(m
     assert html.count("data-dre-detail-trigger") == 6
     assert 'data-chart-account-id="11"' in html
     assert 'data-chart-account-id="10"' not in html
+
+
+def test_income_statement_sidebar_removes_budget_vs_actual_and_adds_column_toggles():
+    app = _build_app()
+    report_definition = {
+        "code": "income_statement",
+        "slug": "demonstrativo-resultados",
+        "label": "Demonstração de Resultados 01",
+        "description": "DRE contábil.",
+    }
+    options = SimpleNamespace(chart_accounts=[], cost_centers=[], projects=[])
+
+    with app.test_request_context("/financial/reports/demonstrativo-resultados?company_id=7"):
+        html = render_template(
+            "modules/financial/partials/report_filters_income_statement_sidebar.html",
+            company_id=7,
+            default_period_start="2026-04-01",
+            default_period_end="2026-04-30",
+            filters={},
+            options=options,
+            report_definition=report_definition,
+        )
+
+    assert "Orçado x Realizado" not in html
+    assert "include_budget_vs_actual" not in html
+    assert 'name="show_competence_column"' in html
+    assert 'name="show_due_column"' in html
+    assert 'name="show_liquidation_column"' in html
+    assert "Colunas principais" in html
+
+
+def test_income_statement_filters_page_hides_unselected_primary_columns():
+    app = _build_app()
+    company = SimpleNamespace(id=7, name="Empresa Teste")
+    company.to_dict = lambda: {"id": 7, "name": "Empresa Teste"}
+    report_definition = {
+        "code": "income_statement",
+        "slug": "demonstrativo-resultados",
+        "label": "Demonstração de Resultados 01",
+        "description": "DRE contábil.",
+        "filters": ("period",),
+    }
+    report = {
+        "title": "Demonstração de Resultados 01",
+        "subtitle": "DRE contábil.",
+        "filters": [],
+        "summary_cards": [],
+        "general_info": [],
+        "show_status_columns": False,
+        "show_competence_column": False,
+        "show_due_column": True,
+        "show_liquidation_column": False,
+        "hierarchy_rows": [
+            {
+                "id": "dre-11",
+                "parent_id": None,
+                "chart_account_id": 11,
+                "codigo": "3.1.01.001",
+                "descricao": "Receita teste",
+                "account_label": "3.1.01.001 - Receita teste",
+                "level": 0,
+                "row_type": "account",
+                "is_leaf": True,
+                "has_children": False,
+                "competencia": 100.0,
+                "competencia_label": "R$ 100,00",
+                "vencimento": 100.0,
+                "vencimento_label": "R$ 100,00",
+                "liquidacao": 100.0,
+                "liquidacao_label": "R$ 100,00",
+                "aberto": 0.0,
+                "aberto_label": "R$ 0,00",
+                "baixado": 100.0,
+                "baixado_label": "R$ 100,00",
+            }
+        ],
+        "totals": {
+            "competence": 100.0,
+            "competence_label": "R$ 100,00",
+            "due": 100.0,
+            "due_label": "R$ 100,00",
+            "liquidation": 100.0,
+            "liquidation_label": "R$ 100,00",
+        },
+    }
+
+    with app.test_request_context(
+        "/financial/reports/demonstrativo-resultados"
+        "?period_start=2026-04-01"
+        "&period_end=2026-04-30"
+        "&show_competence_column=false"
+        "&show_due_column=true"
+        "&show_liquidation_column=false"
+    ):
+        html = render_template(
+            "modules/financial/partials/report_filters_income_statement_page.html",
+            company=company,
+            company_id=company.id,
+            report_definition=report_definition,
+            report=report,
+        )
+
+    assert '<th class="col-value">Competência</th>' not in html
+    assert '<th class="col-value">Vencimento</th>' in html
+    assert '<th class="col-value">Liquidação</th>' not in html
+    assert 'data-bucket="competence"' not in html
+    assert 'data-bucket="due"' in html
+    assert 'data-bucket="liquidation"' not in html
