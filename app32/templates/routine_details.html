@@ -134,8 +134,8 @@
 
                         <div class="form-group form-group-compact">
                             <label class="form-label">⭐ Peso de Pontuação *</label>
-                            <input type="number" name="score_weight" class="form-control-compact" min="0.1" step="0.1"
-                                max="10" value="{{ routine.score_weight or 1.0 }}" required>
+                            <input type="text" data-format="weight" name="score_weight" class="form-control-compact"
+                                value="{{ routine.score_weight or 1.0 }}" required>
                         </div>
                     </div>
                 </div>
@@ -217,7 +217,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Horas/Dedicação *</label>
-                            <input type="number" name="hours_used" id="hoursUsed" class="form-control" step="0.5" min="0.5" required>
+                            <input type="text" data-format="hours-decimal" name="hours_used" id="hoursUsed" class="form-control" required>
                         </div>
                     </div>
                     <div class="form-group" style="margin-top: 1rem;">
@@ -1164,7 +1164,9 @@
         document.getElementById('collaboratorFormDescription').textContent = 'Ajuste dedicação, notas ou substitua o colaborador vinculado à rotina.';
         document.getElementById('collaboratorSubmitButton').textContent = 'Atualizar executor';
         document.getElementById('collaboratorId').value = c.id;
-        document.getElementById('hoursUsed').value = c.hours_used;
+        document.getElementById('hoursUsed').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('hours-decimal', c.hours_used)
+            : c.hours_used;
         document.getElementById('collaboratorNotes').value = c.notes || '';
         await loadEmployees(c.employee_id);
     }

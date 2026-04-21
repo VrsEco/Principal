@@ -73,7 +73,7 @@
                 <label><span>Intervalo</span><input type="number" min="1" step="1" name="interval_value" value="1"></label>
                 <label><span>Offset início (dias)</span><input type="number" min="0" name="start_offset_days" value="0"></label>
                 <label><span>Offset vencimento (dias)</span><input type="number" min="0" name="due_offset_days" value="0"></label>
-                <label><span>Valor padrão</span><input type="number" step="0.01" min="0" name="template_amount" value="0"></label>
+                <label><span>Valor padrão</span><input type="text" data-format="currency" name="template_amount" value="0,00"></label>
                 <label class="col-span-2"><span>Template nome</span><input name="schedule_name_template" required placeholder="Financeiro {instance_code} - {instance_title}"></label>
                 <label class="col-span-2"><span>Template descrição</span><input name="description_template" required placeholder="Cobrança vinculada à instância {instance_code}"></label>
                 <label><span>Conta bancária</span><input type="number" min="1" name="bank_account_id"></label>

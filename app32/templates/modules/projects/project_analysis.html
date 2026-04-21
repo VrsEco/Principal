@@ -676,11 +676,11 @@
                 <div class="form-grid">
                     <div class="field">
                         <label>Horas Estimadas</label>
-                        <input type="number" id="taskEstimatedHours" step="0.5" value="0">
+                        <input type="text" data-format="hours-decimal" id="taskEstimatedHours" value="00:00">
                     </div>
                     <div class="field">
                         <label>Peso / Complexidade</label>
-                        <input type="number" id="taskScoreWeight" step="0.1" value="1.0">
+                        <input type="text" data-format="weight" id="taskScoreWeight" value="1">
                     </div>
                 </div>
 
@@ -716,7 +716,7 @@
                             </div>
                             <div class="field">
                                 <label>Horas Trabalhadas</label>
-                                <input type="number" id="logHours" step="0.1" placeholder="0.0">
+                                <input type="text" data-format="hours-decimal" id="logHours" placeholder="00:00">
                             </div>
                         </div>
                         <div class="field">
@@ -1328,8 +1328,12 @@
             document.getElementById('taskWhat').value = currentTask.what;
             document.getElementById('taskEmployeeId').value = currentTask.employee_id || '';
             document.getElementById('taskDueDate').value = currentTask.due_date || '';
-            document.getElementById('taskEstimatedHours').value = currentTask.estimated_hours || 0;
-            document.getElementById('taskScoreWeight').value = currentTask.score_weight || 1.0;
+        document.getElementById('taskEstimatedHours').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('hours-decimal', currentTask.estimated_hours || 0)
+            : (currentTask.estimated_hours || 0);
+        document.getElementById('taskScoreWeight').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('weight', currentTask.score_weight || 1.0)
+            : (currentTask.score_weight || 1.0);
             document.getElementById('taskHow').value = currentTask.how || '';
             document.getElementById('taskNotes').value = currentTask.notes || '';
 
@@ -1384,8 +1388,12 @@
             project_id: projectId,
             employee_id: document.getElementById('taskEmployeeId').value || null,
             due_date: document.getElementById('taskDueDate').value || null,
-            estimated_hours: document.getElementById('taskEstimatedHours').value || 0,
-            score_weight: document.getElementById('taskScoreWeight').value || 1.0,
+            estimated_hours: window.App32InputFormatters
+                ? window.App32InputFormatters.parseClockToDecimalHours(document.getElementById('taskEstimatedHours').value || '')
+                : (document.getElementById('taskEstimatedHours').value || 0),
+            score_weight: window.App32InputFormatters
+                ? Number(window.App32InputFormatters.normalizeForSubmit(document.getElementById('taskScoreWeight')))
+                : (document.getElementById('taskScoreWeight').value || 1.0),
             how: document.getElementById('taskHow').value,
             notes: document.getElementById('taskNotes').value,
             logs: currentTaskLogs

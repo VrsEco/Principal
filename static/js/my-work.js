@@ -3580,7 +3580,9 @@ function renderComments(logs) {
 }
 
 function updateHoursSummary() {
-  const newHours = parseFloat(document.getElementById('hoursWorked').value) || 0;
+  const newHours = window.App32InputFormatters
+    ? window.App32InputFormatters.parseClockToDecimalHours(document.getElementById('hoursWorked').value)
+    : (parseFloat(document.getElementById('hoursWorked').value) || 0);
   const currentHours = currentActivity?.worked_hours || 0;
   const estimatedHours = currentActivity?.estimated_hours || 0;
   const totalAfter = currentHours + newHours;

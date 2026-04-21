@@ -49,7 +49,7 @@
                     </label>
                     <label class="field field-span-1">
                         <span>Valor do Título</span>
-                        <input id="direct-amount" name="original_amount_display" inputmode="numeric" autocomplete="off" placeholder="0,00" required>
+                        <input id="direct-amount" name="original_amount_display" inputmode="numeric" data-format="currency" autocomplete="off" placeholder="0,00" required>
                     </label>
                     <label class="field field-span-2">
                         <span>Correção Financeira</span>
@@ -58,11 +58,11 @@
 
                     <label class="field field-span-2">
                         <span>Competência</span>
-                        <input id="direct-competence-date" name="competence_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                        <input id="direct-competence-date" name="competence_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="AAAA/MM/DD" required>
                     </label>
                     <label class="field field-span-2">
                         <span>Vencimento</span>
-                        <input id="direct-due-date" name="due_date_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa">
+                        <input id="direct-due-date" name="due_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="AAAA/MM/DD">
                     </label>
                     <label class="field field-span-2">
                         <span>Desconto</span>
@@ -70,7 +70,7 @@
                     </label>
                     <label class="field field-span-2">
                         <span>Data do lançamento</span>
-                        <input id="direct-occurred-on" name="occurred_on_display" inputmode="numeric" autocomplete="off" placeholder="dd/mm/aaaa" required>
+                        <input id="direct-occurred-on" name="occurred_on_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="AAAA/MM/DD" required>
                     </label>
                     <label class="field field-span-2">
                         <span>Conta bancária</span>

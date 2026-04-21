@@ -72,7 +72,7 @@
 
                 <label class="field">
                     <span>Valor a {{ 'pagar' if is_payable else 'receber' }}</span>
-                    <input id="principal-amount" name="principal_amount" inputmode="decimal" placeholder="0,00" required>
+                    <input id="principal-amount" name="principal_amount" inputmode="decimal" data-format="currency" placeholder="0,00" required>
                     <small id="available-amount-hint" class="field-hint"></small>
                 </label>
 

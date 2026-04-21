@@ -1430,7 +1430,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Duração Prevista (min)</label>
-                                <input type="number" id="meeting-planned-duration" class="form-input" min="0" step="5" placeholder="Ex: 60">
+                                <input type="text" data-format="duration-minutes" id="meeting-planned-duration" class="form-input" placeholder="01:00">
                             </div>
                         </div>
 
@@ -1555,7 +1555,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Duração Real (min)</label>
-                                <input type="number" id="meeting-actual-duration" class="form-input" min="0" step="5" placeholder="Ex: 75">
+                                <input type="text" data-format="duration-minutes" id="meeting-actual-duration" class="form-input" placeholder="01:15">
                             </div>
                         </div>
 
@@ -2041,6 +2041,19 @@
         syncActivitiesFromDom();
     }
 
+    function getMeetingDurationMinutes(inputId) {
+        const value = document.getElementById(inputId)?.value || '';
+        return window.App32InputFormatters
+            ? window.App32InputFormatters.parseClockToMinutes(value)
+            : (value || '');
+    }
+
+    function formatMeetingDurationValue(value) {
+        return window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('duration-minutes', value || '')
+            : (value || '');
+    }
+
     function collectMeetingSnapshot() {
         syncMeetingStateFromDom();
         return {
@@ -2048,11 +2061,11 @@
             title: document.getElementById('meeting-title')?.value || '',
             scheduled_date: document.getElementById('meeting-scheduled-date')?.value || '',
             scheduled_time: document.getElementById('meeting-scheduled-time')?.value || '',
-            planned_duration_minutes: document.getElementById('meeting-planned-duration')?.value || '',
+            planned_duration_minutes: getMeetingDurationMinutes('meeting-planned-duration'),
             invite_notes: document.getElementById('meeting-invite-notes')?.value || '',
             actual_date: document.getElementById('meeting-actual-date')?.value || '',
             actual_time: document.getElementById('meeting-actual-time')?.value || '',
-            actual_duration_minutes: document.getElementById('meeting-actual-duration')?.value || '',
+            actual_duration_minutes: getMeetingDurationMinutes('meeting-actual-duration'),
             meeting_notes: document.getElementById('meeting-notes')?.value || '',
             guestsInternal: deepClone(guestsInternal) || [],
             guestsExternal: deepClone(guestsExternal) || [],
@@ -2150,11 +2163,11 @@
             'meeting-title': snapshot.title || '',
             'meeting-scheduled-date': snapshot.scheduled_date || '',
             'meeting-scheduled-time': snapshot.scheduled_time || '',
-            'meeting-planned-duration': snapshot.planned_duration_minutes || '',
+            'meeting-planned-duration': formatMeetingDurationValue(snapshot.planned_duration_minutes || ''),
             'meeting-invite-notes': snapshot.invite_notes || '',
             'meeting-actual-date': snapshot.actual_date || '',
             'meeting-actual-time': snapshot.actual_time || '',
-            'meeting-actual-duration': snapshot.actual_duration_minutes || '',
+            'meeting-actual-duration': formatMeetingDurationValue(snapshot.actual_duration_minutes || ''),
             'meeting-notes': snapshot.meeting_notes || '',
         };
 
@@ -2460,11 +2473,11 @@
                 document.getElementById('meeting-title').value = meeting.title || '';
                 document.getElementById('meeting-scheduled-date').value = meeting.scheduled_date || '';
                 document.getElementById('meeting-scheduled-time').value = meeting.scheduled_time || '';
-                document.getElementById('meeting-planned-duration').value = meeting.planned_duration_minutes || '';
+        document.getElementById('meeting-planned-duration').value = formatMeetingDurationValue(meeting.planned_duration_minutes || '');
                 document.getElementById('meeting-invite-notes').value = meeting.invite_notes || '';
                 document.getElementById('meeting-actual-date').value = meeting.actual_date || '';
                 document.getElementById('meeting-actual-time').value = meeting.actual_time || '';
-                document.getElementById('meeting-actual-duration').value = meeting.actual_duration_minutes || '';
+        document.getElementById('meeting-actual-duration').value = formatMeetingDurationValue(meeting.actual_duration_minutes || '');
                 document.getElementById('meeting-notes').value = meeting.meeting_notes || '';
 
                 guestsInternal = meeting.guests?.internal || [];
@@ -2938,7 +2951,7 @@
             title: document.getElementById('meeting-title').value.trim(),
             scheduled_date: document.getElementById('meeting-scheduled-date').value,
             scheduled_time: document.getElementById('meeting-scheduled-time').value,
-            planned_duration_minutes: document.getElementById('meeting-planned-duration').value || null,
+        planned_duration_minutes: getMeetingDurationMinutes('meeting-planned-duration') || null,
             invite_notes: document.getElementById('meeting-invite-notes').value,
             guests: { internal: guestsInternal, external: guestsExternal },
             agenda: agendaItems
@@ -3416,7 +3429,7 @@
         const payload = {
             actual_date: document.getElementById('meeting-actual-date').value,
             actual_time: document.getElementById('meeting-actual-time').value,
-            actual_duration_minutes: document.getElementById('meeting-actual-duration').value || null,
+            actual_duration_minutes: getMeetingDurationMinutes('meeting-actual-duration') || null,
             participants, discussions, activities: getPersistableActivities(),
             meeting_notes: document.getElementById('meeting-notes').value,
             status: currentMeetingStatus
@@ -3588,8 +3601,8 @@
                 status: currentMeetingStatus,
                 actual_date: document.getElementById('meeting-actual-date').value,
                 actual_time: document.getElementById('meeting-actual-time').value,
-                actual_duration_minutes: document.getElementById('meeting-actual-duration').value || null,
-                planned_duration_minutes: document.getElementById('meeting-planned-duration').value || null
+                actual_duration_minutes: getMeetingDurationMinutes('meeting-actual-duration') || null,
+                planned_duration_minutes: getMeetingDurationMinutes('meeting-planned-duration') || null
             };
 
             const syncRes = await fetch('/meetings/api/meeting/' + currentMeetingId + '/sync-activities?company_id=' + meetingsCompanyId, {

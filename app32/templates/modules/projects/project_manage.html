@@ -1005,11 +1005,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Horas Previstas</label>
-                        <input type="number" id="taskEstimatedHours" class="form-input" step="0.5" min="0">
+                        <input type="text" data-format="hours-decimal" id="taskEstimatedHours" class="form-input">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Peso Score</label>
-                        <input type="number" id="taskScoreWeight" class="form-input" step="0.1" min="0.1" value="1.0">
+                        <input type="text" data-format="weight" id="taskScoreWeight" class="form-input" value="1">
                     </div>
                     <div class="form-group form-group--full" id="dueDateChangeQuickAccess" style="display: none;"></div>
                     <div class="form-group form-group--full">
@@ -2065,8 +2065,12 @@
             document.getElementById('taskWhat').value = currentTask.what || '';
             document.getElementById('taskEmployeeId').value = currentTask.employee_id || '';
             document.getElementById('taskDueDate').value = currentTask.due_date || '';
-            document.getElementById('taskEstimatedHours').value = currentTask.estimated_hours || '';
-            document.getElementById('taskScoreWeight').value = currentTask.score_weight || 1.0;
+        document.getElementById('taskEstimatedHours').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('hours-decimal', currentTask.estimated_hours || '')
+            : (currentTask.estimated_hours || '');
+        document.getElementById('taskScoreWeight').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('weight', currentTask.score_weight || 1.0)
+            : (currentTask.score_weight || 1.0);
             document.getElementById('taskHow').value = currentTask.how || '';
             document.getElementById('taskNotes').value = currentTask.notes || '';
 
@@ -2081,7 +2085,9 @@
             taskForm.reset();
             currentTaskLogs = [];
             dependencySection.style.display = 'none';
-            document.getElementById('taskScoreWeight').value = 1.0;
+        document.getElementById('taskScoreWeight').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('weight', 1)
+            : 1.0;
             mountBacklogHumanGateSection(null);
             renderTaskModalDueDateChangeQuickAccess(null);
 
@@ -2124,8 +2130,12 @@
             what: document.getElementById('taskWhat').value,
             employee_id: document.getElementById('taskEmployeeId').value || null,
             due_date: document.getElementById('taskDueDate').value || null,
-            estimated_hours: document.getElementById('taskEstimatedHours').value || 0,
-            score_weight: document.getElementById('taskScoreWeight').value || 1.0,
+            estimated_hours: window.App32InputFormatters
+                ? window.App32InputFormatters.parseClockToDecimalHours(document.getElementById('taskEstimatedHours').value || '')
+                : (document.getElementById('taskEstimatedHours').value || 0),
+            score_weight: window.App32InputFormatters
+                ? Number(window.App32InputFormatters.normalizeForSubmit(document.getElementById('taskScoreWeight')))
+                : (document.getElementById('taskScoreWeight').value || 1.0),
             how: document.getElementById('taskHow').value,
             notes: document.getElementById('taskNotes').value,
             logs: currentTaskLogs

@@ -375,27 +375,27 @@
                         <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">Pontos - Entrega no Prazo</label>
-                                <input type="number" id="on_time_score" class="form-control" step="0.1">
+                                <input type="text" data-format="score" id="on_time_score" class="form-control">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Pontos - Entrega em Atraso</label>
-                                <input type="number" id="late_score" class="form-control" step="0.1">
+                                <input type="text" data-format="score" id="late_score" class="form-control">
                             </div>
                         </div>
                         <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">Penalidade Diária (Atraso)</label>
-                                <input type="number" id="daily_delay_penalty" class="form-control" step="0.1">
+                                <input type="text" data-format="score" id="daily_delay_penalty" class="form-control">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Penalidade - Registro Tardio</label>
-                                <input type="number" id="late_registration_penalty" class="form-control" step="0.1">
+                                <input type="text" data-format="score" id="late_registration_penalty" class="form-control">
                             </div>
                         </div>
                         <div class="company-grid company-grid--2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                             <div class="form-group">
                                 <label class="form-label">Penalidade por Adiamento</label>
-                                <input type="number" id="postpone_penalty_points" class="form-control" step="0.1">
+                                <input type="text" data-format="score" id="postpone_penalty_points" class="form-control">
                                 <small class="form-help">Aplicada apenas quando o adiamento for aprovado. Não conta como atraso.</small>
                             </div>
                             <div class="form-group">
@@ -597,7 +597,7 @@
             </div>
             <div class="form-group mb-4">
                 <label class="form-label">Headcount Planejado</label>
-                <input type="number" id="role-headcount" class="form-control" value="1" min="1">
+                <input type="text" data-format="integer" id="role-headcount" class="form-control" value="1">
             </div>
             <div class="form-group mb-4">
                 <label class="form-label">Cargo Superior</label>
@@ -646,7 +646,7 @@
             </div>
             <div class="form-group mb-4">
                 <label class="form-label">Horas Semanais</label>
-                <input type="number" id="emp-weekly-hours" class="form-control" step="0.5" value="40" min="0">
+                <input type="text" data-format="hours-decimal" id="emp-weekly-hours" class="form-control" value="40:00">
             </div>
             <div class="modal-actions-row" style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
@@ -1317,11 +1317,21 @@
         if (!companyId) return;
         const r = await fetch(`/api/companies/${companyId}/performance-settings`);
         const s = await r.json();
-        document.getElementById('on_time_score').value = s.on_time_score;
-        document.getElementById('late_score').value = s.late_score;
-        document.getElementById('daily_delay_penalty').value = s.daily_delay_penalty;
-        document.getElementById('late_registration_penalty').value = s.late_registration_penalty;
-        document.getElementById('postpone_penalty_points').value = s.postpone_penalty_points ?? -1;
+        document.getElementById('on_time_score').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('score', s.on_time_score)
+            : s.on_time_score;
+        document.getElementById('late_score').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('score', s.late_score)
+            : s.late_score;
+        document.getElementById('daily_delay_penalty').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('score', s.daily_delay_penalty)
+            : s.daily_delay_penalty;
+        document.getElementById('late_registration_penalty').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('score', s.late_registration_penalty)
+            : s.late_registration_penalty;
+        document.getElementById('postpone_penalty_points').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('score', s.postpone_penalty_points ?? -1)
+            : (s.postpone_penalty_points ?? -1);
         document.getElementById('allow_postpone_after_due_date').checked = Boolean(s.allow_postpone_after_due_date);
     }
 
@@ -1386,11 +1396,21 @@
         e.preventDefault();
         const postponePenaltyValue = document.getElementById('postpone_penalty_points').value;
         const data = {
-            on_time_score: document.getElementById('on_time_score').value,
-            late_score: document.getElementById('late_score').value,
-            daily_delay_penalty: document.getElementById('daily_delay_penalty').value,
-            late_registration_penalty: document.getElementById('late_registration_penalty').value,
-            postpone_penalty_points: postponePenaltyValue === '' ? null : Number(postponePenaltyValue),
+            on_time_score: window.App32InputFormatters
+                ? Number(window.App32InputFormatters.normalizeForSubmit(document.getElementById('on_time_score')))
+                : document.getElementById('on_time_score').value,
+            late_score: window.App32InputFormatters
+                ? Number(window.App32InputFormatters.normalizeForSubmit(document.getElementById('late_score')))
+                : document.getElementById('late_score').value,
+            daily_delay_penalty: window.App32InputFormatters
+                ? Number(window.App32InputFormatters.normalizeForSubmit(document.getElementById('daily_delay_penalty')))
+                : document.getElementById('daily_delay_penalty').value,
+            late_registration_penalty: window.App32InputFormatters
+                ? Number(window.App32InputFormatters.normalizeForSubmit(document.getElementById('late_registration_penalty')))
+                : document.getElementById('late_registration_penalty').value,
+            postpone_penalty_points: postponePenaltyValue === '' ? null : (window.App32InputFormatters
+                ? Number(window.App32InputFormatters.normalizeForSubmit(document.getElementById('postpone_penalty_points')))
+                : Number(postponePenaltyValue)),
             allow_postpone_after_due_date: document.getElementById('allow_postpone_after_due_date').checked
         };
         const r = await fetch(`/api/companies/${companyId}/performance-settings`, {

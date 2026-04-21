@@ -55,7 +55,7 @@
                 <div class="budget-form-grid">
                     <label class="budget-field"><span>Código</span><input id="contract-code" maxlength="60" placeholder="CTR-0001"></label>
                     <label class="budget-field"><span>Nome</span><input id="contract-name" maxlength="160" placeholder="Concretagem"></label>
-                    <label class="budget-field"><span>Valor contratado</span><input id="contract-amount" type="number" min="0" step="0.01"></label>
+                    <label class="budget-field"><span>Valor contratado</span><input id="contract-amount" type="text" data-format="currency"></label>
                     <label class="budget-field"><span>Status</span>
                         <select id="contract-status">
                             <option value="draft">Rascunho</option>
@@ -91,7 +91,7 @@
                         <select id="document-type"><option value="invoice">Nota fiscal</option><option value="equivalent">Equivalente</option></select>
                     </label>
                     <label class="budget-field"><span>Número</span><input id="document-number" maxlength="80" placeholder="000123"></label>
-                    <label class="budget-field"><span>Valor executado</span><input id="document-amount" type="number" min="0" step="0.01"></label>
+                    <label class="budget-field"><span>Valor executado</span><input id="document-amount" type="text" data-format="currency"></label>
                     <label class="budget-field"><span>Favorecido</span><select id="document-counterparty"></select></label>
                     <label class="budget-field"><span>Registro padrão</span><select id="document-is-default-suggestion"><option value="false">Não</option><option value="true">Sim</option></select></label>
                     <label class="budget-field"><span>Emissão</span><input id="document-issue-date" type="date"></label>
@@ -114,7 +114,7 @@
                 <div class="budget-form-grid">
                     <label class="budget-field"><span>Rótulo</span><input id="installment-label" maxlength="80" placeholder="Parcela 1/2"></label>
                     <label class="budget-field"><span>Vencimento</span><input id="installment-due-date" type="date"></label>
-                    <label class="budget-field"><span>Valor</span><input id="installment-amount" type="number" min="0" step="0.01"></label>
+                    <label class="budget-field"><span>Valor</span><input id="installment-amount" type="text" data-format="currency"></label>
                     <label class="budget-field"><span>&nbsp;</span><button class="budget-btn budget-btn--secondary" id="btn-add-installment" type="button">Adicionar parcela</button></label>
                 </div>
                 <div id="draft-installments" class="budget-draft-list"></div>

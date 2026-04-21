@@ -151,7 +151,7 @@
         </div>
         <div class="form-field">
           <label for="progresso">Progresso (%)</label>
-          <input type="number" id="progresso" name="progresso" min="0" max="100"
+          <input type="text" data-format="percent" id="progresso" name="progresso"
                  value="{{ sessao.progresso if sessao else 0 }}">
         </div>
       </div>

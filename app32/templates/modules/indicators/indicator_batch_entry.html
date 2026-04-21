@@ -135,7 +135,7 @@
                             <span style="position:absolute; left:0.6rem; font-size:0.8rem; font-weight:700; color:var(--text-tertiary);">R$</span>
                             <input type="text" class="cell-input val-visual" placeholder="0,00" style="padding-left:2rem;" oninput="formatBatchCurrency(this)">
                             {% else %}
-                            <input type="number" step="0.01" class="cell-input val-real" placeholder="0.00">
+                            <input type="text" data-format="decimal" class="cell-input val-real" placeholder="0,00">
                             {% endif %}
                             <input type="hidden" class="val-hidden">
                         </div>

@@ -87,7 +87,7 @@
 
                     <div style="flex: 1; min-width: 100px;">
                         <label class="form-label small text-tertiary mb-1">Horas</label>
-                        <input type="number" step="0.1" class="form-control" id="editLogHours">
+                        <input type="text" data-format="hours-decimal" class="form-control" id="editLogHours">
                     </div>
 
                     <div style="flex: 3; min-width: 250px;">
@@ -518,7 +518,7 @@
                 </div>
                 
                 <div style="flex: 0 0 80px;">
-                    <input type="number" step="0.1" class="form-control form-control-sm" id="hours-${uid}" placeholder="Hrs">
+                    <input type="text" data-format="hours-decimal" class="form-control form-control-sm" id="hours-${uid}" placeholder="00:00">
                 </div>
                 
                 <div style="flex: 2; min-width: 200px;">
@@ -571,7 +571,9 @@
             if (!dateInput || !hoursInput) continue;
 
             const dateVal = dateInput.value;
-            const hoursVal = parseFloat(hoursInput.value);
+            const hoursVal = window.App32InputFormatters
+                ? window.App32InputFormatters.parseClockToDecimalHours(hoursInput.value)
+                : parseFloat(hoursInput.value);
             const desc = descInput ? descInput.value : '';
 
             if (dateVal && hoursVal && !isNaN(hoursVal) && hoursVal > 0) {
@@ -930,7 +932,9 @@
         document.getElementById('editLogEmployeeId').value = log.employee_id;
         document.getElementById('editLogEmployeeName').value = log.employee_name || 'Desconhecido';
         document.getElementById('editLogDate').value = log.work_date.split('T')[0];
-        document.getElementById('editLogHours').value = log.hours_worked;
+        document.getElementById('editLogHours').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('hours-decimal', log.hours_worked)
+            : log.hours_worked;
         document.getElementById('editLogDesc').value = log.description || '';
 
         form.scrollIntoView({ behavior: 'smooth' });
@@ -946,7 +950,9 @@
         if (!currentLogId) return;
 
         const dateVal = document.getElementById('editLogDate').value;
-        const hoursVal = parseFloat(document.getElementById('editLogHours').value);
+        const hoursVal = window.App32InputFormatters
+            ? window.App32InputFormatters.parseClockToDecimalHours(document.getElementById('editLogHours').value)
+            : parseFloat(document.getElementById('editLogHours').value);
         const desc = document.getElementById('editLogDesc').value;
         const empId = document.getElementById('editLogEmployeeId').value;
         const empName = document.getElementById('editLogEmployeeName').value;
@@ -1009,7 +1015,9 @@
         const descInput = document.getElementById(`desc-${uid}`);
 
         const dateVal = dateInput.value;
-        const hoursVal = parseFloat(hoursInput.value);
+        const hoursVal = window.App32InputFormatters
+            ? window.App32InputFormatters.parseClockToDecimalHours(hoursInput.value)
+            : parseFloat(hoursInput.value);
         const desc = descInput.value;
 
         if (!dateVal || !hoursVal || isNaN(hoursVal)) {
