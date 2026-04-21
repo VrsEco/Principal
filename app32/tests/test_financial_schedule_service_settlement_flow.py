@@ -250,3 +250,68 @@ def test_delete_schedule_soft_deletes_generated_entries_without_settlements(monk
     assert isinstance(linked_entry.deleted_at, datetime)
     assert updates["committed"] is True
     assert isinstance(updates["allocation_deleted_at"], datetime)
+
+
+def test_apply_schedule_allocations_backfills_legacy_adjustment_gap_before_replace(monkeypatch):
+    captured = {}
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 41,
+            "company_id": 9,
+            "template_amount": 500000.0,
+            "next_due_date": None,
+            "first_due_date": None,
+            "chart_account_id": 301,
+            "cost_center_id": 8,
+            "metadata_json": {
+                "correction_index_id": 12,
+                "allocations": [
+                    {
+                        "chart_account_id": 301,
+                        "cost_center_id": 8,
+                        "allocation_type": "amount",
+                        "allocated_amount": 500000.0,
+                        "metadata_json": {"adjustment_kind": None},
+                    }
+                ],
+            },
+        },
+    )()
+
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": 500000.0,
+            "correction_amount": 12483.33,
+            "discount_amount": 0.0,
+            "updated_amount": 512483.33,
+        },
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_resolve_adjustment_chart_account_id",
+        lambda **kwargs: 777,
+    )
+
+    def _fake_replace_allocations(*, payload, allowed_company_ids=None):
+        captured["payload"] = payload
+        return [], None
+
+    monkeypatch.setattr(schedule_module.FinancialService, "replace_allocations", _fake_replace_allocations)
+
+    error = FinancialScheduleService._apply_schedule_allocations(
+        schedule=schedule,
+        entry_id=91,
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert len(captured["payload"]["allocations"]) == 2
+    assert captured["payload"]["allocations"][1]["allocated_amount"] == 12483.33
+    assert captured["payload"]["allocations"][1]["metadata_json"]["adjustment_kind"] == "correction"
+    persisted_allocations = schedule.metadata_json["allocations"]
+    assert len(persisted_allocations) == 2
+    assert persisted_allocations[1]["chart_account_id"] == 777

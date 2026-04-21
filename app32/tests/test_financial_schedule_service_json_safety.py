@@ -102,6 +102,7 @@ def test_create_schedule_sanitizes_metadata_json_before_insert(monkeypatch):
     )
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_has_active_settlements", lambda **kwargs: False)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
     monkeypatch.setattr(schedule_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
     monkeypatch.setattr(schedule_module.db.session, "commit", lambda: captured.setdefault("committed", True))
@@ -179,6 +180,7 @@ def test_create_schedule_uses_flush_when_auto_commit_is_disabled(monkeypatch):
     )
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_has_active_settlements", lambda **kwargs: False)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
     monkeypatch.setattr(schedule_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
     monkeypatch.setattr(schedule_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
@@ -274,6 +276,7 @@ def test_update_schedule_sanitizes_metadata_json_before_persist(monkeypatch):
     )
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_has_active_settlements", lambda **kwargs: False)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
     monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.db.session, "commit", lambda: None)
@@ -360,6 +363,7 @@ def test_update_schedule_uses_flush_when_auto_commit_is_disabled(monkeypatch):
     )
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_has_active_settlements", lambda **kwargs: False)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
     monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.db.session, "flush", lambda: captured.setdefault("flushed", True))
@@ -687,6 +691,7 @@ def test_update_schedule_accepts_same_schedule_code_in_payload(monkeypatch):
     monkeypatch.setattr(schedule_module.FinancialService, "_resolve_budget_links", lambda **kwargs: ({}, None))
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_has_active_settlements", lambda **kwargs: False)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
     monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.db.session, "commit", lambda: None)
@@ -756,6 +761,7 @@ def test_update_schedule_rejects_schedule_code_change(monkeypatch):
     monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_has_active_settlements", lambda **kwargs: False)
     monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
 
     result, error = schedule_module.FinancialScheduleService.update_schedule(
@@ -766,7 +772,7 @@ def test_update_schedule_rejects_schedule_code_change(monkeypatch):
     )
 
     assert result is None
-    assert error == "O código do agendamento não pode ser alterado após a criação."
+    assert error == "O código do Título Financeiro não pode ser alterado após a criação."
 
 
 def test_create_schedule_returns_friendly_date_validation_message():
@@ -1031,6 +1037,7 @@ def test_update_schedule_blocks_when_budget_document_exceeds_capacity(monkeypatc
     monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
     monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_has_active_settlements", lambda **kwargs: False)
     monkeypatch.setattr(
         schedule_module.FinancialService,
         "_resolve_budget_links",
@@ -1329,3 +1336,146 @@ def test_validate_schedule_allocations_accepts_adjustment_rows_matching_updated_
     )
 
     assert error is None
+
+
+def test_normalize_schedule_allocations_backfills_adjustment_rows_for_legacy_principal_only_payload(monkeypatch):
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": 500000.0,
+            "correction_amount": 12483.33,
+            "discount_amount": 0.0,
+            "updated_amount": 512483.33,
+        },
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_resolve_adjustment_chart_account_id",
+        lambda **kwargs: 777,
+    )
+
+    allocations = FinancialScheduleService._normalize_schedule_allocations(
+        company_id=9,
+        template_amount=Decimal("500000.00"),
+        due_date=date(2026, 4, 21),
+        metadata_json={
+            "correction_index_id": 12,
+            "allocations": [
+                {
+                    "chart_account_id": 301,
+                    "cost_center_id": 8,
+                    "allocation_type": "amount",
+                    "allocated_amount": Decimal("500000.00"),
+                    "metadata_json": {"adjustment_kind": None},
+                }
+            ],
+        },
+        fallback_chart_account_id=301,
+        fallback_cost_center_id=8,
+    )
+
+    assert len(allocations) == 2
+    assert allocations[0]["allocated_amount"] == Decimal("500000.00")
+    assert allocations[1]["chart_account_id"] == 777
+    assert allocations[1]["cost_center_id"] == 8
+    assert allocations[1]["allocated_amount"] == 12483.33
+    assert allocations[1]["metadata_json"]["adjustment_kind"] == "correction"
+    allocated_total = sum(Decimal(str(item["allocated_amount"])) for item in allocations)
+    assert allocated_total == Decimal("512483.33")
+
+
+def test_create_schedule_normalizes_legacy_adjustment_gap_before_validation_and_persist(monkeypatch):
+    captured = {}
+
+    class _FakeSchedule:
+        company_id = _Column()
+        schedule_code = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(None)
+
+        def __init__(self, **kwargs):
+            captured["kwargs"] = kwargs
+            self.__dict__.update(kwargs)
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: ({"budget_line_id": None, "budget_contract_id": None, "budget_document_id": None}, None),
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_validate_schedule_allocations",
+        lambda **kwargs: captured.setdefault("validated_metadata", kwargs["metadata_json"]) and None,
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": 500000.0,
+            "correction_amount": 12483.33,
+            "discount_amount": 0.0,
+            "updated_amount": 512483.33,
+        },
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_resolve_adjustment_chart_account_id",
+        lambda **kwargs: 777,
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
+    monkeypatch.setattr(schedule_module.db.session, "add", lambda obj: captured.setdefault("added", obj))
+    monkeypatch.setattr(schedule_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(schedule_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+
+    result, error = FinancialScheduleService.create_schedule(
+        payload={
+            "company_id": 9,
+            "schedule_code": "SCH-ADJ-001",
+            "name": "Título legado",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "origin_type": "manual",
+            "status": "active",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": date(2026, 4, 1),
+            "competence_date": date(2026, 4, 1),
+            "first_due_date": date(2026, 4, 10),
+            "next_due_date": date(2026, 4, 10),
+            "description": "Título com correção pendente",
+            "template_amount": Decimal("500000.00"),
+            "currency_code": "BRL",
+            "chart_account_id": 301,
+            "cost_center_id": 8,
+            "metadata_json": {
+                "correction_index_id": 12,
+                "allocations": [
+                    {
+                        "chart_account_id": 301,
+                        "cost_center_id": 8,
+                        "allocation_type": "amount",
+                        "allocated_amount": Decimal("500000.00"),
+                        "metadata_json": {"adjustment_kind": None},
+                    }
+                ],
+            },
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result is not None
+    assert len(captured["validated_metadata"]["allocations"]) == 2
+    persisted_allocations = captured["kwargs"]["metadata_json"]["allocations"]
+    assert len(persisted_allocations) == 2
+    assert persisted_allocations[1]["chart_account_id"] == 777
+    assert persisted_allocations[1]["allocated_amount"] == 12483.33

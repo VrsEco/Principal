@@ -485,17 +485,27 @@ class FinancialScheduleService:
         if validation_error:
             return None, validation_error
 
+        normalized_metadata_json = dict(data.metadata_json or {})
+        normalized_metadata_json["allocations"] = FinancialScheduleService._normalize_schedule_allocations(
+            company_id=data.company_id,
+            template_amount=data.template_amount,
+            due_date=data.next_due_date or data.first_due_date,
+            metadata_json=normalized_metadata_json,
+            fallback_chart_account_id=data.chart_account_id,
+            fallback_cost_center_id=data.cost_center_id,
+        )
+
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
             company_id=data.company_id,
             template_amount=data.template_amount,
             due_date=data.next_due_date or data.first_due_date,
-            metadata_json=data.metadata_json,
+            metadata_json=normalized_metadata_json,
         )
         if allocation_error:
             return None, allocation_error
 
         allocation_budget_links = FinancialScheduleService._derive_budget_links_from_allocations(
-            metadata_json=data.metadata_json,
+            metadata_json=normalized_metadata_json,
         )
 
         budget_links, budget_error = FinancialService._resolve_budget_links(
@@ -528,7 +538,7 @@ class FinancialScheduleService:
         normalized["competence_date"] = normalized.get("competence_date") or normalized.get("start_date")
         normalized["metadata_json"] = FinancialScheduleService._sanitize_json(
             FinancialService._merge_budget_metadata(
-                normalized.get("metadata_json") or {},
+                normalized_metadata_json,
                 budget_links,
             )
         )
@@ -631,17 +641,27 @@ class FinancialScheduleService:
         if validation_error:
             return None, validation_error
 
+        merged_metadata_json = dict(merged.get("metadata_json", schedule.metadata_json) or {})
+        merged_metadata_json["allocations"] = FinancialScheduleService._normalize_schedule_allocations(
+            company_id=company_id,
+            template_amount=merged.get("template_amount", schedule.template_amount),
+            due_date=merged.get("next_due_date", merged.get("first_due_date", schedule.next_due_date or schedule.first_due_date)),
+            metadata_json=merged_metadata_json,
+            fallback_chart_account_id=merged.get("chart_account_id", schedule.chart_account_id),
+            fallback_cost_center_id=merged.get("cost_center_id", schedule.cost_center_id),
+        )
+
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
             company_id=company_id,
             template_amount=merged.get("template_amount", schedule.template_amount),
             due_date=merged.get("next_due_date", merged.get("first_due_date", schedule.next_due_date or schedule.first_due_date)),
-            metadata_json=merged.get("metadata_json", schedule.metadata_json),
+            metadata_json=merged_metadata_json,
         )
         if allocation_error:
             return None, allocation_error
 
         allocation_budget_links = FinancialScheduleService._derive_budget_links_from_allocations(
-            metadata_json=merged.get("metadata_json", schedule.metadata_json),
+            metadata_json=merged_metadata_json,
         )
 
         budget_links, budget_error = FinancialService._resolve_budget_links(
@@ -680,7 +700,7 @@ class FinancialScheduleService:
             merged["competence_date"] = competence_date
             merged["metadata_json"] = FinancialScheduleService._sanitize_json(
                 FinancialService._merge_budget_metadata(
-                    merged.get("metadata_json", schedule.metadata_json),
+                    merged_metadata_json,
                     budget_links,
                 )
             )
@@ -1238,9 +1258,20 @@ class FinancialScheduleService:
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Optional[str]:
         metadata = dict(schedule.metadata_json or {})
-        raw_allocations = list(metadata.get("allocations") or [])
+        raw_allocations = FinancialScheduleService._normalize_schedule_allocations(
+            company_id=schedule.company_id,
+            template_amount=schedule.template_amount,
+            due_date=schedule.next_due_date or schedule.first_due_date,
+            metadata_json=metadata,
+            fallback_chart_account_id=getattr(schedule, "chart_account_id", None),
+            fallback_cost_center_id=getattr(schedule, "cost_center_id", None),
+        )
         if not raw_allocations:
             return None
+
+        if raw_allocations != list(metadata.get("allocations") or []):
+            metadata["allocations"] = FinancialScheduleService._sanitize_json(raw_allocations)
+            schedule.metadata_json = metadata
 
         payload = {
             "company_id": schedule.company_id,
@@ -1281,6 +1312,181 @@ class FinancialScheduleService:
             allowed_company_ids=allowed_company_ids,
         )
         return error
+
+    @staticmethod
+    def _normalize_schedule_allocations(
+        *,
+        company_id: int,
+        template_amount: Any,
+        due_date: Optional[date],
+        metadata_json: Optional[Dict[str, Any]],
+        fallback_chart_account_id: Optional[int] = None,
+        fallback_cost_center_id: Optional[int] = None,
+        fallback_domain_type: Optional[str] = None,
+        fallback_domain_source_id: Optional[int] = None,
+        fallback_domain_label: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        metadata = dict(metadata_json or {})
+        raw_allocations = list(metadata.get("allocations") or [])
+        if not raw_allocations:
+            return []
+
+        def _money_decimal(value: Any) -> Decimal:
+            try:
+                return Decimal(str(value or 0)).quantize(Decimal("0.01"))
+            except Exception:
+                return Decimal("0.00")
+
+        def _same_money(left: Decimal, right: Decimal) -> bool:
+            return abs(left - right) <= Decimal("0.01")
+
+        normalized_allocations: List[Dict[str, Any]] = []
+        base_allocations: List[Dict[str, Any]] = []
+        adjustment_allocations: Dict[str, Dict[str, Any]] = {}
+        allocation_modes = set()
+        raw_total = Decimal("0.00")
+        base_total = Decimal("0.00")
+
+        for item in raw_allocations:
+            row = dict(item or {})
+            row["metadata_json"] = dict(row.get("metadata_json") or {})
+            mode = str(
+                row.get("allocation_type")
+                or ("amount" if row.get("allocated_amount") not in ("", None) else "percentage")
+            ).strip().lower() or "percentage"
+            row["allocation_type"] = mode
+            allocation_modes.add(mode)
+            if mode == "amount":
+                amount = _money_decimal(row.get("allocated_amount"))
+                raw_total += amount
+            else:
+                amount = Decimal("0.00")
+
+            adjustment_kind = str((row.get("metadata_json") or {}).get("adjustment_kind") or "").strip().lower()
+            if adjustment_kind in {"correction", "discount"}:
+                adjustment_allocations[adjustment_kind] = row
+            else:
+                base_allocations.append(row)
+                if mode == "amount":
+                    base_total += amount
+            normalized_allocations.append(row)
+
+        if allocation_modes != {"amount"} or not base_allocations:
+            return normalized_allocations
+
+        totals = FinancialScheduleService._calculate_schedule_adjustments(
+            company_id=company_id,
+            template_amount=template_amount,
+            metadata_json=metadata,
+            due_date=due_date,
+        )
+        template_total = _money_decimal(totals.get("template_amount") or template_amount)
+        correction_amount = _money_decimal(totals.get("correction_amount"))
+        discount_amount = _money_decimal(totals.get("discount_amount"))
+        updated_total = _money_decimal(totals.get("updated_amount") or template_amount)
+        has_tagged_adjustments = bool(adjustment_allocations)
+        needs_adjustment_backfill = (
+            not has_tagged_adjustments
+            and not _same_money(updated_total, template_total)
+            and _same_money(raw_total, template_total)
+            and _same_money(base_total, template_total)
+        )
+        if not has_tagged_adjustments and not needs_adjustment_backfill:
+            return normalized_allocations
+
+        principal_row = base_allocations[0]
+        default_domain_type = (
+            principal_row.get("domain_type")
+            or metadata.get("domain_type")
+            or fallback_domain_type
+        )
+        default_domain_source_id = (
+            principal_row.get("domain_source_id")
+            if principal_row.get("domain_source_id") is not None
+            else metadata.get("domain_source_id", fallback_domain_source_id)
+        )
+        default_domain_label = (
+            principal_row.get("domain_label")
+            or metadata.get("domain_label")
+            or fallback_domain_label
+        )
+
+        def _build_adjustment_row(*, kind: str, label: str, amount: Decimal) -> Optional[Dict[str, Any]]:
+            if _same_money(amount, Decimal("0.00")):
+                return None
+
+            existing = adjustment_allocations.get(kind) or {}
+            existing_metadata = dict(existing.get("metadata_json") or {})
+            source_id = metadata.get("correction_index_id" if kind == "correction" else "discount_rule_id")
+            effective_fallback_chart_account_id = (
+                existing.get("chart_account_id")
+                or principal_row.get("chart_account_id")
+                or fallback_chart_account_id
+            )
+            chart_account_id = (
+                existing.get("chart_account_id")
+                or FinancialScheduleService._resolve_adjustment_chart_account_id(
+                    company_id=company_id,
+                    adjustment_kind=kind,
+                    adjustment_source_id=source_id,
+                    fallback_chart_account_id=effective_fallback_chart_account_id,
+                )
+            )
+            cost_center_id = existing.get("cost_center_id") or principal_row.get("cost_center_id") or fallback_cost_center_id
+            domain_type = existing.get("domain_type") or default_domain_type
+            domain_source_id = (
+                existing.get("domain_source_id")
+                if existing.get("domain_source_id") is not None
+                else default_domain_source_id
+            )
+            domain_label = existing.get("domain_label") or default_domain_label
+            domain_value = existing.get("domain_value") or (
+                f"{domain_type}:{domain_source_id}"
+                if domain_type and domain_source_id not in ("", None)
+                else ""
+            )
+            return {
+                "chart_account_id": chart_account_id,
+                "cost_center_id": cost_center_id,
+                "allocation_type": "amount",
+                "percentage": None,
+                "allocated_amount": float(amount),
+                "notes": existing.get("notes") or label,
+                "domain_type": domain_type,
+                "domain_source_id": domain_source_id,
+                "domain_label": domain_label,
+                "domain_value": domain_value,
+                "budget_version_id": None,
+                "budget_version_code": None,
+                "budget_line_id": None,
+                "budget_line_code": None,
+                "budget_contract_id": None,
+                "budget_contract_code": None,
+                "budget_document_id": None,
+                "budget_document_code": None,
+                "metadata_json": {
+                    **existing_metadata,
+                    "adjustment_kind": kind,
+                    "adjustment_label": label,
+                },
+            }
+
+        normalized_with_adjustments = list(base_allocations)
+        correction_row = _build_adjustment_row(
+            kind="correction",
+            label="Correção Financeira",
+            amount=correction_amount,
+        )
+        if correction_row:
+            normalized_with_adjustments.append(correction_row)
+        discount_row = _build_adjustment_row(
+            kind="discount",
+            label="Desconto",
+            amount=discount_amount * Decimal("-1"),
+        )
+        if discount_row:
+            normalized_with_adjustments.append(discount_row)
+        return normalized_with_adjustments
 
     @staticmethod
     def _validate_schedule_links(
