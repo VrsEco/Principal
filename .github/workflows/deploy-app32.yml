@@ -50,10 +50,10 @@ jobs:
             echo "📂 Acessando diretório do projeto..."
             cd ${{ secrets.PROJECT_PATH }}
 
-            if [ -x "app32/scripts/deploy_configr.sh" ]; then
+            if [ -f "app32/scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
               bash app32/scripts/deploy_configr.sh
-            elif [ -x "scripts/deploy_configr.sh" ]; then
+            elif [ -f "scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via scripts/deploy_configr.sh"
               bash scripts/deploy_configr.sh
             else
