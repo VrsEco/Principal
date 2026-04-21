@@ -525,6 +525,78 @@ class FinancialReportService:
         return values
 
     @staticmethod
+    def _parse_positive_int(value: Any) -> Optional[int]:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
+
+    @staticmethod
+    def _entry_settlement_totals(
+        company_id: int,
+        *,
+        entry_ids: Optional[Sequence[int]] = None,
+    ) -> Dict[int, Decimal]:
+        query = db.session.query(
+            FinancialSettlement.financial_entry_id,
+            db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0),
+        ).filter(
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.deleted_at.is_(None),
+            FinancialSettlement.settlement_status != "cancelled",
+            FinancialSettlement.financial_entry_id.isnot(None),
+        )
+        positive_entry_ids = [int(item) for item in (entry_ids or []) if FinancialReportService._parse_positive_int(item)]
+        if entry_ids is not None and not positive_entry_ids:
+            return {}
+        if positive_entry_ids:
+            query = query.filter(FinancialSettlement.financial_entry_id.in_(positive_entry_ids))
+        rows = query.group_by(FinancialSettlement.financial_entry_id).all()
+        return {
+            int(entry_id): Decimal(str(total or 0))
+            for entry_id, total in rows
+            if entry_id is not None
+        }
+
+    @staticmethod
+    def _entry_outstanding_amount(entry: FinancialEntry, settled_amount: Decimal | float | int = Decimal("0")) -> Decimal:
+        original_amount = Decimal(str(getattr(entry, "original_amount", None) or 0))
+        settled_total = Decimal(str(settled_amount or 0))
+        return max(original_amount - settled_total, Decimal("0"))
+
+    @staticmethod
+    def _entry_installment_label(entry: FinancialEntry) -> str:
+        metadata = dict(getattr(entry, "metadata_json", None) or {})
+        value = (
+            metadata.get("installment_number")
+            or metadata.get("parcela")
+            or metadata.get("installment_label")
+            or metadata.get("parcel_label")
+            or metadata.get("repeat_label")
+        )
+        return str(value).strip() if value not in (None, "") else "-"
+
+    @staticmethod
+    def _entry_history_label(entry: FinancialEntry) -> str:
+        metadata = dict(getattr(entry, "metadata_json", None) or {})
+        history = (
+            metadata.get("history")
+            or metadata.get("historico")
+            or metadata.get("description")
+            or getattr(entry, "description", None)
+            or getattr(entry, "memo", None)
+            or getattr(entry, "notes", None)
+        )
+        return str(history or "Sem histórico").strip()
+
+    @staticmethod
+    def _entry_number_installment_label(entry: FinancialEntry) -> str:
+        number = getattr(entry, "document_number", None) or getattr(entry, "entry_code", None) or str(getattr(entry, "id", "-"))
+        installment = FinancialReportService._entry_installment_label(entry)
+        return f"{number} / {installment}" if installment != "-" else str(number)
+
+    @staticmethod
     def _entry_project_ids(entry: FinancialEntry) -> List[int]:
         metadata = getattr(entry, "metadata_json", None) or {}
         candidates = [metadata.get("project_id"), metadata.get("app_project_id"), metadata.get("grv_project_id")]
@@ -730,6 +802,162 @@ class FinancialReportService:
         if filters.include_reconciled_only:
             query = query.filter(FinancialSettlement.reconciliation_status == "reconciled")
         return query
+
+    @staticmethod
+    def _normalize_cash_flow_title_selection_filters(raw_filters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        payload = dict(raw_filters or {})
+        movement_nature = str(payload.get("movement_nature") or "").strip().lower()
+        search = str(payload.get("search") or "").strip()
+        return {
+            "movement_nature": movement_nature if movement_nature in {"credit", "debit"} else None,
+            "counterparty_id": FinancialReportService._parse_positive_int(payload.get("counterparty_id")),
+            "chart_account_id": FinancialReportService._parse_positive_int(payload.get("chart_account_id")),
+            "cost_center_id": FinancialReportService._parse_positive_int(payload.get("cost_center_id")),
+            "search": search or None,
+        }
+
+    @staticmethod
+    def _cash_flow_projected_entry_query(
+        company_id: int,
+        filters: FinancialManagementReportFiltersInput,
+        *,
+        entry_ids: Optional[Sequence[int]] = None,
+        selection_filters: Optional[Dict[str, Any]] = None,
+    ):
+        query = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+            FinancialEntry.status.in_(["draft", "pending_review", "scheduled", "posted", "partially_settled"]),
+            FinancialEntry.due_date.isnot(None),
+            FinancialEntry.due_date >= filters.period_start,
+            FinancialEntry.due_date <= filters.period_end,
+        )
+        bank_account_ids = FinancialReportService._selected_ids(
+            filters.bank_account_id,
+            filters.bank_account_ids,
+            preserve_empty_marker=True,
+        )
+        if bank_account_ids:
+            query = query.filter(FinancialEntry.bank_account_id.in_(bank_account_ids))
+
+        positive_entry_ids = FinancialReportService._selected_ids(None, entry_ids or [])
+        if positive_entry_ids:
+            query = query.filter(FinancialEntry.id.in_(positive_entry_ids))
+
+        normalized_selection_filters = FinancialReportService._normalize_cash_flow_title_selection_filters(selection_filters)
+        movement_nature = normalized_selection_filters.get("movement_nature")
+        if movement_nature:
+            query = query.filter(FinancialEntry.movement_nature == movement_nature)
+        counterparty_id = normalized_selection_filters.get("counterparty_id")
+        if counterparty_id:
+            query = query.filter(FinancialEntry.counterparty_id == counterparty_id)
+        chart_account_id = normalized_selection_filters.get("chart_account_id")
+        if chart_account_id:
+            query = query.filter(FinancialEntry.chart_account_id == chart_account_id)
+        cost_center_id = normalized_selection_filters.get("cost_center_id")
+        if cost_center_id:
+            query = query.filter(FinancialEntry.cost_center_id == cost_center_id)
+
+        search = normalized_selection_filters.get("search")
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    FinancialEntry.entry_code.ilike(pattern),
+                    FinancialEntry.document_number.ilike(pattern),
+                    FinancialEntry.description.ilike(pattern),
+                    FinancialEntry.memo.ilike(pattern),
+                    FinancialEntry.external_reference.ilike(pattern),
+                    FinancialEntry.origin_reference.ilike(pattern),
+                )
+            )
+        return query.order_by(FinancialEntry.due_date.asc(), FinancialEntry.id.asc())
+
+    @staticmethod
+    def _serialize_cash_flow_excluded_title(
+        entry: FinancialEntry,
+        *,
+        settled_amount: Decimal,
+        counterparty_names: Dict[int, str],
+    ) -> Dict[str, Any]:
+        outstanding = FinancialReportService._entry_outstanding_amount(entry, settled_amount)
+        counterparty_label = (
+            counterparty_names.get(getattr(entry, "counterparty_id", None))
+            or (dict(getattr(entry, "metadata_json", None) or {}).get("counterparty_name"))
+            or "Não informado"
+        )
+        title_amount = Decimal(str(getattr(entry, "original_amount", None) or 0))
+        return {
+            "id": entry.id,
+            "entry_code": getattr(entry, "entry_code", None) or str(entry.id),
+            "history": FinancialReportService._entry_history_label(entry),
+            "type": "Entrada" if getattr(entry, "movement_nature", None) == "credit" else "Saída",
+            "title_amount": FinancialReportService._format_currency(title_amount),
+            "title_amount_value": FinancialReportService._serialize_money(title_amount),
+            "open_amount": FinancialReportService._format_currency(outstanding),
+            "open_amount_value": FinancialReportService._serialize_money(outstanding),
+            "counterparty": counterparty_label,
+            "number_installment": FinancialReportService._entry_number_installment_label(entry),
+            "competence_date": entry.competence_date.isoformat() if getattr(entry, "competence_date", None) else "-",
+            "due_date": entry.due_date.isoformat() if getattr(entry, "due_date", None) else "-",
+            "status_label": "Retirado do fluxo",
+        }
+
+    @staticmethod
+    def build_cash_flow_title_preview(
+        *,
+        company_id: int,
+        filters: Optional[Dict[str, Any]] = None,
+        selection_filters: Optional[Dict[str, Any]] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        normalized_filters, error = FinancialReportService._normalize_filters("cash_flow", filters)
+        if error:
+            return None, error
+
+        selected_entry_ids = FinancialReportService._selected_ids(None, normalized_filters.excluded_entry_ids)
+        selected_entry_id_set = set(selected_entry_ids)
+        entries = FinancialReportService._cash_flow_projected_entry_query(
+            company_id,
+            normalized_filters,
+            selection_filters=selection_filters,
+        ).all()
+        settlement_totals = FinancialReportService._entry_settlement_totals(
+            company_id,
+            entry_ids=[entry.id for entry in entries],
+        )
+        counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
+
+        titles: List[Dict[str, Any]] = []
+        total_open_amount = Decimal("0")
+        for entry in entries:
+            settled_amount = settlement_totals.get(entry.id, Decimal("0"))
+            outstanding = FinancialReportService._entry_outstanding_amount(entry, settled_amount)
+            if outstanding <= Decimal("0"):
+                continue
+            item = FinancialReportService._serialize_cash_flow_excluded_title(
+                entry,
+                settled_amount=settled_amount,
+                counterparty_names=counterparty_names,
+            )
+            item["selected"] = entry.id in selected_entry_id_set
+            titles.append(item)
+            total_open_amount += outstanding
+
+        return {
+            "titles": titles,
+            "summary": {
+                "count": len(titles),
+                "selected_count": len(selected_entry_ids),
+                "total_open_amount": FinancialReportService._serialize_money(total_open_amount),
+                "total_open_amount_label": FinancialReportService._format_currency(total_open_amount),
+                "period_label": f"{normalized_filters.period_start.isoformat()} até {normalized_filters.period_end.isoformat()}",
+            },
+        }, None
 
     @staticmethod
     def _build_schedule_report(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
@@ -1978,28 +2206,44 @@ class FinancialReportService:
                 slot["realized_out"] += amount
                 realized_out += amount
 
+        excluded_entry_id_set = (
+            set(FinancialReportService._selected_ids(None, filters.excluded_entry_ids))
+            if filters.enable_title_exclusions
+            else set()
+        )
+        excluded_titles: List[Dict[str, Any]] = []
+        excluded_open_total = Decimal("0")
         if filters.include_projected:
-            projected_entries = FinancialEntry.query.filter(
-                FinancialEntry.company_id == company_id,
-                FinancialEntry.deleted_at.is_(None),
-                FinancialEntry.status.in_(["draft", "pending_review", "scheduled", "posted", "partially_settled"]),
-                FinancialEntry.due_date >= filters.period_start,
-                FinancialEntry.due_date <= filters.period_end,
+            projected_entries = FinancialReportService._cash_flow_projected_entry_query(company_id, filters).all()
+            projected_settlement_totals = FinancialReportService._entry_settlement_totals(
+                company_id,
+                entry_ids=[entry.id for entry in projected_entries],
             )
-            if bank_account_ids:
-                projected_entries = projected_entries.filter(FinancialEntry.bank_account_id.in_(bank_account_ids))
-            if filters.cost_center_id:
-                projected_entries = projected_entries.filter(FinancialEntry.cost_center_id == filters.cost_center_id)
-            settled_ids = {item.financial_entry_id for item in settlements}
-            for entry in projected_entries.all():
-                if entry.id in settled_ids or not entry.due_date:
+            counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
+            for entry in projected_entries:
+                if not entry.due_date:
+                    continue
+                outstanding = FinancialReportService._entry_outstanding_amount(
+                    entry,
+                    projected_settlement_totals.get(entry.id, Decimal("0")),
+                )
+                if outstanding <= Decimal("0"):
+                    continue
+                if entry.id in excluded_entry_id_set:
+                    excluded_titles.append(
+                        FinancialReportService._serialize_cash_flow_excluded_title(
+                            entry,
+                            settled_amount=projected_settlement_totals.get(entry.id, Decimal("0")),
+                            counterparty_names=counterparty_names,
+                        )
+                    )
+                    excluded_open_total += outstanding
                     continue
                 slot = daily.setdefault(entry.due_date.isoformat(), {"realized_in": Decimal("0"), "realized_out": Decimal("0"), "projected_in": Decimal("0"), "projected_out": Decimal("0")})
-                amount = Decimal(entry.original_amount or 0)
                 if entry.movement_nature == "credit":
-                    slot["projected_in"] += amount
+                    slot["projected_in"] += outstanding
                 else:
-                    slot["projected_out"] += amount
+                    slot["projected_out"] += outstanding
 
         bucket_mode = (filters.frequency or "daily").lower()
 
@@ -2051,6 +2295,13 @@ class FinancialReportService:
             if rows
             else FinancialReportService._serialize_money(Decimal(initial_balance) + overdraft_limit)
         )
+        projected_titles_label = "Todos retirados"
+        if filters.include_projected:
+            projected_titles_label = (
+                f"{len(excluded_titles)} título(s) retirado(s)"
+                if filters.enable_title_exclusions
+                else "Incluídos"
+            )
         return {
             "title": definition["label"],
             "subtitle": definition["description"],
@@ -2060,12 +2311,14 @@ class FinancialReportService:
                 {"label": "Saídas realizadas", "value": FinancialReportService._format_currency(realized_out)},
                 {"label": "Saldo projetado final", "value": FinancialReportService._format_currency(projected_final_value)},
                 {"label": "Saldo projetado c/ limite", "value": FinancialReportService._format_currency(projected_with_limit_value)},
+                {"label": "Saldo retirado", "value": FinancialReportService._format_currency(excluded_open_total)},
             ],
             "general_info": [
                 {"label": "Janela analisada", "value": f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"},
                 {"label": "Contas correntes", "value": bank_accounts_label},
                 {"label": "Periodicidade", "value": {"daily": "Diário", "weekly": "Semanal", "monthly": "Mensal"}.get(bucket_mode, bucket_mode)},
-                {"label": "Títulos financeiros em aberto", "value": "Incluídos" if filters.include_projected else "Retirados"},
+                {"label": "Títulos financeiros em aberto", "value": projected_titles_label},
+                {"label": "Títulos retirados manualmente", "value": str(len(excluded_titles))},
                 {"label": "Limite de conta", "value": FinancialReportService._format_currency(overdraft_limit)},
             ],
             "columns": [
@@ -2087,7 +2340,9 @@ class FinancialReportService:
                 "projected_final": FinancialReportService._serialize_money(projected_final_value),
                 "overdraft_limit": FinancialReportService._serialize_money(overdraft_limit),
                 "projected_with_limit": FinancialReportService._serialize_money(projected_with_limit_value),
+                "excluded_projected_amount": FinancialReportService._serialize_money(excluded_open_total),
             },
+            "excluded_titles": excluded_titles,
         }
 
     @staticmethod
@@ -2625,7 +2880,14 @@ class FinancialReportService:
                 })
         else:
             if filters.report_type == "cash_flow":
-                values.append({"label": "Títulos financeiros em aberto", "value": "Incluídos" if filters.include_projected else "Retirados"})
+                if filters.include_projected:
+                    values.append({"label": "Títulos financeiros em aberto", "value": "Incluídos"})
+                    values.append({
+                        "label": "Retirada manual de títulos",
+                        "value": f"{len(filters.excluded_entry_ids)} selecionado(s)" if filters.enable_title_exclusions else "Desativada",
+                    })
+                else:
+                    values.append({"label": "Títulos financeiros em aberto", "value": "Todos retirados"})
             else:
                 values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
             values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})

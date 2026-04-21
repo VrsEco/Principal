@@ -91,6 +91,13 @@
 {% set selected_orientation = (filters.get('orientation', ['landscape']) | first) %}
 {% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
 {% set selected_reference_date = (filters.get('reference_date', [default_period_end]) | first) %}
+{% set title_exclusion_enabled = (filters.get('enable_title_exclusions', ['false']) | first) == 'true' %}
+{% set selected_excluded_entry_ids = filters.get('excluded_entry_ids', []) %}
+{% set title_filter_movement_nature = (filters.get('title_filter_movement_nature', ['']) | first) %}
+{% set title_filter_counterparty_id = (filters.get('title_filter_counterparty_id', ['']) | first) %}
+{% set title_filter_chart_account_id = (filters.get('title_filter_chart_account_id', ['']) | first) %}
+{% set title_filter_cost_center_id = (filters.get('title_filter_cost_center_id', ['']) | first) %}
+{% set title_filter_search = (filters.get('title_filter_search', ['']) | first) %}
 {% if is_schedule_report %}
 {% include 'modules/financial/partials/report_filters_schedule_page.html' %}
 {% elif is_dre %}
@@ -405,45 +412,87 @@
 
                 <div class="cash-flow-main">
                     <div class="cash-flow-banner">
-                        {% set exclude_projected_checked = 'include_projected' in filters and (filters.get('include_projected', []) | first) == 'false' %}
+                        <input type="hidden" name="enable_title_exclusions" value="{{ 'true' if title_exclusion_enabled else 'false' }}" data-cash-flow-exclusion-flag>
                         <label class="check-field">
-                            <input type="checkbox" name="include_projected" value="false" {% if exclude_projected_checked %}checked{% endif %}>
-                            <span>Retirar títulos financeiros em aberto</span>
+                            <input type="checkbox" value="true" data-cash-flow-exclusion-toggle {% if title_exclusion_enabled %}checked{% endif %}>
+                            <span>Retirar títulos financeiros do fluxo</span>
                         </label>
-                        <small class="cash-flow-banner__hint">Por padrão, o fluxo já considera os agendamentos/títulos em aberto. Marque apenas quando quiser removê-los da projeção.</small>
+                        <small class="cash-flow-banner__hint">Ao habilitar, o sistema lista os títulos em aberto do período para você marcar apenas os que não devem compor o saldo projetado.</small>
                     </div>
 
-                    <details class="cash-flow-filters-panel">
-                        <summary>Filtros adicionais</summary>
+                    <div class="cash-flow-filters-panel{% if not title_exclusion_enabled %} is-hidden{% endif %}" data-cash-flow-selection-panel>
+                        <div class="cash-flow-filters-panel__header">
+                            <div>
+                                <strong>Filtros para retirada de títulos</strong>
+                                <small>Use a Data Inicial/Data Final e refine a busca antes de marcar os títulos que sairão do fluxo.</small>
+                            </div>
+                            <button type="button" class="btn btn-secondary" data-cash-flow-process>Processar filtros</button>
+                        </div>
                         <div class="cash-flow-extra-grid">
                             <label>
-                                <span>Centro de resultados</span>
-                                <select name="cost_center_id">
+                                <span>Movimento</span>
+                                <select name="title_filter_movement_nature">
                                     <option value="">Todos</option>
-                                    {% for item in options.cost_centers %}
-                                    <option value="{{ item.id }}" {% if (filters.get('cost_center_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                                    <option value="credit" {% if title_filter_movement_nature == 'credit' %}selected{% endif %}>Entrada</option>
+                                    <option value="debit" {% if title_filter_movement_nature == 'debit' %}selected{% endif %}>Saída</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Favorecido</span>
+                                <select name="title_filter_counterparty_id">
+                                    <option value="">Todos</option>
+                                    {% for item in options.counterparties %}
+                                    <option value="{{ item.id }}" {% if title_filter_counterparty_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
                                     {% endfor %}
                                 </select>
                             </label>
                             <label>
-                                <span>Orientação</span>
-                                <select name="orientation">
-                                    <option value="landscape" {% if selected_orientation == 'landscape' %}selected{% endif %}>Paisagem</option>
-                                    <option value="portrait" {% if selected_orientation == 'portrait' %}selected{% endif %}>Retrato</option>
+                                <span>Plano de conta</span>
+                                <select name="title_filter_chart_account_id">
+                                    <option value="">Todos</option>
+                                    {% for item in options.chart_accounts %}
+                                    <option value="{{ item.id }}" {% if title_filter_chart_account_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                                    {% endfor %}
                                 </select>
                             </label>
                             <label>
-                                <span>Imprimir</span>
-                                <select name="output_mode">
-                                    <option value="screen" {% if selected_output_mode == 'screen' %}selected{% endif %}>Na Tela</option>
-                                    <option value="pdf" {% if selected_output_mode == 'pdf' %}selected{% endif %}>PDF</option>
+                                <span>Centro de resultados</span>
+                                <select name="title_filter_cost_center_id">
+                                    <option value="">Todos</option>
+                                    {% for item in options.cost_centers %}
+                                    <option value="{{ item.id }}" {% if title_filter_cost_center_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                                    {% endfor %}
                                 </select>
                             </label>
+                            <label class="cash-flow-extra-grid__search">
+                                <span>Buscar título</span>
+                                <input type="text" name="title_filter_search" value="{{ title_filter_search }}" placeholder="Histórico, número ou código">
+                            </label>
                         </div>
-                    </details>
+                    </div>
 
-                    <div class="cash-flow-preview">
+                    <div class="cash-flow-selected-inputs" data-cash-flow-selected-inputs>
+                        {% for entry_id in selected_excluded_entry_ids %}
+                        <input type="hidden" name="excluded_entry_ids" value="{{ entry_id }}">
+                        {% endfor %}
+                    </div>
+
+                    <div class="cash-flow-preview"
+                         data-cash-flow-preview
+                         data-preview-endpoint="/financial/reports/{{ report_definition.slug }}/projected-titles"
+                         data-enabled="{{ 'true' if title_exclusion_enabled else 'false' }}">
+                        <div class="cash-flow-preview__toolbar">
+                            <div>
+                                <strong>Títulos elegíveis para retirada</strong>
+                                <small data-cash-flow-preview-summary>Marque a opção acima, ajuste os filtros e clique em <strong>Processar filtros</strong>.</small>
+                            </div>
+                            <div class="cash-flow-preview__selected">
+                                <span data-cash-flow-selected-count>{{ selected_excluded_entry_ids|length }}</span>
+                                <small>selecionado(s)</small>
+                            </div>
+                        </div>
                         <div class="cash-flow-preview__head">
+                            <span>Retirar</span>
                             <span>Histórico</span>
                             <span>Tipo</span>
                             <span>Valor Título</span>
@@ -453,9 +502,28 @@
                             <span>Competência</span>
                             <span>Vencimento</span>
                         </div>
-                        <div class="cash-flow-preview__empty">
-                            A visualização detalhada será exibida após gerar o relatório.
+                        <div class="cash-flow-preview__body" data-cash-flow-preview-body>
+                            <div class="cash-flow-preview__empty">
+                                Os títulos em aberto do período aparecerão aqui para marcação individual.
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="cash-flow-report-settings">
+                        <label>
+                            <span>Orientação</span>
+                            <select name="orientation">
+                                <option value="landscape" {% if selected_orientation == 'landscape' %}selected{% endif %}>Paisagem</option>
+                                <option value="portrait" {% if selected_orientation == 'portrait' %}selected{% endif %}>Retrato</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Imprimir</span>
+                            <select name="output_mode">
+                                <option value="screen" {% if selected_output_mode == 'screen' %}selected{% endif %}>Na Tela</option>
+                                <option value="pdf" {% if selected_output_mode == 'pdf' %}selected{% endif %}>PDF</option>
+                            </select>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -720,7 +788,7 @@
     .report-subtitle { color:var(--text-secondary); max-width:880px; }
     .report-filter-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; align-items:end; }
     .report-filter-grid label, .date-field-row label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); }
-    .report-filter-grid input[type="date"], .report-filter-grid select { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.82rem .88rem; color:var(--text-primary); }
+    .report-filter-grid input[type="date"], .report-filter-grid input[type="text"], .report-filter-grid select { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.82rem .88rem; color:var(--text-primary); }
     .report-filter-grid--dre { display:flex; flex-direction:column; gap:1rem; align-items:stretch; }
     .report-filter-grid--cash-flow { display:block; }
     .report-filter-grid--ledger { display:flex; flex-direction:column; gap:1rem; align-items:stretch; }
@@ -742,12 +810,30 @@
     .cash-flow-banner__hint { display:block; margin-top:.45rem; color:rgba(255,255,255,.86); font-weight:600; }
     .filter-hint { display:block; margin-top:.45rem; color:var(--text-tertiary); font-weight:600; line-height:1.35; }
     .cash-flow-filters-panel { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
-    .cash-flow-filters-panel summary { cursor:pointer; list-style:none; padding:1rem; font-weight:700; color:var(--text-primary); }
-    .cash-flow-filters-panel summary::-webkit-details-marker { display:none; }
+    .cash-flow-filters-panel.is-hidden { display:none; }
+    .cash-flow-filters-panel__header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; padding:1rem 1rem 0; }
+    .cash-flow-filters-panel__header strong { display:block; color:var(--text-primary); }
+    .cash-flow-filters-panel__header small { display:block; margin-top:.25rem; color:var(--text-secondary); line-height:1.4; }
     .cash-flow-extra-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; padding:0 1rem 1rem; }
+    .cash-flow-extra-grid__search { grid-column:span 2; }
+    .cash-flow-selected-inputs { display:none; }
     .cash-flow-preview { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); overflow:hidden; }
-    .cash-flow-preview__head { display:grid; grid-template-columns:1.2fr .8fr .9fr .9fr 1.1fr 1fr .9fr .9fr; gap:.5rem; padding:1rem; font-weight:700; color:#1d4ed8; border-bottom:1px solid var(--border); }
+    .cash-flow-preview__toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; padding:1rem; border-bottom:1px solid var(--border); background:rgba(37,99,235,.05); }
+    .cash-flow-preview__toolbar strong { display:block; color:var(--text-primary); }
+    .cash-flow-preview__toolbar small { display:block; margin-top:.25rem; color:var(--text-secondary); line-height:1.4; }
+    .cash-flow-preview__selected { text-align:right; min-width:96px; }
+    .cash-flow-preview__selected span { display:block; font-size:1.3rem; font-weight:800; color:#1d4ed8; }
+    .cash-flow-preview__head, .cash-flow-preview__row { display:grid; grid-template-columns:80px 1.35fr .75fr .85fr .85fr 1.1fr 1fr .85fr .85fr; gap:.5rem; padding:1rem; align-items:center; }
+    .cash-flow-preview__head { font-weight:700; color:#1d4ed8; border-bottom:1px solid var(--border); }
+    .cash-flow-preview__body { display:flex; flex-direction:column; }
+    .cash-flow-preview__row { border-bottom:1px solid var(--border); color:var(--text-secondary); }
+    .cash-flow-preview__row:last-child { border-bottom:none; }
+    .cash-flow-preview__row.is-selected { background:rgba(29,78,216,.08); }
+    .cash-flow-preview__cell--check { display:flex; align-items:center; justify-content:center; }
+    .cash-flow-preview__cell--check label { display:flex; align-items:center; justify-content:center; }
+    .cash-flow-preview__cell--strong { font-weight:700; color:var(--text-primary); }
     .cash-flow-preview__empty { padding:1.5rem 1rem; color:var(--text-secondary); }
+    .cash-flow-report-settings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
     .working-capital-layout { display:flex; flex-direction:column; gap:1rem; }
     .working-capital-banner { padding:1rem; border-radius:16px 16px 0 0; background:linear-gradient(135deg, #0f172a, #1e293b); color:#fff; font-weight:700; }
     .working-capital-reference { display:grid; grid-template-columns:1.2fr .8fr; gap:1rem; align-items:end; }
@@ -771,13 +857,17 @@
     .report-actions--full .btn { width:100%; }
     .btn { border:none; border-radius:12px; padding:.85rem 1rem; font-weight:700; cursor:pointer; }
     .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface); color:var(--text-primary); border:1px solid var(--border); }
     @media (max-width: 1200px) {
         .dre-dates-grid, .dre-config-grid, .schedule-config-grid, .cash-flow-extra-grid, .ledger-config-grid, .working-capital-reference { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .cash-flow-layout { grid-template-columns:1fr; }
+        .cash-flow-extra-grid__search { grid-column:auto; }
     }
     @media (max-width: 960px) {
         .fin-report-page { padding:0 1rem 1.5rem; }
-        .report-filter-grid, .dre-dates-grid, .date-field-row, .dre-config-grid, .schedule-config-grid, .cash-flow-extra-grid, .cash-flow-preview__head, .ledger-config-grid, .working-capital-reference, .working-capital-table__head, .working-capital-table__row { grid-template-columns:1fr; }
+        .report-filter-grid, .dre-dates-grid, .date-field-row, .dre-config-grid, .schedule-config-grid, .cash-flow-extra-grid, .cash-flow-preview__head, .cash-flow-preview__row, .cash-flow-report-settings, .ledger-config-grid, .working-capital-reference, .working-capital-table__head, .working-capital-table__row { grid-template-columns:1fr; }
+        .cash-flow-filters-panel__header, .cash-flow-preview__toolbar { flex-direction:column; }
+        .cash-flow-preview__selected { text-align:left; }
         .report-actions .btn { width:100%; }
     }
 </style>
@@ -809,6 +899,8 @@
 <script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421d') }}"></script>
 {% elif report_definition.code == 'bank_statement' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419b') }}"></script>
+{% elif report_definition.code == 'cash_flow' %}
+<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260421f') }}"></script>
 {% else %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {

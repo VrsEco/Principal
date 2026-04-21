@@ -105,6 +105,85 @@ def test_bank_statement_view_redirects_to_filters(monkeypatch):
     )
 
 
+def test_cash_flow_projected_titles_route_returns_json(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(
+        financial_reports_route,
+        "get_active_company",
+        lambda: SimpleNamespace(id=7, name="Empresa Teste"),
+    )
+    monkeypatch.setattr(financial_reports_route, "get_accessible_company_ids", lambda: [7])
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "get_report_definition_or_error",
+        lambda slug: (
+            {
+                "code": "cash_flow",
+                "slug": "fluxo-caixa",
+                "label": "Fluxo de Caixa",
+                "description": "Fluxo gerencial.",
+            },
+            None,
+        ),
+    )
+
+    def _fake_build_cash_flow_title_preview(**kwargs):
+        captured.update(kwargs)
+        return (
+            {
+                "titles": [
+                    {
+                        "id": 11,
+                        "history": "Parcela abril",
+                        "type": "Saída",
+                        "title_amount": "R$ 1.200,00",
+                        "open_amount": "R$ 1.200,00",
+                        "counterparty": "Fornecedor Teste",
+                        "number_installment": "NF-100 / 1",
+                        "competence_date": "2026-04-01",
+                        "due_date": "2026-04-15",
+                        "selected": True,
+                    }
+                ],
+                "summary": {"count": 1, "selected_count": 1, "total_open_amount_label": "R$ 1.200,00"},
+            },
+            None,
+        )
+
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "build_cash_flow_title_preview",
+        _fake_build_cash_flow_title_preview,
+    )
+
+    client = app.test_client()
+    response = client.get(
+        "/financial/reports/fluxo-caixa/projected-titles"
+        "?period_start=2026-04-01"
+        "&period_end=2026-04-30"
+        "&bank_account_ids=-1"
+        "&bank_account_ids=3"
+        "&enable_title_exclusions=true"
+        "&excluded_entry_ids=11"
+        "&title_filter_search=fornecedor"
+        "&title_filter_counterparty_id=9",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["titles"][0]["id"] == 11
+    assert captured["company_id"] == 7
+    assert captured["filters"]["period_start"] == "2026-04-01"
+    assert captured["filters"]["bank_account_ids"] == ["3"]
+    assert captured["filters"]["excluded_entry_ids"] == ["11"]
+    assert "title_filter_search" not in captured["filters"]
+    assert captured["selection_filters"]["search"] == "fornecedor"
+    assert captured["selection_filters"]["counterparty_id"] == "9"
+
+
 def test_income_statement_filters_page_builds_report_context(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)

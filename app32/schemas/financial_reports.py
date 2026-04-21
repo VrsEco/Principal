@@ -34,6 +34,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
     manual_values: dict[int, Decimal] = Field(default_factory=dict)
     counterparty_id: Optional[int] = Field(default=None, ge=1)
     counterparty_ids: list[int] = Field(default_factory=list)
+    excluded_entry_ids: list[int] = Field(default_factory=list)
 
     movement_nature: Optional[str] = None
     schedule_status: Optional[str] = None
@@ -42,6 +43,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
     include_projected: bool = False
     include_reconciled_only: bool = False
     include_overdraft: bool = True
+    enable_title_exclusions: bool = False
 
     include_open: bool = True
     include_settled: bool = True

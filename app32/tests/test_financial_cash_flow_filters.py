@@ -64,9 +64,29 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     )
     template = template_path.read_text(encoding="utf-8")
 
-    assert "Retirar títulos financeiros em aberto" in template
+    assert "Retirar títulos financeiros do fluxo" in template
+    assert 'name="enable_title_exclusions"' in template
+    assert 'data-cash-flow-process' in template
+    assert 'name="excluded_entry_ids"' in template
+    assert '/projected-titles' in template
     assert 'name="bank_account_ids" value="-1"' in template
-    assert "Desmarque contas para retirar seus títulos financeiros" in template
+    assert "Processar filtros" in template
+
+
+def test_cash_flow_filters_accept_manual_title_exclusions():
+    filters, error = FinancialReportService._normalize_filters(
+        "cash_flow",
+        {
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "enable_title_exclusions": "true",
+            "excluded_entry_ids": ["10", "11"],
+        },
+    )
+
+    assert error is None
+    assert filters.enable_title_exclusions is True
+    assert filters.excluded_entry_ids == [10, 11]
 
 
 def test_bank_account_catalog_template_exposes_overdraft_limit_field():

@@ -69,6 +69,43 @@
         </article>
     </section>
 
+    {% if report.excluded_titles %}
+    <section class="rv-panel">
+        <h2>Títulos retirados do fluxo</h2>
+        <p class="rv-helper">Os títulos abaixo foram marcados na tela de filtros e não compõem o saldo projetado do fluxo de caixa.</p>
+        <div class="rv-table-wrap">
+            <table class="rv-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Histórico</th>
+                        <th>Tipo</th>
+                        <th>Saldo retirado</th>
+                        <th>Favorecido</th>
+                        <th>Número/Parc</th>
+                        <th>Competência</th>
+                        <th>Vencimento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report.excluded_titles %}
+                    <tr>
+                        <td>{{ row.status_label }}</td>
+                        <td>{{ row.history }}</td>
+                        <td>{{ row.type }}</td>
+                        <td>{{ row.open_amount }}</td>
+                        <td>{{ row.counterparty }}</td>
+                        <td>{{ row.number_installment }}</td>
+                        <td>{{ row.competence_date }}</td>
+                        <td>{{ row.due_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
     <section class="rv-panel">
         <h2>Dados</h2>
         {% if report.rows %}
@@ -117,6 +154,7 @@
     .rv-list { display:grid; gap:.75rem; }
     .rv-list div { display:flex; justify-content:space-between; gap:1rem; padding:.75rem .85rem; background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; }
     .rv-list span { color:var(--text-secondary); }
+    .rv-helper { margin:.25rem 0 1rem; color:var(--text-secondary); }
     .rv-table-wrap { overflow:auto; }
     .rv-table { width:100%; min-width:900px; border-collapse:collapse; }
     .rv-table th, .rv-table td { padding:.82rem .75rem; border-bottom:1px solid var(--border); text-align:left; }

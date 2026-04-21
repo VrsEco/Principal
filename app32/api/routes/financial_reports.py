@@ -14,6 +14,7 @@ _BOOLEAN_FILTER_KEYS = {
     "include_projected",
     "include_reconciled_only",
     "include_overdraft",
+    "enable_title_exclusions",
     "include_open",
     "include_settled",
     "include_partial",
@@ -45,12 +46,18 @@ _LIST_FILTER_KEYS = {
     "process_ids",
     "working_capital_accounts",
     "counterparty_ids",
+    "excluded_entry_ids",
 }
 
 _IGNORED_FILTER_QUERY_KEYS = {
     "company_id",
     "bucket",
     "detail_chart_account_id",
+    "title_filter_movement_nature",
+    "title_filter_counterparty_id",
+    "title_filter_chart_account_id",
+    "title_filter_cost_center_id",
+    "title_filter_search",
     "ui_refresh",
     "refresh",
 }
@@ -102,6 +109,16 @@ def _current_filters_state():
             continue
         state[key] = values
     return state
+
+
+def _cash_flow_title_filter_payload():
+    return {
+        "movement_nature": request.args.get("title_filter_movement_nature"),
+        "counterparty_id": request.args.get("title_filter_counterparty_id"),
+        "chart_account_id": request.args.get("title_filter_chart_account_id"),
+        "cost_center_id": request.args.get("title_filter_cost_center_id"),
+        "search": request.args.get("title_filter_search"),
+    }
 
 
 @financial_bp.route('/financial/reports')
@@ -220,6 +237,28 @@ def financial_report_income_statement_drilldown(report_slug: str):
         bucket=bucket or '',
         chart_account_id=chart_account_id,
         filters=filters_payload,
+        allowed_company_ids=get_accessible_company_ids(),
+    )
+    if error:
+        abort(400, description=error)
+    return jsonify(payload)
+
+
+@financial_bp.route('/financial/reports/<report_slug>/projected-titles')
+@permission_required('financial', 'view')
+def financial_report_cash_flow_projected_titles(report_slug: str):
+    company = get_active_company()
+    if not company:
+        abort(400, description='Empresa ativa não identificada para relatórios financeiros.')
+
+    report_definition, error = FinancialReportService.get_report_definition_or_error(report_slug)
+    if error or not report_definition or report_definition["code"] != "cash_flow":
+        abort(404, description='Pré-visualização disponível apenas para o Fluxo de Caixa.')
+
+    payload, error = FinancialReportService.build_cash_flow_title_preview(
+        company_id=company.id,
+        filters=_request_filters_payload(),
+        selection_filters=_cash_flow_title_filter_payload(),
         allowed_company_ids=get_accessible_company_ids(),
     )
     if error:
