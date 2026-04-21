@@ -2603,6 +2603,1004 @@ class FinancialReportService:
         return payload, None
 
     @staticmethod
+    def build_income_statement_drilldown(
+        *,
+        company_id: int,
+        report_type: str,
+        bucket: str,
+        chart_account_id: Optional[int] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        definition, error = FinancialReportService.get_report_definition_or_error(report_type)
+        if error:
+            return None, error
+        if definition["code"] not in {"income_statement", "income_statement_2"}:
+            return None, "Drill-down disponível apenas para a DRE."
+
+        normalized_filters, error = FinancialReportService._normalize_filters(definition["code"], filters)
+        if error:
+            return None, error
+
+        bucket_map = {
+            "competence": {"key": "competencia", "label": "Competência", "source_label": "Títulos e ajustes"},
+            "competencia": {"key": "competencia", "label": "Competência", "source_label": "Títulos e ajustes"},
+            "due": {"key": "vencimento", "label": "Vencimento", "source_label": "Títulos e ajustes"},
+            "vencimento": {"key": "vencimento", "label": "Vencimento", "source_label": "Títulos e ajustes"},
+            "liquidation": {"key": "liquidacao", "label": "Baixa", "source_label": "Baixas"},
+            "liquidacao": {"key": "liquidacao", "label": "Baixa", "source_label": "Baixas"},
+            "settlement": {"key": "liquidacao", "label": "Baixa", "source_label": "Baixas"},
+            "baixa": {"key": "liquidacao", "label": "Baixa", "source_label": "Baixas"},
+            "open": {"key": "aberto", "label": "Em aberto", "source_label": "Títulos em aberto"},
+            "aberto": {"key": "aberto", "label": "Em aberto", "source_label": "Títulos em aberto"},
+            "settled": {"key": "baixado", "label": "Liquidado", "source_label": "Títulos liquidados"},
+            "baixado": {"key": "baixado", "label": "Liquidado", "source_label": "Títulos liquidados"},
+            "liquidado": {"key": "baixado", "label": "Liquidado", "source_label": "Títulos liquidados"},
+        }
+        bucket_meta = bucket_map.get(str(bucket or "").strip().lower())
+        if not bucket_meta:
+            return None, "Bucket inválido para drill-down da DRE."
+
+        consolidated_by_period = definition["code"] == "income_statement"
+        chart_accounts = FinancialChartAccount.query.filter(
+            FinancialChartAccount.company_id == company_id,
+            FinancialChartAccount.deleted_at.is_(None),
+        ).order_by(FinancialChartAccount.code.asc(), FinancialChartAccount.name.asc()).all()
+        chart_map = {
+            item.id: {
+                "id": item.id,
+                "parent_id": item.parent_id,
+                "code": getattr(item, "code", None) or f"CTA-{item.id}",
+                "name": item.name,
+                "accepts_posting": bool(getattr(item, "accepts_posting", False)),
+            }
+            for item in chart_accounts
+        }
+        chart_children_map: Dict[Optional[int], List[int]] = {}
+        for item in chart_accounts:
+            chart_children_map.setdefault(item.parent_id, []).append(item.id)
+        for child_ids in chart_children_map.values():
+            child_ids.sort(key=lambda account_id: ((chart_map.get(account_id) or {}).get("code") or "", (chart_map.get(account_id) or {}).get("name") or ""))
+
+        if chart_account_id is not None and chart_account_id not in chart_map:
+            return None, "Conta contábil não encontrada para o drill-down."
+
+        center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
+        counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
+
+        period_start = normalized_filters.period_start
+        period_end = normalized_filters.period_end
+        competence_start = normalized_filters.competence_start or normalized_filters.period_start
+        competence_end = normalized_filters.competence_end or normalized_filters.period_end
+        due_start = normalized_filters.due_start
+        due_end = normalized_filters.due_end
+        settlement_start = normalized_filters.settlement_start
+        settlement_end = normalized_filters.settlement_end
+
+        chart_account_ids = FinancialReportService._selected_ids(normalized_filters.chart_account_id, normalized_filters.chart_account_ids)
+        cost_center_ids = FinancialReportService._selected_ids(normalized_filters.cost_center_id, normalized_filters.cost_center_ids)
+        allowed_entry_types = []
+        if normalized_filters.include_receivable:
+            allowed_entry_types.append("receivable")
+        if normalized_filters.include_payable:
+            allowed_entry_types.append("payable")
+        if normalized_filters.include_budget_vs_actual:
+            allowed_entry_types.append("forecast")
+
+        detail_items_by_bucket: Dict[str, Dict[int, List[Dict[str, Any]]]] = {
+            "competencia": {},
+            "vencimento": {},
+            "liquidacao": {},
+            "aberto": {},
+            "baixado": {},
+        }
+
+        def _bucket_store(current_bucket: str, account_id: Optional[int]) -> List[Dict[str, Any]]:
+            normalized_account_id = int(account_id or 0)
+            return detail_items_by_bucket.setdefault(current_bucket, {}).setdefault(normalized_account_id, [])
+
+        def _account_label(account_id: Optional[int]) -> str:
+            account = chart_map.get(int(account_id or 0))
+            if not account:
+                return "Sem conta contábil"
+            return f"{account['code']} - {account['name']}"
+
+        def _date_iso(value: Optional[date]) -> Optional[str]:
+            return value.isoformat() if hasattr(value, "isoformat") else None
+
+        def _component_label(component_key: str) -> str:
+            return {
+                "principal": "Principal",
+                "financial_correction": "Correção financeira",
+                "discount": "Desconto",
+            }.get(component_key, component_key)
+
+        def _title_reference(schedule: Optional[FinancialSchedule], entry: Optional[FinancialEntry]) -> str:
+            if schedule is not None:
+                return getattr(schedule, "schedule_code", None) or getattr(schedule, "document_number_prefix", None) or f"Título {schedule.id}"
+            if entry is not None:
+                return getattr(entry, "entry_code", None) or getattr(entry, "document_number", None) or f"Lançamento {entry.id}"
+            return "Título"
+
+        def _title_description(schedule: Optional[FinancialSchedule], entry: Optional[FinancialEntry]) -> str:
+            if schedule is not None:
+                return getattr(schedule, "description", None) or getattr(schedule, "name", None) or "Sem histórico"
+            if entry is not None:
+                return getattr(entry, "description", None) or getattr(entry, "memo", None) or "Sem histórico"
+            return "Sem histórico"
+
+        def _title_counterparty(schedule: Optional[FinancialSchedule], entry: Optional[FinancialEntry]) -> str:
+            schedule_counterparty_id = getattr(schedule, "counterparty_id", None) if schedule is not None else None
+            entry_counterparty_id = getattr(entry, "counterparty_id", None) if entry is not None else None
+            if schedule_counterparty_id:
+                return counterparty_names.get(schedule_counterparty_id, "Não informado")
+            if entry_counterparty_id:
+                return counterparty_names.get(entry_counterparty_id, "Não informado")
+            schedule_metadata = dict(getattr(schedule, "metadata_json", {}) or {}) if schedule is not None else {}
+            entry_metadata = dict(getattr(entry, "metadata_json", {}) or {}) if entry is not None else {}
+            return schedule_metadata.get("counterparty_name") or entry_metadata.get("counterparty_name") or "Não informado"
+
+        def _relevant_date_iso(bucket_key: str, *, competence_date: Optional[date], due_date_value: Optional[date], settlement_date_value: Optional[date]) -> Optional[str]:
+            if bucket_key == "competencia":
+                return _date_iso(competence_date)
+            if bucket_key == "vencimento":
+                return _date_iso(due_date_value)
+            if bucket_key == "liquidacao":
+                return _date_iso(settlement_date_value)
+            if bucket_key == "aberto":
+                return _date_iso(due_date_value or competence_date)
+            if bucket_key == "baixado":
+                return _date_iso(settlement_date_value or due_date_value or competence_date)
+            return None
+
+        def _push_item(
+            *,
+            bucket_key: str,
+            account_id: Optional[int],
+            amount: Decimal,
+            source_kind: str,
+            source_code: str,
+            component_key: str,
+            description: str,
+            counterparty: str,
+            competence_date_value: Optional[date],
+            due_date_value: Optional[date],
+            settlement_date_value: Optional[date],
+            entry: Optional[FinancialEntry] = None,
+            schedule: Optional[FinancialSchedule] = None,
+            settlement: Optional[FinancialSettlement] = None,
+            cost_center_id: Optional[int] = None,
+        ) -> None:
+            item_amount = Decimal(amount or 0)
+            if item_amount == Decimal("0"):
+                return
+            normalized_account_id = int(account_id or 0)
+            cost_center_label = center_names.get(cost_center_id, str(cost_center_id)) if cost_center_id else "Todos"
+            store = _bucket_store(bucket_key, normalized_account_id)
+            store.append(
+                {
+                    "bucket": bucket_key,
+                    "source_kind": source_kind,
+                    "source_kind_label": "Baixa" if source_kind == "settlement" else "Título",
+                    "source_code": source_code,
+                    "component_key": component_key,
+                    "component_label": _component_label(component_key),
+                    "description": description,
+                    "counterparty": counterparty or "Não informado",
+                    "account_id": normalized_account_id,
+                    "account_label": _account_label(normalized_account_id),
+                    "cost_center_label": cost_center_label,
+                    "competence_date": _date_iso(competence_date_value),
+                    "due_date": _date_iso(due_date_value),
+                    "settlement_date": _date_iso(settlement_date_value),
+                    "relevant_date": _relevant_date_iso(
+                        bucket_key,
+                        competence_date=competence_date_value,
+                        due_date_value=due_date_value,
+                        settlement_date_value=settlement_date_value,
+                    ),
+                    "amount": FinancialReportService._serialize_money(item_amount),
+                    "amount_label": FinancialReportService._format_currency(item_amount),
+                    "schedule_id": getattr(schedule, "id", None),
+                    "entry_id": getattr(entry, "id", None),
+                    "settlement_id": getattr(settlement, "id", None),
+                }
+            )
+
+        def _passes_financial_status(total_amount: Decimal, settled_amount: Decimal, explicit_status: Optional[str] = None) -> Tuple[bool, bool]:
+            normalized_status = str(explicit_status or "").strip().lower()
+            if normalized_status in {"draft", "cancelled"}:
+                return False, False
+            if normalized_status == "forecast":
+                return bool(normalized_filters.include_budget_vs_actual), True
+            is_settled = normalized_status in {"settled", "completed"} or (total_amount > Decimal("0") and settled_amount >= total_amount)
+            is_partial = not is_settled and settled_amount > Decimal("0")
+            is_open = not is_settled
+            if is_settled:
+                return bool(normalized_filters.include_settled), is_open
+            if is_partial:
+                return bool(normalized_filters.include_partial or normalized_filters.include_open), is_open
+            return bool(normalized_filters.include_open), is_open
+
+        def _settlement_component_summary(settlement: FinancialSettlement, entry: FinancialEntry) -> Dict[str, Any]:
+            try:
+                serialized = FinancialService.serialize_settlement(settlement, entry=entry, include_components=True)
+                if serialized:
+                    return {
+                        "component_summary": dict(serialized.get("settlement_component_summary") or {}),
+                        "allocation_breakdown": dict(serialized.get("settlement_allocation_breakdown") or {}),
+                    }
+            except Exception:
+                pass
+
+            metadata = dict(getattr(settlement, "metadata_json", {}) or {})
+            return {
+                "component_summary": {
+                    "principal": Decimal(getattr(settlement, "principal_amount", None) or 0),
+                    "financial_correction": Decimal(getattr(settlement, "interest_amount", None) or 0)
+                    + Decimal(getattr(settlement, "penalty_amount", None) or 0)
+                    + Decimal(getattr(settlement, "fee_amount", None) or 0)
+                    + Decimal(getattr(settlement, "other_adjustments_amount", None) or 0),
+                    "discount": Decimal(getattr(settlement, "discount_amount", None) or 0),
+                },
+                "allocation_breakdown": dict(metadata.get("settlement_allocation_breakdown") or {}),
+            }
+
+        def _resolve_entry_principal_amount(
+            entry: FinancialEntry,
+            *,
+            schedule: Optional[FinancialSchedule] = None,
+        ) -> Decimal:
+            metadata = dict(getattr(entry, "metadata_json", {}) or {})
+            schedule_amount = metadata.get("schedule_template_amount")
+            if schedule_amount not in (None, ""):
+                return Decimal(str(schedule_amount or 0))
+            if schedule is not None:
+                return Decimal(str(getattr(schedule, "template_amount", None) or 0))
+            return Decimal(str(getattr(entry, "original_amount", None) or 0))
+
+        def _date_in_bucket(target_date: Optional[date], bucket_key: str) -> bool:
+            if not target_date:
+                return False
+            if consolidated_by_period:
+                return bool(period_start and period_end and period_start <= target_date <= period_end)
+
+            if bucket_key == "competencia":
+                if competence_start and target_date < competence_start:
+                    return False
+                if competence_end and target_date > competence_end:
+                    return False
+                return True
+
+            if bucket_key == "vencimento":
+                if due_start and target_date < due_start:
+                    return False
+                if due_end and target_date > due_end:
+                    return False
+                return True
+
+            if settlement_start and target_date < settlement_start:
+                return False
+            if settlement_end and target_date > settlement_end:
+                return False
+            return True
+
+        def _push_settlement_breakdown(
+            *,
+            settlement: FinancialSettlement,
+            entry: FinancialEntry,
+            schedule: Optional[FinancialSchedule],
+            fallback_chart_account_id: Optional[int],
+            fallback_cost_center_id: Optional[int],
+        ) -> Dict[str, bool]:
+            summary_payload = _settlement_component_summary(settlement, entry)
+            component_summary = summary_payload["component_summary"]
+            allocation_breakdown = summary_payload["allocation_breakdown"]
+            movement_multiplier = Decimal("1") if entry.movement_nature == "credit" else Decimal("-1")
+            flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+            settlement_date_value = getattr(settlement, "settlement_date", None)
+            title_reference = _title_reference(schedule, entry)
+            title_description = _title_description(schedule, entry)
+            title_counterparty = _title_counterparty(schedule, entry)
+
+            component_specs = (
+                ("principal", Decimal("1"), Decimal(getattr(settlement, "principal_amount", None) or 0)),
+                ("financial_correction", Decimal("1"), Decimal("0")),
+                ("discount", Decimal("-1"), Decimal("0")),
+            )
+            for component_key, component_multiplier, fallback_amount in component_specs:
+                breakdown = dict(allocation_breakdown.get(component_key) or {})
+                items = list(breakdown.get("items") or [])
+                if items:
+                    for item in items:
+                        item_payload = dict(item or {})
+                        amount = abs(Decimal(str(item_payload.get("settled_allocated_amount", item_payload.get("allocated_amount", item_payload.get("amount", 0))) or 0)))
+                        if amount == Decimal("0"):
+                            continue
+                        signed_amount = amount * movement_multiplier * component_multiplier
+                        allocated_chart_account_id = item_payload.get("chart_account_id") or fallback_chart_account_id
+                        allocated_cost_center_id = item_payload.get("cost_center_id") or fallback_cost_center_id
+                        raw_competence_date = item_payload.get("competence_date")
+                        raw_due_date = item_payload.get("due_date")
+                        competence_date_value = settlement_date_value
+                        due_date_value = settlement_date_value
+                        if raw_competence_date:
+                            try:
+                                competence_date_value = date.fromisoformat(str(raw_competence_date))
+                            except ValueError:
+                                competence_date_value = settlement_date_value
+                        if raw_due_date:
+                            try:
+                                due_date_value = date.fromisoformat(str(raw_due_date))
+                            except ValueError:
+                                due_date_value = settlement_date_value
+
+                        if component_key == "principal":
+                            if _date_in_bucket(settlement_date_value, "liquidacao"):
+                                _push_item(
+                                    bucket_key="liquidacao",
+                                    account_id=allocated_chart_account_id,
+                                    amount=signed_amount,
+                                    source_kind="settlement",
+                                    source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                                    component_key=component_key,
+                                    description=title_description,
+                                    counterparty=title_counterparty,
+                                    competence_date_value=competence_date_value,
+                                    due_date_value=due_date_value,
+                                    settlement_date_value=settlement_date_value,
+                                    entry=entry,
+                                    schedule=schedule,
+                                    settlement=settlement,
+                                    cost_center_id=allocated_cost_center_id,
+                                )
+                                flags["liquidacao"] = True
+                            continue
+
+                        if _date_in_bucket(competence_date_value, "competencia"):
+                            _push_item(
+                                bucket_key="competencia",
+                                account_id=allocated_chart_account_id,
+                                amount=signed_amount,
+                                source_kind="settlement",
+                                source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                                component_key=component_key,
+                                description=title_description,
+                                counterparty=title_counterparty,
+                                competence_date_value=competence_date_value,
+                                due_date_value=due_date_value,
+                                settlement_date_value=settlement_date_value,
+                                entry=entry,
+                                schedule=schedule,
+                                settlement=settlement,
+                                cost_center_id=allocated_cost_center_id,
+                            )
+                            flags["competencia"] = True
+                        if _date_in_bucket(due_date_value, "vencimento"):
+                            _push_item(
+                                bucket_key="vencimento",
+                                account_id=allocated_chart_account_id,
+                                amount=signed_amount,
+                                source_kind="settlement",
+                                source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                                component_key=component_key,
+                                description=title_description,
+                                counterparty=title_counterparty,
+                                competence_date_value=competence_date_value,
+                                due_date_value=due_date_value,
+                                settlement_date_value=settlement_date_value,
+                                entry=entry,
+                                schedule=schedule,
+                                settlement=settlement,
+                                cost_center_id=allocated_cost_center_id,
+                            )
+                            flags["vencimento"] = True
+                        if _date_in_bucket(settlement_date_value, "liquidacao"):
+                            _push_item(
+                                bucket_key="liquidacao",
+                                account_id=allocated_chart_account_id,
+                                amount=signed_amount,
+                                source_kind="settlement",
+                                source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                                component_key=component_key,
+                                description=title_description,
+                                counterparty=title_counterparty,
+                                competence_date_value=competence_date_value,
+                                due_date_value=due_date_value,
+                                settlement_date_value=settlement_date_value,
+                                entry=entry,
+                                schedule=schedule,
+                                settlement=settlement,
+                                cost_center_id=allocated_cost_center_id,
+                            )
+                            flags["liquidacao"] = True
+                    continue
+
+                amount = abs(Decimal(str(component_summary.get(component_key) or fallback_amount or 0)))
+                if amount == Decimal("0"):
+                    continue
+                signed_amount = amount * movement_multiplier * component_multiplier
+                if component_key == "principal":
+                    if _date_in_bucket(settlement_date_value, "liquidacao"):
+                        _push_item(
+                            bucket_key="liquidacao",
+                            account_id=fallback_chart_account_id,
+                            amount=signed_amount,
+                            source_kind="settlement",
+                            source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                            component_key=component_key,
+                            description=title_description,
+                            counterparty=title_counterparty,
+                            competence_date_value=settlement_date_value,
+                            due_date_value=settlement_date_value,
+                            settlement_date_value=settlement_date_value,
+                            entry=entry,
+                            schedule=schedule,
+                            settlement=settlement,
+                            cost_center_id=fallback_cost_center_id,
+                        )
+                        flags["liquidacao"] = True
+                else:
+                    if _date_in_bucket(settlement_date_value, "competencia"):
+                        _push_item(
+                            bucket_key="competencia",
+                            account_id=fallback_chart_account_id,
+                            amount=signed_amount,
+                            source_kind="settlement",
+                            source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                            component_key=component_key,
+                            description=title_description,
+                            counterparty=title_counterparty,
+                            competence_date_value=settlement_date_value,
+                            due_date_value=settlement_date_value,
+                            settlement_date_value=settlement_date_value,
+                            entry=entry,
+                            schedule=schedule,
+                            settlement=settlement,
+                            cost_center_id=fallback_cost_center_id,
+                        )
+                        flags["competencia"] = True
+                    if _date_in_bucket(settlement_date_value, "vencimento"):
+                        _push_item(
+                            bucket_key="vencimento",
+                            account_id=fallback_chart_account_id,
+                            amount=signed_amount,
+                            source_kind="settlement",
+                            source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                            component_key=component_key,
+                            description=title_description,
+                            counterparty=title_counterparty,
+                            competence_date_value=settlement_date_value,
+                            due_date_value=settlement_date_value,
+                            settlement_date_value=settlement_date_value,
+                            entry=entry,
+                            schedule=schedule,
+                            settlement=settlement,
+                            cost_center_id=fallback_cost_center_id,
+                        )
+                        flags["vencimento"] = True
+                    if _date_in_bucket(settlement_date_value, "liquidacao"):
+                        _push_item(
+                            bucket_key="liquidacao",
+                            account_id=fallback_chart_account_id,
+                            amount=signed_amount,
+                            source_kind="settlement",
+                            source_code=getattr(settlement, "settlement_code", None) or f"Baixa {settlement.id}",
+                            component_key=component_key,
+                            description=title_description,
+                            counterparty=title_counterparty,
+                            competence_date_value=settlement_date_value,
+                            due_date_value=settlement_date_value,
+                            settlement_date_value=settlement_date_value,
+                            entry=entry,
+                            schedule=schedule,
+                            settlement=settlement,
+                            cost_center_id=fallback_cost_center_id,
+                        )
+                        flags["liquidacao"] = True
+
+            return flags
+
+        if consolidated_by_period:
+            schedule_query = FinancialSchedule.query.filter(
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            )
+            if chart_account_ids:
+                schedule_query = schedule_query.filter(FinancialSchedule.chart_account_id.in_(chart_account_ids))
+            if cost_center_ids:
+                schedule_query = schedule_query.filter(FinancialSchedule.cost_center_id.in_(cost_center_ids))
+            if allowed_entry_types:
+                schedule_query = schedule_query.filter(FinancialSchedule.entry_type.in_(allowed_entry_types))
+
+            schedules = schedule_query.order_by(FinancialSchedule.chart_account_id.asc(), FinancialSchedule.competence_date.asc(), FinancialSchedule.id.asc()).all()
+            if normalized_filters.project_ids:
+                schedules = [item for item in schedules if FinancialReportService._schedule_matches_projects(item, normalized_filters.project_ids)]
+
+            schedule_ids = [item.id for item in schedules]
+            schedule_refs = {f"financial_schedule:{item.id}": item.id for item in schedules}
+            linked_entries: List[FinancialEntry] = []
+            if schedule_ids:
+                linked_entries = FinancialEntry.query.filter(
+                    FinancialEntry.company_id == company_id,
+                    FinancialEntry.deleted_at.is_(None),
+                    or_(
+                        FinancialEntry.financial_schedule_id.in_(schedule_ids),
+                        FinancialEntry.external_reference.in_(list(schedule_refs.keys())),
+                    ),
+                ).all()
+
+            entries_by_schedule: Dict[int, List[FinancialEntry]] = {item.id: [] for item in schedules}
+            linked_entry_ids: List[int] = []
+            for entry in linked_entries:
+                schedule_id = getattr(entry, "financial_schedule_id", None) or schedule_refs.get(entry.external_reference)
+                if schedule_id in entries_by_schedule:
+                    entries_by_schedule[schedule_id].append(entry)
+                    linked_entry_ids.append(entry.id)
+
+            settlement_totals_by_entry: Dict[int, Decimal] = {}
+            settlement_items_by_entry: Dict[int, List[FinancialSettlement]] = {}
+            if linked_entry_ids:
+                for settlement in FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id.in_(linked_entry_ids),
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                ).all():
+                    settlement_principal = Decimal(settlement.principal_amount or 0)
+                    settlement_amount = Decimal(settlement.net_amount or 0)
+                    settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                    settlement_totals_by_entry[settlement.financial_entry_id] += settlement_principal
+                    if settlement_amount != Decimal("0"):
+                        settlement_items_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
+
+            for schedule in schedules:
+                schedule_entries = entries_by_schedule.get(schedule.id, [])
+                competence_date_value = schedule.competence_date or schedule.start_date
+                due_date_value = schedule.next_due_date or schedule.first_due_date or schedule.start_date
+                title_amount = Decimal(str(schedule.template_amount or 0))
+                if title_amount <= Decimal("0") and schedule_entries:
+                    title_amount = sum((_resolve_entry_principal_amount(entry, schedule=schedule) for entry in schedule_entries), Decimal("0"))
+                settled_total = sum((settlement_totals_by_entry.get(entry.id, Decimal("0")) for entry in schedule_entries), Decimal("0"))
+                derived_settlement_state = "open"
+                if title_amount > Decimal("0") and settled_total >= title_amount:
+                    derived_settlement_state = "settled"
+                elif settled_total > Decimal("0"):
+                    derived_settlement_state = "partial"
+                operational_state = build_title_operational_state_metadata(
+                    schedule_status=schedule.status,
+                    settlement_state=derived_settlement_state,
+                    entry_type=schedule.entry_type,
+                    metadata_json=schedule.metadata_json,
+                )
+                passes_status, is_open = _passes_financial_status(title_amount, settled_total, operational_state["code"])
+                if not passes_status:
+                    continue
+
+                in_competence = bool(competence_date_value and period_start <= competence_date_value <= period_end)
+                in_due = bool(due_date_value and period_start <= due_date_value <= period_end)
+                settlement_flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+                for entry in schedule_entries:
+                    for settlement in settlement_items_by_entry.get(entry.id, []):
+                        current_flags = _push_settlement_breakdown(
+                            settlement=settlement,
+                            entry=entry,
+                            schedule=schedule,
+                            fallback_chart_account_id=schedule.chart_account_id,
+                            fallback_cost_center_id=schedule.cost_center_id,
+                        )
+                        settlement_flags = {key: settlement_flags[key] or current_flags[key] for key in settlement_flags}
+
+                in_liquidation = settlement_flags["liquidacao"]
+                if not any([in_competence, in_due, settlement_flags["competencia"], settlement_flags["vencimento"], in_liquidation]):
+                    continue
+
+                signed_title = Decimal(str(FinancialService.get_signed_amount(title_amount, schedule.movement_nature)))
+                if in_competence:
+                    _push_item(
+                        bucket_key="competencia",
+                        account_id=schedule.chart_account_id,
+                        amount=signed_title,
+                        source_kind="title",
+                        source_code=_title_reference(schedule, None),
+                        component_key="principal",
+                        description=_title_description(schedule, None),
+                        counterparty=_title_counterparty(schedule, None),
+                        competence_date_value=competence_date_value,
+                        due_date_value=due_date_value,
+                        settlement_date_value=None,
+                        schedule=schedule,
+                        cost_center_id=schedule.cost_center_id,
+                    )
+                if in_due:
+                    _push_item(
+                        bucket_key="vencimento",
+                        account_id=schedule.chart_account_id,
+                        amount=signed_title,
+                        source_kind="title",
+                        source_code=_title_reference(schedule, None),
+                        component_key="principal",
+                        description=_title_description(schedule, None),
+                        counterparty=_title_counterparty(schedule, None),
+                        competence_date_value=competence_date_value,
+                        due_date_value=due_date_value,
+                        settlement_date_value=None,
+                        schedule=schedule,
+                        cost_center_id=schedule.cost_center_id,
+                    )
+                if is_open:
+                    _push_item(
+                        bucket_key="aberto",
+                        account_id=schedule.chart_account_id,
+                        amount=signed_title,
+                        source_kind="title",
+                        source_code=_title_reference(schedule, None),
+                        component_key="principal",
+                        description=_title_description(schedule, None),
+                        counterparty=_title_counterparty(schedule, None),
+                        competence_date_value=competence_date_value,
+                        due_date_value=due_date_value,
+                        settlement_date_value=None,
+                        schedule=schedule,
+                        cost_center_id=schedule.cost_center_id,
+                    )
+                else:
+                    last_settlement_date = None
+                    dated_settlements = [settlement for entry in schedule_entries for settlement in settlement_items_by_entry.get(entry.id, [])]
+                    if dated_settlements:
+                        dated_settlements.sort(key=lambda item: (getattr(item, "settlement_date", None) or date.max, getattr(item, "id", 0)))
+                        last_settlement_date = getattr(dated_settlements[-1], "settlement_date", None)
+                    _push_item(
+                        bucket_key="baixado",
+                        account_id=schedule.chart_account_id,
+                        amount=signed_title,
+                        source_kind="title",
+                        source_code=_title_reference(schedule, None),
+                        component_key="principal",
+                        description=_title_description(schedule, None),
+                        counterparty=_title_counterparty(schedule, None),
+                        competence_date_value=competence_date_value,
+                        due_date_value=due_date_value,
+                        settlement_date_value=last_settlement_date,
+                        schedule=schedule,
+                        cost_center_id=schedule.cost_center_id,
+                    )
+
+            manual_query = FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            )
+            if chart_account_ids:
+                manual_query = manual_query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
+            if cost_center_ids:
+                manual_query = manual_query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
+            if allowed_entry_types:
+                manual_query = manual_query.filter(FinancialEntry.entry_type.in_(allowed_entry_types))
+            manual_entries = [
+                entry
+                for entry in manual_query.order_by(FinancialEntry.chart_account_id.asc(), FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all()
+                if not getattr(entry, "financial_schedule_id", None) and not str(entry.external_reference or "").startswith("financial_schedule:")
+            ]
+            if normalized_filters.project_ids:
+                manual_entries = [entry for entry in manual_entries if FinancialReportService._entry_matches_projects(entry, normalized_filters.project_ids)]
+
+            manual_entry_ids = [entry.id for entry in manual_entries]
+            manual_settlement_totals: Dict[int, Decimal] = {}
+            manual_settlement_items: Dict[int, List[FinancialSettlement]] = {}
+            if manual_entry_ids:
+                for settlement in FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id.in_(manual_entry_ids),
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                ).all():
+                    settlement_principal = Decimal(settlement.principal_amount or 0)
+                    settlement_amount = Decimal(settlement.net_amount or 0)
+                    manual_settlement_totals.setdefault(settlement.financial_entry_id, Decimal("0"))
+                    manual_settlement_totals[settlement.financial_entry_id] += settlement_principal
+                    if settlement_amount != Decimal("0"):
+                        manual_settlement_items.setdefault(settlement.financial_entry_id, []).append(settlement)
+
+            for entry in manual_entries:
+                original_amount = Decimal(entry.original_amount or 0)
+                total_settlement_amount = manual_settlement_totals.get(entry.id, Decimal("0"))
+                passes_status, is_open = _passes_financial_status(original_amount, total_settlement_amount, entry.status)
+                if not passes_status:
+                    continue
+                in_competence = bool(entry.competence_date and period_start <= entry.competence_date <= period_end)
+                in_due = bool(entry.due_date and period_start <= entry.due_date <= period_end)
+                settlement_flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+                for settlement in manual_settlement_items.get(entry.id, []):
+                    current_flags = _push_settlement_breakdown(
+                        settlement=settlement,
+                        entry=entry,
+                        schedule=None,
+                        fallback_chart_account_id=entry.chart_account_id,
+                        fallback_cost_center_id=entry.cost_center_id,
+                    )
+                    settlement_flags = {key: settlement_flags[key] or current_flags[key] for key in settlement_flags}
+                in_liquidation = settlement_flags["liquidacao"]
+                if not any([in_competence, in_due, settlement_flags["competencia"], settlement_flags["vencimento"], in_liquidation]):
+                    continue
+
+                signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
+                if in_competence:
+                    _push_item(
+                        bucket_key="competencia",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(None, entry),
+                        component_key="principal",
+                        description=_title_description(None, entry),
+                        counterparty=_title_counterparty(None, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=None,
+                        entry=entry,
+                        cost_center_id=entry.cost_center_id,
+                    )
+                if in_due:
+                    _push_item(
+                        bucket_key="vencimento",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(None, entry),
+                        component_key="principal",
+                        description=_title_description(None, entry),
+                        counterparty=_title_counterparty(None, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=None,
+                        entry=entry,
+                        cost_center_id=entry.cost_center_id,
+                    )
+                if is_open:
+                    _push_item(
+                        bucket_key="aberto",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(None, entry),
+                        component_key="principal",
+                        description=_title_description(None, entry),
+                        counterparty=_title_counterparty(None, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=None,
+                        entry=entry,
+                        cost_center_id=entry.cost_center_id,
+                    )
+                else:
+                    last_settlement_date = None
+                    entry_settlements = list(manual_settlement_items.get(entry.id, []))
+                    if entry_settlements:
+                        entry_settlements.sort(key=lambda item: (getattr(item, "settlement_date", None) or date.max, getattr(item, "id", 0)))
+                        last_settlement_date = getattr(entry_settlements[-1], "settlement_date", None)
+                    _push_item(
+                        bucket_key="baixado",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(None, entry),
+                        component_key="principal",
+                        description=_title_description(None, entry),
+                        counterparty=_title_counterparty(None, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=last_settlement_date,
+                        entry=entry,
+                        cost_center_id=entry.cost_center_id,
+                    )
+        else:
+            query = FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            )
+            if chart_account_ids:
+                query = query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
+            if cost_center_ids:
+                query = query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
+            if allowed_entry_types:
+                query = query.filter(FinancialEntry.entry_type.in_(allowed_entry_types))
+
+            entries = query.order_by(FinancialEntry.chart_account_id.asc(), FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all()
+            if normalized_filters.project_ids:
+                entries = [entry for entry in entries if FinancialReportService._entry_matches_projects(entry, normalized_filters.project_ids)]
+
+            entry_ids = [entry.id for entry in entries]
+            settlement_totals_by_entry: Dict[int, Decimal] = {}
+            settlement_items_by_entry: Dict[int, List[FinancialSettlement]] = {}
+            if entry_ids:
+                settlements = FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id.in_(entry_ids),
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                ).all()
+                for settlement in settlements:
+                    settlement_totals_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
+                    settlement_totals_by_entry[settlement.financial_entry_id] += Decimal(settlement.principal_amount or 0)
+                    settlement_items_by_entry.setdefault(settlement.financial_entry_id, []).append(settlement)
+
+            schedule_by_entry_id: Dict[int, FinancialSchedule] = {}
+            schedule_ids = {
+                int(getattr(entry, "financial_schedule_id", 0) or 0)
+                for entry in entries
+                if getattr(entry, "financial_schedule_id", None)
+            }
+            if schedule_ids:
+                for schedule in FinancialSchedule.query.filter(
+                    FinancialSchedule.company_id == company_id,
+                    FinancialSchedule.id.in_(list(schedule_ids)),
+                    FinancialSchedule.deleted_at.is_(None),
+                ).all():
+                    schedule_by_entry_id[int(getattr(schedule, "id", 0) or 0)] = schedule
+
+            for entry in entries:
+                linked_schedule = schedule_by_entry_id.get(int(getattr(entry, "financial_schedule_id", 0) or 0))
+                total_settlement_amount = settlement_totals_by_entry.get(entry.id, Decimal("0"))
+                original_amount = _resolve_entry_principal_amount(entry, schedule=linked_schedule)
+                passes_status, is_open = _passes_financial_status(original_amount, total_settlement_amount, entry.status)
+                if not passes_status:
+                    continue
+
+                in_competence = True
+                if competence_start and ((not entry.competence_date) or entry.competence_date < competence_start):
+                    in_competence = False
+                if competence_end and ((not entry.competence_date) or entry.competence_date > competence_end):
+                    in_competence = False
+
+                in_due = True
+                if due_start and ((not entry.due_date) or entry.due_date < due_start):
+                    in_due = False
+                if due_end and ((not entry.due_date) or entry.due_date > due_end):
+                    in_due = False
+
+                settlement_flags = {"competencia": False, "vencimento": False, "liquidacao": False}
+                for settlement in settlement_items_by_entry.get(entry.id, []):
+                    current_flags = _push_settlement_breakdown(
+                        settlement=settlement,
+                        entry=entry,
+                        schedule=linked_schedule,
+                        fallback_chart_account_id=(linked_schedule.chart_account_id if linked_schedule is not None else entry.chart_account_id),
+                        fallback_cost_center_id=(linked_schedule.cost_center_id if linked_schedule is not None else entry.cost_center_id),
+                    )
+                    settlement_flags = {key: settlement_flags[key] or current_flags[key] for key in settlement_flags}
+
+                in_liquidation = settlement_flags["liquidacao"]
+                if not any([in_competence, in_due, settlement_flags["competencia"], settlement_flags["vencimento"], in_liquidation]):
+                    continue
+
+                signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
+                if in_competence:
+                    _push_item(
+                        bucket_key="competencia",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(linked_schedule, entry),
+                        component_key="principal",
+                        description=_title_description(linked_schedule, entry),
+                        counterparty=_title_counterparty(linked_schedule, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=None,
+                        entry=entry,
+                        schedule=linked_schedule,
+                        cost_center_id=entry.cost_center_id,
+                    )
+                if in_due:
+                    _push_item(
+                        bucket_key="vencimento",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(linked_schedule, entry),
+                        component_key="principal",
+                        description=_title_description(linked_schedule, entry),
+                        counterparty=_title_counterparty(linked_schedule, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=None,
+                        entry=entry,
+                        schedule=linked_schedule,
+                        cost_center_id=entry.cost_center_id,
+                    )
+                if is_open:
+                    _push_item(
+                        bucket_key="aberto",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(linked_schedule, entry),
+                        component_key="principal",
+                        description=_title_description(linked_schedule, entry),
+                        counterparty=_title_counterparty(linked_schedule, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=None,
+                        entry=entry,
+                        schedule=linked_schedule,
+                        cost_center_id=entry.cost_center_id,
+                    )
+                else:
+                    last_settlement_date = None
+                    entry_settlements = list(settlement_items_by_entry.get(entry.id, []))
+                    if entry_settlements:
+                        entry_settlements.sort(key=lambda item: (getattr(item, "settlement_date", None) or date.max, getattr(item, "id", 0)))
+                        last_settlement_date = getattr(entry_settlements[-1], "settlement_date", None)
+                    _push_item(
+                        bucket_key="baixado",
+                        account_id=entry.chart_account_id,
+                        amount=signed_original,
+                        source_kind="title",
+                        source_code=_title_reference(linked_schedule, entry),
+                        component_key="principal",
+                        description=_title_description(linked_schedule, entry),
+                        counterparty=_title_counterparty(linked_schedule, entry),
+                        competence_date_value=entry.competence_date,
+                        due_date_value=entry.due_date,
+                        settlement_date_value=last_settlement_date,
+                        entry=entry,
+                        schedule=linked_schedule,
+                        cost_center_id=entry.cost_center_id,
+                    )
+
+        def _descendant_ids(root_account_id: int) -> List[int]:
+            ordered: List[int] = []
+            queue = [root_account_id]
+            seen = set()
+            while queue:
+                current = queue.pop(0)
+                if current in seen:
+                    continue
+                seen.add(current)
+                ordered.append(current)
+                queue.extend(chart_children_map.get(current, []))
+            return ordered
+
+        requested_bucket = bucket_meta["key"]
+        scoped_items: List[Dict[str, Any]] = []
+        account_scope_ids = _descendant_ids(chart_account_id) if chart_account_id is not None else list((detail_items_by_bucket.get(requested_bucket) or {}).keys())
+        for scoped_account_id in account_scope_ids:
+            scoped_items.extend(list((detail_items_by_bucket.get(requested_bucket) or {}).get(scoped_account_id, [])))
+
+        scoped_items.sort(
+            key=lambda item: (
+                item.get("relevant_date") or "9999-12-31",
+                item.get("account_label") or "",
+                item.get("source_code") or "",
+                item.get("component_label") or "",
+                item.get("description") or "",
+            )
+        )
+
+        total_amount = sum((Decimal(str(item.get("amount") or 0)) for item in scoped_items), Decimal("0"))
+        account_label = "Total consolidado"
+        if chart_account_id is not None:
+            account_label = _account_label(chart_account_id)
+
+        return {
+            "report_type": definition["code"],
+            "report_slug": definition["slug"],
+            "bucket": requested_bucket,
+            "bucket_label": bucket_meta["label"],
+            "source_label": bucket_meta["source_label"],
+            "chart_account_id": chart_account_id,
+            "account_label": account_label,
+            "item_count": len(scoped_items),
+            "total": FinancialReportService._serialize_money(total_amount),
+            "total_label": FinancialReportService._format_currency(total_amount),
+            "items": scoped_items,
+        }, None
+
+    @staticmethod
     def generate_report(*, company_id: int, report_type: str, period_start: str, period_end: str, allowed_company_ids: Optional[Sequence[int]] = None) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         return FinancialReportService.build_management_report(
             company_id=company_id,

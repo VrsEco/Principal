@@ -198,3 +198,43 @@ def test_income_statement_2_view_redirects_to_filters(monkeypatch):
     assert response.headers["Location"].endswith(
         "/financial/reports/demonstrativo-resultados-02?competence_start=2026-04-01&competence_end=2026-04-19"
     )
+
+
+def test_income_statement_drilldown_route_returns_json(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(
+        financial_reports_route,
+        "get_active_company",
+        lambda: SimpleNamespace(id=7, name="Empresa Teste"),
+    )
+    monkeypatch.setattr(financial_reports_route, "get_accessible_company_ids", lambda: [7])
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "build_income_statement_drilldown",
+        lambda **kwargs: (
+            {
+                "bucket": "competencia",
+                "bucket_label": "Competência",
+                "account_label": "4.01.001 - Receita teste",
+                "total": 100.0,
+                "total_label": "R$ 100,00",
+                "item_count": 1,
+                "items": [{"source_kind": "title", "source_code": "AG-000001", "amount_label": "R$ 100,00"}],
+            },
+            None,
+        ),
+    )
+
+    client = app.test_client()
+    response = client.get(
+        "/financial/reports/demonstrativo-resultados/drilldown?bucket=competence&chart_account_id=11",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["bucket"] == "competencia"
+    assert payload["account_label"] == "4.01.001 - Receita teste"
+    assert payload["total"] == 100.0
+    assert payload["item_count"] == 1

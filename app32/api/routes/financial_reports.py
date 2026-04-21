@@ -1,7 +1,7 @@
 import io
 import re
 
-from flask import abort, redirect, render_template, request, send_file, url_for
+from flask import abort, jsonify, redirect, render_template, request, send_file, url_for
 
 from services.financial_report_service import FinancialReportService
 from utils.company_access import get_accessible_company_ids
@@ -166,6 +166,35 @@ def financial_report_view_page(report_slug: str):
         company_id=company.id,
         report=report,
     )
+
+
+@financial_bp.route('/financial/reports/<report_slug>/drilldown')
+@permission_required('financial', 'view')
+def financial_report_income_statement_drilldown(report_slug: str):
+    company = get_active_company()
+    if not company:
+        abort(400, description='Empresa ativa não identificada para relatórios financeiros.')
+
+    bucket = request.args.get('bucket')
+    raw_chart_account_id = request.args.get('chart_account_id')
+    chart_account_id = None
+    if raw_chart_account_id not in (None, ''):
+        try:
+            chart_account_id = int(raw_chart_account_id)
+        except (TypeError, ValueError):
+            abort(400, description='Conta contábil inválida para drill-down da DRE.')
+
+    payload, error = FinancialReportService.build_income_statement_drilldown(
+        company_id=company.id,
+        report_type=report_slug,
+        bucket=bucket or '',
+        chart_account_id=chart_account_id,
+        filters=_request_filters_payload(),
+        allowed_company_ids=get_accessible_company_ids(),
+    )
+    if error:
+        abort(400, description=error)
+    return jsonify(payload)
 
 
 @financial_bp.route('/financial/reports/<report_slug>/export.xlsx')

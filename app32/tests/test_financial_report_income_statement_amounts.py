@@ -659,3 +659,173 @@ def test_income_statement_02_correction_uses_settlement_window_for_competence_an
     assert april_rows["5.2.01.003"]["competencia"] == "R$ -100,00"
     assert april_rows["5.2.01.003"]["vencimento"] == "R$ -100,00"
     assert april_rows["5.2.01.003"]["liquidacao"] == "R$ -100,00"
+
+
+def test_income_statement_drilldown_aggregates_titles_and_adjustments_by_account_tree(monkeypatch):
+    schedule = SimpleNamespace(
+        id=45,
+        company_id=7,
+        schedule_code="AG-000045",
+        description="Receita recorrente",
+        status="active",
+        entry_type="receivable",
+        movement_nature="credit",
+        competence_date=date(2026, 4, 10),
+        start_date=date(2026, 4, 10),
+        first_due_date=date(2026, 4, 20),
+        next_due_date=date(2026, 4, 20),
+        template_amount=Decimal("100"),
+        chart_account_id=11,
+        cost_center_id=None,
+        counterparty_id=None,
+        metadata_json={},
+    )
+    entry = SimpleNamespace(
+        id=145,
+        company_id=7,
+        entry_code="LCT-000145",
+        external_reference="financial_schedule:45",
+        financial_schedule_id=45,
+        original_amount=Decimal("100"),
+        status="settled",
+        movement_nature="credit",
+        entry_type="receivable",
+        competence_date=date(2026, 4, 10),
+        due_date=date(2026, 4, 20),
+        chart_account_id=11,
+        cost_center_id=None,
+        counterparty_id=None,
+        description="Receita recorrente",
+        metadata_json={},
+    )
+    settlement = SimpleNamespace(
+        id=81,
+        company_id=7,
+        financial_entry_id=145,
+        settlement_code="BX-000081",
+        settlement_date=date(2026, 4, 21),
+        principal_amount=Decimal("100"),
+        net_amount=Decimal("115"),
+        metadata_json={
+            "settlement_allocation_breakdown": {
+                "principal": {"items": [{"chart_account_id": 11, "settled_allocated_amount": 100}]},
+                "financial_correction": {"items": [{"chart_account_id": 12, "settled_allocated_amount": 20}]},
+                "discount": {"items": [{"chart_account_id": 13, "settled_allocated_amount": 5}]},
+            }
+        },
+    )
+    _install_income_statement_fakes(monkeypatch, schedules=[schedule], entries=[entry], settlements=[settlement])
+
+    payload, error = FinancialReportService.build_income_statement_drilldown(
+        company_id=7,
+        report_type="income_statement",
+        bucket="competence",
+        chart_account_id=10,
+        filters={
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+        },
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert payload["bucket"] == "competencia"
+    assert payload["account_label"] == "4 - Receitas"
+    assert payload["item_count"] == 3
+    assert payload["total"] == 115.0
+    assert [item["source_kind"] for item in payload["items"]] == ["title", "settlement", "settlement"]
+    assert [item["account_label"] for item in payload["items"]] == [
+        "4.01.001 - Receita teste",
+        "4.02.001 - Correção financeira",
+        "4.03.001 - Descontos concedidos",
+    ]
+
+
+def test_income_statement_drilldown_uses_settlements_for_liquidation(monkeypatch):
+    schedule = SimpleNamespace(
+        id=52,
+        company_id=9,
+        schedule_code="AG-000052",
+        description="Aluguel",
+        status="active",
+        entry_type="payable",
+        movement_nature="debit",
+        competence_date=date(2020, 1, 31),
+        start_date=date(2020, 1, 31),
+        first_due_date=date(2020, 2, 28),
+        next_due_date=date(2020, 2, 28),
+        template_amount=Decimal("7500"),
+        chart_account_id=11,
+        cost_center_id=None,
+        counterparty_id=None,
+        metadata_json={},
+    )
+    entry = SimpleNamespace(
+        id=210,
+        company_id=9,
+        entry_code="LCT-000210",
+        external_reference="financial_schedule:52",
+        financial_schedule_id=52,
+        original_amount=Decimal("13134.75"),
+        status="partial",
+        movement_nature="debit",
+        entry_type="payable",
+        competence_date=date(2020, 1, 31),
+        due_date=date(2020, 2, 28),
+        chart_account_id=11,
+        cost_center_id=None,
+        counterparty_id=None,
+        description="Aluguel",
+        metadata_json={"schedule_template_amount": "7500"},
+    )
+    settlement = SimpleNamespace(
+        id=91,
+        company_id=9,
+        financial_entry_id=210,
+        settlement_code="BX-000091",
+        settlement_date=date(2020, 4, 21),
+        principal_amount=Decimal("2000"),
+        net_amount=Decimal("2100"),
+        metadata_json={
+            "settlement_allocation_breakdown": {
+                "principal": {"items": [{"chart_account_id": 11, "settled_allocated_amount": 2000}]},
+                "financial_correction": {"items": [{"chart_account_id": 12, "settled_allocated_amount": 100}]},
+            }
+        },
+    )
+    accounts = [
+        SimpleNamespace(id=10, parent_id=None, code="5", name="Despesas", accepts_posting=False),
+        SimpleNamespace(id=11, parent_id=10, code="5.2.01.001", name="Aluguel", accepts_posting=True),
+        SimpleNamespace(id=12, parent_id=10, code="5.2.01.003", name="Multas e Juros", accepts_posting=True),
+    ]
+    _install_income_statement_fakes(monkeypatch, schedules=[schedule], entries=[entry], settlements=[settlement], accounts=accounts)
+
+    payload, error = FinancialReportService.build_income_statement_drilldown(
+        company_id=9,
+        report_type="income_statement",
+        bucket="liquidation",
+        chart_account_id=11,
+        filters={
+            "period_start": "2020-04-01",
+            "period_end": "2020-04-30",
+            "include_open": "true",
+            "include_partial": "true",
+            "include_settled": "true",
+            "include_receivable": "true",
+            "include_payable": "true",
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert payload["bucket"] == "liquidacao"
+    assert payload["item_count"] == 1
+    assert payload["total"] == -2000.0
+    assert payload["items"][0]["source_kind"] == "settlement"
+    assert payload["items"][0]["source_code"] == "BX-000091"
+    assert payload["items"][0]["component_label"] == "Principal"
