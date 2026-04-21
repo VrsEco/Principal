@@ -8,6 +8,9 @@
 {% if report.report_type == 'income_statement' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419c') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421e') }}">
+{% elif report.report_type == 'cash_flow' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419c') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_cash_flow_report.css', v='20260421g') }}">
 {% endif %}
 {% endblock %}
 
@@ -24,6 +27,8 @@
 {% block workspace_content %}
 {% if report.report_type == 'income_statement' %}
     {% include 'modules/financial/partials/report_view_income_statement.html' %}
+{% elif report.report_type == 'cash_flow' %}
+    {% include 'modules/financial/partials/report_view_cash_flow.html' %}
 {% else %}
 <div class="fin-report-view fade-in">
     <section class="rv-panel rv-header">

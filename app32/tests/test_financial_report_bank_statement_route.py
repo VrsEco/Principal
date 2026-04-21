@@ -184,6 +184,83 @@ def test_cash_flow_projected_titles_route_returns_json(monkeypatch):
     assert captured["selection_filters"]["counterparty_id"] == "9"
 
 
+def test_cash_flow_report_view_renders_dedicated_layout():
+    app = _build_app()
+    company = SimpleNamespace(id=7, name="Empresa Teste")
+    company.to_dict = lambda: {"id": 7, "name": "Empresa Teste"}
+    report = {
+        "report_type": "cash_flow",
+        "report_slug": "fluxo-caixa",
+        "title": "Fluxo de Caixa",
+        "subtitle": "Fluxo gerencial.",
+        "filters": [{"label": "Período", "value": "01/04/2026 até 30/04/2026"}],
+        "summary_cards": [{"label": "Saldo inicial", "value": "R$ 1.000,00", "tone": "positive"}],
+        "general_info": [{"label": "Periodicidade", "value": "Semanal"}],
+        "bank_balance_reference_label": "21/04/2026",
+        "bank_account_summary_rows": [],
+        "bank_account_summary_totals": {
+            "limit": "R$ 0,00",
+            "balance": "R$ 0,00",
+            "available_total": "R$ 0,00",
+        },
+        "periodicity_label": "Semanal",
+        "columns": [
+            {"key": "periodo", "label": "Período"},
+            {"key": "data_inicial", "label": "Data Inicial"},
+            {"key": "data_final", "label": "Data Final"},
+            {"key": "saldo_inicial", "label": "Saldo Inicial"},
+            {"key": "entrada", "label": "Entrada"},
+            {"key": "saida", "label": "Saída"},
+            {"key": "saldo_final", "label": "Saldo Final"},
+            {"key": "limite", "label": "Limite"},
+            {"key": "disponivel_total_final", "label": "Disp. Total Final"},
+        ],
+        "rows": [
+            {
+                "periodo": "Semana 1",
+                "data_inicial": "01/04/2026",
+                "data_final": "07/04/2026",
+                "saldo_inicial": "R$ 1.000,00",
+                "entrada": "R$ 0,00",
+                "saida": "R$ 100,00",
+                "saldo_final": "R$ 900,00",
+                "limite": "R$ 0,00",
+                "disponivel_total_final": "R$ 900,00",
+            }
+        ],
+        "selected_receivables": [],
+        "selected_receivables_totals": {
+            "count": 0,
+            "title_amount": "R$ 0,00",
+            "open_amount": "R$ 0,00",
+        },
+        "selected_payables": [],
+        "selected_payables_totals": {
+            "count": 0,
+            "title_amount": "R$ 0,00",
+            "open_amount": "R$ 0,00",
+        },
+        "generated_at": "21/04/2026 10:00",
+    }
+
+    with app.test_request_context("/financial/reports/fluxo-caixa/view?period_start=2026-04-01&period_end=2026-04-30"):
+        report_macros = app.jinja_env.get_template(
+            "modules/financial/partials/_report_workspace_macros.html"
+        ).module
+        html = render_template(
+            "modules/financial/partials/report_view_cash_flow.html",
+            company=company,
+            company_id=company.id,
+            report=report,
+            report_macros=report_macros,
+        )
+
+    assert "Contas Correntes" in html
+    assert "Contas a Receber Selecionadas" in html
+    assert "Contas a Pagar Selecionadas" in html
+    assert "Disp. Total Final" in html
+
+
 def test_income_statement_filters_page_builds_report_context(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)

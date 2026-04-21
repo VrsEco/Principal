@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -101,3 +102,55 @@ def test_bank_account_catalog_template_exposes_overdraft_limit_field():
 
     assert "Limite da conta (conta garantida / cheque especial)" in template
     assert "overdraft_limit: normalizeValue('overdraft_limit'" in template
+
+
+def test_cash_flow_period_buckets_weekly_cover_full_selected_window():
+    buckets = FinancialReportService._cash_flow_period_buckets(
+        date(2023, 12, 1),
+        date(2023, 12, 31),
+        "weekly",
+    )
+
+    assert [
+        (bucket["label"], bucket["start"].isoformat(), bucket["end"].isoformat())
+        for bucket in buckets
+    ] == [
+        ("Semana 1", "2023-12-01", "2023-12-07"),
+        ("Semana 2", "2023-12-08", "2023-12-14"),
+        ("Semana 3", "2023-12-15", "2023-12-21"),
+        ("Semana 4", "2023-12-22", "2023-12-28"),
+        ("Semana 5", "2023-12-29", "2023-12-31"),
+    ]
+
+
+def test_cash_flow_view_template_uses_dedicated_partial_and_styles():
+    template_path = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "financial"
+        / "report_view.html"
+    )
+    template = template_path.read_text(encoding="utf-8")
+
+    assert "report.report_type == 'cash_flow'" in template
+    assert "report_view_cash_flow.html" in template
+    assert "financial_cash_flow_report.css" in template
+
+
+def test_cash_flow_report_partial_contains_expected_sections():
+    partial_path = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "financial"
+        / "partials"
+        / "report_view_cash_flow.html"
+    )
+    template = partial_path.read_text(encoding="utf-8")
+
+    assert "Contas Correntes" in template
+    assert "Fluxo de Caixa" in template
+    assert "Contas a Receber Selecionadas" in template
+    assert "Contas a Pagar Selecionadas" in template
+    assert "Retirado" in template

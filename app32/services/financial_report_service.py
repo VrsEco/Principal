@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import io
 import re
-from datetime import date, datetime
+from calendar import monthrange
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -595,6 +596,104 @@ class FinancialReportService:
         number = getattr(entry, "document_number", None) or getattr(entry, "entry_code", None) or str(getattr(entry, "id", "-"))
         installment = FinancialReportService._entry_installment_label(entry)
         return f"{number} / {installment}" if installment != "-" else str(number)
+
+    @staticmethod
+    def _format_date_br(value: Any) -> str:
+        if value in (None, "", "-"):
+            return "-"
+        if isinstance(value, datetime):
+            value = value.date()
+        if isinstance(value, date):
+            return value.strftime("%d/%m/%Y")
+        try:
+            return date.fromisoformat(str(value)).strftime("%d/%m/%Y")
+        except (TypeError, ValueError):
+            return str(value)
+
+    @staticmethod
+    def _cash_flow_frequency_label(value: Optional[str]) -> str:
+        return {
+            "daily": "Diário",
+            "weekly": "Semanal",
+            "monthly": "Mensal",
+        }.get(str(value or "daily").strip().lower(), str(value or "Diário"))
+
+    @staticmethod
+    def _cash_flow_period_buckets(
+        period_start: date,
+        period_end: date,
+        frequency: Optional[str],
+    ) -> List[Dict[str, Any]]:
+        bucket_mode = str(frequency or "daily").strip().lower()
+        buckets: List[Dict[str, Any]] = []
+
+        if bucket_mode == "weekly":
+            cursor = period_start
+            index = 1
+            while cursor <= period_end:
+                bucket_end = min(cursor + timedelta(days=6), period_end)
+                buckets.append(
+                    {
+                        "key": f"week-{index}",
+                        "label": f"Semana {index}",
+                        "start": cursor,
+                        "end": bucket_end,
+                    }
+                )
+                cursor = bucket_end + timedelta(days=1)
+                index += 1
+            return buckets
+
+        if bucket_mode == "monthly":
+            cursor = period_start
+            while cursor <= period_end:
+                month_end = date(cursor.year, cursor.month, monthrange(cursor.year, cursor.month)[1])
+                bucket_end = min(month_end, period_end)
+                buckets.append(
+                    {
+                        "key": cursor.strftime("%Y-%m"),
+                        "label": cursor.strftime("%m/%Y"),
+                        "start": cursor,
+                        "end": bucket_end,
+                    }
+                )
+                cursor = bucket_end + timedelta(days=1)
+            return buckets
+
+        cursor = period_start
+        while cursor <= period_end:
+            buckets.append(
+                {
+                    "key": cursor.isoformat(),
+                    "label": FinancialReportService._format_date_br(cursor),
+                    "start": cursor,
+                    "end": cursor,
+                }
+            )
+            cursor += timedelta(days=1)
+        return buckets
+
+    @staticmethod
+    def _cash_flow_entry_type_code(entry: FinancialEntry) -> str:
+        entry_type = str(getattr(entry, "entry_type", None) or "").strip().lower()
+        movement_nature = str(getattr(entry, "movement_nature", None) or "").strip().lower()
+        if entry_type == "receivable" or movement_nature == "credit":
+            return "RCB"
+        return "PGT"
+
+    @staticmethod
+    def _cash_flow_bank_account_limit(account: FinancialBankAccount) -> Decimal:
+        return FinancialDashboardAnalytics.extract_decimal_from_mapping(
+            dict(getattr(account, "metadata_json", None) or {}),
+            (
+                "overdraft_limit",
+                "cheque_especial_limit",
+                "special_limit",
+                "credit_limit",
+                "limite_cheque_especial",
+                "limite",
+            ),
+        )
 
     @staticmethod
     def _entry_project_ids(entry: FinancialEntry) -> List[int]:
@@ -2171,6 +2270,23 @@ class FinancialReportService:
             bank_accounts_label = ", ".join(bank_names.get(item, str(item)) for item in bank_account_ids)
         else:
             bank_accounts_label = "Todas"
+        periodicity_label = FinancialReportService._cash_flow_frequency_label(filters.frequency)
+
+        bank_accounts_query = FinancialBankAccount.query.filter(
+            FinancialBankAccount.company_id == company_id,
+            FinancialBankAccount.deleted_at.is_(None),
+            FinancialBankAccount.is_active.is_(True),
+        )
+        if bank_account_ids == [-1]:
+            selected_bank_accounts: List[FinancialBankAccount] = []
+        else:
+            if bank_account_ids:
+                bank_accounts_query = bank_accounts_query.filter(FinancialBankAccount.id.in_(bank_account_ids))
+            selected_bank_accounts = bank_accounts_query.order_by(
+                FinancialBankAccount.code.asc(),
+                FinancialBankAccount.name.asc(),
+            ).all()
+
         overdraft_limit = (
             FinancialDashboardAnalytics.calculate_overdraft_limit(
                 company_id,
@@ -2190,14 +2306,22 @@ class FinancialReportService:
             history_query = history_query.filter(FinancialSettlement.bank_account_id.in_(bank_account_ids))
         initial_balance = FinancialDashboardAnalytics.calculate_current_balance(settlements=history_query.all(), entries_by_id=entries, as_of_date=filters.period_start)
 
-        daily: Dict[str, Dict[str, Decimal]] = {}
+        def _empty_cash_flow_slot() -> Dict[str, Decimal]:
+            return {
+                "realized_in": Decimal("0"),
+                "realized_out": Decimal("0"),
+                "projected_in": Decimal("0"),
+                "projected_out": Decimal("0"),
+            }
+
+        daily: Dict[date, Dict[str, Decimal]] = {}
         realized_in = Decimal("0")
         realized_out = Decimal("0")
         for settlement in settlements:
             entry = entries.get(settlement.financial_entry_id)
             if not entry:
                 continue
-            slot = daily.setdefault(settlement.settlement_date.isoformat(), {"realized_in": Decimal("0"), "realized_out": Decimal("0"), "projected_in": Decimal("0"), "projected_out": Decimal("0")})
+            slot = daily.setdefault(settlement.settlement_date, _empty_cash_flow_slot())
             amount = Decimal(settlement.net_amount or 0)
             if entry.movement_nature == "credit":
                 slot["realized_in"] += amount
@@ -2213,6 +2337,14 @@ class FinancialReportService:
         )
         excluded_titles: List[Dict[str, Any]] = []
         excluded_open_total = Decimal("0")
+        projected_in_total = Decimal("0")
+        projected_out_total = Decimal("0")
+        selected_receivables: List[Dict[str, Any]] = []
+        selected_payables: List[Dict[str, Any]] = []
+        receivable_title_total = Decimal("0")
+        receivable_open_total = Decimal("0")
+        payable_title_total = Decimal("0")
+        payable_open_total = Decimal("0")
         if filters.include_projected:
             projected_entries = FinancialReportService._cash_flow_projected_entry_query(company_id, filters).all()
             projected_settlement_totals = FinancialReportService._entry_settlement_totals(
@@ -2223,78 +2355,114 @@ class FinancialReportService:
             for entry in projected_entries:
                 if not entry.due_date:
                     continue
+                title_amount = Decimal(str(getattr(entry, "original_amount", None) or 0))
+                settled_amount = projected_settlement_totals.get(entry.id, Decimal("0"))
                 outstanding = FinancialReportService._entry_outstanding_amount(
                     entry,
-                    projected_settlement_totals.get(entry.id, Decimal("0")),
+                    settled_amount,
                 )
                 if outstanding <= Decimal("0"):
                     continue
-                if entry.id in excluded_entry_id_set:
+                serialized = FinancialReportService._serialize_cash_flow_excluded_title(
+                    entry,
+                    settled_amount=settled_amount,
+                    counterparty_names=counterparty_names,
+                )
+                is_excluded = entry.id in excluded_entry_id_set
+                title_row = {
+                    "id": entry.id,
+                    "entry_code": serialized["entry_code"],
+                    "type_code": FinancialReportService._cash_flow_entry_type_code(entry),
+                    "type_label": "Recebimento" if entry.movement_nature == "credit" else "Pagamento",
+                    "title_amount": FinancialReportService._format_currency(title_amount),
+                    "title_amount_value": FinancialReportService._serialize_money(title_amount),
+                    "open_amount": FinancialReportService._format_currency(outstanding),
+                    "open_amount_value": FinancialReportService._serialize_money(outstanding),
+                    "counterparty": serialized["counterparty"],
+                    "due_date": FinancialReportService._format_date_br(entry.due_date),
+                    "competence_date": FinancialReportService._format_date_br(entry.competence_date),
+                    "number_installment": serialized["number_installment"],
+                    "history": serialized["history"],
+                    "is_excluded": is_excluded,
+                    "status_label": "Retirado" if is_excluded else "No fluxo",
+                }
+                if entry.movement_nature == "credit":
+                    receivable_title_total += title_amount
+                    receivable_open_total += outstanding
+                    selected_receivables.append(title_row)
+                else:
+                    payable_title_total += title_amount
+                    payable_open_total += outstanding
+                    selected_payables.append(title_row)
+                if is_excluded:
                     excluded_titles.append(
-                        FinancialReportService._serialize_cash_flow_excluded_title(
-                            entry,
-                            settled_amount=projected_settlement_totals.get(entry.id, Decimal("0")),
-                            counterparty_names=counterparty_names,
-                        )
+                        {
+                            **serialized,
+                            "type_code": FinancialReportService._cash_flow_entry_type_code(entry),
+                            "competence_date_display": FinancialReportService._format_date_br(entry.competence_date),
+                            "due_date_display": FinancialReportService._format_date_br(entry.due_date),
+                            "status_label": "Retirado do fluxo",
+                        }
                     )
                     excluded_open_total += outstanding
                     continue
-                slot = daily.setdefault(entry.due_date.isoformat(), {"realized_in": Decimal("0"), "realized_out": Decimal("0"), "projected_in": Decimal("0"), "projected_out": Decimal("0")})
+                slot = daily.setdefault(entry.due_date, _empty_cash_flow_slot())
                 if entry.movement_nature == "credit":
                     slot["projected_in"] += outstanding
+                    projected_in_total += outstanding
                 else:
                     slot["projected_out"] += outstanding
+                    projected_out_total += outstanding
 
         bucket_mode = (filters.frequency or "daily").lower()
-
-        def _bucket_label(current_day: str) -> str:
-            current = date.fromisoformat(current_day)
-            if bucket_mode == "weekly":
-                iso_year, iso_week, _ = current.isocalendar()
-                return f"{iso_year}-W{iso_week:02d}"
-            if bucket_mode == "monthly":
-                return current.strftime("%Y-%m")
-            return current_day
-
-        aggregated: Dict[str, Dict[str, Decimal]] = {}
-        for day in sorted(daily.keys()):
-            label = _bucket_label(day)
-            bucket = aggregated.setdefault(
-                label,
-                {"realized_in": Decimal("0"), "realized_out": Decimal("0"), "projected_in": Decimal("0"), "projected_out": Decimal("0")},
-            )
-            bucket["realized_in"] += daily[day]["realized_in"]
-            bucket["realized_out"] += daily[day]["realized_out"]
-            bucket["projected_in"] += daily[day]["projected_in"]
-            bucket["projected_out"] += daily[day]["projected_out"]
+        bucket_specs = FinancialReportService._cash_flow_period_buckets(
+            filters.period_start,
+            filters.period_end,
+            bucket_mode,
+        )
+        aggregated: Dict[str, Dict[str, Decimal]] = {
+            bucket["key"]: _empty_cash_flow_slot()
+            for bucket in bucket_specs
+        }
+        for day, amounts in sorted(daily.items(), key=lambda item: item[0]):
+            if day < filters.period_start or day > filters.period_end:
+                continue
+            for bucket in bucket_specs:
+                if bucket["start"] <= day <= bucket["end"]:
+                    slot = aggregated[bucket["key"]]
+                    slot["realized_in"] += amounts["realized_in"]
+                    slot["realized_out"] += amounts["realized_out"]
+                    slot["projected_in"] += amounts["projected_in"]
+                    slot["projected_out"] += amounts["projected_out"]
+                    break
 
         running = Decimal(initial_balance)
         rows: List[Dict[str, Any]] = []
-        for bucket_label in sorted(aggregated.keys()):
-            slot = aggregated[bucket_label]
+        for bucket in bucket_specs:
+            slot = aggregated[bucket["key"]]
             opening = running
-            running = opening + slot["realized_in"] - slot["realized_out"]
-            projected_final = running + slot["projected_in"] - slot["projected_out"]
-            projected_with_limit = projected_final + overdraft_limit
+            inflow_amount = slot["realized_in"] + slot["projected_in"]
+            outflow_amount = slot["realized_out"] + slot["projected_out"]
+            closing = opening + inflow_amount - outflow_amount
+            available_total = closing + overdraft_limit
             rows.append(
                 {
-                    "data": bucket_label,
-                    "saldo_inicial": FinancialReportService._serialize_money(opening),
-                    "entrada_realizada": FinancialReportService._serialize_money(slot["realized_in"]),
-                    "saida_realizada": FinancialReportService._serialize_money(slot["realized_out"]),
-                    "entrada_projetada": FinancialReportService._serialize_money(slot["projected_in"]),
-                    "saida_projetada": FinancialReportService._serialize_money(slot["projected_out"]),
-                    "saldo_final": FinancialReportService._serialize_money(running),
-                    "saldo_projetado": FinancialReportService._serialize_money(projected_final),
-                    "saldo_com_limite": FinancialReportService._serialize_money(projected_with_limit),
+                    "periodo": bucket["label"],
+                    "data_inicial": FinancialReportService._format_date_br(bucket["start"]),
+                    "data_final": FinancialReportService._format_date_br(bucket["end"]),
+                    "saldo_inicial": FinancialReportService._format_currency(opening),
+                    "entrada": FinancialReportService._format_currency(inflow_amount),
+                    "saida": FinancialReportService._format_currency(outflow_amount),
+                    "saldo_final": FinancialReportService._format_currency(closing),
+                    "limite": FinancialReportService._format_currency(overdraft_limit),
+                    "disponivel_total_final": FinancialReportService._format_currency(available_total),
                 }
             )
-        projected_final_value = rows[-1]["saldo_projetado"] if rows else FinancialReportService._serialize_money(initial_balance)
-        projected_with_limit_value = (
-            rows[-1]["saldo_com_limite"]
-            if rows
-            else FinancialReportService._serialize_money(Decimal(initial_balance) + overdraft_limit)
-        )
+            running = closing
+        final_balance = running if rows else Decimal(initial_balance)
+        final_with_limit = final_balance + overdraft_limit
+        flow_in_total = realized_in + projected_in_total
+        flow_out_total = realized_out + projected_out_total
         projected_titles_label = "Todos retirados"
         if filters.include_projected:
             projected_titles_label = (
@@ -2302,48 +2470,172 @@ class FinancialReportService:
                 if filters.enable_title_exclusions
                 else "Incluídos"
             )
-        return {
-            "title": definition["label"],
-            "subtitle": definition["description"],
-            "summary_cards": [
-                {"label": "Saldo inicial", "value": FinancialReportService._format_currency(initial_balance)},
-                {"label": "Entradas realizadas", "value": FinancialReportService._format_currency(realized_in)},
-                {"label": "Saídas realizadas", "value": FinancialReportService._format_currency(realized_out)},
-                {"label": "Saldo projetado final", "value": FinancialReportService._format_currency(projected_final_value)},
-                {"label": "Saldo projetado c/ limite", "value": FinancialReportService._format_currency(projected_with_limit_value)},
-                {"label": "Saldo retirado", "value": FinancialReportService._format_currency(excluded_open_total)},
-            ],
-            "general_info": [
-                {"label": "Janela analisada", "value": f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"},
-                {"label": "Contas correntes", "value": bank_accounts_label},
-                {"label": "Periodicidade", "value": {"daily": "Diário", "weekly": "Semanal", "monthly": "Mensal"}.get(bucket_mode, bucket_mode)},
-                {"label": "Títulos financeiros em aberto", "value": projected_titles_label},
-                {"label": "Títulos retirados manualmente", "value": str(len(excluded_titles))},
-                {"label": "Limite de conta", "value": FinancialReportService._format_currency(overdraft_limit)},
-            ],
-            "columns": [
-                {"key": "data", "label": "Data"},
-                {"key": "saldo_inicial", "label": "Saldo inicial"},
-                {"key": "entrada_realizada", "label": "Entrada realizada"},
-                {"key": "saida_realizada", "label": "Saída realizada"},
-                {"key": "entrada_projetada", "label": "Entrada projetada"},
-                {"key": "saida_projetada", "label": "Saída projetada"},
-                {"key": "saldo_final", "label": "Saldo final"},
-                {"key": "saldo_projetado", "label": "Saldo projetado"},
-                {"key": "saldo_com_limite", "label": "Saldo c/ limite"},
-            ],
-            "rows": rows,
-            "totals": {
-                "opening_balance": FinancialReportService._serialize_money(initial_balance),
-                "realized_inflow": FinancialReportService._serialize_money(realized_in),
-                "realized_outflow": FinancialReportService._serialize_money(realized_out),
-                "projected_final": FinancialReportService._serialize_money(projected_final_value),
-                "overdraft_limit": FinancialReportService._serialize_money(overdraft_limit),
-                "projected_with_limit": FinancialReportService._serialize_money(projected_with_limit_value),
-                "excluded_projected_amount": FinancialReportService._serialize_money(excluded_open_total),
-            },
-            "excluded_titles": excluded_titles,
+
+        balance_reference_date = date.today()
+        bank_balance_totals = {
+            "limit": Decimal("0"),
+            "balance": Decimal("0"),
+            "available_total": Decimal("0"),
         }
+        bank_account_summary_rows: List[Dict[str, Any]] = []
+        bank_settlements: List[FinancialSettlement] = []
+        if selected_bank_accounts:
+            selected_bank_account_ids = [item.id for item in selected_bank_accounts]
+            bank_settlements = FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+                FinancialSettlement.bank_account_id.in_(selected_bank_account_ids),
+                FinancialSettlement.settlement_date <= balance_reference_date,
+            ).order_by(
+                FinancialSettlement.bank_account_id.asc(),
+                FinancialSettlement.settlement_date.asc(),
+                FinancialSettlement.id.asc(),
+            ).all()
+        settlements_by_bank: Dict[int, List[FinancialSettlement]] = {}
+        for settlement in bank_settlements:
+            if settlement.bank_account_id is None:
+                continue
+            settlements_by_bank.setdefault(settlement.bank_account_id, []).append(settlement)
+
+        for account in selected_bank_accounts:
+            account_limit = (
+                FinancialReportService._cash_flow_bank_account_limit(account)
+                if filters.include_overdraft
+                else Decimal("0")
+            )
+            account_balance = FinancialDashboardAnalytics.calculate_current_balance(
+                settlements=settlements_by_bank.get(account.id, []),
+                entries_by_id=entries,
+                as_of_date=balance_reference_date,
+            )
+            account_available_total = account_balance + account_limit
+            bank_account_summary_rows.append(
+                {
+                    "id": account.id,
+                    "description": account.name,
+                    "limit": FinancialReportService._format_currency(account_limit),
+                    "limit_value": FinancialReportService._serialize_money(account_limit),
+                    "balance": FinancialReportService._format_currency(account_balance),
+                    "balance_value": FinancialReportService._serialize_money(account_balance),
+                    "available_total": FinancialReportService._format_currency(account_available_total),
+                    "available_total_value": FinancialReportService._serialize_money(account_available_total),
+                }
+            )
+            bank_balance_totals["limit"] += account_limit
+            bank_balance_totals["balance"] += account_balance
+            bank_balance_totals["available_total"] += account_available_total
+
+        return FinancialReportService._report_payload(
+            definition,
+            summary_cards=[
+                FinancialReportService._report_card(
+                    "Saldo inicial",
+                    FinancialReportService._format_currency(initial_balance),
+                    "positive" if initial_balance > 0 else ("negative" if initial_balance < 0 else "neutral"),
+                ),
+                FinancialReportService._report_card(
+                    "Entradas no fluxo",
+                    FinancialReportService._format_currency(flow_in_total),
+                    "positive" if flow_in_total > 0 else "neutral",
+                ),
+                FinancialReportService._report_card(
+                    "Saídas no fluxo",
+                    FinancialReportService._format_currency(flow_out_total),
+                    "negative" if flow_out_total > 0 else "neutral",
+                ),
+                FinancialReportService._report_card(
+                    "Saldo final do período",
+                    FinancialReportService._format_currency(final_balance),
+                    "positive" if final_balance > 0 else ("negative" if final_balance < 0 else "neutral"),
+                ),
+                FinancialReportService._report_card(
+                    "Disponível c/ limite",
+                    FinancialReportService._format_currency(final_with_limit),
+                    "primary" if final_with_limit >= 0 else "negative",
+                ),
+                FinancialReportService._report_card(
+                    "Títulos retirados",
+                    FinancialReportService._format_currency(excluded_open_total),
+                    "primary" if excluded_open_total > 0 else "neutral",
+                ),
+            ],
+            general_info=[
+                FinancialReportService._report_info(
+                    "Janela analisada",
+                    f"{FinancialReportService._format_date_br(filters.period_start)} até {FinancialReportService._format_date_br(filters.period_end)}",
+                ),
+                FinancialReportService._report_info("Contas correntes", bank_accounts_label),
+                FinancialReportService._report_info("Periodicidade", periodicity_label),
+                FinancialReportService._report_info("Títulos financeiros em aberto", projected_titles_label),
+                FinancialReportService._report_info("Títulos retirados manualmente", str(len(excluded_titles))),
+                FinancialReportService._report_info(
+                    f"Saldo em {FinancialReportService._format_date_br(balance_reference_date)}",
+                    FinancialReportService._format_currency(bank_balance_totals["balance"]),
+                ),
+                FinancialReportService._report_info(
+                    "Disponível total",
+                    FinancialReportService._format_currency(bank_balance_totals["available_total"]),
+                ),
+                FinancialReportService._report_info(
+                    "Limite total",
+                    FinancialReportService._format_currency(bank_balance_totals["limit"]),
+                ),
+            ],
+            columns=[
+                {"key": "periodo", "label": "Período"},
+                {"key": "data_inicial", "label": "Data Inicial"},
+                {"key": "data_final", "label": "Data Final"},
+                {"key": "saldo_inicial", "label": "Saldo Inicial"},
+                {"key": "entrada", "label": "Entrada"},
+                {"key": "saida", "label": "Saída"},
+                {"key": "saldo_final", "label": "Saldo Final"},
+                {"key": "limite", "label": "Limite"},
+                {"key": "disponivel_total_final", "label": "Disp. Total Final"},
+            ],
+            rows=rows,
+            totals={
+                "opening_balance": FinancialReportService._serialize_money(initial_balance),
+                "flow_in_total": FinancialReportService._serialize_money(flow_in_total),
+                "flow_out_total": FinancialReportService._serialize_money(flow_out_total),
+                "final_balance": FinancialReportService._serialize_money(final_balance),
+                "overdraft_limit": FinancialReportService._serialize_money(overdraft_limit),
+                "final_with_limit": FinancialReportService._serialize_money(final_with_limit),
+                "excluded_projected_amount": FinancialReportService._serialize_money(excluded_open_total),
+                "current_bank_balance": FinancialReportService._serialize_money(bank_balance_totals["balance"]),
+                "current_available_total": FinancialReportService._serialize_money(bank_balance_totals["available_total"]),
+            },
+            extra={
+                "periodicity_label": periodicity_label,
+                "bank_balance_reference_label": FinancialReportService._format_date_br(balance_reference_date),
+                "bank_account_summary_rows": bank_account_summary_rows,
+                "bank_account_summary_totals": {
+                    "limit": FinancialReportService._format_currency(bank_balance_totals["limit"]),
+                    "limit_value": FinancialReportService._serialize_money(bank_balance_totals["limit"]),
+                    "balance": FinancialReportService._format_currency(bank_balance_totals["balance"]),
+                    "balance_value": FinancialReportService._serialize_money(bank_balance_totals["balance"]),
+                    "available_total": FinancialReportService._format_currency(bank_balance_totals["available_total"]),
+                    "available_total_value": FinancialReportService._serialize_money(bank_balance_totals["available_total"]),
+                },
+                "selected_receivables": selected_receivables,
+                "selected_payables": selected_payables,
+                "selected_receivables_totals": {
+                    "count": len(selected_receivables),
+                    "title_amount": FinancialReportService._format_currency(receivable_title_total),
+                    "title_amount_value": FinancialReportService._serialize_money(receivable_title_total),
+                    "open_amount": FinancialReportService._format_currency(receivable_open_total),
+                    "open_amount_value": FinancialReportService._serialize_money(receivable_open_total),
+                },
+                "selected_payables_totals": {
+                    "count": len(selected_payables),
+                    "title_amount": FinancialReportService._format_currency(payable_title_total),
+                    "title_amount_value": FinancialReportService._serialize_money(payable_title_total),
+                    "open_amount": FinancialReportService._format_currency(payable_open_total),
+                    "open_amount_value": FinancialReportService._serialize_money(payable_open_total),
+                },
+                "excluded_titles": excluded_titles,
+            },
+        )
 
     @staticmethod
     def _build_ledger(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
