@@ -344,7 +344,7 @@ class FinancialBudgetActualService:
                 {
                     "key": "actual_settlements",
                     "label": "Baixas",
-                    "description": "Realizado por liquidação quando a visão exigir efetivação financeira.",
+                    "description": "Realizado por baixa quando a visão exigir efetivação financeira.",
                     "date_basis": "data da baixa",
                 },
             ],

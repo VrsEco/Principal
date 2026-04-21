@@ -1148,7 +1148,7 @@ class FinancialSettlementInput(BaseModel):
         if self.net_amount is None:
             self.net_amount = expected_net
         elif self.net_amount != expected_net:
-            raise ValueError("net_amount inconsistente com a composição da liquidação.")
+            raise ValueError("net_amount inconsistente com a composição da baixa.")
 
         if self.gross_amount is None:
             self.gross_amount = expected_net
@@ -1159,9 +1159,9 @@ class FinancialSettlementInput(BaseModel):
                 signed_amount = component.amount * (Decimal("-1") if component.component_type == "discount" else Decimal("1"))
                 component_total += signed_amount
             if self.gross_amount != component_total:
-                raise ValueError("gross_amount inconsistente com a soma dos componentes da liquidação.")
+                raise ValueError("gross_amount inconsistente com a soma dos componentes da baixa.")
         elif self.gross_amount != expected_net:
-            raise ValueError("gross_amount inconsistente com a composição agregada da liquidação.")
+            raise ValueError("gross_amount inconsistente com a composição agregada da baixa.")
 
         return self
 

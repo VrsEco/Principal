@@ -77,9 +77,9 @@ class FinancialReconciliationService:
             )
         principal_amount = Decimal(str(principal_amount or 0))
         if principal_amount <= 0:
-            return None, "Linha conciliada sem valor elegível para liquidação automática."
+            return None, "Linha conciliada sem valor elegível para baixa automática."
         if remaining_principal <= 0:
-            return None, "Lançamento já está totalmente liquidado."
+            return None, "Lançamento já está totalmente baixado."
         if principal_amount > remaining_principal:
             return None, "Valor conciliado excede o saldo em aberto do lançamento."
 
@@ -98,7 +98,7 @@ class FinancialReconciliationService:
             "other_adjustments_amount": other_adjustments_amount,
             "external_reference": f"reconciliation-match:{match.id}",
             "reconciliation_status": "reconciled",
-            "notes": f"Liquidação automática gerada pela confirmação do match {match.id}.",
+            "notes": f"Baixa automática gerada pela confirmação do match {match.id}.",
             "metadata_json": {
                 "import_batch_id": match.import_batch_id,
                 "import_row_id": row.id,

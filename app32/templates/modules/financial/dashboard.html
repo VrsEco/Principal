@@ -105,7 +105,7 @@
             ['Saldo final sem limites', formatCurrency(scoreboard.projected_final_without_limits)],
             ['Saldo final com limites', formatCurrency(scoreboard.projected_final_with_limits)],
             ['DRE competência', formatCurrency(scoreboard.dre_competence_result)],
-            ['DRE liquidação', formatCurrency(scoreboard.dre_liquidation_result)],
+            ['DRE baixa', formatCurrency(scoreboard.dre_liquidation_result)],
         ];
         document.getElementById('scoreboard').innerHTML = items.map(([label, value]) => `
             <article class="dash-kpi">
@@ -175,7 +175,7 @@
                             <th>Orçado</th>
                             <th>Competência</th>
                             <th>Vencimento</th>
-                            <th>Liquidação</th>
+                            <th>Baixa</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -200,8 +200,8 @@
             <div class="schedule-config-grid">
                 <fieldset>
                     <legend>Status</legend>
-                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Liquidado</span></label>
-                    <label class="check-field"><input type="checkbox" name="include_partial" value="true" {% if 'include_partial' not in filters or (filters.get('include_partial', []) | first) == 'true' %}checked{% endif %}><span>Liquidado Parcial</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Baixado</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_partial" value="true" {% if 'include_partial' not in filters or (filters.get('include_partial', []) | first) == 'true' %}checked{% endif %}><span>Baixado Parcial</span></label>
                     <label class="check-field"><input type="checkbox" name="include_open" value="true" {% if 'include_open' not in filters or (filters.get('include_open', []) | first) == 'true' %}checked{% endif %}><span>Aberto</span></label>
                     <label class="check-field"><input type="checkbox" name="include_bordero" value="true" {% if 'include_bordero' not in filters or (filters.get('include_bordero', []) | first) == 'true' %}checked{% endif %}><span>Borderô</span></label>
                 </fieldset>
@@ -220,7 +220,7 @@
                     <label class="check-field"><input type="checkbox" name="show_balance_amount" value="true" {% if 'show_balance_amount' not in filters or (filters.get('show_balance_amount', []) | first) == 'true' %}checked{% endif %}><span>Valor Saldo</span></label>
                     <label class="check-field"><input type="checkbox" name="show_competence_date" value="true" {% if 'show_competence_date' not in filters or (filters.get('show_competence_date', []) | first) == 'true' %}checked{% endif %}><span>Competência</span></label>
                     <label class="check-field"><input type="checkbox" name="show_due_date" value="true" {% if 'show_due_date' not in filters or (filters.get('show_due_date', []) | first) == 'true' %}checked{% endif %}><span>Vencimento</span></label>
-                    <label class="check-field"><input type="checkbox" name="show_settlement_date" value="true" {% if 'show_settlement_date' not in filters or (filters.get('show_settlement_date', []) | first) == 'true' %}checked{% endif %}><span>Data da Liquidação</span></label>
+                    <label class="check-field"><input type="checkbox" name="show_settlement_date" value="true" {% if 'show_settlement_date' not in filters or (filters.get('show_settlement_date', []) | first) == 'true' %}checked{% endif %}><span>Data da Baixa</span></label>
                 </fieldset>
                 <fieldset>
                     <legend>Ordenar por</legend>
@@ -232,7 +232,7 @@
                     <label class="radio-field"><input type="radio" name="order_by" value="balance_amount" {% if selected_order_by == 'balance_amount' %}checked{% endif %}><span>Valor Saldo</span></label>
                     <label class="radio-field"><input type="radio" name="order_by" value="competence_date" {% if selected_order_by == 'competence_date' %}checked{% endif %}><span>Competência</span></label>
                     <label class="radio-field"><input type="radio" name="order_by" value="due_date" {% if selected_order_by == 'due_date' %}checked{% endif %}><span>Vencimento</span></label>
-                    <label class="radio-field"><input type="radio" name="order_by" value="settlement_date" {% if selected_order_by == 'settlement_date' %}checked{% endif %}><span>Data da Liquidação</span></label>
+                    <label class="radio-field"><input type="radio" name="order_by" value="settlement_date" {% if selected_order_by == 'settlement_date' %}checked{% endif %}><span>Data da Baixa</span></label>
                 </fieldset>
                 <fieldset>
                     <legend>Ordenação</legend>
@@ -329,7 +329,7 @@
             <div class="dre-config-grid">
                 <fieldset>
                     <legend>Status</legend>
-                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Liquidado</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Baixado</span></label>
                     <label class="check-field"><input type="checkbox" name="include_open" value="true" {% if 'include_open' not in filters or (filters.get('include_open', []) | first) == 'true' %}checked{% endif %}><span>Aberto</span></label>
                 </fieldset>
                 <fieldset>
@@ -499,8 +499,8 @@
             <div class="ledger-config-grid">
                 <fieldset>
                     <legend>Status</legend>
-                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Liquidado</span></label>
-                    <label class="check-field"><input type="checkbox" name="include_budget_vs_actual" value="true" {% if 'include_budget_vs_actual' not in filters or (filters.get('include_budget_vs_actual', []) | first) == 'true' %}checked{% endif %}><span>Liquidado Parcial</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_settled" value="true" {% if 'include_settled' not in filters or (filters.get('include_settled', []) | first) == 'true' %}checked{% endif %}><span>Baixado</span></label>
+                    <label class="check-field"><input type="checkbox" name="include_budget_vs_actual" value="true" {% if 'include_budget_vs_actual' not in filters or (filters.get('include_budget_vs_actual', []) | first) == 'true' %}checked{% endif %}><span>Baixado Parcial</span></label>
                     <label class="check-field"><input type="checkbox" name="include_open" value="true" {% if 'include_open' not in filters or (filters.get('include_open', []) | first) == 'true' %}checked{% endif %}><span>Aberto</span></label>
                 </fieldset>
                 <fieldset>

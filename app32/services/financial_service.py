@@ -1550,7 +1550,7 @@ class FinancialService:
         try:
             data = FinancialSettlementInput(**normalized_payload)
         except Exception as exc:
-            return None, f"Payload inválido para liquidação: {str(exc)}"
+            return None, f"Payload inválido para baixa: {str(exc)}"
 
         scope_error = FinancialService._ensure_company_scope(data.company_id, allowed_company_ids)
         if scope_error:
@@ -1562,7 +1562,7 @@ class FinancialService:
             FinancialEntry.deleted_at.is_(None),
         ).first()
         if not entry:
-            return None, "Lançamento financeiro não encontrado para liquidação."
+            return None, "Lançamento financeiro não encontrado para baixa."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=data.company_id, entry=entry)
@@ -1574,7 +1574,7 @@ class FinancialService:
             FinancialSettlement.settlement_code == data.settlement_code,
         ).first()
         if existing:
-            return None, f"Já existe liquidação com código {data.settlement_code} para esta empresa."
+            return None, f"Já existe baixa com código {data.settlement_code} para esta empresa."
 
         reference_error = FinancialCatalogService.validate_reference_ids(
             company_id=data.company_id,
@@ -1603,8 +1603,8 @@ class FinancialService:
             projected_total = Decimal(total_liquidated) + data.principal_amount
             if projected_total > Decimal(entry.original_amount or 0):
                 return None, (
-                    "Liquidação principal excede o valor original do lançamento. "
-                    f"Liquidado atual: {total_liquidated}. Original: {entry.original_amount}."
+                    "Baixa principal excede o valor original do lançamento. "
+                    f"Baixado atual: {total_liquidated}. Original: {entry.original_amount}."
                 )
 
             settlement_payload = data.model_dump(exclude={"settlement_components"})
@@ -1713,28 +1713,32 @@ class FinancialService:
             return settlement, None
         except Exception as exc:
             db.session.rollback()
-            logger.exception("Erro ao criar liquidação para lançamento %s", data.financial_entry_id)
-            return None, f"Erro ao criar liquidação: {str(exc)}"
+            logger.exception("Erro ao criar baixa para lançamento %s", data.financial_entry_id)
+            return None, f"Erro ao criar baixa: {str(exc)}"
 
     @staticmethod
     def _generate_settlement_code(company_id: int) -> str:
-        prefix = "LIQ"
-        last = (
+        # Códigos de baixa são únicos por empresa mesmo quando a baixa é excluída
+        # logicamente. Portanto a geração não pode ignorar registros com deleted_at,
+        # sob risco de reutilizar o código bloqueado pela constraint única.
+        prefixes = ("BX", "LIQ")
+        settlements = (
             FinancialSettlement.query.filter(
                 FinancialSettlement.company_id == company_id,
-                FinancialSettlement.deleted_at.is_(None),
-                FinancialSettlement.settlement_code.like(f"{prefix}-%"),
             )
             .order_by(FinancialSettlement.id.desc())
-            .first()
+            .all()
         )
-        next_number = 1
-        if last and getattr(last, "settlement_code", None):
+        max_number = 0
+        for settlement in settlements or []:
+            code = str(getattr(settlement, "settlement_code", "") or "").strip().upper()
+            if not any(code.startswith(f"{prefix}-") for prefix in prefixes):
+                continue
             try:
-                next_number = int(str(last.settlement_code).split("-")[-1]) + 1
+                max_number = max(max_number, int(code.split("-")[-1]))
             except Exception:
-                next_number = int(getattr(last, "id", 0) or 0) + 1 or 1
-        return f"{prefix}-{next_number:06d}"
+                max_number = max(max_number, int(getattr(settlement, "id", 0) or 0))
+        return f"BX-{max_number + 1:06d}"
 
     @staticmethod
     def upload_settlement_attachment(
@@ -1754,7 +1758,7 @@ class FinancialService:
             FinancialSettlement.deleted_at.is_(None),
         ).first()
         if not settlement:
-            return None, "Liquidação financeira não encontrada no escopo da empresa."
+            return None, "Baixa financeira não encontrada no escopo da empresa."
 
         if not file or not file.filename:
             return None, "Nenhum arquivo informado."
@@ -1803,7 +1807,7 @@ class FinancialService:
             FinancialSettlement.deleted_at.is_(None),
         ).first()
         if not settlement:
-            return None, "Liquidação financeira não encontrada no escopo da empresa."
+            return None, "Baixa financeira não encontrada no escopo da empresa."
 
         metadata = dict(settlement.metadata_json or {})
         attachments = list(metadata.get("attachments") or [])
@@ -1816,7 +1820,7 @@ class FinancialService:
                 remaining.append(item)
 
         if not removed:
-            return None, "Anexo não encontrado para a liquidação."
+            return None, "Anexo não encontrado para a baixa."
 
         metadata["attachments"] = remaining
         settlement.metadata_json = metadata
@@ -1835,3 +1839,4 @@ class FinancialService:
                 os.remove(absolute_path)
 
         return removed, None
+

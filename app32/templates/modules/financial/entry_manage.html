@@ -40,7 +40,7 @@
         <div class="panel-header">
             <div>
                 <h2>Nova baixa</h2>
-                <p>Fluxo simplificado: somente os dados operacionais necessários para liquidar o lançamento.</p>
+                <p>Fluxo simplificado: somente os dados operacionais necessários para baixar o lançamento.</p>
             </div>
         </div>
 
@@ -94,7 +94,7 @@
         <div class="panel-header">
             <div>
                 <h2>Histórico de baixas</h2>
-                <p>Lista das liquidações já registradas neste lançamento.</p>
+                <p>Lista das baixas já registradas neste lançamento.</p>
             </div>
         </div>
         <div id="settlements-list" class="settlements-list"></div>
@@ -360,7 +360,7 @@
 
     async function deleteSettlement(settlementId) {
         if (!settlementId) return;
-        const confirmed = window.confirm('Deseja realmente excluir esta baixa? Esta ação remove a liquidação deste lançamento.');
+        const confirmed = window.confirm('Deseja realmente excluir esta baixa? Esta ação remove a baixa deste lançamento.');
         if (!confirmed) return;
 
         const response = await fetch(`/api/financial/settlements/${settlementId}?company_id=${companyId}`, {

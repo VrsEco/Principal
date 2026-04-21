@@ -724,7 +724,7 @@
         <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · <span class="${amountClass(entry.signed_amount ?? 0)}">${money(entry.signed_amount ?? signedAmount(entry.original_amount, entry.movement_nature))}</span></small>
         <table class="settlement-table">
           <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Principal</th><th>Correção Financeira</th><th>Descontos</th><th>Total</th><th>Ações</th></tr></thead>
-          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>'}</td></tr>`).join('') : '<tr><td colspan="8">Sem liquidações registradas.</td></tr>'}</tbody>
+          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>'}</td></tr>`).join('') : '<tr><td colspan="8">Sem baixas registradas.</td></tr>'}</tbody>
         </table>
       </article>`).join('');
   }
@@ -857,7 +857,7 @@
       summaryEl.innerHTML = latest ? [
         `<article class="calc-log-kpi"><span>Último evento</span><strong>${formatIso(latest.calculation_date)}</strong><small>${eventLabel(latest.event_type)}</small></article>`,
         `<article class="calc-log-kpi"><span>Total em aberto</span><strong class="${amountClass(signedTotalOpen)}">${money(signedTotalOpen)}</strong><small>Principal + ajustes pendentes</small></article>`,
-        `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correção financeira/descontos a liquidar</small></article>`,
+        `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correção financeira/descontos a baixar</small></article>`,
         `<article class="calc-log-kpi"><span>Saldo ainda alterável</span><strong class="${amountClass(signedEditableOpen)}">${money(signedEditableOpen)}</strong><small>Janela restante para novas baixas e ajustes</small></article>`,
         `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias estruturadas registradas</small></article>`,
       ].join('') : '';

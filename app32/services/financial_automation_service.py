@@ -2338,7 +2338,7 @@ class FinancialAutomationService:
                 "other_adjustments_amount": Decimal("0"),
                 "net_amount": Decimal(str(record.amount or 0)),
                 "reconciliation_status": "pending",
-                "notes": f"Liquidação criada pela Central de Automação Financeira (record {record.id}).",
+                "notes": f"Baixa criada pela Central de Automação Financeira (record {record.id}).",
                 "metadata_json": FinancialAutomationService._build_generation_metadata(record),
             }
             _, settlement_error = FinancialService.create_settlement(

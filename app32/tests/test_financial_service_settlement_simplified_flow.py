@@ -62,6 +62,12 @@ class _SequenceQueryStub(_QueryStub):
             return self._results.pop(0)
         return None
 
+    def all(self):
+        if self._results:
+            result = self._results.pop(0)
+            return list(result) if isinstance(result, list) else ([] if result is None else [result])
+        return []
+
 
 def test_create_settlement_generates_code_when_not_informed(monkeypatch):
     captured = {}
@@ -83,7 +89,7 @@ def test_create_settlement_generates_code_when_not_informed(monkeypatch):
         principal_amount = _Column()
         financial_entry_id = _Column()
         settlement_status = _Column()
-        query = _SequenceQueryStub([type("PreviousSettlement", (), {"settlement_code": "LIQ-000014", "id": 14})(), None])
+        query = _SequenceQueryStub([[type("PreviousSettlement", (), {"settlement_code": "LIQ-000014", "id": 14})()], None])
 
         def __init__(self, **kwargs):
             captured["kwargs"] = kwargs
@@ -133,10 +139,40 @@ def test_create_settlement_generates_code_when_not_informed(monkeypatch):
 
     assert error is None
     assert settlement is not None
-    assert captured["kwargs"]["settlement_code"] == "LIQ-000015"
+    assert captured["kwargs"]["settlement_code"] == "BX-000015"
     assert captured["kwargs"]["metadata_json"]["history"] == "Baixa simplificada"
     assert captured["committed"] is True
     assert entry.status == "partially_settled"
+
+
+def test_generate_settlement_code_does_not_reuse_soft_deleted_code(monkeypatch):
+    captured_filters = []
+
+    class _CaptureQuery:
+        def filter(self, *args, **kwargs):
+            captured_filters.extend(args)
+            return self
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return [
+                type("DeletedSettlement", (), {"settlement_code": "LIQ-000016", "id": 16})(),
+                type("ActiveSettlement", (), {"settlement_code": "BX-000015", "id": 15})(),
+            ]
+
+    class _FakeSettlement:
+        company_id = _Column()
+        settlement_code = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        query = _CaptureQuery()
+
+    monkeypatch.setattr(financial_module, "FinancialSettlement", _FakeSettlement)
+
+    assert FinancialService._generate_settlement_code(7) == "BX-000017"
+    assert ("is", None) not in captured_filters
 
 
 def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
@@ -183,7 +219,7 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
         principal_amount = _Column()
         financial_entry_id = _Column()
         settlement_status = _Column()
-        query = _SequenceQueryStub([type("PreviousSettlement", (), {"settlement_code": "LIQ-000020", "id": 20})(), None])
+        query = _SequenceQueryStub([[type("PreviousSettlement", (), {"settlement_code": "LIQ-000020", "id": 20})()], None])
 
         def __init__(self, **kwargs):
             captured["kwargs"] = kwargs
@@ -493,7 +529,7 @@ def test_create_settlement_persists_gross_amount_and_component_breakdown(monkeyp
         principal_amount = _Column()
         financial_entry_id = _Column()
         settlement_status = _Column()
-        query = _SequenceQueryStub([type("PreviousSettlement", (), {"settlement_code": "LIQ-000030", "id": 30})(), None])
+        query = _SequenceQueryStub([[type("PreviousSettlement", (), {"settlement_code": "LIQ-000030", "id": 30})()], None])
 
         def __init__(self, **kwargs):
             captured["settlement_kwargs"] = kwargs
@@ -668,6 +704,7 @@ def test_build_schedule_component_allocation_breakdown_for_discount():
     assert result["component_kind"] == "discount"
     assert result["total_allocated_amount"] == 20.0
     assert result["items"][0]["chart_account_id"] == 901
-    assert result["items"][0]["competence_date"] is None
+    assert result["items"][0]["competence_date"] == "2026-04-20"
     assert result["items"][0]["metadata_json"]["component_kind"] == "discount"
     assert result["items"][1]["settled_allocated_amount"] == 5.0
+

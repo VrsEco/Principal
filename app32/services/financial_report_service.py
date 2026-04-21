@@ -84,7 +84,7 @@ class FinancialReportService:
             "code": "income_statement",
             "slug": "demonstrativo-resultados",
             "label": "Demonstração de Resultados 01",
-            "description": "DRE contábil com período único e apuração independente por competência, vencimento e liquidação.",
+            "description": "DRE contábil com período único e apuração independente por competência, vencimento e baixa.",
             "filters": (
                 "period",
                 "chart_account_multi",
@@ -97,7 +97,7 @@ class FinancialReportService:
             "code": "income_statement_2",
             "slug": "demonstrativo-resultados-02",
             "label": "Demonstração de Resultados 02",
-            "description": "DRE contábil hierárquica nas visões de competência, vencimento e liquidação por conta contábil.",
+            "description": "DRE contábil hierárquica nas visões de competência, vencimento e baixa por conta contábil.",
             "filters": (
                 "competence_period",
                 "due_period",
@@ -119,7 +119,7 @@ class FinancialReportService:
             "code": "ledger",
             "slug": "razao",
             "label": "Razão",
-            "description": "Razão gerencial por conta contábil, com histórico dos lançamentos, liquidação vinculada e saldo acumulado.",
+            "description": "Razão gerencial por conta contábil, com histórico dos lançamentos, baixa vinculada e saldo acumulado.",
             "filters": ("ledger_config",),
         },
         "working_capital": {
@@ -916,8 +916,8 @@ class FinancialReportService:
             status_label = {
                 "draft": "Rascunho",
                 "forecast": "Projetado",
-                "settled": "Liquidado",
-                "partial": "Liquidado Parcial",
+                "settled": "Baixado",
+                "partial": "Baixado Parcial",
                 "open": "Aberto",
                 "cancelled": "Cancelado",
                 "bordero": "Borderô",
@@ -1093,7 +1093,7 @@ class FinancialReportService:
             ],
             columns=[
                 {"key": "data", "label": "Data"},
-                {"key": "codigo", "label": "Liquidação"},
+                {"key": "codigo", "label": "Baixa"},
                 {"key": "conta_bancaria", "label": "Conta bancária"},
                 {"key": "lancamento", "label": "Lançamento"},
                 {"key": "descricao", "label": "Descrição"},
@@ -1185,7 +1185,7 @@ class FinancialReportService:
                     "vencimento": Decimal("0"),
                     "liquidacao": Decimal("0"),
                     "aberto": Decimal("0"),
-                    "liquidado": Decimal("0"),
+                    "baixado": Decimal("0"),
                     "centros": set(),
                     "projetos": set(),
                     "tipos": set(),
@@ -1417,7 +1417,7 @@ class FinancialReportService:
                 if is_open:
                     slot["aberto"] += signed_title
                 else:
-                    slot["liquidado"] += signed_title
+                    slot["baixado"] += signed_title
                 if schedule.cost_center_id:
                     slot["centros"].add(center_names.get(schedule.cost_center_id, str(schedule.cost_center_id)))
                 for project_id in FinancialReportService._schedule_project_ids(schedule):
@@ -1488,7 +1488,7 @@ class FinancialReportService:
                 if is_open:
                     slot["aberto"] += signed_original
                 else:
-                    slot["liquidado"] += signed_original
+                    slot["baixado"] += signed_original
                 if entry.cost_center_id:
                     slot["centros"].add(center_names.get(entry.cost_center_id, str(entry.cost_center_id)))
                 for project_id in FinancialReportService._entry_project_ids(entry):
@@ -1577,7 +1577,7 @@ class FinancialReportService:
                 if is_open:
                     slot["aberto"] += signed_original
                 else:
-                    slot["liquidado"] += signed_original
+                    slot["baixado"] += signed_original
                 if entry.cost_center_id:
                     slot["centros"].add(center_names.get(entry.cost_center_id, str(entry.cost_center_id)))
                 for project_id in FinancialReportService._entry_project_ids(entry):
@@ -1597,7 +1597,7 @@ class FinancialReportService:
                 "vencimento": Decimal(data.get("vencimento", Decimal("0"))),
                 "liquidacao": Decimal(data.get("liquidacao", Decimal("0"))),
                 "aberto": Decimal(data.get("aberto", Decimal("0"))),
-                "liquidado": Decimal(data.get("liquidado", Decimal("0"))),
+                "baixado": Decimal(data.get("baixado", Decimal("0"))),
                 "centros": set(data.get("centros", set())),
                 "projetos": set(data.get("projetos", set())),
                 "tipos": set(data.get("tipos", set())),
@@ -1617,7 +1617,7 @@ class FinancialReportService:
                 "vencimento": Decimal(data.get("vencimento", Decimal("0"))),
                 "liquidacao": Decimal(data.get("liquidacao", Decimal("0"))),
                 "aberto": Decimal(data.get("aberto", Decimal("0"))),
-                "liquidado": Decimal(data.get("liquidado", Decimal("0"))),
+                "baixado": Decimal(data.get("baixado", Decimal("0"))),
                 "centros": set(data.get("centros", set())),
                 "projetos": set(data.get("projetos", set())),
                 "tipos": set(data.get("tipos", set())),
@@ -1635,7 +1635,7 @@ class FinancialReportService:
                 node["vencimento"] += child["vencimento"]
                 node["liquidacao"] += child["liquidacao"]
                 node["aberto"] += child["aberto"]
-                node["liquidado"] += child["liquidado"]
+                node["baixado"] += child["baixado"]
                 node["centros"].update(child["centros"])
                 node["projetos"].update(child["projetos"])
                 node["tipos"].update(child["tipos"])
@@ -1652,7 +1652,7 @@ class FinancialReportService:
         def _node_has_value(node: Dict[str, Any]) -> bool:
             return any(
                 Decimal(node[key] or 0) != Decimal("0")
-                for key in ("competencia", "vencimento", "liquidacao", "aberto", "liquidado")
+                for key in ("competencia", "vencimento", "liquidacao", "aberto", "baixado")
             )
 
         hierarchy_rows: List[Dict[str, Any]] = []
@@ -1693,8 +1693,8 @@ class FinancialReportService:
                     "liquidacao_label": FinancialReportService._format_currency(node["liquidacao"]),
                     "aberto": FinancialReportService._serialize_money(node["aberto"]),
                     "aberto_label": FinancialReportService._format_currency(node["aberto"]),
-                    "liquidado": FinancialReportService._serialize_money(node["liquidado"]),
-                    "liquidado_label": FinancialReportService._format_currency(node["liquidado"]),
+                    "baixado": FinancialReportService._serialize_money(node["baixado"]),
+                    "baixado_label": FinancialReportService._format_currency(node["baixado"]),
                     "centros": ", ".join(sorted(node["centros"])) or "Todos",
                     "projetos": ", ".join(sorted(node["projetos"])) or "Todos",
                     "tipos": ", ".join(sorted(node["tipos"])) or "N/D",
@@ -1720,7 +1720,7 @@ class FinancialReportService:
             total_due += node["vencimento"]
             total_set += node["liquidacao"]
             total_open += node["aberto"]
-            total_settled += node["liquidado"]
+            total_settled += node["baixado"]
         for item in hierarchy_rows:
             row_payload = {
                 "codigo": item["codigo"],
@@ -1738,7 +1738,7 @@ class FinancialReportService:
             }
             if not consolidated_by_period:
                 row_payload["aberto"] = item["aberto_label"]
-                row_payload["liquidado"] = item["liquidado_label"]
+                row_payload["baixado"] = item["baixado_label"]
             rows.append(row_payload)
 
         columns: List[Dict[str, str]] = []
@@ -1750,14 +1750,14 @@ class FinancialReportService:
             [
                 {"key": "competencia", "label": "Competência"},
                 {"key": "vencimento", "label": "Vencimento"},
-                {"key": "liquidacao", "label": "Liquidação"},
+                {"key": "liquidacao", "label": "Baixa"},
             ]
         )
         if not consolidated_by_period:
             columns.extend(
                 [
                     {"key": "aberto", "label": "Em aberto"},
-                    {"key": "liquidado", "label": "Liquidado"},
+                    {"key": "baixado", "label": "Baixado"},
                 ]
             )
         columns.extend(
@@ -1775,7 +1775,7 @@ class FinancialReportService:
             summary_cards = [
                 FinancialReportService._report_card("Resultado competência", FinancialReportService._format_currency(total_comp)),
                 FinancialReportService._report_card("Resultado vencimento", FinancialReportService._format_currency(total_due)),
-                FinancialReportService._report_card("Resultado liquidação", FinancialReportService._format_currency(total_set)),
+                FinancialReportService._report_card("Resultado baixa", FinancialReportService._format_currency(total_set)),
                 FinancialReportService._report_card("Linhas da DRE", len(hierarchy_rows)),
             ]
             due_window = f"{due_start.isoformat()} até {due_end.isoformat()}" if due_start and due_end else "Livre"
@@ -1999,14 +1999,14 @@ class FinancialReportService:
                 continue
             settled_amount = settlements_by_entry.get(entry.id, Decimal("0"))
             if entry.status == "settled":
-                status_bucket = "Liquidado"
+                status_bucket = "Baixado"
             elif settled_amount > 0:
-                status_bucket = "Liquidado Parcial"
+                status_bucket = "Baixado Parcial"
             else:
                 status_bucket = "Aberto"
-            if status_bucket == "Liquidado" and not filters.include_settled:
+            if status_bucket == "Baixado" and not filters.include_settled:
                 continue
-            if status_bucket == "Liquidado Parcial" and not filters.include_budget_vs_actual:
+            if status_bucket == "Baixado Parcial" and not filters.include_budget_vs_actual:
                 continue
             if status_bucket == "Aberto" and not filters.include_open:
                 continue
@@ -2026,7 +2026,7 @@ class FinancialReportService:
                     "descricao": entry.description,
                     "debito": FinancialReportService._serialize_money(debit),
                     "credito": FinancialReportService._serialize_money(credit),
-                    "liquidado": FinancialReportService._serialize_money(settled_amount),
+                    "baixado": FinancialReportService._serialize_money(settled_amount),
                     "status": status_bucket,
                     "saldo": FinancialReportService._serialize_money(running),
                 }
@@ -2064,7 +2064,7 @@ class FinancialReportService:
                 {"key": "descricao", "label": "Descrição"},
                 {"key": "debito", "label": "Débito"},
                 {"key": "credito", "label": "Crédito"},
-                {"key": "liquidado", "label": "Liquidado"},
+                {"key": "baixado", "label": "Baixado"},
                 {"key": "status", "label": "Status"},
                 {"key": "saldo", "label": "Saldo acumulado"},
             ],
@@ -2414,8 +2414,8 @@ class FinancialReportService:
                     "value": ", ".join(
                         [
                             label for enabled, label in [
-                                (filters.include_settled, "Liquidado"),
-                                (filters.include_partial, "Liquidado Parcial"),
+                                (filters.include_settled, "Baixado"),
+                                (filters.include_partial, "Baixado Parcial"),
                                 (filters.include_open, "Aberto"),
                                 (filters.include_bordero, "Borderô"),
                             ] if enabled
@@ -2449,7 +2449,7 @@ class FinancialReportService:
                 values.append({
                     "label": "Status",
                     "value": ", ".join([label for enabled, label in [
-                        (filters.include_settled, "Liquidado"),
+                        (filters.include_settled, "Baixado"),
                         (filters.include_open, "Aberto"),
                     ] if enabled]) or "Nenhum",
                 })
@@ -2467,7 +2467,7 @@ class FinancialReportService:
             values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
             values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
             values.append({"label": "Considerar limites", "value": "Sim" if filters.include_overdraft else "Não"})
-            values.append({"label": "Status considerados", "value": ", ".join([label for enabled, label in [(filters.include_settled, "Liquidado"), (filters.include_open, "Aberto")] if enabled]) or "Nenhum"})
+            values.append({"label": "Status considerados", "value": ", ".join([label for enabled, label in [(filters.include_settled, "Baixado"), (filters.include_open, "Aberto")] if enabled]) or "Nenhum"})
             values.append({"label": "Tipos considerados", "value": ", ".join([label for enabled, label in [(filters.include_receivable, "Recebimento"), (filters.include_payable, "Pagamento"), (filters.include_budget_vs_actual, "Orçado x Realizado")] if enabled]) or "Nenhum"})
             values.append({"label": "Exibir", "value": ", ".join([label for enabled, label in [(filters.show_code, "Código"), (filters.show_description, "Descrição")] if enabled]) or "Nenhum"})
             values.append({"label": "Ordenar por", "value": order_labels.get(filters.order_by, filters.order_by)})

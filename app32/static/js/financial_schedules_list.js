@@ -47,7 +47,7 @@
       if (state === 'bordero_item' && item?.bordero?.code) return `Bord. - ${item.bordero.code}`;
       if (state === 'bordero') return 'Borderô';
       if (item?.summary?.operational_state_label) return item.summary.operational_state_label;
-      return ({ draft: 'Rascunho', forecast: 'Projetado', open: 'Em aberto', partial: 'Liquidado parcial', settled: 'Liquidado', cancelled: 'Cancelado' }[state] || 'Em aberto');
+      return ({ draft: 'Rascunho', forecast: 'Projetado', open: 'Em aberto', partial: 'Baixado parcial', settled: 'Baixado', cancelled: 'Cancelado' }[state] || 'Em aberto');
     };
     const settlementClass = (state) => ({ draft: 'sched-pill--open', forecast: 'sched-pill--partial', open: 'sched-pill--open', partial: 'sched-pill--partial', settled: 'sched-pill--settled', cancelled: 'sched-pill--bordero-item', bordero_item: 'sched-pill--bordero-item', bordero: 'sched-pill--bordero' }[state] || 'sched-pill--open');
 

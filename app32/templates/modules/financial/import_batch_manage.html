@@ -512,9 +512,9 @@
         }
         if (decision === 'confirmed') {
             if (result.auto_settlement) {
-                alert(`Match confirmado e liquidação ${result.auto_settlement.settlement_code} gerada automaticamente.`);
+                alert(`Match confirmado e baixa ${result.auto_settlement.settlement_code} gerada automaticamente.`);
             } else if (result.auto_settlement_error) {
-                alert(`Match confirmado, mas a liquidação automática não foi gerada: ${result.auto_settlement_error}`);
+                alert(`Match confirmado, mas a baixa automática não foi gerada: ${result.auto_settlement_error}`);
             }
         }
         loadBatchDetail();
