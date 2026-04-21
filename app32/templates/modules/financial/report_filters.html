@@ -98,6 +98,7 @@
 {% set title_filter_chart_account_id = (filters.get('title_filter_chart_account_id', ['']) | first) %}
 {% set title_filter_cost_center_id = (filters.get('title_filter_cost_center_id', ['']) | first) %}
 {% set title_filter_search = (filters.get('title_filter_search', ['']) | first) %}
+{% set selected_projected_values_mode = (filters.get('projected_values_mode', ['with_financial_correction']) | first) %}
 {% if is_schedule_report %}
 {% include 'modules/financial/partials/report_filters_schedule_page.html' %}
 {% elif is_dre %}
@@ -225,8 +226,9 @@
                     <label class="check-field"><input type="checkbox" name="show_installment" value="true" {% if 'show_installment' not in filters or (filters.get('show_installment', []) | first) == 'true' %}checked{% endif %}><span>Parcela</span></label>
                     <label class="check-field"><input type="checkbox" name="show_history" value="true" {% if 'show_history' not in filters or (filters.get('show_history', []) | first) == 'true' %}checked{% endif %}><span>Histórico</span></label>
                     <label class="check-field"><input type="checkbox" name="show_counterparty" value="true" {% if 'show_counterparty' not in filters or (filters.get('show_counterparty', []) | first) == 'true' %}checked{% endif %}><span>Favorecido</span></label>
-                    <label class="check-field"><input type="checkbox" name="show_title_amount" value="true" {% if 'show_title_amount' not in filters or (filters.get('show_title_amount', []) | first) == 'true' %}checked{% endif %}><span>Valor Título</span></label>
-                    <label class="check-field"><input type="checkbox" name="show_balance_amount" value="true" {% if 'show_balance_amount' not in filters or (filters.get('show_balance_amount', []) | first) == 'true' %}checked{% endif %}><span>Valor Saldo</span></label>
+                    <label class="check-field"><input type="checkbox" name="show_title_amount" value="true" {% if 'show_title_amount' not in filters or (filters.get('show_title_amount', []) | first) == 'true' %}checked{% endif %}><span>Valor Original</span></label>
+                    <label class="check-field"><input type="checkbox" name="show_correction_amount" value="true" {% if 'show_correction_amount' not in filters or (filters.get('show_correction_amount', []) | first) == 'true' %}checked{% endif %}><span>Valor da Correção</span></label>
+                    <label class="check-field"><input type="checkbox" name="show_balance_amount" value="true" {% if 'show_balance_amount' not in filters or (filters.get('show_balance_amount', []) | first) == 'true' %}checked{% endif %}><span>Saldo Principal Corrigido</span></label>
                     <label class="check-field"><input type="checkbox" name="show_competence_date" value="true" {% if 'show_competence_date' not in filters or (filters.get('show_competence_date', []) | first) == 'true' %}checked{% endif %}><span>Competência</span></label>
                     <label class="check-field"><input type="checkbox" name="show_due_date" value="true" {% if 'show_due_date' not in filters or (filters.get('show_due_date', []) | first) == 'true' %}checked{% endif %}><span>Vencimento</span></label>
                     <label class="check-field"><input type="checkbox" name="show_settlement_date" value="true" {% if 'show_settlement_date' not in filters or (filters.get('show_settlement_date', []) | first) == 'true' %}checked{% endif %}><span>Data da Baixa</span></label>
@@ -237,8 +239,9 @@
                     <label class="radio-field"><input type="radio" name="order_by" value="installment" {% if selected_order_by == 'installment' %}checked{% endif %}><span>Parcela</span></label>
                     <label class="radio-field"><input type="radio" name="order_by" value="history" {% if selected_order_by == 'history' %}checked{% endif %}><span>Histórico</span></label>
                     <label class="radio-field"><input type="radio" name="order_by" value="counterparty" {% if selected_order_by == 'counterparty' %}checked{% endif %}><span>Favorecido</span></label>
-                    <label class="radio-field"><input type="radio" name="order_by" value="title_amount" {% if selected_order_by == 'title_amount' %}checked{% endif %}><span>Valor Título</span></label>
-                    <label class="radio-field"><input type="radio" name="order_by" value="balance_amount" {% if selected_order_by == 'balance_amount' %}checked{% endif %}><span>Valor Saldo</span></label>
+                    <label class="radio-field"><input type="radio" name="order_by" value="title_amount" {% if selected_order_by == 'title_amount' %}checked{% endif %}><span>Valor Original</span></label>
+                    <label class="radio-field"><input type="radio" name="order_by" value="correction_amount" {% if selected_order_by == 'correction_amount' %}checked{% endif %}><span>Valor da Correção</span></label>
+                    <label class="radio-field"><input type="radio" name="order_by" value="balance_amount" {% if selected_order_by == 'balance_amount' %}checked{% endif %}><span>Saldo Principal Corrigido</span></label>
                     <label class="radio-field"><input type="radio" name="order_by" value="competence_date" {% if selected_order_by == 'competence_date' %}checked{% endif %}><span>Competência</span></label>
                     <label class="radio-field"><input type="radio" name="order_by" value="due_date" {% if selected_order_by == 'due_date' %}checked{% endif %}><span>Vencimento</span></label>
                     <label class="radio-field"><input type="radio" name="order_by" value="settlement_date" {% if selected_order_by == 'settlement_date' %}checked{% endif %}><span>Data da Baixa</span></label>
@@ -408,6 +411,12 @@
                         <label class="radio-field"><input type="radio" name="frequency" value="weekly" {% if selected_frequency == 'weekly' %}checked{% endif %}><span>Semanal</span></label>
                         <label class="radio-field"><input type="radio" name="frequency" value="monthly" {% if selected_frequency == 'monthly' %}checked{% endif %}><span>Mensal</span></label>
                     </fieldset>
+
+                    <fieldset class="cash-flow-fieldset">
+                        <legend>Valores projetados</legend>
+                        <label class="radio-field"><input type="radio" name="projected_values_mode" value="with_financial_correction" {% if selected_projected_values_mode == 'with_financial_correction' %}checked{% endif %}><span>Com correção financeira</span></label>
+                        <label class="radio-field"><input type="radio" name="projected_values_mode" value="without_financial_correction" {% if selected_projected_values_mode == 'without_financial_correction' %}checked{% endif %}><span>Sem correção financeira</span></label>
+                    </fieldset>
                 </div>
 
                 <div class="cash-flow-main">
@@ -496,7 +505,7 @@
                             <span>Histórico</span>
                             <span>Tipo</span>
                             <span>Valor Título</span>
-                            <span>Saldo</span>
+                            <span>{% if selected_projected_values_mode == 'with_financial_correction' %}Saldo Corrigido{% else %}Saldo Principal{% endif %}</span>
                             <span>Favorecido</span>
                             <span>Número/Parc</span>
                             <span>Competência</span>

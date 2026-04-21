@@ -1598,9 +1598,16 @@ class FinancialScheduleService:
             "adjustments_settled": balance.get("adjustments_settled"),
             "adjustments_open": balance.get("adjustments_open"),
             "discounts_open": balance.get("discounts_open"),
+            "discounts_applied": balance.get("discounts_applied"),
             "suggested_financial_correction": float(suggested_financial_correction.quantize(Decimal("0.01"))),
             "suggested_discount": float(suggested_discount.quantize(Decimal("0.01"))),
             "suggested_updated_amount": float(
+                max(
+                    Decimal(str(balance.get("principal_open") or 0)) + suggested_financial_correction - suggested_discount,
+                    Decimal("0.00"),
+                ).quantize(Decimal("0.01"))
+            ),
+            "principal_corrected_open": float(
                 max(
                     Decimal(str(balance.get("principal_open") or 0)) + suggested_financial_correction - suggested_discount,
                     Decimal("0.00"),

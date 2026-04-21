@@ -79,26 +79,38 @@
                                 <span>Desconto</span>
                                 <select id="field-discount-rule" name="discount_rule_id"></select>
                             </label>
+                            <label class="field field-span-1 field-compact">
+                                <span>Desconto Configurado</span>
+                                <input id="field-discount-configured" inputmode="numeric" data-format="currency" autocomplete="off" placeholder="0,00">
+                            </label>
                         </div>
                         <div class="sched-summary-strip">
                             <label class="field field-summary field-compact">
-                                <span>Valor da Correção</span>
-                                <input id="field-correction-amount" name="correction_amount_display" value="0,00" readonly tabindex="-1">
+                                <span>Valor Original</span>
+                                <input id="field-original-amount" value="0,00" readonly tabindex="-1">
                             </label>
                             <label class="field field-summary field-compact">
-                                <span>Valor do Desconto</span>
-                                <input id="field-discount-amount" name="discount_amount_display" value="0,00" inputmode="numeric" data-format="currency" autocomplete="off" placeholder="0,00">
-                            </label>
-                            <label class="field field-summary field-compact">
-                                <span>Valor das Baixas Principal</span>
+                                <span>Baixas do Principal</span>
                                 <input id="field-liquidated-amount" name="liquidated_amount_display" value="0,00" readonly tabindex="-1">
                             </label>
                             <label class="field field-summary field-compact">
-                                <span>Valor das Baixas Total</span>
+                                <span>Correções Realizadas / Baixadas</span>
+                                <input id="field-correction-amount" name="correction_amount_display" value="0,00" readonly tabindex="-1">
+                            </label>
+                            <label class="field field-summary field-compact">
+                                <span>Descontos Realizados / Baixados</span>
+                                <input id="field-discount-amount" name="discount_amount_display" value="0,00" readonly tabindex="-1">
+                            </label>
+                            <label class="field field-summary field-compact">
+                                <span>Baixas Total</span>
                                 <input id="field-liquidated-total-amount" name="liquidated_total_amount_display" value="0,00" readonly tabindex="-1">
                             </label>
                             <label class="field field-summary field-compact">
-                                <span>Valor Atualizado</span>
+                                <span>Saldo do Principal</span>
+                                <input id="field-principal-open-amount" value="0,00" readonly tabindex="-1">
+                            </label>
+                            <label class="field field-summary field-compact">
+                                <span>Saldo do Principal Corrigido</span>
                                 <input id="field-updated-amount" name="updated_amount_display" value="0,00" readonly tabindex="-1">
                             </label>
                         </div>

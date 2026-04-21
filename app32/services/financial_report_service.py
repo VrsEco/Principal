@@ -35,6 +35,7 @@ from schemas.financial_reports import FinancialManagementReportFiltersInput
 from services.financial_dashboard_analytics import FinancialDashboardAnalytics
 from services.financial_service import FinancialService
 from services.financial_title_amount_service import FinancialTitleAmountService
+from services.financial_title_balance_service import FinancialTitleBalanceService
 
 
 class FinancialReportService:
@@ -165,6 +166,7 @@ class FinancialReportService:
         if report_type == "cash_flow":
             payload.setdefault("frequency", "daily")
             payload.setdefault("include_projected", "true")
+            payload.setdefault("projected_values_mode", "with_financial_correction")
         if report_type == "working_capital":
             payload.setdefault("include_overdraft", "true")
         payload["report_type"] = report_type
@@ -237,6 +239,7 @@ class FinancialReportService:
                 data.show_history,
                 data.show_counterparty,
                 data.show_title_amount,
+                data.show_correction_amount,
                 data.show_balance_amount,
                 data.show_competence_date,
                 data.show_due_date,
@@ -565,6 +568,111 @@ class FinancialReportService:
         original_amount = Decimal(str(getattr(entry, "original_amount", None) or 0))
         settled_total = Decimal(str(settled_amount or 0))
         return max(original_amount - settled_total, Decimal("0"))
+
+    @staticmethod
+    def _projected_values_mode_label(value: Optional[str]) -> str:
+        return {
+            "with_financial_correction": "Com correção financeira",
+            "without_financial_correction": "Sem correção financeira",
+        }.get(str(value or "").strip().lower(), "Com correção financeira")
+
+    @staticmethod
+    def _entry_schedule_id(entry: FinancialEntry) -> Optional[int]:
+        raw_schedule_id = getattr(entry, "financial_schedule_id", None)
+        if raw_schedule_id not in (None, ""):
+            parsed = FinancialReportService._parse_positive_int(raw_schedule_id)
+            if parsed:
+                return parsed
+        external_reference = str(getattr(entry, "external_reference", "") or "").strip()
+        prefix = "financial_schedule:"
+        if external_reference.startswith(prefix):
+            parsed = FinancialReportService._parse_positive_int(external_reference[len(prefix):])
+            if parsed:
+                return parsed
+        return None
+
+    @staticmethod
+    def _schedule_projected_balance_snapshot(
+        schedule: FinancialSchedule,
+        *,
+        reference_date: Optional[date] = None,
+    ) -> Dict[str, Decimal]:
+        from services.financial_title_adjustment_service import FinancialTitleAdjustmentService
+
+        balance = FinancialTitleBalanceService.calculate_for_schedule(
+            schedule=schedule,
+            reference_date=reference_date,
+        )
+        principal_amount = Decimal(str(balance.get("principal_amount") or 0))
+        principal_open = Decimal(str(balance.get("principal_open") or 0))
+        principal_settled = Decimal(str(balance.get("principal_settled") or 0))
+        settlement_total_amount = Decimal(str(balance.get("settlement_total_amount") or 0))
+        suggested_financial_correction = Decimal("0")
+        suggested_discount = Decimal("0")
+        try:
+            adjustment_simulation = FinancialTitleAdjustmentService.simulate_for_schedule(
+                schedule=schedule,
+                reference_date=reference_date or date.today(),
+                base_amount=principal_open,
+            )
+            totals = adjustment_simulation.get("totals") or {}
+            suggested_financial_correction = Decimal(str(totals.get("positive_adjustments") or 0))
+            suggested_discount = Decimal(str(totals.get("discount") or 0))
+        except Exception:
+            suggested_financial_correction = Decimal("0")
+            suggested_discount = Decimal("0")
+
+        principal_corrected_open = max(
+            principal_open + suggested_financial_correction - suggested_discount,
+            Decimal("0"),
+        )
+        return {
+            "principal_amount": principal_amount,
+            "principal_open": principal_open,
+            "principal_settled": principal_settled,
+            "settlement_total_amount": settlement_total_amount,
+            "financial_correction_open": suggested_financial_correction,
+            "discount_open": suggested_discount,
+            "principal_corrected_open": principal_corrected_open,
+        }
+
+    @staticmethod
+    def _entry_projected_open_amount(
+        entry: FinancialEntry,
+        *,
+        settled_amount: Decimal | float | int = Decimal("0"),
+        projected_values_mode: Optional[str] = None,
+        schedule_cache: Optional[Dict[int, FinancialSchedule]] = None,
+        schedule_projection_cache: Optional[Dict[int, Dict[str, Decimal]]] = None,
+    ) -> Decimal:
+        principal_outstanding = FinancialReportService._entry_outstanding_amount(entry, settled_amount)
+        if principal_outstanding <= Decimal("0"):
+            return Decimal("0")
+        if str(projected_values_mode or "with_financial_correction").strip().lower() != "with_financial_correction":
+            return principal_outstanding
+
+        schedule_id = FinancialReportService._entry_schedule_id(entry)
+        if not schedule_id:
+            return principal_outstanding
+
+        snapshot = (schedule_projection_cache or {}).get(schedule_id)
+        if snapshot is None:
+            schedule = (schedule_cache or {}).get(schedule_id)
+            if schedule is None:
+                return principal_outstanding
+            snapshot = FinancialReportService._schedule_projected_balance_snapshot(schedule)
+            if schedule_projection_cache is not None:
+                schedule_projection_cache[schedule_id] = snapshot
+
+        schedule_principal_open = Decimal(str(snapshot.get("principal_open") or 0))
+        schedule_corrected_open = Decimal(str(snapshot.get("principal_corrected_open") or 0))
+        if schedule_principal_open <= Decimal("0"):
+            return principal_outstanding
+        if schedule_corrected_open <= Decimal("0"):
+            return Decimal("0")
+        ratio = principal_outstanding / schedule_principal_open
+        corrected_amount = (schedule_corrected_open * ratio).quantize(Decimal("0.01"))
+        return max(corrected_amount, Decimal("0"))
 
     @staticmethod
     def _entry_installment_label(entry: FinancialEntry) -> str:
@@ -978,8 +1086,9 @@ class FinancialReportService:
         *,
         settled_amount: Decimal,
         counterparty_names: Dict[int, str],
+        open_amount: Optional[Decimal] = None,
     ) -> Dict[str, Any]:
-        outstanding = FinancialReportService._entry_outstanding_amount(entry, settled_amount)
+        outstanding = open_amount if open_amount is not None else FinancialReportService._entry_outstanding_amount(entry, settled_amount)
         counterparty_label = (
             counterparty_names.get(getattr(entry, "counterparty_id", None))
             or (dict(getattr(entry, "metadata_json", None) or {}).get("counterparty_name"))
@@ -1030,18 +1139,36 @@ class FinancialReportService:
             entry_ids=[entry.id for entry in entries],
         )
         counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
+        schedule_projection_cache: Dict[int, Dict[str, Decimal]] = {}
+        schedule_ids = {FinancialReportService._entry_schedule_id(entry) for entry in entries}
+        schedule_ids = {item for item in schedule_ids if item}
+        schedule_cache: Dict[int, FinancialSchedule] = {}
+        if schedule_ids:
+            for schedule in FinancialSchedule.query.filter(
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.id.in_(list(schedule_ids)),
+                FinancialSchedule.deleted_at.is_(None),
+            ).all():
+                schedule_cache[int(schedule.id)] = schedule
 
         titles: List[Dict[str, Any]] = []
         total_open_amount = Decimal("0")
         for entry in entries:
             settled_amount = settlement_totals.get(entry.id, Decimal("0"))
-            outstanding = FinancialReportService._entry_outstanding_amount(entry, settled_amount)
+            outstanding = FinancialReportService._entry_projected_open_amount(
+                entry,
+                settled_amount=settled_amount,
+                projected_values_mode=normalized_filters.projected_values_mode,
+                schedule_cache=schedule_cache,
+                schedule_projection_cache=schedule_projection_cache,
+            )
             if outstanding <= Decimal("0"):
                 continue
             item = FinancialReportService._serialize_cash_flow_excluded_title(
                 entry,
                 settled_amount=settled_amount,
                 counterparty_names=counterparty_names,
+                open_amount=outstanding,
             )
             item["selected"] = entry.id in selected_entry_id_set
             titles.append(item)
@@ -1055,6 +1182,8 @@ class FinancialReportService:
                 "total_open_amount": FinancialReportService._serialize_money(total_open_amount),
                 "total_open_amount_label": FinancialReportService._format_currency(total_open_amount),
                 "period_label": f"{normalized_filters.period_start.isoformat()} até {normalized_filters.period_end.isoformat()}",
+                "projected_values_mode": normalized_filters.projected_values_mode,
+                "projected_values_mode_label": FinancialReportService._projected_values_mode_label(normalized_filters.projected_values_mode),
             },
         }, None
 
@@ -1155,8 +1284,10 @@ class FinancialReportService:
 
         rows: List[Dict[str, Any]] = []
         receivable_title_total = Decimal("0")
+        receivable_correction_total = Decimal("0")
         receivable_open_total = Decimal("0")
         payable_title_total = Decimal("0")
+        payable_correction_total = Decimal("0")
         payable_open_total = Decimal("0")
         open_count = 0
         bordero_count = 0
@@ -1164,6 +1295,7 @@ class FinancialReportService:
         for schedule in schedules:
             metadata = dict(schedule.metadata_json or {})
             schedule_entries = entries_by_schedule.get(schedule.id, [])
+            projection_snapshot = FinancialReportService._schedule_projected_balance_snapshot(schedule)
             original_total = Decimal("0")
             settled_total = Decimal("0")
             open_total = Decimal("0")
@@ -1232,13 +1364,18 @@ class FinancialReportService:
                 if latest_settlement_date < filters.settlement_start or latest_settlement_date > filters.settlement_end:
                     continue
 
+            correction_amount = Decimal(str(projection_snapshot.get("financial_correction_open") or 0))
+            corrected_open_total = Decimal(str(projection_snapshot.get("principal_corrected_open") or open_total or 0))
             signed_title_amount = Decimal(str(FinancialService.get_signed_amount(original_total, schedule.movement_nature)))
-            signed_open_amount = Decimal(str(FinancialService.get_signed_amount(open_total, schedule.movement_nature)))
+            signed_correction_amount = Decimal(str(FinancialService.get_signed_amount(correction_amount, schedule.movement_nature)))
+            signed_open_amount = Decimal(str(FinancialService.get_signed_amount(corrected_open_total, schedule.movement_nature)))
             if schedule.entry_type == "receivable":
                 receivable_title_total += original_total
+                receivable_correction_total += correction_amount
                 receivable_open_total += signed_open_amount
             else:
                 payable_title_total += original_total
+                payable_correction_total += correction_amount
                 payable_open_total += signed_open_amount
             if report_state not in {"settled", "cancelled", "draft"}:
                 open_count += 1
@@ -1277,6 +1414,7 @@ class FinancialReportService:
                     "history": history_value,
                     "counterparty": counterparty_value,
                     "title_amount": FinancialReportService._format_currency(signed_title_amount),
+                    "correction_amount": FinancialReportService._format_currency(signed_correction_amount),
                     "balance_amount": FinancialReportService._format_currency(signed_open_amount),
                     "competence_date": competence_date_value,
                     "due_date": due_date_value,
@@ -1288,6 +1426,7 @@ class FinancialReportService:
                     "_history_sort": str(history_value or "").lower(),
                     "_counterparty_sort": str(counterparty_value or "").lower(),
                     "_title_amount_sort": float(signed_title_amount),
+                    "_correction_amount_sort": float(signed_correction_amount),
                     "_balance_amount_sort": float(signed_open_amount),
                     "_competence_date_sort": competence_date_value if competence_date_value != "-" else "",
                     "_due_date_sort": due_date_value if due_date_value != "-" else "",
@@ -1301,6 +1440,7 @@ class FinancialReportService:
             "history": "_history_sort",
             "counterparty": "_counterparty_sort",
             "title_amount": "_title_amount_sort",
+            "correction_amount": "_correction_amount_sort",
             "balance_amount": "_balance_amount_sort",
             "competence_date": "_competence_date_sort",
             "due_date": "_due_date_sort",
@@ -1314,8 +1454,9 @@ class FinancialReportService:
         for key, label, enabled in [
             ("title_number", "Nº Título", filters.show_title_number),
             ("counterparty", "Favorecido", filters.show_counterparty),
-            ("title_amount", "Valor Título", filters.show_title_amount),
-            ("balance_amount", "Valor Saldo", filters.show_balance_amount),
+            ("title_amount", "Valor Original", filters.show_title_amount),
+            ("correction_amount", "Valor da Correção", filters.show_correction_amount),
+            ("balance_amount", "Saldo do Principal Corrigido", filters.show_balance_amount),
             ("competence_date", "Competência", filters.show_competence_date),
             ("due_date", "Vencimento", filters.show_due_date),
             ("settlement_date", "Dt. da Última Liquid.", filters.show_settlement_date),
@@ -1331,8 +1472,10 @@ class FinancialReportService:
             summary_cards=[
                 FinancialReportService._report_card("Quantidade de registros", len(rows)),
                 FinancialReportService._report_card("Total a receber", FinancialReportService._format_currency(receivable_title_total), "positive"),
+                FinancialReportService._report_card("Correções a receber", FinancialReportService._format_currency(receivable_correction_total), "positive"),
                 FinancialReportService._report_card("Total líquido a receber", FinancialReportService._format_currency(receivable_open_total), "positive"),
                 FinancialReportService._report_card("Total a pagar", FinancialReportService._format_currency(payable_title_total), "negative"),
+                FinancialReportService._report_card("Correções a pagar", FinancialReportService._format_currency(payable_correction_total), "negative"),
                 FinancialReportService._report_card("Total líquido a pagar", FinancialReportService._format_currency(abs(payable_open_total)), "negative"),
                 FinancialReportService._report_card("Total geral", FinancialReportService._format_currency(total_general), "primary"),
                 FinancialReportService._report_card("Total geral líquido", FinancialReportService._format_currency(total_general_net), "primary"),
@@ -1347,8 +1490,10 @@ class FinancialReportService:
             totals={
                 "count": len(rows),
                 "receivable_title_total": FinancialReportService._serialize_money(receivable_title_total),
+                "receivable_correction_total": FinancialReportService._serialize_money(receivable_correction_total),
                 "receivable_open_total": FinancialReportService._serialize_money(receivable_open_total),
                 "payable_title_total": FinancialReportService._serialize_money(payable_title_total),
+                "payable_correction_total": FinancialReportService._serialize_money(payable_correction_total),
                 "payable_open_total": FinancialReportService._serialize_money(abs(payable_open_total)),
                 "total_general": FinancialReportService._serialize_money(total_general),
                 "total_general_net": FinancialReportService._serialize_money(total_general_net),
@@ -2339,11 +2484,14 @@ class FinancialReportService:
         excluded_open_total = Decimal("0")
         projected_in_total = Decimal("0")
         projected_out_total = Decimal("0")
+        schedule_projection_cache: Dict[int, Dict[str, Decimal]] = {}
         selected_receivables: List[Dict[str, Any]] = []
         selected_payables: List[Dict[str, Any]] = []
         receivable_title_total = Decimal("0")
+        receivable_correction_total = Decimal("0")
         receivable_open_total = Decimal("0")
         payable_title_total = Decimal("0")
+        payable_correction_total = Decimal("0")
         payable_open_total = Decimal("0")
         if filters.include_projected:
             projected_entries = FinancialReportService._cash_flow_projected_entry_query(company_id, filters).all()
@@ -2352,14 +2500,27 @@ class FinancialReportService:
                 entry_ids=[entry.id for entry in projected_entries],
             )
             counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
+            schedule_ids = {FinancialReportService._entry_schedule_id(entry) for entry in projected_entries}
+            schedule_ids = {item for item in schedule_ids if item}
+            schedule_cache: Dict[int, FinancialSchedule] = {}
+            if schedule_ids:
+                for schedule in FinancialSchedule.query.filter(
+                    FinancialSchedule.company_id == company_id,
+                    FinancialSchedule.id.in_(list(schedule_ids)),
+                    FinancialSchedule.deleted_at.is_(None),
+                ).all():
+                    schedule_cache[int(schedule.id)] = schedule
             for entry in projected_entries:
                 if not entry.due_date:
                     continue
                 title_amount = Decimal(str(getattr(entry, "original_amount", None) or 0))
                 settled_amount = projected_settlement_totals.get(entry.id, Decimal("0"))
-                outstanding = FinancialReportService._entry_outstanding_amount(
+                outstanding = FinancialReportService._entry_projected_open_amount(
                     entry,
-                    settled_amount,
+                    settled_amount=settled_amount,
+                    projected_values_mode=filters.projected_values_mode,
+                    schedule_cache=schedule_cache,
+                    schedule_projection_cache=schedule_projection_cache,
                 )
                 if outstanding <= Decimal("0"):
                     continue
@@ -2367,6 +2528,7 @@ class FinancialReportService:
                     entry,
                     settled_amount=settled_amount,
                     counterparty_names=counterparty_names,
+                    open_amount=outstanding,
                 )
                 is_excluded = entry.id in excluded_entry_id_set
                 title_row = {
@@ -2378,6 +2540,7 @@ class FinancialReportService:
                     "title_amount_value": FinancialReportService._serialize_money(title_amount),
                     "open_amount": FinancialReportService._format_currency(outstanding),
                     "open_amount_value": FinancialReportService._serialize_money(outstanding),
+                    "projected_amount_mode": filters.projected_values_mode,
                     "counterparty": serialized["counterparty"],
                     "due_date": FinancialReportService._format_date_br(entry.due_date),
                     "competence_date": FinancialReportService._format_date_br(entry.competence_date),
@@ -2567,6 +2730,7 @@ class FinancialReportService:
                 ),
                 FinancialReportService._report_info("Contas correntes", bank_accounts_label),
                 FinancialReportService._report_info("Periodicidade", periodicity_label),
+                FinancialReportService._report_info("Valores projetados", FinancialReportService._projected_values_mode_label(filters.projected_values_mode)),
                 FinancialReportService._report_info("Títulos financeiros em aberto", projected_titles_label),
                 FinancialReportService._report_info("Títulos retirados manualmente", str(len(excluded_titles))),
                 FinancialReportService._report_info(
@@ -2634,6 +2798,9 @@ class FinancialReportService:
                     "open_amount_value": FinancialReportService._serialize_money(payable_open_total),
                 },
                 "excluded_titles": excluded_titles,
+                "projected_values_mode": filters.projected_values_mode,
+                "projected_values_mode_label": FinancialReportService._projected_values_mode_label(filters.projected_values_mode),
+                "projected_amount_label": "Saldo do Principal Corrigido" if filters.projected_values_mode == "with_financial_correction" else "Saldo do Principal",
             },
         )
 

@@ -268,9 +268,9 @@
     });
     return lastIndex;
   };
-  const getConfiguredDiscountAmount = () => round2(parseCurrency($('field-discount-amount')?.value || ''));
+  const getConfiguredDiscountAmount = () => round2(parseCurrency($('field-discount-configured')?.value || ''));
   const setDiscountAmountField = (value, { manual = false } = {}) => {
-    const field = $('field-discount-amount');
+    const field = $('field-discount-configured');
     if (!field) return;
     field.value = formatSignedCurrency(value || 0);
     field.dataset.manualOverride = manual ? '1' : '0';
@@ -333,7 +333,7 @@
   }
 
   function calculateDiscountAmount() {
-    const discountField = $('field-discount-amount');
+    const discountField = $('field-discount-configured');
     const discountFieldRawValue = String(discountField?.value || '').trim();
     if (discountField?.dataset.manualOverride === '1') {
       return getConfiguredDiscountAmount();
@@ -350,7 +350,7 @@
   }
 
   function refreshSuggestedDiscountAmountField() {
-    const field = $('field-discount-amount');
+    const field = $('field-discount-configured');
     if (!field || field.dataset.manualOverride === '1') return;
     const selectedRule = getSelectedDiscountRule();
     if (!selectedRule) return setDiscountAmountField(0, { manual: false });
@@ -399,18 +399,39 @@
     return calculateCorrectionAmount();
   }
 
+  function realizedCorrectionAmount() {
+    const summary = scheduleSummary();
+    if (summary.adjustments_settled !== undefined && summary.adjustments_settled !== null) {
+      return round2(Number(summary.adjustments_settled || 0));
+    }
+    return 0;
+  }
+
+  function realizedDiscountAmount() {
+    const summary = scheduleSummary();
+    if (summary.discounts_applied !== undefined && summary.discounts_applied !== null) {
+      return round2(Number(summary.discounts_applied || 0));
+    }
+    return 0;
+  }
+
   function updateFinancialTotals() {
     const summary = scheduleSummary();
+    const originalAmount = Number(summary.principal_amount ?? getTopAmount() ?? 0);
     const principalOpen = Number(summary.principal_open ?? getTopAmount() ?? 0);
-    const correctionAmount = suggestedCorrectionAmount();
-    const discountAmount = calculateDiscountAmount();
-    const updatedAmount = round2(Math.max(principalOpen + correctionAmount - discountAmount, 0));
+    const correctionAmount = realizedCorrectionAmount();
+    const discountAmount = realizedDiscountAmount();
+    const updatedAmount = round2(Number(summary.principal_corrected_open ?? summary.suggested_updated_amount ?? Math.max(principalOpen + suggestedCorrectionAmount() - calculateDiscountAmount(), 0)));
     const liquidatedPrincipalAmount = calculateLiquidatedPrincipalAmount();
     const liquidatedTotalAmount = calculateLiquidatedTotalAmount();
-    setFieldValue('field-correction-amount', correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    setFieldValue('field-liquidated-amount', liquidatedPrincipalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    setFieldValue('field-liquidated-total-amount', liquidatedTotalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    setFieldValue('field-updated-amount', updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    const moneyLabel = (value) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    setFieldValue('field-original-amount', moneyLabel(originalAmount));
+    setFieldValue('field-principal-open-amount', moneyLabel(principalOpen));
+    setFieldValue('field-correction-amount', moneyLabel(correctionAmount));
+    setFieldValue('field-discount-amount', moneyLabel(discountAmount));
+    setFieldValue('field-liquidated-amount', moneyLabel(liquidatedPrincipalAmount));
+    setFieldValue('field-liquidated-total-amount', moneyLabel(liquidatedTotalAmount));
+    setFieldValue('field-updated-amount', moneyLabel(updatedAmount));
   }
 
   function getEffectiveScheduleAmount() {
@@ -739,7 +760,7 @@
     return ({
       settlement_posted: 'Baixa registrada',
       settlement_updated: 'Baixa atualizada',
-      settlement_deleted: 'Baixa removida',
+      settlement_deleted: 'Baixa removida (oculta na memória)',
       adjustment_released: 'Ajuste liberado',
       recalculation: 'Recálculo',
     }[eventType] || eventType || 'Evento financeiro');
@@ -760,6 +781,8 @@
     const principalAmount = asMoneyValue(summary.principal_amount ?? summary.template_amount ?? schedule.template_amount);
     const principalOpen = asMoneyValue(summary.principal_open ?? summary.open_principal ?? schedule.template_amount);
     const suggestedCorrection = asMoneyValue(summary.suggested_financial_correction ?? summary.adjustments_open ?? summary.correction_amount ?? 0);
+    const realizedCorrection = asMoneyValue(summary.adjustments_settled ?? 0);
+    const realizedDiscount = asMoneyValue(summary.discounts_applied ?? 0);
     const manualDiscount = asMoneyValue(summary.suggested_discount ?? summary.discounts_open ?? summary.discount_amount ?? 0);
     const principalSettled = asMoneyValue(summary.principal_settled ?? summary.liquidated_amount ?? 0);
     const settlementTotal = asMoneyValue(summary.settlement_total_amount ?? summary.settled_amount ?? principalSettled);
@@ -770,7 +793,7 @@
         <div>
           <span>Resumo financeiro do título</span>
           <h3>${escapeHtml(schedule.schedule_code || `Título ${schedule.id}`)} · ${escapeHtml(schedule.description || schedule.name || 'Sem histórico')}</h3>
-          <p>Principal, correção financeira sugerida, descontos e baixas registradas.</p>
+          <p>Separação entre realizado/baixado e saldo projetado corrigido do título.</p>
         </div>
       </header>
       <div class="title-balance-grid">
@@ -780,29 +803,29 @@
           <small>Valor base do título financeiro.</small>
         </article>
         <article class="title-balance-card">
-          <span>Valor da correção</span>
-          <strong>${money(signedAmount(suggestedCorrection, nature))}</strong>
-          <small>Calculado sobre o saldo do principal desde a última baixa até hoje.</small>
+          <span>Correções realizadas / baixadas</span>
+          <strong>${money(signedAmount(realizedCorrection, nature))}</strong>
+          <small>Somatório das correções financeiras já baixadas.</small>
         </article>
         <article class="title-balance-card title-balance-card--adjustment">
-          <span>Descontos</span>
-          <strong>${money(signedAmount(manualDiscount, nature))}</strong>
-          <small>Desconto manual considerado no valor atualizado.</small>
+          <span>Descontos realizados / baixados</span>
+          <strong>${money(signedAmount(realizedDiscount, nature))}</strong>
+          <small>Somatório dos descontos já aplicados nas baixas.</small>
         </article>
         <article class="title-balance-card">
-          <span>Valor das baixas principal</span>
+          <span>Baixas do principal</span>
           <strong>${money(signedAmount(principalSettled, nature))}</strong>
           <small>Somatório do principal já baixado.</small>
         </article>
         <article class="title-balance-card">
-          <span>Valor das baixas total</span>
+          <span>Baixas total</span>
           <strong>${money(signedAmount(settlementTotal, nature))}</strong>
           <small>Principal + correção financeira - descontos já baixados.</small>
         </article>
         <article class="title-balance-card title-balance-card--editable">
-          <span>Valor atualizado</span>
+          <span>Saldo do principal corrigido</span>
           <strong>${money(signedAmount(updatedAmount, nature))}</strong>
-          <small>Principal aberto ${money(signedAmount(principalOpen, nature))} + correção ${money(signedAmount(suggestedCorrection, nature))} - descontos ${money(signedAmount(manualDiscount, nature))}</small>
+          <small>Principal aberto ${money(signedAmount(principalOpen, nature))} + correções em aberto ${money(signedAmount(suggestedCorrection, nature))} - descontos em aberto ${money(signedAmount(manualDiscount, nature))}</small>
         </article>
       </div>
     `;
@@ -830,7 +853,11 @@
     const listEl = $('calculation-log-list');
     const tabButton = $('calculation-log-tab-button');
     const hasSchedule = Boolean(schedule?.id);
-    const normalizedLogs = Array.isArray(logs) ? logs : [];
+    const normalizedLogs = (Array.isArray(logs) ? logs : []).filter((log) => {
+      const metadata = log?.metadata_json || {};
+      const eventType = String(log?.event_type || '').trim().toLowerCase();
+      return !metadata.hidden_from_memory && !metadata.deletion_timestamp && !log?.deleted_at && eventType !== 'settlement_deleted';
+    });
     selectedCalculationLogs = normalizedLogs;
 
     renderTitleBalance(schedule);
@@ -857,7 +884,7 @@
       summaryEl.innerHTML = latest ? [
         `<article class="calc-log-kpi"><span>Último evento</span><strong>${formatIso(latest.calculation_date)}</strong><small>${eventLabel(latest.event_type)}</small></article>`,
         `<article class="calc-log-kpi"><span>Total em aberto</span><strong class="${amountClass(signedTotalOpen)}">${money(signedTotalOpen)}</strong><small>Principal + ajustes pendentes</small></article>`,
-        `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correção financeira/descontos a baixar</small></article>`,
+        `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correções e descontos ainda em aberto</small></article>`,
         `<article class="calc-log-kpi"><span>Saldo ainda alterável</span><strong class="${amountClass(signedEditableOpen)}">${money(signedEditableOpen)}</strong><small>Janela restante para novas baixas e ajustes</small></article>`,
         `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias estruturadas registradas</small></article>`,
       ].join('') : '';
@@ -903,7 +930,7 @@
               ${ledgerStep('Agora', 'Composição realizada neste evento', [
                 ledgerMetric('Principal baixado', currentBlock.principal_settled ?? log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature),
                 ledgerMetric('Correção financeira', currentBlock.financial_correction ?? log.adjustments_settled_now ?? 0, schedule?.movement_nature),
-                ledgerMetric('Desconto liberado', currentBlock.discount ?? log.discount_now ?? log.discount_amount ?? 0, schedule?.movement_nature, { invert: true }),
+                ledgerMetric('Desconto baixado', currentBlock.discount ?? log.discount_now ?? log.discount_amount ?? 0, schedule?.movement_nature, { invert: true }),
                 ledgerMetric('Valor da baixa', currentBlock.gross_amount ?? 0, schedule?.movement_nature),
               ], 'ledger-step--current')}
               ${ledgerStep('Depois', 'Saldo remanescente editável do título', [
@@ -1076,7 +1103,7 @@
         document_number: fieldValue('field-document-number').trim() || null,
         correction_index_id: Number(fieldValue('field-correction-index') || 0) || null,
         discount_rule_id: Number(fieldValue('field-discount-rule') || 0) || null,
-        discount_amount_override: $('field-discount-amount')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
+        discount_amount_override: $('field-discount-configured')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
         repeat_count: Number(fieldValue('field-repeat-count', '1') || 1),
         attachments: selectedSchedule?.attachments || [],
         counterparty_name: $('field-counterparty')?.selectedOptions?.[0]?.textContent || null,
@@ -1630,7 +1657,7 @@
     updateFinancialTotals();
   });
 
-  $('field-discount-amount').addEventListener('input', (event) => {
+  $('field-discount-configured').addEventListener('input', (event) => {
     event.target.value = formatCurrencyFromDigits(event.target.value);
     event.target.dataset.manualOverride = '1';
     syncAdjustmentAllocationRows();

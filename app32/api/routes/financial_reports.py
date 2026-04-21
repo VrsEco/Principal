@@ -32,6 +32,7 @@ _BOOLEAN_FILTER_KEYS = {
     "show_history",
     "show_counterparty",
     "show_title_amount",
+    "show_correction_amount",
     "show_balance_amount",
     "show_competence_date",
     "show_due_date",

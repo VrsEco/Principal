@@ -23,6 +23,19 @@ def test_cash_flow_includes_open_titles_by_default():
     assert filters.include_projected is True
 
 
+def test_cash_flow_defaults_to_projection_with_financial_correction():
+    filters, error = FinancialReportService._normalize_filters(
+        "cash_flow",
+        {
+            "period_start": "2026-04-01",
+            "period_end": "2026-04-30",
+        },
+    )
+
+    assert error is None
+    assert filters.projected_values_mode == "with_financial_correction"
+
+
 def test_cash_flow_allows_filter_to_remove_open_titles():
     filters, error = FinancialReportService._normalize_filters(
         "cash_flow",
@@ -72,6 +85,8 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert '/projected-titles' in template
     assert 'name="bank_account_ids" value="-1"' in template
     assert "Processar filtros" in template
+    assert 'name="projected_values_mode" value="with_financial_correction"' in template
+    assert 'name="projected_values_mode" value="without_financial_correction"' in template
 
 
 def test_cash_flow_filters_accept_manual_title_exclusions():
@@ -153,4 +168,5 @@ def test_cash_flow_report_partial_contains_expected_sections():
     assert "Fluxo de Caixa" in template
     assert "Contas a Receber Selecionadas" in template
     assert "Contas a Pagar Selecionadas" in template
+    assert "projected_amount_label" in template
     assert "Retirado" in template

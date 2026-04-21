@@ -185,8 +185,9 @@
         {% set display_fields = [
             ('show_title_number', 'Nº Título'),
             ('show_counterparty', 'Favorecido'),
-            ('show_title_amount', 'Valor Título'),
-            ('show_balance_amount', 'Valor Saldo'),
+            ('show_title_amount', 'Valor Original'),
+            ('show_correction_amount', 'Valor da Correção'),
+            ('show_balance_amount', 'Saldo Principal Corrigido'),
             ('show_competence_date', 'Competência'),
             ('show_due_date', 'Vencimento'),
             ('show_settlement_date', 'Dt. da Última Liquid.')
@@ -208,8 +209,9 @@
         {% set order_fields = [
             ('title_number', 'Nº Título'),
             ('counterparty', 'Favorecido'),
-            ('title_amount', 'Valor Título'),
-            ('balance_amount', 'Valor Saldo'),
+            ('title_amount', 'Valor Original'),
+            ('correction_amount', 'Valor da Correção'),
+            ('balance_amount', 'Saldo Principal Corrigido'),
             ('competence_date', 'Competência'),
             ('due_date', 'Vencimento'),
             ('settlement_date', 'Dt. da Última Liquid.')

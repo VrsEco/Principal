@@ -44,6 +44,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
     include_reconciled_only: bool = False
     include_overdraft: bool = True
     enable_title_exclusions: bool = False
+    projected_values_mode: Literal['with_financial_correction', 'without_financial_correction'] = 'with_financial_correction'
 
     include_open: bool = True
     include_settled: bool = True
@@ -63,6 +64,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
     show_history: bool = True
     show_counterparty: bool = True
     show_title_amount: bool = True
+    show_correction_amount: bool = True
     show_balance_amount: bool = True
     show_competence_date: bool = True
     show_due_date: bool = True
@@ -76,6 +78,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
         'history',
         'counterparty',
         'title_amount',
+        'correction_amount',
         'balance_amount',
         'competence_date',
         'due_date',

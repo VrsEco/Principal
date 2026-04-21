@@ -134,7 +134,18 @@ class FinancialTitleCalculationService:
     @staticmethod
     def _is_hidden_from_memory(payload: Dict[str, Any]) -> bool:
         metadata = dict(payload.get("metadata_json") or {})
-        return bool(metadata.get("hidden_from_memory"))
+        if bool(metadata.get("hidden_from_memory")):
+            return True
+        event_type = str(payload.get("event_type") or "").strip().lower()
+        if event_type == "settlement_deleted":
+            return True
+        if str(metadata.get("hidden_reason") or "").strip().lower() == "settlement_deleted":
+            return True
+        if metadata.get("deletion_timestamp"):
+            return True
+        if payload.get("deleted_at"):
+            return True
+        return False
 
     @staticmethod
     def list_title_calculation_logs(

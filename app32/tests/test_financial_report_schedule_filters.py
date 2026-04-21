@@ -67,6 +67,7 @@ def test_schedule_report_normalize_rejects_without_display_columns():
             "show_history": "false",
             "show_counterparty": "false",
             "show_title_amount": "false",
+            "show_correction_amount": "false",
             "show_balance_amount": "false",
             "show_competence_date": "false",
             "show_due_date": "false",
@@ -156,3 +157,51 @@ def test_schedule_report_templates_use_titulos_financeiros_copy():
     sidebar = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\partials\report_filters_schedule_sidebar.html").read_text(encoding="utf-8")
     assert "Abrir títulos financeiros" in page
     assert "relatório de títulos financeiros" in sidebar
+
+
+def test_schedule_report_normalize_accepts_correction_sort_field():
+    filters, error = FinancialReportService._normalize_filters(
+        "schedule_report",
+        {
+            "competence_start": "2026-04-01",
+            "competence_end": "2026-04-30",
+            "include_settled": "true",
+            "include_partial": "true",
+            "include_open": "true",
+            "include_bordero": "true",
+            "include_payable": "true",
+            "include_receivable": "true",
+            "show_correction_amount": "true",
+            "order_by": "correction_amount",
+        },
+    )
+
+    assert error is None
+    assert filters.order_by == "correction_amount"
+
+
+def test_schedule_report_templates_expose_correction_and_corrected_balance_copy():
+    page = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\partials\report_filters_schedule_page.html").read_text(encoding="utf-8")
+    sidebar = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\partials\report_filters_schedule_sidebar.html").read_text(encoding="utf-8")
+    filters_page = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\report_filters.html").read_text(encoding="utf-8")
+    assert "Saldo Principal Corrigido" in sidebar
+    assert "Valor da Correção" in sidebar
+    assert "Saldo Principal Corrigido" in filters_page
+    assert "field-correction-amount" in Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\schedules.html").read_text(encoding="utf-8")
+
+
+def test_schedule_form_separates_discount_configuration_from_realized_discount_summary():
+    schedules_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\schedules.html").read_text(encoding="utf-8")
+    schedules_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+    assert "Desconto Configurado" in schedules_template
+    assert "Descontos Realizados / Baixados" in schedules_template
+    assert "field-discount-configured" in schedules_template
+    assert "discounts_applied" in schedules_js
+    assert "Correções realizadas / baixadas" in schedules_js
+
+
+def test_calculation_memory_ui_hides_deleted_events_and_uses_refined_copy():
+    schedules_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+    assert "eventType !== 'settlement_deleted'" in schedules_js
+    assert "Correções e descontos ainda em aberto" in schedules_js
+    assert "Desconto baixado" in schedules_js
