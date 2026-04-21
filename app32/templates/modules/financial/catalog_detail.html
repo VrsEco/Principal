@@ -678,6 +678,7 @@
                 { name: 'branch_number', label: 'Agência', section: 'account' },
                 { name: 'account_number', label: 'Conta', section: 'account' },
                 { name: 'account_digit', label: 'Dígito', section: 'account' },
+                { name: 'overdraft_limit', label: 'Limite da conta (conta garantida / cheque especial)', section: 'account', type: 'number', step: '0.01', min: '0', hint: 'Valor usado nos indicadores de disponibilidade quando a análise considerar limites.' },
                 { name: 'holder_name', label: 'Titular', section: 'holder' },
                 { name: 'holder_document', label: 'CPF / CNPJ', section: 'holder', inputmode: 'numeric', maxlength: 18, oninput: 'handleDocumentInput(this)', hintId: 'cw-document-type', hint: 'Digite CPF ou CNPJ' },
                 { name: 'pix_key', label: 'PIX', section: 'holder', colSpan: 2 },
@@ -1041,6 +1042,23 @@
         updateDocumentTypeLabel(type);
     }
 
+    function getBankAccountOverdraftLimit(item) {
+        const metadata = item?.metadata_json || {};
+        const keys = [
+            'overdraft_limit',
+            'cheque_especial_limit',
+            'special_limit',
+            'credit_limit',
+            'limite_cheque_especial',
+            'limite',
+        ];
+        for (const key of keys) {
+            const value = metadata[key];
+            if (value !== null && value !== undefined && value !== '') return value;
+        }
+        return item?.overdraft_limit ?? '';
+    }
+
     function getHierarchyParentOptions() {
         const blockedIds = new Set();
         if (editingId) {
@@ -1245,7 +1263,7 @@
         if (['is_default_receivable', 'is_default_payable'].includes(field)) return String(value) === 'true';
         if (['parent_id', 'manager_employee_id', 'installment_count', 'interval_days', 'settlement_days', 'chart_account_id', 'category_id', 'due_in_days'].includes(field)) return Number(value);
         if (field === 'value') return Number(value);
-        if (['interest_rate', 'penalty_rate', 'penalty_limit_rate', 'manual_value'].includes(field)) return Number(value);
+        if (['interest_rate', 'penalty_rate', 'penalty_limit_rate', 'manual_value', 'overdraft_limit'].includes(field)) return Number(value);
         if (field === 'reduced_code') return String(value).trim().toLowerCase();
         if (field === 'external_code') return String(value).trim() || null;
         return value;
@@ -1318,6 +1336,10 @@
             const notesField = form.querySelector('[name="metadata_notes"]');
             if (notesField) {
                 notesField.value = item?.metadata_json?.notes || '';
+            }
+            const overdraftLimitField = form.querySelector('[name="overdraft_limit"]');
+            if (overdraftLimitField) {
+                overdraftLimitField.value = getBankAccountOverdraftLimit(item);
             }
             handleDocumentInput(form.querySelector('[name="holder_document"]'));
         }
@@ -1578,14 +1600,17 @@
         for (const [key, value] of formData.entries()) {
             if (key === 'id') continue;
             if (key === 'metadata_notes') continue;
+            if (key === 'overdraft_limit') continue;
             payload[key] = normalizeValue(key, value);
         }
         if (activeCatalog === 'bank_accounts') {
             const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;
             payload.metadata_json = {
                 ...(currentItem?.metadata_json || {}),
+                overdraft_limit: normalizeValue('overdraft_limit', formData.get('overdraft_limit') || ''),
                 notes: (formData.get('metadata_notes') || '').trim() || null,
             };
+            payload.overdraft_limit = payload.metadata_json.overdraft_limit;
         }
         if (activeCatalog === 'chart_accounts') {
             const currentItem = id ? allItems.find(item => String(item.id) === String(id)) : null;

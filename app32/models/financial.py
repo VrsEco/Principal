@@ -154,6 +154,22 @@ class FinancialBankAccount(db.Model):
     deleted_at = db.Column(db.DateTime)
 
     def to_dict(self):
+        metadata = self.metadata_json or {}
+        overdraft_limit = next(
+            (
+                metadata.get(key)
+                for key in (
+                    "overdraft_limit",
+                    "cheque_especial_limit",
+                    "special_limit",
+                    "credit_limit",
+                    "limite_cheque_especial",
+                    "limite",
+                )
+                if metadata.get(key) not in (None, "")
+            ),
+            None,
+        )
         return {
             "id": self.id,
             "company_id": self.company_id,
@@ -168,8 +184,9 @@ class FinancialBankAccount(db.Model):
             "holder_document": self.holder_document,
             "pix_key": self.pix_key,
             "currency_code": self.currency_code,
+            "overdraft_limit": overdraft_limit,
             "is_active": self.is_active,
-            "metadata_json": self.metadata_json or {},
+            "metadata_json": metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

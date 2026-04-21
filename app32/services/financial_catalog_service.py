@@ -380,6 +380,11 @@ class FinancialCatalogService:
             prepared.pop("manual_value", None)
             metadata.pop("manual_value", None)
 
+        if catalog_type == "bank_accounts":
+            for field_name in ("overdraft_limit",):
+                if field_name in prepared:
+                    metadata[field_name] = prepared.pop(field_name)
+
         if catalog_type in {
             "account_categories",
             "asset_accounts",

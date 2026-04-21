@@ -1,5 +1,6 @@
 import os
 import sys
+from decimal import Decimal
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -91,6 +92,24 @@ def test_prepare_cost_center_payload_maps_account_level_type():
     assert payload["accepts_posting"] is False
     assert payload["metadata_json"]["account_level_type"] == "synthetic"
     assert payload["metadata_json"]["external_code"] == "ERP-01"
+
+
+def test_prepare_bank_account_payload_maps_overdraft_limit_to_metadata():
+    payload = FinancialCatalogService._prepare_catalog_payload(
+        catalog_type="bank_accounts",
+        company_id=9,
+        data={
+            "company_id": 9,
+            "code": "001",
+            "name": "Conta Movimento",
+            "metadata_json": {"notes": "Conta principal"},
+            "overdraft_limit": Decimal("12500.75"),
+        },
+    )
+
+    assert "overdraft_limit" not in payload
+    assert payload["metadata_json"]["notes"] == "Conta principal"
+    assert payload["metadata_json"]["overdraft_limit"] == 12500.75
 
 
 def test_validate_related_scope_rejects_analytic_cost_center_parent(monkeypatch):

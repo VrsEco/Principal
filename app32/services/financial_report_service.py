@@ -163,6 +163,7 @@ class FinancialReportService:
         payload = dict(raw_filters or {})
         if report_type == "cash_flow":
             payload.setdefault("frequency", "daily")
+            payload.setdefault("include_projected", "true")
         if report_type == "working_capital":
             payload.setdefault("include_overdraft", "true")
         payload["report_type"] = report_type
@@ -501,15 +502,26 @@ class FinancialReportService:
         ], None
 
     @staticmethod
-    def _selected_ids(single_id: Optional[int], multiple_ids: Optional[Sequence[int]]) -> List[int]:
+    def _selected_ids(
+        single_id: Optional[int],
+        multiple_ids: Optional[Sequence[int]],
+        *,
+        preserve_empty_marker: bool = False,
+    ) -> List[int]:
         values: List[int] = []
+        has_empty_marker = False
         for current in list(multiple_ids or []) + ([single_id] if single_id else []):
             try:
                 parsed = int(current)
             except (TypeError, ValueError):
                 continue
+            if parsed == -1 and preserve_empty_marker:
+                has_empty_marker = True
+                continue
             if parsed > 0 and parsed not in values:
                 values.append(parsed)
+        if preserve_empty_marker and has_empty_marker and not values:
+            return [-1]
         return values
 
     @staticmethod
@@ -708,7 +720,11 @@ class FinancialReportService:
             FinancialSettlement.settlement_date >= filters.period_start,
             FinancialSettlement.settlement_date <= filters.period_end,
         )
-        bank_account_ids = FinancialReportService._selected_ids(filters.bank_account_id, filters.bank_account_ids)
+        bank_account_ids = FinancialReportService._selected_ids(
+            filters.bank_account_id,
+            filters.bank_account_ids,
+            preserve_empty_marker=filters.report_type == "cash_flow",
+        )
         if bank_account_ids:
             query = query.filter(FinancialSettlement.bank_account_id.in_(bank_account_ids))
         if filters.include_reconciled_only:
@@ -1914,9 +1930,27 @@ class FinancialReportService:
     def _build_cash_flow(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
         bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
-        bank_account_ids = FinancialReportService._selected_ids(filters.bank_account_id, filters.bank_account_ids)
+        bank_account_ids = FinancialReportService._selected_ids(
+            filters.bank_account_id,
+            filters.bank_account_ids,
+            preserve_empty_marker=True,
+        )
         settlements = FinancialReportService._settlement_query(company_id, filters).order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc()).all()
         entries = {item.id: item for item in FinancialEntry.query.filter(FinancialEntry.company_id == company_id, FinancialEntry.deleted_at.is_(None)).all()}
+        if bank_account_ids == [-1]:
+            bank_accounts_label = "Nenhuma conta selecionada"
+        elif bank_account_ids:
+            bank_accounts_label = ", ".join(bank_names.get(item, str(item)) for item in bank_account_ids)
+        else:
+            bank_accounts_label = "Todas"
+        overdraft_limit = (
+            FinancialDashboardAnalytics.calculate_overdraft_limit(
+                company_id,
+                bank_account_ids=[] if bank_account_ids == [-1] else (bank_account_ids or None),
+            )
+            if filters.include_overdraft
+            else Decimal("0")
+        )
 
         history_query = FinancialSettlement.query.filter(
             FinancialSettlement.company_id == company_id,
@@ -1997,6 +2031,7 @@ class FinancialReportService:
             opening = running
             running = opening + slot["realized_in"] - slot["realized_out"]
             projected_final = running + slot["projected_in"] - slot["projected_out"]
+            projected_with_limit = projected_final + overdraft_limit
             rows.append(
                 {
                     "data": bucket_label,
@@ -2007,9 +2042,15 @@ class FinancialReportService:
                     "saida_projetada": FinancialReportService._serialize_money(slot["projected_out"]),
                     "saldo_final": FinancialReportService._serialize_money(running),
                     "saldo_projetado": FinancialReportService._serialize_money(projected_final),
+                    "saldo_com_limite": FinancialReportService._serialize_money(projected_with_limit),
                 }
             )
         projected_final_value = rows[-1]["saldo_projetado"] if rows else FinancialReportService._serialize_money(initial_balance)
+        projected_with_limit_value = (
+            rows[-1]["saldo_com_limite"]
+            if rows
+            else FinancialReportService._serialize_money(Decimal(initial_balance) + overdraft_limit)
+        )
         return {
             "title": definition["label"],
             "subtitle": definition["description"],
@@ -2018,12 +2059,14 @@ class FinancialReportService:
                 {"label": "Entradas realizadas", "value": FinancialReportService._format_currency(realized_in)},
                 {"label": "Saídas realizadas", "value": FinancialReportService._format_currency(realized_out)},
                 {"label": "Saldo projetado final", "value": FinancialReportService._format_currency(projected_final_value)},
+                {"label": "Saldo projetado c/ limite", "value": FinancialReportService._format_currency(projected_with_limit_value)},
             ],
             "general_info": [
                 {"label": "Janela analisada", "value": f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"},
-                {"label": "Contas correntes", "value": ", ".join(bank_names.get(item, str(item)) for item in bank_account_ids) if bank_account_ids else "Todas"},
+                {"label": "Contas correntes", "value": bank_accounts_label},
                 {"label": "Periodicidade", "value": {"daily": "Diário", "weekly": "Semanal", "monthly": "Mensal"}.get(bucket_mode, bucket_mode)},
-                {"label": "Projeções abertas", "value": "Sim" if filters.include_projected else "Não"},
+                {"label": "Títulos financeiros em aberto", "value": "Incluídos" if filters.include_projected else "Retirados"},
+                {"label": "Limite de conta", "value": FinancialReportService._format_currency(overdraft_limit)},
             ],
             "columns": [
                 {"key": "data", "label": "Data"},
@@ -2034,9 +2077,17 @@ class FinancialReportService:
                 {"key": "saida_projetada", "label": "Saída projetada"},
                 {"key": "saldo_final", "label": "Saldo final"},
                 {"key": "saldo_projetado", "label": "Saldo projetado"},
+                {"key": "saldo_com_limite", "label": "Saldo c/ limite"},
             ],
             "rows": rows,
-            "totals": {"opening_balance": FinancialReportService._serialize_money(initial_balance), "realized_inflow": FinancialReportService._serialize_money(realized_in), "realized_outflow": FinancialReportService._serialize_money(realized_out), "projected_final": FinancialReportService._serialize_money(projected_final_value)},
+            "totals": {
+                "opening_balance": FinancialReportService._serialize_money(initial_balance),
+                "realized_inflow": FinancialReportService._serialize_money(realized_in),
+                "realized_outflow": FinancialReportService._serialize_money(realized_out),
+                "projected_final": FinancialReportService._serialize_money(projected_final_value),
+                "overdraft_limit": FinancialReportService._serialize_money(overdraft_limit),
+                "projected_with_limit": FinancialReportService._serialize_money(projected_with_limit_value),
+            },
         }
 
     @staticmethod
@@ -2466,7 +2517,11 @@ class FinancialReportService:
             if current:
                 values.append({"label": label, "value": names.get(current, str(current))})
         if filters.bank_account_ids:
-            values.append({"label": "Contas correntes", "value": ", ".join(bank_names.get(item, str(item)) for item in filters.bank_account_ids)})
+            if all(int(item) == -1 for item in filters.bank_account_ids):
+                values.append({"label": "Contas correntes", "value": "Nenhuma conta selecionada"})
+            else:
+                positive_bank_ids = [int(item) for item in filters.bank_account_ids if int(item) > 0]
+                values.append({"label": "Contas correntes", "value": ", ".join(bank_names.get(item, str(item)) for item in positive_bank_ids)})
         if filters.chart_account_ids:
             values.append({"label": "Planos de conta", "value": ", ".join(chart_names.get(item, str(item)) for item in filters.chart_account_ids)})
         if filters.cost_center_ids:
@@ -2569,7 +2624,10 @@ class FinancialReportService:
                     ] if enabled]) or "Nenhuma",
                 })
         else:
-            values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
+            if filters.report_type == "cash_flow":
+                values.append({"label": "Títulos financeiros em aberto", "value": "Incluídos" if filters.include_projected else "Retirados"})
+            else:
+                values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
             values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
             values.append({"label": "Considerar limites", "value": "Sim" if filters.include_overdraft else "Não"})
             values.append({"label": "Status considerados", "value": ", ".join([label for enabled, label in [(filters.include_settled, "Baixado"), (filters.include_open, "Aberto")] if enabled]) or "Nenhum"})

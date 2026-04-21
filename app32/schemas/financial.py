@@ -233,6 +233,7 @@ class FinancialBankAccountInput(BaseModel):
     holder_document: Optional[str] = Field(None, max_length=50)
     pix_key: Optional[str] = Field(None, max_length=120)
     currency_code: str = Field("BRL", min_length=3, max_length=3)
+    overdraft_limit: Optional[Decimal] = Field(None, ge=0)
     is_active: bool = True
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
@@ -277,6 +278,7 @@ class FinancialBankAccountUpdateInput(BaseModel):
     holder_document: Optional[str] = Field(None, max_length=50)
     pix_key: Optional[str] = Field(None, max_length=120)
     currency_code: Optional[str] = Field(None, min_length=3, max_length=3)
+    overdraft_limit: Optional[Decimal] = Field(None, ge=0)
     is_active: Optional[bool] = None
     metadata_json: Optional[Dict[str, Any]] = None
 

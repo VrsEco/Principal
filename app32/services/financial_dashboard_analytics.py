@@ -310,13 +310,30 @@ class FinancialDashboardAnalytics:
         return total
 
     @staticmethod
-    def calculate_overdraft_limit(company_id: int) -> Decimal:
+    def calculate_overdraft_limit(company_id: int, bank_account_ids: Optional[Sequence[int]] = None) -> Decimal:
         total = Decimal("0")
-        accounts = FinancialBankAccount.query.filter(
+        selected_ids: Optional[List[int]] = None
+        if bank_account_ids is not None:
+            selected_ids = []
+            for item in bank_account_ids:
+                try:
+                    parsed = int(item)
+                except (TypeError, ValueError):
+                    continue
+                if parsed > 0 and parsed not in selected_ids:
+                    selected_ids.append(parsed)
+            if not selected_ids:
+                return total
+
+        query = FinancialBankAccount.query.filter(
             FinancialBankAccount.company_id == company_id,
             FinancialBankAccount.deleted_at.is_(None),
             FinancialBankAccount.is_active.is_(True),
-        ).all()
+        )
+        if selected_ids is not None:
+            query = query.filter(FinancialBankAccount.id.in_(selected_ids))
+
+        accounts = query.all()
         for account in accounts:
             total += FinancialDashboardAnalytics.extract_decimal_from_mapping(
                 account.metadata_json or {},

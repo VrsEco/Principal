@@ -56,6 +56,13 @@ _IGNORED_FILTER_QUERY_KEYS = {
 }
 
 
+def _normalize_list_filter_values(values):
+    normalized = [value for value in values if value != '']
+    if "-1" in normalized and any(value != "-1" for value in normalized):
+        normalized = [value for value in normalized if value != "-1"]
+    return normalized
+
+
 def _request_filters_payload(*, excluded_keys=None):
     excluded = set(_IGNORED_FILTER_QUERY_KEYS)
     if excluded_keys:
@@ -65,7 +72,7 @@ def _request_filters_payload(*, excluded_keys=None):
     for key in request.args.keys():
         if key in excluded:
             continue
-        values = [value for value in request.args.getlist(key) if value != '']
+        values = _normalize_list_filter_values(request.args.getlist(key))
         if not values:
             continue
         manual_match = re.match(r'^manual_value_(\d+)$', key)
@@ -87,7 +94,7 @@ def _request_filters_payload(*, excluded_keys=None):
 def _current_filters_state():
     state = {}
     for key in request.args.keys():
-        values = [value for value in request.args.getlist(key) if value != '']
+        values = _normalize_list_filter_values(request.args.getlist(key))
         if not values:
             continue
         if key in _BOOLEAN_FILTER_KEYS:

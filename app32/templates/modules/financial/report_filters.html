@@ -82,7 +82,9 @@
 {% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
 {% set selected_cost_centers = filters.get('cost_center_ids', []) %}
 {% set selected_projects = filters.get('project_ids', []) %}
-{% set selected_bank_accounts = filters.get('bank_account_ids', []) %}
+{% set selected_bank_accounts_raw = filters.get('bank_account_ids') %}
+{% set selected_bank_accounts = selected_bank_accounts_raw or [] %}
+{% set cash_flow_all_bank_accounts_selected = is_cash_flow and selected_bank_accounts_raw is none %}
 {% set selected_working_capital_accounts = filters.get('working_capital_accounts', []) %}
 {% set selected_order_by = (filters.get('order_by', ['title_number' if is_schedule_report else 'code']) | first) %}
 {% set selected_order_direction = (filters.get('order_direction', ['asc']) | first) %}
@@ -370,14 +372,16 @@
                     <label class="report-block-field">
                         <span>Contas Correntes</span>
                         <div class="checkbox-list">
+                            <input type="hidden" name="bank_account_ids" value="-1">
                             {% for item in options.bank_accounts %}
                             {% set option_id = item.id|string %}
                             <label class="check-field">
-                                <input type="checkbox" name="bank_account_ids" value="{{ item.id }}" {% if option_id in selected_bank_accounts %}checked{% endif %}>
+                                <input type="checkbox" name="bank_account_ids" value="{{ item.id }}" {% if cash_flow_all_bank_accounts_selected or option_id in selected_bank_accounts %}checked{% endif %}>
                                 <span>{{ item.label }}</span>
                             </label>
                             {% endfor %}
                         </div>
+                        <small class="filter-hint">Todas entram no fluxo inicialmente. Desmarque contas para retirar seus títulos financeiros da projeção.</small>
                     </label>
 
                     <label>
@@ -401,10 +405,12 @@
 
                 <div class="cash-flow-main">
                     <div class="cash-flow-banner">
+                        {% set exclude_projected_checked = 'include_projected' in filters and (filters.get('include_projected', []) | first) == 'false' %}
                         <label class="check-field">
-                            <input type="checkbox" name="include_projected" value="true" {% if 'include_projected' not in filters or (filters.get('include_projected', []) | first) == 'true' %}checked{% endif %}>
-                            <span>Incluir Agendamentos</span>
+                            <input type="checkbox" name="include_projected" value="false" {% if exclude_projected_checked %}checked{% endif %}>
+                            <span>Retirar títulos financeiros em aberto</span>
                         </label>
+                        <small class="cash-flow-banner__hint">Por padrão, o fluxo já considera os agendamentos/títulos em aberto. Marque apenas quando quiser removê-los da projeção.</small>
                     </div>
 
                     <details class="cash-flow-filters-panel">
@@ -733,6 +739,8 @@
     .cash-flow-fieldset legend { padding:0 .4rem; font-weight:700; color:var(--text-primary); }
     .cash-flow-banner { padding:1rem; border-radius:16px; background:linear-gradient(135deg, #1d4ed8, #2563eb); color:#fff; }
     .cash-flow-banner .check-field span { color:#fff; font-weight:700; }
+    .cash-flow-banner__hint { display:block; margin-top:.45rem; color:rgba(255,255,255,.86); font-weight:600; }
+    .filter-hint { display:block; margin-top:.45rem; color:var(--text-tertiary); font-weight:600; line-height:1.35; }
     .cash-flow-filters-panel { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
     .cash-flow-filters-panel summary { cursor:pointer; list-style:none; padding:1rem; font-weight:700; color:var(--text-primary); }
     .cash-flow-filters-panel summary::-webkit-details-marker { display:none; }
