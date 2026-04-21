@@ -389,17 +389,27 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert snapshot["settled_principal_current"] == 120.0
     assert snapshot["settled_principal_after"] == 220.0
     assert snapshot["open_principal_after"] == 255.0
+    assert snapshot["before"]["principal"] == 375.0
+    assert snapshot["before"]["financial_correction"] == 0.0
+    assert snapshot["before"]["discount"] == 0.0
+    assert snapshot["before"]["gross_amount"] == 375.0
     assert snapshot["before"]["principal_open"] == 375.0
     assert snapshot["before"]["total_open"] == 375.0
     assert snapshot["before"]["editable_open"]["principal"] == 375.0
     assert snapshot["before"]["editable_rules"]["principal_max"] == 375.0
+    assert snapshot["current"]["principal"] == 120.0
     assert snapshot["current"]["principal_settled"] == 120.0
     assert snapshot["current"]["financial_correction"] == 0.0
     assert snapshot["current"]["discount"] == 0.0
     assert snapshot["current"]["gross_amount"] == 120.0
+    assert snapshot["after"]["principal"] == 255.0
+    assert snapshot["after"]["financial_correction"] == 0.0
+    assert snapshot["after"]["discount"] == 0.0
+    assert snapshot["after"]["gross_amount"] == 255.0
     assert snapshot["after"]["principal_open"] == 255.0
     assert snapshot["after"]["editable_open"]["principal"] == 255.0
     assert snapshot["after"]["editable_open"]["total_open"] == 255.0
+    assert snapshot["after"]["editable_open"]["gross_amount"] == 255.0
     assert snapshot["after"]["total_open"] == 255.0
     assert snapshot["after"]["operational_state"]["code"] == "partial"
     assert settlement.metadata_json["settlement_allocation_breakdown"]["principal"]["total_allocated_amount"] == 120.0
@@ -439,6 +449,111 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["company_id"] == 7
     assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["financial_schedule_id"] == 77
     assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["scope_consistent"] is True
+
+
+def test_build_title_settlement_snapshot_keeps_after_principal_and_correction_split(monkeypatch):
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 88,
+            "company_id": 7,
+            "schedule_code": "TIT-088",
+            "status": "active",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "description": "Título com correção aberta",
+            "name": "Título com correção aberta",
+            "template_amount": Decimal("2500.00"),
+            "metadata_json": {},
+            "competence_date": date(2026, 4, 1),
+            "start_date": date(2026, 4, 1),
+            "first_due_date": date(2026, 4, 30),
+            "next_due_date": date(2026, 4, 30),
+        },
+    )()
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSchedule",
+        type(
+            "FinancialScheduleStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(schedule),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module.FinancialTitleAmountService,
+        "calculate",
+        lambda **kwargs: {
+            "template_amount": 2500.0,
+            "correction_amount": 300.0,
+            "discount_amount": 0.0,
+            "updated_amount": 2500.0,
+        },
+    )
+    monkeypatch.setattr(
+        financial_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda **kwargs: {
+            "principal_amount": 2500.0,
+            "principal_settled": 300.0,
+            "principal_open": 2200.0,
+            "adjustments_open": 300.0,
+            "discounts_open": 0.0,
+            "total_open": 2500.0,
+            "adjustments_settled": 0.0,
+            "discounts_applied": 0.0,
+        },
+    )
+
+    entry = type("Entry", (), {"company_id": 7, "financial_schedule_id": 88})()
+    settlement_data = type(
+        "SettlementData",
+        (),
+        {
+            "company_id": 7,
+            "settlement_date": date(2026, 5, 10),
+            "principal_amount": Decimal("200.00"),
+            "interest_amount": Decimal("0.00"),
+            "penalty_amount": Decimal("0.00"),
+            "discount_amount": Decimal("0.00"),
+            "fee_amount": Decimal("0.00"),
+            "other_adjustments_amount": Decimal("0.00"),
+            "gross_amount": Decimal("200.00"),
+            "net_amount": Decimal("200.00"),
+            "settlement_components": [],
+        },
+    )()
+
+    snapshot = FinancialService._build_title_settlement_snapshot(
+        entry=entry,
+        settlement_data=settlement_data,
+        total_liquidated_before=Decimal("300.00"),
+    )
+
+    assert snapshot is not None
+    assert snapshot["before"]["principal"] == 2200.0
+    assert snapshot["before"]["financial_correction"] == 300.0
+    assert snapshot["before"]["discount"] == 0.0
+    assert snapshot["before"]["gross_amount"] == 2500.0
+    assert snapshot["current"]["principal"] == 200.0
+    assert snapshot["current"]["financial_correction"] == 0.0
+    assert snapshot["current"]["discount"] == 0.0
+    assert snapshot["current"]["gross_amount"] == 200.0
+    assert snapshot["after"]["principal"] == 2000.0
+    assert snapshot["after"]["financial_correction"] == 300.0
+    assert snapshot["after"]["discount"] == 0.0
+    assert snapshot["after"]["gross_amount"] == 2300.0
+    assert snapshot["after"]["total_open"] == 2300.0
+    assert snapshot["after"]["editable_open"]["principal"] == 2000.0
+    assert snapshot["after"]["editable_open"]["financial_correction"] == 300.0
+    assert snapshot["after"]["editable_open"]["gross_amount"] == 2300.0
+    assert snapshot["after"]["editable_open"]["total_open"] == 2300.0
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):

@@ -739,70 +739,52 @@
   function renderTitleBalance(schedule) {
     const panelEl = $('title-balance-panel');
     if (!panelEl) return;
-    const hasSchedule = Boolean(schedule?.id);
-    panelEl.classList.toggle('hidden', !hasSchedule);
-    if (!hasSchedule) {
-      panelEl.innerHTML = '';
-      return;
-    }
-
-    const summary = schedule.summary || {};
-    const nature = schedule.movement_nature;
-    const principalAmount = asMoneyValue(summary.principal_amount ?? summary.template_amount ?? schedule.template_amount);
-    const principalOpen = asMoneyValue(summary.principal_open ?? summary.open_principal ?? schedule.template_amount);
-    const suggestedCorrection = asMoneyValue(summary.suggested_financial_correction ?? summary.adjustments_open ?? summary.correction_amount ?? 0);
-    const manualDiscount = asMoneyValue(summary.suggested_discount ?? summary.discounts_open ?? summary.discount_amount ?? 0);
-    const principalSettled = asMoneyValue(summary.principal_settled ?? summary.liquidated_amount ?? 0);
-    const settlementTotal = asMoneyValue(summary.settlement_total_amount ?? summary.settled_amount ?? principalSettled);
-    const updatedAmount = asMoneyValue(summary.suggested_updated_amount ?? Math.max(principalOpen + suggestedCorrection - manualDiscount, 0));
-
-    panelEl.innerHTML = `
-      <header class="title-balance-head">
-        <div>
-          <span>Resumo financeiro do título</span>
-          <h3>${escapeHtml(schedule.schedule_code || `Título ${schedule.id}`)} · ${escapeHtml(schedule.description || schedule.name || 'Sem histórico')}</h3>
-          <p>Principal, correção financeira sugerida, descontos e baixas registradas.</p>
-        </div>
-      </header>
-      <div class="title-balance-grid">
-        <article class="title-balance-card title-balance-card--principal">
-          <span>Valor do principal</span>
-          <strong>${money(signedAmount(principalAmount, nature))}</strong>
-          <small>Valor base do título financeiro.</small>
-        </article>
-        <article class="title-balance-card">
-          <span>Valor da correção</span>
-          <strong>${money(signedAmount(suggestedCorrection, nature))}</strong>
-          <small>Calculado sobre o saldo do principal desde a última baixa até hoje.</small>
-        </article>
-        <article class="title-balance-card title-balance-card--adjustment">
-          <span>Descontos</span>
-          <strong>${money(signedAmount(manualDiscount, nature))}</strong>
-          <small>Desconto manual considerado no valor atualizado.</small>
-        </article>
-        <article class="title-balance-card">
-          <span>Valor das baixas principal</span>
-          <strong>${money(signedAmount(principalSettled, nature))}</strong>
-          <small>Somatório do principal já baixado.</small>
-        </article>
-        <article class="title-balance-card">
-          <span>Valor das baixas total</span>
-          <strong>${money(signedAmount(settlementTotal, nature))}</strong>
-          <small>Principal + correção financeira - descontos já baixados.</small>
-        </article>
-        <article class="title-balance-card title-balance-card--editable">
-          <span>Valor atualizado</span>
-          <strong>${money(signedAmount(updatedAmount, nature))}</strong>
-          <small>Principal aberto ${money(signedAmount(principalOpen, nature))} + correção ${money(signedAmount(suggestedCorrection, nature))} - descontos ${money(signedAmount(manualDiscount, nature))}</small>
-        </article>
-      </div>
-    `;
+    panelEl.classList.add('hidden');
+    panelEl.innerHTML = '';
   }
 
   function ledgerMetric(label, value, movementNature, { invert = false } = {}) {
     const numeric = asMoneyValue(value) * (invert ? -1 : 1);
     const signed = signedAmount(numeric, movementNature);
     return `<div class="ledger-component"><span>${label}</span><strong class="${amountClass(signed)}">${money(signed)}</strong></div>`;
+  }
+
+  function normalizeLedgerPhase(block, log, phase) {
+    const current = block || {};
+    const principalFallback = phase === 'current'
+      ? (log.principal_settled_now ?? log.settled_principal_current ?? 0)
+      : phase === 'before'
+        ? (log.principal_before ?? log.principal_open_before ?? 0)
+        : (log.principal_after ?? log.open_principal_after ?? 0);
+    const correctionFallback = phase === 'current'
+      ? (log.adjustments_settled_now ?? 0)
+      : phase === 'before'
+        ? (log.adjustments_open_before ?? 0)
+        : (log.adjustments_open_after ?? 0);
+    const discountFallback = phase === 'current'
+      ? (log.discount_now ?? 0)
+      : phase === 'before'
+        ? (log.discounts_open_before ?? 0)
+        : (log.discounts_open_after ?? 0);
+
+    const principal = asMoneyValue(current.principal ?? current.principal_open ?? current.principal_settled ?? principalFallback);
+    const financialCorrection = asMoneyValue(current.financial_correction ?? current.adjustments_open ?? correctionFallback);
+    const discount = asMoneyValue(current.discount ?? current.discounts_open ?? discountFallback);
+    let grossAmount = asMoneyValue(
+      current.gross_amount
+      ?? current.total_open
+      ?? (phase === 'before' ? log.total_due_before : phase === 'after' ? log.total_due_after : 0)
+    );
+    if (!(grossAmount > 0) && (principal > 0 || financialCorrection > 0 || discount > 0)) {
+      grossAmount = Math.max(principal + financialCorrection - discount, 0);
+    }
+
+    return {
+      principal,
+      financial_correction: financialCorrection,
+      discount,
+      gross_amount: grossAmount,
+    };
   }
 
   function ledgerStep(title, subtitle, metrics, tone = '') {
@@ -835,24 +817,7 @@
       return;
     }
 
-    const latest = normalizedLogs[0] || null;
-    const latestTimeline = latest?.memory_timeline || {};
-    const latestAfter = latestTimeline.after || latest?.after || {};
-    const latestEditableAfter = latestAfter.editable_open || latest?.metadata_json?.editable_after || {};
-    const summary = schedule.summary || {};
-    const signedTotalOpen = signedAmount(summary.total_open ?? latestAfter.total_open ?? latest?.total_due_after ?? latest?.open_principal_after ?? 0, schedule?.movement_nature);
-    const signedAdjustmentsOpen = signedAmount(summary.adjustments_open ?? latestAfter.adjustments_open ?? latest?.adjustments_open_after ?? 0, schedule?.movement_nature);
-    const signedEditableOpen = signedAmount(summary.editable_open?.total_open ?? latestEditableAfter.total_open ?? latestAfter.total_open ?? 0, schedule?.movement_nature);
-
-    if (summaryEl) {
-      summaryEl.innerHTML = latest ? [
-        `<article class="calc-log-kpi"><span>Último evento</span><strong>${formatIso(latest.calculation_date)}</strong><small>${eventLabel(latest.event_type)}</small></article>`,
-        `<article class="calc-log-kpi"><span>Total em aberto</span><strong class="${amountClass(signedTotalOpen)}">${money(signedTotalOpen)}</strong><small>Principal + ajustes pendentes</small></article>`,
-        `<article class="calc-log-kpi"><span>Ajustes em aberto</span><strong class="${amountClass(signedAdjustmentsOpen)}">${money(signedAdjustmentsOpen)}</strong><small>Correção financeira/descontos a baixar</small></article>`,
-        `<article class="calc-log-kpi"><span>Saldo ainda alterável</span><strong class="${amountClass(signedEditableOpen)}">${money(signedEditableOpen)}</strong><small>Janela restante para novas baixas e ajustes</small></article>`,
-        `<article class="calc-log-kpi"><span>Eventos</span><strong>${normalizedLogs.length}</strong><small>Memórias estruturadas registradas</small></article>`,
-      ].join('') : '';
-    }
+    if (summaryEl) summaryEl.innerHTML = '';
 
     if (listEl) {
       listEl.innerHTML = normalizedLogs.map((log, index) => {
@@ -862,14 +827,13 @@
         const beforeBlock = timeline.before || snapshot.before || {};
         const currentBlock = timeline.current || snapshot.current || {};
         const afterBlock = timeline.after || snapshot.after || {};
+        const beforeLedger = normalizeLedgerPhase(beforeBlock, log, 'before');
+        const currentLedger = normalizeLedgerPhase(currentBlock, log, 'current');
+        const afterLedger = normalizeLedgerPhase(afterBlock, log, 'after');
         const settlementCode = meta.settlement_code || snapshot.settlement_code || '-';
         const entryCode = snapshot.entry?.code || snapshot.entry_code || '-';
-        const beforeTotal = beforeBlock.total_open ?? log.total_due_before ?? ((log.principal_before || 0) + (log.adjustments_open_before || 0));
-        const afterTotal = afterBlock.total_open ?? log.total_due_after ?? ((log.principal_after || 0) + (log.adjustments_open_after || 0));
         const beforeState = beforeBlock.operational_state?.label || beforeBlock.operational_state_label || '';
         const afterState = afterBlock.operational_state?.label || afterBlock.operational_state_label || '';
-        const beforeEditable = beforeBlock.editable_open || meta.editable_before || {};
-        const afterEditable = afterBlock.editable_open || meta.editable_after || {};
         return `
           <article class="calc-log-card calc-log-card--ledger">
             <header class="calc-log-card__head">
@@ -879,29 +843,29 @@
                 <p>Título ${escapeHtml(schedule.schedule_code || schedule.id || '-')} · Baixa ${escapeHtml(settlementCode)} · Lançamento ${escapeHtml(entryCode)}${afterState ? ` · Estado após ${escapeHtml(afterState)}` : ''}</p>
               </div>
               <div class="calc-log-card__badges">
-                <span class="calc-log-badge">Principal ${money(signedAmount(currentBlock.principal_settled ?? log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature))}</span>
-                <span class="calc-log-badge">Correção ${money(signedAmount(currentBlock.financial_correction ?? log.adjustments_settled_now ?? log.correction_amount ?? 0, schedule?.movement_nature))}</span>
-                <span class="calc-log-badge">Baixa ${money(signedAmount(currentBlock.gross_amount ?? 0, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Principal ${money(signedAmount(currentLedger.principal, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Correção ${money(signedAmount(currentLedger.financial_correction, schedule?.movement_nature))}</span>
+                <span class="calc-log-badge">Baixa ${money(signedAmount(currentLedger.gross_amount, schedule?.movement_nature))}</span>
               </div>
             </header>
             <div class="ledger-flow">
               ${ledgerStep('Antes', 'Saldo calculado antes da baixa', [
-                ledgerMetric('Principal aberto', beforeBlock.principal_open ?? log.principal_before ?? log.template_amount ?? 0, schedule?.movement_nature),
-                ledgerMetric('Ajustes abertos', beforeBlock.adjustments_open ?? log.adjustments_open_before ?? log.correction_amount ?? 0, schedule?.movement_nature),
-                ledgerMetric('Descontos abertos', beforeBlock.discounts_open ?? 0, schedule?.movement_nature, { invert: true }),
-                ledgerMetric('Saldo alterável', beforeEditable.total_open ?? beforeTotal, schedule?.movement_nature),
+                ledgerMetric('Principal', beforeLedger.principal, schedule?.movement_nature),
+                ledgerMetric('Correção financeira', beforeLedger.financial_correction, schedule?.movement_nature),
+                ledgerMetric('Desconto', beforeLedger.discount, schedule?.movement_nature, { invert: true }),
+                ledgerMetric('Valor da baixa', beforeLedger.gross_amount, schedule?.movement_nature),
               ], 'ledger-step--before')}${beforeState ? `<small class="calc-log-state">Estado: ${escapeHtml(beforeState)}</small>` : ''}
               ${ledgerStep('Agora', 'Composição realizada neste evento', [
-                ledgerMetric('Principal baixado', currentBlock.principal_settled ?? log.principal_settled_now ?? log.settled_principal_current ?? 0, schedule?.movement_nature),
-                ledgerMetric('Correção financeira', currentBlock.financial_correction ?? log.adjustments_settled_now ?? 0, schedule?.movement_nature),
-                ledgerMetric('Desconto liberado', currentBlock.discount ?? log.discount_now ?? log.discount_amount ?? 0, schedule?.movement_nature, { invert: true }),
-                ledgerMetric('Valor da baixa', currentBlock.gross_amount ?? 0, schedule?.movement_nature),
+                ledgerMetric('Principal', currentLedger.principal, schedule?.movement_nature),
+                ledgerMetric('Correção financeira', currentLedger.financial_correction, schedule?.movement_nature),
+                ledgerMetric('Desconto', currentLedger.discount, schedule?.movement_nature, { invert: true }),
+                ledgerMetric('Valor da baixa', currentLedger.gross_amount, schedule?.movement_nature),
               ], 'ledger-step--current')}
               ${ledgerStep('Depois', 'Saldo remanescente editável do título', [
-                ledgerMetric('Principal aberto', afterBlock.principal_open ?? log.principal_after ?? log.open_principal_after ?? 0, schedule?.movement_nature),
-                ledgerMetric('Ajustes abertos', afterBlock.adjustments_open ?? log.adjustments_open_after ?? 0, schedule?.movement_nature),
-                ledgerMetric('Descontos abertos', afterBlock.discounts_open ?? 0, schedule?.movement_nature, { invert: true }),
-                ledgerMetric('Saldo alterável', afterEditable.total_open ?? afterTotal, schedule?.movement_nature),
+                ledgerMetric('Principal', afterLedger.principal, schedule?.movement_nature),
+                ledgerMetric('Correção financeira', afterLedger.financial_correction, schedule?.movement_nature),
+                ledgerMetric('Desconto', afterLedger.discount, schedule?.movement_nature, { invert: true }),
+                ledgerMetric('Valor da baixa', afterLedger.gross_amount, schedule?.movement_nature),
               ], 'ledger-step--after')}${afterState ? `<small class="calc-log-state">Estado: ${escapeHtml(afterState)}</small>` : ''}
             </div>
             <details class="calc-log-snapshot">

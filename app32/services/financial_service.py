@@ -1643,8 +1643,8 @@ class FinancialService:
             "principal": FinancialService._money_float(open_after),
             "financial_correction": FinancialService._money_float(adjustments_open_after),
             "discount": FinancialService._money_float(discounts_open_after),
-            "gross_amount": FinancialService._money_float(open_after),
-            "total_open": FinancialService._money_float(open_after),
+            "gross_amount": FinancialService._money_float(total_open_after),
+            "total_open": FinancialService._money_float(total_open_after),
         }
         editable_rules = {
             "principal_max": editable_before["principal"],
@@ -1690,6 +1690,10 @@ class FinancialService:
                 "movement_nature": getattr(entry, "movement_nature", None),
             },
             "before": {
+                "principal": FinancialService._money_float(principal_open_before),
+                "financial_correction": FinancialService._money_float(adjustments_open_before),
+                "discount": FinancialService._money_float(discounts_open_before),
+                "gross_amount": FinancialService._money_float(total_open_before),
                 "principal_open": FinancialService._money_float(principal_open_before),
                 "adjustments_open": FinancialService._money_float(adjustments_open_before),
                 "discounts_open": FinancialService._money_float(discounts_open_before),
@@ -1701,16 +1705,21 @@ class FinancialService:
                 "editable_rules": editable_rules,
             },
             "current": {
+                "principal": FinancialService._money_float(principal_now),
                 "principal_settled": FinancialService._money_float(principal_now),
                 "financial_correction": FinancialService._money_float(correction_now),
                 "discount": FinancialService._money_float(discount_now),
                 "gross_amount": FinancialService._money_float(gross_now),
             },
             "after": {
+                "principal": FinancialService._money_float(open_after),
+                "financial_correction": FinancialService._money_float(adjustments_open_after),
+                "discount": FinancialService._money_float(discounts_open_after),
+                "gross_amount": FinancialService._money_float(total_open_after),
                 "principal_open": FinancialService._money_float(open_after),
                 "adjustments_open": FinancialService._money_float(adjustments_open_after),
                 "discounts_open": FinancialService._money_float(discounts_open_after),
-                "total_open": FinancialService._money_float(open_after),
+                "total_open": FinancialService._money_float(total_open_after),
                 "ledger_total_open": FinancialService._money_float(total_open_after),
                 "principal_settled": FinancialService._money_float(settled_after),
                 "settlement_state": settlement_state_after,
@@ -1732,15 +1741,36 @@ class FinancialService:
         current_block = dict(snapshot.get("current") or {})
         after_block = dict(snapshot.get("after") or {})
 
-        principal_before = Decimal(str(before_block.get("principal_open") or snapshot.get("principal_open_before") or 0))
+        principal_before = Decimal(
+            str(
+                before_block.get("principal")
+                or before_block.get("principal_open")
+                or snapshot.get("principal_open_before")
+                or 0
+            )
+        )
         if principal_before <= 0:
             principal_before = Decimal(str(snapshot.get("open_principal_after") or 0)) + Decimal(
                 str(snapshot.get("settled_principal_current") or 0)
             )
         principal_settled_now = Decimal(str(snapshot.get("settled_principal_current") or 0))
         principal_after = max(principal_before - principal_settled_now, Decimal("0"))
-        adjustments_open_before = Decimal(str(before_block.get("adjustments_open") or snapshot.get("adjustments_open_before") or 0))
-        discounts_open_before = Decimal(str(before_block.get("discounts_open") or snapshot.get("discounts_open_before") or 0))
+        adjustments_open_before = Decimal(
+            str(
+                before_block.get("financial_correction")
+                or before_block.get("adjustments_open")
+                or snapshot.get("adjustments_open_before")
+                or 0
+            )
+        )
+        discounts_open_before = Decimal(
+            str(
+                before_block.get("discount")
+                or before_block.get("discounts_open")
+                or snapshot.get("discounts_open_before")
+                or 0
+            )
+        )
         adjustments_settled_now = Decimal(str(current_block.get("financial_correction") or 0))
         if adjustments_settled_now <= 0:
             adjustments_settled_now = (
@@ -1750,16 +1780,45 @@ class FinancialService:
                 + Decimal(str(getattr(settlement, "other_adjustments_amount", 0) or 0))
             )
         discount_now = Decimal(str(current_block.get("discount") or getattr(settlement, "discount_amount", 0) or 0))
-        adjustments_open_after = Decimal(str(after_block.get("adjustments_open") or snapshot.get("adjustments_open_after") or 0))
+        adjustments_open_after = Decimal(
+            str(
+                after_block.get("financial_correction")
+                or after_block.get("adjustments_open")
+                or snapshot.get("adjustments_open_after")
+                or 0
+            )
+        )
         if adjustments_open_after <= Decimal("0") and adjustments_open_before > Decimal("0"):
             adjustments_open_after = max(adjustments_open_before - adjustments_settled_now, Decimal("0"))
-        discounts_open_after = Decimal(str(after_block.get("discounts_open") or snapshot.get("discounts_open_after") or 0))
+        discounts_open_after = Decimal(
+            str(
+                after_block.get("discount")
+                or after_block.get("discounts_open")
+                or snapshot.get("discounts_open_after")
+                or 0
+            )
+        )
         if discounts_open_after <= Decimal("0") and discounts_open_before > Decimal("0"):
             discounts_open_after = max(discounts_open_before - discount_now, Decimal("0"))
-        total_due_before = Decimal(str(before_block.get("total_open") or snapshot.get("total_open_before") or 0))
+        total_due_before = Decimal(
+            str(
+                before_block.get("gross_amount")
+                or before_block.get("total_open")
+                or snapshot.get("total_open_before")
+                or 0
+            )
+        )
         if total_due_before <= 0:
             total_due_before = principal_before + adjustments_open_before - discounts_open_before
-        total_due_after = Decimal(str(after_block.get("total_open") or snapshot.get("principal_only_total_after") or snapshot.get("total_open_after") or 0))
+        total_due_after = Decimal(
+            str(
+                after_block.get("gross_amount")
+                or after_block.get("total_open")
+                or snapshot.get("principal_only_total_after")
+                or snapshot.get("total_open_after")
+                or 0
+            )
+        )
         if total_due_after <= 0 and (principal_after > Decimal("0") or adjustments_open_after > Decimal("0") or discounts_open_after > Decimal("0")):
             total_due_after = max(principal_after + adjustments_open_after - discounts_open_after, Decimal("0"))
 
