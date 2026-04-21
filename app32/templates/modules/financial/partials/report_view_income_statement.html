@@ -104,20 +104,20 @@
                                     </div>
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button" data-dre-detail-trigger data-bucket="competence" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Competência">{{ row.competencia_label }}</button>
+                                    <button type="button" class="dre-value-button {% if row.competencia < 0 %}dre-value-button--negative{% elif row.competencia > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="competence" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Competência" title="Ver composição da competência">{{ row.competencia_label }}</button>
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button" data-dre-detail-trigger data-bucket="due" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Vencimento">{{ row.vencimento_label }}</button>
+                                    <button type="button" class="dre-value-button {% if row.vencimento < 0 %}dre-value-button--negative{% elif row.vencimento > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="due" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Vencimento" title="Ver composição do vencimento">{{ row.vencimento_label }}</button>
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button" data-dre-detail-trigger data-bucket="liquidation" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Baixa">{{ row.liquidacao_label }}</button>
+                                    <button type="button" class="dre-value-button {% if row.liquidacao < 0 %}dre-value-button--negative{% elif row.liquidacao > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="liquidation" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Baixa" title="Ver composição da baixa">{{ row.liquidacao_label }}</button>
                                 </td>
                                 {% if report.show_status_columns %}
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button" data-dre-detail-trigger data-bucket="open" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Em aberto">{{ row.aberto_label }}</button>
+                                    <button type="button" class="dre-value-button {% if row.aberto < 0 %}dre-value-button--negative{% elif row.aberto > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="open" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Em aberto" title="Ver composição em aberto">{{ row.aberto_label }}</button>
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button" data-dre-detail-trigger data-bucket="settled" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Liquidado">{{ row.baixado_label }}</button>
+                                    <button type="button" class="dre-value-button {% if row.baixado < 0 %}dre-value-button--negative{% elif row.baixado > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="settled" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Liquidado" title="Ver composição do liquidado">{{ row.baixado_label }}</button>
                                 </td>
                                 {% endif %}
                             </tr>
@@ -127,20 +127,20 @@
                             <tr>
                                 <th>Total consolidado</th>
                                 <th>
-                                    <button type="button" class="dre-value-button dre-value-button--footer" data-dre-detail-trigger data-bucket="competence" data-bucket-label="Competência" data-account-label="Total consolidado">{{ report.totals.competence_label if report.totals else '-' }}</button>
+                                    <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.competence < 0 %}dre-value-button--negative{% elif report.totals and report.totals.competence > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="competence" data-bucket-label="Competência" data-account-label="Total consolidado">{{ report.totals.competence_label if report.totals else '-' }}</button>
                                 </th>
                                 <th>
-                                    <button type="button" class="dre-value-button dre-value-button--footer" data-dre-detail-trigger data-bucket="due" data-bucket-label="Vencimento" data-account-label="Total consolidado">{{ report.totals.due_label if report.totals else '-' }}</button>
+                                    <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.due < 0 %}dre-value-button--negative{% elif report.totals and report.totals.due > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="due" data-bucket-label="Vencimento" data-account-label="Total consolidado">{{ report.totals.due_label if report.totals else '-' }}</button>
                                 </th>
                                 <th>
-                                    <button type="button" class="dre-value-button dre-value-button--footer" data-dre-detail-trigger data-bucket="liquidation" data-bucket-label="Baixa" data-account-label="Total consolidado">{{ report.totals.liquidation_label if report.totals else '-' }}</button>
+                                    <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.liquidation < 0 %}dre-value-button--negative{% elif report.totals and report.totals.liquidation > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="liquidation" data-bucket-label="Baixa" data-account-label="Total consolidado">{{ report.totals.liquidation_label if report.totals else '-' }}</button>
                                 </th>
                                 {% if report.show_status_columns %}
                                 <th>
-                                    <button type="button" class="dre-value-button dre-value-button--footer" data-dre-detail-trigger data-bucket="open" data-bucket-label="Em aberto" data-account-label="Total consolidado">{{ report.totals.open_label if report.totals else '-' }}</button>
+                                    <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.open < 0 %}dre-value-button--negative{% elif report.totals and report.totals.open > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="open" data-bucket-label="Em aberto" data-account-label="Total consolidado">{{ report.totals.open_label if report.totals else '-' }}</button>
                                 </th>
                                 <th>
-                                    <button type="button" class="dre-value-button dre-value-button--footer" data-dre-detail-trigger data-bucket="settled" data-bucket-label="Liquidado" data-account-label="Total consolidado">{{ report.totals.settled_label if report.totals else '-' }}</button>
+                                    <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.settled < 0 %}dre-value-button--negative{% elif report.totals and report.totals.settled > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="settled" data-bucket-label="Liquidado" data-account-label="Total consolidado">{{ report.totals.settled_label if report.totals else '-' }}</button>
                                 </th>
                                 {% endif %}
                             </tr>
@@ -157,28 +157,29 @@
     </div>
 </div>
 
-<dialog id="dre-detail-dialog" class="dre-detail-dialog">
-    <div class="dre-detail-dialog__surface">
-        <header class="dre-detail-dialog__header">
+<div id="dre-detail-modal" class="dre-detail-modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dre-detail-modal-title">
+    <div class="dre-detail-modal__backdrop" data-dre-detail-close></div>
+    <div class="dre-detail-modal__card">
+        <header class="dre-detail-modal__header">
             <div>
-                <p class="dre-detail-dialog__eyebrow">Composição da DRE</p>
-                <h2 id="dre-detail-dialog-title">Detalhamento</h2>
-                <p id="dre-detail-dialog-subtitle" class="dre-detail-dialog__subtitle">Confira os títulos e baixas que compõem o valor selecionado.</p>
+                <p class="dre-detail-modal__eyebrow">Composição da DRE</p>
+                <h2 id="dre-detail-modal-title">Detalhamento</h2>
+                <p id="dre-detail-modal-subtitle" class="dre-detail-modal__subtitle">Confira os títulos e baixas que compõem o valor selecionado.</p>
             </div>
-            <button type="button" class="dre-detail-dialog__close" data-dre-detail-close aria-label="Fechar detalhamento">×</button>
+            <button type="button" class="dre-detail-modal__close" data-dre-detail-close aria-label="Fechar detalhamento">×</button>
         </header>
-        <div class="dre-detail-dialog__summary">
-            <div class="dre-detail-dialog__summary-card">
+        <div class="dre-detail-modal__summary">
+            <div class="dre-detail-modal__summary-card">
                 <span>Total</span>
-                <strong id="dre-detail-dialog-total">R$ 0,00</strong>
+                <strong id="dre-detail-modal-total">R$ 0,00</strong>
             </div>
-            <div class="dre-detail-dialog__summary-card">
+            <div class="dre-detail-modal__summary-card">
                 <span>Itens</span>
-                <strong id="dre-detail-dialog-count">0</strong>
+                <strong id="dre-detail-modal-count">0</strong>
             </div>
         </div>
-        <div id="dre-detail-dialog-feedback" class="dre-detail-dialog__feedback">Selecione um valor da DRE para ver a composição.</div>
-        <div id="dre-detail-dialog-table-wrap" class="dre-detail-dialog__table-wrap" hidden>
+        <div id="dre-detail-modal-feedback" class="dre-detail-modal__feedback">Selecione um valor da DRE para ver a composição.</div>
+        <div id="dre-detail-modal-table-wrap" class="dre-detail-modal__table-wrap" hidden>
             <table class="dre-detail-table">
                 <thead>
                     <tr>
@@ -192,8 +193,8 @@
                         <th>Valor</th>
                     </tr>
                 </thead>
-                <tbody id="dre-detail-dialog-table-body"></tbody>
+                <tbody id="dre-detail-modal-table-body"></tbody>
             </table>
         </div>
     </div>
-</dialog>
+</div>

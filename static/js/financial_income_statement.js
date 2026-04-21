@@ -1,16 +1,18 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const root = document.querySelector('.dre-report-page');
-  const rows = Array.from(document.querySelectorAll('.dre-row[data-row-id]'));
+document.addEventListener('DOMContentLoaded', function () {
+  var root = document.querySelector('.dre-report-page');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.dre-row[data-row-id]'));
 
   if (rows.length) {
-    const rowMap = new Map(rows.map((row) => [row.dataset.rowId, row]));
+    var rowMap = new Map(rows.map(function (row) {
+      return [row.dataset.rowId, row];
+    }));
 
-    const applyVisibility = () => {
-      rows.forEach((row) => {
-        let parentId = row.dataset.parentId;
-        let hidden = false;
+    var applyVisibility = function () {
+      rows.forEach(function (row) {
+        var parentId = row.dataset.parentId;
+        var hidden = false;
         while (parentId) {
-          const parent = rowMap.get(parentId);
+          var parent = rowMap.get(parentId);
           if (!parent) {
             break;
           }
@@ -24,15 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     };
 
-    const setCollapsedState = (row, collapsed) => {
+    var setCollapsedState = function (row, collapsed) {
       if (row && row.dataset.hasChildren === 'true') {
         row.dataset.collapsed = collapsed ? 'true' : 'false';
       }
     };
 
-    document.querySelectorAll('[data-dre-toggle]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const row = rowMap.get(button.dataset.dreToggle);
+    document.querySelectorAll('[data-dre-toggle]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var row = rowMap.get(button.dataset.dreToggle);
         if (!row) {
           return;
         }
@@ -41,8 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    const collapseAll = () => {
-      rows.forEach((row) => {
+    var collapseAllButton = document.querySelector('[data-dre-action="collapse-all"]');
+    var expandAllButton = document.querySelector('[data-dre-action="expand-all"]');
+
+    var collapseAll = function () {
+      rows.forEach(function (row) {
         if (row.dataset.hasChildren === 'true' && Number(row.dataset.level || 0) >= 0) {
           row.dataset.collapsed = Number(row.dataset.level || 0) > 0 ? 'true' : 'false';
         }
@@ -50,99 +55,101 @@ document.addEventListener('DOMContentLoaded', () => {
       applyVisibility();
     };
 
-    const expandAll = () => {
-      rows.forEach((row) => setCollapsedState(row, false));
+    var expandAll = function () {
+      rows.forEach(function (row) {
+        setCollapsedState(row, false);
+      });
       applyVisibility();
     };
 
-    document.querySelector('[data-dre-action="collapse-all"]')?.addEventListener('click', collapseAll);
-    document.querySelector('[data-dre-action="expand-all"]')?.addEventListener('click', expandAll);
+    if (collapseAllButton) {
+      collapseAllButton.addEventListener('click', collapseAll);
+    }
+    if (expandAllButton) {
+      expandAllButton.addEventListener('click', expandAll);
+    }
 
     applyVisibility();
   }
 
-  const dialog = document.getElementById('dre-detail-dialog');
-  const dialogTitle = document.getElementById('dre-detail-dialog-title');
-  const dialogSubtitle = document.getElementById('dre-detail-dialog-subtitle');
-  const dialogTotal = document.getElementById('dre-detail-dialog-total');
-  const dialogCount = document.getElementById('dre-detail-dialog-count');
-  const dialogFeedback = document.getElementById('dre-detail-dialog-feedback');
-  const dialogTableWrap = document.getElementById('dre-detail-dialog-table-wrap');
-  const dialogTableBody = document.getElementById('dre-detail-dialog-table-body');
-  const drilldownUrl = root?.dataset?.dreDrilldownUrl;
+  var drilldownUrl = root && root.dataset ? root.dataset.dreDrilldownUrl : '';
+  var modal = document.getElementById('dre-detail-modal');
+  var modalTitle = document.getElementById('dre-detail-modal-title');
+  var modalSubtitle = document.getElementById('dre-detail-modal-subtitle');
+  var modalTotal = document.getElementById('dre-detail-modal-total');
+  var modalCount = document.getElementById('dre-detail-modal-count');
+  var modalFeedback = document.getElementById('dre-detail-modal-feedback');
+  var modalTableWrap = document.getElementById('dre-detail-modal-table-wrap');
+  var modalTableBody = document.getElementById('dre-detail-modal-table-body');
 
-  if (!dialog || !dialogTitle || !dialogSubtitle || !dialogTotal || !dialogCount || !dialogFeedback || !dialogTableWrap || !dialogTableBody || !drilldownUrl) {
+  if (!drilldownUrl || !modal || !modalTitle || !modalSubtitle || !modalTotal || !modalCount || !modalFeedback || !modalTableWrap || !modalTableBody) {
     return;
   }
 
-  const escapeHtml = (value) => String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-
-  const setFeedback = (message, tone = 'neutral') => {
-    dialogFeedback.hidden = false;
-    dialogFeedback.dataset.tone = tone;
-    dialogFeedback.textContent = message;
-    dialogTableWrap.hidden = true;
-    dialogTableBody.innerHTML = '';
+  var escapeHtml = function (value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char];
+    });
   };
 
-  const closeDialog = () => {
-    if (typeof dialog.close === 'function' && dialog.open) {
-      dialog.close();
-      return;
-    }
-    dialog.removeAttribute('open');
+  var setFeedback = function (message, tone) {
+    modalFeedback.hidden = false;
+    modalFeedback.setAttribute('data-tone', tone || 'neutral');
+    modalFeedback.textContent = message;
+    modalTableWrap.hidden = true;
+    modalTableBody.innerHTML = '';
   };
 
-  const openDialog = () => {
-    if (typeof dialog.showModal === 'function') {
-      if (!dialog.open) {
-        dialog.showModal();
+  var openModal = function () {
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+  };
+
+  var closeModal = function () {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+  };
+
+  var renderRows = function (items) {
+    modalTableBody.innerHTML = items.map(function (item) {
+      var referenceMeta = '';
+      if (item.component_label) {
+        referenceMeta += '<span class="dre-detail-table__meta">' + escapeHtml(item.component_label) + '</span>';
       }
-      return;
-    }
-    dialog.setAttribute('open', 'open');
-  };
-
-  const renderRows = (items) => {
-    dialogTableBody.innerHTML = items.map((item) => {
-      const referenceMeta = [
-        item.component_label ? `<span class="dre-detail-table__meta">${escapeHtml(item.component_label)}</span>` : '',
-        item.description ? `<div class="dre-detail-table__desc">${escapeHtml(item.description)}</div>` : '',
-      ].join('');
-      return `
-        <tr>
-          <td>${escapeHtml(item.source_kind_label || '-')}</td>
-          <td>
-            <strong>${escapeHtml(item.source_code || '-')}</strong>
-            ${referenceMeta}
-          </td>
-          <td>
-            <strong>${escapeHtml(item.account_label || '-')}</strong>
-            <div class="dre-detail-table__desc">${escapeHtml(item.cost_center_label || 'Todos')}</div>
-          </td>
-          <td>${escapeHtml(item.counterparty || 'Não informado')}</td>
-          <td>${escapeHtml(item.competence_date || '-')}</td>
-          <td>${escapeHtml(item.due_date || '-')}</td>
-          <td>${escapeHtml(item.settlement_date || '-')}</td>
-          <td class="dre-detail-table__amount">${escapeHtml(item.amount_label || '-')}</td>
-        </tr>
-      `;
+      if (item.description) {
+        referenceMeta += '<div class="dre-detail-table__desc">' + escapeHtml(item.description) + '</div>';
+      }
+      return '' +
+        '<tr>' +
+          '<td>' + escapeHtml(item.source_kind_label || '-') + '</td>' +
+          '<td><strong>' + escapeHtml(item.source_code || '-') + '</strong>' + referenceMeta + '</td>' +
+          '<td><strong>' + escapeHtml(item.account_label || '-') + '</strong><div class="dre-detail-table__desc">' + escapeHtml(item.cost_center_label || 'Todos') + '</div></td>' +
+          '<td>' + escapeHtml(item.counterparty || 'Não informado') + '</td>' +
+          '<td>' + escapeHtml(item.competence_date || '-') + '</td>' +
+          '<td>' + escapeHtml(item.due_date || '-') + '</td>' +
+          '<td>' + escapeHtml(item.settlement_date || '-') + '</td>' +
+          '<td class="dre-detail-table__amount">' + escapeHtml(item.amount_label || '-') + '</td>' +
+        '</tr>';
     }).join('');
-    dialogFeedback.hidden = true;
-    dialogTableWrap.hidden = false;
+    modalFeedback.hidden = true;
+    modalTableWrap.hidden = false;
   };
 
-  const buildDrilldownUrl = (trigger) => {
-    const url = new URL(drilldownUrl, window.location.origin);
-    const params = new URLSearchParams(window.location.search);
-    params.set('bucket', trigger.dataset.bucket || '');
-    if (trigger.dataset.chartAccountId) {
-      params.set('chart_account_id', trigger.dataset.chartAccountId);
+  var buildDrilldownUrl = function (trigger) {
+    var url = new URL(drilldownUrl, window.location.origin);
+    var params = new URLSearchParams(window.location.search);
+    params.set('bucket', trigger.getAttribute('data-bucket') || '');
+    var chartAccountId = trigger.getAttribute('data-chart-account-id') || '';
+    if (chartAccountId) {
+      params.set('chart_account_id', chartAccountId);
     } else {
       params.delete('chart_account_id');
     }
@@ -150,64 +157,67 @@ document.addEventListener('DOMContentLoaded', () => {
     return url.toString();
   };
 
-  const loadDrilldown = async (trigger) => {
-    dialogTitle.textContent = `${trigger.dataset.bucketLabel || 'Detalhamento'} · ${trigger.dataset.accountLabel || 'Total consolidado'}`;
-    dialogSubtitle.textContent = 'Carregando composição...';
-    dialogTotal.textContent = '...';
-    dialogCount.textContent = '...';
+  var loadDrilldown = function (trigger) {
+    modalTitle.textContent = (trigger.getAttribute('data-bucket-label') || 'Detalhamento') + ' · ' + (trigger.getAttribute('data-account-label') || 'Total consolidado');
+    modalSubtitle.textContent = 'Carregando composição...';
+    modalTotal.textContent = '...';
+    modalCount.textContent = '...';
     setFeedback('Carregando composição da DRE...');
-    openDialog();
+    openModal();
 
-    try {
-      const response = await fetch(buildDrilldownUrl(trigger), {
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'same-origin',
+    fetch(buildDrilldownUrl(trigger), {
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error('Falha ao carregar detalhamento (' + response.status + ').');
+        }
+        return response.json();
+      })
+      .then(function (payload) {
+        modalTitle.textContent = (payload.bucket_label || trigger.getAttribute('data-bucket-label') || 'Detalhamento') + ' · ' + (payload.account_label || trigger.getAttribute('data-account-label') || 'Total consolidado');
+        modalSubtitle.textContent = payload.source_label
+          ? payload.source_label + ' que compõem o valor selecionado.'
+          : 'Confira os lançamentos que compõem o valor selecionado.';
+        modalTotal.textContent = payload.total_label || 'R$ 0,00';
+        modalCount.textContent = String(payload.item_count || 0);
+
+        if (!Array.isArray(payload.items) || !payload.items.length) {
+          setFeedback('Nenhum título ou baixa encontrado para os filtros e a célula selecionada.');
+          return;
+        }
+
+        renderRows(payload.items);
+      })
+      .catch(function (error) {
+        modalTotal.textContent = 'R$ 0,00';
+        modalCount.textContent = '0';
+        setFeedback((error && error.message) || 'Não foi possível carregar o detalhamento da DRE.', 'danger');
       });
-
-      if (!response.ok) {
-        throw new Error(`Falha ao carregar detalhamento (${response.status}).`);
-      }
-
-      const payload = await response.json();
-      dialogTitle.textContent = `${payload.bucket_label || trigger.dataset.bucketLabel || 'Detalhamento'} · ${payload.account_label || trigger.dataset.accountLabel || 'Total consolidado'}`;
-      dialogSubtitle.textContent = payload.source_label
-        ? `${payload.source_label} que compõem o valor selecionado.`
-        : 'Confira os lançamentos que compõem o valor selecionado.';
-      dialogTotal.textContent = payload.total_label || 'R$ 0,00';
-      dialogCount.textContent = String(payload.item_count || 0);
-
-      if (!Array.isArray(payload.items) || !payload.items.length) {
-        setFeedback('Nenhum título ou baixa encontrado para os filtros e a célula selecionada.');
-        return;
-      }
-
-      renderRows(payload.items);
-    } catch (error) {
-      dialogTotal.textContent = 'R$ 0,00';
-      dialogCount.textContent = '0';
-      setFeedback(error?.message || 'Não foi possível carregar o detalhamento da DRE.', 'danger');
-    }
   };
 
-  document.querySelectorAll('[data-dre-detail-trigger]').forEach((button) => {
-    button.addEventListener('click', () => loadDrilldown(button));
+  document.addEventListener('click', function (event) {
+    var trigger = event.target.closest('[data-dre-detail-trigger]');
+    if (trigger) {
+      event.preventDefault();
+      loadDrilldown(trigger);
+      return;
+    }
+
+    var closeTrigger = event.target.closest('[data-dre-detail-close]');
+    if (closeTrigger) {
+      event.preventDefault();
+      closeModal();
+    }
   });
 
-  dialog.querySelectorAll('[data-dre-detail-close]').forEach((button) => {
-    button.addEventListener('click', closeDialog);
-  });
-
-  dialog.addEventListener('click', (event) => {
-    const bounds = dialog.getBoundingClientRect();
-    const clickedOutside = event.clientX < bounds.left
-      || event.clientX > bounds.right
-      || event.clientY < bounds.top
-      || event.clientY > bounds.bottom;
-    if (clickedOutside) {
-      closeDialog();
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeModal();
     }
   });
 });
