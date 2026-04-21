@@ -218,6 +218,207 @@
   font-weight: 700;
 }
 
+.dre-value-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: right;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.dre-value-button:hover,
+.dre-value-button:focus-visible {
+  filter: brightness(0.92);
+  outline: none;
+}
+
+.dre-value-button--positive {
+  color: #2563eb;
+}
+
+.dre-value-button--negative {
+  color: #dc2626;
+}
+
+.dre-value-button--neutral {
+  color: #0f172a;
+}
+
+.dre-value-button--footer {
+  font-weight: 800;
+}
+
+.dre-detail-modal.hidden {
+  display: none !important;
+}
+
+.dre-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.dre-detail-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.dre-detail-modal__card {
+  position: relative;
+  width: min(1280px, 96vw);
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+  margin: 1.5rem auto;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid #dbe7ff;
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+}
+
+.dre-detail-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.35rem 1rem;
+  border-bottom: 1px solid #e5edf9;
+}
+
+.dre-detail-modal__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #1d4ed8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dre-detail-modal__header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.dre-detail-modal__subtitle {
+  margin: 0.3rem 0 0;
+  color: #475569;
+  font-size: 0.86rem;
+}
+
+.dre-detail-modal__close {
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 999px;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dre-detail-modal__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 1rem 1.35rem 0.25rem;
+}
+
+.dre-detail-modal__summary-card {
+  border: 1px solid #dbe7ff;
+  background: #fff;
+  border-radius: 14px;
+  padding: 0.85rem 0.95rem;
+}
+
+.dre-detail-modal__summary-card span {
+  display: block;
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+}
+
+.dre-detail-modal__summary-card strong {
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.dre-detail-modal__feedback {
+  margin: 0.95rem 1.35rem 1.25rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 1rem;
+  background: #fff;
+  color: #475569;
+  text-align: center;
+}
+
+.dre-detail-modal__feedback[data-tone="danger"] {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff1f2;
+}
+
+.dre-detail-modal__table-wrap {
+  padding: 0.25rem 1.35rem 1.35rem;
+  overflow: auto;
+}
+
+.dre-detail-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  border: 1px solid #e5edf9;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.dre-detail-table th {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  color: #fff;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.7rem 0.65rem;
+  text-align: left;
+}
+
+.dre-detail-table td {
+  padding: 0.7rem 0.65rem;
+  border-bottom: 1px solid #e5edf9;
+  vertical-align: top;
+  font-size: 0.78rem;
+}
+
+.dre-detail-table tbody tr:nth-child(even) {
+  background: #f8fbff;
+}
+
+.dre-detail-table__meta,
+.dre-detail-table__desc {
+  display: block;
+  margin-top: 0.18rem;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.dre-detail-table__amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
 .dre-row--account .dre-value,
 .dre-row--account-group .dre-value {
   font-weight: 600;
@@ -252,6 +453,14 @@
   .dre-info-grid {
     grid-template-columns: 1fr;
   }
+
+  .dre-detail-modal__card {
+    width: min(96vw, 96vw);
+  }
+
+  .dre-detail-modal__summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media print {
@@ -270,7 +479,8 @@
   }
 
   .dre-toggle,
-  .dre-table-toolbar {
+  .dre-table-toolbar,
+  .dre-detail-modal {
     display: none !important;
   }
 
