@@ -8,7 +8,9 @@ from models import db
 from models.financial import (
     FinancialCorrectionIndex,
     FinancialDiscountRule,
+    FinancialEntry,
     FinancialSchedule,
+    FinancialSettlement,
     FinancialTitleAdjustment,
 )
 from services.financial_title_adjustment_allocation_service import FinancialTitleAdjustmentAllocationService
@@ -59,6 +61,52 @@ class FinancialTitleAdjustmentService:
     @staticmethod
     def _due_date(schedule: FinancialSchedule) -> Optional[date]:
         return getattr(schedule, "next_due_date", None) or getattr(schedule, "first_due_date", None) or getattr(schedule, "start_date", None)
+
+    @staticmethod
+    def _last_active_settlement_date(schedule: FinancialSchedule) -> Optional[date]:
+        try:
+            entry_ids = [
+                int(entry_id)
+                for (entry_id,) in (
+                    db.session.query(FinancialEntry.id)
+                    .filter(
+                        FinancialEntry.company_id == schedule.company_id,
+                        db.or_(
+                            FinancialEntry.financial_schedule_id == schedule.id,
+                            FinancialEntry.external_reference == f"financial_schedule:{schedule.id}",
+                        ),
+                        FinancialEntry.deleted_at.is_(None),
+                    )
+                    .all()
+                )
+                if entry_id is not None
+            ]
+            query = FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == schedule.company_id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            )
+            if entry_ids:
+                query = query.filter(
+                    db.or_(
+                        FinancialSettlement.financial_entry_id.in_(entry_ids),
+                        FinancialSettlement.external_reference == f"financial_schedule:{schedule.id}",
+                    )
+                )
+            else:
+                query = query.filter(FinancialSettlement.external_reference == f"financial_schedule:{schedule.id}")
+            last_settlement = query.order_by(FinancialSettlement.settlement_date.desc(), FinancialSettlement.id.desc()).first()
+            return getattr(last_settlement, "settlement_date", None) if last_settlement else None
+        except RuntimeError:
+            return None
+
+    @staticmethod
+    def _financial_correction_period_start(schedule: FinancialSchedule) -> Optional[date]:
+        due_date = FinancialTitleAdjustmentService._due_date(schedule)
+        last_settlement_date = FinancialTitleAdjustmentService._last_active_settlement_date(schedule)
+        if last_settlement_date and due_date:
+            return max(last_settlement_date, due_date)
+        return last_settlement_date or due_date
 
     @staticmethod
     def _rule_snapshot(rule: Any, *, rule_kind: str) -> Dict[str, Any]:
@@ -134,6 +182,7 @@ class FinancialTitleAdjustmentService:
     ) -> Dict[str, Any]:
         calculation_date = reference_date or date.today()
         due_date = FinancialTitleAdjustmentService._due_date(schedule)
+        correction_period_start = FinancialTitleAdjustmentService._financial_correction_period_start(schedule)
         metadata = dict(getattr(schedule, "metadata_json", None) or {})
         balance = FinancialTitleBalanceService.calculate_for_schedule(
             schedule=schedule,
@@ -164,12 +213,12 @@ class FinancialTitleAdjustmentService:
             interest_period = str(rule_metadata.get("interest_period") or "daily").lower()
             penalty_period = str(rule_metadata.get("penalty_period") or "daily").lower()
             interest_periods = FinancialTitleAdjustmentService._periods_between(
-                due_date=due_date,
+                due_date=correction_period_start,
                 reference_date=calculation_date,
                 period=interest_period,
             )
             penalty_periods = FinancialTitleAdjustmentService._periods_between(
-                due_date=due_date,
+                due_date=correction_period_start,
                 reference_date=calculation_date,
                 period=penalty_period,
             )
@@ -188,7 +237,7 @@ class FinancialTitleAdjustmentService:
                     competence_date=calculation_date,
                     due_date_reference=due_date,
                     rule_snapshot=correction_snapshot,
-                    metadata_json={"source": "simulate_for_schedule", "rate": str(monetary_correction_rate), "periods": str(interest_periods)},
+                    metadata_json={"source": "simulate_for_schedule", "rate": str(monetary_correction_rate), "periods": str(interest_periods), "period_start_date": correction_period_start.isoformat() if correction_period_start else None},
                 ))
             if interest_rate > 0 and interest_periods > 0:
                 amount = resolved_base * (interest_rate / Decimal("100")) * interest_periods
@@ -201,7 +250,7 @@ class FinancialTitleAdjustmentService:
                     competence_date=calculation_date,
                     due_date_reference=due_date,
                     rule_snapshot=correction_snapshot,
-                    metadata_json={"source": "simulate_for_schedule", "rate": str(interest_rate), "period": interest_period, "periods": str(interest_periods)},
+                    metadata_json={"source": "simulate_for_schedule", "rate": str(interest_rate), "period": interest_period, "periods": str(interest_periods), "period_start_date": correction_period_start.isoformat() if correction_period_start else None},
                 ))
             effective_penalty_rate = penalty_rate
             if penalty_limit_rate > 0:
@@ -217,7 +266,7 @@ class FinancialTitleAdjustmentService:
                     competence_date=calculation_date,
                     due_date_reference=due_date,
                     rule_snapshot=correction_snapshot,
-                    metadata_json={"source": "simulate_for_schedule", "rate": str(effective_penalty_rate), "period": penalty_period, "periods": str(penalty_periods)},
+                    metadata_json={"source": "simulate_for_schedule", "rate": str(effective_penalty_rate), "period": penalty_period, "periods": str(penalty_periods), "period_start_date": correction_period_start.isoformat() if correction_period_start else None},
                 ))
 
         discount_override = FinancialTitleAdjustmentService._money(metadata.get("discount_amount_override"))
@@ -267,6 +316,7 @@ class FinancialTitleAdjustmentService:
             "calculation_date": calculation_date.isoformat(),
             "competence_date": calculation_date.isoformat(),
             "due_date_reference": due_date.isoformat() if due_date else None,
+            "correction_period_start_date": correction_period_start.isoformat() if correction_period_start else None,
             "base_amount": float(resolved_base),
             "principal_open": balance.get("principal_open"),
             "adjustments": [

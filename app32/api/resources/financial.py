@@ -17,6 +17,8 @@ from models import (
     FinancialEntryAllocation,
     FinancialSchedule,
     FinancialSettlement,
+    FinancialSettlementComponent,
+    FinancialTitleAdjustment,
 )
 from schemas.financial import (
     financial_entry_allocation_schema,
@@ -1195,6 +1197,25 @@ class FinancialSettlementResource(Resource):
 
         try:
             settlement.deleted_at = datetime.utcnow()
+            components = FinancialSettlementComponent.query.filter(
+                FinancialSettlementComponent.company_id == company_id,
+                FinancialSettlementComponent.financial_settlement_id == settlement.id,
+            ).all()
+            for component in components:
+                origin_id = getattr(component, "origin_adjustment_id", None)
+                if not origin_id:
+                    continue
+                adjustment = FinancialTitleAdjustment.query.filter(
+                    FinancialTitleAdjustment.id == origin_id,
+                    FinancialTitleAdjustment.company_id == company_id,
+                    FinancialTitleAdjustment.deleted_at.is_(None),
+                ).first()
+                if not adjustment:
+                    continue
+                amount = component.amount or 0
+                adjustment.settled_amount = max((adjustment.settled_amount or 0) - amount, 0)
+                adjustment.open_amount = max((adjustment.generated_amount or 0) - (adjustment.settled_amount or 0), 0)
+                adjustment.status = "open" if adjustment.open_amount > 0 else "settled"
             entry = FinancialEntry.query.filter(
                 FinancialEntry.id == settlement.financial_entry_id,
                 FinancialEntry.company_id == company_id,

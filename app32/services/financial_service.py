@@ -1036,8 +1036,8 @@ class FinancialService:
                 "source_allocated_amount": round(base_amount, 2),
                 "settled_allocated_amount": proportional_amount,
                 "notes": item.get("notes"),
-                "competence_date": settlement_date_iso if normalized_kind == "financial_correction" else None,
-                "due_date": settlement_date_iso if normalized_kind == "financial_correction" else None,
+                "competence_date": settlement_date_iso if normalized_kind in {"financial_correction", "discount"} else None,
+                "due_date": settlement_date_iso if normalized_kind in {"financial_correction", "discount"} else None,
                 "metadata_json": {
                     **dict(item.get("metadata_json") or {}),
                     "component_kind": normalized_kind,
@@ -1252,8 +1252,8 @@ class FinancialService:
             "principal": FinancialService._money_float(open_after),
             "financial_correction": FinancialService._money_float(adjustments_open_after),
             "discount": FinancialService._money_float(discounts_open_after),
-            "gross_amount": FinancialService._money_float(total_open_after),
-            "total_open": FinancialService._money_float(total_open_after),
+            "gross_amount": FinancialService._money_float(open_after),
+            "total_open": FinancialService._money_float(open_after),
         }
         editable_rules = {
             "principal_max": editable_before["principal"],
@@ -1283,6 +1283,7 @@ class FinancialService:
             "adjustments_open_after": FinancialService._money_float(adjustments_open_after),
             "discounts_open_after": FinancialService._money_float(discounts_open_after),
             "total_open_after": FinancialService._money_float(total_open_after),
+            "principal_only_total_after": FinancialService._money_float(open_after),
             "title": {
                 "id": schedule.id,
                 "code": schedule.schedule_code,
@@ -1318,7 +1319,8 @@ class FinancialService:
                 "principal_open": FinancialService._money_float(open_after),
                 "adjustments_open": FinancialService._money_float(adjustments_open_after),
                 "discounts_open": FinancialService._money_float(discounts_open_after),
-                "total_open": FinancialService._money_float(total_open_after),
+                "total_open": FinancialService._money_float(open_after),
+                "ledger_total_open": FinancialService._money_float(total_open_after),
                 "principal_settled": FinancialService._money_float(settled_after),
                 "settlement_state": settlement_state_after,
                 "operational_state": operational_state_after,
@@ -1366,11 +1368,12 @@ class FinancialService:
         total_due_before = Decimal(str(before_block.get("total_open") or snapshot.get("total_open_before") or 0))
         if total_due_before <= 0:
             total_due_before = principal_before + adjustments_open_before - discounts_open_before
-        total_due_after = Decimal(str(after_block.get("total_open") or snapshot.get("total_open_after") or 0))
+        total_due_after = Decimal(str(after_block.get("total_open") or snapshot.get("principal_only_total_after") or snapshot.get("total_open_after") or 0))
         if total_due_after <= 0 and (principal_after > Decimal("0") or adjustments_open_after > Decimal("0") or discounts_open_after > Decimal("0")):
             total_due_after = max(principal_after + adjustments_open_after - discounts_open_after, Decimal("0"))
 
         settlement_metadata = dict(getattr(settlement, "metadata_json", {}) or {})
+        financial_correction_audit = dict(settlement_metadata.get("financial_correction_audit") or {})
         actor_payload = FinancialService._build_settlement_actor_payload(settlement, metadata_json=settlement_metadata)
         component_summary = FinancialService._build_settlement_component_audit_payload(
             component_payloads=component_payloads,
@@ -1432,6 +1435,7 @@ class FinancialService:
                 "actor": actor_payload,
                 "evidence": evidence_payload,
                 "component_summary": component_summary,
+                "financial_correction_audit": financial_correction_audit,
                 "tenant_scope": tenant_scope,
                 "editable_before": before_block.get("editable_open") or snapshot.get("editable_before") or {},
                 "editable_after": after_block.get("editable_open") or snapshot.get("editable_after") or {},

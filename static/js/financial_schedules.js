@@ -648,6 +648,23 @@
     clearPendingAttachments();
   }
 
+  function settlementCorrectionAmount(settlement = {}) {
+    const components = Array.isArray(settlement.settlement_components) ? settlement.settlement_components : [];
+    const fromComponents = components.reduce((acc, component) => {
+      const type = String(component.component_type || '').toLowerCase();
+      if (['monetary_correction', 'manual_adjustment', 'interest', 'fine'].includes(type)) {
+        return acc + Number(component.amount || 0);
+      }
+      return acc;
+    }, 0);
+    if (fromComponents > 0) return round2(fromComponents);
+    return round2(Number(settlement.interest_amount || 0) + Number(settlement.penalty_amount || 0) + Number(settlement.fee_amount || 0) + Number(settlement.other_adjustments_amount || 0));
+  }
+
+  function hasActiveSettlements(schedule = selectedSchedule) {
+    return (schedule?.related_entries || []).some((entry) => (entry.settlements || []).some((settlement) => !settlement.deleted_at && settlement.settlement_status !== 'cancelled'));
+  }
+
   function renderBaixas(entries) {
     $('baixas-empty').classList.toggle('hidden', !!entries.length);
     $('baixas-list').innerHTML = entries.map((entry, index) => `
@@ -655,8 +672,8 @@
         <strong>${index + 1}. ${entry.description || 'Baixa sem histórico'}</strong>
         <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · <span class="${amountClass(entry.signed_amount ?? 0)}">${money(entry.signed_amount ?? signedAmount(entry.original_amount, entry.movement_nature))}</span></small>
         <table class="settlement-table">
-          <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Valor</th><th>Multa</th><th>Juros</th><th>Desconto</th></tr></thead>
-          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlement.penalty_amount || 0)}</td><td>${money(settlement.interest_amount || 0)}</td><td>${money(settlement.discount_amount || 0)}</td></tr>`).join('') : '<tr><td colspan="7">Sem liquidações registradas.</td></tr>'}</tbody>
+          <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Principal</th><th>Correção</th><th>Multa</th><th>Juros</th><th>Desconto</th><th>Ações</th></tr></thead>
+          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlement.penalty_amount || 0)}</td><td>${money(settlement.interest_amount || 0)}</td><td>${money(settlement.discount_amount || 0)}</td><td><button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button></td></tr>`).join('') : '<tr><td colspan="9">Sem liquidações registradas.</td></tr>'}</tbody>
         </table>
       </article>`).join('');
   }
@@ -889,6 +906,7 @@
 
   function fillForm(schedule) {
     borderoLocked = Boolean(schedule.is_bordero_locked);
+    const settlementLocked = hasActiveSettlements(schedule);
     form.schedule_id.value = schedule.id || '';
     form.schedule_code.value = schedule.schedule_code || '';
     form.status.value = schedule.status || 'active';
@@ -918,15 +936,21 @@
     $('baixas-tab-button').classList.toggle('hidden', !(schedule.related_entries || []).length);
     Array.from(form.elements).forEach((field) => {
       if (!field || ['schedule_id', 'schedule_code'].includes(field.name)) return;
-      field.disabled = borderoLocked;
+      field.disabled = borderoLocked || settlementLocked;
     });
     document.querySelectorAll('.sched-footer-actions button').forEach((button) => {
       if (button.textContent.includes('Cancelar')) return;
-      button.disabled = borderoLocked;
+      if (button.textContent.includes('Baixar')) {
+        button.disabled = borderoLocked;
+        return;
+      }
+      button.disabled = borderoLocked || settlementLocked;
     });
     if (borderoLocked && entryTypeBanner) {
       const code = schedule.bordero?.code || schedule.summary?.bordero_code || 'Borderô';
       entryTypeBanner.textContent = `Título Financeiro bloqueado pelo ${code}. Consulta liberada; edição e baixa direta indisponíveis.`;
+    } else if (settlementLocked && entryTypeBanner) {
+      entryTypeBanner.textContent = 'Título Financeiro com baixa registrada. Edição bloqueada; remova as baixas para liberar alteração cadastral.';
     }
     window.toggleRepeatFields();
     refreshSuggestedDiscountAmountField();
@@ -1149,9 +1173,9 @@
   function getDefaultSettlementComposition(schedule = selectedSchedule) {
     const summary = schedule?.summary || {};
     const principalOpen = summary.principal_open ?? summary.open_total ?? getTopAmount();
-    const backendAdjustments = Number(summary.adjustments_open || 0);
+    const backendAdjustments = Number(summary.suggested_financial_correction ?? summary.adjustments_open ?? 0);
     const financialCorrection = backendAdjustments > 0 ? backendAdjustments : calculateCorrectionAmount();
-    const backendDiscount = Number(summary.discounts_open || 0);
+    const backendDiscount = Number(summary.suggested_discount ?? summary.discounts_open ?? 0);
     const discount = backendDiscount > 0 ? backendDiscount : calculateDiscountAmount();
     const composition = {
       principal: round2(principalOpen || 0),
@@ -1344,6 +1368,11 @@
     try {
       if (borderoLocked) throw new Error(`Título Financeiro bloqueado pelo ${selectedSchedule?.bordero?.code || 'borderô'}.`);
       if (action === 'cancel') return window.location.href = '/financial/schedules';
+      if (action === 'save_and_settle' && hasActiveSettlements(selectedSchedule)) {
+        await openSettlementCompositionModal(selectedSchedule);
+        return;
+      }
+      if (hasActiveSettlements(selectedSchedule)) throw new Error('Título Financeiro com baixa registrada. Remova as baixas para liberar edição.');
       const saved = await saveSchedule();
       if (action === 'save_and_new') return window.startNewSchedule(initialEntryType);
       if (action === 'save_and_back') return window.location.href = '/financial/schedules';
@@ -1404,6 +1433,18 @@
       await fetchJson(`/api/financial/schedules/${selectedSchedule.id}/attachments/${attachmentId}?company_id=${companyId}`, { method: 'DELETE' });
       await window.selectSchedule(selectedSchedule.id);
       switchTab('anexos');
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  async function deleteSettlement(settlementId) {
+    try {
+      if (!settlementId || !selectedSchedule?.id) return;
+      if (!window.confirm('Excluir esta baixa? O título será liberado para edição se não houver outras baixas.')) return;
+      await fetchJson(`/api/financial/settlements/${settlementId}?company_id=${companyId}`, { method: 'DELETE' });
+      await window.selectSchedule(selectedSchedule.id);
+      switchTab('baixas');
     } catch (error) {
       alert(error.message);
     }
@@ -1704,6 +1745,11 @@
       if (item) { try { URL.revokeObjectURL(item.url); } catch (_) {} }
       pendingAttachments = pendingAttachments.filter((candidate) => candidate.id !== pendingId);
       renderAttachments(selectedSchedule?.attachments || []);
+      return;
+    }
+    const settlementDeleteButton = event.target.closest('button[data-settlement-delete]');
+    if (settlementDeleteButton) {
+      deleteSettlement(settlementDeleteButton.dataset.settlementDelete);
       return;
     }
     const button = event.target.closest('button[data-attachment-delete]');

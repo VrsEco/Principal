@@ -82,6 +82,16 @@ def test_resolve_title_settlement_state_marks_discounted_title_as_partial_until_
     ) == "settled"
 
 
+def test_resolve_title_settlement_state_marks_principal_zero_as_settled_even_with_adjustment_open():
+    assert resolve_title_settlement_state(
+        principal_amount=1000,
+        principal_settled=1000,
+        adjustments_settled=0,
+        discounts_applied=0,
+        total_open=25,
+    ) == "settled"
+
+
 def test_build_financial_title_contract_payload_exposes_canonical_aliases():
     payload = build_financial_title_contract_payload(
         {

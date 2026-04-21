@@ -88,6 +88,9 @@ def resolve_title_settlement_state(
     discounts_applied_decimal = Decimal(str(_money_float(discounts_applied)))
     total_open_decimal = Decimal(str(_money_float(total_open)))
 
+    if principal_amount_decimal > Decimal("0.00") and principal_settled_decimal >= principal_amount_decimal:
+        return "settled"
+
     if total_open_decimal <= Decimal("0.00"):
         return "settled"
 

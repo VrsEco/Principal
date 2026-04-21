@@ -82,6 +82,40 @@ class FinancialScheduleService:
         return f"Payload inválido para {operation} do agendamento: {exc}"
 
     @staticmethod
+    def _has_active_settlements(*, company_id: int, schedule_id: int) -> bool:
+        entry_ids = [
+            int(entry_id)
+            for (entry_id,) in (
+                db.session.query(FinancialEntry.id)
+                .filter(
+                    FinancialEntry.company_id == company_id,
+                    db.or_(
+                        FinancialEntry.financial_schedule_id == schedule_id,
+                        FinancialEntry.external_reference == f"financial_schedule:{schedule_id}",
+                    ),
+                    FinancialEntry.deleted_at.is_(None),
+                )
+                .all()
+            )
+            if entry_id is not None
+        ]
+        query = FinancialSettlement.query.filter(
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.deleted_at.is_(None),
+            FinancialSettlement.settlement_status != "cancelled",
+        )
+        if entry_ids:
+            query = query.filter(
+                db.or_(
+                    FinancialSettlement.financial_entry_id.in_(entry_ids),
+                    FinancialSettlement.external_reference == f"financial_schedule:{schedule_id}",
+                )
+            )
+        else:
+            query = query.filter(FinancialSettlement.external_reference == f"financial_schedule:{schedule_id}")
+        return query.first() is not None
+
+    @staticmethod
     def list_schedules(
         *,
         company_id: int,
@@ -570,6 +604,8 @@ class FinancialScheduleService:
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
         if active_bordero:
             return None, f"Título Financeiro bloqueado pelo borderô {active_bordero.bordero_code}. Consulte o borderô para realizar baixas."
+        if FinancialScheduleService._has_active_settlements(company_id=company_id, schedule_id=schedule.id):
+            return None, "Título Financeiro com baixa registrada. Remova as baixas antes de alterar o cadastro do título."
 
         merged = data.model_dump(exclude_unset=True)
         if "schedule_code" in merged:
@@ -1501,6 +1537,21 @@ class FinancialScheduleService:
         original_total = Decimal(str(balance.get("principal_amount") or 0))
         settled_total = Decimal(str(balance.get("principal_settled") or 0))
         open_total = Decimal(str(balance.get("total_open") or balance.get("principal_open") or 0))
+        suggested_financial_correction = Decimal("0.00")
+        suggested_discount = Decimal("0.00")
+        try:
+            from services.financial_title_adjustment_service import FinancialTitleAdjustmentService
+
+            adjustment_simulation = FinancialTitleAdjustmentService.simulate_for_schedule(
+                schedule=schedule,
+                reference_date=date.today(),
+                base_amount=balance.get("principal_open"),
+            )
+            totals = adjustment_simulation.get("totals") or {}
+            suggested_financial_correction = Decimal(str(totals.get("positive_adjustments") or 0))
+            suggested_discount = Decimal(str(totals.get("discount") or 0))
+        except Exception:
+            logger.debug("Não foi possível calcular sugestão de correção do título %s", getattr(schedule, "id", None), exc_info=True)
         settlement_state = str(balance.get("settlement_state") or "open")
         operational_state_code = str(operational_state["code"] or "open")
         settled_entries = 1 if operational_state_code == "settled" and original_total > 0 else 0
@@ -1525,6 +1576,8 @@ class FinancialScheduleService:
             "adjustments_settled": balance.get("adjustments_settled"),
             "adjustments_open": balance.get("adjustments_open"),
             "discounts_open": balance.get("discounts_open"),
+            "suggested_financial_correction": float(suggested_financial_correction.quantize(Decimal("0.01"))),
+            "suggested_discount": float(suggested_discount.quantize(Decimal("0.01"))),
             "total_open": balance.get("total_open"),
             "signed_total_open": balance.get("signed_total_open"),
             "counterparty_name": metadata.get("counterparty_name"),

@@ -129,6 +129,28 @@ class FinancialSettlementCompositionService:
         return FinancialSettlementCompositionService._money(positive - amounts.get("discount", Decimal("0.00")))
 
     @staticmethod
+    def _suggested_adjustments(*, schedule: FinancialSchedule, settlement_date: date, balance: Dict[str, Any]) -> Dict[str, Any]:
+        from services.financial_title_adjustment_service import FinancialTitleAdjustmentService
+
+        simulation = FinancialTitleAdjustmentService.simulate_for_schedule(
+            schedule=schedule,
+            reference_date=settlement_date,
+            base_amount=balance.get("principal_open"),
+        )
+        totals = dict(simulation.get("totals") or {})
+        financial_correction = FinancialSettlementCompositionService._money(totals.get("positive_adjustments") or 0)
+        discount = FinancialSettlementCompositionService._money(totals.get("discount") or 0)
+        return {
+            "financial_correction": financial_correction,
+            "discount": discount,
+            "base_amount": FinancialSettlementCompositionService._money(simulation.get("base_amount")),
+            "calculation_date": simulation.get("calculation_date"),
+            "due_date_reference": simulation.get("due_date_reference"),
+            "correction_period_start_date": simulation.get("correction_period_start_date"),
+            "totals": totals,
+        }
+
+    @staticmethod
     def _validate_amounts(*, amounts: Dict[str, Decimal], balance: Dict[str, Any], open_by_type: Dict[str, Decimal]) -> List[str]:
         errors: List[str] = []
         principal_open = FinancialSettlementCompositionService._money(balance.get("principal_open"))
@@ -252,6 +274,11 @@ class FinancialSettlementCompositionService:
         balance = FinancialTitleBalanceService.calculate_for_schedule(schedule=schedule, reference_date=settlement_date)
         adjustments = FinancialSettlementCompositionService._list_open_adjustments(company_id=company_id, schedule_id=schedule_id)
         open_by_type = FinancialSettlementCompositionService._open_adjustments_by_type(adjustments)
+        suggestions = FinancialSettlementCompositionService._suggested_adjustments(
+            schedule=schedule,
+            settlement_date=settlement_date,
+            balance=balance,
+        )
         amounts = FinancialSettlementCompositionService._requested_amounts(payload, balance=balance, open_by_type=open_by_type)
         validation_errors = FinancialSettlementCompositionService._validate_amounts(amounts=amounts, balance=balance, open_by_type=open_by_type)
         gross_amount = FinancialSettlementCompositionService._gross_from_amounts(amounts)
@@ -287,6 +314,26 @@ class FinancialSettlementCompositionService:
             settlement_date=settlement_date,
         )
         aggregate_fields = FinancialSettlementCompositionService._aggregate_settlement_fields(amounts)
+        requested_financial_correction = FinancialSettlementCompositionService._money(sum(
+            (amounts.get(item, Decimal("0.00")) for item in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS),
+            Decimal("0.00"),
+        ))
+        requested_discount = FinancialSettlementCompositionService._money(amounts.get("discount", Decimal("0.00")))
+        suggested_financial_correction = FinancialSettlementCompositionService._money(suggestions.get("financial_correction"))
+        suggested_discount = FinancialSettlementCompositionService._money(suggestions.get("discount"))
+        suggestion_audit = {
+            "source": "financial_settlement_composition_service",
+            "financial_correction_suggested": float(suggested_financial_correction),
+            "financial_correction_user": float(requested_financial_correction),
+            "financial_correction_delta": float(FinancialSettlementCompositionService._money(requested_financial_correction - suggested_financial_correction)),
+            "discount_suggested": float(suggested_discount),
+            "discount_user": float(requested_discount),
+            "discount_delta": float(FinancialSettlementCompositionService._money(requested_discount - suggested_discount)),
+            "base_amount": float(FinancialSettlementCompositionService._money(suggestions.get("base_amount"))),
+            "calculation_date": suggestions.get("calculation_date"),
+            "due_date_reference": suggestions.get("due_date_reference"),
+            "correction_period_start_date": suggestions.get("correction_period_start_date"),
+        }
         return {
             "financial_schedule_id": schedule_id,
             "company_id": company_id,
@@ -299,6 +346,12 @@ class FinancialSettlementCompositionService:
                 "editable_rules": editable_rules,
             },
             "available_adjustments": {key: float(value) for key, value in open_by_type.items()},
+            "suggestions": {
+                **suggestion_audit,
+                "financial_correction": float(suggested_financial_correction),
+                "discount": float(suggested_discount),
+                "totals": suggestions.get("totals") or {},
+            },
             "composition": {
                 **{key: float(FinancialSettlementCompositionService._money(value)) for key, value in amounts.items()},
                 "financial_correction": float(FinancialSettlementCompositionService._money(sum(
@@ -311,6 +364,9 @@ class FinancialSettlementCompositionService:
                 **{key: float(value) for key, value in aggregate_fields.items()},
                 "gross_amount": float(gross_amount),
                 "net_amount": float(gross_amount),
+                "metadata_json": {
+                    "financial_correction_audit": suggestion_audit,
+                },
                 "settlement_components": [
                     {
                         **component,
@@ -379,6 +435,7 @@ class FinancialSettlementCompositionService:
         settlement_payload["settlement_components"] = simulation["settlement_payload"]["settlement_components"]
         metadata = dict(settlement_payload.get("metadata_json") or {})
         metadata["assisted_composition"] = simulation["composition"]
+        metadata["financial_correction_audit"] = simulation.get("suggestions") or metadata.get("financial_correction_audit") or {}
         settlement_payload["metadata_json"] = metadata
 
         from services.financial_schedule_service import FinancialScheduleService

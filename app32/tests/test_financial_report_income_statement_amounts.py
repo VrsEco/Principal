@@ -73,6 +73,8 @@ def _install_income_statement_fakes(monkeypatch, *, schedules, entries, settleme
     accounts = [
         SimpleNamespace(id=10, parent_id=None, code="4", name="Receitas", accepts_posting=False),
         SimpleNamespace(id=11, parent_id=10, code="4.01.001", name="Receita teste", accepts_posting=True),
+        SimpleNamespace(id=12, parent_id=10, code="4.02.001", name="Correção financeira", accepts_posting=True),
+        SimpleNamespace(id=13, parent_id=10, code="4.03.001", name="Descontos concedidos", accepts_posting=True),
     ]
     monkeypatch.setattr(report_module, "FinancialChartAccount", _FakeModel(accounts))
     monkeypatch.setattr(report_module, "FinancialSchedule", _FakeModel(schedules))
@@ -141,6 +143,61 @@ def test_income_statement_uses_financial_title_dates_and_settlement_date(monkeyp
     assert payload["totals"]["competence"] == 90.0
     assert payload["totals"]["due"] == 0.0
     assert payload["totals"]["liquidation"] == 30.0
+
+
+def test_income_statement_liquidation_splits_principal_correction_and_discount(monkeypatch):
+    schedule = SimpleNamespace(
+        id=45,
+        company_id=7,
+        status="active",
+        entry_type="receivable",
+        movement_nature="credit",
+        competence_date=date(2026, 4, 10),
+        start_date=date(2026, 4, 10),
+        first_due_date=date(2026, 4, 20),
+        next_due_date=date(2026, 4, 20),
+        template_amount=Decimal("100"),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    entry = SimpleNamespace(
+        id=145,
+        company_id=7,
+        external_reference="financial_schedule:45",
+        financial_schedule_id=45,
+        original_amount=Decimal("100"),
+        status="settled",
+        movement_nature="credit",
+        entry_type="receivable",
+        competence_date=date(2026, 4, 10),
+        due_date=date(2026, 4, 20),
+        chart_account_id=11,
+        cost_center_id=None,
+        metadata_json={},
+    )
+    settlement = SimpleNamespace(
+        financial_entry_id=145,
+        settlement_date=date(2026, 4, 21),
+        principal_amount=Decimal("100"),
+        net_amount=Decimal("115"),
+        metadata_json={
+            "settlement_allocation_breakdown": {
+                "principal": {"items": [{"chart_account_id": 11, "settled_allocated_amount": 100}]},
+                "financial_correction": {"items": [{"chart_account_id": 12, "settled_allocated_amount": 20}]},
+                "discount": {"items": [{"chart_account_id": 13, "settled_allocated_amount": 5}]},
+            }
+        },
+    )
+    _install_income_statement_fakes(monkeypatch, schedules=[schedule], entries=[entry], settlements=[settlement])
+
+    payload = FinancialReportService._build_income_statement(7, _income_statement_filters())
+    rows_by_code = {row["codigo"]: row for row in payload["rows"]}
+
+    assert payload["totals"]["liquidation"] == 115.0
+    assert rows_by_code["4.01.001"]["liquidacao"] == "R$ 100,00"
+    assert rows_by_code["4.02.001"]["liquidacao"] == "R$ 20,00"
+    assert rows_by_code["4.03.001"]["liquidacao"] == "R$ -5,00"
 
 
 def test_income_statement_ignores_cancelled_financial_titles(monkeypatch):
