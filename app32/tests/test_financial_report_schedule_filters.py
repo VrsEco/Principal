@@ -205,3 +205,9 @@ def test_calculation_memory_ui_hides_deleted_events_and_uses_refined_copy():
     assert "eventType !== 'settlement_deleted'" in schedules_js
     assert "Correções e descontos ainda em aberto" in schedules_js
     assert "Desconto baixado" in schedules_js
+
+
+def test_schedule_template_loads_canonical_financial_schedules_asset():
+    schedules_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\schedules.html").read_text(encoding="utf-8")
+    assert "js/financial_schedules.js" in schedules_template
+    assert "financial_schedules_20260420m.js" not in schedules_template
