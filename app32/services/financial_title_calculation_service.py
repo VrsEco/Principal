@@ -132,6 +132,11 @@ class FinancialTitleCalculationService:
         return payload
 
     @staticmethod
+    def _is_hidden_from_memory(payload: Dict[str, Any]) -> bool:
+        metadata = dict(payload.get("metadata_json") or {})
+        return bool(metadata.get("hidden_from_memory"))
+
+    @staticmethod
     def list_title_calculation_logs(
         *,
         company_id: int,
@@ -168,13 +173,23 @@ class FinancialTitleCalculationService:
             .all()
         )
 
+        serialized_logs = [
+            FinancialTitleCalculationService._serialize_log(log)
+            for log in logs
+        ]
+        visible_logs = [
+            payload
+            for payload in serialized_logs
+            if not FinancialTitleCalculationService._is_hidden_from_memory(payload)
+        ]
+
         return {
             "schedule": title.to_dict() if hasattr(title, "to_dict") else {
                 "id": getattr(title, "id", schedule_id),
                 "company_id": getattr(title, "company_id", company_id),
                 "schedule_code": getattr(title, "schedule_code", None),
             },
-            "logs": [FinancialTitleCalculationService._serialize_log(log) for log in logs],
-            "count": len(logs),
+            "logs": visible_logs,
+            "count": len(visible_logs),
             "limit": normalized_limit,
         }, None

@@ -152,3 +152,42 @@ def test_calculate_from_records_marks_discount_only_settlement_as_partial():
     assert result["settlement_state"] == "partial"
     assert result["operational_state"] == "partial"
     assert result["has_open_balance"] is True
+
+
+def test_calculate_from_records_ignores_components_from_deleted_settlements():
+    schedule = _Obj(
+        id=37,
+        company_id=7,
+        schedule_code="TIT-037",
+        status="open",
+        movement_nature="debit",
+        template_amount=Decimal("1000.00"),
+    )
+    deleted_settlement_components = [
+        _Obj(financial_settlement_id=999, component_type="interest", amount=Decimal("50.00"), origin_adjustment_id=901),
+    ]
+    adjustments = [
+        _Obj(
+            id=901,
+            adjustment_type="interest",
+            status="open",
+            generated_amount=Decimal("50.00"),
+            settled_amount=Decimal("0.00"),
+            open_amount=Decimal("50.00"),
+            deleted_at=None,
+        )
+    ]
+
+    result = FinancialTitleBalanceService.calculate_from_records(
+        schedule=schedule,
+        entries=[],
+        settlements=[],
+        components=deleted_settlement_components,
+        adjustments=adjustments,
+        reference_date=date(2026, 4, 21),
+    )
+
+    assert result["principal_open"] == 1000.0
+    assert result["adjustments_settled"] == 0.0
+    assert result["adjustments_open"] == 50.0
+    assert result["total_open"] == 1050.0

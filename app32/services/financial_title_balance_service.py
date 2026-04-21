@@ -108,7 +108,17 @@ class FinancialTitleBalanceService:
     ) -> Dict[str, Any]:
         entries = list(entries or [])
         settlements = [item for item in list(settlements or []) if FinancialTitleBalanceService._is_active_settlement(item)]
-        components = list(components or [])
+        active_settlement_ids = {
+            int(getattr(item, "id", 0))
+            for item in settlements
+            if getattr(item, "id", None) is not None
+        }
+        components = [
+            item
+            for item in list(components or [])
+            if getattr(item, "financial_settlement_id", None) is None
+            or int(getattr(item, "financial_settlement_id", 0) or 0) in active_settlement_ids
+        ]
         adjustments = list(adjustments or [])
 
         principal_amount = FinancialTitleBalanceService._money(getattr(schedule, "template_amount", 0))

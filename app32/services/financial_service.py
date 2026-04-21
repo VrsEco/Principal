@@ -24,6 +24,7 @@ from models.financial import (
     FinancialSchedule,
     FinancialSettlement,
     FinancialSettlementComponent,
+    FinancialTitleAdjustment,
     FinancialTitleAdjustmentAllocation,
     FinancialTitleCalculationLog,
 )
@@ -1566,7 +1567,10 @@ class FinancialService:
             schedule=schedule,
             reference_date=settlement_data.settlement_date or date.today(),
         )
-        title_amount = FinancialService._money_decimal(amount_totals.get("updated_amount") or schedule.template_amount or 0)
+        principal_basis_amount = FinancialService._resolve_entry_principal_basis_amount(
+            entry,
+            schedule=schedule,
+        )
         settled_before = FinancialService._money_decimal(balance_before.get("principal_settled") or total_liquidated_before or 0)
         principal_open_before = FinancialService._money_decimal(balance_before.get("principal_open"))
         adjustments_open_before = FinancialService._money_decimal(balance_before.get("adjustments_open"))
@@ -1601,20 +1605,20 @@ class FinancialService:
             gross_now = max(principal_now + correction_now - discount_now, Decimal("0.00"))
 
         settled_after = settled_before + principal_now
-        open_after = max(title_amount - settled_after, Decimal("0.00"))
+        open_after = max(principal_basis_amount - settled_after, Decimal("0.00"))
         adjustments_open_after = max(adjustments_open_before - correction_now, Decimal("0.00"))
         discounts_open_after = max(discounts_open_before - discount_now, Decimal("0.00"))
         total_open_after = max(open_after + adjustments_open_after - discounts_open_after, Decimal("0.00"))
 
         settlement_state_before = resolve_title_settlement_state(
-            principal_amount=balance_before.get("principal_amount") or schedule.template_amount or 0,
+            principal_amount=balance_before.get("principal_amount") or principal_basis_amount or 0,
             principal_settled=balance_before.get("principal_settled") or total_liquidated_before or 0,
             adjustments_settled=balance_before.get("adjustments_settled") or 0,
             discounts_applied=balance_before.get("discounts_applied") or 0,
             total_open=total_open_before,
         )
         settlement_state_after = resolve_title_settlement_state(
-            principal_amount=balance_before.get("principal_amount") or schedule.template_amount or 0,
+            principal_amount=balance_before.get("principal_amount") or principal_basis_amount or 0,
             principal_settled=settled_after,
             adjustments_settled=FinancialService._money_decimal(balance_before.get("adjustments_settled")) + correction_now,
             discounts_applied=FinancialService._money_decimal(balance_before.get("discounts_applied")) + discount_now,
@@ -1659,7 +1663,7 @@ class FinancialService:
             "calculation_date": (settlement_data.settlement_date or date.today()).isoformat(),
             "competence_date": schedule.competence_date.isoformat() if schedule.competence_date else None,
             "due_date": due_date.isoformat() if due_date else None,
-            "template_amount": amount_totals.get("template_amount"),
+            "template_amount": FinancialService._money_float(principal_basis_amount),
             "correction_amount": amount_totals.get("correction_amount"),
             "discount_amount": amount_totals.get("discount_amount"),
             "updated_amount": amount_totals.get("updated_amount"),
@@ -1736,6 +1740,10 @@ class FinancialService:
         settlement: FinancialSettlement,
         snapshot: Dict[str, Any],
         component_payloads: Optional[Sequence[Dict[str, Any]]] = None,
+        event_type: str = "settlement_posted",
+        source: str = "create_settlement",
+        calculation_date: Optional[date] = None,
+        metadata_overrides: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         before_block = dict(snapshot.get("before") or {})
         current_block = dict(snapshot.get("current") or {})
@@ -1853,8 +1861,8 @@ class FinancialService:
             "financial_schedule_id": int(snapshot["financial_schedule_id"]),
             "financial_entry_id": entry.id,
             "financial_settlement_id": getattr(settlement, "id", None),
-            "event_type": "settlement_posted",
-            "calculation_date": settlement.settlement_date,
+            "event_type": event_type,
+            "calculation_date": calculation_date or settlement.settlement_date,
             "template_amount": Decimal(str(snapshot.get("template_amount") or 0)),
             "correction_amount": Decimal(str(snapshot.get("correction_amount") or 0)),
             "discount_amount": Decimal(str(snapshot.get("discount_amount") or 0)),
@@ -1874,7 +1882,7 @@ class FinancialService:
             "total_due_after": total_due_after.quantize(Decimal("0.01")),
             "snapshot_json": snapshot,
             "metadata_json": {
-                "source": "create_settlement",
+                "source": source,
                 "settlement_code": settlement.settlement_code,
                 "snapshot": snapshot,
                 "ledger_version": FINANCIAL_TITLE_MEMORY_VERSION,
@@ -1890,8 +1898,209 @@ class FinancialService:
                 "editable_before": before_block.get("editable_open") or snapshot.get("editable_before") or {},
                 "editable_after": after_block.get("editable_open") or snapshot.get("editable_after") or {},
                 "editable_rules": before_block.get("editable_rules") or snapshot.get("editable_rules") or {},
+                **dict(metadata_overrides or {}),
             },
         }
+
+    @staticmethod
+    def _serialize_existing_settlement_component_payloads(
+        *,
+        settlement: FinancialSettlement,
+        components: Optional[Sequence[FinancialSettlementComponent]] = None,
+    ) -> List[Dict[str, Any]]:
+        payloads: List[Dict[str, Any]] = []
+        for component in components or []:
+            payloads.append(
+                {
+                    "component_type": getattr(component, "component_type", None),
+                    "amount": FinancialService._money_decimal(getattr(component, "amount", 0)),
+                    "competence_date": getattr(component, "competence_date", None),
+                    "due_date": getattr(component, "due_date", None),
+                    "source": getattr(component, "source", None) or "system",
+                    "origin_adjustment_id": getattr(component, "origin_adjustment_id", None),
+                    "metadata_json": dict(getattr(component, "metadata_json", {}) or {}),
+                }
+            )
+        if payloads:
+            return payloads
+        return FinancialService._build_serialized_settlement_component_payloads(settlement=settlement)
+
+    @staticmethod
+    def _build_title_balance_block(balance: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        current = dict(balance or {})
+        editable_open = dict(current.get("editable_open") or {})
+        editable_rules = dict(current.get("editable_rules") or {})
+        operational_state = {
+            "code": current.get("operational_state"),
+            "label": current.get("operational_state_label"),
+            "include_in_accounting_reports": current.get("include_in_accounting_reports"),
+            "include_in_projected_reports": current.get("include_in_projected_reports"),
+        }
+        operational_state = {key: value for key, value in operational_state.items() if value not in (None, "", [], {})}
+        return {
+            "principal": FinancialService._money_float(current.get("principal_open")),
+            "financial_correction": FinancialService._money_float(current.get("adjustments_open")),
+            "discount": FinancialService._money_float(current.get("discounts_open")),
+            "gross_amount": FinancialService._money_float(current.get("total_open")),
+            "principal_open": FinancialService._money_float(current.get("principal_open")),
+            "adjustments_open": FinancialService._money_float(current.get("adjustments_open")),
+            "discounts_open": FinancialService._money_float(current.get("discounts_open")),
+            "total_open": FinancialService._money_float(current.get("total_open")),
+            "principal_settled": FinancialService._money_float(current.get("principal_settled")),
+            "settlement_state": current.get("settlement_state"),
+            "operational_state": operational_state,
+            "editable_open": editable_open or {
+                "principal": FinancialService._money_float(current.get("principal_open")),
+                "financial_correction": FinancialService._money_float(current.get("adjustments_open")),
+                "discount": FinancialService._money_float(current.get("discounts_open")),
+                "gross_amount": FinancialService._money_float(current.get("total_open")),
+                "total_open": FinancialService._money_float(current.get("total_open")),
+            },
+            "editable_rules": editable_rules,
+        }
+
+    @staticmethod
+    def _build_deleted_settlement_snapshot(
+        *,
+        entry: FinancialEntry,
+        schedule: FinancialSchedule,
+        settlement: FinancialSettlement,
+        before_balance: Dict[str, Any],
+        after_balance: Dict[str, Any],
+        component_payloads: Optional[Sequence[Dict[str, Any]]] = None,
+        deleted_at: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        principal_now = Decimal("0.00")
+        correction_now = Decimal("0.00")
+        discount_now = Decimal("0.00")
+        for component_payload in component_payloads or []:
+            normalized_kind = FinancialService._normalize_component_kind(component_payload.get("component_type"))
+            amount = FinancialService._money_decimal(component_payload.get("amount"))
+            if normalized_kind == "discount":
+                discount_now += amount
+            elif normalized_kind == "financial_correction":
+                correction_now += amount
+            else:
+                principal_now += amount
+        gross_now = max(principal_now + correction_now - discount_now, Decimal("0.00"))
+
+        effective_deleted_at = deleted_at or datetime.utcnow()
+        before_block = FinancialService._build_title_balance_block(before_balance)
+        after_block = FinancialService._build_title_balance_block(after_balance)
+        principal_basis_amount = FinancialService._resolve_entry_principal_basis_amount(
+            entry,
+            schedule=schedule,
+        )
+        due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
+
+        return {
+            "contract_version": FINANCIAL_TITLE_MEMORY_VERSION,
+            "financial_schedule_id": schedule.id,
+            "schedule_code": schedule.schedule_code,
+            "calculation_date": effective_deleted_at.date().isoformat(),
+            "competence_date": schedule.competence_date.isoformat() if schedule.competence_date else None,
+            "due_date": due_date.isoformat() if due_date else None,
+            "template_amount": FinancialService._money_float(principal_basis_amount),
+            "correction_amount": FinancialService._money_float(before_balance.get("adjustments_open")),
+            "discount_amount": FinancialService._money_float(before_balance.get("discounts_open")),
+            "updated_amount": FinancialService._money_float(before_balance.get("total_open")),
+            "settled_principal_before": FinancialService._money_float(before_balance.get("principal_settled")),
+            "settled_principal_current": FinancialService._money_float(principal_now),
+            "settled_principal_after": FinancialService._money_float(after_balance.get("principal_settled")),
+            "open_principal_after": FinancialService._money_float(after_balance.get("principal_open")),
+            "principal_open_before": FinancialService._money_float(before_balance.get("principal_open")),
+            "adjustments_open_before": FinancialService._money_float(before_balance.get("adjustments_open")),
+            "discounts_open_before": FinancialService._money_float(before_balance.get("discounts_open")),
+            "total_open_before": FinancialService._money_float(before_balance.get("total_open")),
+            "adjustments_open_after": FinancialService._money_float(after_balance.get("adjustments_open")),
+            "discounts_open_after": FinancialService._money_float(after_balance.get("discounts_open")),
+            "total_open_after": FinancialService._money_float(after_balance.get("total_open")),
+            "principal_only_total_after": FinancialService._money_float(after_balance.get("principal_open")),
+            "title": {
+                "id": getattr(schedule, "id", None),
+                "code": getattr(schedule, "schedule_code", None),
+                "status": getattr(schedule, "status", None),
+                "entry_type": getattr(schedule, "entry_type", None),
+                "movement_nature": getattr(schedule, "movement_nature", None),
+                "description": getattr(schedule, "description", None) or getattr(schedule, "name", None),
+            },
+            "entry": {
+                "id": getattr(entry, "id", None),
+                "code": getattr(entry, "entry_code", None),
+                "status": getattr(entry, "status", None),
+                "movement_nature": getattr(entry, "movement_nature", None),
+            },
+            "before": before_block,
+            "current": {
+                "principal": FinancialService._money_float(principal_now),
+                "principal_settled": FinancialService._money_float(principal_now),
+                "financial_correction": FinancialService._money_float(correction_now),
+                "discount": FinancialService._money_float(discount_now),
+                "gross_amount": FinancialService._money_float(gross_now),
+            },
+            "after": after_block,
+        }
+
+    @staticmethod
+    def _hide_superseded_calculation_logs(
+        *,
+        company_id: int,
+        schedule_id: int,
+        settlement_id: int,
+        hidden_at: datetime,
+    ) -> List[int]:
+        if not settlement_id:
+            return []
+        logs = (
+            FinancialTitleCalculationLog.query.filter(
+                FinancialTitleCalculationLog.company_id == company_id,
+                FinancialTitleCalculationLog.financial_schedule_id == schedule_id,
+                FinancialTitleCalculationLog.financial_settlement_id == settlement_id,
+            )
+            .order_by(FinancialTitleCalculationLog.id.asc())
+            .all()
+        )
+        hidden_ids: List[int] = []
+        for log in logs or []:
+            if str(getattr(log, "event_type", "") or "").strip().lower() == "settlement_deleted":
+                continue
+            metadata = dict(getattr(log, "metadata_json", {}) or {})
+            metadata["hidden_from_memory"] = True
+            metadata["hidden_reason"] = "settlement_deleted"
+            metadata["hidden_at"] = hidden_at.isoformat()
+            log.metadata_json = metadata
+            if getattr(log, "id", None) is not None:
+                hidden_ids.append(int(log.id))
+        return hidden_ids
+
+    @staticmethod
+    def _recalculate_entry_status(
+        *,
+        entry: FinancialEntry,
+        schedule: Optional[FinancialSchedule] = None,
+    ) -> None:
+        total_liquidated = (
+            db.session.query(db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0))
+            .filter(
+                FinancialSettlement.company_id == entry.company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            )
+            .scalar()
+        ) or Decimal("0")
+        principal_basis_amount = FinancialService._resolve_entry_principal_basis_amount(
+            entry,
+            schedule=schedule,
+        )
+        if total_liquidated >= principal_basis_amount and principal_basis_amount > Decimal("0"):
+            entry.status = "settled"
+            return
+        if total_liquidated > Decimal("0"):
+            entry.status = "partially_settled"
+            return
+        if getattr(entry, "status", None) in {"partially_settled", "settled"}:
+            entry.status = "posted"
 
     @staticmethod
     def _resolve_settlement_schedule_context(
@@ -2175,6 +2384,142 @@ class FinancialService:
             db.session.rollback()
             logger.exception("Erro ao criar baixa para lançamento %s", data.financial_entry_id)
             return None, f"Erro ao criar baixa: {str(exc)}"
+
+    @staticmethod
+    def delete_settlement(
+        *,
+        settlement_id: int,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        settlement = FinancialSettlement.query.filter(
+            FinancialSettlement.id == settlement_id,
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.deleted_at.is_(None),
+        ).first()
+        if not settlement:
+            return None, "Baixa financeira não encontrada no escopo da empresa."
+
+        if str(settlement.reconciliation_status or "").strip().lower() in {"matched", "reconciled"}:
+            return None, "Baixa conciliada/casada não pode ser excluída. Desfaça a conciliação antes de remover."
+
+        try:
+            entry = FinancialEntry.query.filter(
+                FinancialEntry.id == settlement.financial_entry_id,
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            ).first()
+            schedule = None
+            if entry and getattr(entry, "financial_schedule_id", None):
+                schedule = FinancialSchedule.query.filter(
+                    FinancialSchedule.id == entry.financial_schedule_id,
+                    FinancialSchedule.company_id == company_id,
+                    FinancialSchedule.deleted_at.is_(None),
+                ).first()
+
+            components = FinancialSettlementComponent.query.filter(
+                FinancialSettlementComponent.company_id == company_id,
+                FinancialSettlementComponent.financial_settlement_id == settlement.id,
+            ).all()
+            component_payloads = FinancialService._serialize_existing_settlement_component_payloads(
+                settlement=settlement,
+                components=components,
+            )
+            reference_date = getattr(settlement, "settlement_date", None) or date.today()
+            before_balance = (
+                FinancialTitleBalanceService.calculate_for_schedule(
+                    schedule=schedule,
+                    reference_date=reference_date,
+                )
+                if schedule is not None
+                else None
+            )
+
+            deleted_at = datetime.utcnow()
+            settlement.deleted_at = deleted_at
+            settlement.metadata_json = {
+                **dict(getattr(settlement, "metadata_json", {}) or {}),
+                "deleted_at": deleted_at.isoformat(),
+                "deleted_via": "financial_service.delete_settlement",
+            }
+
+            for component in components:
+                origin_id = getattr(component, "origin_adjustment_id", None)
+                if not origin_id:
+                    continue
+                adjustment = FinancialTitleAdjustment.query.filter(
+                    FinancialTitleAdjustment.id == origin_id,
+                    FinancialTitleAdjustment.company_id == company_id,
+                    FinancialTitleAdjustment.deleted_at.is_(None),
+                ).first()
+                if not adjustment:
+                    continue
+                amount = FinancialService._money_decimal(getattr(component, "amount", 0))
+                adjustment.settled_amount = max(
+                    FinancialService._money_decimal(getattr(adjustment, "settled_amount", 0)) - amount,
+                    Decimal("0.00"),
+                )
+                adjustment.open_amount = max(
+                    FinancialService._money_decimal(getattr(adjustment, "generated_amount", 0))
+                    - FinancialService._money_decimal(getattr(adjustment, "settled_amount", 0)),
+                    Decimal("0.00"),
+                )
+                adjustment.status = "open" if adjustment.open_amount > 0 else "settled"
+
+            if schedule is not None and entry is not None:
+                hidden_log_ids = FinancialService._hide_superseded_calculation_logs(
+                    company_id=company_id,
+                    schedule_id=schedule.id,
+                    settlement_id=settlement.id,
+                    hidden_at=deleted_at,
+                )
+                after_balance = FinancialTitleBalanceService.calculate_for_schedule(
+                    schedule=schedule,
+                    reference_date=reference_date,
+                )
+                deletion_snapshot = FinancialService._build_deleted_settlement_snapshot(
+                    entry=entry,
+                    schedule=schedule,
+                    settlement=settlement,
+                    before_balance=before_balance or {},
+                    after_balance=after_balance or {},
+                    component_payloads=component_payloads,
+                    deleted_at=deleted_at,
+                )
+                db.session.add(
+                    FinancialTitleCalculationLog(
+                        **FinancialService._build_title_calculation_log_payload(
+                            entry=entry,
+                            settlement=settlement,
+                            snapshot=deletion_snapshot,
+                            component_payloads=component_payloads,
+                            event_type="settlement_deleted",
+                            source="delete_settlement",
+                            calculation_date=deleted_at.date(),
+                            metadata_overrides={
+                                "deletion_timestamp": deleted_at.isoformat(),
+                                "hidden_superseded_log_ids": hidden_log_ids,
+                            },
+                        )
+                    )
+                )
+
+            if entry:
+                FinancialService._recalculate_entry_status(
+                    entry=entry,
+                    schedule=schedule,
+                )
+
+            db.session.commit()
+            return {"message": "Baixa removida com sucesso.", "id": settlement.id}, None
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao remover baixa financeira %s", settlement_id)
+            return None, f"Erro ao remover baixa: {str(exc)}"
 
     @staticmethod
     def _generate_settlement_code(company_id: int) -> str:

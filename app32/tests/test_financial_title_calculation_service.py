@@ -130,3 +130,67 @@ def test_list_title_calculation_logs_blocks_cross_tenant_scope(monkeypatch):
 
     assert result is None
     assert error == "Acesso negado ao escopo da empresa."
+
+
+def test_list_title_calculation_logs_hides_superseded_deleted_settlement_events(monkeypatch):
+    title = type("Schedule", (), {"id": 77, "company_id": 7, "schedule_code": "TIT-077", "to_dict": lambda self: {"id": 77, "company_id": 7, "schedule_code": "TIT-077"}})()
+    hidden_log = type(
+        "Log",
+        (),
+        {
+            "to_dict": lambda self: {
+                "id": 10,
+                "financial_schedule_id": 77,
+                "event_type": "settlement_posted",
+                "calculation_date": date(2026, 4, 20).isoformat(),
+                "snapshot_json": {"before": {}, "current": {}, "after": {}},
+                "metadata_json": {"hidden_from_memory": True},
+            }
+        },
+    )()
+    visible_log = type(
+        "Log",
+        (),
+        {
+            "to_dict": lambda self: {
+                "id": 11,
+                "financial_schedule_id": 77,
+                "event_type": "settlement_deleted",
+                "calculation_date": date(2026, 4, 21).isoformat(),
+                "snapshot_json": {"before": {}, "current": {}, "after": {}},
+                "metadata_json": {"deletion_timestamp": "2026-04-21T11:00:00"},
+            }
+        },
+    )()
+
+    monkeypatch.setattr(
+        calc_module,
+        "FinancialSchedule",
+        type(
+            "ScheduleModel",
+            (),
+            {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(first_result=title)},
+        ),
+    )
+    monkeypatch.setattr(
+        calc_module,
+        "FinancialTitleCalculationLog",
+        type(
+            "LogModel",
+            (),
+            {"company_id": _Column(), "financial_schedule_id": _Column(), "calculation_date": _Column(), "id": _Column(), "query": _QueryStub(all_result=[hidden_log, visible_log])},
+        ),
+    )
+    monkeypatch.setattr(calc_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+
+    result, error = FinancialTitleCalculationService.list_title_calculation_logs(
+        company_id=7,
+        schedule_id=77,
+        allowed_company_ids=[7],
+        limit=10,
+    )
+
+    assert error is None
+    assert result["count"] == 1
+    assert len(result["logs"]) == 1
+    assert result["logs"][0]["event_type"] == "settlement_deleted"

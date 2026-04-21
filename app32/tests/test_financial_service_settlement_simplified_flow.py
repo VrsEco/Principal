@@ -310,8 +310,9 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
         "calculate_for_schedule",
         lambda **kwargs: {
             "principal_settled": 100.0,
-            "principal_open": 375.0,
+            "principal_open": 400.0,
             "adjustments_open": 0.0,
+            "discounts_open": 25.0,
             "total_open": 375.0,
         },
     )
@@ -388,26 +389,28 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert snapshot["settled_principal_before"] == 100.0
     assert snapshot["settled_principal_current"] == 120.0
     assert snapshot["settled_principal_after"] == 220.0
-    assert snapshot["open_principal_after"] == 255.0
-    assert snapshot["before"]["principal"] == 375.0
+    assert snapshot["open_principal_after"] == 280.0
+    assert snapshot["before"]["principal"] == 400.0
     assert snapshot["before"]["financial_correction"] == 0.0
-    assert snapshot["before"]["discount"] == 0.0
+    assert snapshot["before"]["discount"] == 25.0
     assert snapshot["before"]["gross_amount"] == 375.0
-    assert snapshot["before"]["principal_open"] == 375.0
+    assert snapshot["before"]["principal_open"] == 400.0
     assert snapshot["before"]["total_open"] == 375.0
-    assert snapshot["before"]["editable_open"]["principal"] == 375.0
-    assert snapshot["before"]["editable_rules"]["principal_max"] == 375.0
+    assert snapshot["before"]["editable_open"]["principal"] == 400.0
+    assert snapshot["before"]["editable_open"]["discount"] == 25.0
+    assert snapshot["before"]["editable_rules"]["principal_max"] == 400.0
     assert snapshot["current"]["principal"] == 120.0
     assert snapshot["current"]["principal_settled"] == 120.0
     assert snapshot["current"]["financial_correction"] == 0.0
     assert snapshot["current"]["discount"] == 0.0
     assert snapshot["current"]["gross_amount"] == 120.0
-    assert snapshot["after"]["principal"] == 255.0
+    assert snapshot["after"]["principal"] == 280.0
     assert snapshot["after"]["financial_correction"] == 0.0
-    assert snapshot["after"]["discount"] == 0.0
+    assert snapshot["after"]["discount"] == 25.0
     assert snapshot["after"]["gross_amount"] == 255.0
-    assert snapshot["after"]["principal_open"] == 255.0
-    assert snapshot["after"]["editable_open"]["principal"] == 255.0
+    assert snapshot["after"]["principal_open"] == 280.0
+    assert snapshot["after"]["editable_open"]["principal"] == 280.0
+    assert snapshot["after"]["editable_open"]["discount"] == 25.0
     assert snapshot["after"]["editable_open"]["total_open"] == 255.0
     assert snapshot["after"]["editable_open"]["gross_amount"] == 255.0
     assert snapshot["after"]["total_open"] == 255.0
@@ -420,9 +423,9 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["financial_entry_id"] == 99
     assert captured["log_kwargs"]["event_type"] == "settlement_posted"
     assert captured["log_kwargs"]["updated_amount"] == Decimal("475.0")
-    assert captured["log_kwargs"]["principal_before"] == Decimal("375.00")
+    assert captured["log_kwargs"]["principal_before"] == Decimal("400.00")
     assert captured["log_kwargs"]["principal_settled_now"] == Decimal("120.00")
-    assert captured["log_kwargs"]["principal_after"] == Decimal("255.00")
+    assert captured["log_kwargs"]["principal_after"] == Decimal("280.00")
     assert captured["log_kwargs"]["adjustments_open_before"] == Decimal("0.00")
     assert captured["log_kwargs"]["total_due_before"] == Decimal("375.00")
     assert captured["log_kwargs"]["total_due_after"] == Decimal("255.00")
@@ -443,9 +446,9 @@ def test_create_settlement_adds_financial_title_snapshot(monkeypatch):
     assert captured["log_kwargs"]["metadata_json"]["component_summary"]["principal"] == 120.0
     assert captured["log_kwargs"]["metadata_json"]["component_summary"]["gross_amount"] == 120.0
     assert captured["log_kwargs"]["metadata_json"]["component_summary"]["count"] == 1
-    assert captured["log_kwargs"]["metadata_json"]["editable_before"]["principal"] == 375.0
-    assert captured["log_kwargs"]["metadata_json"]["editable_after"]["principal"] == 255.0
-    assert captured["log_kwargs"]["metadata_json"]["editable_rules"]["principal_max"] == 375.0
+    assert captured["log_kwargs"]["metadata_json"]["editable_before"]["principal"] == 400.0
+    assert captured["log_kwargs"]["metadata_json"]["editable_after"]["principal"] == 280.0
+    assert captured["log_kwargs"]["metadata_json"]["editable_rules"]["principal_max"] == 400.0
     assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["company_id"] == 7
     assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["financial_schedule_id"] == 77
     assert captured["log_kwargs"]["metadata_json"]["tenant_scope"]["scope_consistent"] is True
@@ -493,7 +496,7 @@ def test_build_title_settlement_snapshot_keeps_after_principal_and_correction_sp
             "template_amount": 2500.0,
             "correction_amount": 300.0,
             "discount_amount": 0.0,
-            "updated_amount": 2500.0,
+            "updated_amount": 2800.0,
         },
     )
     monkeypatch.setattr(
@@ -554,6 +557,227 @@ def test_build_title_settlement_snapshot_keeps_after_principal_and_correction_sp
     assert snapshot["after"]["editable_open"]["financial_correction"] == 300.0
     assert snapshot["after"]["editable_open"]["gross_amount"] == 2300.0
     assert snapshot["after"]["editable_open"]["total_open"] == 2300.0
+
+
+def test_delete_settlement_hides_previous_memory_event_and_registers_exclusion_log(monkeypatch):
+    captured = {"added": []}
+
+    settlement = type(
+        "Settlement",
+        (),
+        {
+            "id": 31,
+            "company_id": 7,
+            "financial_entry_id": 99,
+            "settlement_code": "BX-000031",
+            "settlement_date": date(2026, 4, 20),
+            "reconciliation_status": None,
+            "deleted_at": None,
+            "settlement_status": "posted",
+            "metadata_json": {},
+        },
+    )()
+    entry = type(
+        "Entry",
+        (),
+        {
+            "id": 99,
+            "company_id": 7,
+            "deleted_at": None,
+            "financial_schedule_id": 77,
+            "entry_code": "LAN-099",
+            "status": "partially_settled",
+            "original_amount": Decimal("7500.00"),
+            "metadata_json": {"schedule_template_amount": 7500.0},
+        },
+    )()
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 77,
+            "company_id": 7,
+            "deleted_at": None,
+            "schedule_code": "TIT-077",
+            "status": "active",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "description": "Título teste",
+            "name": "Título teste",
+            "template_amount": Decimal("7500.00"),
+            "metadata_json": {},
+            "competence_date": date(2026, 1, 31),
+            "start_date": date(2026, 1, 31),
+            "first_due_date": date(2026, 2, 28),
+            "next_due_date": date(2026, 2, 28),
+        },
+    )()
+    components = [
+        type(
+            "ComponentPrincipal",
+            (),
+            {
+                "id": 1,
+                "company_id": 7,
+                "financial_settlement_id": 31,
+                "financial_schedule_id": 77,
+                "component_type": "principal",
+                "amount": Decimal("2000.00"),
+                "competence_date": date(2026, 1, 31),
+                "due_date": date(2026, 2, 28),
+                "source": "user",
+                "origin_adjustment_id": None,
+                "metadata_json": {},
+            },
+        )(),
+        type(
+            "ComponentInterest",
+            (),
+            {
+                "id": 2,
+                "company_id": 7,
+                "financial_settlement_id": 31,
+                "financial_schedule_id": 77,
+                "component_type": "interest",
+                "amount": Decimal("100.00"),
+                "competence_date": date(2026, 4, 20),
+                "due_date": date(2026, 4, 20),
+                "source": "user",
+                "origin_adjustment_id": 901,
+                "metadata_json": {},
+            },
+        )(),
+    ]
+    adjustment = type(
+        "Adjustment",
+        (),
+        {
+            "id": 901,
+            "company_id": 7,
+            "deleted_at": None,
+            "generated_amount": Decimal("100.00"),
+            "settled_amount": Decimal("100.00"),
+            "open_amount": Decimal("0.00"),
+            "status": "settled",
+        },
+    )()
+    hidden_log = type(
+        "CalcLog",
+        (),
+        {
+            "id": 701,
+            "event_type": "settlement_posted",
+            "metadata_json": {"source": "create_settlement"},
+        },
+    )()
+
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSettlement",
+        type("FinancialSettlementStub", (), {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "settlement_status": _Column(), "principal_amount": _Column(), "financial_entry_id": _Column(), "query": _QueryStub(settlement)}),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSettlementComponent",
+        type("FinancialSettlementComponentStub", (), {"company_id": _Column(), "financial_settlement_id": _Column(), "query": _QueryStub(components)}),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntry",
+        type("FinancialEntryStub", (), {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(entry)}),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSchedule",
+        type("FinancialScheduleStub", (), {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(schedule)}),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialTitleAdjustment",
+        type("FinancialTitleAdjustmentStub", (), {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(adjustment)}),
+    )
+
+    class _FakeCalculationLog:
+        company_id = _Column()
+        financial_schedule_id = _Column()
+        financial_settlement_id = _Column()
+        id = _Column()
+        query = _QueryStub([hidden_log])
+
+        def __init__(self, **kwargs):
+            captured["added"].append(kwargs)
+            self.__dict__.update(kwargs)
+
+    monkeypatch.setattr(financial_module, "FinancialTitleCalculationLog", _FakeCalculationLog)
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    balance_snapshots = [
+        {
+            "principal_amount": 7500.0,
+            "principal_settled": 2000.0,
+            "principal_open": 5500.0,
+            "adjustments_open": 100.0,
+            "discounts_open": 0.0,
+            "total_open": 5600.0,
+            "adjustments_settled": 100.0,
+            "discounts_applied": 0.0,
+            "settlement_state": "partial",
+            "operational_state": "partial",
+            "operational_state_label": "Parcial",
+            "include_in_accounting_reports": True,
+            "include_in_projected_reports": False,
+            "editable_open": {"principal": 5500.0, "financial_correction": 100.0, "discount": 0.0, "gross_amount": 5600.0, "total_open": 5600.0},
+            "editable_rules": {"principal_max": 5500.0},
+        },
+        {
+            "principal_amount": 7500.0,
+            "principal_settled": 0.0,
+            "principal_open": 7500.0,
+            "adjustments_open": 100.0,
+            "discounts_open": 0.0,
+            "total_open": 7600.0,
+            "adjustments_settled": 0.0,
+            "discounts_applied": 0.0,
+            "settlement_state": "open",
+            "operational_state": "open",
+            "operational_state_label": "Em aberto",
+            "include_in_accounting_reports": True,
+            "include_in_projected_reports": True,
+            "editable_open": {"principal": 7500.0, "financial_correction": 100.0, "discount": 0.0, "gross_amount": 7600.0, "total_open": 7600.0},
+            "editable_rules": {"principal_max": 7500.0},
+        },
+    ]
+    monkeypatch.setattr(
+        financial_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda **kwargs: balance_snapshots.pop(0),
+    )
+    monkeypatch.setattr(
+        financial_module.db.session,
+        "query",
+        lambda *args, **kwargs: type("AggQuery", (), {"filter": lambda self, *a, **k: self, "scalar": lambda self: Decimal("0")})(),
+    )
+    monkeypatch.setattr(financial_module.db.session, "add", lambda obj: captured["added"].append(obj))
+    monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+
+    result, error = FinancialService.delete_settlement(
+        settlement_id=31,
+        company_id=7,
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert result["id"] == 31
+    assert settlement.deleted_at is not None
+    assert hidden_log.metadata_json["hidden_from_memory"] is True
+    assert hidden_log.metadata_json["hidden_reason"] == "settlement_deleted"
+    created_log = next(item for item in captured["added"] if isinstance(item, dict))
+    assert created_log["event_type"] == "settlement_deleted"
+    assert created_log["snapshot_json"]["after"]["principal"] == 7500.0
+    assert created_log["snapshot_json"]["after"]["financial_correction"] == 100.0
+    assert created_log["snapshot_json"]["after"]["gross_amount"] == 7600.0
+    assert created_log["metadata_json"]["hidden_superseded_log_ids"] == [701]
+    assert entry.status == "posted"
 
 
 def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monkeypatch):

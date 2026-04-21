@@ -1189,49 +1189,14 @@ class FinancialSettlementResource(Resource):
     @permission_required("financial", "delete")
     def delete(self, settlement_id: int):
         company_id = get_request_company_id()
-        settlement = FinancialSettlement.query.filter(
-            FinancialSettlement.id == settlement_id,
-            FinancialSettlement.company_id == company_id,
-            FinancialSettlement.deleted_at.is_(None),
-        ).first_or_404()
-
-        if str(settlement.reconciliation_status or "").strip().lower() in {"matched", "reconciled"}:
-            return {"error": "Baixa conciliada/casada não pode ser excluída. Desfaça a conciliação antes de remover."}, 400
-
-        try:
-            settlement.deleted_at = datetime.utcnow()
-            components = FinancialSettlementComponent.query.filter(
-                FinancialSettlementComponent.company_id == company_id,
-                FinancialSettlementComponent.financial_settlement_id == settlement.id,
-            ).all()
-            for component in components:
-                origin_id = getattr(component, "origin_adjustment_id", None)
-                if not origin_id:
-                    continue
-                adjustment = FinancialTitleAdjustment.query.filter(
-                    FinancialTitleAdjustment.id == origin_id,
-                    FinancialTitleAdjustment.company_id == company_id,
-                    FinancialTitleAdjustment.deleted_at.is_(None),
-                ).first()
-                if not adjustment:
-                    continue
-                amount = component.amount or 0
-                adjustment.settled_amount = max((adjustment.settled_amount or 0) - amount, 0)
-                adjustment.open_amount = max((adjustment.generated_amount or 0) - (adjustment.settled_amount or 0), 0)
-                adjustment.status = "open" if adjustment.open_amount > 0 else "settled"
-            entry = FinancialEntry.query.filter(
-                FinancialEntry.id == settlement.financial_entry_id,
-                FinancialEntry.company_id == company_id,
-                FinancialEntry.deleted_at.is_(None),
-            ).first()
-            if entry:
-                _recalculate_entry_status(entry)
-            db.session.commit()
-            return {"message": "Baixa removida com sucesso.", "id": settlement.id}, 200
-        except Exception:
-            db.session.rollback()
-            logger.exception("Erro ao remover baixa financeira %s", settlement_id)
-            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+        result, error = FinancialService.delete_settlement(
+            settlement_id=settlement_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
 
 
 class FinancialSettlementAttachmentListResource(Resource):

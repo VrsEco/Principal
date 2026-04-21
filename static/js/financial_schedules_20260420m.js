@@ -730,7 +730,7 @@
     return ({
       settlement_posted: 'Baixa registrada',
       settlement_updated: 'Baixa atualizada',
-      settlement_deleted: 'Baixa removida',
+      settlement_deleted: 'Baixa excluída',
       adjustment_released: 'Ajuste liberado',
       recalculation: 'Recálculo',
     }[eventType] || eventType || 'Evento financeiro');
@@ -834,6 +834,12 @@
         const entryCode = snapshot.entry?.code || snapshot.entry_code || '-';
         const beforeState = beforeBlock.operational_state?.label || beforeBlock.operational_state_label || '';
         const afterState = afterBlock.operational_state?.label || afterBlock.operational_state_label || '';
+        const isDeletedEvent = String(log.event_type || '').trim().toLowerCase() === 'settlement_deleted';
+        const currentSubtitle = isDeletedEvent ? 'Composição removida deste evento' : 'Composição realizada neste evento';
+        const afterSubtitle = isDeletedEvent ? 'Saldo recalculado após a exclusão da baixa' : 'Saldo remanescente editável do título';
+        const deletionNote = isDeletedEvent
+          ? '<p class="calc-log-card__note">Esta baixa foi excluída do saldo do título. O evento original foi ocultado da memória de cálculo.</p>'
+          : '';
         return `
           <article class="calc-log-card calc-log-card--ledger">
             <header class="calc-log-card__head">
@@ -841,6 +847,7 @@
                 <span class="calc-log-step">Evento ${index + 1}</span>
                 <h3>${formatIso(log.calculation_date)} · ${escapeHtml(eventLabel(log.event_type))}</h3>
                 <p>Título ${escapeHtml(schedule.schedule_code || schedule.id || '-')} · Baixa ${escapeHtml(settlementCode)} · Lançamento ${escapeHtml(entryCode)}${afterState ? ` · Estado após ${escapeHtml(afterState)}` : ''}</p>
+                ${deletionNote}
               </div>
               <div class="calc-log-card__badges">
                 <span class="calc-log-badge">Principal ${money(signedAmount(currentLedger.principal, schedule?.movement_nature))}</span>
@@ -855,13 +862,13 @@
                 ledgerMetric('Desconto', beforeLedger.discount, schedule?.movement_nature, { invert: true }),
                 ledgerMetric('Valor da baixa', beforeLedger.gross_amount, schedule?.movement_nature),
               ], 'ledger-step--before')}${beforeState ? `<small class="calc-log-state">Estado: ${escapeHtml(beforeState)}</small>` : ''}
-              ${ledgerStep('Agora', 'Composição realizada neste evento', [
+              ${ledgerStep('Agora', currentSubtitle, [
                 ledgerMetric('Principal', currentLedger.principal, schedule?.movement_nature),
                 ledgerMetric('Correção financeira', currentLedger.financial_correction, schedule?.movement_nature),
                 ledgerMetric('Desconto', currentLedger.discount, schedule?.movement_nature, { invert: true }),
                 ledgerMetric('Valor da baixa', currentLedger.gross_amount, schedule?.movement_nature),
               ], 'ledger-step--current')}
-              ${ledgerStep('Depois', 'Saldo remanescente editável do título', [
+              ${ledgerStep('Depois', afterSubtitle, [
                 ledgerMetric('Principal', afterLedger.principal, schedule?.movement_nature),
                 ledgerMetric('Correção financeira', afterLedger.financial_correction, schedule?.movement_nature),
                 ledgerMetric('Desconto', afterLedger.discount, schedule?.movement_nature, { invert: true }),
