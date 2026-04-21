@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_schedule.css', v='20260419b') }}">
 {% elif report_definition.code in ['income_statement', 'income_statement_2'] %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419d') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421b') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421c') }}">
 {% elif report_definition.code == 'bank_statement' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419b') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_bank_statement.css', v='20260419b') }}">
@@ -798,7 +798,7 @@
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419b') }}"></script>
 {% elif report_definition.code in ['income_statement', 'income_statement_2'] %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419d') }}"></script>
-<script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421b') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421c') }}"></script>
 {% elif report_definition.code == 'bank_statement' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419b') }}"></script>
 {% else %}
