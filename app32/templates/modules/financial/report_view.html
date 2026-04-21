@@ -7,7 +7,7 @@
 {{ super() }}
 {% if report.report_type == 'income_statement' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419c') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421c') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421d') }}">
 {% endif %}
 {% endblock %}
 
@@ -141,6 +141,6 @@
 {% block scripts %}
 {{ super() }}
 {% if report.report_type == 'income_statement' %}
-<script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421c') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421d') }}"></script>
 {% endif %}
 {% endblock %}

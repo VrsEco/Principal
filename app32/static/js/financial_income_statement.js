@@ -149,9 +149,9 @@ document.addEventListener('DOMContentLoaded', function () {
     params.set('bucket', trigger.getAttribute('data-bucket') || '');
     var chartAccountId = trigger.getAttribute('data-chart-account-id') || '';
     if (chartAccountId) {
-      params.set('chart_account_id', chartAccountId);
+      params.set('detail_chart_account_id', chartAccountId);
     } else {
-      params.delete('chart_account_id');
+      params.delete('detail_chart_account_id');
     }
     url.search = params.toString();
     return url.toString();

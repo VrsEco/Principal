@@ -2,7 +2,7 @@ import os
 import sys
 from types import SimpleNamespace
 
-from flask import Flask
+from flask import Flask, render_template
 from flask_login import LoginManager
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -238,3 +238,188 @@ def test_income_statement_drilldown_route_returns_json(monkeypatch):
     assert payload["account_label"] == "4.01.001 - Receita teste"
     assert payload["total"] == 100.0
     assert payload["item_count"] == 1
+
+
+def test_income_statement_drilldown_route_strips_detail_params_from_filters(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(
+        financial_reports_route,
+        "get_active_company",
+        lambda: SimpleNamespace(id=7, name="Empresa Teste"),
+    )
+    monkeypatch.setattr(financial_reports_route, "get_accessible_company_ids", lambda: [7])
+
+    def _fake_build_income_statement_drilldown(**kwargs):
+        captured.update(kwargs)
+        return ({"bucket": "competencia", "bucket_label": "Competência", "account_label": "Teste", "total": 0.0, "total_label": "R$ 0,00", "item_count": 0, "items": []}, None)
+
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "build_income_statement_drilldown",
+        _fake_build_income_statement_drilldown,
+    )
+
+    client = app.test_client()
+    response = client.get(
+        "/financial/reports/demonstrativo-resultados/drilldown"
+        "?bucket=competence"
+        "&detail_chart_account_id=11"
+        "&period_start=2026-04-01"
+        "&period_end=2026-04-30"
+        "&include_open=true"
+        "&include_settled=true"
+        "&include_receivable=true"
+        "&include_payable=true"
+        "&show_code=true"
+        "&show_description=true",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert captured["chart_account_id"] == 11
+    assert captured["bucket"] == "competence"
+    assert captured["filters"]["period_start"] == "2026-04-01"
+    assert "bucket" not in captured["filters"]
+    assert "detail_chart_account_id" not in captured["filters"]
+
+
+def test_income_statement_drilldown_route_keeps_legacy_chart_account_param_out_of_filters(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(
+        financial_reports_route,
+        "get_active_company",
+        lambda: SimpleNamespace(id=7, name="Empresa Teste"),
+    )
+    monkeypatch.setattr(financial_reports_route, "get_accessible_company_ids", lambda: [7])
+
+    def _fake_build_income_statement_drilldown(**kwargs):
+        captured.update(kwargs)
+        return ({"bucket": "competencia", "bucket_label": "Competência", "account_label": "Teste", "total": 0.0, "total_label": "R$ 0,00", "item_count": 0, "items": []}, None)
+
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "build_income_statement_drilldown",
+        _fake_build_income_statement_drilldown,
+    )
+
+    client = app.test_client()
+    response = client.get(
+        "/financial/reports/demonstrativo-resultados/drilldown"
+        "?bucket=competence"
+        "&chart_account_id=11"
+        "&period_start=2026-04-01"
+        "&period_end=2026-04-30"
+        "&include_open=true"
+        "&include_settled=true"
+        "&include_receivable=true"
+        "&include_payable=true"
+        "&show_code=true"
+        "&show_description=true",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert captured["chart_account_id"] == 11
+    assert "chart_account_id" not in captured["filters"]
+
+
+def test_income_statement_filters_page_only_keeps_drilldown_on_analytical_rows(monkeypatch):
+    app = _build_app()
+    company = SimpleNamespace(id=7, name="Empresa Teste")
+    company.to_dict = lambda: {"id": 7, "name": "Empresa Teste"}
+    report_definition = {
+        "code": "income_statement",
+        "slug": "demonstrativo-resultados",
+        "label": "Demonstração de Resultados 01",
+        "description": "DRE contábil.",
+        "filters": ("period",),
+    }
+    report = {
+        "title": "Demonstração de Resultados 01",
+        "subtitle": "DRE contábil.",
+        "filters": [],
+        "summary_cards": [],
+        "general_info": [],
+        "show_status_columns": False,
+        "hierarchy_rows": [
+            {
+                "id": "dre-10",
+                "parent_id": None,
+                "chart_account_id": 10,
+                "codigo": "3",
+                "descricao": "Receitas",
+                "account_label": "3 - Receitas",
+                "level": 0,
+                "row_type": "group",
+                "is_leaf": False,
+                "has_children": True,
+                "competencia": 0.0,
+                "competencia_label": "R$ 0,00",
+                "vencimento": 0.0,
+                "vencimento_label": "R$ 0,00",
+                "liquidacao": 0.0,
+                "liquidacao_label": "R$ 0,00",
+                "aberto": 0.0,
+                "aberto_label": "R$ 0,00",
+                "baixado": 0.0,
+                "baixado_label": "R$ 0,00",
+            },
+            {
+                "id": "dre-11",
+                "parent_id": "dre-10",
+                "chart_account_id": 11,
+                "codigo": "3.1.01.001",
+                "descricao": "Receita teste",
+                "account_label": "3.1.01.001 - Receita teste",
+                "level": 1,
+                "row_type": "account",
+                "is_leaf": True,
+                "has_children": False,
+                "competencia": 100.0,
+                "competencia_label": "R$ 100,00",
+                "vencimento": 100.0,
+                "vencimento_label": "R$ 100,00",
+                "liquidacao": 100.0,
+                "liquidacao_label": "R$ 100,00",
+                "aberto": 0.0,
+                "aberto_label": "R$ 0,00",
+                "baixado": 100.0,
+                "baixado_label": "R$ 100,00",
+            },
+        ],
+        "totals": {
+            "competence": 100.0,
+            "competence_label": "R$ 100,00",
+            "due": 100.0,
+            "due_label": "R$ 100,00",
+            "liquidation": 100.0,
+            "liquidation_label": "R$ 100,00",
+        },
+    }
+
+    with app.test_request_context(
+        "/financial/reports/demonstrativo-resultados"
+        "?period_start=2026-04-01"
+        "&period_end=2026-04-30"
+        "&include_open=true"
+        "&include_settled=true"
+        "&include_receivable=true"
+        "&include_payable=true"
+        "&show_code=true"
+        "&show_description=true"
+    ):
+        html = render_template(
+            "modules/financial/partials/report_filters_income_statement_page.html",
+            company=company,
+            company_id=company.id,
+            report_definition=report_definition,
+            report=report,
+        )
+
+    assert html.count("data-dre-detail-trigger") == 6
+    assert 'data-chart-account-id="11"' in html
+    assert 'data-chart-account-id="10"' not in html

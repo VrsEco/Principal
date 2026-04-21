@@ -255,6 +255,16 @@
   font-weight: 800;
 }
 
+.dre-value-static {
+  display: block;
+  cursor: default;
+}
+
+.dre-value-static:hover,
+.dre-value-static:focus-visible {
+  filter: none;
+}
+
 .dre-detail-modal.hidden {
   display: none !important;
 }

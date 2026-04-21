@@ -44,11 +44,24 @@ _LIST_FILTER_KEYS = {
     "counterparty_ids",
 }
 
+_IGNORED_FILTER_QUERY_KEYS = {
+    "company_id",
+    "bucket",
+    "detail_chart_account_id",
+    "ui_refresh",
+    "refresh",
+}
 
-def _request_filters_payload():
+
+def _request_filters_payload(*, excluded_keys=None):
+    excluded = set(_IGNORED_FILTER_QUERY_KEYS)
+    if excluded_keys:
+        excluded.update({str(key) for key in excluded_keys if key})
     payload = {}
     manual_values = {}
     for key in request.args.keys():
+        if key in excluded:
+            continue
         values = [value for value in request.args.getlist(key) if value != '']
         if not values:
             continue
@@ -65,7 +78,6 @@ def _request_filters_payload():
         payload[key] = values if len(values) > 1 else values[0]
     if manual_values:
         payload['manual_values'] = manual_values
-    payload.pop('company_id', None)
     return payload
 
 
@@ -176,7 +188,11 @@ def financial_report_income_statement_drilldown(report_slug: str):
         abort(400, description='Empresa ativa não identificada para relatórios financeiros.')
 
     bucket = request.args.get('bucket')
-    raw_chart_account_id = request.args.get('chart_account_id')
+    raw_chart_account_id = request.args.get('detail_chart_account_id')
+    using_legacy_chart_account_param = False
+    if raw_chart_account_id in (None, ''):
+        raw_chart_account_id = request.args.get('chart_account_id')
+        using_legacy_chart_account_param = raw_chart_account_id not in (None, '')
     chart_account_id = None
     if raw_chart_account_id not in (None, ''):
         try:
@@ -184,12 +200,16 @@ def financial_report_income_statement_drilldown(report_slug: str):
         except (TypeError, ValueError):
             abort(400, description='Conta contábil inválida para drill-down da DRE.')
 
+    filters_payload = _request_filters_payload()
+    if using_legacy_chart_account_param:
+        filters_payload.pop('chart_account_id', None)
+
     payload, error = FinancialReportService.build_income_statement_drilldown(
         company_id=company.id,
         report_type=report_slug,
         bucket=bucket or '',
         chart_account_id=chart_account_id,
-        filters=_request_filters_payload(),
+        filters=filters_payload,
         allowed_company_ids=get_accessible_company_ids(),
     )
     if error:

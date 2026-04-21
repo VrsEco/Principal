@@ -3,6 +3,22 @@
 {% set report_filters = report.filters if report else [] %}
 {% set hierarchy_rows = report.hierarchy_rows if report else [] %}
 {% set show_status_columns = report.show_status_columns if report and report.show_status_columns is defined else true %}
+{% macro dre_value_cell(label, tone_class, can_drilldown=false, bucket='', chart_account_id='', account_label='', bucket_label='') -%}
+    {% if can_drilldown %}
+    <button type="button"
+            class="dre-value-button {{ tone_class }}"
+            data-dre-detail-trigger
+            data-bucket="{{ bucket }}"
+            data-chart-account-id="{{ chart_account_id }}"
+            data-account-label="{{ account_label }}"
+            data-bucket-label="{{ bucket_label }}"
+            title="Ver composição de {{ bucket_label|lower }}">
+        {{ label }}
+    </button>
+    {% else %}
+    <span class="dre-value-button dre-value-static {{ tone_class }}">{{ label }}</span>
+    {% endif %}
+{%- endmacro %}
 
 <div class="report-workspace-page dre-report-page fade-in"
      data-report-workspace-root
@@ -65,6 +81,7 @@
                         </thead>
                         <tbody>
                             {% for row in hierarchy_rows %}
+                            {% set can_drilldown = row.is_leaf %}
                             <tr class="dre-row dre-row--{{ row.row_type }}{% if row.level > 0 %} is-child{% endif %}"
                                 data-row-id="{{ row.id }}"
                                 data-parent-id="{{ row.parent_id or '' }}"
@@ -87,20 +104,60 @@
                                     </div>
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button {% if row.competencia < 0 %}dre-value-button--negative{% elif row.competencia > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="competence" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Competência" title="Ver composição da competência">{{ row.competencia_label }}</button>
+                                    {{ dre_value_cell(
+                                        row.competencia_label,
+                                        'dre-value-button--negative' if row.competencia < 0 else ('dre-value-button--positive' if row.competencia > 0 else 'dre-value-button--neutral'),
+                                        can_drilldown=can_drilldown,
+                                        bucket='competence',
+                                        chart_account_id=row.chart_account_id,
+                                        account_label=row.account_label,
+                                        bucket_label='Competência'
+                                    ) }}
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button {% if row.vencimento < 0 %}dre-value-button--negative{% elif row.vencimento > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="due" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Vencimento" title="Ver composição do vencimento">{{ row.vencimento_label }}</button>
+                                    {{ dre_value_cell(
+                                        row.vencimento_label,
+                                        'dre-value-button--negative' if row.vencimento < 0 else ('dre-value-button--positive' if row.vencimento > 0 else 'dre-value-button--neutral'),
+                                        can_drilldown=can_drilldown,
+                                        bucket='due',
+                                        chart_account_id=row.chart_account_id,
+                                        account_label=row.account_label,
+                                        bucket_label='Vencimento'
+                                    ) }}
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button {% if row.liquidacao < 0 %}dre-value-button--negative{% elif row.liquidacao > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="liquidation" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Baixa" title="Ver composição da baixa">{{ row.liquidacao_label }}</button>
+                                    {{ dre_value_cell(
+                                        row.liquidacao_label,
+                                        'dre-value-button--negative' if row.liquidacao < 0 else ('dre-value-button--positive' if row.liquidacao > 0 else 'dre-value-button--neutral'),
+                                        can_drilldown=can_drilldown,
+                                        bucket='liquidation',
+                                        chart_account_id=row.chart_account_id,
+                                        account_label=row.account_label,
+                                        bucket_label='Baixa'
+                                    ) }}
                                 </td>
                                 {% if show_status_columns %}
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button {% if row.aberto < 0 %}dre-value-button--negative{% elif row.aberto > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="open" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Em aberto" title="Ver composição em aberto">{{ row.aberto_label }}</button>
+                                    {{ dre_value_cell(
+                                        row.aberto_label,
+                                        'dre-value-button--negative' if row.aberto < 0 else ('dre-value-button--positive' if row.aberto > 0 else 'dre-value-button--neutral'),
+                                        can_drilldown=can_drilldown,
+                                        bucket='open',
+                                        chart_account_id=row.chart_account_id,
+                                        account_label=row.account_label,
+                                        bucket_label='Em aberto'
+                                    ) }}
                                 </td>
                                 <td class="col-value dre-value">
-                                    <button type="button" class="dre-value-button {% if row.baixado < 0 %}dre-value-button--negative{% elif row.baixado > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="settled" data-chart-account-id="{{ row.chart_account_id }}" data-account-label="{{ row.account_label }}" data-bucket-label="Liquidado" title="Ver composição do liquidado">{{ row.baixado_label }}</button>
+                                    {{ dre_value_cell(
+                                        row.baixado_label,
+                                        'dre-value-button--negative' if row.baixado < 0 else ('dre-value-button--positive' if row.baixado > 0 else 'dre-value-button--neutral'),
+                                        can_drilldown=can_drilldown,
+                                        bucket='settled',
+                                        chart_account_id=row.chart_account_id,
+                                        account_label=row.account_label,
+                                        bucket_label='Liquidado'
+                                    ) }}
                                 </td>
                                 {% endif %}
                             </tr>
