@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260420h') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules.css', v='20260420j') }}">
 {% endblock %}
 
 {% block workspace_content %}
@@ -90,16 +90,16 @@
                                 <input id="field-discount-amount" name="discount_amount_display" value="0,00" inputmode="numeric" data-format="currency" autocomplete="off" placeholder="0,00">
                             </label>
                             <label class="field field-summary field-compact">
-                                <span>Valor das Baixas</span>
+                                <span>Valor das Baixas Principal</span>
                                 <input id="field-liquidated-amount" name="liquidated_amount_display" value="0,00" readonly tabindex="-1">
+                            </label>
+                            <label class="field field-summary field-compact">
+                                <span>Valor das Baixas Total</span>
+                                <input id="field-liquidated-total-amount" name="liquidated_total_amount_display" value="0,00" readonly tabindex="-1">
                             </label>
                             <label class="field field-summary field-compact">
                                 <span>Valor Atualizado</span>
                                 <input id="field-updated-amount" name="updated_amount_display" value="0,00" readonly tabindex="-1">
-                            </label>
-                            <label class="field field-summary field-compact">
-                                <span>Saldo</span>
-                                <input id="field-open-balance" name="open_balance_display" value="0,00" readonly tabindex="-1">
                             </label>
                         </div>
 
@@ -334,5 +334,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260420h') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260420j') }}"></script>
 {% endblock %}

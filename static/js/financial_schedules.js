@@ -363,33 +363,54 @@
     setDiscountAmountField(suggestedValue, { manual: false });
   }
 
-  function calculateLiquidatedAmount() {
-    return round2(
-      (selectedSchedule?.related_entries || []).reduce((entryAcc, entry) => (
-        entryAcc + (entry.settlements || []).reduce((settAcc, settlement) => (
-          settAcc
-          + Number(settlement.principal_amount || 0)
-          + Number(settlement.interest_amount || 0)
-          + Number(settlement.penalty_amount || 0)
-          + Number(settlement.fee_amount || 0)
-          + Number(settlement.other_adjustments_amount || 0)
-          - Number(settlement.discount_amount || 0)
-        ), 0)
+  function scheduleSummary() {
+    return selectedSchedule?.summary || {};
+  }
+
+  function calculateLiquidatedPrincipalAmount() {
+    const summary = scheduleSummary();
+    if (summary.principal_settled !== undefined && summary.principal_settled !== null) {
+      return round2(Number(summary.principal_settled || 0));
+    }
+    return round2((selectedSchedule?.related_entries || []).reduce((entryAcc, entry) => (
+      entryAcc + (entry.settlements || []).reduce((settAcc, settlement) => (
+        settAcc + Number(settlement.principal_amount || 0)
       ), 0)
-    );
+    ), 0));
+  }
+
+  function calculateLiquidatedTotalAmount() {
+    const summary = scheduleSummary();
+    if (summary.settlement_total_amount !== undefined && summary.settlement_total_amount !== null) {
+      return round2(Number(summary.settlement_total_amount || 0));
+    }
+    return round2((selectedSchedule?.related_entries || []).reduce((entryAcc, entry) => (
+      entryAcc + (entry.settlements || []).reduce((settAcc, settlement) => (
+        settAcc + settlementTotalAmount(settlement)
+      ), 0)
+    ), 0));
+  }
+
+  function suggestedCorrectionAmount() {
+    const summary = scheduleSummary();
+    if (summary.suggested_financial_correction !== undefined && summary.suggested_financial_correction !== null) {
+      return round2(Number(summary.suggested_financial_correction || 0));
+    }
+    return calculateCorrectionAmount();
   }
 
   function updateFinancialTotals() {
-    const amount = getTopAmount();
-    const correctionAmount = calculateCorrectionAmount();
+    const summary = scheduleSummary();
+    const principalOpen = Number(summary.principal_open ?? getTopAmount() ?? 0);
+    const correctionAmount = suggestedCorrectionAmount();
     const discountAmount = calculateDiscountAmount();
-    const updatedAmount = round2(amount + correctionAmount - discountAmount);
-    const liquidatedAmount = calculateLiquidatedAmount();
-    const openBalance = round2(updatedAmount - liquidatedAmount);
+    const updatedAmount = round2(Math.max(principalOpen + correctionAmount - discountAmount, 0));
+    const liquidatedPrincipalAmount = calculateLiquidatedPrincipalAmount();
+    const liquidatedTotalAmount = calculateLiquidatedTotalAmount();
     setFieldValue('field-correction-amount', correctionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    setFieldValue('field-liquidated-amount', liquidatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-liquidated-amount', liquidatedPrincipalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setFieldValue('field-liquidated-total-amount', liquidatedTotalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     setFieldValue('field-updated-amount', updatedAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    setFieldValue('field-open-balance', openBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   }
 
   function getEffectiveScheduleAmount() {
