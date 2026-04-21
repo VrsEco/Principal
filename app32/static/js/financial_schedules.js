@@ -985,7 +985,15 @@
     $('baixas-tab-button').classList.toggle('hidden', !(schedule.related_entries || []).length);
     Array.from(form.elements).forEach((field) => {
       if (!field || ['schedule_id', 'schedule_code'].includes(field.name)) return;
+      if (field.matches?.('[data-settlement-delete]')) {
+        field.disabled = false;
+        return;
+      }
       field.disabled = borderoLocked || settlementLocked;
+    });
+    document.querySelectorAll('button[data-settlement-delete]').forEach((button) => {
+      button.disabled = false;
+      button.removeAttribute('aria-disabled');
     });
     document.querySelectorAll('.sched-footer-actions button').forEach((button) => {
       if (button.textContent.includes('Cancelar')) return;

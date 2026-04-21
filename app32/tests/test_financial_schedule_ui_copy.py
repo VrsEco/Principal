@@ -27,3 +27,11 @@ def test_settlement_delete_button_is_bound_to_baixas_list():
     assert "data-settlement-delete" in schedule_js
     assert "const baixasListEl = $('baixas-list');" in schedule_js
     assert "baixasListEl.addEventListener('click'" in schedule_js
+
+
+def test_settlement_delete_button_is_not_disabled_by_title_lock():
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert "field.matches?.('[data-settlement-delete]')" in schedule_js
+    assert "button[data-settlement-delete]" in schedule_js
+    assert "button.disabled = false" in schedule_js
