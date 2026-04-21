@@ -120,10 +120,16 @@ class FinancialTitleBalanceService:
 
         component_amounts = FinancialTitleBalanceService._component_amounts_by_settlement(components)
         principal_settled = Decimal("0")
+        settlement_total_amount = Decimal("0")
         adjustments_settled_by_components = Decimal("0")
         discounts_applied_by_components = Decimal("0")
 
         for settlement in settlements:
+            settlement_total_amount += FinancialTitleBalanceService._money(
+                getattr(settlement, "net_amount", None)
+                or getattr(settlement, "gross_amount", None)
+                or Decimal("0")
+            )
             settlement_id = getattr(settlement, "id", None)
             per_type = component_amounts.get(int(settlement_id), {}) if settlement_id is not None else {}
             if per_type:
@@ -218,6 +224,7 @@ class FinancialTitleBalanceService:
             "reference_date": (reference_date or date.today()).isoformat(),
             "principal_amount": FinancialTitleBalanceService._float(principal_amount),
             "principal_settled": FinancialTitleBalanceService._float(principal_settled),
+            "settlement_total_amount": FinancialTitleBalanceService._float(settlement_total_amount),
             "principal_open": FinancialTitleBalanceService._float(principal_open),
             "adjustments_generated": FinancialTitleBalanceService._float(adjustments_generated),
             "adjustments_settled": FinancialTitleBalanceService._float(adjustments_settled),

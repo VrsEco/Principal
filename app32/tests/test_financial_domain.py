@@ -154,3 +154,27 @@ def test_build_financial_settlement_contract_payload_links_title_and_correction_
     assert payload["financial_correction_amount"] == 35.0
     assert payload["total_amount"] == 235.0
     assert payload["settlement_component_summary"]["financial_correction"] == 35.0
+
+
+def test_build_financial_settlement_contract_payload_uses_legacy_amounts_without_components():
+    payload = build_financial_settlement_contract_payload(
+        {
+            "id": 902,
+            "settlement_code": "LIQ-000902",
+            "financial_entry_id": 89,
+            "external_reference": "financial_schedule:16",
+            "principal_amount": 100,
+            "net_amount": 112,
+            "interest_amount": 7,
+            "penalty_amount": 3,
+            "fee_amount": 2,
+            "discount_amount": 5,
+        },
+        entry_payload={"id": 89, "entry_code": "LAN-000089", "financial_schedule_id": 16},
+    )
+
+    assert payload["financial_correction_amount"] == 12.0
+    assert payload["settlement_component_summary"]["principal"] == 100.0
+    assert payload["settlement_component_summary"]["financial_correction"] == 12.0
+    assert payload["settlement_component_summary"]["discount"] == 5.0
+    assert payload["total_amount"] == 112.0

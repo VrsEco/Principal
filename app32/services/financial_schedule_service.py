@@ -1571,6 +1571,7 @@ class FinancialScheduleService:
             "settlement_state": settlement_state,
             "principal_amount": balance.get("principal_amount"),
             "principal_settled": balance.get("principal_settled"),
+            "settlement_total_amount": balance.get("settlement_total_amount"),
             "principal_open": balance.get("principal_open"),
             "adjustments_generated": balance.get("adjustments_generated"),
             "adjustments_settled": balance.get("adjustments_settled"),
@@ -1578,6 +1579,12 @@ class FinancialScheduleService:
             "discounts_open": balance.get("discounts_open"),
             "suggested_financial_correction": float(suggested_financial_correction.quantize(Decimal("0.01"))),
             "suggested_discount": float(suggested_discount.quantize(Decimal("0.01"))),
+            "suggested_updated_amount": float(
+                max(
+                    Decimal(str(balance.get("principal_open") or 0)) + suggested_financial_correction - suggested_discount,
+                    Decimal("0.00"),
+                ).quantize(Decimal("0.01"))
+            ),
             "total_open": balance.get("total_open"),
             "signed_total_open": balance.get("signed_total_open"),
             "counterparty_name": metadata.get("counterparty_name"),

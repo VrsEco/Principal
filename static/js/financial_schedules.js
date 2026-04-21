@@ -649,6 +649,13 @@
   }
 
   function settlementCorrectionAmount(settlement = {}) {
+    const summary = settlement.settlement_component_summary || {};
+    if (summary.financial_correction !== undefined && summary.financial_correction !== null) {
+      return round2(Number(summary.financial_correction || 0));
+    }
+    if (settlement.financial_correction_amount !== undefined && settlement.financial_correction_amount !== null) {
+      return round2(Number(settlement.financial_correction_amount || 0));
+    }
     const components = Array.isArray(settlement.settlement_components) ? settlement.settlement_components : [];
     const fromComponents = components.reduce((acc, component) => {
       const type = String(component.component_type || '').toLowerCase();
@@ -659,6 +666,29 @@
     }, 0);
     if (fromComponents > 0) return round2(fromComponents);
     return round2(Number(settlement.interest_amount || 0) + Number(settlement.penalty_amount || 0) + Number(settlement.fee_amount || 0) + Number(settlement.other_adjustments_amount || 0));
+  }
+
+  function settlementDiscountAmount(settlement = {}) {
+    const summary = settlement.settlement_component_summary || {};
+    if (summary.discount !== undefined && summary.discount !== null) return round2(Number(summary.discount || 0));
+    const components = Array.isArray(settlement.settlement_components) ? settlement.settlement_components : [];
+    const fromComponents = components.reduce((acc, component) => (
+      String(component.component_type || '').toLowerCase() === 'discount'
+        ? acc + Number(component.amount || 0)
+        : acc
+    ), 0);
+    if (fromComponents > 0) return round2(fromComponents);
+    return round2(Number(settlement.discount_amount || 0));
+  }
+
+  function settlementTotalAmount(settlement = {}) {
+    if (settlement.total_amount !== undefined && settlement.total_amount !== null) return round2(Number(settlement.total_amount || 0));
+    if (settlement.net_amount !== undefined && settlement.net_amount !== null) return round2(Number(settlement.net_amount || 0));
+    return round2(Number(settlement.principal_amount || 0) + settlementCorrectionAmount(settlement) - settlementDiscountAmount(settlement));
+  }
+
+  function canDeleteSettlement(settlement = {}) {
+    return settlement.id && !['matched', 'reconciled'].includes(String(settlement.reconciliation_status || '').toLowerCase());
   }
 
   function hasActiveSettlements(schedule = selectedSchedule) {
@@ -672,8 +702,8 @@
         <strong>${index + 1}. ${entry.description || 'Baixa sem histórico'}</strong>
         <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · <span class="${amountClass(entry.signed_amount ?? 0)}">${money(entry.signed_amount ?? signedAmount(entry.original_amount, entry.movement_nature))}</span></small>
         <table class="settlement-table">
-          <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Principal</th><th>Correção</th><th>Multa</th><th>Juros</th><th>Desconto</th><th>Ações</th></tr></thead>
-          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlement.penalty_amount || 0)}</td><td>${money(settlement.interest_amount || 0)}</td><td>${money(settlement.discount_amount || 0)}</td><td><button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button></td></tr>`).join('') : '<tr><td colspan="9">Sem liquidações registradas.</td></tr>'}</tbody>
+          <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Principal</th><th>Correção Financeira</th><th>Descontos</th><th>Total</th><th>Ações</th></tr></thead>
+          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>'}</td></tr>`).join('') : '<tr><td colspan="8">Sem liquidações registradas.</td></tr>'}</tbody>
         </table>
       </article>`).join('');
   }
@@ -705,55 +735,53 @@
     }
 
     const summary = schedule.summary || {};
-    const editableOpen = summary.editable_open || {};
     const nature = schedule.movement_nature;
     const principalAmount = asMoneyValue(summary.principal_amount ?? summary.template_amount ?? schedule.template_amount);
     const principalOpen = asMoneyValue(summary.principal_open ?? summary.open_principal ?? schedule.template_amount);
-    const adjustmentsGenerated = asMoneyValue(summary.adjustments_generated ?? summary.correction_amount ?? 0);
-    const adjustmentsSettled = asMoneyValue(summary.adjustments_settled ?? 0);
-    const adjustmentsOpen = asMoneyValue(summary.adjustments_open ?? Math.max(adjustmentsGenerated - adjustmentsSettled, 0));
-    const discountsOpen = asMoneyValue(summary.discounts_open ?? summary.discount_amount ?? 0);
-    const totalOpen = asMoneyValue(summary.total_open ?? (principalOpen + adjustmentsOpen - discountsOpen));
-    const settledTotal = asMoneyValue(summary.principal_settled ?? summary.liquidated_amount ?? 0);
-    const editableTotal = asMoneyValue(editableOpen.total_open ?? totalOpen);
-    const editablePrincipal = asMoneyValue(editableOpen.principal ?? principalOpen);
-    const editableCorrection = asMoneyValue(editableOpen.financial_correction ?? adjustmentsOpen);
-    const editableDiscount = asMoneyValue(editableOpen.discount ?? discountsOpen);
+    const suggestedCorrection = asMoneyValue(summary.suggested_financial_correction ?? summary.adjustments_open ?? summary.correction_amount ?? 0);
+    const manualDiscount = asMoneyValue(summary.suggested_discount ?? summary.discounts_open ?? summary.discount_amount ?? 0);
+    const principalSettled = asMoneyValue(summary.principal_settled ?? summary.liquidated_amount ?? 0);
+    const settlementTotal = asMoneyValue(summary.settlement_total_amount ?? summary.settled_amount ?? principalSettled);
+    const updatedAmount = asMoneyValue(summary.suggested_updated_amount ?? Math.max(principalOpen + suggestedCorrection - manualDiscount, 0));
 
     panelEl.innerHTML = `
       <header class="title-balance-head">
         <div>
-          <span>Saldo analítico do título</span>
+          <span>Resumo financeiro do título</span>
           <h3>${escapeHtml(schedule.schedule_code || `Título ${schedule.id}`)} · ${escapeHtml(schedule.description || schedule.name || 'Sem histórico')}</h3>
-          <p>Composição operacional do principal, correções financeiras, descontos e saldo ainda alterável.</p>
+          <p>Principal, correção financeira sugerida, descontos e baixas registradas.</p>
         </div>
-        <strong class="${amountClass(signedAmount(totalOpen, nature))}">${money(signedAmount(totalOpen, nature))}</strong>
       </header>
       <div class="title-balance-grid">
         <article class="title-balance-card title-balance-card--principal">
-          <span>Principal original</span>
+          <span>Valor do principal</span>
           <strong>${money(signedAmount(principalAmount, nature))}</strong>
           <small>Valor base do título financeiro.</small>
         </article>
         <article class="title-balance-card">
-          <span>Principal em aberto</span>
-          <strong>${money(signedAmount(principalOpen, nature))}</strong>
-          <small>Parcela do principal ainda pendente.</small>
+          <span>Valor da correção</span>
+          <strong>${money(signedAmount(suggestedCorrection, nature))}</strong>
+          <small>Calculado sobre o saldo do principal desde a última baixa até hoje.</small>
         </article>
         <article class="title-balance-card title-balance-card--adjustment">
-          <span>Ajustes em aberto</span>
-          <strong>${money(signedAmount(adjustmentsOpen, nature))}</strong>
-          <small>Correções/descontos ainda não baixados.</small>
+          <span>Descontos</span>
+          <strong>${money(signedAmount(manualDiscount, nature))}</strong>
+          <small>Desconto manual considerado no valor atualizado.</small>
         </article>
         <article class="title-balance-card">
-          <span>Principal baixado</span>
-          <strong>${money(signedAmount(settledTotal, nature))}</strong>
-          <small>Principal liquidado até o momento.</small>
+          <span>Valor das baixas principal</span>
+          <strong>${money(signedAmount(principalSettled, nature))}</strong>
+          <small>Somatório do principal já baixado.</small>
+        </article>
+        <article class="title-balance-card">
+          <span>Valor das baixas total</span>
+          <strong>${money(signedAmount(settlementTotal, nature))}</strong>
+          <small>Principal + correção financeira - descontos já baixados.</small>
         </article>
         <article class="title-balance-card title-balance-card--editable">
-          <span>Saldo ainda alterável</span>
-          <strong>${money(signedAmount(editableTotal, nature))}</strong>
-          <small>Principal ${money(signedAmount(editablePrincipal, nature))} · Correção ${money(signedAmount(editableCorrection, nature))} · Desconto ${money(signedAmount(editableDiscount, nature))}</small>
+          <span>Valor atualizado</span>
+          <strong>${money(signedAmount(updatedAmount, nature))}</strong>
+          <small>Principal aberto ${money(signedAmount(principalOpen, nature))} + correção ${money(signedAmount(suggestedCorrection, nature))} - descontos ${money(signedAmount(manualDiscount, nature))}</small>
         </article>
       </div>
     `;

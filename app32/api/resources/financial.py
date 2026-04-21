@@ -1195,6 +1195,9 @@ class FinancialSettlementResource(Resource):
             FinancialSettlement.deleted_at.is_(None),
         ).first_or_404()
 
+        if str(settlement.reconciliation_status or "").strip().lower() in {"matched", "reconciled"}:
+            return {"error": "Baixa conciliada/casada não pode ser excluída. Desfaça a conciliação antes de remover."}, 400
+
         try:
             settlement.deleted_at = datetime.utcnow()
             components = FinancialSettlementComponent.query.filter(

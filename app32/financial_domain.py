@@ -268,13 +268,16 @@ def build_financial_settlement_contract_payload(
     )
     financial_entry_code = entry_data.get("entry_code")
     financial_correction_amount = component_summary.get("financial_correction")
-    if financial_correction_amount is None:
+    if not components:
         financial_correction_amount = _money_float(
             _money_float(contract.get("interest_amount"))
             + _money_float(contract.get("penalty_amount"))
             + _money_float(contract.get("fee_amount"))
             + _money_float(contract.get("other_adjustments_amount"))
         )
+        component_summary["financial_correction"] = _money_float(financial_correction_amount)
+        component_summary.setdefault("discount", _money_float(contract.get("discount_amount")))
+        component_summary.setdefault("principal", _money_float(contract.get("principal_amount")))
     total_amount = contract.get("gross_amount")
     if total_amount is None:
         total_amount = contract.get("net_amount")
