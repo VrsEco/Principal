@@ -110,7 +110,11 @@
                                 <input id="field-principal-open-amount" value="0,00" readonly tabindex="-1">
                             </label>
                             <label class="field field-summary field-compact">
-                                <span>Saldo do Principal Corrigido</span>
+                                <span>Valor da Correção Atual</span>
+                                <input id="field-current-correction-amount" value="0,00" readonly tabindex="-1">
+                            </label>
+                            <label class="field field-summary field-compact">
+                                <span>Saldo do Título Atualizado</span>
                                 <input id="field-updated-amount" name="updated_amount_display" value="0,00" readonly tabindex="-1">
                             </label>
                         </div>
@@ -344,6 +348,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260421-saldo-corrigido') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules.js', v='20260421-saldo-titulo-atualizado') }}"></script>
 {% endblock %}
 

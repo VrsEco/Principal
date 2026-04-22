@@ -420,8 +420,9 @@
     const originalAmount = Number(summary.principal_amount ?? getTopAmount() ?? 0);
     const principalOpen = Number(summary.principal_open ?? getTopAmount() ?? 0);
     const correctionAmount = realizedCorrectionAmount();
+    const currentCorrectionAmount = suggestedCorrectionAmount();
     const discountAmount = realizedDiscountAmount();
-    const updatedAmount = round2(Number(summary.principal_corrected_open ?? summary.suggested_updated_amount ?? Math.max(principalOpen + suggestedCorrectionAmount() - calculateDiscountAmount(), 0)));
+    const updatedAmount = round2(Number(summary.principal_corrected_open ?? summary.suggested_updated_amount ?? Math.max(principalOpen + currentCorrectionAmount - calculateDiscountAmount(), 0)));
     const liquidatedPrincipalAmount = calculateLiquidatedPrincipalAmount();
     const liquidatedTotalAmount = calculateLiquidatedTotalAmount();
     const moneyLabel = (value) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -431,6 +432,7 @@
     setFieldValue('field-discount-amount', moneyLabel(discountAmount));
     setFieldValue('field-liquidated-amount', moneyLabel(liquidatedPrincipalAmount));
     setFieldValue('field-liquidated-total-amount', moneyLabel(liquidatedTotalAmount));
+    setFieldValue('field-current-correction-amount', moneyLabel(currentCorrectionAmount));
     setFieldValue('field-updated-amount', moneyLabel(updatedAmount));
   }
 
@@ -813,8 +815,13 @@
           <strong>${money(signedAmount(settlementTotal, nature))}</strong>
           <small>Principal + correção financeira - descontos já baixados.</small>
         </article>
+        <article class="title-balance-card">
+          <span>Valor da correção atual</span>
+          <strong>${money(signedAmount(suggestedCorrection, nature))}</strong>
+          <small>Correção financeira em aberto projetada para o título.</small>
+        </article>
         <article class="title-balance-card title-balance-card--editable">
-          <span>Saldo do principal corrigido</span>
+          <span>Saldo do título atualizado</span>
           <strong>${money(signedAmount(updatedAmount, nature))}</strong>
           <small>Principal aberto ${money(signedAmount(principalOpen, nature))} + correções em aberto ${money(signedAmount(suggestedCorrection, nature))} - descontos em aberto ${money(signedAmount(manualDiscount, nature))}</small>
         </article>
