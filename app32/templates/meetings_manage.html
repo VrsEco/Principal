@@ -1845,6 +1845,27 @@
             .replace(/'/g, '&#39;');
     }
 
+    function buildRemoveActionButton(onclickExpression, ariaLabel) {
+        return `
+            <button
+                type="button"
+                class="button button-sm button-ghost"
+                onclick="${onclickExpression}"
+                title="${escapeHtml(ariaLabel)}"
+                aria-label="${escapeHtml(ariaLabel)}"
+                style="color: #ef4444; padding: 6px;"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                </svg>
+            </button>
+        `;
+    }
+
     function getExecutionTabKey() {
         const executionTab = document.querySelector('[id^="tab-realiz"]');
         return executionTab ? executionTab.id.replace('tab-', '') : 'realizacao';
@@ -2867,7 +2888,7 @@
                 <strong>${guest.name}</strong><br>
                 <small style="color: var(--text-muted);">${guest.email || 'Sem e-mail'} | ${guest.whatsapp || 'Sem WhatsApp'}</small>
             </div>
-            <button type="button" class="button button-sm button-ghost" onclick="removerGuestInternal(${index})" style="color: #ef4444;">?</button>
+            ${buildRemoveActionButton(`removerGuestInternal(${index})`, `Excluir convidado interno ${guest.name || ''}`)}
         </div>
     `).join('');
     }
@@ -2899,7 +2920,7 @@
                 <strong>${guest.name}</strong><br>
                 <small style="color: var(--text-muted);">${guest.email || 'Sem e-mail'} | ${guest.whatsapp || 'Sem WhatsApp'}</small>
             </div>
-            <button type="button" class="button button-sm button-ghost" onclick="removerGuestExternal(${index})" style="color: #ef4444;">?</button>
+            ${buildRemoveActionButton(`removerGuestExternal(${index})`, `Excluir convidado externo ${guest.name || ''}`)}
         </div>
     `).join('');
     }
@@ -2925,7 +2946,7 @@
         container.innerHTML = agendaItems.map((item, index) => `
         <div class="agenda-item">
             <span style="flex: 1; font-weight: 500;">${index + 1}. ${item.title}</span>
-            <button type="button" class="button button-sm button-ghost" onclick="removerAgenda(${index})" style="color: #ef4444;">?</button>
+            ${buildRemoveActionButton(`removerAgenda(${index})`, `Excluir item de pauta ${item.title || ''}`)}
         </div>
     `).join('');
     }
@@ -3191,7 +3212,7 @@
                 <input type="text" class="form-input" placeholder="Tpico / Título" 
                        value="${disc.title || ''}" onchange="discussions[${index}].title = this.value" style="flex: 1;">
                 <button type="button" class="button button-sm button-outline" onclick="criarAtividadeDaDiscussao(${index})" title="Criar atividade de projeto a partir desta discussão">+ Atividade</button>
-                <button type="button" class="button button-sm button-ghost" onclick="removerDiscussação(${index})" style="color: #ef4444;">?</button>
+                ${buildRemoveActionButton(`removerDiscussação(${index})`, `Excluir discussão ${disc.title || ''}`)}
             </div>
             <textarea class="form-textarea" rows="3" placeholder="Discusso e definies..."
                       onchange="discussions[${index}].discussion = this.value">${disc.discussion || ''}</textarea>
@@ -3388,7 +3409,7 @@
             internalSelect.innerHTML = '<option value="">Colaborador...</option>';
             employeesData.forEach(emp => {
                 const isGuest = guestsInternal.find(g => g.id == emp.id);
-                const label = isGuest ? `? ${emp.name}` : emp.name;
+                const label = isGuest ? `${emp.name} (já convidado)` : emp.name;
                 internalSelect.innerHTML += `<option value="${emp.id}" data-name="${emp.name}" ${currentVal == emp.id ? 'selected' : ''}>${label}</option>`;
             });
         }
@@ -3404,7 +3425,7 @@
                     <div style="font-weight: 600; font-size: 0.9rem;">${p.name}</div>
                     <div style="font-size: 0.7rem; color: #3b82f6; font-weight: 600; text-transform: uppercase;">Colaborador</div>
                 </div>
-                <button type="button" class="button button-sm button-ghost" onclick="removerParticipantEfetivo('internal', ${index})" style="color: #ef4444; padding: 4px;">?</button>
+                ${buildRemoveActionButton(`removerParticipantEfetivo('internal', ${index})`, `Excluir participante interno ${p.name || ''}`)}
             </div>`;
         });
 
@@ -3415,7 +3436,7 @@
                     <div style="font-weight: 600; font-size: 0.9rem;">${p.name}</div>
                     <div style="font-size: 0.7rem; color: #10b981; font-weight: 600; text-transform: uppercase;">Externo</div>
                 </div>
-                <button type="button" class="button button-sm button-ghost" onclick="removerParticipantEfetivo('external', ${index})" style="color: #ef4444; padding: 4px;">?</button>
+                ${buildRemoveActionButton(`removerParticipantEfetivo('external', ${index})`, `Excluir participante externo ${p.name || ''}`)}
             </div>`;
         });
 
