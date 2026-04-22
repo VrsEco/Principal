@@ -520,26 +520,17 @@
   }
 
   function syncAdjustmentAllocationRows() {
-    const correction = getSelectedCorrectionIndex();
-    const discountRule = getSelectedDiscountRule();
-    updateAdjustmentAllocationRow('correction', {
-      adjustment_label: 'Correção Financeira',
-      chart_account_id: getAdjustmentChartAccountId(correction),
-      allocated_amount: calculateCorrectionAmount(),
-      notes: correction ? `Correção Financeira: ${correction.display_label || correction.name || correction.code || correction.id}` : 'Correção Financeira',
-    });
-    updateAdjustmentAllocationRow('discount', {
-      adjustment_label: 'Desconto',
-      chart_account_id: getAdjustmentChartAccountId(discountRule),
-      allocated_amount: calculateDiscountAmount() * -1,
-      notes: discountRule ? `Desconto: ${discountRule.display_label || discountRule.name || discountRule.code || discountRule.id}` : 'Desconto',
-    });
+    allocationRows = getBaseAllocationRows().map((row) => createAllocationRow({
+      ...row,
+      adjustment_kind: null,
+      adjustment_label: null,
+    }));
   }
 
   function summarizeAllocations() {
-    const totalAmount = getEffectiveScheduleAmount();
+    const totalAmount = getTopAmount();
     const totalPercentage = round4(getBaseAllocationRows().reduce((acc, row) => acc + parseDecimal(row.percentage), 0));
-    const totalAllocated = round2(allocationRows.reduce((acc, row) => acc + round2(row.allocated_amount), 0));
+    const totalAllocated = round2(getBaseAllocationRows().reduce((acc, row) => acc + round2(row.allocated_amount), 0));
     const remainingPercentage = round4(100 - totalPercentage);
     const remainingValue = round2(totalAmount - totalAllocated);
     const percentagesOk = Math.abs(totalPercentage - 100) <= 0.01;
@@ -1047,7 +1038,7 @@
   function validateAllocationSummary() {
     const summary = summarizeAllocations();
     if (!summary.percentagesOk) throw new Error('A soma dos percentuais do rateio deve ser exatamente 100%.');
-    if (!summary.valuesOk) throw new Error('A soma dos valores do rateio deve ser igual ao valor atualizado do título financeiro.');
+    if (!summary.valuesOk) throw new Error('A soma dos valores do rateio deve ser igual ao valor principal do título financeiro.');
   }
 
   function buildPayload() {
@@ -1107,7 +1098,7 @@
         repeat_count: Number(fieldValue('field-repeat-count', '1') || 1),
         attachments: selectedSchedule?.attachments || [],
         counterparty_name: $('field-counterparty')?.selectedOptions?.[0]?.textContent || null,
-        allocations: allocationRows.map((row) => ({
+        allocations: getBaseAllocationRows().map((row) => ({
           chart_account_id: Number(row.chart_account_id || 0) || null,
           cost_center_id: Number(row.cost_center_id || 0) || null,
           budget_version_id: Number(row.budget_version_id || 0) || null,
@@ -1125,10 +1116,7 @@
           percentage: row.percentage !== '' ? round4(parseDecimal(row.percentage)) : null,
           allocated_amount: row.allocated_amount != null ? round2(row.allocated_amount) : null,
           notes: row.notes || null,
-          metadata_json: {
-            adjustment_kind: row.adjustment_kind || null,
-            adjustment_label: row.adjustment_label || null,
-          },
+          metadata_json: {},
         })),
       },
     };

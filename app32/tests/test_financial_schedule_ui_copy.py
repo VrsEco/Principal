@@ -35,3 +35,16 @@ def test_settlement_delete_button_is_not_disabled_by_title_lock():
     assert "field.matches?.('[data-settlement-delete]')" in schedule_js
     assert "button[data-settlement-delete]" in schedule_js
     assert "button.disabled = false" in schedule_js
+
+
+def test_schedule_allocation_excludes_financial_adjustments_from_rateio():
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert "updateAdjustmentAllocationRow('correction'" not in schedule_js
+    assert "updateAdjustmentAllocationRow('discount'" not in schedule_js
+    assert "allocationRows = getBaseAllocationRows().map((row) => createAllocationRow({" in schedule_js
+    assert "const totalAmount = getTopAmount();" in schedule_js
+    assert "const totalAllocated = round2(getBaseAllocationRows().reduce" in schedule_js
+    assert "valor principal do título financeiro" in schedule_js
+    assert "allocations: getBaseAllocationRows().map((row) => ({" in schedule_js
+    assert "metadata_json: {}" in schedule_js
