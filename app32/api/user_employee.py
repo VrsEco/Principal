@@ -10,6 +10,9 @@ from models.user import User
 from models.company import Company
 from models.employee import Employee
 from utils.permissions import admin_required, can_access_company, is_platform_admin
+from services.identity.user_employee_orchestrator_service import (
+    UserEmployeeOrchestratorService,
+)
 
 user_employee_bp = Blueprint('user_employee', __name__, url_prefix='/api/user-employee')
 PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
@@ -243,33 +246,16 @@ def update_employee(employee_id):
         
         # Vincular a usuário se fornecido
         if 'user_id' in data and data['user_id']:
-            user_id = int(data['user_id'])
-            # Verificar se usuário existe
-            user = User.query.get(user_id)
-            if not user:
+            link_result = UserEmployeeOrchestratorService.link_existing_user_to_employee(
+                company_id=employee.company_id,
+                user_id=int(data['user_id']),
+                employee_id=employee_id,
+            )
+            if not link_result.get('success'):
                 return jsonify({
                     'success': False,
-                    'error': 'Usuário não encontrado'
-                }), 404
-            
-            # Verificar se já existe outro employee com este user_id nesta empresa
-            existing = Employee.query.filter_by(
-                user_id=user_id,
-                company_id=employee.company_id
-            ).filter(Employee.id != employee_id).first()
-            
-            if existing:
-                return jsonify({
-                    'success': False,
-                    'error': 'Este usuário já está vinculado a outro colaborador nesta empresa'
+                    'error': link_result['error']
                 }), 400
-            
-            employee.user_id = user_id
-            # Atualizar email e nome se não estiverem preenchidos
-            if not employee.email and user.email:
-                employee.email = user.email
-            if not employee.name or employee.name == '':
-                employee.name = user.name
         
         db.session.commit()
         
@@ -331,32 +317,21 @@ def link_employee_to_user(employee_id):
                 'error': 'Usuário não encontrado'
             }), 404
         
-        # Verificar se já existe outro employee com este user_id nesta empresa
-        existing = Employee.query.filter_by(
+        result = UserEmployeeOrchestratorService.link_existing_user_to_employee(
+            company_id=employee.company_id,
             user_id=user_id,
-            company_id=employee.company_id
-        ).filter(Employee.id != employee_id).first()
-        
-        if existing:
+            employee_id=employee_id,
+        )
+        if not result.get('success'):
             return jsonify({
                 'success': False,
-                'error': 'Este usuário já está vinculado a outro colaborador nesta empresa'
+                'error': result['error']
             }), 400
-        
-        # Vincular
-        employee.user_id = user_id
-        # Atualizar email e nome se não estiverem preenchidos
-        if not employee.email and user.email:
-            employee.email = user.email
-        if not employee.name or employee.name == '':
-            employee.name = user.name
-        
-        db.session.commit()
         
         return jsonify({
             'success': True,
             'message': 'Colaborador vinculado ao usuário com sucesso',
-            'employee': employee.to_dict()
+            'employee': result.get('employee')
         }), 200
         
     except Exception as e:

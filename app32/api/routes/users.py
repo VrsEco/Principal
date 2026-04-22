@@ -5,6 +5,9 @@ from schemas.user_pydantic import UserCreateSchema, UserUpdateSchema, UserChanne
 from pydantic import ValidationError
 from utils.permissions import admin_required, is_platform_admin
 from services.notification_hub import notification_hub
+from services.identity.user_employee_orchestrator_service import (
+    UserEmployeeOrchestratorService,
+)
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
@@ -213,13 +216,33 @@ def create_user():
             if invalid_company_ids:
                 return jsonify({"success": False, "message": f"Empresas inválidas ou inativas: {invalid_company_ids}"}), 400
         
-        # Check if email exists
-        if User.query.filter_by(email=validated_data.email).first():
+        existing_user = User.query.filter_by(email=validated_data.email.strip().lower()).first()
+
+        if existing_user and not company_ids:
             return jsonify({"success": False, "message": "Email já cadastrado"}), 400
-        
+
+        if existing_user and company_ids:
+            link_result = UserEmployeeOrchestratorService.link_user_to_companies(
+                user_id=existing_user.id,
+                company_ids=company_ids,
+                employee_payload={
+                    "name": validated_data.name,
+                    "email": validated_data.email,
+                    "whatsapp": validated_data.whatsapp,
+                },
+            )
+            if not link_result.get("success") and not link_result.get("results"):
+                return jsonify({"success": False, "message": link_result["failures"][0]["error"]}), 400
+            return jsonify({
+                "success": True,
+                "user": existing_user.to_dict(),
+                "employees": link_result.get("employees", []),
+                "message": "Usuário existente reaproveitado e vinculado às empresas selecionadas",
+            }), 200
+
         user = User(
             name=validated_data.name,
-            email=validated_data.email,
+            email=validated_data.email.strip().lower(),
             role=validated_data.role,
             whatsapp=validated_data.whatsapp,
             telegram=validated_data.telegram,
@@ -227,20 +250,28 @@ def create_user():
             summary_delivery_channels=_serialize_summary_channels(validated_data.summary_delivery_channels),
         )
         user.set_password(validated_data.password)
-        
+
         db.session.add(user)
-        db.session.commit()
-        
-        # Vincular empresas se houver
+        db.session.flush()
+
+        employees = []
         if company_ids:
-            from services.user_employee_service import UserEmployeeService
-            UserEmployeeService.add_employee_to_multiple_companies(user.id, company_ids)
-            recent_employees = Employee.query.filter_by(user_id=user.id).all()
-            for emp in recent_employees:
-                if emp.company_id in company_ids:
-                    UserEmployeeService.assign_user_to_employee(user.id, emp.id)
-        
-        return jsonify({"success": True, "user": user.to_dict()}), 201
+            link_result = UserEmployeeOrchestratorService.link_user_to_companies(
+                user_id=user.id,
+                company_ids=company_ids,
+                employee_payload={
+                    "name": validated_data.name,
+                    "email": validated_data.email,
+                    "whatsapp": validated_data.whatsapp,
+                },
+            )
+            if not link_result.get("success") and link_result.get("failures"):
+                return jsonify({"success": False, "message": link_result["failures"][0]["error"]}), 400
+            employees = link_result.get("employees", [])
+        else:
+            db.session.commit()
+
+        return jsonify({"success": True, "user": user.to_dict(), "employees": employees}), 201
         
     except ValidationError as e:
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 400

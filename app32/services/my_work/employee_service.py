@@ -52,13 +52,12 @@ def get_employee_id_from_user(user_id: int) -> Optional[int]:
             ).first()
             
             if employee:
-                # Auto-link for future
-                try:
-                    employee.user_id = user_id
-                    db.session.commit()
-                    logger.info(f"✅ Auto-linked: User #{user_id} -> Employee #{employee.id}")
-                except Exception:
-                    db.session.rollback()
+                logger.info(
+                    "Employee fallback match found for user_id=%s by email on employee_id=%s "
+                    "(sem auto-link legado).",
+                    user_id,
+                    employee.id,
+                )
                 return employee.id
         return None
     except Exception as e:

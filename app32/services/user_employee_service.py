@@ -116,63 +116,29 @@ class UserEmployeeService:
         Returns:
             Dict com employee criado
         """
-        try:
-            # Verificar se o usuário já é colaborador desta empresa
-            existing = Employee.query.filter_by(
-                user_id=user_id,
-                company_id=company_id
-            ).first()
-            
-            if existing:
-                return {
-                    'success': False,
-                    'error': 'Usuário já é colaborador desta empresa'
-                }
-            
-            # Buscar dados do usuário
-            user = User.query.get(user_id)
-            if not user:
-                return {
-                    'success': False,
-                    'error': 'Usuário não encontrado'
-                }
-            
-            # Criar novo Employee
-            employee = Employee(
-                user_id=user_id,
-                company_id=company_id,
-                role_id=role_id,
-                name=user.name,
-                email=user.email,
-                status='active'
-            )
-            
-            if employee_data:
-                for key, value in employee_data.items():
-                    if hasattr(employee, key):
-                        setattr(employee, key, value)
-            
-            db.session.add(employee)
-            db.session.commit()
-            
-            return {
-                'success': True,
-                'employee': employee.to_dict()
-            }
-            
-        except Exception as e:
-            db.session.rollback()
-            # Tratar erro de constraint única de forma mais amigável
-            error_msg = str(e)
-            if 'unique' in error_msg.lower() or 'duplicate' in error_msg.lower() or 'idx_employees' in error_msg.lower():
-                return {
-                    'success': False,
-                    'error': 'Usuário já é colaborador desta empresa'
-                }
-            return {
-                'success': False,
-                'error': str(e)
-            }
+        from services.identity.user_employee_orchestrator_service import (
+            UserEmployeeOrchestratorService,
+        )
+
+        user = User.query.get(user_id)
+        if not user:
+            return {'success': False, 'error': 'Usuário não encontrado'}
+
+        payload = dict(employee_data or {})
+        if role_id and 'role_id' not in payload:
+            payload['role_id'] = role_id
+        payload.setdefault('name', user.name)
+        payload.setdefault('email', user.email)
+
+        result = UserEmployeeOrchestratorService.register_or_link_user_employee(
+            company_id=company_id,
+            existing_user_id=user_id,
+            create_system_access=True,
+            employee_payload=payload,
+        )
+        if not result.get('success'):
+            return result
+        return {'success': True, 'employee': result.get('employee'), 'assignment': result.get('assignment')}
 
     @staticmethod
     def add_employee_to_multiple_companies(
@@ -191,99 +157,15 @@ class UserEmployeeService:
         Returns:
             Dict com employees criados e contadores
         """
-        try:
-            # Validar entrada
-            if not company_ids or len(company_ids) == 0:
-                return {
-                    'success': False,
-                    'error': 'Nenhuma empresa foi fornecida'
-                }
-            
-            # Verificar se usuário existe
-            user = User.query.get(user_id)
-            if not user:
-                return {
-                    'success': False,
-                    'error': 'Usuário não encontrado'
-                }
-            
-            # Verificar quais empresas já estão vinculadas
-            existing_employees = Employee.query.filter(
-                Employee.user_id == user_id,
-                Employee.company_id.in_(company_ids)
-            ).all()
-            
-            existing_company_ids = {emp.company_id for emp in existing_employees}
-            new_company_ids = [cid for cid in company_ids if cid not in existing_company_ids]
-            
-            if not new_company_ids:
-                return {
-                    'success': False,
-                    'error': 'Usuário já é colaborador de todas as empresas selecionadas'
-                }
-            
-            # Criar novos Employees para empresas não vinculadas
-            employees_created = []
-            for company_id in new_company_ids:
-                # Verificar se empresa existe usando query SQL direta (evita carregar colunas inexistentes)
-                try:
-                    from sqlalchemy import text
-                    result = db.session.execute(
-                        text("SELECT id FROM companies WHERE id = :company_id"),
-                        {"company_id": company_id}
-                    ).fetchone()
-                    if not result:
-                        continue  # Pula se empresa não existir
-                except Exception as e:
-                    # Se falhar, tentar verificar apenas se existe pelo ID usando exists()
-                    try:
-                        from sqlalchemy import exists
-                        company_exists = db.session.query(
-                            exists().where(Company.id == company_id)
-                        ).scalar()
-                        if not company_exists:
-                            continue
-                    except Exception:
-                        # Se ainda falhar, pular esta empresa
-                        continue
-                
-                employee = Employee(
-                    user_id=user_id,
-                    company_id=company_id,
-                    name=user.name,
-                    email=user.email,
-                    status='active'
-                )
-                
-                if employee_data:
-                    for key, value in employee_data.items():
-                        if hasattr(employee, key):
-                            setattr(employee, key, value)
-                
-                db.session.add(employee)
-                employees_created.append(employee)
-            
-            db.session.commit()
-            
-            return {
-                'success': True,
-                'linked_count': len(employees_created),
-                'skipped_count': len(existing_company_ids),
-                'employees': [emp.to_dict() for emp in employees_created]
-            }
-            
-        except Exception as e:
-            db.session.rollback()
-            error_msg = str(e)
-            if 'unique' in error_msg.lower() or 'duplicate' in error_msg.lower() or 'idx_employees' in error_msg.lower():
-                return {
-                    'success': False,
-                    'error': 'Erro ao vincular: uma ou mais empresas já estão vinculadas'
-                }
-            return {
-                'success': False,
-                'error': str(e)
-            }
+        from services.identity.user_employee_orchestrator_service import (
+            UserEmployeeOrchestratorService,
+        )
+
+        return UserEmployeeOrchestratorService.link_user_to_companies(
+            user_id=user_id,
+            company_ids=company_ids,
+            employee_payload=employee_data,
+        )
 
     @staticmethod
     def get_user_companies(user_id: int) -> List[Dict[str, Any]]:
@@ -397,31 +279,18 @@ class UserEmployeeService:
         Returns:
             Dict com employee criado
         """
-        try:
-            employee = Employee(
-                company_id=company_id,
-                user_id=None,  # Sem vínculo com User
-                name=employee_data['name'],
-                email=employee_data.get('email'),
-                phone=employee_data.get('phone'),
-                department=employee_data.get('department'),
-                status='active'
-            )
-            
-            db.session.add(employee)
-            db.session.commit()
-            
-            return {
-                'success': True,
-                'employee': employee.to_dict()
-            }
-            
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }
+        from services.identity.user_employee_orchestrator_service import (
+            UserEmployeeOrchestratorService,
+        )
+
+        result = UserEmployeeOrchestratorService.register_or_link_user_employee(
+            company_id=company_id,
+            employee_payload=employee_data,
+            create_system_access=False,
+        )
+        if not result.get('success'):
+            return result
+        return {'success': True, 'employee': result.get('employee')}
 
     @staticmethod
     def assign_user_to_employee(

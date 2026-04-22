@@ -1,6 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify
 from models import db, Company, Employee, User, Role, CompanyPerformanceSettings
 from services.user_employee_service import UserEmployeeService
+from services.identity.user_employee_orchestrator_service import (
+    UserEmployeeOrchestratorService,
+)
 from services.company_onboarding_service import CompanyOnboardingService
 from utils.permissions import can_access_company, is_platform_admin, permission_required
 from flask_login import login_required, current_user
@@ -72,49 +75,32 @@ def add_company_user(company_id):
     if not email or not name:
         return jsonify({"error": "Nome e Email são obrigatórios"}), 400
         
-    # Check if user already exists
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        # Create user
-        user = User(email=email, name=name, role=role)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.flush()
-    
-    # Check if already employee of this company
-    existing_emp = Employee.query.filter_by(user_id=user.id, company_id=company_id).first()
-    if existing_emp:
-        return jsonify({"error": "Usuário já vinculado a esta empresa"}), 400
-        
-    # Attempt to find an existing "Colaborador" (Employee) without a user_id 
-    # matching the provided email or name
-    employee_to_link = Employee.query.filter_by(company_id=company_id, email=email).filter(Employee.user_id.is_(None)).first()
-    
-    if not employee_to_link:
-        employee_to_link = Employee.query.filter(
-            Employee.company_id == company_id,
-            db.func.lower(Employee.name) == db.func.lower(name),
-            Employee.user_id.is_(None)
-        ).first()
-
-    if employee_to_link:
-        employee_to_link.user_id = user.id
-        employee_to_link.email = email
-        employee = employee_to_link
-    else:
-        # Create employment link
-        employee = Employee(
-            user_id=user.id,
-            company_id=company_id,
-            name=name,
-            email=email,
-            status='active'
-        )
-        db.session.add(employee)
-        
-    db.session.commit()
-    
-    return jsonify(employee.to_dict()), 201
+    result = UserEmployeeOrchestratorService.register_or_link_user_employee(
+        company_id=company_id,
+        create_system_access=True,
+        user_payload={
+            'name': name,
+            'email': email,
+            'password': password,
+            'role': role,
+            'whatsapp': data.get('whatsapp'),
+            'telegram': data.get('telegram'),
+            'instagram': data.get('instagram'),
+        },
+        employee_payload={
+            'name': name,
+            'email': email,
+            'phone': data.get('phone'),
+            'whatsapp': data.get('whatsapp'),
+            'department': data.get('department'),
+            'role_id': data.get('role_id'),
+            'notes': data.get('notes'),
+        },
+    )
+    if not result.get('success'):
+        return jsonify({"error": result['error']}), 400
+    status_code = 200 if result.get('action') == 'already_linked' else 201
+    return jsonify(result['employee']), status_code
 
 @companies_bp.route('/api/companies/<int:company_id>/roles', methods=['GET'])
 @permission_required('companies', 'view')
@@ -201,10 +187,25 @@ def get_company_employees_full(company_id):
 def add_company_employee(company_id):
     try:
         data = request.json
-        employee = Employee(company_id=company_id, **data)
-        db.session.add(employee)
-        db.session.commit()
-        return jsonify(employee.to_dict()), 201
+        user_id = data.get('user_id')
+        if user_id:
+            result = UserEmployeeOrchestratorService.register_or_link_user_employee(
+                company_id=company_id,
+                existing_user_id=int(user_id),
+                create_system_access=True,
+                employee_payload=data,
+                employee_id=data.get('employee_id'),
+            )
+        else:
+            result = UserEmployeeOrchestratorService.register_or_link_user_employee(
+                company_id=company_id,
+                employee_payload=data,
+                create_system_access=False,
+                employee_id=data.get('employee_id'),
+            )
+        if not result.get('success'):
+            return jsonify({"error": result['error']}), 400
+        return jsonify(result['employee']), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
@@ -252,31 +253,18 @@ def link_company_user(company_id):
     if not user:
         return jsonify({"error": "Usuário do sistema não encontrado"}), 404
         
-    # Verifica se este colaborador já possui um usuário (bloqueia apenas se for um usuário DIFERENTE)
-    if employee.user_id and employee.user_id != user.id:
-        return jsonify({"error": f"O colaborador selecionado já possui outro usuário vinculado (ID: {employee.user_id})"}), 400
-        
-    # Verifica se este usuário já está vinculado a outro colaborador nesta empresa
-    existing_emp = Employee.query.filter_by(user_id=user.id, company_id=company_id).first()
-    if existing_emp and existing_emp.id != employee.id:
-        return jsonify({"error": "Este usuário já está vinculado a outro colaborador nesta empresa"}), 400
-        
-    # Realiza o vínculo através do serviço que gerencia períodos
-    result = UserEmployeeService.assign_user_to_employee(
-        user_id=user.id, 
-        employee_id=employee.id, 
-        start_date=start_date, 
-        end_date=end_date
+    result = UserEmployeeOrchestratorService.link_existing_user_to_employee(
+        company_id=company_id,
+        user_id=user.id,
+        employee_id=employee.id,
+        start_date=start_date,
+        end_date=end_date,
     )
     
     if not result['success']:
         return jsonify({"error": result['error']}), 400
     
-    if not employee.email and user.email:
-        employee.email = user.email
-    db.session.commit()
-    
-    return jsonify({"success": True}), 200
+    return jsonify({"success": True, "assignment": result.get("assignment")}), 200
 
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>', methods=['GET', 'PUT'])
 @permission_required('companies', 'edit')

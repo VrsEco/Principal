@@ -21,6 +21,9 @@ class _FakeSession:
     def commit(self):
         self.committed += 1
 
+    def flush(self):
+        return None
+
     def rollback(self):
         self.rolled_back = True
 
@@ -73,7 +76,7 @@ class _FakeUserQuery:
     def first(self):
         email = (self.last_filter_kwargs or {}).get("email")
         if email and email == self.existing_email:
-            return SimpleNamespace(id=999, email=email)
+            return self.user_obj or SimpleNamespace(id=999, email=email, to_dict=lambda: {"id": 999, "email": email})
         return None
 
     def get_or_404(self, user_id):
@@ -126,24 +129,30 @@ class _FakeEmployee:
     query = None
 
 
-class _FakeUserEmployeeService:
-    added_calls = []
-    assigned_calls = []
+class _FakeOrchestratorService:
+    linked_calls = []
+    linked_response = None
 
     @classmethod
     def reset(cls):
-        cls.added_calls = []
-        cls.assigned_calls = []
+        cls.linked_calls = []
+        cls.linked_response = None
 
     @classmethod
-    def add_employee_to_multiple_companies(cls, user_id, company_ids):
-        cls.added_calls.append((user_id, list(company_ids)))
-        return {"success": True}
-
-    @classmethod
-    def assign_user_to_employee(cls, user_id, employee_id):
-        cls.assigned_calls.append((user_id, employee_id))
-        return {"success": True}
+    def link_user_to_companies(cls, user_id, company_ids, employee_payload=None):
+        cls.linked_calls.append((user_id, list(company_ids), employee_payload or {}))
+        return cls.linked_response or {
+            "success": True,
+            "employees": [
+                {"id": 201, "company_id": 8},
+                {"id": 202, "company_id": 9},
+            ],
+            "results": [
+                {"employee": {"id": 201, "company_id": 8}},
+                {"employee": {"id": 202, "company_id": 9}},
+            ],
+            "failures": [],
+        }
 
 
 def _build_app():
@@ -159,21 +168,15 @@ def test_create_user_route_accepts_company_ids_and_links_employees(monkeypatch):
     session = _FakeSession()
     _FakeUser.query = _FakeUserQuery(existing_email=None)
     _FakeCompany.query = _FakeCompanyQuery(active_ids={8, 9})
-    _FakeEmployee.query = _FakeEmployeeQuery([
-        SimpleNamespace(id=201, user_id=101, company_id=8),
-        SimpleNamespace(id=202, user_id=101, company_id=9),
-        SimpleNamespace(id=203, user_id=777, company_id=8),
-    ])
-    _FakeUserEmployeeService.reset()
+    _FakeEmployee.query = _FakeEmployeeQuery([])
+    _FakeOrchestratorService.reset()
 
     monkeypatch.setattr(users_route, "current_user", SimpleNamespace(id=7, role="admin", is_authenticated=True))
     monkeypatch.setattr(users_route, "db", SimpleNamespace(session=session))
     monkeypatch.setattr(users_route, "User", _FakeUser)
     monkeypatch.setattr(users_route, "Company", _FakeCompany)
     monkeypatch.setattr(users_route, "Employee", _FakeEmployee)
-
-    import services.user_employee_service as service_module
-    monkeypatch.setattr(service_module, "UserEmployeeService", _FakeUserEmployeeService)
+    monkeypatch.setattr(users_route, "UserEmployeeOrchestratorService", _FakeOrchestratorService)
 
     client = app.test_client()
     response = client.post(
@@ -193,9 +196,12 @@ def test_create_user_route_accepts_company_ids_and_links_employees(monkeypatch):
     assert body["success"] is True
     assert body["user"]["email"] == "novo@empresa.com"
     assert body["user"]["summary_delivery_channels"] == "telegram,email"
-    assert session.committed == 1
-    assert _FakeUserEmployeeService.added_calls == [(101, [8, 9])]
-    assert _FakeUserEmployeeService.assigned_calls == [(101, 201), (101, 202)]
+    assert session.committed == 0
+    assert _FakeOrchestratorService.linked_calls == [(
+        101,
+        [8, 9],
+        {"name": "Novo Usuário", "email": "novo@empresa.com", "whatsapp": None},
+    )]
 
 
 def test_create_user_route_rejects_inactive_or_unknown_company_ids(monkeypatch):
@@ -204,16 +210,14 @@ def test_create_user_route_rejects_inactive_or_unknown_company_ids(monkeypatch):
     _FakeUser.query = _FakeUserQuery(existing_email=None)
     _FakeCompany.query = _FakeCompanyQuery(active_ids={8})
     _FakeEmployee.query = _FakeEmployeeQuery([])
-    _FakeUserEmployeeService.reset()
+    _FakeOrchestratorService.reset()
 
     monkeypatch.setattr(users_route, "current_user", SimpleNamespace(id=7, role="admin", is_authenticated=True))
     monkeypatch.setattr(users_route, "db", SimpleNamespace(session=session))
     monkeypatch.setattr(users_route, "User", _FakeUser)
     monkeypatch.setattr(users_route, "Company", _FakeCompany)
     monkeypatch.setattr(users_route, "Employee", _FakeEmployee)
-
-    import services.user_employee_service as service_module
-    monkeypatch.setattr(service_module, "UserEmployeeService", _FakeUserEmployeeService)
+    monkeypatch.setattr(users_route, "UserEmployeeOrchestratorService", _FakeOrchestratorService)
 
     client = app.test_client()
     response = client.post(
@@ -232,8 +236,52 @@ def test_create_user_route_rejects_inactive_or_unknown_company_ids(monkeypatch):
     assert body["success"] is False
     assert "99" in body["message"]
     assert session.committed == 0
-    assert _FakeUserEmployeeService.added_calls == []
-    assert _FakeUserEmployeeService.assigned_calls == []
+    assert _FakeOrchestratorService.linked_calls == []
+
+
+def test_create_user_route_reuses_existing_user_when_email_already_exists(monkeypatch):
+    app = _build_app()
+    session = _FakeSession()
+    existing_user = SimpleNamespace(
+        id=999,
+        email="existente@empresa.com",
+        name="Usuário Existente",
+        to_dict=lambda: {"id": 999, "email": "existente@empresa.com", "name": "Usuário Existente"},
+    )
+    _FakeUser.query = _FakeUserQuery(existing_email="existente@empresa.com", user_obj=existing_user)
+    _FakeCompany.query = _FakeCompanyQuery(active_ids={8, 9})
+    _FakeEmployee.query = _FakeEmployeeQuery([])
+    _FakeOrchestratorService.reset()
+
+    monkeypatch.setattr(users_route, "current_user", SimpleNamespace(id=7, role="admin", is_authenticated=True))
+    monkeypatch.setattr(users_route, "db", SimpleNamespace(session=session))
+    monkeypatch.setattr(users_route, "User", _FakeUser)
+    monkeypatch.setattr(users_route, "Company", _FakeCompany)
+    monkeypatch.setattr(users_route, "Employee", _FakeEmployee)
+    monkeypatch.setattr(users_route, "UserEmployeeOrchestratorService", _FakeOrchestratorService)
+
+    client = app.test_client()
+    response = client.post(
+        "/api/usuarios",
+        json={
+            "name": "Usuário Existente",
+            "email": "existente@empresa.com",
+            "password": "123456",
+            "role": "collaborator",
+            "company_ids": [8, 9],
+        },
+    )
+
+    body = response.get_json()
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["user"]["id"] == 999
+    assert "reaproveitado" in body["message"].lower()
+    assert _FakeOrchestratorService.linked_calls == [(
+        999,
+        [8, 9],
+        {"name": "Usuário Existente", "email": "existente@empresa.com", "whatsapp": None},
+    )]
 
 
 class _FakeNotificationHub:
