@@ -1,6 +1,6 @@
 import os
 import sys
-from datetime import date
+from datetime import date, datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -14,6 +14,9 @@ class _Column:
 
     def is_(self, other):
         return ("is", other)
+
+    def in_(self, other):
+        return ("in", other)
 
     def desc(self):
         return self
@@ -228,6 +231,78 @@ def test_list_title_calculation_logs_hides_logs_marked_with_deletion_timestamp(m
             "LogModel",
             (),
             {"company_id": _Column(), "financial_schedule_id": _Column(), "calculation_date": _Column(), "id": _Column(), "query": _QueryStub(all_result=[deleted_marked_log])},
+        ),
+    )
+    monkeypatch.setattr(calc_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+
+    result, error = FinancialTitleCalculationService.list_title_calculation_logs(
+        company_id=7,
+        schedule_id=77,
+        allowed_company_ids=[7],
+        limit=10,
+    )
+
+    assert error is None
+    assert result["count"] == 0
+    assert result["logs"] == []
+
+
+def test_list_title_calculation_logs_hides_legacy_logs_when_related_settlement_is_deleted(monkeypatch):
+    title = type("Schedule", (), {"id": 77, "company_id": 7, "schedule_code": "TIT-077", "to_dict": lambda self: {"id": 77, "company_id": 7, "schedule_code": "TIT-077"}})()
+    legacy_visible_log = type(
+        "Log",
+        (),
+        {
+            "to_dict": lambda self: {
+                "id": 20,
+                "company_id": 7,
+                "financial_schedule_id": 77,
+                "financial_entry_id": 88,
+                "financial_settlement_id": 99,
+                "event_type": "settlement_posted",
+                "calculation_date": date(2026, 4, 20).isoformat(),
+                "snapshot_json": {"before": {}, "current": {}, "after": {}},
+                "metadata_json": {},
+            }
+        },
+    )()
+    deleted_settlement = type("Settlement", (), {"id": 99, "company_id": 7, "deleted_at": datetime(2026, 4, 21, 10, 0, 0)})()
+    active_entry = type("Entry", (), {"id": 88, "company_id": 7, "deleted_at": None})()
+
+    monkeypatch.setattr(
+        calc_module,
+        "FinancialSchedule",
+        type(
+            "ScheduleModel",
+            (),
+            {"id": _Column(), "company_id": _Column(), "deleted_at": _Column(), "query": _QueryStub(first_result=title)},
+        ),
+    )
+    monkeypatch.setattr(
+        calc_module,
+        "FinancialTitleCalculationLog",
+        type(
+            "LogModel",
+            (),
+            {"company_id": _Column(), "financial_schedule_id": _Column(), "calculation_date": _Column(), "id": _Column(), "query": _QueryStub(all_result=[legacy_visible_log])},
+        ),
+    )
+    monkeypatch.setattr(
+        calc_module,
+        "FinancialSettlement",
+        type(
+            "SettlementModel",
+            (),
+            {"company_id": _Column(), "id": _Column(), "query": _QueryStub(all_result=[deleted_settlement])},
+        ),
+    )
+    monkeypatch.setattr(
+        calc_module,
+        "FinancialEntry",
+        type(
+            "EntryModel",
+            (),
+            {"company_id": _Column(), "id": _Column(), "query": _QueryStub(all_result=[active_entry])},
         ),
     )
     monkeypatch.setattr(calc_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)

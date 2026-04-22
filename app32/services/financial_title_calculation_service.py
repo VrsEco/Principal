@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence, Set, Tuple
 
-from models import FinancialSchedule, FinancialTitleCalculationLog
+from models import FinancialEntry, FinancialSchedule, FinancialSettlement, FinancialTitleCalculationLog
 from services.financial_service import FinancialService
 
 
@@ -132,7 +132,12 @@ class FinancialTitleCalculationService:
         return payload
 
     @staticmethod
-    def _is_hidden_from_memory(payload: Dict[str, Any]) -> bool:
+    def _is_hidden_from_memory(
+        payload: Dict[str, Any],
+        *,
+        deleted_settlement_ids: Optional[Set[int]] = None,
+        deleted_entry_ids: Optional[Set[int]] = None,
+    ) -> bool:
         metadata = dict(payload.get("metadata_json") or {})
         if bool(metadata.get("hidden_from_memory")):
             return True
@@ -145,7 +150,65 @@ class FinancialTitleCalculationService:
             return True
         if payload.get("deleted_at"):
             return True
+        settlement_id = FinancialTitleCalculationService._parse_int(payload.get("financial_settlement_id"))
+        if settlement_id and settlement_id in (deleted_settlement_ids or set()):
+            return True
+        entry_id = FinancialTitleCalculationService._parse_int(payload.get("financial_entry_id"))
+        if entry_id and entry_id in (deleted_entry_ids or set()):
+            return True
         return False
+
+    @staticmethod
+    def _parse_int(value: Any) -> Optional[int]:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
+
+    @staticmethod
+    def _deleted_related_ids(
+        *,
+        company_id: int,
+        serialized_logs: Sequence[Dict[str, Any]],
+    ) -> Tuple[Set[int], Set[int]]:
+        settlement_ids: Set[int] = set()
+        entry_ids: Set[int] = set()
+        for payload in serialized_logs:
+            settlement_id = FinancialTitleCalculationService._parse_int(payload.get("financial_settlement_id"))
+            if settlement_id:
+                settlement_ids.add(settlement_id)
+            entry_id = FinancialTitleCalculationService._parse_int(payload.get("financial_entry_id"))
+            if entry_id:
+                entry_ids.add(entry_id)
+
+        deleted_settlement_ids: Set[int] = set()
+        if settlement_ids:
+            settlements = FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.id.in_(settlement_ids),
+            ).all()
+            deleted_settlement_ids = {
+                int(settlement.id)
+                for settlement in settlements
+                if getattr(settlement, "id", None) is not None
+                and getattr(settlement, "deleted_at", None) is not None
+            }
+
+        deleted_entry_ids: Set[int] = set()
+        if entry_ids:
+            entries = FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.id.in_(entry_ids),
+            ).all()
+            deleted_entry_ids = {
+                int(entry.id)
+                for entry in entries
+                if getattr(entry, "id", None) is not None
+                and getattr(entry, "deleted_at", None) is not None
+            }
+
+        return deleted_settlement_ids, deleted_entry_ids
 
     @staticmethod
     def list_title_calculation_logs(
@@ -188,10 +251,18 @@ class FinancialTitleCalculationService:
             FinancialTitleCalculationService._serialize_log(log)
             for log in logs
         ]
+        deleted_settlement_ids, deleted_entry_ids = FinancialTitleCalculationService._deleted_related_ids(
+            company_id=company_id,
+            serialized_logs=serialized_logs,
+        )
         visible_logs = [
             payload
             for payload in serialized_logs
-            if not FinancialTitleCalculationService._is_hidden_from_memory(payload)
+            if not FinancialTitleCalculationService._is_hidden_from_memory(
+                payload,
+                deleted_settlement_ids=deleted_settlement_ids,
+                deleted_entry_ids=deleted_entry_ids,
+            )
         ]
 
         return {
