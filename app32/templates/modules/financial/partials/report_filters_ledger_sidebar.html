@@ -1,0 +1,194 @@
+{% set selected_counterparties = filters.get('counterparty_ids', []) %}
+{% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
+{% set selected_cost_centers = filters.get('cost_center_ids', []) %}
+{% set selected_projects = filters.get('project_ids', []) %}
+{% set selected_processes = filters.get('process_ids', []) %}
+{% set selected_grouped_by = (filters.get('order_by', ['code']) | first) %}
+{% set selected_movement_nature = (filters.get('movement_nature', ['']) | first) %}
+{% set include_settled = 'include_settled' not in filters or (filters.get('include_settled', ['true']) | first) == 'true' %}
+{% set include_partial = 'include_budget_vs_actual' not in filters or (filters.get('include_budget_vs_actual', ['true']) | first) == 'true' %}
+{% set include_open = 'include_open' not in filters or (filters.get('include_open', ['true']) | first) == 'true' %}
+
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="report-workspace-sidebar-subtitle">Razão moderno com agrupamento analítico e leitura cruzada por dimensão financeira.</p>
+</div>
+
+<div class="sidebar-content-ws report-workspace-sidebar ledger-report-sidebar">
+    <form id="ledger-report-filter-form"
+          data-report-filter-form
+          method="get"
+          action="/financial/reports/{{ report_definition.slug }}"
+          data-view-action="/financial/reports/{{ report_definition.slug }}"
+          data-clear-url="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">
+        {% if company_id %}
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        {% endif %}
+        <input type="hidden" name="orientation" value="landscape">
+        <input type="hidden" name="output_mode" value="screen">
+        <input type="hidden" name="order_direction" value="asc">
+
+        <section class="report-workspace-sidebar__section ledger-sidebar-section">
+            <p class="filter-label">Competência</p>
+            <div class="report-workspace-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="competence_start" value="{{ competence_start }}" data-filter-input data-default-value="{{ default_period_start }}">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="competence_end" value="{{ competence_end }}" data-filter-input data-default-value="{{ default_period_end }}">
+                </label>
+            </div>
+
+            <p class="filter-label">Vencimento</p>
+            <div class="report-workspace-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="due_start" value="{{ due_start }}" data-filter-input data-default-value="">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="due_end" value="{{ due_end }}" data-filter-input data-default-value="">
+                </label>
+            </div>
+
+            <p class="filter-label">Liquidação</p>
+            <div class="report-workspace-date-pair">
+                <label>
+                    <span>De</span>
+                    <input type="date" name="settlement_start" value="{{ settlement_start }}" data-filter-input data-default-value="">
+                </label>
+                <label>
+                    <span>Até</span>
+                    <input type="date" name="settlement_end" value="{{ settlement_end }}" data-filter-input data-default-value="">
+                </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section ledger-sidebar-section">
+            <div class="filter-group">
+                <label class="filter-label" for="ledger-counterparties">Favorecido</label>
+                <select id="ledger-counterparties" name="counterparty_ids" multiple size="6" data-filter-input data-default-value="">
+                    {% for item in options.counterparties %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_counterparties %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="ledger-chart-accounts">Plano de Contas</label>
+                <select id="ledger-chart-accounts" name="chart_account_ids" multiple size="7" data-filter-input data-default-value="">
+                    {% for item in options.chart_accounts %}
+                    {% set option_id = item.id|string %}
+                    {% set is_selectable = item.get('selectable', true) %}
+                    <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %} {% if not is_selectable %}disabled aria-disabled="true"{% endif %}>{{ item.label }}{% if not is_selectable %} · sintética{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="ledger-cost-centers">Centro de Resultado</label>
+                <select id="ledger-cost-centers" name="cost_center_ids" multiple size="6" data-filter-input data-default-value="">
+                    {% for item in options.cost_centers %}
+                    {% set option_id = item.id|string %}
+                    {% set is_selectable = item.get('selectable', true) %}
+                    <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %} {% if not is_selectable %}disabled aria-disabled="true"{% endif %}>{{ item.label }}{% if not is_selectable %} · sintética{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="ledger-projects">Projeto</label>
+                <select id="ledger-projects" name="project_ids" multiple size="5" data-filter-input data-default-value="">
+                    {% for item in options.projects %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="ledger-processes">Projeto / Processo</label>
+                <select id="ledger-processes" name="process_ids" multiple size="5" data-filter-input data-default-value="">
+                    {% for item in options.processes %}
+                    {% set option_id = item.id|string %}
+                    <option value="{{ item.id }}" {% if option_id in selected_processes %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+                <small class="report-workspace-field-help">Use Projeto e/ou Processo para leitura consolidada da coluna Projeto/Processo.</small>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section ledger-sidebar-section">
+            <p class="filter-label">Tipo</p>
+            <div class="report-workspace-radio-grid">
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="movement_nature" value="" {% if selected_movement_nature == '' %}checked{% endif %} data-filter-input data-default-value="">
+                    <span>Todos</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="movement_nature" value="credit" {% if selected_movement_nature == 'credit' %}checked{% endif %} data-filter-input data-default-value="">
+                    <span>Entrada</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="movement_nature" value="debit" {% if selected_movement_nature == 'debit' %}checked{% endif %} data-filter-input data-default-value="">
+                    <span>Saída</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section ledger-sidebar-section">
+            <p class="filter-label">Status</p>
+            <div class="report-workspace-choice-grid">
+                <label class="report-workspace-choice-card">
+                    <input type="hidden" name="include_settled" value="false">
+                    <input type="checkbox" name="include_settled" value="true" {% if include_settled %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Liquidado</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="hidden" name="include_budget_vs_actual" value="false">
+                    <input type="checkbox" name="include_budget_vs_actual" value="true" {% if include_partial %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Liquidado parcial</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="hidden" name="include_open" value="false">
+                    <input type="checkbox" name="include_open" value="true" {% if include_open %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Aberto</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section ledger-sidebar-section">
+            <p class="filter-label">Agrupado por</p>
+            <div class="report-workspace-choice-grid report-workspace-choice-grid--compact">
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="order_by" value="code" {% if selected_grouped_by == 'code' %}checked{% endif %} data-filter-input data-default-value="code">
+                    <span>Plano de Contas</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="order_by" value="description" {% if selected_grouped_by == 'description' %}checked{% endif %} data-filter-input data-default-value="code">
+                    <span>Centro de Resultado</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="order_by" value="project" {% if selected_grouped_by == 'project' %}checked{% endif %} data-filter-input data-default-value="code">
+                    <span>Projeto / Processo</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="order_by" value="counterparty" {% if selected_grouped_by == 'counterparty' %}checked{% endif %} data-filter-input data-default-value="code">
+                    <span>Favorecido</span>
+                </label>
+                <label class="report-workspace-choice-card">
+                    <input type="radio" name="order_by" value="movement_nature" {% if selected_grouped_by == 'movement_nature' %}checked{% endif %} data-filter-input data-default-value="code">
+                    <span>Tipo</span>
+                </label>
+            </div>
+        </section>
+
+        <div class="report-workspace-sidebar__footer">
+            <button type="submit" class="btn btn-primary w-100">Aplicar filtros</button>
+            <button type="button" class="btn btn-secondary w-100" data-report-clear-filters>Limpar filtros</button>
+        </div>
+    </form>
+</div>

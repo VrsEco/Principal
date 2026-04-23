@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from calendar import monthrange
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -26,6 +27,7 @@ from models.financial import (
     FinancialCostCenter,
     FinancialCounterparty,
     FinancialEntry,
+    FinancialEntryAllocation,
     FinancialSchedule,
     FinancialSettlement,
 )
@@ -821,11 +823,48 @@ class FinancialReportService:
         return project_ids
 
     @staticmethod
+    def _entry_process_ids(entry: FinancialEntry) -> List[int]:
+        metadata = dict(getattr(entry, "metadata_json", None) or {})
+        candidates = [
+            metadata.get("process_id"),
+            metadata.get("app_process_id"),
+            metadata.get("grv_process_id"),
+        ]
+        values = metadata.get("process_ids") or []
+        if isinstance(values, (list, tuple, set)):
+            candidates.extend(values)
+
+        process_instance = getattr(entry, "process_instance", None)
+        if process_instance is not None:
+            candidates.append(getattr(process_instance, "process_id", None))
+
+        activity = getattr(entry, "activity", None)
+        if activity is not None:
+            candidates.append(getattr(activity, "process_id", None))
+
+        process_ids: List[int] = []
+        for value in candidates:
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0 and parsed not in process_ids:
+                process_ids.append(parsed)
+        return process_ids
+
+    @staticmethod
     def _entry_matches_projects(entry: FinancialEntry, project_ids: Sequence[int]) -> bool:
         selected = {int(item) for item in project_ids if item}
         if not selected:
             return True
         return bool(selected.intersection(FinancialReportService._entry_project_ids(entry)))
+
+    @staticmethod
+    def _entry_matches_processes(entry: FinancialEntry, process_ids: Sequence[int]) -> bool:
+        selected = {int(item) for item in process_ids if item}
+        if not selected:
+            return True
+        return bool(selected.intersection(FinancialReportService._entry_process_ids(entry)))
 
     @staticmethod
     def _sort_income_statement_account_ids(
@@ -3000,6 +3039,8 @@ class FinancialReportService:
         chart_names = FinancialReportService._name_map(FinancialChartAccount, company_id)
         center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
         project_names = FinancialReportService._name_map(Project, company_id)
+        process_names = FinancialReportService._name_map(Process, company_id)
+        counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
         competence_start = filters.competence_start or filters.period_start
         competence_end = filters.competence_end or filters.period_end
         due_start = filters.due_start
@@ -3019,11 +3060,20 @@ class FinancialReportService:
         cost_center_ids = FinancialReportService._selected_ids(filters.cost_center_id, filters.cost_center_ids)
         if cost_center_ids:
             query = query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
+        counterparty_ids = FinancialReportService._selected_ids(filters.counterparty_id, filters.counterparty_ids)
+        if counterparty_ids:
+            query = query.filter(FinancialEntry.counterparty_id.in_(counterparty_ids))
+        if filters.movement_nature:
+            query = query.filter(FinancialEntry.movement_nature == filters.movement_nature)
         entries = query.order_by(FinancialEntry.competence_date.asc(), FinancialEntry.id.asc()).all()
         if filters.project_ids:
             entries = [entry for entry in entries if FinancialReportService._entry_matches_projects(entry, filters.project_ids)]
+        if filters.process_ids:
+            entries = [entry for entry in entries if FinancialReportService._entry_matches_processes(entry, filters.process_ids)]
         entry_ids = [entry.id for entry in entries]
         settlements_by_entry: Dict[int, Decimal] = {}
+        settlement_dates_by_entry: Dict[int, List[date]] = defaultdict(list)
+        allocation_counts_by_entry: Dict[int, int] = defaultdict(int)
         if entry_ids:
             settlement_query = FinancialSettlement.query.filter(
                 FinancialSettlement.company_id == company_id,
@@ -3038,11 +3088,48 @@ class FinancialReportService:
             for settlement in settlement_query.all():
                 settlements_by_entry.setdefault(settlement.financial_entry_id, Decimal("0"))
                 settlements_by_entry[settlement.financial_entry_id] += Decimal(settlement.net_amount or 0)
+                if settlement.settlement_date:
+                    settlement_dates_by_entry[settlement.financial_entry_id].append(settlement.settlement_date)
 
-        debit_total = Decimal("0")
-        credit_total = Decimal("0")
-        running = Decimal("0")
+            for allocation in FinancialEntryAllocation.query.filter(
+                FinancialEntryAllocation.company_id == company_id,
+                FinancialEntryAllocation.financial_entry_id.in_(entry_ids),
+                FinancialEntryAllocation.deleted_at.is_(None),
+            ).all():
+                allocation_counts_by_entry[allocation.financial_entry_id] += 1
+
+        inflow_total = Decimal("0")
+        outflow_total = Decimal("0")
+        net_total = Decimal("0")
         rows = []
+        grouping_label_map = {
+            "code": "Plano de Contas",
+            "description": "Centro de Resultado",
+            "project": "Projeto / Processo",
+            "counterparty": "Favorecido",
+            "movement_nature": "Tipo",
+        }
+        movement_label_map = {
+            "credit": "Entrada",
+            "debit": "Saída",
+        }
+
+        def _project_process_label(entry: FinancialEntry) -> str:
+            project_labels = [project_names.get(pid, str(pid)) for pid in FinancialReportService._entry_project_ids(entry)]
+            process_labels = [process_names.get(pid, str(pid)) for pid in FinancialReportService._entry_process_ids(entry)]
+            labels = project_labels + [label for label in process_labels if label not in project_labels]
+            return " | ".join(labels) if labels else "Não informado"
+
+        def _group_label_for_row(row: Dict[str, Any]) -> str:
+            value_map = {
+                "code": row["plano_contas"],
+                "description": row["centro_resultado"],
+                "project": row["projeto_processo"],
+                "counterparty": row["favorecido"],
+                "movement_nature": row["tipo"],
+            }
+            return value_map.get(filters.order_by, row["plano_contas"])
+
         for entry in entries:
             if due_start and ((not entry.due_date) or entry.due_date < due_start):
                 continue
@@ -3061,66 +3148,119 @@ class FinancialReportService:
                 continue
             if status_bucket == "Aberto" and not filters.include_open:
                 continue
-            debit = Decimal(entry.original_amount or 0) if entry.movement_nature == "debit" else Decimal("0")
-            credit = Decimal(entry.original_amount or 0) if entry.movement_nature == "credit" else Decimal("0")
-            debit_total += debit
-            credit_total += credit
-            running += credit - debit
-            project_labels = [project_names.get(pid, str(pid)) for pid in FinancialReportService._entry_project_ids(entry)]
+            amount = Decimal(entry.original_amount or 0)
+            signed_amount = amount if entry.movement_nature == "credit" else -amount
+            if signed_amount >= 0:
+                inflow_total += signed_amount
+            else:
+                outflow_total += abs(signed_amount)
+            net_total += signed_amount
+            liquidation_dates = settlement_dates_by_entry.get(entry.id) or []
+            liquidation_date = max(liquidation_dates).isoformat() if liquidation_dates else "-"
+            project_process = _project_process_label(entry)
             rows.append(
                 {
-                    "data": entry.competence_date.isoformat() if entry.competence_date else "-",
-                    "codigo": entry.entry_code,
-                    "conta": chart_names.get(entry.chart_account_id, "Sem conta contábil"),
+                    "agrupador": "",
+                    "id": entry.id,
+                    "historico": FinancialReportService._entry_history_label(entry),
+                    "favorecido": counterparty_names.get(entry.counterparty_id, "Não informado"),
+                    "tipo": movement_label_map.get(entry.movement_nature, "Não informado"),
+                    "plano_contas": chart_names.get(entry.chart_account_id, "Sem conta contábil"),
                     "centro_resultado": center_names.get(entry.cost_center_id, "Não informado"),
-                    "projeto": ", ".join(project_labels) or "Não informado",
-                    "descricao": entry.description,
-                    "debito": FinancialReportService._serialize_money(debit),
-                    "credito": FinancialReportService._serialize_money(credit),
-                    "baixado": FinancialReportService._serialize_money(settled_amount),
+                    "projeto_processo": project_process,
+                    "competencia": entry.competence_date.isoformat() if entry.competence_date else "-",
+                    "vencimento": entry.due_date.isoformat() if entry.due_date else "-",
+                    "liquidacao": liquidation_date,
+                    "valor": FinancialReportService._format_signed_currency(signed_amount, positive_sign=True),
+                    "valor_value": FinancialReportService._serialize_money(signed_amount),
+                    "totalizador": "",
+                    "totalizador_value": 0.0,
+                    "numero_qtd_rateio": f"{FinancialReportService._entry_number_installment_label(entry)} / {allocation_counts_by_entry.get(entry.id, 0)}",
                     "status": status_bucket,
-                    "saldo": FinancialReportService._serialize_money(running),
+                    "_group_label": "",
+                    "_group_sort_value": "",
                 }
             )
-        grouped_sort_key = filters.order_by
         reverse = filters.order_direction == "desc"
-        sort_key_map = {
-            "code": lambda item: str(item["conta"]).lower(),
-            "description": lambda item: str(item["centro_resultado"]).lower(),
-            "project": lambda item: str(item["projeto"]).lower(),
-        }
-        rows.sort(key=sort_key_map.get(grouped_sort_key, sort_key_map["code"]), reverse=reverse)
+        for row in rows:
+            group_label = _group_label_for_row(row)
+            row["agrupador"] = group_label
+            row["_group_label"] = group_label
+            row["_group_sort_value"] = str(group_label).lower()
+        rows.sort(
+            key=lambda item: (
+                item["_group_sort_value"],
+                item["competencia"],
+                item["id"],
+            ),
+            reverse=reverse,
+        )
+
+        grouped_rows: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        group_totals: Dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+        for row in rows:
+            grouped_rows[row["_group_label"]].append(row)
+            group_totals[row["_group_label"]] += Decimal(str(row["valor_value"] or 0))
+
+        groups = []
+        flat_rows = []
+        for group_label in sorted(grouped_rows.keys(), key=lambda value: str(value).lower(), reverse=reverse):
+            group_total = group_totals[group_label]
+            items = grouped_rows[group_label]
+            for row in items:
+                row["totalizador"] = FinancialReportService._format_signed_currency(group_total, positive_sign=True)
+                row["totalizador_value"] = FinancialReportService._serialize_money(group_total)
+                flat_rows.append(row)
+            groups.append(
+                {
+                    "label": group_label,
+                    "item_count": len(items),
+                    "total": FinancialReportService._format_signed_currency(group_total, positive_sign=True),
+                    "total_value": FinancialReportService._serialize_money(group_total),
+                    "rows": items,
+                }
+            )
         return {
             "title": definition["label"],
             "subtitle": definition["description"],
             "summary_cards": [
-                {"label": "Total débito", "value": FinancialReportService._format_currency(debit_total)},
-                {"label": "Total crédito", "value": FinancialReportService._format_currency(credit_total)},
-                {"label": "Saldo líquido", "value": FinancialReportService._format_currency(running)},
-                {"label": "Movimentos", "value": len(rows)},
+                {"label": "Total entradas", "value": FinancialReportService._format_currency(inflow_total)},
+                {"label": "Total saídas", "value": FinancialReportService._format_currency(outflow_total)},
+                {"label": "Saldo líquido", "value": FinancialReportService._format_signed_currency(net_total, positive_sign=True)},
+                {"label": "Lançamentos", "value": len(flat_rows)},
             ],
             "general_info": [
-                {"label": "Competência", "value": f"{competence_start.isoformat()} até {competence_end.isoformat()}"},
-                {"label": "Vencimento", "value": f"{due_start.isoformat()} até {due_end.isoformat()}" if due_start and due_end else "Livre"},
-                {"label": "Baixa", "value": f"{settlement_start.isoformat()} até {settlement_end.isoformat()}" if settlement_start and settlement_end else "Livre"},
-                {"label": "Ordenar por", "value": {"code": "Plano de Conta", "description": "Centro de Resultado", "project": "Projeto"}.get(filters.order_by, filters.order_by)},
+                {"label": "Competência", "value": f"{FinancialReportService._format_date_br(competence_start)} até {FinancialReportService._format_date_br(competence_end)}"},
+                {"label": "Vencimento", "value": f"{FinancialReportService._format_date_br(due_start)} até {FinancialReportService._format_date_br(due_end)}" if due_start and due_end else "Livre"},
+                {"label": "Liquidação", "value": f"{FinancialReportService._format_date_br(settlement_start)} até {FinancialReportService._format_date_br(settlement_end)}" if settlement_start and settlement_end else "Livre"},
+                {"label": "Agrupado por", "value": grouping_label_map.get(filters.order_by, filters.order_by)},
                 {"label": "Orientação PDF", "value": "Paisagem" if filters.orientation == "landscape" else "Retrato"},
             ],
             "columns": [
-                {"key": "data", "label": "Data"},
-                {"key": "codigo", "label": "Lançamento"},
-                {"key": "conta", "label": "Conta"},
+                {"key": "agrupador", "label": "Agrupador"},
+                {"key": "id", "label": "ID"},
+                {"key": "historico", "label": "Histórico"},
+                {"key": "favorecido", "label": "Favorecido"},
+                {"key": "tipo", "label": "Tipo"},
+                {"key": "plano_contas", "label": "Plano de Contas"},
                 {"key": "centro_resultado", "label": "Centro de Resultado"},
-                {"key": "projeto", "label": "Projeto"},
-                {"key": "descricao", "label": "Descrição"},
-                {"key": "debito", "label": "Débito"},
-                {"key": "credito", "label": "Crédito"},
-                {"key": "baixado", "label": "Baixado"},
-                {"key": "status", "label": "Status"},
-                {"key": "saldo", "label": "Saldo acumulado"},
+                {"key": "projeto_processo", "label": "Projeto/Processo"},
+                {"key": "competencia", "label": "Competência"},
+                {"key": "vencimento", "label": "Vencimento"},
+                {"key": "liquidacao", "label": "Liquidação"},
+                {"key": "valor", "label": "Valor"},
+                {"key": "totalizador", "label": "Totalizador"},
+                {"key": "numero_qtd_rateio", "label": "Número/Qtd Rateio"},
             ],
-            "rows": rows,
-            "totals": {"debit": FinancialReportService._serialize_money(debit_total), "credit": FinancialReportService._serialize_money(credit_total), "net": FinancialReportService._serialize_money(running)},
+            "rows": flat_rows,
+            "groups": groups,
+            "grouped_by": filters.order_by,
+            "grouped_by_label": grouping_label_map.get(filters.order_by, filters.order_by),
+            "totals": {
+                "inflow": FinancialReportService._serialize_money(inflow_total),
+                "outflow": FinancialReportService._serialize_money(outflow_total),
+                "net": FinancialReportService._serialize_money(net_total),
+            },
             "orientation": filters.orientation,
         }
 
@@ -3363,9 +3503,10 @@ class FinancialReportService:
         process_names = FinancialReportService._name_map(Process, company_id)
         raw_filters = raw_filters or {}
         order_labels = {
-            "code": "Código",
-            "description": "Descrição",
-            "project": "Projeto",
+            "code": "Plano de Contas",
+            "description": "Centro de Resultado",
+            "project": "Projeto / Processo",
+            "movement_nature": "Tipo",
             "title_number": "Nº Título",
             "installment": "Parcela",
             "history": "Histórico",
@@ -3378,7 +3519,7 @@ class FinancialReportService:
         }
         default_start, default_end = FinancialReportService.default_period()
         values: List[Dict[str, str]] = []
-        if filters.report_type not in {"schedule_report", "income_statement", "income_statement_2"}:
+        if filters.report_type not in {"schedule_report", "income_statement", "income_statement_2", "ledger"}:
             values.extend(
                 [
                     {"label": "Período inicial", "value": filters.period_start.isoformat()},
@@ -3527,6 +3668,19 @@ class FinancialReportService:
                         (filters.show_liquidation_column, "Liquidação"),
                     ] if enabled]) or "Nenhuma",
                 })
+        elif filters.report_type == "ledger":
+            values.append({
+                "label": "Status considerados",
+                "value": ", ".join([
+                    label for enabled, label in [
+                        (filters.include_settled, "Liquidado"),
+                        (filters.include_budget_vs_actual, "Liquidado parcial"),
+                        (filters.include_open, "Aberto"),
+                    ] if enabled
+                ]) or "Nenhum",
+            })
+            values.append({"label": "Agrupado por", "value": order_labels.get(filters.order_by, filters.order_by)})
+            values.append({"label": "Orientação", "value": "Paisagem" if filters.orientation == "landscape" else "Retrato"})
         else:
             if filters.report_type == "cash_flow":
                 if filters.include_projected:
@@ -5104,71 +5258,20 @@ class FinancialReportService:
         )
 
         company_name = str(report_payload.get("company_name") or "Versus Gestão Corporativa")
-        period_label = next(
-            (
-                str(item.get("value") or "").strip()
-                for item in report_payload.get("filters", [])
-                if str(item.get("label") or "").strip().lower() in {"janela analisada", "período"}
-            ),
-            "-",
-        )
         hero_left = [
             Paragraph(report_payload.get("title", "Fluxo de Caixa"), title_style),
             Paragraph(company_name, subtitle_style),
             Paragraph(str(report_payload.get("subtitle") or ""), subtitle_style),
         ]
-        hero_right_style = ParagraphStyle(
-            "CashFlowPdfHeroRight",
-            parent=styles["BodyText"],
-            fontSize=8,
-            leading=10,
-            alignment=TA_LEFT,
-            textColor=colors.white,
-        )
-        hero = Table(
-            [[
-                hero_left,
-                [
-                    Paragraph(f"<b>Período</b><br/>{period_label}", hero_right_style),
-                    Paragraph(f"<b>Emitido em</b><br/>{FinancialReportService._pdf_generated_at_label(report_payload)}", hero_right_style),
-                ],
-            ]],
-            colWidths=[available_width * 0.62, available_width * 0.38],
-            hAlign="LEFT",
-        )
-        hero.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
-                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 14),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-                    ("TOPPADDING", (0, 0), (-1, -1), 12),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ]
-            )
+        top_panel = FinancialReportService._build_cash_flow_pdf_header_accounts_panel(
+            hero_left=hero_left,
+            report_payload=report_payload,
+            available_width=available_width,
+            header_style=table_header_style,
+            cell_style=table_cell_style,
         )
 
-        elements: List[Any] = [hero, Spacer(1, 10)]
-        elements.append(Paragraph("Filtros aplicados", section_title_style))
-        elements.append(
-            FinancialReportService._build_schedule_pdf_filter_cards(
-                report_filters=report_payload.get("filters") or [],
-                available_width=available_width,
-                content_style=filter_style,
-            )
-        )
-        elements.append(Spacer(1, 8))
-        elements.append(
-            FinancialReportService._build_schedule_pdf_summary_cards(
-                report_summary_cards=report_payload.get("summary_cards") or [],
-                available_width=available_width,
-                label_style=stat_label_style,
-                value_style=stat_value_style,
-            )
-        )
-        elements.append(Spacer(1, 10))
+        elements: List[Any] = [top_panel, Spacer(1, 10)]
         elements.append(Paragraph("Contas correntes", section_title_style))
         elements.append(
             FinancialReportService._build_cash_flow_pdf_accounts_table(
@@ -5218,6 +5321,46 @@ class FinancialReportService:
             )
         )
         return elements
+
+    @staticmethod
+    def _build_cash_flow_pdf_header_accounts_panel(*, hero_left: List[Any], report_payload: Dict[str, Any], available_width: float, header_style, cell_style) -> Table:
+        accounts_table = FinancialReportService._build_cash_flow_pdf_accounts_table(
+            report_payload=report_payload,
+            available_width=available_width * 0.72,
+            header_style=header_style,
+            cell_style=cell_style,
+        )
+        hero_card = Table([[hero_left]], colWidths=[available_width * 0.28], hAlign="LEFT")
+        hero_card.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                    ("TOPPADDING", (0, 0), (-1, -1), 12),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
+        )
+        panel = Table(
+            [[hero_card, accounts_table]],
+            colWidths=[available_width * 0.28, available_width * 0.72],
+            hAlign="LEFT",
+        )
+        panel.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ]
+            )
+        )
+        return panel
 
     @staticmethod
     def _build_cash_flow_pdf_accounts_table(*, report_payload: Dict[str, Any], available_width: float, header_style, cell_style) -> Table:

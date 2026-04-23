@@ -73,6 +73,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
         'code',
         'description',
         'project',
+        'movement_nature',
         'title_number',
         'installment',
         'history',

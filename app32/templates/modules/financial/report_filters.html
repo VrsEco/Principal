@@ -13,6 +13,9 @@
 {% elif report_definition.code == 'bank_statement' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419b') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_bank_statement.css', v='20260419b') }}">
+{% elif report_definition.code == 'ledger' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260423d') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_ledger_report.css', v='20260423d') }}">
 {% endif %}
 {% endblock %}
 
@@ -55,6 +58,17 @@
         </svg>
         <span class="btn-text">Filtros</span>
         <span class="report-workspace-filter-count dre-navbar-filter-count" id="dre-report-filter-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% elif report_definition.code == 'ledger' %}
+<div style="display:flex;align-items:center;gap:.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="report-workspace-filter-count ledger-navbar-filter-count" id="ledger-report-filter-count">0</span>
     </button>
     <div class="user-avatar-mini" title="Meu Perfil">MV</div>
 </div>
@@ -105,6 +119,8 @@
 {% include 'modules/financial/partials/report_filters_income_statement_page.html' %}
 {% elif is_bank_statement %}
 {% include 'modules/financial/partials/report_filters_bank_statement_page.html' %}
+{% elif is_ledger %}
+{% include 'modules/financial/partials/report_filters_ledger_page.html' %}
 {% else %}
 <div class="fin-report-page fade-in">
     <section class="report-hero">
@@ -896,6 +912,9 @@
 {% elif report_definition.code == 'bank_statement' %}
 {% set filters = current_filters or {} %}
 {% include 'modules/financial/partials/report_filters_bank_statement_sidebar.html' %}
+{% elif report_definition.code == 'ledger' %}
+{% set filters = current_filters or {} %}
+{% include 'modules/financial/partials/report_filters_ledger_sidebar.html' %}
 {% endif %}
 {% endblock %}
 
@@ -908,6 +927,8 @@
 <script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421d') }}"></script>
 {% elif report_definition.code == 'bank_statement' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260419b') }}"></script>
+{% elif report_definition.code == 'ledger' %}
+<script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260423d') }}"></script>
 {% elif report_definition.code == 'cash_flow' %}
 <script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260421f') }}"></script>
 {% else %}

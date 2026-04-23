@@ -1,0 +1,142 @@
+{% import 'modules/financial/partials/_report_workspace_macros.html' as report_macros %}
+{% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
+{% set report_filters = report.filters if report else [] %}
+{% set report_summary_cards = report.summary_cards if report else [] %}
+{% set report_groups = report.groups if report else [] %}
+{% set grouped_by = report.grouped_by if report else selected_order_by %}
+{% set grouped_by_label = report.grouped_by_label if report else 'Plano de Contas' %}
+{% set cross_reading = 'Plano de Contas | Centro de Resultado | Projeto/Processo' %}
+{% if grouped_by == 'code' %}
+    {% set cross_reading = 'Centro de Resultado | Projeto/Processo' %}
+{% elif grouped_by == 'description' %}
+    {% set cross_reading = 'Plano de Contas | Projeto/Processo' %}
+{% elif grouped_by == 'project' %}
+    {% set cross_reading = 'Plano de Contas | Centro de Resultado' %}
+{% endif %}
+
+<div class="report-workspace-page ledger-report-page fade-in"
+     data-report-workspace-root
+     data-filter-count-target="ledger-report-filter-count">
+    {% call report_macros.workspace_header(report_definition, 'ledger-report-header', 'ledger-report-eyebrow', 'ledger-report-subtitle', 'ledger-report-header-actions', 'Gestão Financeira · Razão Analítico') %}
+    <span class="ledger-report-chip">{{ grouped_by_label }}</span>
+    <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
+    <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
+    {% endcall %}
+
+    <div class="report-workspace-viewer ledger-report-viewer">
+        <article class="report-workspace-sheet ledger-report-sheet">
+            {{ report_macros.workspace_sheet_header(
+                report.title if report else report_definition.label,
+                company.name if company and company.name else 'Empresa ativa',
+                'ledger-section ledger-section--header',
+                'ledger-report-title-main',
+                'ledger-report-company-name'
+            ) }}
+
+            <section class="report-workspace-section ledger-section ledger-section--insight">
+                <div class="ledger-insight-card">
+                    <span class="ledger-insight-card__label">Agrupado por</span>
+                    <strong>{{ grouped_by_label }}</strong>
+                </div>
+                <div class="ledger-insight-card">
+                    <span class="ledger-insight-card__label">Leitura complementar</span>
+                    <strong>{{ cross_reading }}</strong>
+                </div>
+                <div class="ledger-insight-card">
+                    <span class="ledger-insight-card__label">Saída</span>
+                    <strong>Layout contábil moderno com subtotais por agrupador</strong>
+                </div>
+            </section>
+
+            {{ report_macros.workspace_filters(
+                report_filters,
+                'Sem filtros adicionais.',
+                'ledger-section ledger-section--filters',
+                'ledger-section-title',
+                'ledger-filters-grid',
+                'ledger-filter-item'
+            ) }}
+
+            {{ report_macros.workspace_stats(
+                report_summary_cards,
+                'ledger-section ledger-section--stats',
+                'ledger-stats-grid',
+                'ledger-stat',
+                'ledger-stat',
+                'ledger-stat__value',
+                'ledger-stat__label'
+            ) }}
+
+            {{ report_macros.workspace_info(
+                report.general_info if report else [],
+                'Visão operacional',
+                'ledger-section ledger-section--info',
+                'ledger-section-title',
+                'ledger-info-grid',
+                'ledger-info-card'
+            ) }}
+
+            <section class="report-workspace-section ledger-section ledger-section--table">
+                {% if report_groups %}
+                <div class="ledger-groups">
+                    {% for group in report_groups %}
+                    <article class="ledger-group-card">
+                        <header class="ledger-group-card__header">
+                            <div>
+                                <span class="ledger-group-card__eyebrow">Agrupador</span>
+                                <h3>{{ group.label }}</h3>
+                            </div>
+                            <div class="ledger-group-card__meta">
+                                <span>{{ group.item_count }} lançamento(s)</span>
+                                <strong>{{ group.total }}</strong>
+                            </div>
+                        </header>
+                        <div class="report-workspace-table-wrap ledger-table-wrap">
+                            <table class="report-workspace-table ledger-table">
+                                <thead>
+                                    <tr>
+                                        {% for column in report.columns %}
+                                        <th class="col-{{ column.key }}">{{ column.label }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in group.rows %}
+                                    <tr>
+                                        <td class="col-agrupador">
+                                            {% if loop.first %}
+                                            <span class="ledger-group-badge">{{ row.agrupador }}</span>
+                                            {% else %}
+                                            <span class="ledger-group-ghost">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="col-id">{{ row.id }}</td>
+                                        <td class="col-historico">{{ row.historico }}</td>
+                                        <td class="col-favorecido">{{ row.favorecido }}</td>
+                                        <td class="col-tipo"><span class="ledger-type-chip ledger-type-chip--{{ 'credit' if row.tipo == 'Entrada' else 'debit' }}">{{ row.tipo }}</span></td>
+                                        <td class="col-plano_contas">{{ row.plano_contas }}</td>
+                                        <td class="col-centro_resultado">{{ row.centro_resultado }}</td>
+                                        <td class="col-projeto_processo">{{ row.projeto_processo }}</td>
+                                        <td class="col-competencia">{{ row.competencia }}</td>
+                                        <td class="col-vencimento">{{ row.vencimento }}</td>
+                                        <td class="col-liquidacao">{{ row.liquidacao }}</td>
+                                        <td class="col-valor is-currency">{{ row.valor }}</td>
+                                        <td class="col-totalizador is-currency">{{ row.totalizador }}</td>
+                                        <td class="col-numero_qtd_rateio">{{ row.numero_qtd_rateio }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="report-workspace-empty ledger-empty">Nenhum lançamento encontrado para os filtros informados.</div>
+                {% endif %}
+            </section>
+
+            {{ report_macros.workspace_footer(report.generated_at if report else None, 'ledger-footer') }}
+        </article>
+    </div>
+</div>
