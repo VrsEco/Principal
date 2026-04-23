@@ -197,11 +197,33 @@ def test_cash_flow_report_view_renders_dedicated_layout():
         "summary_cards": [{"label": "Saldo inicial", "value": "R$ 1.000,00", "tone": "positive"}],
         "general_info": [{"label": "Periodicidade", "value": "Semanal"}],
         "bank_balance_reference_label": "21/04/2026",
-        "bank_account_summary_rows": [],
+        "bank_account_summary_rows": [
+            {
+                "description": "Inter Versus",
+                "limit": "R$ 50.000,00",
+                "limit_value": 50000.0,
+                "balance": "R$ 1.500,00",
+                "balance_value": 1500.0,
+                "available_total": "R$ 51.500,00",
+                "available_total_value": 51500.0,
+            },
+            {
+                "description": "Efi Banco - Conta 01",
+                "limit": "R$ 0,00",
+                "limit_value": 0.0,
+                "balance": "R$ -200,00",
+                "balance_value": -200.0,
+                "available_total": "R$ -200,00",
+                "available_total_value": -200.0,
+            },
+        ],
         "bank_account_summary_totals": {
-            "limit": "R$ 0,00",
-            "balance": "R$ 0,00",
-            "available_total": "R$ 0,00",
+            "limit": "R$ 50.000,00",
+            "limit_value": 50000.0,
+            "balance": "R$ 1.300,00",
+            "balance_value": 1300.0,
+            "available_total": "R$ 51.300,00",
+            "available_total_value": 51300.0,
         },
         "periodicity_label": "Semanal",
         "columns": [
@@ -256,9 +278,13 @@ def test_cash_flow_report_view_renders_dedicated_layout():
         )
 
     assert "Contas Correntes" in html
+    assert "Empresa Teste" in html
     assert "Contas a Receber Selecionadas" in html
     assert "Contas a Pagar Selecionadas" in html
     assert "Disp. Total Final" in html
+    assert "cashflow-bank-amount--positive" in html
+    assert "cashflow-bank-amount--negative" in html
+    assert "- 200,00" in html
     assert "Visão do período" not in html
     assert "Janela analisada" not in html
     assert "Periodicidade" not in html
