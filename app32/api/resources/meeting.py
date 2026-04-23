@@ -117,6 +117,47 @@ def _clean_text(value):
     return str(value or '').strip()
 
 
+def _normalize_project_id(value):
+    parsed = _parse_optional_int(value)
+    return parsed if parsed and parsed > 0 else None
+
+
+def _collect_meeting_target_project_ids(meeting, activities=None):
+    target_project_ids = []
+
+    meeting_project_id = _normalize_project_id(getattr(meeting, 'project_id', None))
+    if meeting_project_id:
+        target_project_ids.append(meeting_project_id)
+
+    for activity in activities or []:
+        if not isinstance(activity, dict):
+            continue
+        activity_project_id = _normalize_project_id(activity.get('project_id'))
+        if activity_project_id:
+            target_project_ids.append(activity_project_id)
+
+    seen = set()
+    ordered_ids = []
+    for project_id in target_project_ids:
+        if project_id in seen:
+            continue
+        seen.add(project_id)
+        ordered_ids.append(project_id)
+    return ordered_ids
+
+
+def _load_meeting_target_projects(company_id, project_ids):
+    if not company_id or not project_ids:
+        return {}
+
+    projects = (
+        Project.query
+        .filter(Project.company_id == company_id, Project.id.in_(project_ids))
+        .all()
+    )
+    return {project.id: project for project in projects}
+
+
 def _normalize_phone(value):
     return ''.join(ch for ch in str(value or '') if ch.isdigit())
 
@@ -855,7 +896,7 @@ class MeetingActivitiesResource(Resource):
     @login_required
     def get(self, meeting_id):
         """Get all activities related to this meeting (from multiple possible projects)"""
-        from models import ProjectTask, Project
+        from models import ProjectTask
         meeting, error_response = get_meeting_or_404(meeting_id)
         if error_response:
             return error_response
@@ -867,28 +908,39 @@ class MeetingActivitiesResource(Resource):
         except Exception:
             pass
 
+        target_project_ids = _collect_meeting_target_project_ids(meeting, meeting_activities)
+        projects_by_id = _load_meeting_target_projects(meeting.company_id, target_project_ids)
+
         # 2. Activities already created in projects
         project_activities = []
-        if meeting.project_id:
-            tasks = ProjectTask.query.filter_by(project_id=meeting.project_id).all()
+        if projects_by_id:
+            tasks = ProjectTask.query.filter(ProjectTask.project_id.in_(list(projects_by_id.keys()))).all()
             for t in tasks:
                 d = t.to_dict()
                 # Map fields to match what the frontend expects
                 d['title'] = t.what
                 d['responsible'] = t.who or t.employee_name
                 d['deadline'] = t.due_date.isoformat() if t.due_date else None
+                d['project_id'] = t.project_id
+                project = projects_by_id.get(t.project_id)
+                if project:
+                    d['project_title'] = project.name
+                    d['project_code'] = getattr(project, 'code', None)
                 project_activities.append(d)
 
         # 3. Project details
-        project = Project.query.get(meeting.project_id) if meeting.project_id else None
+        primary_project_id = _normalize_project_id(meeting.project_id)
+        if not primary_project_id and len(projects_by_id) == 1:
+            primary_project_id = next(iter(projects_by_id.keys()))
+        project = projects_by_id.get(primary_project_id) if primary_project_id else None
         
         return {
             "success": True,
             "meeting_activities": meeting_activities,
             "project_activities": project_activities,
-            "project_id": meeting.project_id,
+            "project_id": primary_project_id,
             "project_title": project.name if project else None,
-            "project_code": project.code if project else None,
+            "project_code": getattr(project, 'code', None) if project else None,
         }
 
 class MeetingSyncCheckResource(Resource):
@@ -908,20 +960,43 @@ class MeetingSyncCheckResource(Resource):
             m_acts = json.loads(meeting.activities_json or "[]")
         except Exception:
             m_acts = []
-            
-        p_tasks = ProjectTask.query.filter_by(project_id=meeting.project_id).all()
-        
-        m_titles = [a.get('title') for a in m_acts if a.get('title')]
-        p_titles = [t.what for t in p_tasks]
-        
-        missing = [t for t in m_titles if t not in p_titles]
-        extra = [t for t in p_titles if t not in m_titles]
+
+        target_project_ids = _collect_meeting_target_project_ids(meeting, m_acts)
+        projects_by_id = _load_meeting_target_projects(meeting.company_id, target_project_ids)
+        if not projects_by_id:
+            return {"success": True, "is_synced": False, "message": "Sem projeto vinculado", 
+                    "meeting_count": 0, "project_count": 0, "missing_in_project": [], "extra_in_project": []}
+
+        p_tasks = ProjectTask.query.filter(ProjectTask.project_id.in_(list(projects_by_id.keys()))).all()
+        titles_by_project = {}
+        for task in p_tasks:
+            titles_by_project.setdefault(task.project_id, set()).add(task.what)
+
+        meeting_refs = []
+        for activity in m_acts:
+            if not isinstance(activity, dict):
+                continue
+            title = _clean_text(activity.get('title'))
+            target_project_id = _normalize_project_id(activity.get('project_id')) or _normalize_project_id(meeting.project_id)
+            if not title or not target_project_id or target_project_id not in projects_by_id:
+                continue
+            meeting_refs.append((target_project_id, title))
+
+        missing = [
+            title for project_id, title in meeting_refs
+            if title not in titles_by_project.get(project_id, set())
+        ]
+        expected_refs = set(meeting_refs)
+        extra = [
+            task.what for task in p_tasks
+            if (task.project_id, task.what) not in expected_refs
+        ]
         
         return {
             "success": True,
             "is_synced": len(missing) == 0 and len(extra) == 0,
-            "meeting_count": len(m_titles),
-            "project_count": len(p_titles),
+            "meeting_count": len(meeting_refs),
+            "project_count": len(p_tasks),
             "missing_in_project": missing,
             "extra_in_project": extra
         }
@@ -936,28 +1011,41 @@ class MeetingSyncActivitiesResource(Resource):
             return error_response
         data = request.get_json() or {}
         
-        if not meeting.project_id:
-            # Optionally create project if not exists
-            return {"success": False, "message": "Inicie a reunião primeiro para vincular um projeto"}, 400
-
         try:
             m_acts = data.get('activities', [])
-            p_tasks = ProjectTask.query.filter_by(project_id=meeting.project_id).all()
-            p_titles = [t.what for t in p_tasks]
+            if not isinstance(m_acts, list):
+                m_acts = []
+
+            target_project_ids = _collect_meeting_target_project_ids(meeting, m_acts)
+            projects_by_id = _load_meeting_target_projects(meeting.company_id, target_project_ids)
+            if not projects_by_id:
+                return {"success": False, "message": "Vincule a reunião a um projeto ou selecione um projeto destino nas atividades."}, 400
+
+            existing_tasks = ProjectTask.query.filter(ProjectTask.project_id.in_(list(projects_by_id.keys()))).all()
+            titles_by_project = {}
+            for task in existing_tasks:
+                titles_by_project.setdefault(task.project_id, set()).add(task.what)
             
             created_count = 0
             for act in m_acts:
+                if not isinstance(act, dict):
+                    continue
                 title = act.get('title')
-                if not title: continue
+                if not title:
+                    continue
+
+                target_project_id = _normalize_project_id(act.get('project_id')) or _normalize_project_id(meeting.project_id)
+                if not target_project_id or target_project_id not in projects_by_id:
+                    continue
                 
-                if title not in p_titles:
+                if title not in titles_by_project.setdefault(target_project_id, set()):
                     try:
                         due_date = datetime.strptime(act.get('deadline'), '%Y-%m-%d').date() if act.get('deadline') else None
                     except Exception:
                         due_date = None
                         
                     task = ProjectTask(
-                        project_id=meeting.project_id,
+                        project_id=target_project_id,
                         what=title,
                         how=act.get('how', ''),
                         who=act.get('responsible'),
@@ -967,7 +1055,11 @@ class MeetingSyncActivitiesResource(Resource):
                         priority='medium'
                     )
                     db.session.add(task)
+                    titles_by_project[target_project_id].add(title)
                     created_count += 1
+
+            if not _normalize_project_id(meeting.project_id) and len(projects_by_id) == 1:
+                meeting.project_id = next(iter(projects_by_id.keys()))
             
             # Update meeting itself
             if 'meeting_notes' in data: meeting.meeting_notes = data['meeting_notes']
@@ -980,12 +1072,15 @@ class MeetingSyncActivitiesResource(Resource):
             
             db.session.commit()
             
-            project = Project.query.get(meeting.project_id)
+            primary_project_id = _normalize_project_id(meeting.project_id)
+            if not primary_project_id and len(projects_by_id) == 1:
+                primary_project_id = next(iter(projects_by_id.keys()))
+            project = projects_by_id.get(primary_project_id) or (Project.query.get(primary_project_id) if primary_project_id else None)
             return {
                 "success": True, 
                 "message": f"Sincronização concluída. {created_count} novas atividades criadas.",
                 "synced_count": created_count,
-                "project_id": meeting.project_id,
+                "project_id": primary_project_id,
                 "project_title": project.name if project else None
             }
         except Exception as e:

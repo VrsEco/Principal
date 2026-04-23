@@ -8,6 +8,7 @@ from flask import Flask
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from api.resources import meeting as meeting_resource
+import models
 
 
 class _FakeMeetingQuery:
@@ -84,6 +85,40 @@ class _FakeListQuery:
 
     def all(self):
         return self.items
+
+
+class _FakeFilterAllQuery:
+    def __init__(self, items=None):
+        self.items = items or []
+        self.filtered = False
+
+    def filter(self, *args, **kwargs):
+        self.filtered = True
+        return self
+
+    def all(self):
+        return self.items
+
+
+class _FakeDbSession:
+    def __init__(self):
+        self.added = []
+        self.committed = 0
+        self.rolled_back = False
+
+    def add(self, obj):
+        self.added.append(obj)
+
+    def commit(self):
+        self.committed += 1
+
+    def rollback(self):
+        self.rolled_back = True
+
+
+class _FakeColumn:
+    def in_(self, values):
+        return values
 
 
 def _build_app():
@@ -381,3 +416,109 @@ def test_meeting_share_summary_sends_selected_channels(monkeypatch):
     assert sent_emails[0]['subject'].startswith('Resumo da Reunião:')
     assert 'Ata completa:' in sent_emails[0]['body']
     assert sent_whatsapps[0]['message'].startswith('📋 *RESUMO DA REUNIÃO*')
+
+
+def test_meeting_sync_activities_respects_activity_project_id(monkeypatch):
+    app = _build_app()
+    fake_session = _FakeDbSession()
+
+    meeting_payload = SimpleNamespace(
+        id=27,
+        company_id=8,
+        project_id=None,
+        meeting_notes='',
+        participants_json='[]',
+        discussions_json='[]',
+        activities_json='[]',
+        actual_duration_minutes=None,
+        planned_duration_minutes=None,
+        status='draft',
+        updated_at=None,
+    )
+
+    fake_project = SimpleNamespace(id=22, company_id=8, name='Consultoria - Geral', code='C.J.22')
+
+    class _FakeProjectTask:
+        query = _FakeFilterAllQuery([])
+        project_id = _FakeColumn()
+
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='admin'))
+    monkeypatch.setattr(meeting_resource, 'Meeting', SimpleNamespace(query=_FakeMeetingQuery(meeting_payload)))
+    monkeypatch.setattr(meeting_resource, 'Company', SimpleNamespace(query=_FakeCompanyQuery(SimpleNamespace(id=8, is_active=True))))
+    monkeypatch.setattr(meeting_resource, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery(SimpleNamespace(company_id=8))))
+    monkeypatch.setattr(meeting_resource, 'db', SimpleNamespace(session=fake_session))
+    monkeypatch.setattr(models, 'ProjectTask', _FakeProjectTask)
+    monkeypatch.setattr(meeting_resource, '_load_meeting_target_projects', lambda company_id, project_ids: {22: fake_project})
+
+    with app.test_request_context(
+        '/meetings/api/meeting/27/sync-activities?company_id=8',
+        method='POST',
+        json={
+            'activities': [
+                {
+                    'title': 'Plano de Estruturação da Loja - Adenize',
+                    'responsible': 'Adenize',
+                    'employee_id': 34,
+                    'deadline': '2026-04-20',
+                    'project_id': 22,
+                }
+            ]
+        },
+    ):
+        response = meeting_resource.MeetingSyncActivitiesResource().post.__wrapped__(meeting_resource.MeetingSyncActivitiesResource(), 27)
+
+    created_task = fake_session.added[0]
+    assert response['success'] is True
+    assert response['synced_count'] == 1
+    assert created_task.project_id == 22
+    assert created_task.what == 'Plano de Estruturação da Loja - Adenize'
+    assert meeting_payload.project_id == 22
+    assert fake_session.committed == 1
+
+
+def test_meeting_activities_resource_loads_tasks_from_activity_projects(monkeypatch):
+    app = _build_app()
+
+    meeting_payload = SimpleNamespace(
+        id=27,
+        company_id=8,
+        project_id=None,
+        activities_json=json.dumps([
+            {'title': 'Plano de Estruturação da Loja - Adenize', 'project_id': 22, 'responsible': 'Adenize', 'deadline': '2026-04-20'}
+        ]),
+    )
+
+    fake_project = SimpleNamespace(id=22, company_id=8, name='Consultoria - Geral', code='C.J.22')
+    fake_task = SimpleNamespace(
+        project_id=22,
+        what='Plano de Estruturação da Loja - Adenize',
+        who='Adenize',
+        employee_name='Adenize',
+        due_date=SimpleNamespace(isoformat=lambda: '2026-04-20'),
+        to_dict=lambda: {'id': 501, 'project_id': 22},
+    )
+
+    class _FakeProjectTaskModel:
+        query = _FakeFilterAllQuery([fake_task])
+        project_id = _FakeColumn()
+
+    monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='admin'))
+    monkeypatch.setattr(meeting_resource, 'Meeting', SimpleNamespace(query=_FakeMeetingQuery(meeting_payload)))
+    monkeypatch.setattr(meeting_resource, 'Company', SimpleNamespace(query=_FakeCompanyQuery(SimpleNamespace(id=8, is_active=True))))
+    monkeypatch.setattr(meeting_resource, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery(SimpleNamespace(company_id=8))))
+    monkeypatch.setattr(models, 'ProjectTask', _FakeProjectTaskModel)
+    monkeypatch.setattr(meeting_resource, '_load_meeting_target_projects', lambda company_id, project_ids: {22: fake_project})
+
+    with app.test_request_context('/meetings/api/meeting/27/atividades?company_id=8'):
+        response = meeting_resource.MeetingActivitiesResource().get.__wrapped__(meeting_resource.MeetingActivitiesResource(), 27)
+
+    assert response['success'] is True
+    assert response['project_id'] == 22
+    assert response['project_title'] == 'Consultoria - Geral'
+    assert response['project_activities'][0]['project_id'] == 22
+    assert response['project_activities'][0]['project_title'] == 'Consultoria - Geral'
+    assert response['project_activities'][0]['project_code'] == 'C.J.22'
