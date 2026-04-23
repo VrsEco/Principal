@@ -3,9 +3,11 @@ import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import services.financial_report_service as report_module
 from services.financial_dashboard_analytics import FinancialDashboardAnalytics
 from services.financial_report_service import FinancialReportService
 
@@ -170,3 +172,100 @@ def test_cash_flow_report_partial_contains_expected_sections():
     assert "Contas a Pagar Selecionadas" in template
     assert "projected_amount_label" in template
     assert "Retirado" in template
+
+
+class _Column:
+    def __eq__(self, other):
+        return ("eq", other)
+
+    def is_(self, other):
+        return ("is", other)
+
+    def isnot(self, other):
+        return ("isnot", other)
+
+    def in_(self, other):
+        return ("in", list(other))
+
+    def __ge__(self, other):
+        return ("ge", other)
+
+    def __le__(self, other):
+        return ("le", other)
+
+    def asc(self):
+        return self
+
+
+class _QueryStub:
+    def __init__(self):
+        self.filters = []
+        self.ordering = []
+
+    def filter(self, *args, **kwargs):
+        self.filters.extend(args)
+        return self
+
+    def order_by(self, *args, **kwargs):
+        self.ordering.extend(args)
+        return self
+
+
+def test_cash_flow_projected_query_includes_titles_without_bank_account_when_accounts_selected(monkeypatch):
+    query = _QueryStub()
+    entry_model = type(
+        "FinancialEntryStub",
+        (),
+        {
+            "company_id": _Column(),
+            "deleted_at": _Column(),
+            "status": _Column(),
+            "due_date": _Column(),
+            "bank_account_id": _Column(),
+            "id": _Column(),
+            "query": query,
+        },
+    )
+    monkeypatch.setattr(report_module, "FinancialEntry", entry_model)
+    monkeypatch.setattr(report_module, "or_", lambda *args: ("or", args))
+
+    filters = SimpleNamespace(
+        period_start=date(2026, 5, 1),
+        period_end=date(2026, 5, 31),
+        bank_account_id=None,
+        bank_account_ids=[1, 2],
+    )
+
+    FinancialReportService._cash_flow_projected_entry_query(9, filters)
+
+    assert ("or", (("in", [1, 2]), ("is", None))) in query.filters
+
+
+def test_cash_flow_projected_query_with_empty_bank_marker_keeps_only_titles_without_bank_account(monkeypatch):
+    query = _QueryStub()
+    entry_model = type(
+        "FinancialEntryStub",
+        (),
+        {
+            "company_id": _Column(),
+            "deleted_at": _Column(),
+            "status": _Column(),
+            "due_date": _Column(),
+            "bank_account_id": _Column(),
+            "id": _Column(),
+            "query": query,
+        },
+    )
+    monkeypatch.setattr(report_module, "FinancialEntry", entry_model)
+    monkeypatch.setattr(report_module, "or_", lambda *args: ("or", args))
+
+    filters = SimpleNamespace(
+        period_start=date(2026, 5, 1),
+        period_end=date(2026, 5, 31),
+        bank_account_id=None,
+        bank_account_ids=[-1],
+    )
+
+    FinancialReportService._cash_flow_projected_entry_query(9, filters)
+
+    assert ("is", None) in query.filters

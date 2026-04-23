@@ -1044,8 +1044,15 @@ class FinancialReportService:
             filters.bank_account_ids,
             preserve_empty_marker=True,
         )
-        if bank_account_ids:
-            query = query.filter(FinancialEntry.bank_account_id.in_(bank_account_ids))
+        if bank_account_ids == [-1]:
+            query = query.filter(FinancialEntry.bank_account_id.is_(None))
+        elif bank_account_ids:
+            query = query.filter(
+                or_(
+                    FinancialEntry.bank_account_id.in_(bank_account_ids),
+                    FinancialEntry.bank_account_id.is_(None),
+                )
+            )
 
         positive_entry_ids = FinancialReportService._selected_ids(None, entry_ids or [])
         if positive_entry_ids:
