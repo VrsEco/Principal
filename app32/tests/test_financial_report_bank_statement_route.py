@@ -243,24 +243,44 @@ def test_cash_flow_report_view_renders_dedicated_layout():
                 "data_inicial": "01/04/2026",
                 "data_final": "07/04/2026",
                 "saldo_inicial": "R$ 1.000,00",
-                "entrada": "R$ 0,00",
-                "saida": "R$ 100,00",
+                "entrada": "R$ 250,00",
+                "saida": "R$ -100,00",
                 "saldo_final": "R$ 900,00",
                 "limite": "R$ 0,00",
                 "disponivel_total_final": "R$ 900,00",
             }
         ],
-        "selected_receivables": [],
+        "selected_receivables": [
+            {
+                "id": 44,
+                "type_code": "RCB",
+                "title_amount": "R$ 1.250,00",
+                "open_amount": "R$ 1.250,00",
+                "counterparty": "001 - Cliente Teste 01",
+                "due_date": "02/05/2026",
+                "is_excluded": False,
+            }
+        ],
         "selected_receivables_totals": {
-            "count": 0,
-            "title_amount": "R$ 0,00",
-            "open_amount": "R$ 0,00",
+            "count": 1,
+            "title_amount": "R$ 1.250,00",
+            "open_amount": "R$ 1.250,00",
         },
-        "selected_payables": [],
+        "selected_payables": [
+            {
+                "id": 45,
+                "type_code": "PGT",
+                "title_amount": "R$ -1.050,00",
+                "open_amount": "R$ -1.050,00",
+                "counterparty": "002 - Fornecedor Teste 02",
+                "due_date": "02/05/2026",
+                "is_excluded": False,
+            }
+        ],
         "selected_payables_totals": {
-            "count": 0,
-            "title_amount": "R$ 0,00",
-            "open_amount": "R$ 0,00",
+            "count": 1,
+            "title_amount": "R$ -1.050,00",
+            "open_amount": "R$ -1.050,00",
         },
         "generated_at": "21/04/2026 10:00",
     }
@@ -284,7 +304,13 @@ def test_cash_flow_report_view_renders_dedicated_layout():
     assert "Disp. Total Final" in html
     assert "cashflow-bank-amount--positive" in html
     assert "cashflow-bank-amount--negative" in html
+    assert "cashflow-amount--positive" in html
+    assert "cashflow-amount--negative" in html
     assert "- 200,00" in html
+    assert "1.250,00" in html
+    assert "- 1.050,00" in html
+    assert "R$ 1.250,00" not in html
+    assert "R$ -1.050,00" not in html
     assert "Visão do período" not in html
     assert "Janela analisada" not in html
     assert "Periodicidade" not in html

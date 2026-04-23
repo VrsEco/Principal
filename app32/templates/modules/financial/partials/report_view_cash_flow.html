@@ -1,13 +1,15 @@
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
-{% macro bank_amount(value, amount_value) -%}
-    {% set raw_value = (value or '') | replace('R$ ', '') | replace('R$', '') | trim %}
-    {% if amount_value < 0 %}
-        {% set clean_value = raw_value | replace('- ', '') | replace('-', '') | trim %}
-        <span class="cashflow-bank-amount cashflow-bank-amount--negative">- {{ clean_value }}</span>
-    {% elif amount_value > 0 %}
-        <span class="cashflow-bank-amount cashflow-bank-amount--positive">{{ raw_value }}</span>
+{% macro money_amount(value, amount_value=None, css_base='cashflow-amount') -%}
+    {% set raw_value = (value or '0,00') | replace('R$ ', '') | replace('R$', '') | trim %}
+    {% set unsigned_value = raw_value | replace('- ', '') | replace('-', '') | trim %}
+    {% set normalized_amount = unsigned_value | replace('.', '') | replace(',', '.') %}
+    {% set resolved_amount = amount_value if amount_value is not none else ((-1 if '-' in raw_value else 1) * (normalized_amount | float)) %}
+    {% if resolved_amount < 0 %}
+        <span class="{{ css_base }} {{ css_base }}--negative">- {{ unsigned_value }}</span>
+    {% elif resolved_amount > 0 %}
+        <span class="{{ css_base }} {{ css_base }}--positive">{{ unsigned_value }}</span>
     {% else %}
-        <span class="cashflow-bank-amount cashflow-bank-amount--neutral">{{ raw_value }}</span>
+        <span class="{{ css_base }} {{ css_base }}--neutral">{{ unsigned_value }}</span>
     {% endif %}
 {%- endmacro %}
 
@@ -58,18 +60,18 @@
                                     {% for row in report.bank_account_summary_rows %}
                                     <tr>
                                         <td>{{ row.description }}</td>
-                                        <td>{{ bank_amount(row.limit, row.limit_value) }}</td>
-                                        <td>{{ bank_amount(row.balance, row.balance_value) }}</td>
-                                        <td>{{ bank_amount(row.available_total, row.available_total_value) }}</td>
+                                        <td>{{ money_amount(row.limit, row.limit_value, 'cashflow-bank-amount') }}</td>
+                                        <td>{{ money_amount(row.balance, row.balance_value, 'cashflow-bank-amount') }}</td>
+                                        <td>{{ money_amount(row.available_total, row.available_total_value, 'cashflow-bank-amount') }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                                 <tfoot>
                                     <tr>
                                         <th>Total</th>
-                                        <th>{{ bank_amount(report.bank_account_summary_totals.limit, report.bank_account_summary_totals.limit_value) }}</th>
-                                        <th>{{ bank_amount(report.bank_account_summary_totals.balance, report.bank_account_summary_totals.balance_value) }}</th>
-                                        <th>{{ bank_amount(report.bank_account_summary_totals.available_total, report.bank_account_summary_totals.available_total_value) }}</th>
+                                        <th>{{ money_amount(report.bank_account_summary_totals.limit, report.bank_account_summary_totals.limit_value, 'cashflow-bank-amount') }}</th>
+                                        <th>{{ money_amount(report.bank_account_summary_totals.balance, report.bank_account_summary_totals.balance_value, 'cashflow-bank-amount') }}</th>
+                                        <th>{{ money_amount(report.bank_account_summary_totals.available_total, report.bank_account_summary_totals.available_total_value, 'cashflow-bank-amount') }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -97,10 +99,17 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {% set cashflow_amount_columns = ['saldo_inicial', 'entrada', 'saida', 'saldo_final', 'limite', 'disponivel_total_final'] %}
                             {% for row in report.rows %}
                             <tr>
                                 {% for column in report.columns %}
-                                <td>{{ row[column.key] }}</td>
+                                <td>
+                                    {% if column.key in cashflow_amount_columns %}
+                                        {{ money_amount(row[column.key]) }}
+                                    {% else %}
+                                        {{ row[column.key] }}
+                                    {% endif %}
+                                </td>
                                 {% endfor %}
                             </tr>
                             {% endfor %}
@@ -140,8 +149,8 @@
                                 <tr class="{% if row.is_excluded %}is-excluded{% endif %}">
                                     <td>{{ row.id }}</td>
                                     <td>{{ row.type_code }}</td>
-                                    <td>{{ row.title_amount }}</td>
-                                    <td>{{ row.open_amount }}</td>
+                                    <td>{{ money_amount(row.title_amount) }}</td>
+                                    <td>{{ money_amount(row.open_amount) }}</td>
                                     <td>{{ row.counterparty }}</td>
                                     <td>
                                         <div class="cashflow-due-cell">
@@ -162,8 +171,8 @@
                         <tfoot>
                             <tr>
                                 <th colspan="2">Total a Receber</th>
-                                <th>{{ report.selected_receivables_totals.title_amount }}</th>
-                                <th>{{ report.selected_receivables_totals.open_amount }}</th>
+                                <th>{{ money_amount(report.selected_receivables_totals.title_amount) }}</th>
+                                <th>{{ money_amount(report.selected_receivables_totals.open_amount) }}</th>
                                 <th colspan="2">{{ report.selected_receivables_totals.count }} título(s)</th>
                             </tr>
                         </tfoot>
@@ -202,8 +211,8 @@
                                 <tr class="{% if row.is_excluded %}is-excluded{% endif %}">
                                     <td>{{ row.id }}</td>
                                     <td>{{ row.type_code }}</td>
-                                    <td>{{ row.title_amount }}</td>
-                                    <td>{{ row.open_amount }}</td>
+                                    <td>{{ money_amount(row.title_amount) }}</td>
+                                    <td>{{ money_amount(row.open_amount) }}</td>
                                     <td>{{ row.counterparty }}</td>
                                     <td>
                                         <div class="cashflow-due-cell">
@@ -224,8 +233,8 @@
                         <tfoot>
                             <tr>
                                 <th colspan="2">Total a Pagar</th>
-                                <th>{{ report.selected_payables_totals.title_amount }}</th>
-                                <th>{{ report.selected_payables_totals.open_amount }}</th>
+                                <th>{{ money_amount(report.selected_payables_totals.title_amount) }}</th>
+                                <th>{{ money_amount(report.selected_payables_totals.open_amount) }}</th>
                                 <th colspan="2">{{ report.selected_payables_totals.count }} título(s)</th>
                             </tr>
                         </tfoot>

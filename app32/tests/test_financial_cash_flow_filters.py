@@ -174,8 +174,10 @@ def test_cash_flow_report_partial_contains_expected_sections():
     assert "Retirado" in template
     assert "cashflow-accounts-layout" in template
     assert "cashflow-accounts-brand" in template
-    assert "cashflow-bank-amount--positive" in template
-    assert "cashflow-bank-amount--negative" in template
+    assert "cashflow-bank-amount" in template
+    assert "cashflow-amount" in template
+    assert "css_base }}--positive" in template
+    assert "css_base }}--negative" in template
     assert "cashflow-title-col--counterparty" in template
     assert "cashflow-title-col--projected" in template
 
