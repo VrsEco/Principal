@@ -1084,8 +1084,65 @@ class FinancialReportService:
                     FinancialEntry.external_reference.ilike(pattern),
                     FinancialEntry.origin_reference.ilike(pattern),
                 )
-            )
+        )
         return query.order_by(FinancialEntry.due_date.asc(), FinancialEntry.id.asc())
+
+    @staticmethod
+    def _cash_flow_projected_schedule_query(
+        company_id: int,
+        filters: FinancialManagementReportFiltersInput,
+        *,
+        selection_filters: Optional[Dict[str, Any]] = None,
+    ):
+        query = FinancialSchedule.query.filter(
+            FinancialSchedule.company_id == company_id,
+            FinancialSchedule.deleted_at.is_(None),
+            FinancialSchedule.next_due_date.isnot(None),
+            FinancialSchedule.next_due_date >= filters.period_start,
+            FinancialSchedule.next_due_date <= filters.period_end,
+        )
+        bank_account_ids = FinancialReportService._selected_ids(
+            filters.bank_account_id,
+            filters.bank_account_ids,
+            preserve_empty_marker=True,
+        )
+        if bank_account_ids == [-1]:
+            query = query.filter(FinancialSchedule.bank_account_id.is_(None))
+        elif bank_account_ids:
+            query = query.filter(
+                or_(
+                    FinancialSchedule.bank_account_id.in_(bank_account_ids),
+                    FinancialSchedule.bank_account_id.is_(None),
+                )
+            )
+
+        normalized_selection_filters = FinancialReportService._normalize_cash_flow_title_selection_filters(selection_filters)
+        movement_nature = normalized_selection_filters.get("movement_nature")
+        if movement_nature:
+            query = query.filter(FinancialSchedule.movement_nature == movement_nature)
+        counterparty_id = normalized_selection_filters.get("counterparty_id")
+        if counterparty_id:
+            query = query.filter(FinancialSchedule.counterparty_id == counterparty_id)
+        chart_account_id = normalized_selection_filters.get("chart_account_id")
+        if chart_account_id:
+            query = query.filter(FinancialSchedule.chart_account_id == chart_account_id)
+        cost_center_id = normalized_selection_filters.get("cost_center_id")
+        if cost_center_id:
+            query = query.filter(FinancialSchedule.cost_center_id == cost_center_id)
+
+        search = normalized_selection_filters.get("search")
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    FinancialSchedule.schedule_code.ilike(pattern),
+                    FinancialSchedule.document_number_prefix.ilike(pattern),
+                    FinancialSchedule.name.ilike(pattern),
+                    FinancialSchedule.description.ilike(pattern),
+                    FinancialSchedule.memo.ilike(pattern),
+                )
+            )
+        return query.order_by(FinancialSchedule.next_due_date.asc(), FinancialSchedule.id.asc())
 
     @staticmethod
     def _serialize_cash_flow_excluded_title(
@@ -1117,6 +1174,30 @@ class FinancialReportService:
             "due_date": entry.due_date.isoformat() if getattr(entry, "due_date", None) else "-",
             "status_label": "Retirado do fluxo",
         }
+
+    @staticmethod
+    def _schedule_installment_label(schedule: FinancialSchedule) -> str:
+        metadata = dict(getattr(schedule, "metadata_json", None) or {})
+        value = (
+            metadata.get("installment_number")
+            or metadata.get("parcela")
+            or metadata.get("installment_label")
+            or metadata.get("parcel_label")
+            or metadata.get("repeat_label")
+        )
+        return str(value).strip() if value not in (None, "") else "-"
+
+    @staticmethod
+    def _schedule_history_label(schedule: FinancialSchedule) -> str:
+        metadata = dict(getattr(schedule, "metadata_json", None) or {})
+        history = (
+            metadata.get("history")
+            or metadata.get("historico")
+            or getattr(schedule, "name", None)
+            or getattr(schedule, "description", None)
+            or getattr(schedule, "memo", None)
+        )
+        return str(history or "Sem histórico").strip()
 
     @staticmethod
     def build_cash_flow_title_preview(
@@ -2583,6 +2664,108 @@ class FinancialReportService:
                 else:
                     slot["projected_out"] += outstanding
                     projected_out_total += outstanding
+
+            projected_schedules = FinancialReportService._cash_flow_projected_schedule_query(company_id, filters).all()
+            if filters.process_ids:
+                projected_schedules = [item for item in projected_schedules if FinancialReportService._schedule_matches_processes(item, filters.process_ids)]
+            if filters.project_ids:
+                projected_schedules = [item for item in projected_schedules if FinancialReportService._schedule_matches_projects(item, filters.project_ids)]
+
+            schedule_ids = [item.id for item in projected_schedules]
+            entry_refs = {f"financial_schedule:{item.id}": item.id for item in projected_schedules}
+            linked_entries_by_schedule: Dict[int, List[FinancialEntry]] = {item.id: [] for item in projected_schedules}
+            if schedule_ids:
+                linked_entries = FinancialEntry.query.filter(
+                    FinancialEntry.company_id == company_id,
+                    FinancialEntry.deleted_at.is_(None),
+                    or_(
+                        FinancialEntry.financial_schedule_id.in_(schedule_ids),
+                        FinancialEntry.external_reference.in_(list(entry_refs.keys())),
+                    ),
+                ).all()
+                for linked_entry in linked_entries:
+                    schedule_id = getattr(linked_entry, "financial_schedule_id", None) or entry_refs.get(linked_entry.external_reference)
+                    if schedule_id in linked_entries_by_schedule:
+                        linked_entries_by_schedule[schedule_id].append(linked_entry)
+
+            for schedule in projected_schedules:
+                if linked_entries_by_schedule.get(schedule.id):
+                    continue
+
+                if schedule.entry_type == "receivable" and not filters.include_receivable:
+                    continue
+                if schedule.entry_type == "payable" and not filters.include_payable:
+                    continue
+
+                normalized_status = str(getattr(schedule, "status", None) or "").strip().lower()
+                if normalized_status in {"draft", "cancelled", "completed"}:
+                    continue
+                if normalized_status == "forecast" and not bool(filters.include_budget_vs_actual):
+                    continue
+
+                projection_snapshot = FinancialReportService._schedule_projected_balance_snapshot(schedule)
+                title_amount = Decimal(str(projection_snapshot.get("principal_amount") or getattr(schedule, "template_amount", None) or 0))
+                if title_amount <= Decimal("0"):
+                    title_amount = Decimal(str(getattr(schedule, "template_amount", None) or 0))
+                open_amount = Decimal(
+                    str(
+                        projection_snapshot.get(
+                            "principal_corrected_open"
+                            if filters.projected_values_mode == "with_financial_correction"
+                            else "principal_open"
+                        )
+                        or 0
+                    )
+                )
+                if open_amount <= Decimal("0") and normalized_status not in {"completed", "cancelled"} and title_amount > Decimal("0"):
+                    open_amount = title_amount
+                if open_amount <= Decimal("0"):
+                    continue
+
+                metadata = dict(getattr(schedule, "metadata_json", None) or {})
+                counterparty_label = (
+                    counterparty_names.get(getattr(schedule, "counterparty_id", None))
+                    or metadata.get("counterparty_name")
+                    or "Não informado"
+                )
+                due_date = schedule.next_due_date or schedule.first_due_date or schedule.start_date
+                if not due_date:
+                    continue
+
+                title_row = {
+                    "id": schedule.id,
+                    "entry_code": getattr(schedule, "schedule_code", None) or str(schedule.id),
+                    "type_code": FinancialReportService._cash_flow_entry_type_code(schedule),
+                    "type_label": "Recebimento" if schedule.movement_nature == "credit" else "Pagamento",
+                    "title_amount": FinancialReportService._format_currency(title_amount),
+                    "title_amount_value": FinancialReportService._serialize_money(title_amount),
+                    "open_amount": FinancialReportService._format_currency(open_amount),
+                    "open_amount_value": FinancialReportService._serialize_money(open_amount),
+                    "projected_amount_mode": filters.projected_values_mode,
+                    "counterparty": counterparty_label,
+                    "due_date": FinancialReportService._format_date_br(due_date),
+                    "competence_date": FinancialReportService._format_date_br(schedule.competence_date),
+                    "number_installment": FinancialReportService._schedule_installment_label(schedule),
+                    "history": FinancialReportService._schedule_history_label(schedule),
+                    "is_excluded": False,
+                    "status_label": "No fluxo",
+                }
+                if schedule.movement_nature == "credit":
+                    receivable_title_total += title_amount
+                    receivable_open_total += open_amount
+                    selected_receivables.append(title_row)
+                else:
+                    payable_title_total += title_amount
+                    payable_open_total += open_amount
+                    selected_payables.append(title_row)
+
+                slot = daily.setdefault(due_date, _empty_cash_flow_slot())
+                if schedule.movement_nature == "credit":
+                    slot["projected_in"] += open_amount
+                    projected_in_total += open_amount
+                else:
+                    slot["projected_out"] += open_amount
+                    projected_out_total += open_amount
 
         bucket_mode = (filters.frequency or "daily").lower()
         bucket_specs = FinancialReportService._cash_flow_period_buckets(

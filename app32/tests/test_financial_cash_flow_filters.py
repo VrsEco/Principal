@@ -193,6 +193,9 @@ class _Column:
     def __le__(self, other):
         return ("le", other)
 
+    def __lt__(self, other):
+        return ("lt", other)
+
     def asc(self):
         return self
 
@@ -269,3 +272,165 @@ def test_cash_flow_projected_query_with_empty_bank_marker_keeps_only_titles_with
     FinancialReportService._cash_flow_projected_entry_query(9, filters)
 
     assert ("is", None) in query.filters
+
+
+def test_cash_flow_build_includes_schedule_titles_when_entries_do_not_exist(monkeypatch):
+    receivable_schedule = SimpleNamespace(
+        id=44,
+        schedule_code="AG-000029",
+        name="Teste a receber",
+        description="Teste a receber",
+        memo=None,
+        entry_type="receivable",
+        movement_nature="credit",
+        status="active",
+        competence_date=date(2026, 4, 20),
+        start_date=date(2026, 4, 20),
+        first_due_date=date(2026, 5, 2),
+        next_due_date=date(2026, 5, 2),
+        template_amount=Decimal("1250.00"),
+        bank_account_id=None,
+        counterparty_id=1,
+        chart_account_id=19,
+        cost_center_id=2,
+        metadata_json={},
+    )
+    payable_schedule = SimpleNamespace(
+        id=45,
+        schedule_code="AG-000030",
+        name="Contas a Pagar 01",
+        description="Contas a Pagar 01",
+        memo=None,
+        entry_type="payable",
+        movement_nature="debit",
+        status="active",
+        competence_date=date(2026, 4, 20),
+        start_date=date(2026, 4, 20),
+        first_due_date=date(2026, 5, 2),
+        next_due_date=date(2026, 5, 2),
+        template_amount=Decimal("1050.00"),
+        bank_account_id=None,
+        counterparty_id=2,
+        chart_account_id=19,
+        cost_center_id=2,
+        metadata_json={},
+    )
+
+    monkeypatch.setattr(report_module.FinancialReportService, "_settlement_query", lambda company_id, filters: _QueryStubWithItems([]))
+    monkeypatch.setattr(report_module.FinancialReportService, "_cash_flow_projected_entry_query", lambda company_id, filters: _QueryStubWithItems([]))
+    monkeypatch.setattr(
+        report_module.FinancialReportService,
+        "_cash_flow_projected_schedule_query",
+        lambda company_id, filters: _QueryStubWithItems([receivable_schedule, payable_schedule]),
+    )
+    monkeypatch.setattr(
+        report_module.FinancialReportService,
+        "_schedule_projected_balance_snapshot",
+        lambda schedule: {
+            "principal_amount": Decimal(str(schedule.template_amount)),
+            "principal_open": Decimal(str(schedule.template_amount)),
+            "principal_corrected_open": Decimal(str(schedule.template_amount)),
+        },
+    )
+    monkeypatch.setattr(report_module.FinancialReportService, "_entry_settlement_totals", lambda company_id, entry_ids=None: {})
+    monkeypatch.setattr(report_module, "or_", lambda *args: ("or", args))
+    monkeypatch.setattr(
+        report_module.FinancialReportService,
+        "_name_map",
+        lambda model, company_id: {1: "Cliente Teste", 2: "Fornecedor Teste"},
+    )
+    monkeypatch.setattr(report_module.FinancialDashboardAnalytics, "calculate_overdraft_limit", lambda *args, **kwargs: Decimal("0"))
+    monkeypatch.setattr(report_module.FinancialDashboardAnalytics, "calculate_current_balance", lambda **kwargs: Decimal("0"))
+
+    monkeypatch.setattr(
+        report_module,
+        "FinancialEntry",
+        type(
+            "FinancialEntryStub",
+            (),
+            {
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "status": _Column(),
+                "due_date": _Column(),
+                "financial_schedule_id": _Column(),
+                "external_reference": _Column(),
+                "id": _Column(),
+                "query": _QueryStubWithItems([]),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        report_module,
+        "FinancialSettlement",
+        type(
+            "FinancialSettlementStub",
+            (),
+            {
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "settlement_status": _Column(),
+                "settlement_date": _Column(),
+                "bank_account_id": _Column(),
+                "id": _Column(),
+                "query": _QueryStubWithItems([]),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        report_module,
+        "FinancialBankAccount",
+        type(
+            "FinancialBankAccountStub",
+            (),
+            {
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "is_active": _Column(),
+                "code": _Column(),
+                "name": _Column(),
+                "id": _Column(),
+                "query": _QueryStubWithItems([]),
+            },
+        ),
+    )
+
+    filters = SimpleNamespace(
+        report_type="cash_flow",
+        period_start=date(2026, 5, 1),
+        period_end=date(2026, 5, 31),
+        bank_account_id=None,
+        bank_account_ids=[],
+        include_reconciled_only=False,
+        include_overdraft=False,
+        frequency="daily",
+        include_projected=True,
+        projected_values_mode="with_financial_correction",
+        enable_title_exclusions=False,
+        excluded_entry_ids=[],
+        process_ids=[],
+        project_ids=[],
+        include_receivable=True,
+        include_payable=True,
+        include_budget_vs_actual=False,
+    )
+
+    result = FinancialReportService._build_cash_flow(9, filters)
+
+    assert result["selected_receivables_totals"]["count"] == 1
+    assert result["selected_payables_totals"]["count"] == 1
+    assert result["selected_receivables"][0]["id"] == 44
+    assert result["selected_payables"][0]["id"] == 45
+    assert result["selected_receivables"][0]["counterparty"] == "Cliente Teste"
+    assert result["selected_payables"][0]["counterparty"] == "Fornecedor Teste"
+    assert result["rows"][1]["entrada"] == "R$ 1.250,00"
+    assert result["rows"][1]["saida"] == "R$ 1.050,00"
+
+
+class _QueryStubWithItems(_QueryStub):
+    def __init__(self, items):
+        super().__init__()
+        self._items = list(items)
+
+    def all(self):
+        return list(self._items)
