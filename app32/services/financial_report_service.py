@@ -4595,7 +4595,20 @@ class FinancialReportService:
     @staticmethod
     def export_xlsx(report_payload: Dict[str, Any]) -> bytes:
         from openpyxl import Workbook
-        from openpyxl.styles import Font
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+        from openpyxl.utils import get_column_letter
+
+        if report_payload.get("report_type") == "cash_flow":
+            return FinancialReportService._export_cash_flow_xlsx(
+                report_payload,
+                workbook_factory=Workbook,
+                alignment_cls=Alignment,
+                border_cls=Border,
+                font_cls=Font,
+                fill_cls=PatternFill,
+                side_cls=Side,
+                get_column_letter_fn=get_column_letter,
+            )
 
         workbook = Workbook()
         summary_sheet = workbook.active
@@ -4644,6 +4657,20 @@ class FinancialReportService:
 
         if report_payload.get("report_type") == "schedule_report":
             elements = FinancialReportService._build_schedule_pdf_elements(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+            )
+            doc.build(
+                elements,
+                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            )
+            buffer.seek(0)
+            return buffer.getvalue()
+
+        if report_payload.get("report_type") == "cash_flow":
+            elements = FinancialReportService._build_cash_flow_pdf_elements(
                 report_payload=report_payload,
                 styles=styles,
                 available_width=available_width,
@@ -4708,6 +4735,654 @@ class FinancialReportService:
         )
         buffer.seek(0)
         return buffer.getvalue()
+
+    @staticmethod
+    def _parse_currency_label(value: Any) -> Decimal:
+        raw_value = str(value or "0").strip()
+        if not raw_value:
+            return Decimal("0")
+        negative = "-" in raw_value
+        normalized = (
+            raw_value.replace("R$ ", "")
+            .replace("R$", "")
+            .replace("- ", "")
+            .replace("-", "")
+            .replace(".", "")
+            .replace(",", ".")
+            .strip()
+        )
+        try:
+            amount = Decimal(normalized or "0")
+        except Exception:
+            return Decimal("0")
+        return -amount if negative else amount
+
+    @staticmethod
+    def _cash_flow_plain_amount_label(value: Any, amount_value: Any = None) -> str:
+        amount = (
+            Decimal(str(amount_value))
+            if amount_value is not None and str(amount_value).strip() != ""
+            else FinancialReportService._parse_currency_label(value)
+        )
+        absolute_label = str(FinancialReportService._format_currency(abs(amount))).replace("R$ ", "").replace("R$", "").strip()
+        if amount < 0:
+            return f"- {absolute_label}"
+        return absolute_label
+
+    @staticmethod
+    def _cash_flow_amount_color_hex(value: Any, amount_value: Any = None) -> str:
+        amount = (
+            Decimal(str(amount_value))
+            if amount_value is not None and str(amount_value).strip() != ""
+            else FinancialReportService._parse_currency_label(value)
+        )
+        if amount > 0:
+            return "#2563eb"
+        if amount < 0:
+            return "#dc2626"
+        return "#334155"
+
+    @staticmethod
+    def _cash_flow_numeric_amount(value: Any, amount_value: Any = None) -> float:
+        amount = (
+            Decimal(str(amount_value))
+            if amount_value is not None and str(amount_value).strip() != ""
+            else FinancialReportService._parse_currency_label(value)
+        )
+        return FinancialReportService._serialize_money(amount)
+
+    @staticmethod
+    def _export_cash_flow_xlsx(
+        report_payload: Dict[str, Any],
+        *,
+        workbook_factory,
+        alignment_cls,
+        border_cls,
+        font_cls,
+        fill_cls,
+        side_cls,
+        get_column_letter_fn,
+    ) -> bytes:
+        workbook = workbook_factory()
+        hero_fill = fill_cls(fill_type="solid", fgColor="0F172A")
+        accent_fill = fill_cls(fill_type="solid", fgColor="DBEAFE")
+        header_fill = fill_cls(fill_type="solid", fgColor="1E3A8A")
+        section_fill = fill_cls(fill_type="solid", fgColor="EFF6FF")
+        white_font = font_cls(color="FFFFFF", bold=True)
+        title_font = font_cls(color="FFFFFF", bold=True, size=18)
+        subtitle_font = font_cls(color="CBD5E1", size=10)
+        heading_font = font_cls(color="0F172A", bold=True, size=11)
+        label_font = font_cls(color="475569", bold=True)
+        positive_font = font_cls(color="2563EB", bold=True)
+        negative_font = font_cls(color="DC2626", bold=True)
+        neutral_font = font_cls(color="334155", bold=True)
+        thin_border = border_cls(
+            left=side_cls(style="thin", color="CBD5E1"),
+            right=side_cls(style="thin", color="CBD5E1"),
+            top=side_cls(style="thin", color="CBD5E1"),
+            bottom=side_cls(style="thin", color="CBD5E1"),
+        )
+        currency_format = '#,##0.00;[Red]- #,##0.00'
+
+        def _style_amount(cell, raw_value: Any, amount_value: Any = None):
+            amount = FinancialReportService._cash_flow_numeric_amount(raw_value, amount_value)
+            cell.value = amount
+            cell.number_format = currency_format
+            cell.alignment = alignment_cls(horizontal="right", vertical="center")
+            if amount > 0:
+                cell.font = positive_font
+            elif amount < 0:
+                cell.font = negative_font
+            else:
+                cell.font = neutral_font
+            cell.border = thin_border
+
+        def _write_section_title(sheet, row: int, title: str, end_col: int = 6):
+            sheet.merge_cells(start_row=row, start_column=1, end_row=row, end_column=end_col)
+            cell = sheet.cell(row=row, column=1, value=title)
+            cell.fill = section_fill
+            cell.font = heading_font
+            cell.alignment = alignment_cls(horizontal="left", vertical="center")
+            cell.border = thin_border
+            for column in range(2, end_col + 1):
+                sheet.cell(row=row, column=column).border = thin_border
+
+        summary_sheet = workbook.active
+        summary_sheet.title = "Resumo Executivo"
+        summary_sheet.sheet_view.showGridLines = False
+        summary_sheet.freeze_panes = "A8"
+        summary_sheet.merge_cells("A1:F2")
+        summary_sheet["A1"] = report_payload.get("title", "Fluxo de Caixa")
+        summary_sheet["A1"].fill = hero_fill
+        summary_sheet["A1"].font = title_font
+        summary_sheet["A1"].alignment = alignment_cls(horizontal="left", vertical="center")
+        summary_sheet.merge_cells("A3:F3")
+        summary_sheet["A3"] = str(report_payload.get("company_name") or "Versus Gestão Corporativa")
+        summary_sheet["A3"].fill = hero_fill
+        summary_sheet["A3"].font = subtitle_font
+        summary_sheet["A3"].alignment = alignment_cls(horizontal="left", vertical="center")
+        summary_sheet.merge_cells("A4:F4")
+        summary_sheet["A4"] = f"Emitido em {FinancialReportService._pdf_generated_at_label(report_payload)}"
+        summary_sheet["A4"].fill = hero_fill
+        summary_sheet["A4"].font = subtitle_font
+        summary_sheet["A4"].alignment = alignment_cls(horizontal="left", vertical="center")
+
+        _write_section_title(summary_sheet, 6, "Filtros aplicados", 6)
+        row_cursor = 7
+        for item in report_payload.get("filters", []) or [{"label": "Resumo", "value": "Sem filtros adicionais."}]:
+            summary_sheet.cell(row=row_cursor, column=1, value=item.get("label")).font = label_font
+            summary_sheet.cell(row=row_cursor, column=2, value=item.get("value"))
+            summary_sheet.merge_cells(start_row=row_cursor, start_column=2, end_row=row_cursor, end_column=6)
+            for column in range(1, 7):
+                current_cell = summary_sheet.cell(row=row_cursor, column=column)
+                current_cell.border = thin_border
+                current_cell.alignment = alignment_cls(vertical="center", wrap_text=True)
+            row_cursor += 1
+
+        row_cursor += 1
+        _write_section_title(summary_sheet, row_cursor, "Indicadores executivos", 6)
+        row_cursor += 1
+        for card in report_payload.get("summary_cards", []):
+            summary_sheet.cell(row=row_cursor, column=1, value=card.get("label")).font = label_font
+            amount_cell = summary_sheet.cell(row=row_cursor, column=2)
+            amount_cell.value = card.get("value")
+            amount_cell.alignment = alignment_cls(horizontal="left", vertical="center")
+            tone = str(card.get("tone") or "neutral").lower()
+            if tone == "positive":
+                amount_cell.font = positive_font
+            elif tone == "negative":
+                amount_cell.font = negative_font
+            else:
+                amount_cell.font = neutral_font
+            summary_sheet.merge_cells(start_row=row_cursor, start_column=2, end_row=row_cursor, end_column=3)
+            for column in range(1, 7):
+                summary_sheet.cell(row=row_cursor, column=column).border = thin_border
+            row_cursor += 1
+
+        flow_sheet = workbook.create_sheet("Fluxo Consolidado")
+        flow_sheet.sheet_view.showGridLines = False
+        flow_sheet.freeze_panes = "A9"
+        flow_sheet.merge_cells("A1:I2")
+        flow_sheet["A1"] = report_payload.get("title", "Fluxo de Caixa")
+        flow_sheet["A1"].fill = hero_fill
+        flow_sheet["A1"].font = title_font
+        flow_sheet["A1"].alignment = alignment_cls(horizontal="left", vertical="center")
+        flow_sheet.merge_cells("A3:I3")
+        flow_sheet["A3"] = str(report_payload.get("subtitle") or "")
+        flow_sheet["A3"].fill = hero_fill
+        flow_sheet["A3"].font = subtitle_font
+        flow_sheet["A3"].alignment = alignment_cls(horizontal="left", vertical="center")
+
+        _write_section_title(flow_sheet, 5, "Contas correntes", 4)
+        account_headers = ["Descrição", "Limite", f"Saldo em {report_payload.get('bank_balance_reference_label', '-')}", "Disp. Total"]
+        for col_index, header in enumerate(account_headers, start=1):
+            cell = flow_sheet.cell(row=6, column=col_index, value=header)
+            cell.fill = header_fill
+            cell.font = white_font
+            cell.alignment = alignment_cls(horizontal="center", vertical="center")
+            cell.border = thin_border
+        current_row = 7
+        for item in report_payload.get("bank_account_summary_rows", []):
+            flow_sheet.cell(row=current_row, column=1, value=item.get("description")).border = thin_border
+            _style_amount(flow_sheet.cell(row=current_row, column=2), item.get("limit"), item.get("limit_value"))
+            _style_amount(flow_sheet.cell(row=current_row, column=3), item.get("balance"), item.get("balance_value"))
+            _style_amount(flow_sheet.cell(row=current_row, column=4), item.get("available_total"), item.get("available_total_value"))
+            current_row += 1
+        totals = report_payload.get("bank_account_summary_totals", {}) or {}
+        total_row = current_row
+        flow_sheet.cell(row=total_row, column=1, value="Total").font = label_font
+        flow_sheet.cell(row=total_row, column=1).fill = accent_fill
+        flow_sheet.cell(row=total_row, column=1).border = thin_border
+        _style_amount(flow_sheet.cell(row=total_row, column=2), totals.get("limit"), totals.get("limit_value"))
+        _style_amount(flow_sheet.cell(row=total_row, column=3), totals.get("balance"), totals.get("balance_value"))
+        _style_amount(flow_sheet.cell(row=total_row, column=4), totals.get("available_total"), totals.get("available_total_value"))
+        for column in range(2, 5):
+            flow_sheet.cell(row=total_row, column=column).fill = accent_fill
+
+        current_row += 2
+        _write_section_title(flow_sheet, current_row, "Fluxo do período", 9)
+        current_row += 1
+        columns = report_payload.get("columns", [])
+        amount_keys = {"saldo_inicial", "entrada", "saida", "saldo_final", "limite", "disponivel_total_final"}
+        for col_index, column in enumerate(columns, start=1):
+            cell = flow_sheet.cell(row=current_row, column=col_index, value=column.get("label"))
+            cell.fill = header_fill
+            cell.font = white_font
+            cell.alignment = alignment_cls(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = thin_border
+        current_row += 1
+        for item in report_payload.get("rows", []):
+            for col_index, column in enumerate(columns, start=1):
+                key = column.get("key")
+                cell = flow_sheet.cell(row=current_row, column=col_index)
+                cell.border = thin_border
+                if key in amount_keys:
+                    _style_amount(cell, item.get(key))
+                else:
+                    cell.value = item.get(key)
+                    cell.alignment = alignment_cls(horizontal="center" if key != "periodo" else "left", vertical="center")
+            current_row += 1
+
+        def _write_titles_sheet(sheet_name: str, rows: List[Dict[str, Any]], totals_payload: Dict[str, Any], title_text: str):
+            sheet = workbook.create_sheet(sheet_name)
+            sheet.sheet_view.showGridLines = False
+            sheet.freeze_panes = "A5"
+            sheet.merge_cells("A1:F2")
+            sheet["A1"] = title_text
+            sheet["A1"].fill = hero_fill
+            sheet["A1"].font = title_font
+            sheet["A1"].alignment = alignment_cls(horizontal="left", vertical="center")
+            headers = ["ID", "Tipo", "Valor Título", report_payload.get("projected_amount_label", "Saldo Projetado"), "Favorecido", "Vencimento"]
+            for col_index, header in enumerate(headers, start=1):
+                cell = sheet.cell(row=4, column=col_index, value=header)
+                cell.fill = header_fill
+                cell.font = white_font
+                cell.alignment = alignment_cls(horizontal="center", vertical="center", wrap_text=True)
+                cell.border = thin_border
+            row_cursor = 5
+            for item in rows:
+                sheet.cell(row=row_cursor, column=1, value=item.get("id")).border = thin_border
+                sheet.cell(row=row_cursor, column=2, value=item.get("type_code")).border = thin_border
+                _style_amount(sheet.cell(row=row_cursor, column=3), item.get("title_amount"), item.get("title_amount_value"))
+                _style_amount(sheet.cell(row=row_cursor, column=4), item.get("open_amount"), item.get("open_amount_value"))
+                sheet.cell(row=row_cursor, column=5, value=item.get("counterparty")).border = thin_border
+                sheet.cell(row=row_cursor, column=6, value=item.get("due_date")).border = thin_border
+                row_cursor += 1
+            sheet.cell(row=row_cursor, column=1, value="Totais").font = label_font
+            sheet.cell(row=row_cursor, column=1).fill = accent_fill
+            sheet.merge_cells(start_row=row_cursor, start_column=1, end_row=row_cursor, end_column=2)
+            _style_amount(sheet.cell(row=row_cursor, column=3), totals_payload.get("title_amount"), totals_payload.get("title_amount_value"))
+            _style_amount(sheet.cell(row=row_cursor, column=4), totals_payload.get("open_amount"), totals_payload.get("open_amount_value"))
+            sheet.cell(row=row_cursor, column=5, value=f"{totals_payload.get('count', 0)} título(s)").font = label_font
+            sheet.cell(row=row_cursor, column=5).fill = accent_fill
+            sheet.cell(row=row_cursor, column=5).border = thin_border
+            sheet.cell(row=row_cursor, column=6).fill = accent_fill
+            sheet.cell(row=row_cursor, column=6).border = thin_border
+            return sheet
+
+        receivables_sheet = _write_titles_sheet(
+            "Titulos Receber",
+            report_payload.get("selected_receivables", []) or [],
+            report_payload.get("selected_receivables_totals", {}) or {},
+            "Contas a Receber Selecionadas",
+        )
+        payables_sheet = _write_titles_sheet(
+            "Titulos Pagar",
+            report_payload.get("selected_payables", []) or [],
+            report_payload.get("selected_payables_totals", {}) or {},
+            "Contas a Pagar Selecionadas",
+        )
+
+        for sheet in [summary_sheet, flow_sheet, receivables_sheet, payables_sheet]:
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value is not None and cell.border == border_cls():
+                        cell.border = thin_border
+            width_map = {}
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value is None:
+                        continue
+                    width_map[cell.column] = max(width_map.get(cell.column, 0), len(str(cell.value)))
+            for col_index, width in width_map.items():
+                sheet.column_dimensions[get_column_letter_fn(col_index)].width = min(max(width + 2, 12), 34)
+
+        output = io.BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        return output.getvalue()
+
+    @staticmethod
+    def _build_cash_flow_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
+        title_style = ParagraphStyle(
+            "CashFlowPdfTitle",
+            parent=styles["Heading1"],
+            fontSize=20,
+            leading=24,
+            textColor=colors.white,
+            alignment=TA_LEFT,
+        )
+        subtitle_style = ParagraphStyle(
+            "CashFlowPdfSubtitle",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            textColor=colors.HexColor("#CBD5E1"),
+            alignment=TA_LEFT,
+        )
+        section_title_style = ParagraphStyle(
+            "CashFlowPdfSectionTitle",
+            parent=styles["BodyText"],
+            fontSize=10,
+            leading=12,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=5,
+        )
+        table_header_style = ParagraphStyle(
+            "CashFlowPdfTableHeader",
+            parent=styles["BodyText"],
+            fontSize=7,
+            leading=8,
+            fontName="Helvetica-Bold",
+            alignment=TA_CENTER,
+            textColor=colors.white,
+        )
+        table_cell_style = ParagraphStyle(
+            "CashFlowPdfTableCell",
+            parent=styles["BodyText"],
+            fontSize=7,
+            leading=8,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        table_center_style = ParagraphStyle("CashFlowPdfTableCenter", parent=table_cell_style, alignment=TA_CENTER)
+        table_right_style = ParagraphStyle("CashFlowPdfTableRight", parent=table_cell_style, alignment=TA_LEFT)
+        stat_label_style = ParagraphStyle(
+            "CashFlowPdfStatLabel",
+            parent=styles["BodyText"],
+            fontSize=6,
+            leading=7,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#475569"),
+        )
+        stat_value_style = ParagraphStyle(
+            "CashFlowPdfStatValue",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+        )
+        filter_style = ParagraphStyle(
+            "CashFlowPdfFilterCell",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#0F172A"),
+        )
+
+        company_name = str(report_payload.get("company_name") or "Versus Gestão Corporativa")
+        period_label = next(
+            (
+                str(item.get("value") or "").strip()
+                for item in report_payload.get("filters", [])
+                if str(item.get("label") or "").strip().lower() in {"janela analisada", "período"}
+            ),
+            "-",
+        )
+        hero_left = [
+            Paragraph(report_payload.get("title", "Fluxo de Caixa"), title_style),
+            Paragraph(company_name, subtitle_style),
+            Paragraph(str(report_payload.get("subtitle") or ""), subtitle_style),
+        ]
+        hero_right_style = ParagraphStyle(
+            "CashFlowPdfHeroRight",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            alignment=TA_LEFT,
+            textColor=colors.white,
+        )
+        hero = Table(
+            [[
+                hero_left,
+                [
+                    Paragraph(f"<b>Período</b><br/>{period_label}", hero_right_style),
+                    Paragraph(f"<b>Emitido em</b><br/>{FinancialReportService._pdf_generated_at_label(report_payload)}", hero_right_style),
+                ],
+            ]],
+            colWidths=[available_width * 0.62, available_width * 0.38],
+            hAlign="LEFT",
+        )
+        hero.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                    ("TOPPADDING", (0, 0), (-1, -1), 12),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+
+        elements: List[Any] = [hero, Spacer(1, 10)]
+        elements.append(Paragraph("Filtros aplicados", section_title_style))
+        elements.append(
+            FinancialReportService._build_schedule_pdf_filter_cards(
+                report_filters=report_payload.get("filters") or [],
+                available_width=available_width,
+                content_style=filter_style,
+            )
+        )
+        elements.append(Spacer(1, 8))
+        elements.append(
+            FinancialReportService._build_schedule_pdf_summary_cards(
+                report_summary_cards=report_payload.get("summary_cards") or [],
+                available_width=available_width,
+                label_style=stat_label_style,
+                value_style=stat_value_style,
+            )
+        )
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("Contas correntes", section_title_style))
+        elements.append(
+            FinancialReportService._build_cash_flow_pdf_accounts_table(
+                report_payload=report_payload,
+                available_width=available_width,
+                header_style=table_header_style,
+                cell_style=table_cell_style,
+            )
+        )
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("Fluxo do período", section_title_style))
+        elements.append(
+            FinancialReportService._build_cash_flow_pdf_flow_table(
+                report_payload=report_payload,
+                available_width=available_width,
+                header_style=table_header_style,
+                cell_style=table_cell_style,
+                center_style=table_center_style,
+            )
+        )
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("Contas a receber selecionadas", section_title_style))
+        elements.append(
+            FinancialReportService._build_cash_flow_pdf_titles_table(
+                title_rows=report_payload.get("selected_receivables") or [],
+                totals_payload=report_payload.get("selected_receivables_totals") or {},
+                projected_label=f"{report_payload.get('projected_amount_label', 'Saldo Projetado')} a Receber",
+                available_width=available_width,
+                header_style=table_header_style,
+                cell_style=table_cell_style,
+                center_style=table_center_style,
+                right_style=table_right_style,
+            )
+        )
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("Contas a pagar selecionadas", section_title_style))
+        elements.append(
+            FinancialReportService._build_cash_flow_pdf_titles_table(
+                title_rows=report_payload.get("selected_payables") or [],
+                totals_payload=report_payload.get("selected_payables_totals") or {},
+                projected_label=f"{report_payload.get('projected_amount_label', 'Saldo Projetado')} a Pagar",
+                available_width=available_width,
+                header_style=table_header_style,
+                cell_style=table_cell_style,
+                center_style=table_center_style,
+                right_style=table_right_style,
+            )
+        )
+        return elements
+
+    @staticmethod
+    def _build_cash_flow_pdf_accounts_table(*, report_payload: Dict[str, Any], available_width: float, header_style, cell_style) -> Table:
+        rows = report_payload.get("bank_account_summary_rows") or []
+        totals = report_payload.get("bank_account_summary_totals") or {}
+        headers = [
+            "Descrição",
+            "Limite",
+            f"Saldo em {report_payload.get('bank_balance_reference_label', '-')}",
+            "Disp. Total",
+        ]
+        data: List[List[Any]] = [[Paragraph(value, header_style) for value in headers]]
+        for item in rows:
+            data.append(
+                [
+                    Paragraph(str(item.get("description") or "-"), cell_style),
+                    FinancialReportService._cash_flow_pdf_amount_paragraph(item.get("limit"), item.get("limit_value"), cell_style),
+                    FinancialReportService._cash_flow_pdf_amount_paragraph(item.get("balance"), item.get("balance_value"), cell_style),
+                    FinancialReportService._cash_flow_pdf_amount_paragraph(item.get("available_total"), item.get("available_total_value"), cell_style),
+                ]
+            )
+        data.append(
+            [
+                Paragraph("<b>Total</b>", cell_style),
+                FinancialReportService._cash_flow_pdf_amount_paragraph(totals.get("limit"), totals.get("limit_value"), cell_style),
+                FinancialReportService._cash_flow_pdf_amount_paragraph(totals.get("balance"), totals.get("balance_value"), cell_style),
+                FinancialReportService._cash_flow_pdf_amount_paragraph(totals.get("available_total"), totals.get("available_total_value"), cell_style),
+            ]
+        )
+        col_widths = [available_width * 0.34, available_width * 0.18, available_width * 0.24, available_width * 0.24]
+        table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
+        styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("BACKGROUND", (0, len(data) - 1), (-1, len(data) - 1), colors.HexColor("#EFF6FF")),
+        ]
+        for row_index in range(1, len(data) - 1):
+            styles.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#FFFFFF") if row_index % 2 else colors.HexColor("#F8FAFC")))
+        table.setStyle(TableStyle(styles))
+        return table
+
+    @staticmethod
+    def _build_cash_flow_pdf_flow_table(*, report_payload: Dict[str, Any], available_width: float, header_style, cell_style, center_style) -> Table:
+        columns = report_payload.get("columns") or []
+        amount_keys = {"saldo_inicial", "entrada", "saida", "saldo_final", "limite", "disponivel_total_final"}
+        ratio_map = {
+            "periodo": 0.95,
+            "data_inicial": 0.95,
+            "data_final": 0.95,
+            "saldo_inicial": 1.05,
+            "entrada": 0.9,
+            "saida": 0.9,
+            "saldo_final": 1.05,
+            "limite": 0.9,
+            "disponivel_total_final": 1.2,
+        }
+        total_ratio = sum(ratio_map.get(column.get("key"), 1) for column in columns) or 1
+        col_widths = [available_width * (ratio_map.get(column.get("key"), 1) / total_ratio) for column in columns]
+        data = [[Paragraph(str(column.get("label") or ""), header_style) for column in columns]]
+        for item in report_payload.get("rows") or []:
+            row_cells: List[Any] = []
+            for column in columns:
+                key = column.get("key")
+                if key in amount_keys:
+                    row_cells.append(FinancialReportService._cash_flow_pdf_amount_paragraph(item.get(key), None, cell_style))
+                else:
+                    style = cell_style if key == "periodo" else center_style
+                    row_cells.append(Paragraph(str(item.get(key) or "-"), style))
+            data.append(row_cells)
+        table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
+        styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]
+        for row_index in range(1, len(data)):
+            styles.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#FFFFFF") if row_index % 2 else colors.HexColor("#F8FAFC")))
+        table.setStyle(TableStyle(styles))
+        return table
+
+    @staticmethod
+    def _build_cash_flow_pdf_titles_table(
+        *,
+        title_rows: List[Dict[str, Any]],
+        totals_payload: Dict[str, Any],
+        projected_label: str,
+        available_width: float,
+        header_style,
+        cell_style,
+        center_style,
+        right_style,
+    ) -> Table:
+        headers = ["ID", "Tipo", "Valor Título", projected_label, "Favorecido", "Vencimento"]
+        data: List[List[Any]] = [[Paragraph(header, header_style) for header in headers]]
+        rows = title_rows or []
+        if rows:
+            for item in rows:
+                data.append(
+                    [
+                        Paragraph(str(item.get("id") or "-"), center_style),
+                        Paragraph(str(item.get("type_code") or "-"), center_style),
+                        FinancialReportService._cash_flow_pdf_amount_paragraph(item.get("title_amount"), item.get("title_amount_value"), cell_style),
+                        FinancialReportService._cash_flow_pdf_amount_paragraph(item.get("open_amount"), item.get("open_amount_value"), cell_style),
+                        Paragraph(str(item.get("counterparty") or "-"), right_style),
+                        Paragraph(str(item.get("due_date") or "-"), center_style),
+                    ]
+                )
+        else:
+            data.append([Paragraph("Nenhum título encontrado para os filtros informados.", center_style), "", "", "", "", ""])
+        data.append(
+            [
+                Paragraph("<b>Totais</b>", cell_style),
+                "",
+                FinancialReportService._cash_flow_pdf_amount_paragraph(totals_payload.get("title_amount"), totals_payload.get("title_amount_value"), cell_style),
+                FinancialReportService._cash_flow_pdf_amount_paragraph(totals_payload.get("open_amount"), totals_payload.get("open_amount_value"), cell_style),
+                Paragraph(f"<b>{totals_payload.get('count', 0)} título(s)</b>", center_style),
+                "",
+            ]
+        )
+        col_widths = [
+            available_width * 0.07,
+            available_width * 0.08,
+            available_width * 0.17,
+            available_width * 0.21,
+            available_width * 0.31,
+            available_width * 0.16,
+        ]
+        table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
+        styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("BACKGROUND", (0, len(data) - 1), (-1, len(data) - 1), colors.HexColor("#EFF6FF")),
+        ]
+        if not rows:
+            styles.append(("SPAN", (0, 1), (-1, 1)))
+        for row_index in range(1, len(data) - 1):
+            styles.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#FFFFFF") if row_index % 2 else colors.HexColor("#F8FAFC")))
+        table.setStyle(TableStyle(styles))
+        return table
+
+    @staticmethod
+    def _cash_flow_pdf_amount_paragraph(value: Any, amount_value: Any, base_style) -> Paragraph:
+        label = FinancialReportService._cash_flow_plain_amount_label(value, amount_value)
+        color = FinancialReportService._cash_flow_amount_color_hex(value, amount_value)
+        return Paragraph(
+            f"<para alignment='right'><font color='{color}'><b>{label}</b></font></para>",
+            base_style,
+        )
 
     @staticmethod
     def _pdf_generated_at_label(report_payload: Dict[str, Any]) -> str:
