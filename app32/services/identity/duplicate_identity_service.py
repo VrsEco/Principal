@@ -295,7 +295,10 @@ class DuplicateIdentityService:
             if not dry_run:
                 merge_employee.user_id = None
                 merge_employee.status = "inactive"
-                merge_employee.email = merge_employee.email or keep_employee.email
+                if merge_employee.email and normalize_email(merge_employee.email) == normalize_email(keep_employee.email):
+                    merge_employee.email = (
+                        f"merged+employee-{merge_employee.id}__{merge_employee.email}"
+                    )
                 summary.deactivated = True
                 db.session.commit()
             else:
