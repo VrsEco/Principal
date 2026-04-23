@@ -3419,6 +3419,8 @@ class FinancialReportService:
         detail_rows = []
         current_assets = Decimal("0")
         current_liabilities = Decimal("0")
+        non_current_assets = Decimal("0")
+        non_current_liabilities = Decimal("0")
         for config in working_capital_accounts:
             if config["id"] not in selected_ids:
                 continue
@@ -3440,20 +3442,28 @@ class FinancialReportService:
                     amount, labels = _calculate_due_date_account(config)
             else:
                 amount, labels = computed_accounts.get(config["rule"], (Decimal("0"), []))
-            signal = Decimal("1") if config["type"] == "Ativo" else Decimal("-1")
-            if config["type"] == "Ativo":
+            account_type = str(config["type"] or "").strip()
+            account_class = str(config["class_name"] or "").strip()
+            is_current = account_class.lower() == "circulante"
+            signal = Decimal("1") if account_type == "Ativo" else Decimal("-1")
+            if account_type == "Ativo" and is_current:
                 current_assets += amount
-            elif config["type"] == "Passivo":
+            elif account_type == "Passivo" and is_current:
                 current_liabilities += amount
+            elif account_type == "Ativo":
+                non_current_assets += amount
+            elif account_type == "Passivo":
+                non_current_liabilities += amount
             detail_rows.append(
                 {
                     "id": config["id"],
                     "descricao": config["description"],
-                    "tipo": config["type"],
-                    "classe": config["class_name"],
+                    "tipo": account_type,
+                    "classe": account_class,
                     "categoria": config["category"],
                     "valor_data": config.get("value_label") or ("Saldo em conta" if config["rule"] == "bank_balance" else ("Vencidas" if "overdue" in config["rule"] else "Todas à vencer" if "payable" in config["rule"] or "investment" in config["rule"] else "À vencer em 180 dias.")),
-                    "valor": FinancialReportService._serialize_money(amount * signal if config["type"] == "Passivo" else amount),
+                    "valor": FinancialReportService._serialize_money(amount * signal if account_type == "Passivo" else amount),
+                    "valor_absoluto": FinancialReportService._serialize_money(amount),
                     "base_calculo": ", ".join(labels[:5]) if labels else ("Contas bancárias selecionadas" if config_mode == "bank_balances" or config.get("rule") == "bank_balance" else "Valor não informado para esta emissão" if config_mode == "manual_value" else "Sem títulos para a regra"),
                 }
             )
@@ -3461,6 +3471,61 @@ class FinancialReportService:
         working_capital = current_assets - current_liabilities
         adjusted_liquidity = working_capital + overdraft
         liquidity_ratio = (current_assets / current_liabilities) if current_liabilities else Decimal("0")
+        equity = (current_assets + non_current_assets) - (current_liabilities + non_current_liabilities)
+
+        def _build_balance_groups(target_type: str, target_class: str) -> list[dict[str, Any]]:
+            groups: dict[str, dict[str, Any]] = {}
+            rows = [
+                row for row in detail_rows
+                if str(row.get("tipo") or "").strip().lower() == target_type.lower()
+                and str(row.get("classe") or "").strip().lower() == target_class.lower()
+            ]
+            rows.sort(key=lambda item: str(item.get("descricao") or ""))
+            for row in rows:
+                description = str(row.get("descricao") or "").strip()
+                match = re.match(r"^(?P<code>\d+(?:\.\d+)+)\s*-\s*(?P<label>.+)$", description)
+                if match:
+                    full_code = match.group("code")
+                    item_label = match.group("label").strip()
+                else:
+                    full_code = ""
+                    item_label = description
+                code_parts = [part for part in full_code.split(".") if part]
+                if len(code_parts) >= 2:
+                    group_code = ".".join(code_parts[:2])
+                    group_label = item_label.split(" - ")[0].strip()
+                else:
+                    group_code = full_code or description
+                    group_label = item_label
+                group_key = f"{group_code}|{group_label}"
+                if group_key not in groups:
+                    groups[group_key] = {
+                        "code": group_code,
+                        "label": group_label,
+                        "total": Decimal("0"),
+                        "items": [],
+                    }
+                amount = Decimal(str(row.get("valor_absoluto") or 0))
+                groups[group_key]["total"] += amount
+                groups[group_key]["items"].append(
+                    {
+                        "code": full_code or group_code,
+                        "label": item_label,
+                        "amount": FinancialReportService._format_currency(amount),
+                    }
+                )
+            ordered_groups = []
+            for group in sorted(groups.values(), key=lambda item: item["code"] or item["label"]):
+                ordered_groups.append(
+                    {
+                        "code": group["code"],
+                        "label": group["label"],
+                        "amount": FinancialReportService._format_currency(group["total"]),
+                        "items": group["items"],
+                    }
+                )
+            return ordered_groups
+
         return {
             "title": definition["label"],
             "subtitle": definition["description"],
@@ -3486,7 +3551,53 @@ class FinancialReportService:
                 {"key": "base_calculo", "label": "Base de cálculo"},
             ],
             "rows": detail_rows,
-            "totals": {"current_assets": FinancialReportService._serialize_money(current_assets), "current_liabilities": FinancialReportService._serialize_money(current_liabilities), "working_capital": FinancialReportService._serialize_money(working_capital), "adjusted_liquidity": FinancialReportService._serialize_money(adjusted_liquidity)},
+            "totals": {
+                "current_assets": FinancialReportService._serialize_money(current_assets),
+                "current_liabilities": FinancialReportService._serialize_money(current_liabilities),
+                "working_capital": FinancialReportService._serialize_money(working_capital),
+                "adjusted_liquidity": FinancialReportService._serialize_money(adjusted_liquidity),
+                "non_current_assets": FinancialReportService._serialize_money(non_current_assets),
+                "non_current_liabilities": FinancialReportService._serialize_money(non_current_liabilities),
+                "equity": FinancialReportService._serialize_money(equity),
+            },
+            "balance_sheet": {
+                "asset": {
+                    "title": "Ativo",
+                    "current": {
+                        "title": "Circulante",
+                        "amount": FinancialReportService._format_currency(current_assets),
+                        "groups": _build_balance_groups("Ativo", "Circulante"),
+                    },
+                    "non_current": {
+                        "title": "Ativo Não Circulante",
+                        "amount": FinancialReportService._format_currency(non_current_assets),
+                    },
+                },
+                "liability": {
+                    "title": "Passivo",
+                    "current": {
+                        "title": "Circulante",
+                        "amount": FinancialReportService._format_currency(current_liabilities),
+                        "groups": _build_balance_groups("Passivo", "Circulante"),
+                    },
+                    "non_current": {
+                        "title": "Passivo Não Circulante",
+                        "amount": FinancialReportService._format_currency(non_current_liabilities),
+                    },
+                    "equity": {
+                        "title": "Patrimônio Líquido",
+                        "amount": FinancialReportService._format_currency(equity),
+                    },
+                },
+                "working_capital": {
+                    "title": "Capital Circulante Líquido",
+                    "amount": FinancialReportService._format_currency(working_capital),
+                },
+                "patrimonial_status": {
+                    "title": "Situação Patrimonial",
+                    "amount": FinancialReportService._format_currency(equity),
+                },
+            },
         }
 
     @staticmethod
@@ -4752,6 +4863,18 @@ class FinancialReportService:
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
         from openpyxl.utils import get_column_letter
 
+        if report_payload.get("report_type") == "working_capital":
+            return FinancialReportService._export_working_capital_xlsx(
+                report_payload,
+                workbook_factory=Workbook,
+                alignment_cls=Alignment,
+                border_cls=Border,
+                font_cls=Font,
+                fill_cls=PatternFill,
+                side_cls=Side,
+                get_column_letter_fn=get_column_letter,
+            )
+
         if report_payload.get("report_type") == "cash_flow":
             return FinancialReportService._export_cash_flow_xlsx(
                 report_payload,
@@ -4825,6 +4948,20 @@ class FinancialReportService:
 
         if report_payload.get("report_type") == "cash_flow":
             elements = FinancialReportService._build_cash_flow_pdf_elements(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+            )
+            doc.build(
+                elements,
+                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            )
+            buffer.seek(0)
+            return buffer.getvalue()
+
+        if report_payload.get("report_type") == "working_capital":
+            elements = FinancialReportService._build_working_capital_pdf_elements(
                 report_payload=report_payload,
                 styles=styles,
                 available_width=available_width,
@@ -5187,6 +5324,211 @@ class FinancialReportService:
         return output.getvalue()
 
     @staticmethod
+    def _export_working_capital_xlsx(
+        report_payload: Dict[str, Any],
+        *,
+        workbook_factory,
+        alignment_cls,
+        border_cls,
+        font_cls,
+        fill_cls,
+        side_cls,
+        get_column_letter_fn,
+    ) -> bytes:
+        workbook = workbook_factory()
+        hero_fill = fill_cls(fill_type="solid", fgColor="0F172A")
+        header_fill = fill_cls(fill_type="solid", fgColor="E5E7EB")
+        main_fill = fill_cls(fill_type="solid", fgColor="F8FAFC")
+        group_fill = fill_cls(fill_type="solid", fgColor="F3F4F6")
+        highlight_fill = fill_cls(fill_type="solid", fgColor="F5F7FA")
+        thin_border = border_cls(
+            left=side_cls(style="thin", color="CBD5E1"),
+            right=side_cls(style="thin", color="CBD5E1"),
+            top=side_cls(style="thin", color="CBD5E1"),
+            bottom=side_cls(style="thin", color="CBD5E1"),
+        )
+        white_font = font_cls(color="FFFFFF", bold=True)
+        title_font = font_cls(color="FFFFFF", bold=True, size=18)
+        subtitle_font = font_cls(color="CBD5E1", size=10)
+        section_font = font_cls(color="111827", bold=True, size=11)
+        row_font = font_cls(color="111827", bold=True)
+        detail_font = font_cls(color="374151", size=10)
+        currency_format = '#,##0.00;[Red]- #,##0.00'
+
+        def _style_money(cell, value: Any):
+            amount = Decimal(str(value or 0))
+            cell.value = FinancialReportService._serialize_money(amount)
+            cell.number_format = currency_format
+            cell.alignment = alignment_cls(horizontal="right", vertical="center")
+            cell.font = row_font if amount != 0 else detail_font
+            cell.border = thin_border
+
+        def _style_label(cell, value: Any, *, font=None, fill=None, indent=0):
+            cell.value = value
+            cell.alignment = alignment_cls(horizontal="left", vertical="center", indent=indent, wrap_text=True)
+            cell.font = font or detail_font
+            cell.border = thin_border
+            if fill is not None:
+                cell.fill = fill
+
+        def _write_balance_side(sheet, start_col: int, header_title: str, section_payload: Dict[str, Any], total_label: str) -> int:
+            col_label = start_col
+            col_amount = start_col + 3
+            for offset in range(4):
+                sheet.cell(row=6, column=start_col + offset).fill = header_fill
+                sheet.cell(row=6, column=start_col + offset).border = thin_border
+            _style_label(sheet.cell(row=6, column=col_label), header_title.upper(), font=section_font, fill=header_fill)
+            _style_money(sheet.cell(row=6, column=col_amount), FinancialReportService._parse_currency_label(section_payload["current"]["amount"]))
+
+            for offset in range(4):
+                sheet.cell(row=7, column=start_col + offset).fill = main_fill
+                sheet.cell(row=7, column=start_col + offset).border = thin_border
+            _style_label(sheet.cell(row=7, column=col_label), total_label, font=row_font, fill=main_fill)
+            _style_money(sheet.cell(row=7, column=col_amount), FinancialReportService._parse_currency_label(section_payload["current"]["amount"]))
+
+            current_row = 8
+            for group in section_payload["current"].get("groups", []):
+                for offset in range(4):
+                    sheet.cell(row=current_row, column=start_col + offset).fill = group_fill
+                    sheet.cell(row=current_row, column=start_col + offset).border = thin_border
+                _style_label(
+                    sheet.cell(row=current_row, column=col_label),
+                    f"{group.get('code')} - {group.get('label')}",
+                    font=row_font,
+                    fill=group_fill,
+                )
+                _style_money(sheet.cell(row=current_row, column=col_amount), FinancialReportService._parse_currency_label(group.get("amount")))
+                current_row += 1
+                for item in group.get("items", []):
+                    _style_label(
+                        sheet.cell(row=current_row, column=col_label),
+                        f"{item.get('code')} - {item.get('label')}",
+                        font=detail_font,
+                        indent=1,
+                    )
+                    _style_money(sheet.cell(row=current_row, column=col_amount), FinancialReportService._parse_currency_label(item.get("amount")))
+                    current_row += 1
+            return current_row
+
+        summary_sheet = workbook.active
+        summary_sheet.title = "Balanço CCL"
+        summary_sheet.sheet_view.showGridLines = False
+        summary_sheet.merge_cells("A1:H2")
+        summary_sheet["A1"] = report_payload.get("title", "Capital Circulante Líquido")
+        summary_sheet["A1"].fill = hero_fill
+        summary_sheet["A1"].font = title_font
+        summary_sheet["A1"].alignment = alignment_cls(horizontal="left", vertical="center")
+        summary_sheet.merge_cells("A3:H3")
+        summary_sheet["A3"] = str(report_payload.get("company_name") or "Versus Gestão Corporativa")
+        summary_sheet["A3"].fill = hero_fill
+        summary_sheet["A3"].font = subtitle_font
+        summary_sheet["A3"].alignment = alignment_cls(horizontal="left", vertical="center")
+        summary_sheet.merge_cells("A4:H4")
+        summary_sheet["A4"] = f"Emitido em {FinancialReportService._pdf_generated_at_label(report_payload)}"
+        summary_sheet["A4"].fill = hero_fill
+        summary_sheet["A4"].font = subtitle_font
+        summary_sheet["A4"].alignment = alignment_cls(horizontal="left", vertical="center")
+
+        balance_sheet = report_payload.get("balance_sheet") or {}
+        asset_payload = balance_sheet.get("asset") or {"current": {"amount": "0,00", "groups": []}}
+        liability_payload = balance_sheet.get("liability") or {"current": {"amount": "0,00", "groups": []}}
+
+        left_end = _write_balance_side(summary_sheet, 1, "Ativo", asset_payload, "Circulante")
+        right_end = _write_balance_side(summary_sheet, 5, "Passivo", liability_payload, "Circulante")
+        current_row = max(left_end, right_end) + 1
+
+        for column in range(1, 9):
+            summary_sheet.cell(row=current_row, column=column).fill = highlight_fill
+            summary_sheet.cell(row=current_row, column=column).border = thin_border
+        _style_label(
+            summary_sheet.cell(row=current_row, column=1),
+            balance_sheet.get("working_capital", {}).get("title", "Capital Circulante Líquido"),
+            font=section_font,
+            fill=highlight_fill,
+        )
+        _style_money(
+            summary_sheet.cell(row=current_row, column=8),
+            FinancialReportService._parse_currency_label(balance_sheet.get("working_capital", {}).get("amount")),
+        )
+        current_row += 2
+
+        for offset in range(4):
+            summary_sheet.cell(row=current_row, column=1 + offset).fill = main_fill
+            summary_sheet.cell(row=current_row, column=1 + offset).border = thin_border
+            summary_sheet.cell(row=current_row, column=5 + offset).fill = main_fill
+            summary_sheet.cell(row=current_row, column=5 + offset).border = thin_border
+        _style_label(summary_sheet.cell(row=current_row, column=1), asset_payload.get("non_current", {}).get("title", "Ativo Não Circulante"), font=row_font, fill=main_fill)
+        _style_money(summary_sheet.cell(row=current_row, column=4), FinancialReportService._parse_currency_label(asset_payload.get("non_current", {}).get("amount")))
+        _style_label(summary_sheet.cell(row=current_row, column=5), liability_payload.get("non_current", {}).get("title", "Passivo Não Circulante"), font=row_font, fill=main_fill)
+        _style_money(summary_sheet.cell(row=current_row, column=8), FinancialReportService._parse_currency_label(liability_payload.get("non_current", {}).get("amount")))
+        current_row += 1
+
+        for offset in range(4):
+            summary_sheet.cell(row=current_row, column=5 + offset).fill = main_fill
+            summary_sheet.cell(row=current_row, column=5 + offset).border = thin_border
+        _style_label(summary_sheet.cell(row=current_row, column=5), liability_payload.get("equity", {}).get("title", "Patrimônio Líquido"), font=row_font, fill=main_fill)
+        _style_money(summary_sheet.cell(row=current_row, column=8), FinancialReportService._parse_currency_label(liability_payload.get("equity", {}).get("amount")))
+        current_row += 2
+
+        for column in range(1, 9):
+            summary_sheet.cell(row=current_row, column=column).fill = highlight_fill
+            summary_sheet.cell(row=current_row, column=column).border = thin_border
+        _style_label(
+            summary_sheet.cell(row=current_row, column=1),
+            balance_sheet.get("patrimonial_status", {}).get("title", "Situação Patrimonial"),
+            font=section_font,
+            fill=highlight_fill,
+        )
+        _style_money(
+            summary_sheet.cell(row=current_row, column=8),
+            FinancialReportService._parse_currency_label(balance_sheet.get("patrimonial_status", {}).get("amount")),
+        )
+
+        filters_sheet = workbook.create_sheet("Filtros e resumo")
+        filters_sheet["A1"] = report_payload.get("title", "Relatório")
+        filters_sheet["A1"].font = font_cls(bold=True, size=14)
+        filters_sheet["A3"] = "Gerado em"
+        filters_sheet["B3"] = report_payload.get("generated_at")
+        row_cursor = 5
+        for section_title, items in [
+            ("Filtros", report_payload.get("filters", [])),
+            ("Informações gerais", report_payload.get("general_info", [])),
+            ("Resumo executivo", report_payload.get("summary_cards", [])),
+        ]:
+            filters_sheet[f"A{row_cursor}"] = section_title
+            filters_sheet[f"A{row_cursor}"].font = font_cls(bold=True)
+            row_cursor += 1
+            for item in items:
+                filters_sheet[f"A{row_cursor}"] = item.get("label")
+                filters_sheet[f"B{row_cursor}"] = item.get("value")
+                row_cursor += 1
+            row_cursor += 1
+
+        data_sheet = workbook.create_sheet("Base analítica")
+        columns = report_payload.get("columns", [])
+        for index, column in enumerate(columns, start=1):
+            cell = data_sheet.cell(row=1, column=index, value=column.get("label"))
+            cell.font = font_cls(bold=True)
+        for row_index, item in enumerate(report_payload.get("rows", []), start=2):
+            for col_index, column in enumerate(columns, start=1):
+                data_sheet.cell(row=row_index, column=col_index, value=item.get(column.get("key"), ""))
+
+        for sheet in workbook.worksheets:
+            width_map = {}
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value is None:
+                        continue
+                    width_map[cell.column] = max(width_map.get(cell.column, 0), len(str(cell.value)))
+            for col_index, width in width_map.items():
+                sheet.column_dimensions[get_column_letter_fn(col_index)].width = min(max(width + 2, 14), 40)
+
+        output = io.BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        return output.getvalue()
+
+    @staticmethod
     def _build_cash_flow_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
         title_style = ParagraphStyle(
             "CashFlowPdfTitle",
@@ -5321,6 +5663,178 @@ class FinancialReportService:
             )
         )
         return elements
+
+    @staticmethod
+    def _build_working_capital_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
+        title_style = ParagraphStyle(
+            "WorkingCapitalPdfTitle",
+            parent=styles["Heading1"],
+            fontSize=20,
+            leading=24,
+            textColor=colors.white,
+            alignment=TA_LEFT,
+        )
+        subtitle_style = ParagraphStyle(
+            "WorkingCapitalPdfSubtitle",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            textColor=colors.HexColor("#CBD5E1"),
+            alignment=TA_LEFT,
+        )
+        section_title_style = ParagraphStyle(
+            "WorkingCapitalPdfSectionTitle",
+            parent=styles["BodyText"],
+            fontSize=10,
+            leading=12,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=5,
+        )
+        table_header_style = ParagraphStyle(
+            "WorkingCapitalPdfTableHeader",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            fontName="Helvetica-Bold",
+            alignment=TA_LEFT,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        cell_style = ParagraphStyle(
+            "WorkingCapitalPdfCell",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#111827"),
+        )
+
+        company_name = str(report_payload.get("company_name") or "Versus Gestão Corporativa")
+        hero = Table(
+            [[
+                Paragraph(report_payload.get("title", "Capital Circulante Líquido"), title_style),
+                Paragraph(company_name, subtitle_style),
+                Paragraph(str(report_payload.get("subtitle") or ""), subtitle_style),
+            ]],
+            colWidths=[available_width],
+            hAlign="LEFT",
+        )
+        hero.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                    ("TOPPADDING", (0, 0), (-1, -1), 12),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ]
+            )
+        )
+
+        balance_sheet = report_payload.get("balance_sheet") or {}
+        elements: List[Any] = [hero, Spacer(1, 10)]
+        elements.append(
+            Table(
+                [[
+                    FinancialReportService._build_working_capital_pdf_side_table(
+                        title=(balance_sheet.get("asset") or {}).get("title", "Ativo"),
+                        current_section=(balance_sheet.get("asset") or {}).get("current") or {},
+                        table_header_style=table_header_style,
+                        cell_style=cell_style,
+                        available_width=(available_width / 2) - 6,
+                    ),
+                    FinancialReportService._build_working_capital_pdf_side_table(
+                        title=(balance_sheet.get("liability") or {}).get("title", "Passivo"),
+                        current_section=(balance_sheet.get("liability") or {}).get("current") or {},
+                        table_header_style=table_header_style,
+                        cell_style=cell_style,
+                        available_width=(available_width / 2) - 6,
+                    ),
+                ]],
+                colWidths=[available_width / 2, available_width / 2],
+                hAlign="LEFT",
+            )
+        )
+        elements.append(Spacer(1, 10))
+        elements.append(
+            Paragraph(
+                f"<b>{(balance_sheet.get('working_capital') or {}).get('title', 'Capital Circulante Líquido')}:</b> "
+                f"{(balance_sheet.get('working_capital') or {}).get('amount', '0,00')}",
+                section_title_style,
+            )
+        )
+        elements.append(
+            Table(
+                [[
+                    Paragraph(
+                        f"{(balance_sheet.get('asset') or {}).get('non_current', {}).get('title', 'Ativo Não Circulante')}: "
+                        f"<b>{(balance_sheet.get('asset') or {}).get('non_current', {}).get('amount', '0,00')}</b>",
+                        cell_style,
+                    ),
+                    Paragraph(
+                        f"{(balance_sheet.get('liability') or {}).get('non_current', {}).get('title', 'Passivo Não Circulante')}: "
+                        f"<b>{(balance_sheet.get('liability') or {}).get('non_current', {}).get('amount', '0,00')}</b><br/>"
+                        f"{(balance_sheet.get('liability') or {}).get('equity', {}).get('title', 'Patrimônio Líquido')}: "
+                        f"<b>{(balance_sheet.get('liability') or {}).get('equity', {}).get('amount', '0,00')}</b>",
+                        cell_style,
+                    ),
+                ]],
+                colWidths=[available_width / 2, available_width / 2],
+                hAlign="LEFT",
+            )
+        )
+        elements.append(Spacer(1, 8))
+        elements.append(
+            Paragraph(
+                f"<b>{(balance_sheet.get('patrimonial_status') or {}).get('title', 'Situação Patrimonial')}:</b> "
+                f"{(balance_sheet.get('patrimonial_status') or {}).get('amount', '0,00')}",
+                section_title_style,
+            )
+        )
+        return elements
+
+    @staticmethod
+    def _build_working_capital_pdf_side_table(*, title: str, current_section: Dict[str, Any], table_header_style, cell_style, available_width: float) -> Table:
+        rows: List[List[Any]] = [
+            [
+                Paragraph(str(title).upper(), table_header_style),
+                Paragraph(f"<para alignment='right'><b>{current_section.get('amount', '0,00')}</b></para>", cell_style),
+            ],
+            [
+                Paragraph(f"<b>{current_section.get('title', 'Circulante')}</b>", cell_style),
+                Paragraph(f"<para alignment='right'><b>{current_section.get('amount', '0,00')}</b></para>", cell_style),
+            ],
+        ]
+        for group in current_section.get("groups", []):
+            rows.append(
+                [
+                    Paragraph(f"<b>{group.get('code')} - {group.get('label')}</b>", cell_style),
+                    Paragraph(f"<para alignment='right'><b>{group.get('amount')}</b></para>", cell_style),
+                ]
+            )
+            for item in group.get("items", []):
+                rows.append(
+                    [
+                        Paragraph(f"&nbsp;&nbsp;&nbsp;{item.get('code')} - {item.get('label')}", cell_style),
+                        Paragraph(f"<para alignment='right'>{item.get('amount')}</para>", cell_style),
+                    ]
+                )
+        table = Table(rows, colWidths=[available_width * 0.74, available_width * 0.26], hAlign="LEFT")
+        styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
+            ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#F8FAFC")),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]
+        for row_index in range(2, len(rows)):
+            fill = colors.HexColor("#F3F4F6") if not str(rows[row_index][0].text).startswith("&nbsp;") else colors.white
+            styles.append(("BACKGROUND", (0, row_index), (-1, row_index), fill))
+        table.setStyle(TableStyle(styles))
+        return table
 
     @staticmethod
     def _build_cash_flow_pdf_header_accounts_panel(*, hero_left: List[Any], report_payload: Dict[str, Any], available_width: float, header_style, cell_style) -> Table:

@@ -29,6 +29,8 @@
     {% include 'modules/financial/partials/report_view_income_statement.html' %}
 {% elif report.report_type == 'cash_flow' %}
     {% include 'modules/financial/partials/report_view_cash_flow.html' %}
+{% elif report.report_type == 'working_capital' %}
+    {% include 'modules/financial/partials/report_view_working_capital.html' %}
 {% else %}
 <div class="fin-report-view fade-in">
     <section class="rv-panel rv-header">

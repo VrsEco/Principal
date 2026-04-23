@@ -1,0 +1,163 @@
+<div class="wc-report fade-in">
+    <section class="wc-header no-print">
+        <div>
+            <p class="wc-eyebrow">Relatório gerencial</p>
+            <h1>{{ report.title }}</h1>
+            <p class="wc-subtitle">{{ report.subtitle }}</p>
+        </div>
+        <div class="wc-actions">
+            <a href="/financial/reports/{{ report.report_slug }}{% if request.query_string %}?{{ request.query_string.decode('utf-8') }}{% elif company_id %}?company_id={{ company_id }}{% endif %}" class="wc-btn wc-btn--secondary">Filtros</a>
+            <a href="/financial/reports/{{ report.report_slug }}/export-pdf?{{ request.query_string.decode('utf-8') }}" class="wc-btn wc-btn--secondary">Exportar PDF</a>
+            <a href="/financial/reports/{{ report.report_slug }}/export-xlsx?{{ request.query_string.decode('utf-8') }}" class="wc-btn wc-btn--secondary">Exportar XLSX</a>
+            <button type="button" onclick="window.print()" class="wc-btn wc-btn--primary">Imprimir</button>
+        </div>
+    </section>
+
+    <section class="wc-info-grid">
+        <article class="wc-panel">
+            <h2>Filtros aplicados</h2>
+            <div class="wc-list">
+                {% for item in report.filters %}
+                <div><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+                {% endfor %}
+            </div>
+        </article>
+        <article class="wc-panel">
+            <h2>Informações gerais</h2>
+            <div class="wc-list">
+                <div><span>Gerado em</span><strong>{{ report.generated_at }}</strong></div>
+                {% for item in report.general_info %}
+                <div><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+
+    <section class="wc-balance-sheet">
+        <div class="wc-balance-grid">
+            <article class="wc-panel wc-side">
+                <div class="wc-side__header">
+                    <span>{{ report.balance_sheet.asset.title }}</span>
+                    <strong>{{ report.balance_sheet.asset.current.amount }}</strong>
+                </div>
+
+                <div class="wc-section-row wc-section-row--main">
+                    <span>{{ report.balance_sheet.asset.current.title }}</span>
+                    <strong>{{ report.balance_sheet.asset.current.amount }}</strong>
+                </div>
+
+                {% for group in report.balance_sheet.asset.current.groups %}
+                <div class="wc-section-row">
+                    <span>{{ group.code }} - {{ group.label }}</span>
+                    <strong>{{ group.amount }}</strong>
+                </div>
+                {% for item in group.items %}
+                <div class="wc-detail-row">
+                    <span>{{ item.code }} - {{ item.label }}</span>
+                    <strong>{{ item.amount }}</strong>
+                </div>
+                {% endfor %}
+                {% endfor %}
+            </article>
+
+            <article class="wc-panel wc-side">
+                <div class="wc-side__header">
+                    <span>{{ report.balance_sheet.liability.title }}</span>
+                    <strong>{{ report.balance_sheet.liability.current.amount }}</strong>
+                </div>
+
+                <div class="wc-section-row wc-section-row--main">
+                    <span>{{ report.balance_sheet.liability.current.title }}</span>
+                    <strong>{{ report.balance_sheet.liability.current.amount }}</strong>
+                </div>
+
+                {% for group in report.balance_sheet.liability.current.groups %}
+                <div class="wc-section-row">
+                    <span>{{ group.code }} - {{ group.label }}</span>
+                    <strong>{{ group.amount }}</strong>
+                </div>
+                {% for item in group.items %}
+                <div class="wc-detail-row">
+                    <span>{{ item.code }} - {{ item.label }}</span>
+                    <strong>{{ item.amount }}</strong>
+                </div>
+                {% endfor %}
+                {% endfor %}
+            </article>
+        </div>
+
+        <div class="wc-highlight-row">
+            <span>{{ report.balance_sheet.working_capital.title }}</span>
+            <strong>{{ report.balance_sheet.working_capital.amount }}</strong>
+        </div>
+
+        <div class="wc-balance-grid wc-balance-grid--footer">
+            <article class="wc-panel wc-side">
+                <div class="wc-section-row wc-section-row--main">
+                    <span>{{ report.balance_sheet.asset.non_current.title }}</span>
+                    <strong>{{ report.balance_sheet.asset.non_current.amount }}</strong>
+                </div>
+            </article>
+
+            <article class="wc-panel wc-side">
+                <div class="wc-section-row wc-section-row--main">
+                    <span>{{ report.balance_sheet.liability.non_current.title }}</span>
+                    <strong>{{ report.balance_sheet.liability.non_current.amount }}</strong>
+                </div>
+                <div class="wc-section-row wc-section-row--main">
+                    <span>{{ report.balance_sheet.liability.equity.title }}</span>
+                    <strong>{{ report.balance_sheet.liability.equity.amount }}</strong>
+                </div>
+            </article>
+        </div>
+
+        <div class="wc-highlight-row wc-highlight-row--final">
+            <span>{{ report.balance_sheet.patrimonial_status.title }}</span>
+            <strong>{{ report.balance_sheet.patrimonial_status.amount }}</strong>
+        </div>
+    </section>
+</div>
+
+<style>
+    .wc-report { padding:0 2rem 2rem; display:flex; flex-direction:column; gap:1rem; }
+    .wc-panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1.1rem; }
+    .wc-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+    .wc-eyebrow { margin:0 0 .4rem; font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .wc-subtitle { color:var(--text-secondary); max-width:860px; }
+    .wc-actions { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:flex-end; }
+    .wc-btn { border:none; border-radius:12px; padding:.82rem 1rem; font-weight:700; text-decoration:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+    .wc-btn--primary { background:var(--primary); color:#fff; }
+    .wc-btn--secondary { background:var(--surface-secondary); border:1px solid var(--border); color:var(--text-primary); }
+    .wc-info-grid, .wc-balance-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; }
+    .wc-list { display:grid; gap:.75rem; }
+    .wc-list div,
+    .wc-side__header,
+    .wc-section-row,
+    .wc-detail-row,
+    .wc-highlight-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; border-bottom:1px solid var(--border); }
+    .wc-list div { padding:.75rem .85rem; background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; }
+    .wc-list span { color:var(--text-secondary); }
+    .wc-balance-sheet { display:flex; flex-direction:column; gap:.75rem; }
+    .wc-side { padding:0; overflow:hidden; }
+    .wc-side__header { padding:.9rem 1rem; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; background:#f6f7fa; font-weight:800; }
+    .wc-section-row { padding:.85rem 1rem; background:#f2f3f5; font-weight:700; }
+    .wc-section-row--main { background:#fbfbfc; }
+    .wc-detail-row { padding:.75rem 1rem  .75rem 2.25rem; font-size:.92rem; }
+    .wc-detail-row:last-child,
+    .wc-side__header:last-child,
+    .wc-section-row:last-child { border-bottom:none; }
+    .wc-highlight-row { background:#f6f7fa; border:1px solid var(--border); border-radius:18px; padding:1rem 1.1rem; font-size:1.05rem; font-weight:800; }
+    .wc-highlight-row--final { font-size:1.15rem; }
+    .wc-balance-grid--footer .wc-side { min-height:100%; }
+    @media (max-width: 1100px) {
+        .wc-report { padding:0 1rem 1.5rem; }
+        .wc-header, .wc-info-grid, .wc-balance-grid { grid-template-columns:1fr; display:grid; }
+        .wc-actions { justify-content:stretch; }
+        .wc-actions .wc-btn, .wc-actions button { width:100%; }
+    }
+    @media print {
+        .no-print, .sidebar, header, nav { display:none !important; }
+        .wc-report { padding:0; }
+        .wc-panel, .wc-highlight-row { box-shadow:none; break-inside:avoid; }
+    }
+</style>
