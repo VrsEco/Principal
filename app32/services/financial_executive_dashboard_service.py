@@ -6,11 +6,35 @@ from typing import Dict, Optional, Sequence, Tuple
 from models.financial import FinancialImportBatch, FinancialReconciliationMatch
 from services.financial_classification_dashboard_service import FinancialClassificationDashboardService
 from services.financial_dashboard_analytics import FinancialDashboardAnalytics
+from services.financial_report_service import FinancialReportService
 from services.financial_service import FinancialService
 
 
 class FinancialExecutiveDashboardService:
     """Orquestra o cockpit executivo do financeiro preservando a lógica madura do módulo."""
+
+    @staticmethod
+    def _build_working_capital_panel(*, company_id: int, period_start, period_end) -> Dict:
+        filters, error = FinancialReportService._normalize_filters(
+            "working_capital",
+            {
+                "period_start": period_start.isoformat(),
+                "period_end": period_end.isoformat(),
+                "reference_date": period_end.isoformat(),
+                "include_overdraft": True,
+            },
+        )
+        if error or not filters:
+            return {}
+
+        report = FinancialReportService._build_working_capital(company_id, filters)
+        return {
+            "reference_date": period_end.isoformat(),
+            "summary_cards": report.get("summary_cards") or [],
+            "general_info": report.get("general_info") or [],
+            "totals": report.get("totals") or {},
+            "balance_sheet": report.get("balance_sheet") or {},
+        }
 
     @staticmethod
     def get_dashboard(
@@ -41,6 +65,11 @@ class FinancialExecutiveDashboardService:
             company_id=company_id,
             entries=entries,
             settlements=settlements,
+            period_start=start_date,
+            period_end=end_date,
+        )
+        working_capital_panel = FinancialExecutiveDashboardService._build_working_capital_panel(
+            company_id=company_id,
             period_start=start_date,
             period_end=end_date,
         )
@@ -75,6 +104,7 @@ class FinancialExecutiveDashboardService:
             ),
             "cash_flow_panel": cash_flow_panel,
             "dre_matrix": dre_matrix,
+            "working_capital_panel": working_capital_panel,
             "quick_actions": FinancialDashboardAnalytics.build_quick_actions(),
             "classification": classification,
         }, None
