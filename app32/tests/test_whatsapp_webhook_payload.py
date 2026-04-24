@@ -109,6 +109,24 @@ def test_extract_whatsapp_message_supports_document_attachment_without_text():
     assert metadata["attachment"]["mime_type"] == "application/pdf"
 
 
+def test_extract_whatsapp_message_supports_image_attachment_with_image_url_and_no_filename():
+    payload = {
+        "phone": "5571999999999",
+        "image": {
+            "imageUrl": "https://files.example.com/receipt-photo.jpg",
+            "mimeType": "image/jpeg",
+        },
+    }
+
+    phone, text, metadata = _extract_whatsapp_message(payload)
+
+    assert phone == "5571999999999"
+    assert text == ""
+    assert metadata["attachment"]["url"] == "https://files.example.com/receipt-photo.jpg"
+    assert metadata["attachment"]["file_name"] == "arquivo_image.jpg"
+    assert metadata["attachment"]["mime_type"] == "image/jpeg"
+
+
 def test_load_whatsapp_request_payload_from_form_json_field():
     app = Flask(__name__)
 
@@ -224,6 +242,44 @@ def test_process_whatsapp_financial_attachment_enriches_workflow_payload(monkeyp
     assert workflow["payload"]["_source_contact"] == "5571996426565"
     assert workflow["payload"]["_source_external_reference"] == "wamid.123"
     assert workflow["payload"]["_thread_id"] == "wa_5571996426565"
+
+
+def test_process_whatsapp_unsupported_attachment_returns_operational_message(monkeypatch):
+    app = Flask(__name__)
+
+    class DummyUser:
+        id = 7
+        name = "Fabiano Ferreira"
+
+    recorded = {"messages": [], "sent": []}
+
+    monkeypatch.setattr('src.intelligence.identity.resolve_user_identity', lambda contact, channel: DummyUser())
+    monkeypatch.setattr('src.intelligence.identity.build_identity_resolution_trace', lambda *args, **kwargs: type('Trace', (), {'to_safe_dict': lambda self: {}})())
+    monkeypatch.setattr('src.intelligence.identity.get_best_company_id', lambda user: 9)
+    monkeypatch.setattr('services.proactive_service.try_handle_summary_followup', lambda **kwargs: (False, None))
+    monkeypatch.setattr('models.agent_message.AgentMessage', lambda **kwargs: kwargs)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.add', lambda obj: recorded['messages'].append(obj))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.commit', lambda: recorded.setdefault('committed', True))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.rollback', lambda: recorded.setdefault('rolled_back', True))
+    monkeypatch.setattr('services.whatsapp_service.whatsapp_service.send_message', lambda phone, message: recorded['sent'].append((phone, message)) or True)
+
+    metadata = {
+        "event_type": "ReceivedCallback",
+        "message_id": "wamid.unsupported",
+        "thread_contact": "5571996426565",
+        "attachment": {
+            "file_name": "contrato.docx",
+            "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "url": "https://files.example.com/contrato.docx",
+        },
+    }
+
+    process_whatsapp_message(app, "5571996426565", "", metadata)
+
+    assert recorded["sent"]
+    sent_message = recorded["sent"][0][1]
+    assert "Tipo de arquivo ainda nao suportado" in sent_message
+    assert "PDF, XML, PNG, JPG, JPEG, WEBP, HEIC" in sent_message
 
 
 def test_handle_instagram_uses_menu_intercept_and_logs_messages(monkeypatch):

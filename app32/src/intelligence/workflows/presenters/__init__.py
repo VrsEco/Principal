@@ -33,6 +33,7 @@ from .error_presenter import (
     build_internal_error_message,
     build_menu_recovery_message,
     build_recovery_message,
+    build_unsupported_attachment_message,
 )
 from .menu_presenter import (
     build_ambiguous_options_message,
@@ -79,6 +80,7 @@ __all__ = [
     "build_internal_error_message",
     "build_menu_recovery_message",
     "build_recovery_message",
+    "build_unsupported_attachment_message",
     "build_ambiguous_options_message",
     "build_processing_ack_message",
     "build_root_menu_message",

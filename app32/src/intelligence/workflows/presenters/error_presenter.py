@@ -37,6 +37,37 @@ def build_internal_error_message(*, channel: str = "web") -> str:
     )
 
 
+def build_unsupported_attachment_message(
+    *,
+    channel: str = "web",
+    supported_formats: list[str] | None = None,
+) -> str:
+    supported_formats = supported_formats or ["PDF", "XML", "PNG", "JPG", "JPEG", "WEBP", "HEIC"]
+    formatted_supported = ", ".join(supported_formats)
+    return build_chat_contract_message(
+        "Tipo de arquivo ainda nao suportado",
+        channel=channel,
+        blocks=[
+            ChatMessageBlock(
+                kind="status",
+                text=build_status_callout(
+                    "warning",
+                    "Recebi o documento, mas este tipo de arquivo ainda nao esta suportado neste fluxo. O Squad de Engenharia foi sinalizado para evolucao do app.",
+                    channel=channel,
+                ),
+            ),
+            ChatMessageBlock(
+                kind="next_step",
+                items=[
+                    "Esse documento nao sera tratado automaticamente nesta tentativa.",
+                    f"Recomendo reenviar em um dos formatos suportados: {formatted_supported}.",
+                    "Se precisar, o Squad de Engenharia pode analisar este caso para evolucao do fluxo.",
+                ],
+            ),
+        ],
+    )
+
+
 def build_menu_recovery_message(*, channel: str = "web") -> str:
     return build_recovery_message(
         "Nao consegui abrir o menu agora",

@@ -153,6 +153,8 @@ def _extract_message_text(payload: Dict[str, Any]) -> str:
 def _extract_attachment_candidate(candidate: Dict[str, Any], media_kind: str) -> Dict[str, Any]:
     url = _first_non_empty_text(
         candidate.get("url"),
+        candidate.get("imageUrl"),
+        candidate.get("image_url"),
         candidate.get("directUrl"),
         candidate.get("direct_url"),
         candidate.get("downloadUrl"),
@@ -177,6 +179,12 @@ def _extract_attachment_candidate(candidate: Dict[str, Any], media_kind: str) ->
         candidate.get("contentType"),
         candidate.get("content_type"),
     )
+    if not file_name and mime_type:
+        guessed_extension = mimetypes.guess_extension(mime_type, strict=False) or ""
+        if media_kind == "image" and guessed_extension == ".jpe":
+            guessed_extension = ".jpg"
+        file_name = f"arquivo_{media_kind or 'media'}{guessed_extension}"
+
     if not url and not file_name:
         return {}
 
@@ -552,6 +560,25 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
                         )
                     else:
                         response_text = "Recebi o arquivo, mas não consegui iniciar o fluxo financeiro agora."
+            elif attachment:
+                from src.intelligence.workflows.presenters import build_unsupported_attachment_message
+
+                logger.warning(
+                    "WHATSAPP ATTACHMENT UNSUPPORTED: phone=%s message_id=%s mime=%s file_name=%s",
+                    phone,
+                    metadata.get("message_id"),
+                    attachment.get("mime_type"),
+                    attachment.get("file_name"),
+                )
+                response_text = build_unsupported_attachment_message(channel="whatsapp")
+                menu_metadata = {
+                    "flow": "unsupported_attachment",
+                    "unsupported_attachment": {
+                        "mime_type": attachment.get("mime_type"),
+                        "file_name": attachment.get("file_name"),
+                        "message_id": metadata.get("message_id"),
+                    },
+                }
             else:
                 from src.intelligence.menu_engine import handle_menu_message
 
@@ -698,6 +725,7 @@ def handle_whatsapp():
         return jsonify({"status": "no data"}), 200
 
     phone, message_text, metadata = _extract_whatsapp_message(data)
+    has_attachment = bool(dict(metadata.get("attachment") or {}))
     has_supported_attachment = _is_supported_financial_attachment(dict(metadata.get("attachment") or {}))
 
     ignored_reason = metadata.get("ignored")
@@ -708,7 +736,7 @@ def handle_whatsapp():
         )
         return jsonify({"status": ignored_reason}), 200
 
-    if not phone or (not message_text and not has_supported_attachment):
+    if not phone or (not message_text and not has_attachment):
         logger.warning(
             "WHATSAPP PAYLOAD INVALIDO: content_type=%s keys=%s payload=%r",
             request.content_type,
