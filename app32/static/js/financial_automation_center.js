@@ -8,7 +8,7 @@
   const documentDialog = document.getElementById('fa-document-dialog');
   const reviewDialog = document.getElementById('fa-review-dialog');
   const documentBody = document.getElementById('fa-document-body');
-  const state = { options: null, records: [], activeReviewId: null };
+  const state = { options: null, records: [], activeReviewId: null, documentCache: {}, reviewQueueIds: [] };
   const statusLabels = { imported: 'Importada', validated: 'Validada', generated: 'Gerada', excluded: 'Excluída' };
   const originLabels = {
     accountability: 'Prestação de contas',
@@ -57,6 +57,7 @@
   const activeFiltersNode = byId('fa-active-filters');
   const selectedIds = () => Array.from(document.querySelectorAll('.fa-record-select:checked')).map((el) => Number(el.value));
   const badge = (status) => `<span class="fa-badge fa-badge--${status}">${statusLabels[status] || status || '-'}</span>`;
+  const reviewCarouselStatuses = new Set(['imported']);
 
   async function api(url, options = {}) {
     const response = await fetch(url, {
@@ -275,6 +276,41 @@
     return [companyCode, 'R', sourceToken(record), sequence].join('.');
   }
 
+  function isCarouselRecord(record) {
+    return reviewCarouselStatuses.has(String(record?.status || '').toLowerCase());
+  }
+
+  function refreshReviewQueue() {
+    state.reviewQueueIds = state.records.filter(isCarouselRecord).map((record) => record.id);
+  }
+
+  function reviewQueueIndex(recordId) {
+    return state.reviewQueueIds.findIndex((id) => id === Number(recordId));
+  }
+
+  function activeReviewRecord() {
+    return state.records.find((item) => item.id === Number(state.activeReviewId));
+  }
+
+  function documentUrlCandidates(payload = {}) {
+    return [
+      payload.preview_public_url,
+      payload.optimized_public_url,
+      payload.original_public_url,
+      payload.public_url,
+    ].filter(Boolean);
+  }
+
+  function previewKind(payload = {}) {
+    const documentType = String(payload.document_type || '').toLowerCase();
+    const mimeType = String(payload.mime_type || '').toLowerCase();
+    const sourceUrl = documentUrlCandidates(payload)[0] || '';
+    const lowerUrl = String(sourceUrl).toLowerCase();
+    if (mimeType.startsWith('image/') || documentType === 'receipt_image' || /\.(png|jpg|jpeg|webp|gif|bmp|svg)(\?|$)/.test(lowerUrl)) return 'image';
+    if (mimeType.includes('pdf') || /(\.pdf)(\?|$)/.test(lowerUrl) || ['receipt_pdf', 'danfe_pdf', 'dacte_pdf'].includes(documentType)) return 'pdf';
+    return 'external';
+  }
+
   function formatCurrency(value) {
     return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
@@ -294,6 +330,7 @@
   }
 
   function render() {
+    refreshReviewQueue();
     if (!state.records.length) {
       recordsBody.innerHTML = '<tr><td colspan="12" class="fa-empty">Nenhum registro encontrado.</td></tr>';
       return;
@@ -346,7 +383,96 @@
     if (node) node.innerHTML = html;
   }
 
-  function populateReviewForm(record) {
+  async function fetchDocumentPayload(record) {
+    const documentId = record?.document?.id;
+    if (!documentId) return null;
+    if (!state.documentCache[documentId]) {
+      state.documentCache[documentId] = await api(`/api/financial/automation/documents/${documentId}?company_id=${companyId}`);
+    }
+    return state.documentCache[documentId];
+  }
+
+  function renderReviewQueueState(record) {
+    const queueIndex = reviewQueueIndex(record?.id);
+    const queueStatus = byId('fa-review-queue-status');
+    const prevButton = byId('fa-review-prev');
+    const nextButton = byId('fa-review-next');
+    const completeButton = byId('fa-review-complete');
+    if (!queueStatus || !prevButton || !nextButton || !completeButton) return;
+
+    const total = state.reviewQueueIds.length;
+    const inQueue = queueIndex >= 0;
+    queueStatus.textContent = inQueue
+      ? `${queueIndex + 1} de ${total} pendente(s) na esteira de revisão.`
+      : 'Registro fora do carrossel. Para revisar novamente, abra-o diretamente na grade.';
+    prevButton.disabled = !inQueue || queueIndex === 0;
+    nextButton.disabled = !inQueue || queueIndex === total - 1;
+    completeButton.disabled = !record || ['validated', 'generated', 'excluded'].includes(record.status);
+    completeButton.textContent = record?.status === 'validated' ? 'Revisão concluída' : 'Revisão completa';
+  }
+
+  function reviewPreviewFallback(message, links = '') {
+    return `
+      <div class="fa-review-preview__fallback">
+        <p class="fa-muted">${escapeHtml(message)}</p>
+        ${links}
+      </div>
+    `;
+  }
+
+  function renderInlinePreview(payload) {
+    if (!payload) {
+      return reviewPreviewFallback('Este registro não possui documento estruturado para visualização inline.');
+    }
+    const urls = {
+      preview: payload.preview_public_url,
+      optimized: payload.optimized_public_url,
+      original: payload.original_public_url || payload.public_url,
+    };
+    const links = `
+      <div class="fa-review-preview__meta">
+        ${urls.preview ? `<a href="${urls.preview}" target="_blank" rel="noopener">Preview</a>` : ''}
+        ${urls.optimized ? `<a href="${urls.optimized}" target="_blank" rel="noopener">Otimizado</a>` : ''}
+        ${urls.original ? `<a href="${urls.original}" target="_blank" rel="noopener">Original</a>` : ''}
+      </div>
+    `;
+    const primaryUrl = urls.preview || urls.optimized || urls.original;
+    if (!primaryUrl) {
+      return reviewPreviewFallback('O documento foi recebido, mas ainda não há arquivo público disponível para visualização.', links);
+    }
+    const kind = previewKind(payload);
+    if (kind === 'image') {
+      return `
+        <div class="fa-review-preview__viewport">
+          <img src="${primaryUrl}" alt="Documento da revisão">
+        </div>
+        ${links}
+      `;
+    }
+    if (kind === 'pdf') {
+      return `
+        <div class="fa-review-preview__viewport">
+          <iframe src="${primaryUrl}" title="Preview do documento"></iframe>
+        </div>
+        ${links}
+      `;
+    }
+    return reviewPreviewFallback('Este formato não possui preview inline ideal. Abra o documento em pop-up quando precisar conferir o original.', links);
+  }
+
+  async function updateReviewPreview(record) {
+    const previewBody = byId('fa-review-preview-body');
+    const previewOpenButton = byId('fa-review-preview-open');
+    if (!previewBody || !previewOpenButton) return;
+    previewBody.innerHTML = '<p class="fa-muted">Carregando documento...</p>';
+    previewOpenButton.disabled = true;
+
+    const payload = await fetchDocumentPayload(record).catch(() => null);
+    previewBody.innerHTML = renderInlinePreview(payload);
+    previewOpenButton.disabled = !documentUrlCandidates(payload || {}).length;
+  }
+
+  async function populateReviewForm(record) {
     state.activeReviewId = record.id;
     byId('fa-review-record-id').value = String(record.id);
     byId('fa-review-title').textContent = `Revisar registro #${record.id}`;
@@ -378,6 +504,8 @@
     byId('fa-review-chart-account-note').innerHTML = suggestionNote(record, 'chart_account').replace(/^<div class="fa-muted">|<\/div>$/g, '');
     byId('fa-review-cost-center-note').innerHTML = suggestionNote(record, 'cost_center').replace(/^<div class="fa-muted">|<\/div>$/g, '');
     byId('fa-review-save').textContent = record.status === 'validated' ? 'Salvar ajustes' : 'Salvar revisão';
+    renderReviewQueueState(record);
+    await updateReviewPreview(record);
   }
 
   function reviewPayload() {
@@ -405,11 +533,21 @@
     return payload;
   }
 
-  function openReview(recordId) {
+  async function openReview(recordId) {
     const record = state.records.find((item) => item.id === Number(recordId));
     if (!record) return;
-    populateReviewForm(record);
+    await populateReviewForm(record);
     reviewDialog?.showModal();
+  }
+
+  async function openAdjacentReview(offset) {
+    const currentRecord = activeReviewRecord();
+    if (!currentRecord) return;
+    const currentIndex = reviewQueueIndex(currentRecord.id);
+    if (currentIndex < 0) return;
+    const nextId = state.reviewQueueIds[currentIndex + offset];
+    if (!nextId) return;
+    await openReview(nextId);
   }
 
   function rowPayload(row) {
@@ -484,7 +622,7 @@
     await loadRecords();
   }
 
-  async function saveReview() {
+  async function saveReview(closeAfterSave = true) {
     const recordId = Number(byId('fa-review-record-id').value || 0);
     if (!recordId) return;
     await api(`/api/financial/automation/records/${recordId}?company_id=${companyId}`, {
@@ -492,7 +630,44 @@
       body: JSON.stringify(reviewPayload()),
     });
     await loadRecords();
+    if (closeAfterSave) {
+      reviewDialog?.close();
+      return;
+    }
+    const refreshed = state.records.find((item) => item.id === recordId);
+    if (refreshed) {
+      await populateReviewForm(refreshed);
+    }
+  }
+
+  async function completeReview() {
+    const record = activeReviewRecord();
+    if (!record) return;
+    const currentIndex = reviewQueueIndex(record.id);
+    const nextId = currentIndex >= 0 ? state.reviewQueueIds[currentIndex + 1] : null;
+
+    await saveReview(false);
+    await api(`/api/financial/automation/records/bulk-status?company_id=${companyId}`, {
+      method: 'POST',
+      body: JSON.stringify({ record_ids: [record.id], status: 'validated' }),
+    });
+    await loadRecords();
+
+    if (nextId) {
+      const nextRecord = state.records.find((item) => item.id === nextId);
+      if (nextRecord) {
+        await populateReviewForm(nextRecord);
+        return;
+      }
+    }
+
+    const fallback = state.records.find((item) => state.reviewQueueIds.includes(item.id));
+    if (fallback) {
+      await populateReviewForm(fallback);
+      return;
+    }
     reviewDialog?.close();
+    alert('Revisão concluída. Não há mais registros pendentes no carrossel atual.');
   }
 
   function renderDocumentLinks(payload) {
@@ -521,7 +696,7 @@
       documentDialog.showModal();
       return;
     }
-    const payload = await api(`/api/financial/automation/documents/${record.document.id}?company_id=${companyId}`);
+    const payload = await fetchDocumentPayload(record);
     const previewLink = payload.preview_public_url ? `<p><a href="${payload.preview_public_url}" target="_blank" rel="noopener">Abrir preview</a></p>` : '';
     const optimizedLink = payload.optimized_public_url ? `<p><a href="${payload.optimized_public_url}" target="_blank" rel="noopener">Abrir otimizado</a></p>` : '';
     const publicUrl = payload.original_public_url || payload.public_url;
@@ -552,6 +727,18 @@
       </div>
     `;
     documentDialog.showModal();
+  }
+
+  async function openReviewDocumentExternal() {
+    const record = activeReviewRecord();
+    if (!record) return;
+    const payload = await fetchDocumentPayload(record).catch(() => null);
+    const url = documentUrlCandidates(payload || {})[0];
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+      return;
+    }
+    await showOrigin({ dataset: { recordId: String(record.id) } });
   }
 
   async function bulkStatus(status) {
@@ -641,13 +828,12 @@
   byId('fa-generate').addEventListener('click', generateSelected);
   byId('fa-apply-filters')?.addEventListener('click', applyFilters);
   byId('fa-clear-filters')?.addEventListener('click', clearFilters);
-  byId('fa-review-save')?.addEventListener('click', saveReview);
-  byId('fa-review-origin-action')?.addEventListener('click', async () => {
-    const record = state.records.find((item) => item.id === state.activeReviewId);
-    if (!record) return;
-    if (reviewDialog?.open) reviewDialog.close();
-    await showOrigin({ dataset: { recordId: String(record.id) } });
-  });
+  byId('fa-review-save')?.addEventListener('click', () => saveReview(true));
+  byId('fa-review-prev')?.addEventListener('click', () => openAdjacentReview(-1));
+  byId('fa-review-next')?.addEventListener('click', () => openAdjacentReview(1));
+  byId('fa-review-complete')?.addEventListener('click', completeReview);
+  byId('fa-review-origin-action')?.addEventListener('click', openReviewDocumentExternal);
+  byId('fa-review-preview-open')?.addEventListener('click', openReviewDocumentExternal);
   byId('fa-select-all').addEventListener('change', (event) => {
     document.querySelectorAll('.fa-record-select').forEach((el) => { el.checked = event.target.checked; });
   });
@@ -656,7 +842,7 @@
     const action = event.target.dataset.action;
     const row = event.target.closest('tr');
     if (!action || !row) return;
-    if (action === 'review') openReview(row.dataset.recordId);
+    if (action === 'review') await openReview(row.dataset.recordId);
     if (action === 'save') await saveRow(row);
     if (action === 'origin') await showOrigin(row);
     if (action === 'exclude') await excludeRecord(row.dataset.recordId);

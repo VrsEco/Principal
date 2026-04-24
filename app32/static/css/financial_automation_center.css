@@ -62,22 +62,37 @@
 .fa-dialog::backdrop{background:rgba(15,23,42,.55)}
 .fa-dialog__content{width:min(1100px,92vw);padding:0}
 .fa-dialog__content--wide{width:min(1200px,96vw)}
-.fa-dialog__content--review{width:min(1280px,96vw)}
+.fa-dialog__content--review{width:min(1520px,98vw)}
 .fa-dialog__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:1rem 1.1rem 0}
 .fa-dialog__body{padding:1rem 1.1rem 1.2rem;display:flex;flex-direction:column;gap:.9rem}
 .fa-doc-preview{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem}
 .fa-doc-preview pre{white-space:pre-wrap;background:var(--surface-secondary);border:1px solid var(--border);border-radius:12px;padding:1rem;max-height:480px;overflow:auto}
 .fa-review-subtitle{margin:.35rem 0 0}
-.fa-review-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:1rem;align-items:start}
+.fa-review-layout{display:grid;grid-template-columns:300px minmax(0,1.05fr) minmax(320px,.95fr);gap:1rem;align-items:start}
 .fa-review-summary{display:flex;flex-direction:column;gap:.9rem;padding:1rem;border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary);position:sticky;top:0}
 .fa-review-summary__block{display:flex;flex-direction:column;gap:.35rem}
 .fa-review-summary__label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-tertiary)}
 .fa-review-form{display:flex;flex-direction:column;gap:1rem}
+.fa-review-toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:1rem;border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary)}
+.fa-review-toolbar__meta{display:flex;flex-direction:column;gap:.25rem}
 .fa-review-grid{display:grid;gap:1rem}
 .fa-review-grid--double{grid-template-columns:repeat(2,minmax(0,1fr))}
 .fa-review-grid--triple{grid-template-columns:repeat(3,minmax(0,1fr))}
 .fa-review-form label>span{font-size:.76rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-tertiary)}
 .fa-review-form label small{margin-top:.35rem}
 .fa-review-actions{display:flex;justify-content:flex-end;gap:.75rem;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--border);position:sticky;bottom:0;background:linear-gradient(180deg,rgba(255,255,255,0),var(--surface) 28%)}
-@media (max-width:1024px){.fa-review-layout{grid-template-columns:1fr}.fa-review-summary{position:static}.fa-review-grid--triple{grid-template-columns:1fr}}
+.fa-review-preview{display:flex;flex-direction:column;gap:.85rem;padding:1rem;border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary);position:sticky;top:0;min-height:640px}
+.fa-review-preview__header{display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem}
+.fa-review-preview__header h4{margin:.2rem 0 0}
+.fa-review-preview__body{display:flex;flex-direction:column;gap:.85rem;min-height:0}
+.fa-review-preview__viewport{display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;min-height:520px}
+.fa-review-preview__viewport iframe{width:100%;height:70vh;min-height:520px;border:0;background:#fff}
+.fa-review-preview__viewport img{display:block;max-width:100%;max-height:70vh;object-fit:contain;background:#fff}
+.fa-review-preview__fallback{display:flex;flex-direction:column;gap:.75rem;align-items:flex-start;justify-content:center;min-height:280px;padding:1rem;background:#fff;border:1px dashed var(--border);border-radius:14px}
+.fa-review-preview__meta{display:flex;flex-wrap:wrap;gap:.5rem}
+.fa-review-preview__meta a{font-weight:700}
+.fa-btn--success{background:var(--brand-primary);color:#fff;border:1px solid var(--brand-primary);box-shadow:0 10px 18px rgba(37,99,235,.18)}
+.fa-btn--success:hover{filter:brightness(.96)}
+@media (max-width:1320px){.fa-review-layout{grid-template-columns:300px minmax(0,1fr)}.fa-review-preview{grid-column:1 / -1;position:static;min-height:unset}.fa-review-preview__viewport iframe,.fa-review-preview__viewport img{max-height:60vh}}
+@media (max-width:1024px){.fa-review-layout{grid-template-columns:1fr}.fa-review-summary,.fa-review-preview{position:static}.fa-review-grid--triple{grid-template-columns:1fr}.fa-review-toolbar{flex-direction:column}}
 @media (max-width:768px){.fa-page{padding:0 1rem 1.5rem}.fa-hero,.fa-card__header{flex-direction:column}.fa-actions,.fa-inline,.fa-review-actions{flex-direction:column}.fa-btn{width:100%}.fa-filter-chip{width:100%;justify-content:flex-start}.fa-review-grid--double,.fa-review-grid--triple{grid-template-columns:1fr}.fa-table{min-width:980px}}

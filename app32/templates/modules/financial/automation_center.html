@@ -201,6 +201,17 @@
 
             <section class="fa-review-form">
                 <input type="hidden" id="fa-review-record-id">
+                <div class="fa-review-toolbar">
+                    <div class="fa-review-toolbar__meta">
+                        <span class="fa-review-summary__label">Carrossel</span>
+                        <div id="fa-review-queue-status" class="fa-muted">Selecione um registro para iniciar a revisão.</div>
+                    </div>
+                    <div class="fa-inline">
+                        <button type="button" class="fa-btn fa-btn--secondary" id="fa-review-prev">Anterior</button>
+                        <button type="button" class="fa-btn fa-btn--secondary" id="fa-review-next">Próximo</button>
+                        <button type="button" class="fa-btn fa-btn--success" id="fa-review-complete">Revisão completa</button>
+                    </div>
+                </div>
 
                 <div class="fa-review-grid fa-review-grid--double">
                     <label>
@@ -264,10 +275,23 @@
                 </label>
 
                 <div class="fa-review-actions">
-                    <button type="button" class="fa-btn fa-btn--secondary" id="fa-review-origin-action">Documento</button>
+                    <button type="button" class="fa-btn fa-btn--secondary" id="fa-review-origin-action">Abrir documento</button>
                     <button type="button" class="fa-btn fa-btn--primary" id="fa-review-save">Salvar revisão</button>
                 </div>
             </section>
+
+            <aside class="fa-review-preview">
+                <div class="fa-review-preview__header">
+                    <div>
+                        <span class="fa-review-summary__label">Documento</span>
+                        <h4>Visualização</h4>
+                    </div>
+                    <button type="button" class="fa-btn fa-btn--ghost" id="fa-review-preview-open">Abrir em pop-up</button>
+                </div>
+                <div id="fa-review-preview-body" class="fa-review-preview__body">
+                    <p class="fa-muted">Selecione um registro com documento estruturado para visualizar.</p>
+                </div>
+            </aside>
         </div>
     </form>
 </dialog>
