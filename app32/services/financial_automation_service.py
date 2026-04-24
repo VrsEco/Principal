@@ -1748,6 +1748,8 @@ class FinancialAutomationService:
             extension = Path(document.file_name or "").suffix.lower()
             if extension == ".csv":
                 return "csv"
+            if extension == ".xls":
+                return "xls"
             if extension in {".xlsx", ".xls"}:
                 return "xlsx"
         if document.source_kind == "ofx":
@@ -1755,6 +1757,8 @@ class FinancialAutomationService:
         extension = Path(document.file_name or "").suffix.lower()
         if extension == ".csv":
             return "csv"
+        if extension == ".xls":
+            return "xls"
         if extension in {".xlsx", ".xls"}:
             return "xlsx"
         if extension == ".ofx":
@@ -1975,7 +1979,7 @@ class FinancialAutomationService:
                     source_type = FinancialAutomationService._infer_document_source_type(batch, document)
                 record_kwargs_list: List[Dict[str, Any]] = []
 
-                if source_type in {"csv", "xlsx", "ofx"} and file_bytes:
+                if source_type in {"csv", "xls", "xlsx", "ofx"} and file_bytes:
                     parsed_rows = FinancialImportService._parse_source_rows(source_type, file_bytes)
                     for row_number, raw_row in enumerate(parsed_rows, start=1):
                         row_input = FinancialImportService._normalize_row(row_number, raw_row)
@@ -1992,7 +1996,7 @@ class FinancialAutomationService:
 
                 if (
                     not record_kwargs_list
-                    and source_type not in {"csv", "xlsx", "ofx"}
+                    and source_type not in {"csv", "xls", "xlsx", "ofx"}
                     and not dict(document.structured_payload_json or {})
                 ):
                     record_kwargs_list.append(

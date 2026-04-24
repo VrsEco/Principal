@@ -52,6 +52,28 @@ def test_financial_automation_page_renders_central(monkeypatch):
     assert html.endswith("|9")
 
 
+def test_financial_automation_template_download(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(
+        automation_route,
+        "get_active_company",
+        lambda: SimpleNamespace(id=9, to_dict=lambda: {"id": 9, "name": "Empresa Teste"}),
+    )
+    monkeypatch.setattr(
+        automation_route.FinancialImportService,
+        "build_import_template",
+        lambda: (b"xlsx-bytes", None),
+    )
+
+    client = app.test_client()
+    response = client.get("/financial/automation/template?company_id=9", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert response.data == b"xlsx-bytes"
+    assert "app32_modelo_importacao_automacao_financeira.xlsx" in response.headers.get("Content-Disposition", "")
+
+
 def test_app_registers_financial_automation_blueprint_and_resources():
     app_source = open(
         r"C:\GestaoVersus\app32\app32\app.py",

@@ -122,6 +122,8 @@ def test_automation_center_template_contains_bulk_validation_flow():
     assert 'id="fa-import-files"' in template
     assert 'id="filter-document-type"' in template
     assert "XML fiscal" in template
+    assert "Baixar planilha modelo" in template
+    assert "/financial/automation/template" in template
 
 
 def test_automation_center_js_uses_data_field_mapping_and_origin_labels():
@@ -139,6 +141,20 @@ def test_automation_center_js_uses_data_field_mapping_and_origin_labels():
     assert "documentTypeLabels" in script
     assert "filter-document-type" in script
     assert "related_documents" in script
+
+
+def test_financial_import_service_accepts_xls_dispatch(monkeypatch):
+    import services.financial_import_service as import_module
+
+    monkeypatch.setattr(
+        import_module.FinancialImportService,
+        "_parse_xls_bytes",
+        lambda file_bytes: [{"descricao": "Linha XLS"}],
+    )
+
+    rows = import_module.FinancialImportService._parse_source_rows("xls", b"fake-xls")
+
+    assert rows == [{"descricao": "Linha XLS"}]
 
 
 def test_generate_records_routes_settled_to_entry_and_open_to_schedule(monkeypatch):

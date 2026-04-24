@@ -178,6 +178,19 @@ def test_parse_batch_documents_converts_csv_rows_to_imported_records(monkeypatch
     assert result["records"][0]["metadata_json"]["parser_mode"] == "structured_import"
 
 
+def test_infer_document_source_type_preserves_xls_extension():
+    batch = SimpleNamespace(origin_type="manual_upload")
+    document = SimpleNamespace(
+        document_type="spreadsheet",
+        source_kind="spreadsheet",
+        file_name="lote_legado.xls",
+    )
+
+    source_type = FinancialAutomationService._infer_document_source_type(batch, document)
+
+    assert source_type == "xls"
+
+
 def test_parse_batch_documents_creates_fallback_record_for_unstructured_document(monkeypatch):
     document = SimpleNamespace(
         id=11,

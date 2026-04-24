@@ -224,6 +224,46 @@ class FinancialImportService:
         return items
 
     @staticmethod
+    def _parse_xls_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
+        try:
+            import xlrd
+        except ImportError as exc:
+            raise RuntimeError("xlrd não está disponível para leitura XLS.") from exc
+
+        workbook = xlrd.open_workbook(file_contents=file_bytes)
+        if workbook.nsheets <= 0:
+            return []
+
+        sheet = workbook.sheet_by_index(0)
+        if sheet.nrows <= 0:
+            return []
+
+        headers = [
+            str(sheet.cell_value(0, idx)).strip() if sheet.cell_value(0, idx) not in (None, "") else f"column_{idx+1}"
+            for idx in range(sheet.ncols)
+        ]
+        items: List[Dict[str, Any]] = []
+        for row_idx in range(1, sheet.nrows):
+            item: Dict[str, Any] = {}
+            has_value = False
+            for col_idx, header in enumerate(headers):
+                cell = sheet.cell(row_idx, col_idx)
+                value: Any = cell.value
+                if cell.ctype == xlrd.XL_CELL_DATE:
+                    try:
+                        value = xlrd.xldate.xldate_as_datetime(value, workbook.datemode)
+                    except Exception:
+                        pass
+                elif cell.ctype == xlrd.XL_CELL_NUMBER and float(value).is_integer():
+                    value = int(value)
+                if value not in (None, ""):
+                    has_value = True
+                item[header] = value
+            if has_value:
+                items.append(item)
+        return items
+
+    @staticmethod
     def _extract_ofx_tag(block: str, tag: str) -> Optional[str]:
         match = re.search(rf"<{tag}>([^\r\n<]+)", block, re.IGNORECASE)
         if match:
@@ -258,9 +298,11 @@ class FinancialImportService:
             return FinancialImportService._parse_csv_bytes(file_bytes, delimiter=";")
         if source == "xlsx":
             return FinancialImportService._parse_xlsx_bytes(file_bytes)
+        if source == "xls":
+            return FinancialImportService._parse_xls_bytes(file_bytes)
         if source == "ofx":
             return FinancialImportService._parse_ofx_bytes(file_bytes)
-        raise ValueError("Fonte de importação não suportada. Utilize CSV, XLSX ou OFX.")
+        raise ValueError("Fonte de importação não suportada. Utilize CSV, XLS, XLSX ou OFX.")
 
     @staticmethod
     def build_import_template() -> Tuple[Optional[bytes], Optional[str]]:

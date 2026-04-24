@@ -40,6 +40,12 @@
         </div>
         <div class="fa-actions">
             <button type="button" class="fa-btn fa-btn--primary" id="fa-open-import">Novo lote</button>
+            <a
+                class="fa-btn fa-btn--secondary"
+                href="/financial/automation/template?company_id={{ company_id or '' }}"
+            >
+                Baixar planilha modelo
+            </a>
             <button type="button" class="fa-btn fa-btn--secondary" id="fa-refresh">Atualizar</button>
         </div>
     </section>
@@ -110,6 +116,18 @@
                 Agora a Central aceita XML fiscal, DANFE/DACTE em PDF, imagens e recibos,
                 armazenando o original, derivados de consulta e o que foi extraído para revisão.
             </p>
+            <p class="fa-muted">
+                Para importação via planilha, baixe o modelo padrão, ajuste os dados da fonte externa
+                e envie o arquivo em <strong>XLS</strong> ou <strong>XLSX</strong> nesta mesma tela.
+            </p>
+            <div class="fa-inline">
+                <a
+                    class="fa-btn fa-btn--secondary"
+                    href="/financial/automation/template?company_id={{ company_id or '' }}"
+                >
+                    Download do modelo XLSX
+                </a>
+            </div>
             <label>
                 <span>Origem</span>
                 <select id="fa-import-origin">
