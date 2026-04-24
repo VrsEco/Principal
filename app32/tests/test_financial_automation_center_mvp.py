@@ -171,9 +171,11 @@ def test_financial_import_template_uses_instruction_layout_with_horizontal_logo(
     assert "A1:D1" in {str(item) for item in sheet.merged_cells.ranges}
     assert "A2:D2" in {str(item) for item in sheet.merged_cells.ranges}
     assert "A5:I5" in {str(item) for item in sheet.merged_cells.ranges}
+    assert "F1:I2" in {str(item) for item in sheet.merged_cells.ranges}
     assert "B8:I8" in {str(item) for item in sheet.merged_cells.ranges}
     assert sheet["A1"].value == "Versus Gestão Corporativa"
     assert sheet["A2"].value == "Modelo de importação financeira APP32"
+    assert sheet["F1"].fill.fgColor.rgb in {"00000000", "000000"}
     assert sheet["A8"].value == "1."
     assert "conta a pagar / receber" in sheet["B11"].value
     assert "Pagar" in sheet["B12"].value

@@ -353,6 +353,7 @@ class FinancialImportService:
         ws_instructions.merge_cells("A1:D1")
         ws_instructions.merge_cells("A2:D2")
         ws_instructions.merge_cells("A5:I5")
+        ws_instructions.merge_cells("F1:I2")
 
         ws_instructions["A1"] = "Versus Gestão Corporativa"
         ws_instructions["A1"].font = Font(size=16, bold=True, color="0F172A")
@@ -360,6 +361,7 @@ class FinancialImportService:
         ws_instructions["A2"] = "Modelo de importação financeira APP32"
         ws_instructions["A2"].font = Font(size=12, bold=True, color="0F766E")
         ws_instructions["A2"].alignment = Alignment(vertical="center")
+        ws_instructions["F1"].fill = PatternFill("solid", fgColor="000000")
         ws_instructions["A4"] = "Objetivo"
         ws_instructions["A4"].font = Font(bold=True)
         ws_instructions["A5"] = (
