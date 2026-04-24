@@ -38,7 +38,7 @@
 .fa-table th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:left}
 .fa-table tbody tr:hover{background:rgba(37,99,235,.03)}
 .fa-cell-document{min-width:220px}
-.fa-cell-document strong{display:block;font-size:.95rem;color:var(--text-primary)}
+.fa-cell-document strong,.fa-cell-origin strong{display:block;font-size:.95rem;color:var(--text-primary)}
 .fa-cell-document__meta{display:block;margin-top:.2rem;color:var(--text-tertiary);font-size:.78rem}
 .fa-cell-origin,.fa-cell-counterparty,.fa-cell-pendencies{font-size:.88rem;line-height:1.45}
 .fa-cell-amount{font-weight:800;color:var(--text-primary);white-space:nowrap}

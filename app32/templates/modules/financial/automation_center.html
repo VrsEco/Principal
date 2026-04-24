@@ -28,7 +28,7 @@
 {% endblock %}
 
 {% block workspace_content %}
-<div class="fa-page" data-company-id="{{ company_id or '' }}">
+<div class="fa-page" data-company-id="{{ company_id or '' }}" data-company-code="{{ company.client_code if company and company.client_code else 'VS' }}">
     <section class="fa-hero">
         <div>
             <p class="fa-eyebrow">Camada externa do Financeiro</p>

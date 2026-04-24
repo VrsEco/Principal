@@ -2,6 +2,7 @@
   const root = document.querySelector('.fa-page');
   if (!root) return;
   const companyId = Number(root.dataset.companyId || 0);
+  const companyCode = String(root.dataset.companyCode || 'VS').trim().toUpperCase();
   const recordsBody = document.getElementById('fa-records-body');
   const importDialog = document.getElementById('fa-import-dialog');
   const documentDialog = document.getElementById('fa-document-dialog');
@@ -169,6 +170,58 @@
     return [sourceLabel, fileName].filter(Boolean).join('<br>') || '-';
   }
 
+  function digitsOnly(value) {
+    return String(value || '').replace(/\D/g, '');
+  }
+
+  function padNumber(value, size = 4) {
+    const numeric = Number(value || 0);
+    if (!Number.isFinite(numeric) || numeric <= 0) return ''.padStart(size, '0');
+    return String(Math.trunc(numeric)).padStart(size, '0');
+  }
+
+  function compactDate(value) {
+    if (!value) return '';
+    const dateText = String(value).slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateText);
+    if (!match) return '';
+    return `${match[3]}${match[2]}${match[1].slice(-2)}`;
+  }
+
+  function sourceToken(record) {
+    const candidates = [
+      record.batch?.metadata_json?.contact,
+      record.batch?.metadata_json?.sender,
+      record.batch?.metadata_json?.source_contact,
+      record.document?.metadata_json?.contact,
+      record.document?.metadata_json?.sender,
+      record.document?.metadata_json?.source_contact,
+      record.batch?.source_label,
+    ].filter(Boolean);
+    for (const candidate of candidates) {
+      const digits = digitsOnly(candidate);
+      if (digits.length >= 8) return digits;
+    }
+    const originType = String(record.batch?.origin_type || '').toLowerCase();
+    if (originType === 'integration') return 'WPP';
+    if (originType === 'accountability') return 'ACC';
+    if (originType === 'manual_upload') return 'MAN';
+    if (originType === 'csv' || originType === 'xlsx') return 'PLAN';
+    if (originType === 'ofx') return 'OFX';
+    return 'SRC';
+  }
+
+  function documentDisplayCode(record) {
+    const documentId = record.document?.id || record.source_document_id || record.id;
+    const receivedDate = compactDate(record.document?.created_at || record.created_at || record.batch?.created_at);
+    return [companyCode, 'D', receivedDate || '000000', padNumber(documentId)].join('.');
+  }
+
+  function sourceDisplayCode(record) {
+    const sequence = padNumber(record.batch?.id || record.document?.batch_id || record.id);
+    return [companyCode, 'R', sourceToken(record), sequence].join('.');
+  }
+
   function formatCurrency(value) {
     return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
@@ -197,11 +250,15 @@
         <td><input type="checkbox" class="fa-record-select" value="${record.id}"></td>
         <td>${badge(record.status)}</td>
         <td class="fa-cell-document">
-          <strong>${documentLabel(record)}</strong>
+          <strong>${escapeHtml(documentDisplayCode(record))}</strong>
+          <span class="fa-cell-document__meta">${escapeHtml(documentLabel(record))}</span>
           <span class="fa-cell-document__meta">${escapeHtml(record.document_group_key || '-')}</span>
           ${dedupeLabel(record)}
         </td>
-        <td class="fa-cell-origin">${originLabel(record)}</td>
+        <td class="fa-cell-origin">
+          <strong>${escapeHtml(sourceDisplayCode(record))}</strong>
+          <span class="fa-cell-document__meta">${originLabel(record)}</span>
+        </td>
         <td><span class="fa-type-pill fa-type-pill--${record.entry_direction === 'receivable' ? 'receivable' : 'payable'}">${record.entry_direction === 'receivable' ? 'Receber' : 'Pagar'}</span></td>
         <td><span class="fa-state-pill fa-state-pill--${record.settlement_state === 'settled' ? 'settled' : 'open'}">${record.settlement_state === 'settled' ? 'Já pago/recebido' : 'Em aberto'}</span></td>
         <td class="fa-cell-counterparty">${escapeHtml(counterpartyDisplay(record))}</td>
@@ -242,8 +299,8 @@
     byId('fa-review-title').textContent = `Revisar registro #${record.id}`;
     byId('fa-review-subtitle').textContent = record.description || 'Ajuste os dados antes de validar ou gerar no Financeiro.';
     setText('fa-review-status', badge(record.status));
-    setText('fa-review-document', `<strong>${documentLabel(record)}</strong><div class="fa-muted">${escapeHtml(record.document_group_key || '-')}</div>`);
-    setText('fa-review-origin', originLabel(record));
+    setText('fa-review-document', `<strong>${escapeHtml(documentDisplayCode(record))}</strong><div class="fa-muted">${escapeHtml(documentLabel(record))}</div><div class="fa-muted">${escapeHtml(record.document_group_key || '-')}</div>`);
+    setText('fa-review-origin', `<strong>${escapeHtml(sourceDisplayCode(record))}</strong><div class="fa-muted">${originLabel(record)}</div>`);
     setText('fa-review-parties', escapeHtml(partiesLabel(record)));
     setText('fa-review-key', keyLabel(record));
     setText('fa-review-pendencies', pendingLabel(record));
