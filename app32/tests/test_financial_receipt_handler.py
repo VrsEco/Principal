@@ -47,5 +47,41 @@ def test_financial_receipt_handler_stages_file_and_returns_batch_summary():
     assert captured["company_id"] == 9
     assert captured["user_id"] == 7
     assert captured["file_name"] == "recibo_taxi.pdf"
+    assert captured["source_metadata"]["source_channel"] == "whatsapp"
     assert "Lote: 41" in result.response_text
     assert "Registro: 99" in result.response_text
+
+
+def test_financial_receipt_handler_passes_deterministic_source_metadata():
+    captured = {}
+
+    handler = FinancialReceiptIngestExecutionHandler(
+        upload_root_provider=lambda: "C:/tmp/uploads",
+        stage_channel_document=lambda **kwargs: (captured.update(kwargs) or {"batch": {"id": 1}, "record": {"id": 2}}, None),
+    )
+
+    handler.execute(
+        FinancialReceiptIngestRequest(
+            payload={
+                "_attachment": {
+                    "file_name": "recibo_taxi.pdf",
+                    "mime_type": "application/pdf",
+                    "file_bytes": b"%PDF-1.4 fake",
+                },
+                "_channel_label": "WhatsApp",
+                "_source_channel": "whatsapp",
+                "_source_contact": "5571996426565",
+                "_source_external_reference": "wamid-123",
+                "_thread_id": "wa_5571996426565",
+            },
+            active_company_id=9,
+            user_id=7,
+        )
+    )
+
+    assert captured["source_metadata"] == {
+        "source_channel": "whatsapp",
+        "source_contact": "5571996426565",
+        "source_external_reference": "wamid-123",
+        "source_thread_id": "wa_5571996426565",
+    }

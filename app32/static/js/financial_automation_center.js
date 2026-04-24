@@ -189,19 +189,27 @@
   }
 
   function sourceToken(record) {
+    const batchMeta = record.batch?.metadata_json || {};
+    const documentMeta = record.document?.metadata_json || {};
     const candidates = [
-      record.batch?.metadata_json?.contact,
-      record.batch?.metadata_json?.sender,
-      record.batch?.metadata_json?.source_contact,
-      record.document?.metadata_json?.contact,
-      record.document?.metadata_json?.sender,
-      record.document?.metadata_json?.source_contact,
+      batchMeta.source_contact,
+      batchMeta.contact,
+      batchMeta.sender,
+      documentMeta.source_contact,
+      documentMeta.contact,
+      documentMeta.sender,
+      batchMeta.source_external_reference,
+      documentMeta.source_external_reference,
       record.batch?.source_label,
     ].filter(Boolean);
     for (const candidate of candidates) {
       const digits = digitsOnly(candidate);
       if (digits.length >= 8) return digits;
     }
+    const sourceChannel = String(batchMeta.source_channel || documentMeta.source_channel || '').toLowerCase();
+    if (sourceChannel === 'whatsapp') return 'WPP';
+    if (sourceChannel === 'email') return 'EMAIL';
+    if (sourceChannel === 'planilha' || sourceChannel === 'spreadsheet') return 'PLAN';
     const originType = String(record.batch?.origin_type || '').toLowerCase();
     if (originType === 'integration') return 'WPP';
     if (originType === 'accountability') return 'ACC';

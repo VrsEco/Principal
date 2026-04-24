@@ -122,6 +122,34 @@ class FinancialAutomationService:
         return FinancialAutomationService._normalize_text(value).lower()
 
     @staticmethod
+    def _normalized_source_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        if not isinstance(metadata, dict):
+            return {}
+
+        source_channel = FinancialAutomationService._normalize_text(
+            metadata.get("source_channel") or metadata.get("channel")
+        ).lower()
+        source_contact = FinancialAutomationService._normalize_text(
+            metadata.get("source_contact") or metadata.get("contact") or metadata.get("sender")
+        )
+        source_external_reference = FinancialAutomationService._normalize_text(
+            metadata.get("source_external_reference")
+            or metadata.get("external_reference")
+            or metadata.get("message_id")
+        )
+        source_thread_id = FinancialAutomationService._normalize_text(
+            metadata.get("source_thread_id") or metadata.get("thread_id")
+        )
+
+        normalized = {
+            "source_channel": source_channel or None,
+            "source_contact": source_contact or None,
+            "source_external_reference": source_external_reference or None,
+            "source_thread_id": source_thread_id or None,
+        }
+        return {key: value for key, value in normalized.items() if value}
+
+    @staticmethod
     def _extract_counterparty_hint(
         *,
         entry_direction: Optional[str],
@@ -1537,6 +1565,7 @@ class FinancialAutomationService:
         files: Sequence[Any] | None,
         upload_root: str,
         source_label: Optional[str] = None,
+        source_metadata: Optional[Dict[str, Any]] = None,
         created_by_user_id: Optional[int] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -1560,8 +1589,15 @@ class FinancialAutomationService:
         except Exception as exc:
             return None, f"Payload inválido para upload da Central: {exc}"
 
+        normalized_source_metadata = FinancialAutomationService._normalized_source_metadata(source_metadata)
+
         try:
             batch = FinancialAutomationBatch(**batch_data.model_dump())
+            if normalized_source_metadata:
+                batch.metadata_json = {
+                    **(batch.metadata_json or {}),
+                    **normalized_source_metadata,
+                }
             db.session.add(batch)
             db.session.flush()
 
@@ -1609,6 +1645,7 @@ class FinancialAutomationService:
                     },
                     structured_payload_json=uploaded.get("structured_payload_json") or {},
                     metadata_json={
+                        **normalized_source_metadata,
                         **(uploaded.get("metadata_json") or {}),
                         "upload_origin_type": origin_type,
                     },

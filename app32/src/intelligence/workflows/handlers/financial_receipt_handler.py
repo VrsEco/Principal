@@ -43,6 +43,10 @@ class FinancialReceiptIngestExecutionHandler:
         mime_type = str(attachment.get("mime_type") or attachment.get("content_type") or "").strip() or None
         channel_label = str(payload.get("_channel_label") or "Sapiens").strip()
         source_label = str(payload.get("_source_label") or f"{channel_label} - recebimento assistido").strip()
+        source_channel = str(payload.get("_source_channel") or channel_label or "sapiens").strip().lower()
+        source_contact = str(payload.get("_source_contact") or "").strip()
+        source_external_reference = str(payload.get("_source_external_reference") or "").strip()
+        source_thread_id = str(payload.get("_thread_id") or payload.get("thread_id") or "").strip()
 
         if not isinstance(file_bytes, (bytes, bytearray)) or not file_bytes:
             return FinancialReceiptIngestResult(
@@ -57,6 +61,12 @@ class FinancialReceiptIngestExecutionHandler:
             file_bytes=bytes(file_bytes),
             mime_type=mime_type,
             source_label=source_label,
+            source_metadata={
+                "source_channel": source_channel,
+                "source_contact": source_contact,
+                "source_external_reference": source_external_reference,
+                "source_thread_id": source_thread_id,
+            },
             origin_type="integration",
             allowed_company_ids=[int(company_id)],
         )

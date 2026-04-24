@@ -19,6 +19,7 @@ class FinancialAutomationChannelService:
         file_bytes: bytes,
         mime_type: Optional[str] = None,
         source_label: Optional[str] = None,
+        source_metadata: Optional[Dict[str, Any]] = None,
         origin_type: str = "integration",
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -37,6 +38,7 @@ class FinancialAutomationChannelService:
             files=[file_storage],
             upload_root=upload_root,
             source_label=source_label,
+            source_metadata=source_metadata,
             created_by_user_id=user_id,
             allowed_company_ids=allowed_company_ids,
         )

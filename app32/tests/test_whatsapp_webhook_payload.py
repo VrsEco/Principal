@@ -10,6 +10,7 @@ from api.webhooks.whatsapp_webhook import (
     _extract_whatsapp_message,
     _load_whatsapp_request_payload,
     _personalize_whatsapp_greeting,
+    process_whatsapp_message,
     whatsapp_webhook_bp,
 )
 
@@ -170,6 +171,59 @@ def test_handle_whatsapp_accepts_form_encoded_payload(monkeypatch):
     assert called["started"] is True
     assert called["args"][1] == "5511999999999"
     assert called["args"][2] == "oi sapiens"
+
+
+def test_process_whatsapp_financial_attachment_enriches_workflow_payload(monkeypatch):
+    app = Flask(__name__)
+
+    class DummyUser:
+        id = 7
+        name = "Fabiano Ferreira"
+
+    class DummyWorkflowResult:
+        handled = True
+        response_text = "Arquivo enviado para a Central."
+        metadata = {"workflow_code": "361"}
+
+    recorded = {"messages": []}
+
+    def capture_workflow(**kwargs):
+        recorded["workflow"] = kwargs
+        return DummyWorkflowResult()
+
+    monkeypatch.setattr('src.intelligence.identity.resolve_user_identity', lambda contact, channel: DummyUser())
+    monkeypatch.setattr('src.intelligence.identity.build_identity_resolution_trace', lambda *args, **kwargs: type('Trace', (), {'to_safe_dict': lambda self: {}})())
+    monkeypatch.setattr('src.intelligence.identity.get_best_company_id', lambda user: 9)
+    monkeypatch.setattr('services.proactive_service.try_handle_summary_followup', lambda **kwargs: (False, None))
+    monkeypatch.setattr('src.intelligence.menu_engine.start_channel_workflow', capture_workflow)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook._download_attachment_bytes', lambda attachment: (b'%PDF-1.4 fake', None))
+    monkeypatch.setattr('src.intelligence.execution._capture_workflow_usage_from_execution', lambda **kwargs: recorded.setdefault('usage', []).append(kwargs))
+    monkeypatch.setattr('models.agent_message.AgentMessage', lambda **kwargs: kwargs)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.add', lambda obj: recorded['messages'].append(obj))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.commit', lambda: recorded.setdefault('committed', True))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.rollback', lambda: recorded.setdefault('rolled_back', True))
+    monkeypatch.setattr('services.whatsapp_service.whatsapp_service.send_message', lambda phone, message: recorded.setdefault('sent', []).append((phone, message)) or True)
+
+    metadata = {
+        "event_type": "ReceivedCallback",
+        "message_id": "wamid.123",
+        "instance_id": "instance-7",
+        "thread_contact": "5571996426565",
+        "attachment": {
+            "file_name": "Taxa_Alteracao_VM.pdf",
+            "mime_type": "application/pdf",
+            "url": "https://files.example.com/Taxa_Alteracao_VM.pdf",
+        },
+    }
+
+    process_whatsapp_message(app, "5571996426565", "", metadata)
+
+    workflow = recorded["workflow"]
+    assert workflow["workflow_code"] == "361"
+    assert workflow["payload"]["_source_channel"] == "whatsapp"
+    assert workflow["payload"]["_source_contact"] == "5571996426565"
+    assert workflow["payload"]["_source_external_reference"] == "wamid.123"
+    assert workflow["payload"]["_thread_id"] == "wa_5571996426565"
 
 
 def test_handle_instagram_uses_menu_intercept_and_logs_messages(monkeypatch):

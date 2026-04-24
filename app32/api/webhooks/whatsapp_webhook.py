@@ -532,6 +532,10 @@ def process_whatsapp_message(app, phone: str, message_text: str, metadata: Dict[
                             },
                             "_channel_label": "WhatsApp",
                             "_source_label": f"WhatsApp - {attachment.get('file_name') or 'recibo'}",
+                            "_source_channel": "whatsapp",
+                            "_source_contact": phone,
+                            "_source_external_reference": metadata.get("message_id") or metadata.get("instance_id"),
+                            "_thread_id": thread_id,
                         },
                     )
                     if workflow_result and workflow_result.handled:
