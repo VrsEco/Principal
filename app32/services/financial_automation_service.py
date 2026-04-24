@@ -1430,12 +1430,15 @@ class FinancialAutomationService:
         domain_options: List[Dict[str, Any]] = []
         for domain_type, items in items_by_type.items():
             for item in items or []:
+                if not item.get("is_enabled"):
+                    continue
                 domain_options.append(
                     {
                         "domain_type": domain_type,
                         "source_id": item.get("source_id"),
                         "label": item.get("display_label"),
                         "is_enabled": item.get("is_enabled"),
+                        "is_default_suggestion": item.get("is_default_suggestion"),
                     }
                 )
 

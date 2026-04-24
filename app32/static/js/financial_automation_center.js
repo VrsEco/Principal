@@ -32,6 +32,15 @@
     ofx: 'OFX',
     unknown_document: 'Documento',
   };
+  const pendingFlagLabels = {
+    missing_document_number: 'Sem número do documento',
+    missing_issuer: 'Sem emissor identificado',
+    missing_total_amount: 'Sem valor total extraído',
+    missing_issue_date: 'Sem data de emissão',
+    manual_review_required: 'Revisão manual obrigatória',
+    duplicate_detected: 'Duplicidade exata detectada',
+    possible_duplicate_detected: 'Possível duplicidade',
+  };
   const filterDefinitions = [
     { key: 'status', id: 'filter-status', label: 'Status', format: (value) => statusLabels[value] || value },
     { key: 'origin_type', id: 'filter-origin', label: 'Origem', format: (value) => originLabels[value] || value },
@@ -100,6 +109,14 @@
     return `${record.domain_type}:${record.domain_source_id}`;
   }
 
+  function defaultDomainValue(record) {
+    const current = domainLabel(record);
+    if (current) return current;
+    const defaultOption = (state.options?.domain_options || []).find((item) => item.is_default_suggestion);
+    if (!defaultOption) return '';
+    return `${defaultOption.domain_type}:${defaultOption.source_id}`;
+  }
+
   function selectHtml(items, selectedValue, placeholder, valueGetter = (item) => item.id, labelGetter = optionLabel, fieldName = '') {
     const options = [`<option value="">${placeholder}</option>`]
       .concat((items || []).map((item) => {
@@ -145,7 +162,31 @@
     if (dedupe.status === 'duplicate' && !flags.includes('duplicate_detected')) flags.unshift('duplicate_detected');
     if (dedupe.status === 'possible_duplicate' && !flags.includes('possible_duplicate_detected')) flags.unshift('possible_duplicate_detected');
     if (!flags.length) return '<span class="fa-muted">Sem pendências</span>';
-    return flags.map((flag) => `<span class="fa-badge fa-badge--excluded">${escapeHtml(flag)}</span>`).join(' ');
+    return flags.map((flag) => `<span class="fa-badge fa-badge--excluded">${escapeHtml(pendingFlagLabels[flag] || flag)}</span>`).join(' ');
+  }
+
+  function pendingHelpText(record) {
+    const flags = new Set(record.review_flags_json || []);
+    const dedupe = record.metadata_json?.dedupe || {};
+    if (dedupe.status === 'duplicate') flags.add('duplicate_detected');
+    if (dedupe.status === 'possible_duplicate') flags.add('possible_duplicate_detected');
+    if (!flags.size) return 'Sem ação obrigatória pendente.';
+
+    const messages = [];
+    const missingCoreFields = ['missing_document_number', 'missing_issuer', 'missing_total_amount', 'missing_issue_date']
+      .filter((flag) => flags.has(flag));
+    if (missingCoreFields.length) {
+      messages.push('Os dados documentais não foram extraídos por completo. Revise só o que for necessário para gerar com segurança.');
+    }
+    if (flags.has('manual_review_required')) {
+      messages.push('Recibos e imagens exigem revisão humana antes da validação.');
+    }
+    if (flags.has('duplicate_detected')) {
+      messages.push('Duplicidade exata detectada: o recomendado é excluir este registro para evitar geração duplicada.');
+    } else if (flags.has('possible_duplicate_detected')) {
+      messages.push('Possível duplicidade: confira o documento antes de validar ou gerar.');
+    }
+    return messages.join(' ');
   }
 
   function suggestionNote(record, field) {
@@ -316,6 +357,7 @@
     setText('fa-review-parties', escapeHtml(partiesLabel(record)));
     setText('fa-review-key', keyLabel(record));
     setText('fa-review-pendencies', pendingLabel(record));
+    setText('fa-review-pendencies-help', escapeHtml(record.validation_notes || pendingHelpText(record)));
 
     renderReviewSelect('fa-review-entry-direction', [{ id: 'payable', name: 'Pagar' }, { id: 'receivable', name: 'Receber' }], record.entry_direction, 'Tipo', (item) => item.id, optionLabel);
     renderReviewSelect('fa-review-settlement-state', [{ id: 'settled', name: 'Já pago/recebido' }, { id: 'open', name: 'Em aberto' }], record.settlement_state, 'Situação', (item) => item.id, optionLabel);
@@ -323,7 +365,9 @@
     renderReviewSelect('fa-review-bank-account', state.options?.bank_accounts, record.bank_account_id, 'Conta bancária', (item) => item.id, optionLabel);
     renderReviewSelect('fa-review-chart-account', state.options?.chart_accounts, record.chart_account_id, 'Conta contábil', (item) => item.id, optionLabel);
     renderReviewSelect('fa-review-cost-center', state.options?.cost_centers, record.cost_center_id, 'Centro', (item) => item.id, optionLabel);
-    renderReviewSelect('fa-review-domain-link', state.options?.domain_options, domainLabel(record), 'Projeto/Processo', (item) => `${item.domain_type}:${item.source_id}`, (item) => item.label);
+    const domainOptions = state.options?.domain_options || [];
+    const domainPlaceholder = domainOptions.length ? 'Projeto/Processo habilitado no Financeiro' : 'Nenhum Projeto/Processo habilitado no Financeiro';
+    renderReviewSelect('fa-review-domain-link', domainOptions, defaultDomainValue(record), domainPlaceholder, (item) => `${item.domain_type}:${item.source_id}`, (item) => item.label);
 
     byId('fa-review-description').value = record.description || '';
     byId('fa-review-amount').value = record.amount || 0;
