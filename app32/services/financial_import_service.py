@@ -395,6 +395,11 @@ class FinancialImportService:
         ws_instructions["A19"].fill = required_fill
         ws_instructions["A20"] = "Opcional"
         ws_instructions["A20"].fill = optional_fill
+        ws_instructions["A22"] = "Exemplo de preenchimento"
+        ws_instructions["A22"].font = Font(bold=True)
+
+        example_header_row = 23
+        example_value_row = 24
 
         image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "img")
         logo_candidates = [
@@ -415,27 +420,31 @@ class FinancialImportService:
                 logger.exception("Falha ao inserir logo no modelo financeiro XLSX")
 
         for col_idx, column in enumerate(FinancialImportService.IMPORT_TEMPLATE_COLUMNS, start=1):
+            instruction_header = ws_instructions.cell(row=example_header_row, column=col_idx, value=column["label"])
+            instruction_header.font = Font(bold=True, color="FFFFFF")
+            instruction_header.fill = title_fill
+            instruction_header.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            instruction_header.border = border
+
+            instruction_sample = ws_instructions.cell(row=example_value_row, column=col_idx, value=column["example"])
+            instruction_sample.font = Font(italic=True, color="475569")
+            instruction_sample.fill = header_fill
+            instruction_sample.alignment = Alignment(wrap_text=True, vertical="top")
+            instruction_sample.border = border
+
             cell = ws_data.cell(row=1, column=col_idx, value=column["label"])
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = title_fill
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = border
 
-            desc = ws_data.cell(row=2, column=col_idx, value="Obrigatório" if column["required"] else "Opcional")
-            desc.font = Font(bold=True, color="0F172A")
-            desc.fill = required_fill if column["required"] else optional_fill
-            desc.alignment = Alignment(horizontal="center", vertical="center")
-            desc.border = border
-
-            sample = ws_data.cell(row=3, column=col_idx, value=column["example"])
-            sample.font = Font(italic=True, color="475569")
-            sample.fill = header_fill
-            sample.alignment = Alignment(wrap_text=True)
-            sample.border = border
-
             ws_data.column_dimensions[chr(64 + col_idx if col_idx <= 26 else 65)].width = max(18, min(34, len(column["label"]) + 6))
+            ws_instructions.column_dimensions[chr(64 + col_idx if col_idx <= 26 else 65)].width = max(
+                ws_instructions.column_dimensions[chr(64 + col_idx if col_idx <= 26 else 65)].width or 0,
+                max(18, min(34, len(column["label"]) + 6)),
+            )
 
-        ws_data.freeze_panes = "A4"
+        ws_data.freeze_panes = "A2"
         ws_data.sheet_view.showGridLines = True
 
         tipo_registro_validation = DataValidation(
@@ -450,27 +459,14 @@ class FinancialImportService:
         )
         ws_data.add_data_validation(tipo_registro_validation)
         ws_data.add_data_validation(tipo_titulo_validation)
-        tipo_registro_validation.add("A4:A500")
-        tipo_titulo_validation.add("B4:B500")
+        tipo_registro_validation.add("A2:A500")
+        tipo_titulo_validation.add("B2:B500")
 
-        sample_rows = [
-            ["agendamento", "Pagar", "Mensalidade coworking março/2026", "NF-10293", "Cowork XPTO", "12345678000199", 1850.75, "31/03/2026", "10/04/2026", "", "3.01.001", "2.03.001", "PRJ-001 Implantação ERP", "Padrão", "", "", "Importado da rotina financeira"],
-            ["lancamento", "Pagar", "Tarifa bancária março/2026", "", "Banco do Brasil", "", 25.90, "31/03/2026", "", "31/03/2026", "145", "245", "", "", "", "001 - Conta Movimento", "Despesa direta sem agendamento prévio"],
-        ]
-        for row_idx, sample_values in enumerate(sample_rows, start=4):
-            for col_idx, value in enumerate(sample_values, start=1):
-                cell = ws_data.cell(row=row_idx, column=col_idx, value=value)
-                cell.border = border
-                if col_idx in (7,):
-                    cell.number_format = '#,##0.00'
-                else:
-                    cell.alignment = Alignment(wrap_text=True)
-
-        for row in range(4, 501):
+        for row in range(2, 501):
             for col_idx, column in enumerate(FinancialImportService.IMPORT_TEMPLATE_COLUMNS, start=1):
                 cell = ws_data.cell(row=row, column=col_idx)
                 cell.border = border
-                if row > 5 and cell.value in (None, ""):
+                if cell.value in (None, ""):
                     cell.fill = required_fill if column["required"] else optional_fill
 
         buffer = io.BytesIO()

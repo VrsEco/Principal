@@ -167,6 +167,7 @@ def test_financial_import_template_uses_instruction_layout_with_horizontal_logo(
     assert error is None
     workbook = load_workbook(io.BytesIO(content))
     sheet = workbook["Instruções"]
+    data_sheet = workbook["Importação"]
 
     assert "A1:D1" in {str(item) for item in sheet.merged_cells.ranges}
     assert "A2:D2" in {str(item) for item in sheet.merged_cells.ranges}
@@ -180,6 +181,16 @@ def test_financial_import_template_uses_instruction_layout_with_horizontal_logo(
     assert "conta a pagar / receber" in sheet["B11"].value
     assert "Pagar" in sheet["B12"].value
     assert "código completo ou código reduzido" in sheet["B13"].value
+    assert sheet["A22"].value == "Exemplo de preenchimento"
+    assert sheet["A23"].value == "Tipo de Registro *"
+    assert sheet["B23"].value == "Tipo do Título *"
+    assert sheet["A24"].value == "agendamento"
+    assert sheet["B24"].value == "Pagar ou Receber"
+    assert data_sheet["A1"].value == "Tipo de Registro *"
+    assert data_sheet["B1"].value == "Tipo do Título *"
+    assert data_sheet["A2"].value is None
+    assert data_sheet["B2"].value is None
+    assert data_sheet.freeze_panes == "A2"
 
 
 def test_generate_records_routes_settled_to_entry_and_open_to_schedule(monkeypatch):
