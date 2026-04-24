@@ -100,5 +100,6 @@ def test_working_capital_partial_is_registered_in_main_view():
     partial_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\partials\report_view_working_capital.html").read_text(encoding="utf-8")
 
     assert "report_view_working_capital.html" in main_template
+    assert "{% block sidebar_right %}{% endblock %}" in main_template
     assert "wc-balance-sheet" in partial_template
     assert "report.balance_sheet.patrimonial_status.title" in partial_template

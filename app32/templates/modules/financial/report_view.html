@@ -24,6 +24,8 @@
 <span class="current">Visualização</span>
 {% endblock %}
 
+{% block sidebar_right %}{% endblock %}
+
 {% block workspace_content %}
 {% if report.report_type == 'income_statement' %}
     {% include 'modules/financial/partials/report_view_income_statement.html' %}
