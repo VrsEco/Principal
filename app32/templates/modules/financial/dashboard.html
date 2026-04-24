@@ -8,163 +8,131 @@
 <span class="current">Financeiro</span>
 {% endblock %}
 
+{% block sidebar_right %}
+<div class="fin-dash-sidebar">
+    <div class="fin-dash-sidebar__header">
+        <p class="fin-dash-sidebar__eyebrow">Filtros</p>
+        <h3>Período da análise</h3>
+        <p>Defina a janela do cockpit financeiro.</p>
+    </div>
+    {% include "modules/financial/partials/_dashboard_filters.html" %}
+</div>
+{% endblock %}
+
 {% block workspace_content %}
 <div class="fin-dash-page fade-in" data-company-id="{{ company_id or '' }}">
     {% include "modules/financial/partials/_dashboard_header.html" %}
-    {% include "modules/financial/partials/_dashboard_filters.html" %}
 
-    <section id="scoreboard" class="dash-scoreboard"></section>
+    <section class="dash-layout">
+        <div class="dash-main-stack">
+            <section class="dash-panel dash-panel--manager">
+                <div class="dash-panel__header">
+                    <p class="dash-eyebrow">Leitura do gestor</p>
+                    <h2>Parecer executivo do período</h2>
+                </div>
+                <div class="dash-panel__body">
+                    <div id="manager-summary" class="dash-manager-summary"></div>
+                </div>
+            </section>
 
-    <section class="dash-panel dash-panel--manager">
-        <div class="dash-panel__header">
-            <p class="dash-eyebrow">Leitura do gestor</p>
-            <h2>Parecer executivo do período</h2>
-            <p class="dash-muted">Resumo textual para orientar prioridade de atuação financeira sem exigir leitura analítica completa.</p>
-        </div>
-        <div class="dash-panel__body">
-            <div id="manager-summary" class="dash-manager-summary"></div>
+            <div class="dash-main-grid">
+                {% include "modules/financial/partials/_dashboard_cashflow.html" %}
+                {% include "modules/financial/partials/_dashboard_working_capital.html" %}
+            </div>
+
+            <section class="dash-panel">
+                <div class="dash-panel__header">
+                    <p class="dash-eyebrow">DRE gerencial</p>
+                    <h2>Grupos da demonstração</h2>
+                    <p class="dash-muted">Visualização agrupada para leitura direta do comportamento econômico e financeiro do período.</p>
+                </div>
+                <div class="dash-panel__body">
+                    <div id="dre-table"></div>
+                </div>
+            </section>
         </div>
     </section>
-
-    <section class="dash-executive-band">
-        <article class="dash-executive-card">
-            <div class="dash-executive-card__header">
-                <div>
-                    <p class="dash-eyebrow">Pilar 01</p>
-                    <h2>Liquidez diária</h2>
-                </div>
-                <span id="liquidity-chip" class="dash-chip">Monitorando</span>
-            </div>
-            <div id="executive-liquidity" class="dash-executive-card__body"></div>
-        </article>
-        <article class="dash-executive-card">
-            <div class="dash-executive-card__header">
-                <div>
-                    <p class="dash-eyebrow">Pilar 02</p>
-                    <h2>Resultado gerencial</h2>
-                </div>
-                <span id="result-chip" class="dash-chip">Monitorando</span>
-            </div>
-            <div id="executive-result" class="dash-executive-card__body"></div>
-        </article>
-        <article class="dash-executive-card">
-            <div class="dash-executive-card__header">
-                <div>
-                    <p class="dash-eyebrow">Pilar 03</p>
-                    <h2>Capital de giro</h2>
-                </div>
-                <span id="working-capital-chip" class="dash-chip">Monitorando</span>
-            </div>
-            <div id="executive-working-capital" class="dash-executive-card__body"></div>
-        </article>
-    </section>
-
-    <div class="dash-grid dash-grid--primary">
-        {% include "modules/financial/partials/_dashboard_cashflow.html" %}
-        {% include "modules/financial/partials/_dashboard_working_capital.html" %}
-    </div>
-
-    <div class="dash-grid dash-grid--full">
-        {% include "modules/financial/partials/_dashboard_dre.html" %}
-    </div>
-
-    <div class="dash-grid dash-grid--secondary">
-        {% include "modules/financial/partials/_dashboard_quick_actions.html" %}
-        {% include "modules/financial/partials/_dashboard_controls.html" %}
-    </div>
 </div>
 
 <style>
-    .fin-dash-page { padding:0 2rem 2rem; display:flex; flex-direction:column; gap:1rem; }
-    .dash-panel, .dash-executive-card, .dash-kpi { background:var(--surface); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow-sm); overflow:hidden; }
-    .dash-panel__header { padding:1.1rem 1.2rem 0; }
-    .dash-panel__body { padding:1.1rem 1.2rem 1.2rem; }
+    .fin-dash-page { padding:0 2rem 2rem; }
+    .dash-layout { display:block; }
+    .dash-main-stack { display:flex; flex-direction:column; gap:1rem; }
+    .dash-main-grid { display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(0, .9fr); gap:1rem; }
+    .dash-panel { background:var(--surface); border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow-sm); overflow:hidden; }
+    .dash-panel__header { padding:1.2rem 1.3rem 0; }
+    .dash-panel__body { padding:1.15rem 1.3rem 1.3rem; }
     .dash-eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
-    .dash-title-row { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+    .dash-muted { color:var(--text-secondary); }
+    .dash-panel--manager { background:linear-gradient(135deg, rgba(37,99,235,.05), rgba(255,255,255,.98)); }
+    .dash-manager-summary { display:grid; grid-template-columns:1.15fr .85fr; gap:1rem; }
+    .dash-manager-main { border:1px solid rgba(37,99,235,.12); border-radius:18px; padding:1.1rem 1.15rem; background:#ffffff; }
+    .dash-manager-main strong { display:block; font-size:1.06rem; margin-bottom:.45rem; color:var(--text-primary); }
+    .dash-manager-main p { margin:0; color:var(--text-secondary); line-height:1.62; }
+    .dash-manager-alerts { display:grid; gap:.75rem; }
+    .dash-alert { border-radius:18px; padding:1rem 1.05rem; border:1px solid var(--border); background:var(--surface-secondary); }
+    .dash-alert strong { display:block; margin-bottom:.18rem; font-size:.92rem; }
+    .dash-alert span { color:var(--text-secondary); font-size:.87rem; line-height:1.45; }
+    .dash-alert--positive { border-color:#bbf7d0; background:#f0fdf4; }
+    .dash-alert--warning { border-color:#fde68a; background:#fffbeb; }
+    .dash-alert--negative { border-color:#fecaca; background:#fef2f2; }
+    .dash-title-row { display:flex; justify-content:space-between; gap:1rem; align-items:center; }
     .dash-title-row h1, .dash-title-row h2 { margin:0; }
-    .dash-subtitle, .dash-muted { color:var(--text-secondary); }
-    .dash-filter-form { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.9rem; align-items:end; }
-    .dash-filter-form label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); font-size:.92rem; }
-    .dash-filter-form input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .88rem; color:var(--text-primary); }
+    .dash-subtitle { color:var(--text-secondary); }
     .dash-actions-inline { display:flex; gap:.75rem; flex-wrap:wrap; }
     .dash-btn { border:none; border-radius:12px; padding:.82rem 1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:.45rem; text-decoration:none; }
     .dash-btn--primary { background:var(--primary); color:#fff; }
     .dash-btn--secondary { background:var(--surface-secondary); border:1px solid var(--border); color:var(--text-primary); }
-    .dash-scoreboard { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:.85rem; }
-    .dash-kpi { padding:1rem; position:relative; }
-    .dash-kpi span { display:block; color:var(--text-secondary); font-size:.8rem; }
-    .dash-kpi strong { display:block; margin-top:.3rem; font-size:1.18rem; }
-    .dash-kpi small { display:block; margin-top:.35rem; color:var(--text-tertiary); }
-    .dash-kpi::before { content:''; position:absolute; inset:0 auto 0 0; width:4px; background:transparent; }
-    .dash-kpi.is-positive::before { background:#15803d; }
-    .dash-kpi.is-negative::before { background:#b91c1c; }
-    .dash-kpi.is-neutral::before { background:#2563eb; }
-    .dash-panel--manager { background:linear-gradient(135deg, rgba(37,99,235,.06), rgba(15,23,42,.02)); }
-    .dash-manager-summary { display:grid; grid-template-columns:1.1fr .9fr; gap:1rem; }
-    .dash-manager-main { border:1px solid var(--border); border-radius:16px; padding:1rem 1.05rem; background:rgba(255,255,255,.78); }
-    .dash-manager-main strong { display:block; font-size:1.05rem; margin-bottom:.45rem; }
-    .dash-manager-main p { margin:0; color:var(--text-secondary); line-height:1.55; }
-    .dash-manager-alerts { display:grid; gap:.75rem; }
-    .dash-alert { border:1px solid var(--border); border-radius:16px; padding:.95rem 1rem; background:var(--surface-secondary); }
-    .dash-alert strong { display:block; font-size:.92rem; margin-bottom:.2rem; }
-    .dash-alert span { color:var(--text-secondary); font-size:.86rem; line-height:1.45; }
-    .dash-alert--positive { border-color:#bbf7d0; background:#f0fdf4; }
-    .dash-alert--warning { border-color:#fde68a; background:#fffbeb; }
-    .dash-alert--negative { border-color:#fecaca; background:#fef2f2; }
-    .dash-executive-band { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:1rem; }
-    .dash-executive-card { padding:1rem 1.1rem; display:flex; flex-direction:column; gap:1rem; background:linear-gradient(180deg, rgba(37,99,235,.04), rgba(255,255,255,0)); }
-    .dash-executive-card__header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
-    .dash-executive-card__header h2 { margin:0; font-size:1.08rem; }
-    .dash-executive-card__body { display:grid; gap:.75rem; }
-    .dash-summary-stat { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:.8rem .9rem; border-radius:14px; background:var(--surface-secondary); border:1px solid var(--border); }
-    .dash-summary-stat strong { display:block; font-size:1rem; }
-    .dash-summary-stat span { display:block; color:var(--text-secondary); font-size:.8rem; margin-top:.12rem; }
-    .dash-summary-stat small { color:var(--text-tertiary); }
-    .dash-chip { display:inline-flex; align-items:center; justify-content:center; padding:.4rem .7rem; border-radius:999px; font-size:.74rem; font-weight:700; border:1px solid var(--border); background:var(--surface-secondary); color:var(--text-secondary); }
-    .dash-chip--positive { color:#166534; background:#dcfce7; border-color:#bbf7d0; }
-    .dash-chip--negative { color:#991b1b; background:#fee2e2; border-color:#fecaca; }
-    .dash-chip--warning { color:#92400e; background:#fef3c7; border-color:#fde68a; }
-    .dash-grid { display:grid; gap:1rem; }
-    .dash-grid--primary { grid-template-columns:minmax(0, 1.15fr) minmax(0, .85fr); }
-    .dash-grid--secondary { grid-template-columns:minmax(0, .95fr) minmax(0, 1.05fr); }
-    .dash-grid--full { grid-template-columns:1fr; }
+    .dash-filter-form { display:grid; gap:.9rem; }
+    .dash-filter-form label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); font-size:.92rem; }
+    .dash-filter-form input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .88rem; color:var(--text-primary); }
+    .dash-filter-form--sidebar { grid-template-columns:1fr; }
     .dash-metric-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.8rem; }
-    .dash-metric { border:1px solid var(--border); border-radius:14px; padding:.9rem; background:var(--surface-secondary); }
+    .dash-metric { border:1px solid var(--border); border-radius:16px; padding:.95rem; background:var(--surface-secondary); }
     .dash-metric label { display:block; color:var(--text-secondary); font-size:.8rem; margin-bottom:.35rem; }
     .dash-metric strong { display:block; font-size:1.12rem; }
     .dash-periods { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; margin-top:1rem; }
-    .dash-period-card { border:1px solid var(--border); border-radius:16px; padding:1rem; background:var(--surface-secondary); }
+    .dash-period-card { border:1px solid var(--border); border-radius:18px; padding:1rem; background:var(--surface-secondary); }
     .dash-period-card__grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.75rem; margin-top:.8rem; }
-    .dash-table-wrap { overflow-x:auto; }
-    .dash-table { width:100%; border-collapse:collapse; min-width:760px; }
-    .dash-table th, .dash-table td { padding:.85rem .75rem; border-bottom:1px solid var(--border); text-align:right; }
-    .dash-table th:first-child, .dash-table td:first-child { text-align:left; }
-    .dash-table th { color:var(--text-secondary); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
-    .dash-table tfoot td { font-weight:800; background:#f8fafc; }
-    .dash-actions-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.75rem; }
-    .dash-action-card { border:1px solid var(--border); border-radius:16px; padding:1rem; background:var(--surface-secondary); text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:.35rem; transition:.18s ease; }
-    .dash-action-card:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(15,23,42,.08); }
-    .dash-action-card strong { display:block; }
     .dash-stack { display:flex; flex-direction:column; gap:.75rem; }
-    .dash-empty { color:var(--text-tertiary); text-align:center; padding:1rem; }
     .dash-dual-list { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.85rem; }
-    .dash-list-card { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); overflow:hidden; }
+    .dash-list-card { border:1px solid var(--border); border-radius:18px; background:var(--surface-secondary); overflow:hidden; }
     .dash-list-card__header { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:.9rem 1rem; border-bottom:1px solid var(--border); background:#f8fafc; }
     .dash-list { display:flex; flex-direction:column; }
     .dash-list-row { display:flex; justify-content:space-between; gap:1rem; padding:.85rem 1rem; border-bottom:1px solid var(--border); }
     .dash-list-row:last-child { border-bottom:none; }
-    .dash-list-row strong { font-size:.95rem; }
-    .dash-list-row span { color:var(--text-secondary); font-size:.84rem; }
+    .dash-list-row strong { font-size:.94rem; }
+    .dash-list-row span { color:var(--text-secondary); font-size:.83rem; }
+    .dash-empty { color:var(--text-tertiary); text-align:center; padding:1rem; }
+    .dre-groups { display:grid; gap:.8rem; }
+    .dre-group-card { border:1px solid var(--border); border-radius:18px; background:var(--surface-secondary); padding:1rem 1.05rem; }
+    .dre-group-card__top { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.75rem; }
+    .dre-group-card__top strong { font-size:1rem; color:var(--text-primary); }
+    .dre-group-card__grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:.7rem; }
+    .dre-group-metric { background:#fff; border:1px solid var(--border); border-radius:14px; padding:.75rem .8rem; }
+    .dre-group-metric span { display:block; color:var(--text-secondary); font-size:.76rem; margin-bottom:.22rem; }
+    .dre-group-metric strong { display:block; font-size:.96rem; }
+    .dre-total-card { border:1px solid rgba(37,99,235,.16); background:linear-gradient(135deg, rgba(37,99,235,.06), #fff); }
     .is-positive { color:#15803d; }
     .is-negative { color:#b91c1c; }
+
+    .fin-dash-sidebar { padding:1rem; display:flex; flex-direction:column; gap:1rem; }
+    .fin-dash-sidebar__header { padding:.2rem .2rem 0; }
+    .fin-dash-sidebar__eyebrow { margin:0 0 .3rem; font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .fin-dash-sidebar__header h3 { margin:0 0 .35rem; font-size:1rem; }
+    .fin-dash-sidebar__header p { margin:0; color:var(--text-secondary); font-size:.9rem; }
+
     @media (max-width: 1280px) {
-        .dash-scoreboard { grid-template-columns:repeat(3, minmax(0, 1fr)); }
-        .dash-manager-summary, .dash-executive-band, .dash-grid--primary, .dash-grid--secondary, .dash-periods, .dash-dual-list { grid-template-columns:1fr; }
+        .dash-manager-summary,
+        .dash-main-grid,
+        .dash-periods,
+        .dash-dual-list,
+        .dre-group-card__grid { grid-template-columns:1fr; }
     }
     @media (max-width: 768px) {
         .fin-dash-page { padding:0 1rem 1.5rem; }
-        .dash-title-row, .dash-actions-inline { flex-direction:column; align-items:stretch; }
-        .dash-filter-form, .dash-metric-grid, .dash-period-card__grid, .dash-actions-grid, .dash-scoreboard { grid-template-columns:1fr; }
+        .dash-actions-inline, .dash-title-row { flex-direction:column; align-items:stretch; }
+        .dash-metric-grid, .dash-period-card__grid { grid-template-columns:1fr; }
         .dash-btn { width:100%; }
     }
 </style>
@@ -189,122 +157,8 @@
         return '';
     }
 
-    function toneForValue(value, neutralPositive = false) {
-        const number = Number(value || 0);
-        if (number > 0) return 'is-positive';
-        if (number < 0) return 'is-negative';
-        return neutralPositive ? 'is-positive' : 'is-neutral';
-    }
-
-    function setChipState(elementId, variant, text) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        element.className = 'dash-chip';
-        if (variant) element.classList.add(`dash-chip--${variant}`);
-        element.textContent = text;
-    }
-
-    function renderScoreboard(scoreboard = {}, workingCapital = {}) {
-        const currentAssets = Number(workingCapital?.totals?.current_assets || 0);
-        const currentLiabilities = Number(workingCapital?.totals?.current_liabilities || 0);
-        const ccl = Number(workingCapital?.totals?.working_capital || 0);
-        const overdueGap = Number(scoreboard.receivables_overdue || 0) - Number(scoreboard.payables_overdue || 0);
-        const items = [
-            { label: 'Saldo atual', value: formatCurrency(scoreboard.current_balance), tone: toneForValue(scoreboard.current_balance) , helper: scoreboard.period_label || 'Período analisado' },
-            { label: 'Saldo projetado', value: formatCurrency(scoreboard.projected_final_with_limits), tone: toneForValue(scoreboard.projected_final_with_limits), helper: 'Com limites operacionais' },
-            { label: 'CCL', value: formatCurrency(ccl), tone: toneForValue(ccl), helper: `${formatCurrency(currentAssets)} / ${formatCurrency(currentLiabilities)}` },
-            { label: 'DRE competência', value: formatCurrency(scoreboard.dre_competence_result), tone: toneForValue(scoreboard.dre_competence_result), helper: 'Resultado econômico' },
-            { label: 'DRE baixa', value: formatCurrency(scoreboard.dre_liquidation_result), tone: toneForValue(scoreboard.dre_liquidation_result), helper: 'Resultado caixa' },
-            { label: 'Gap de atrasos', value: formatCurrency(overdueGap), tone: toneForValue(overdueGap), helper: 'Receber vencido - pagar vencido' },
-        ];
-        document.getElementById('scoreboard').innerHTML = items.map((item) => `
-            <article class="dash-kpi ${item.tone}">
-                <span>${item.label}</span>
-                <strong>${item.value}</strong>
-                <small>${item.helper}</small>
-            </article>
-        `).join('');
-    }
-
-    function renderExecutiveSummary(payload = {}) {
-        const scoreboard = payload.scoreboard || {};
-        const cash = payload.cash_flow_panel || {};
-        const current = cash.current || {};
-        const next = cash.next_period || {};
-        const wc = payload.working_capital_panel || {};
-        const totals = wc.totals || {};
-
-        document.getElementById('executive-liquidity').innerHTML = `
-            <div class="dash-summary-stat">
-                <div><strong>${formatCurrency(current.balance)}</strong><span>Saldo realizado na data-base</span></div>
-                <small>${scoreboard.period_label || '-'}</small>
-            </div>
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(current.final_with_limits)}">${formatCurrency(current.final_with_limits)}</strong><span>Fechamento do período com limites</span></div>
-                <small>${formatCurrency(current.overdraft_limit)} de limite</small>
-            </div>
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(next.final_without_limits)}">${formatCurrency(next.final_without_limits)}</strong><span>Projeção do período seguinte sem limites</span></div>
-                <small>${next.period_start || '-'} até ${next.period_end || '-'}</small>
-            </div>
-        `;
-
-        document.getElementById('executive-result').innerHTML = `
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(scoreboard.dre_competence_result)}">${formatCurrency(scoreboard.dre_competence_result)}</strong><span>Resultado por competência</span></div>
-                <small>Leitura econômica</small>
-            </div>
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(scoreboard.dre_due_result)}">${formatCurrency(scoreboard.dre_due_result)}</strong><span>Resultado por vencimento</span></div>
-                <small>Compromissos do período</small>
-            </div>
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(scoreboard.dre_liquidation_result)}">${formatCurrency(scoreboard.dre_liquidation_result)}</strong><span>Resultado por liquidação</span></div>
-                <small>Leitura de caixa</small>
-            </div>
-        `;
-
-        document.getElementById('executive-working-capital').innerHTML = `
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(totals.current_assets)}">${formatCurrency(totals.current_assets)}</strong><span>Ativo circulante</span></div>
-                <small>Recursos de curto prazo</small>
-            </div>
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(-(totals.current_liabilities || 0))}">${formatCurrency(totals.current_liabilities)}</strong><span>Passivo circulante</span></div>
-                <small>Exigibilidades de curto prazo</small>
-            </div>
-            <div class="dash-summary-stat">
-                <div><strong class="${cssClassForValue(totals.working_capital)}">${formatCurrency(totals.working_capital)}</strong><span>Folga financeira (CCL)</span></div>
-                <small>Liquidez ${formatNumber((totals.current_liabilities ? (totals.current_assets / totals.current_liabilities) : 0))}</small>
-            </div>
-        `;
-
-        if (Number(current.final_with_limits || 0) < 0) {
-            setChipState('liquidity-chip', 'negative', 'Risco imediato');
-        } else if (Number(current.final_without_limits || 0) < 0) {
-            setChipState('liquidity-chip', 'warning', 'Depende de limite');
-        } else {
-            setChipState('liquidity-chip', 'positive', 'Saudável');
-        }
-
-        if (Number(scoreboard.dre_liquidation_result || 0) < 0) {
-            setChipState('result-chip', 'negative', 'Resultado pressionado');
-        } else {
-            setChipState('result-chip', 'positive', 'Resultado positivo');
-        }
-
-        if (Number(totals.working_capital || 0) < 0) {
-            setChipState('working-capital-chip', 'negative', 'CCL negativo');
-        } else if (Number(totals.current_liabilities || 0) > 0 && (Number(totals.current_assets || 0) / Number(totals.current_liabilities || 1)) < 1.2) {
-            setChipState('working-capital-chip', 'warning', 'Liquidez curta');
-        } else {
-            setChipState('working-capital-chip', 'positive', 'Estrutura equilibrada');
-        }
-    }
-
     function renderManagerSummary(payload = {}) {
         const scoreboard = payload.scoreboard || {};
-        const current = payload.cash_flow_panel?.current || {};
         const totals = payload.working_capital_panel?.totals || {};
         const ccl = Number(totals.working_capital || 0);
         const projected = Number(scoreboard.projected_final_with_limits || 0);
@@ -314,27 +168,27 @@
             ? Number(totals.current_assets || 0) / Number(totals.current_liabilities || 1)
             : 0;
 
-        let opening = 'A operação financeira encerra o período com folga gerencial controlada.';
+        let opening = 'O cockpit mostra uma operação financeiramente administrável no período.';
         if (projected < 0) {
-            opening = 'A operação financeira encerra o período sob pressão e exige ação imediata sobre caixa.';
+            opening = 'O cockpit mostra pressão relevante sobre caixa e necessidade de ação imediata.';
         } else if (ccl < 0 || liquidityRatio < 1) {
-            opening = 'A operação fecha positiva, porém com estrutura de capital de giro tensionada.';
+            opening = 'O caixa está administrável, porém a estrutura de capital de giro está tensionada.';
         } else if (dreCash < 0) {
-            opening = 'O caixa permanece administrável, mas o resultado por liquidação já sinaliza deterioração.';
+            opening = 'A liquidez segue operando, mas a leitura por liquidação já indica deterioração do resultado.';
         }
 
-        const paragraph = `${opening} O fechamento projetado está em ${formatCurrency(projected)}, a DRE por liquidação registra ${formatCurrency(dreCash)} e o capital circulante líquido está em ${formatCurrency(ccl)}. O foco executivo deve equilibrar geração de caixa, controle de vencidos e preservação da liquidez corrente.`;
+        const paragraph = `${opening} O fechamento projetado está em ${formatCurrency(projected)}, o resultado por liquidação está em ${formatCurrency(dreCash)} e o capital circulante líquido está em ${formatCurrency(ccl)}. A prioridade gerencial é sustentar liquidez, controlar vencidos e preservar capacidade de giro.`;
 
         const alerts = [
             projected < 0
-                ? { tone: 'negative', title: 'Caixa projetado negativo', body: `O fechamento com limites está em ${formatCurrency(projected)}. Prioridade: renegociar saídas, acelerar recebimentos e revisar títulos críticos.` }
-                : { tone: 'positive', title: 'Caixa sob controle', body: `O fechamento projetado com limites está em ${formatCurrency(projected)}. Há espaço para gestão preventiva em vez de reação emergencial.` },
+                ? { tone: 'negative', title: 'Caixa projetado', body: `Fechamento com limites em ${formatCurrency(projected)}.` }
+                : { tone: 'positive', title: 'Caixa projetado', body: `Fechamento com limites em ${formatCurrency(projected)}.` },
             overdueGap < 0
-                ? { tone: 'negative', title: 'Atrasos pesam mais no passivo', body: `O gap entre atrasados está em ${formatCurrency(overdueGap)}. O passivo vencido supera o ativo vencido e demanda saneamento imediato.` }
-                : { tone: 'warning', title: 'Gap de atrasos monitorado', body: `O gap entre atrasados está em ${formatCurrency(overdueGap)}. Vale manter rotina firme de cobrança e priorização de pagamentos.` },
+                ? { tone: 'negative', title: 'Gap de atrasos', body: `O passivo vencido supera o ativo vencido em ${formatCurrency(Math.abs(overdueGap))}.` }
+                : { tone: 'warning', title: 'Gap de atrasos', body: `Saldo líquido de atrasos em ${formatCurrency(overdueGap)}.` },
             ccl < 0 || liquidityRatio < 1.2
-                ? { tone: ccl < 0 ? 'negative' : 'warning', title: 'Estrutura de capital de giro curta', body: `CCL em ${formatCurrency(ccl)} e liquidez corrente em ${liquidityRatio ? formatNumber(liquidityRatio) : 'N/A'}. Atenção para não financiar operação longa com caixa curto.` }
-                : { tone: 'positive', title: 'Capital de giro equilibrado', body: `CCL em ${formatCurrency(ccl)} e liquidez corrente em ${formatNumber(liquidityRatio)}. A estrutura suporta melhor a operação de curto prazo.` },
+                ? { tone: ccl < 0 ? 'negative' : 'warning', title: 'Capital de giro', body: `CCL em ${formatCurrency(ccl)} e liquidez corrente em ${liquidityRatio ? formatNumber(liquidityRatio) : 'N/A'}.` }
+                : { tone: 'positive', title: 'Capital de giro', body: `CCL em ${formatCurrency(ccl)} e liquidez corrente em ${formatNumber(liquidityRatio)}.` },
         ];
 
         document.getElementById('manager-summary').innerHTML = `
@@ -430,100 +284,58 @@
             table.innerHTML = '<div class="dash-empty">Sem dados para montar a DRE do período.</div>';
             return;
         }
+
         table.innerHTML = `
-            <div class="dash-table-wrap">
-                <table class="dash-table">
-                    <thead>
-                        <tr>
-                            <th>Grupo</th>
-                            <th>Orçado</th>
-                            <th>Competência</th>
-                            <th>Vencimento</th>
-                            <th>Liquidação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows.map((row) => `
-                            <tr>
-                                <td>${row.group}</td>
-                                <td class="${cssClassForValue(row.budget)}">${formatCurrency(row.budget)}</td>
-                                <td class="${cssClassForValue(row.competence)}">${formatCurrency(row.competence)}</td>
-                                <td class="${cssClassForValue(row.due)}">${formatCurrency(row.due)}</td>
-                                <td class="${cssClassForValue(row.liquidation)}">${formatCurrency(row.liquidation)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td>Total</td>
-                            <td class="${cssClassForValue(totals.budget)}">${formatCurrency(totals.budget)}</td>
-                            <td class="${cssClassForValue(totals.competence)}">${formatCurrency(totals.competence)}</td>
-                            <td class="${cssClassForValue(totals.due)}">${formatCurrency(totals.due)}</td>
-                            <td class="${cssClassForValue(totals.liquidation)}">${formatCurrency(totals.liquidation)}</td>
-                        </tr>
-                    </tfoot>
-                </table>
+            <div class="dre-groups">
+                ${rows.map((row) => `
+                    <article class="dre-group-card">
+                        <div class="dre-group-card__top">
+                            <strong>${row.group}</strong>
+                        </div>
+                        <div class="dre-group-card__grid">
+                            <div class="dre-group-metric">
+                                <span>Orçado</span>
+                                <strong class="${cssClassForValue(row.budget)}">${formatCurrency(row.budget)}</strong>
+                            </div>
+                            <div class="dre-group-metric">
+                                <span>Competência</span>
+                                <strong class="${cssClassForValue(row.competence)}">${formatCurrency(row.competence)}</strong>
+                            </div>
+                            <div class="dre-group-metric">
+                                <span>Vencimento</span>
+                                <strong class="${cssClassForValue(row.due)}">${formatCurrency(row.due)}</strong>
+                            </div>
+                            <div class="dre-group-metric">
+                                <span>Liquidação</span>
+                                <strong class="${cssClassForValue(row.liquidation)}">${formatCurrency(row.liquidation)}</strong>
+                            </div>
+                        </div>
+                    </article>
+                `).join('')}
+                <article class="dre-group-card dre-total-card">
+                    <div class="dre-group-card__top">
+                        <strong>Total consolidado</strong>
+                    </div>
+                    <div class="dre-group-card__grid">
+                        <div class="dre-group-metric">
+                            <span>Orçado</span>
+                            <strong class="${cssClassForValue(totals.budget)}">${formatCurrency(totals.budget)}</strong>
+                        </div>
+                        <div class="dre-group-metric">
+                            <span>Competência</span>
+                            <strong class="${cssClassForValue(totals.competence)}">${formatCurrency(totals.competence)}</strong>
+                        </div>
+                        <div class="dre-group-metric">
+                            <span>Vencimento</span>
+                            <strong class="${cssClassForValue(totals.due)}">${formatCurrency(totals.due)}</strong>
+                        </div>
+                        <div class="dre-group-metric">
+                            <span>Liquidação</span>
+                            <strong class="${cssClassForValue(totals.liquidation)}">${formatCurrency(totals.liquidation)}</strong>
+                        </div>
+                    </div>
+                </article>
             </div>
-        `;
-    }
-
-    function actionDescription(href = '') {
-        if (href.includes('/reports/demonstrativo-resultados')) return 'Abrir a leitura hierárquica do resultado.';
-        if (href.includes('/reports/fluxo-caixa')) return 'Entrar na análise completa de caixa projetado.';
-        if (href.includes('/budget')) return 'Revisar orçamento, verba e execução.';
-        if (href.includes('/entries/direct')) return 'Registrar lançamento imediato.';
-        if (href.includes('/entries')) return 'Gerir lançamentos e baixas.';
-        if (href.includes('/schedules')) return 'Administrar títulos e vencimentos.';
-        if (href.includes('/borderos')) return 'Executar operações de cobrança e remessa.';
-        if (href.includes('/catalogs')) return 'Ajustar bases mestres do financeiro.';
-        return href;
-    }
-
-    function renderQuickActions(actions = []) {
-        const container = document.getElementById('dashboard-quick-actions');
-        if (!actions.length) {
-            container.innerHTML = '<div class="dash-empty">Sem atalhos disponíveis.</div>';
-            return;
-        }
-        container.innerHTML = actions.map((action) => `
-            <a href="${action.href}" class="dash-action-card">
-                <strong>${action.label}</strong>
-                <span class="dash-muted">${actionDescription(action.href)}</span>
-            </a>
-        `).join('');
-    }
-
-    function renderControls(payload = {}) {
-        const box = document.getElementById('dashboard-controls');
-        const classification = payload.classification?.summary || {};
-        const queue = Number(classification.queue_total || 0);
-        const coverage = Number(classification.coverage_rate || 0);
-        const askUserRate = Number(classification.ask_user_rate || 0);
-        box.innerHTML = `
-            <article class="dash-metric">
-                <label>Período analisado</label>
-                <strong>${payload.period_start || '-'} até ${payload.period_end || '-'}</strong>
-            </article>
-            <article class="dash-metric">
-                <label>Filas pendentes de classificação</label>
-                <strong class="${queue > 0 ? 'is-negative' : 'is-positive'}">${queue}</strong>
-            </article>
-            <article class="dash-metric">
-                <label>Cobertura de classificação</label>
-                <strong class="${coverage >= 80 ? 'is-positive' : (coverage >= 60 ? '' : 'is-negative')}">${formatNumber(coverage)}%</strong>
-            </article>
-            <article class="dash-metric">
-                <label>Casos que exigem usuário</label>
-                <strong class="${askUserRate > 20 ? 'is-negative' : ''}">${formatNumber(askUserRate)}%</strong>
-            </article>
-            <article class="dash-metric">
-                <label>Lotes processados</label>
-                <strong>${payload.scoreboard?.import_batches ?? 0}</strong>
-            </article>
-            <article class="dash-metric">
-                <label>Conciliações confirmadas</label>
-                <strong>${payload.scoreboard?.confirmed_matches ?? 0}</strong>
-            </article>
         `;
     }
 
@@ -541,18 +353,14 @@
         const response = await fetch(`/api/financial/dashboard?${params.toString()}`);
         const payload = await response.json();
         if (!response.ok) {
-            document.getElementById('scoreboard').innerHTML = `<div class="dash-empty">${payload.error || 'Erro ao carregar dashboard.'}</div>`;
+            document.getElementById('manager-summary').innerHTML = `<div class="dash-empty">${payload.error || 'Erro ao carregar dashboard.'}</div>`;
             return;
         }
 
-        renderScoreboard(payload.scoreboard || {}, payload.working_capital_panel || {});
         renderManagerSummary(payload);
-        renderExecutiveSummary(payload);
         renderCashFlow(payload.cash_flow_panel || {});
         renderWorkingCapital(payload.working_capital_panel || {});
         renderDre(payload.dre_matrix || {});
-        renderQuickActions(payload.quick_actions || []);
-        renderControls(payload);
     }
 
     function seedDefaultDates() {
