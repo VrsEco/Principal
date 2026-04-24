@@ -31,7 +31,7 @@ class FinancialImportService:
 
     IMPORT_TEMPLATE_COLUMNS = [
         {"key": "tipo_registro", "label": "Tipo de Registro *", "required": True, "example": "agendamento"},
-        {"key": "tipo_titulo", "label": "Tipo do Título *", "required": True, "example": "payable ou receivable"},
+        {"key": "tipo_titulo", "label": "Tipo do Título *", "required": True, "example": "Pagar ou Receber"},
         {"key": "historico", "label": "Histórico *", "required": True, "example": "Mensalidade escritório março/2026"},
         {"key": "numero_documento", "label": "Número do Documento", "required": False, "example": "NF-10293"},
         {"key": "favorecido", "label": "Favorecido *", "required": True, "example": "Fornecedor XPTO"},
@@ -40,8 +40,8 @@ class FinancialImportService:
         {"key": "competencia", "label": "Competência *", "required": True, "example": "31/03/2026"},
         {"key": "vencimento", "label": "Vencimento", "required": False, "example": "10/04/2026"},
         {"key": "data_lancamento", "label": "Data do Lançamento", "required": False, "example": "31/03/2026"},
-        {"key": "plano_conta", "label": "Plano de Conta", "required": False, "example": "4.01.001 - Receita de Serviços"},
-        {"key": "centro_resultado", "label": "Centro de Resultado", "required": False, "example": "2.03 - Administrativo"},
+        {"key": "plano_conta", "label": "Plano de Conta", "required": False, "example": "3.01.001 ou 145"},
+        {"key": "centro_resultado", "label": "Centro de Resultado", "required": False, "example": "2.03.001 ou 245"},
         {"key": "projeto_processo", "label": "Projeto / Processo", "required": False, "example": "PRJ-001 Implantação ERP"},
         {"key": "correcao_financeira", "label": "Correção Financeira", "required": False, "example": "Padrão"},
         {"key": "desconto", "label": "Desconto", "required": False, "example": "Desconto Comercial"},
@@ -318,6 +318,7 @@ class FinancialImportService:
         ws_instructions = workbook.active
         ws_instructions.title = "Instruções"
         ws_data = workbook.create_sheet("Importação")
+        ws_instructions.sheet_view.showGridLines = False
 
         title_fill = PatternFill("solid", fgColor="0F766E")
         header_fill = PatternFill("solid", fgColor="E0F2FE")
@@ -330,31 +331,61 @@ class FinancialImportService:
             bottom=Side(style="thin", color="CBD5E1"),
         )
 
+        for column, width in {
+            "A": 8,
+            "B": 14,
+            "C": 14,
+            "D": 14,
+            "E": 4,
+            "F": 14,
+            "G": 14,
+            "H": 14,
+            "I": 14,
+        }.items():
+            ws_instructions.column_dimensions[column].width = width
+
+        ws_instructions.row_dimensions[1].height = 30
+        ws_instructions.row_dimensions[2].height = 24
+        ws_instructions.row_dimensions[4].height = 22
+        ws_instructions.row_dimensions[5].height = 36
+        ws_instructions.row_dimensions[7].height = 22
+
+        ws_instructions.merge_cells("A1:D1")
+        ws_instructions.merge_cells("A2:D2")
+        ws_instructions.merge_cells("A5:I5")
+
         ws_instructions["A1"] = "Versus Gestão Corporativa"
         ws_instructions["A1"].font = Font(size=16, bold=True, color="0F172A")
+        ws_instructions["A1"].alignment = Alignment(vertical="center")
         ws_instructions["A2"] = "Modelo de importação financeira APP32"
         ws_instructions["A2"].font = Font(size=12, bold=True, color="0F766E")
+        ws_instructions["A2"].alignment = Alignment(vertical="center")
         ws_instructions["A4"] = "Objetivo"
         ws_instructions["A4"].font = Font(bold=True)
         ws_instructions["A5"] = (
             "Use esta planilha para preparar dados de agendamentos e lançamentos financeiros. "
             "Após preencher, faça o upload no Hub de Importação do APP32."
         )
+        ws_instructions["A5"].alignment = Alignment(wrap_text=True, vertical="top")
         ws_instructions["A7"] = "Regras de preenchimento"
         ws_instructions["A7"].font = Font(bold=True)
         rules = [
-            "1. Preencha obrigatoriamente as colunas marcadas com *.",
-            "2. Datas podem ser digitadas como dd/mm/aaaa ou ddmmaaaa.",
-            "3. Valores devem ser informados no padrão brasileiro, por exemplo: 1500,75.",
-            "4. Tipo de Registro: use 'agendamento' para título e 'lancamento' para movimento efetivo.",
-            "5. Tipo do Título: use 'payable' para pagar e 'receivable' para receber.",
-            "6. Plano de Conta, Centro de Resultado e Projeto / Processo podem ser completados depois, mas o ideal é trazer o máximo possível já na importação.",
-            "7. Em Projeto / Processo, utilize apenas itens habilitados no Financeiro.",
-            "8. Não altere a ordem das colunas da aba Importação.",
+            "Preencha obrigatoriamente as colunas marcadas com *.",
+            "Datas podem ser digitadas como dd/mm/aaaa ou ddmmaaaa.",
+            "Valores devem ser informados no padrão brasileiro, por exemplo: 1500,75.",
+            "Tipo de Registro: use 'agendamento' para conta a pagar / receber. Use 'lancamento' para conta já paga / já recebida.",
+            "Tipo do Título: use 'Pagar' para contas a pagar e 'Receber' para contas a receber.",
+            "Plano de Conta, Centro de Resultado e Projeto / Processo: informe apenas itens analíticos. O sistema deve aceitar código completo ou código reduzido. Exemplos: Plano de Conta 3.01.001 ou 145; Centro de Resultado 2.03.001 ou 245.",
+            "Em Projeto / Processo, utilize apenas itens habilitados no Financeiro.",
+            "Não altere a ordem das colunas da aba Importação.",
         ]
-        for idx, rule in enumerate(rules, start=8):
-            ws_instructions[f"A{idx}"] = rule
-            ws_instructions[f"A{idx}"].alignment = Alignment(wrap_text=True, vertical="top")
+        for offset, rule in enumerate(rules, start=8):
+            ws_instructions[f"A{offset}"] = f"{offset - 7}."
+            ws_instructions[f"A{offset}"].alignment = Alignment(horizontal="right", vertical="top")
+            ws_instructions.merge_cells(f"B{offset}:I{offset}")
+            ws_instructions[f"B{offset}"] = rule
+            ws_instructions[f"B{offset}"].alignment = Alignment(wrap_text=True, vertical="top")
+            ws_instructions.row_dimensions[offset].height = 34 if len(rule) < 120 else 50
 
         ws_instructions["A18"] = "Legenda"
         ws_instructions["A18"].font = Font(bold=True)
@@ -363,13 +394,21 @@ class FinancialImportService:
         ws_instructions["A20"] = "Opcional"
         ws_instructions["A20"].fill = optional_fill
 
-        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "img", "logo-versus-slogan.png")
-        if os.path.exists(logo_path):
+        image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "img")
+        logo_candidates = [
+            os.path.join(image_dir, "logo-versus-preta.png"),
+            os.path.join(image_dir, "logo-versus-clara.png"),
+            os.path.join(image_dir, "versus-logo.png"),
+            os.path.join(image_dir, "logo-versus.png"),
+            os.path.join(image_dir, "logo-versus-slogan.png"),
+        ]
+        logo_path = next((path for path in logo_candidates if os.path.exists(path)), None)
+        if logo_path:
             try:
                 image = XLImage(logo_path)
-                image.width = 240
-                image.height = 54
-                ws_instructions.add_image(image, "E1")
+                image.width = 220
+                image.height = 39
+                ws_instructions.add_image(image, "F1")
             except Exception:
                 logger.exception("Falha ao inserir logo no modelo financeiro XLSX")
 
@@ -404,7 +443,7 @@ class FinancialImportService:
         )
         tipo_titulo_validation = DataValidation(
             type="list",
-            formula1='"payable,receivable"',
+            formula1='"Pagar,Receber"',
             allow_blank=False,
         )
         ws_data.add_data_validation(tipo_registro_validation)
@@ -413,8 +452,8 @@ class FinancialImportService:
         tipo_titulo_validation.add("B4:B500")
 
         sample_rows = [
-            ["agendamento", "payable", "Mensalidade coworking março/2026", "NF-10293", "Cowork XPTO", "12345678000199", 1850.75, "31/03/2026", "10/04/2026", "", "5.01.001 - Despesas Administrativas", "2.03 - Administrativo", "PRJ-001 Implantação ERP", "Padrão", "", "", "Importado da rotina financeira"],
-            ["lancamento", "payable", "Tarifa bancária março/2026", "", "Banco do Brasil", "", 25.90, "31/03/2026", "", "31/03/2026", "5.09.003 - Tarifas Bancárias", "2.03 - Administrativo", "", "", "", "001 - Conta Movimento", "Despesa direta sem agendamento prévio"],
+            ["agendamento", "Pagar", "Mensalidade coworking março/2026", "NF-10293", "Cowork XPTO", "12345678000199", 1850.75, "31/03/2026", "10/04/2026", "", "3.01.001", "2.03.001", "PRJ-001 Implantação ERP", "Padrão", "", "", "Importado da rotina financeira"],
+            ["lancamento", "Pagar", "Tarifa bancária março/2026", "", "Banco do Brasil", "", 25.90, "31/03/2026", "", "31/03/2026", "145", "245", "", "", "", "001 - Conta Movimento", "Despesa direta sem agendamento prévio"],
         ]
         for row_idx, sample_values in enumerate(sample_rows, start=4):
             for col_idx, value in enumerate(sample_values, start=1):

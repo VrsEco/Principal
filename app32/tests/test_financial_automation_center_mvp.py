@@ -2,10 +2,14 @@ import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+import io
+
+from openpyxl import load_workbook
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import services.financial_automation_service as automation_module
+from services.financial_import_service import FinancialImportService
 from services.financial_automation_service import FinancialAutomationService
 
 
@@ -155,6 +159,25 @@ def test_financial_import_service_accepts_xls_dispatch(monkeypatch):
     rows = import_module.FinancialImportService._parse_source_rows("xls", b"fake-xls")
 
     assert rows == [{"descricao": "Linha XLS"}]
+
+
+def test_financial_import_template_uses_instruction_layout_with_horizontal_logo():
+    content, error = FinancialImportService.build_import_template()
+
+    assert error is None
+    workbook = load_workbook(io.BytesIO(content))
+    sheet = workbook["Instruções"]
+
+    assert "A1:D1" in {str(item) for item in sheet.merged_cells.ranges}
+    assert "A2:D2" in {str(item) for item in sheet.merged_cells.ranges}
+    assert "A5:I5" in {str(item) for item in sheet.merged_cells.ranges}
+    assert "B8:I8" in {str(item) for item in sheet.merged_cells.ranges}
+    assert sheet["A1"].value == "Versus Gestão Corporativa"
+    assert sheet["A2"].value == "Modelo de importação financeira APP32"
+    assert sheet["A8"].value == "1."
+    assert "conta a pagar / receber" in sheet["B11"].value
+    assert "Pagar" in sheet["B12"].value
+    assert "código completo ou código reduzido" in sheet["B13"].value
 
 
 def test_generate_records_routes_settled_to_entry_and_open_to_schedule(monkeypatch):
