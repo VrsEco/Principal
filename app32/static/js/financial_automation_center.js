@@ -277,7 +277,8 @@
         <td>
           <div class="fa-inline fa-inline--table">
             <button type="button" class="fa-btn fa-btn--primary" data-action="review">Revisar</button>
-            <button type="button" class="fa-btn fa-btn--secondary" data-action="origin">Ver origem</button>
+            <button type="button" class="fa-btn fa-btn--secondary" data-action="origin">Documento</button>
+            <button type="button" class="fa-btn fa-btn--danger" data-action="exclude">Excluir</button>
           </div>
         </td>
       </tr>
@@ -516,6 +517,18 @@
     await loadRecords();
   }
 
+  async function excludeRecord(recordId) {
+    const id = Number(recordId || 0);
+    if (!id) return;
+    const confirmed = window.confirm('Deseja excluir este registro da Central de Automação?');
+    if (!confirmed) return;
+    await api(`/api/financial/automation/records/bulk-status?company_id=${companyId}`, {
+      method: 'POST',
+      body: JSON.stringify({ record_ids: [id], status: 'excluded' }),
+    });
+    await loadRecords();
+  }
+
   async function generateSelected() {
     const ids = selectedIds();
     await api(`/api/financial/automation/generate?company_id=${companyId}`, {
@@ -599,6 +612,7 @@
     if (action === 'review') openReview(row.dataset.recordId);
     if (action === 'save') await saveRow(row);
     if (action === 'origin') await showOrigin(row);
+    if (action === 'exclude') await excludeRecord(row.dataset.recordId);
   });
 
   (async function init() {

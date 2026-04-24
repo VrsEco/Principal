@@ -13,6 +13,7 @@
 .fa-btn--primary{background:var(--primary);color:#fff}
 .fa-btn--secondary{background:var(--surface-secondary);border:1px solid var(--border);color:var(--text-primary)}
 .fa-btn--ghost{background:transparent;border:1px dashed var(--border);color:var(--text-secondary)}
+.fa-btn--danger{background:#fff5f5;border:1px solid #fecaca;color:#b91c1c}
 .fa-dialog__body label{display:flex;flex-direction:column;gap:.35rem}
 .fa-dialog__body select,.fa-dialog__body input,.fa-dialog__body textarea,.fa-table select,.fa-table input,.fa-table textarea{background:var(--surface-secondary);border:1px solid var(--border);border-radius:10px;padding:.65rem .75rem;color:var(--text-primary);width:100%}
 .fa-filters-summary{display:flex;flex-direction:column;gap:.65rem;padding:.9rem 1rem;border:1px dashed var(--border);border-radius:14px;background:linear-gradient(180deg,rgba(37,99,235,.04),rgba(37,99,235,.01));margin-bottom:1rem}
