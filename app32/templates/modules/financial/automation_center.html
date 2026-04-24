@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/static/css/financial_automation_center.css">
+<link rel="stylesheet" href="/static/css/financial_automation_center.css?v={{ asset_version }}">
 {% endblock %}
 
 {% block navbar_actions %}
@@ -334,5 +334,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/financial_automation_center.js"></script>
+<script src="/static/js/financial_automation_center.js?v={{ asset_version }}"></script>
 {% endblock %}

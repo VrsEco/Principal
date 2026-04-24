@@ -165,9 +165,13 @@
   }
 
   function originLabel(record) {
-    const sourceLabel = record.batch?.source_label || originLabels[record.batch?.origin_type];
-    const fileName = record.document?.file_name;
-    return [sourceLabel, fileName].filter(Boolean).join('<br>') || '-';
+    const batchMeta = record.batch?.metadata_json || {};
+    const documentMeta = record.document?.metadata_json || {};
+    const sourceChannel = String(batchMeta.source_channel || documentMeta.source_channel || '').toLowerCase();
+    if (sourceChannel === 'whatsapp') return 'WhatsApp';
+    if (sourceChannel === 'email') return 'E-mail';
+    if (sourceChannel === 'planilha' || sourceChannel === 'spreadsheet') return 'Planilha';
+    return originLabels[record.batch?.origin_type] || 'Origem externa';
   }
 
   function digitsOnly(value) {
@@ -260,12 +264,11 @@
         <td class="fa-cell-document">
           <strong>${escapeHtml(documentDisplayCode(record))}</strong>
           <span class="fa-cell-document__meta">${escapeHtml(documentLabel(record))}</span>
-          <span class="fa-cell-document__meta">${escapeHtml(record.document_group_key || '-')}</span>
           ${dedupeLabel(record)}
         </td>
         <td class="fa-cell-origin">
           <strong>${escapeHtml(sourceDisplayCode(record))}</strong>
-          <span class="fa-cell-document__meta">${originLabel(record)}</span>
+          <span class="fa-cell-document__meta">${escapeHtml(originLabel(record))}</span>
         </td>
         <td><span class="fa-type-pill fa-type-pill--${record.entry_direction === 'receivable' ? 'receivable' : 'payable'}">${record.entry_direction === 'receivable' ? 'Receber' : 'Pagar'}</span></td>
         <td><span class="fa-state-pill fa-state-pill--${record.settlement_state === 'settled' ? 'settled' : 'open'}">${record.settlement_state === 'settled' ? 'Já pago/recebido' : 'Em aberto'}</span></td>
@@ -308,8 +311,8 @@
     byId('fa-review-title').textContent = `Revisar registro #${record.id}`;
     byId('fa-review-subtitle').textContent = record.description || 'Ajuste os dados antes de validar ou gerar no Financeiro.';
     setText('fa-review-status', badge(record.status));
-    setText('fa-review-document', `<strong>${escapeHtml(documentDisplayCode(record))}</strong><div class="fa-muted">${escapeHtml(documentLabel(record))}</div><div class="fa-muted">${escapeHtml(record.document_group_key || '-')}</div>`);
-    setText('fa-review-origin', `<strong>${escapeHtml(sourceDisplayCode(record))}</strong><div class="fa-muted">${originLabel(record)}</div>`);
+    setText('fa-review-document', `<strong>${escapeHtml(documentDisplayCode(record))}</strong><div class="fa-muted">${escapeHtml(documentLabel(record))}</div>`);
+    setText('fa-review-origin', `<strong>${escapeHtml(sourceDisplayCode(record))}</strong><div class="fa-muted">${escapeHtml(originLabel(record))}</div>`);
     setText('fa-review-parties', escapeHtml(partiesLabel(record)));
     setText('fa-review-key', keyLabel(record));
     setText('fa-review-pendencies', pendingLabel(record));
