@@ -36,6 +36,21 @@
 .fa-table{width:100%;border-collapse:collapse;min-width:1160px}
 .fa-table th,.fa-table td{padding:.7rem .6rem;border-bottom:1px solid var(--border);vertical-align:top}
 .fa-table th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:left}
+.fa-table tbody tr:hover{background:rgba(37,99,235,.03)}
+.fa-cell-document{min-width:220px}
+.fa-cell-document strong{display:block;font-size:.95rem;color:var(--text-primary)}
+.fa-cell-document__meta{display:block;margin-top:.2rem;color:var(--text-tertiary);font-size:.78rem}
+.fa-cell-origin,.fa-cell-counterparty,.fa-cell-pendencies{font-size:.88rem;line-height:1.45}
+.fa-cell-amount{font-weight:800;color:var(--text-primary);white-space:nowrap}
+.fa-cell-due{white-space:nowrap}
+.fa-type-pill,.fa-state-pill,.fa-confidence{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:.3rem .65rem;font-size:.74rem;font-weight:800;white-space:nowrap}
+.fa-type-pill--payable{background:#fff7ed;color:#c2410c}
+.fa-type-pill--receivable{background:#ecfeff;color:#0f766e}
+.fa-state-pill--open{background:#eff6ff;color:#1d4ed8}
+.fa-state-pill--settled{background:#ecfdf5;color:#047857}
+.fa-confidence--high{background:#ecfdf5;color:#047857}
+.fa-confidence--medium{background:#fffbeb;color:#b45309}
+.fa-confidence--low{background:#fef2f2;color:#b91c1c}
 .fa-empty{text-align:center;color:var(--text-secondary);padding:2rem}
 .fa-badge{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:.28rem .6rem;font-size:.72rem;font-weight:700}
 .fa-badge--imported{background:#eff6ff;color:#1d4ed8}
@@ -60,6 +75,8 @@
 .fa-review-grid{display:grid;gap:1rem}
 .fa-review-grid--double{grid-template-columns:repeat(2,minmax(0,1fr))}
 .fa-review-grid--triple{grid-template-columns:repeat(3,minmax(0,1fr))}
-.fa-review-actions{display:flex;justify-content:flex-end;gap:.75rem;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--border)}
+.fa-review-form label>span{font-size:.76rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-tertiary)}
+.fa-review-form label small{margin-top:.35rem}
+.fa-review-actions{display:flex;justify-content:flex-end;gap:.75rem;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--border);position:sticky;bottom:0;background:linear-gradient(180deg,rgba(255,255,255,0),var(--surface) 28%)}
 @media (max-width:1024px){.fa-review-layout{grid-template-columns:1fr}.fa-review-summary{position:static}.fa-review-grid--triple{grid-template-columns:1fr}}
-@media (max-width:768px){.fa-page{padding:0 1rem 1.5rem}.fa-hero,.fa-card__header{flex-direction:column}.fa-actions,.fa-inline,.fa-review-actions{flex-direction:column}.fa-btn{width:100%}.fa-filter-chip{width:100%;justify-content:flex-start}.fa-review-grid--double,.fa-review-grid--triple{grid-template-columns:1fr}}
+@media (max-width:768px){.fa-page{padding:0 1rem 1.5rem}.fa-hero,.fa-card__header{flex-direction:column}.fa-actions,.fa-inline,.fa-review-actions{flex-direction:column}.fa-btn{width:100%}.fa-filter-chip{width:100%;justify-content:flex-start}.fa-review-grid--double,.fa-review-grid--triple{grid-template-columns:1fr}.fa-table{min-width:980px}}

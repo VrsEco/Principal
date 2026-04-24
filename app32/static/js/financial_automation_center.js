@@ -169,24 +169,46 @@
     return [sourceLabel, fileName].filter(Boolean).join('<br>') || '-';
   }
 
+  function formatCurrency(value) {
+    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function confidenceBadge(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '<span class="fa-muted">-</span>';
+    const pct = Math.round(numeric * 100);
+    const tone = pct >= 85 ? 'high' : pct >= 60 ? 'medium' : 'low';
+    return `<span class="fa-confidence fa-confidence--${tone}">${pct}%</span>`;
+  }
+
+  function counterpartyDisplay(record) {
+    const matched = (state.options?.counterparties || []).find((item) => String(item.id) === String(record.counterparty_id));
+    if (matched) return optionLabel(matched);
+    return record.recipient_name || record.issuer_name || 'Não definido';
+  }
+
   function render() {
     if (!state.records.length) {
-      recordsBody.innerHTML = '<tr><td colspan="11" class="fa-empty">Nenhum registro encontrado.</td></tr>';
+      recordsBody.innerHTML = '<tr><td colspan="12" class="fa-empty">Nenhum registro encontrado.</td></tr>';
       return;
     }
     recordsBody.innerHTML = state.records.map((record) => `
       <tr data-record-id="${record.id}">
         <td><input type="checkbox" class="fa-record-select" value="${record.id}"></td>
         <td>${badge(record.status)}</td>
-        <td><strong>${documentLabel(record)}</strong><br><span class="fa-muted">${escapeHtml(record.document_group_key || '-')}</span>${dedupeLabel(record)}</td>
-        <td>${originLabel(record)}</td>
-        <td>${record.entry_direction === 'receivable' ? 'Receber' : 'Pagar'}</td>
-        <td>${record.settlement_state === 'settled' ? 'Já pago/recebido' : 'Em aberto'}</td>
-        <td>${escapeHtml(optionLabel((state.options?.counterparties || []).find((item) => String(item.id) === String(record.counterparty_id)) || { name: record.recipient_name || record.issuer_name || 'Não definido' }))}</td>
-        <td>${Number(record.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-        <td>${record.due_date ? new Date(`${record.due_date}T00:00:00`).toLocaleDateString('pt-BR') : '<span class="fa-muted">Sem vencimento</span>'}</td>
-        <td>${record.confidence_score ?? '-'}</td>
-        <td>${pendingLabel(record)}</td>
+        <td class="fa-cell-document">
+          <strong>${documentLabel(record)}</strong>
+          <span class="fa-cell-document__meta">${escapeHtml(record.document_group_key || '-')}</span>
+          ${dedupeLabel(record)}
+        </td>
+        <td class="fa-cell-origin">${originLabel(record)}</td>
+        <td><span class="fa-type-pill fa-type-pill--${record.entry_direction === 'receivable' ? 'receivable' : 'payable'}">${record.entry_direction === 'receivable' ? 'Receber' : 'Pagar'}</span></td>
+        <td><span class="fa-state-pill fa-state-pill--${record.settlement_state === 'settled' ? 'settled' : 'open'}">${record.settlement_state === 'settled' ? 'Já pago/recebido' : 'Em aberto'}</span></td>
+        <td class="fa-cell-counterparty">${escapeHtml(counterpartyDisplay(record))}</td>
+        <td class="fa-cell-amount">${formatCurrency(record.amount)}</td>
+        <td class="fa-cell-due">${record.due_date ? new Date(`${record.due_date}T00:00:00`).toLocaleDateString('pt-BR') : '<span class="fa-muted">Sem vencimento</span>'}</td>
+        <td>${confidenceBadge(record.confidence_score)}</td>
+        <td class="fa-cell-pendencies">${pendingLabel(record)}</td>
         <td>
           <div class="fa-inline fa-inline--table">
             <button type="button" class="fa-btn fa-btn--primary" data-action="review">Revisar</button>
@@ -242,6 +264,7 @@
     byId('fa-review-counterparty-note').innerHTML = suggestionNote(record, 'counterparty').replace(/^<div class="fa-muted">|<\/div>$/g, '');
     byId('fa-review-chart-account-note').innerHTML = suggestionNote(record, 'chart_account').replace(/^<div class="fa-muted">|<\/div>$/g, '');
     byId('fa-review-cost-center-note').innerHTML = suggestionNote(record, 'cost_center').replace(/^<div class="fa-muted">|<\/div>$/g, '');
+    byId('fa-review-save').textContent = record.status === 'validated' ? 'Salvar ajustes' : 'Salvar revisão';
   }
 
   function reviewPayload() {
@@ -519,7 +542,7 @@
       updateFiltersUi();
       await loadRecords();
     } catch (error) {
-      recordsBody.innerHTML = `<tr><td colspan="11" class="fa-empty">${error.message}</td></tr>`;
+      recordsBody.innerHTML = `<tr><td colspan="12" class="fa-empty">${error.message}</td></tr>`;
     }
   })();
 })();
