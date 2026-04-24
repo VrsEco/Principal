@@ -5,8 +5,9 @@
   const recordsBody = document.getElementById('fa-records-body');
   const importDialog = document.getElementById('fa-import-dialog');
   const documentDialog = document.getElementById('fa-document-dialog');
+  const reviewDialog = document.getElementById('fa-review-dialog');
   const documentBody = document.getElementById('fa-document-body');
-  const state = { options: null, records: [] };
+  const state = { options: null, records: [], activeReviewId: null };
   const statusLabels = { imported: 'Importada', validated: 'Validada', generated: 'Gerada', excluded: 'Excluída' };
   const originLabels = {
     accountability: 'Prestação de contas',
@@ -30,8 +31,20 @@
     ofx: 'OFX',
     unknown_document: 'Documento',
   };
+  const filterDefinitions = [
+    { key: 'status', id: 'filter-status', label: 'Status', format: (value) => statusLabels[value] || value },
+    { key: 'origin_type', id: 'filter-origin', label: 'Origem', format: (value) => originLabels[value] || value },
+    { key: 'document_type', id: 'filter-document-type', label: 'Tipo documental', format: (value) => documentTypeLabels[value] || value },
+    { key: 'competence_date_from', id: 'filter-competence-from', label: 'Competência de' },
+    { key: 'competence_date_to', id: 'filter-competence-to', label: 'Competência até' },
+    { key: 'due_date_from', id: 'filter-due-from', label: 'Vencimento de' },
+    { key: 'due_date_to', id: 'filter-due-to', label: 'Vencimento até' },
+  ];
 
   const byId = (id) => document.getElementById(id);
+  const filtersForm = byId('fa-filters');
+  const filterCountNode = byId('fa-filters-count');
+  const activeFiltersNode = byId('fa-active-filters');
   const selectedIds = () => Array.from(document.querySelectorAll('.fa-record-select:checked')).map((el) => Number(el.value));
   const badge = (status) => `<span class="fa-badge fa-badge--${status}">${statusLabels[status] || status || '-'}</span>`;
 
@@ -47,6 +60,38 @@
 
   function optionLabel(item) {
     return `${item.code ? `${item.code} · ` : ''}${item.name || item.display_label || item.label || item.source_name || ''}`;
+  }
+
+  function readFilters() {
+    return filterDefinitions.reduce((acc, { key, id }) => {
+      const value = byId(id)?.value;
+      if (value) acc[key] = value;
+      return acc;
+    }, {});
+  }
+
+  function updateFiltersUi() {
+    const filters = readFilters();
+    const entries = filterDefinitions
+      .map((definition) => {
+        const value = filters[definition.key];
+        if (!value) return null;
+        const text = definition.format ? definition.format(value) : value;
+        return { label: definition.label, text };
+      })
+      .filter(Boolean);
+
+    if (filterCountNode) filterCountNode.textContent = String(entries.length);
+    if (!activeFiltersNode) return;
+
+    if (!entries.length) {
+      activeFiltersNode.innerHTML = '<span class="fa-filter-chip fa-filter-chip--muted">Sem filtros ativos</span>';
+      return;
+    }
+
+    activeFiltersNode.innerHTML = entries
+      .map((entry) => `<span class="fa-filter-chip"><strong>${escapeHtml(entry.label)}:</strong> ${escapeHtml(entry.text)}</span>`)
+      .join('');
   }
 
   function domainLabel(record) {
@@ -126,7 +171,7 @@
 
   function render() {
     if (!state.records.length) {
-      recordsBody.innerHTML = '<tr><td colspan="20" class="fa-empty">Nenhum registro encontrado.</td></tr>';
+      recordsBody.innerHTML = '<tr><td colspan="11" class="fa-empty">Nenhum registro encontrado.</td></tr>';
       return;
     }
     recordsBody.innerHTML = state.records.map((record) => `
@@ -135,29 +180,100 @@
         <td>${badge(record.status)}</td>
         <td><strong>${documentLabel(record)}</strong><br><span class="fa-muted">${escapeHtml(record.document_group_key || '-')}</span>${dedupeLabel(record)}</td>
         <td>${originLabel(record)}</td>
-        <td>${escapeHtml(partiesLabel(record))}</td>
-        <td>${keyLabel(record)}</td>
-        <td>${selectHtml([{id:'payable',name:'Pagar'},{id:'receivable',name:'Receber'}], record.entry_direction, 'Tipo', (item) => item.id, optionLabel, 'entry_direction')}</td>
-        <td>${selectHtml([{id:'settled',name:'Já pago/recebido'},{id:'open',name:'Em aberto'}], record.settlement_state, 'Situação', (item) => item.id, optionLabel, 'settlement_state')}</td>
-        <td><input type="text" value="${escapeHtml(record.description || '')}" data-field="description"></td>
-        <td>${selectHtml(state.options?.counterparties, record.counterparty_id, 'Favorecido', (item) => item.id, optionLabel, 'counterparty_id')}${suggestionNote(record, 'counterparty')}</td>
-        <td><input type="number" step="0.01" value="${record.amount || 0}" data-field="amount"></td>
-        <td><input type="date" value="${record.competence_date || ''}" data-field="competence_date"></td>
-        <td><input type="date" value="${record.due_date || ''}" data-field="due_date"></td>
-        <td>${selectHtml(state.options?.bank_accounts, record.bank_account_id, 'Conta', (item) => item.id, optionLabel, 'bank_account_id')}</td>
-        <td>${selectHtml(state.options?.chart_accounts, record.chart_account_id, 'Conta contábil', (item) => item.id, optionLabel, 'chart_account_id')}${suggestionNote(record, 'chart_account')}</td>
-        <td>${selectHtml(state.options?.cost_centers, record.cost_center_id, 'Centro', (item) => item.id, optionLabel, 'cost_center_id')}${suggestionNote(record, 'cost_center')}</td>
-        <td>${selectHtml(state.options?.domain_options, domainLabel(record), 'Projeto/Processo', (item) => `${item.domain_type}:${item.source_id}`, (item) => item.label, 'domain_link')}</td>
+        <td>${record.entry_direction === 'receivable' ? 'Receber' : 'Pagar'}</td>
+        <td>${record.settlement_state === 'settled' ? 'Já pago/recebido' : 'Em aberto'}</td>
+        <td>${escapeHtml(optionLabel((state.options?.counterparties || []).find((item) => String(item.id) === String(record.counterparty_id)) || { name: record.recipient_name || record.issuer_name || 'Não definido' }))}</td>
+        <td>${Number(record.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+        <td>${record.due_date ? new Date(`${record.due_date}T00:00:00`).toLocaleDateString('pt-BR') : '<span class="fa-muted">Sem vencimento</span>'}</td>
         <td>${record.confidence_score ?? '-'}</td>
         <td>${pendingLabel(record)}</td>
         <td>
-          <div class="fa-inline">
-            <button type="button" class="fa-btn fa-btn--ghost" data-action="save">Salvar</button>
+          <div class="fa-inline fa-inline--table">
+            <button type="button" class="fa-btn fa-btn--primary" data-action="review">Revisar</button>
             <button type="button" class="fa-btn fa-btn--secondary" data-action="origin">Ver origem</button>
           </div>
         </td>
       </tr>
     `).join('');
+  }
+
+  function renderReviewSelect(targetId, items, selectedValue, placeholder, valueGetter = (item) => item.id, labelGetter = optionLabel) {
+    const target = byId(targetId);
+    if (!target) return;
+    target.innerHTML = [`<option value="">${placeholder}</option>`]
+      .concat((items || []).map((item) => {
+        const value = valueGetter(item);
+        const selected = String(value) === String(selectedValue ?? '') ? 'selected' : '';
+        return `<option value="${value}" ${selected}>${labelGetter(item)}</option>`;
+      }))
+      .join('');
+  }
+
+  function setText(targetId, html) {
+    const node = byId(targetId);
+    if (node) node.innerHTML = html;
+  }
+
+  function populateReviewForm(record) {
+    state.activeReviewId = record.id;
+    byId('fa-review-record-id').value = String(record.id);
+    byId('fa-review-title').textContent = `Revisar registro #${record.id}`;
+    byId('fa-review-subtitle').textContent = record.description || 'Ajuste os dados antes de validar ou gerar no Financeiro.';
+    setText('fa-review-status', badge(record.status));
+    setText('fa-review-document', `<strong>${documentLabel(record)}</strong><div class="fa-muted">${escapeHtml(record.document_group_key || '-')}</div>`);
+    setText('fa-review-origin', originLabel(record));
+    setText('fa-review-parties', escapeHtml(partiesLabel(record)));
+    setText('fa-review-key', keyLabel(record));
+    setText('fa-review-pendencies', pendingLabel(record));
+
+    renderReviewSelect('fa-review-entry-direction', [{ id: 'payable', name: 'Pagar' }, { id: 'receivable', name: 'Receber' }], record.entry_direction, 'Tipo', (item) => item.id, optionLabel);
+    renderReviewSelect('fa-review-settlement-state', [{ id: 'settled', name: 'Já pago/recebido' }, { id: 'open', name: 'Em aberto' }], record.settlement_state, 'Situação', (item) => item.id, optionLabel);
+    renderReviewSelect('fa-review-counterparty', state.options?.counterparties, record.counterparty_id, 'Favorecido', (item) => item.id, optionLabel);
+    renderReviewSelect('fa-review-bank-account', state.options?.bank_accounts, record.bank_account_id, 'Conta bancária', (item) => item.id, optionLabel);
+    renderReviewSelect('fa-review-chart-account', state.options?.chart_accounts, record.chart_account_id, 'Conta contábil', (item) => item.id, optionLabel);
+    renderReviewSelect('fa-review-cost-center', state.options?.cost_centers, record.cost_center_id, 'Centro', (item) => item.id, optionLabel);
+    renderReviewSelect('fa-review-domain-link', state.options?.domain_options, domainLabel(record), 'Projeto/Processo', (item) => `${item.domain_type}:${item.source_id}`, (item) => item.label);
+
+    byId('fa-review-description').value = record.description || '';
+    byId('fa-review-amount').value = record.amount || 0;
+    byId('fa-review-competence-date').value = record.competence_date || '';
+    byId('fa-review-due-date').value = record.due_date || '';
+
+    byId('fa-review-counterparty-note').innerHTML = suggestionNote(record, 'counterparty').replace(/^<div class="fa-muted">|<\/div>$/g, '');
+    byId('fa-review-chart-account-note').innerHTML = suggestionNote(record, 'chart_account').replace(/^<div class="fa-muted">|<\/div>$/g, '');
+    byId('fa-review-cost-center-note').innerHTML = suggestionNote(record, 'cost_center').replace(/^<div class="fa-muted">|<\/div>$/g, '');
+  }
+
+  function reviewPayload() {
+    const payload = {
+      entry_direction: byId('fa-review-entry-direction').value || null,
+      settlement_state: byId('fa-review-settlement-state').value || null,
+      description: byId('fa-review-description').value || null,
+      counterparty_id: byId('fa-review-counterparty').value ? Number(byId('fa-review-counterparty').value) : null,
+      bank_account_id: byId('fa-review-bank-account').value ? Number(byId('fa-review-bank-account').value) : null,
+      chart_account_id: byId('fa-review-chart-account').value ? Number(byId('fa-review-chart-account').value) : null,
+      cost_center_id: byId('fa-review-cost-center').value ? Number(byId('fa-review-cost-center').value) : null,
+      amount: byId('fa-review-amount').value ? Number(byId('fa-review-amount').value) : 0,
+      competence_date: byId('fa-review-competence-date').value || null,
+      due_date: byId('fa-review-due-date').value || null,
+    };
+    const domainValue = byId('fa-review-domain-link').value;
+    if (domainValue) {
+      const [domain_type, source_id] = domainValue.split(':');
+      payload.domain_type = domain_type;
+      payload.domain_source_id = Number(source_id);
+    } else {
+      payload.domain_type = null;
+      payload.domain_source_id = null;
+    }
+    return payload;
+  }
+
+  function openReview(recordId) {
+    const record = state.records.find((item) => item.id === Number(recordId));
+    if (!record) return;
+    populateReviewForm(record);
+    reviewDialog?.showModal();
   }
 
   function rowPayload(row) {
@@ -203,17 +319,24 @@
 
   async function loadRecords() {
     const query = new URLSearchParams({ company_id: companyId });
-    [
-      ['status', 'filter-status'],
-      ['origin_type', 'filter-origin'],
-      ['document_type', 'filter-document-type'],
-      ['competence_date_from', 'filter-competence-from'],
-      ['competence_date_to', 'filter-competence-to'],
-      ['due_date_from', 'filter-due-from'],
-      ['due_date_to', 'filter-due-to'],
-    ].forEach(([key, id]) => { const value = byId(id).value; if (value) query.set(key, value); });
+    Object.entries(readFilters()).forEach(([key, value]) => query.set(key, value));
     state.records = await api(`/api/financial/automation/records?${query.toString()}`);
     render();
+  }
+
+  async function applyFilters() {
+    updateFiltersUi();
+    await loadRecords();
+    window.closeAllSidebars?.();
+  }
+
+  async function clearFilters() {
+    filterDefinitions.forEach(({ id }) => {
+      const element = byId(id);
+      if (element) element.value = '';
+    });
+    updateFiltersUi();
+    await loadRecords();
   }
 
   async function saveRow(row) {
@@ -223,6 +346,17 @@
       body: JSON.stringify(payload),
     });
     await loadRecords();
+  }
+
+  async function saveReview() {
+    const recordId = Number(byId('fa-review-record-id').value || 0);
+    if (!recordId) return;
+    await api(`/api/financial/automation/records/${recordId}?company_id=${companyId}`, {
+      method: 'PUT',
+      body: JSON.stringify(reviewPayload()),
+    });
+    await loadRecords();
+    reviewDialog?.close();
   }
 
   function renderDocumentLinks(payload) {
@@ -357,14 +491,24 @@
   byId('fa-mark-validated').addEventListener('click', () => bulkStatus('validated'));
   byId('fa-mark-excluded').addEventListener('click', () => bulkStatus('excluded'));
   byId('fa-generate').addEventListener('click', generateSelected);
+  byId('fa-apply-filters')?.addEventListener('click', applyFilters);
+  byId('fa-clear-filters')?.addEventListener('click', clearFilters);
+  byId('fa-review-save')?.addEventListener('click', saveReview);
+  byId('fa-review-origin-action')?.addEventListener('click', async () => {
+    const record = state.records.find((item) => item.id === state.activeReviewId);
+    if (!record) return;
+    if (reviewDialog?.open) reviewDialog.close();
+    await showOrigin({ dataset: { recordId: String(record.id) } });
+  });
   byId('fa-select-all').addEventListener('change', (event) => {
     document.querySelectorAll('.fa-record-select').forEach((el) => { el.checked = event.target.checked; });
   });
-  byId('fa-filters').addEventListener('change', loadRecords);
+  filtersForm?.addEventListener('change', updateFiltersUi);
   recordsBody.addEventListener('click', async (event) => {
     const action = event.target.dataset.action;
     const row = event.target.closest('tr');
     if (!action || !row) return;
+    if (action === 'review') openReview(row.dataset.recordId);
     if (action === 'save') await saveRow(row);
     if (action === 'origin') await showOrigin(row);
   });
@@ -372,9 +516,10 @@
   (async function init() {
     try {
       await loadOptions();
+      updateFiltersUi();
       await loadRecords();
     } catch (error) {
-      recordsBody.innerHTML = `<tr><td colspan="20" class="fa-empty">${error.message}</td></tr>`;
+      recordsBody.innerHTML = `<tr><td colspan="11" class="fa-empty">${error.message}</td></tr>`;
     }
   })();
 })();

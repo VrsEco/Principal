@@ -14,6 +14,19 @@
 <link rel="stylesheet" href="/static/css/financial_automation_center.css">
 {% endblock %}
 
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="fa-filter-count" id="fa-filters-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
 {% block workspace_content %}
 <div class="fa-page" data-company-id="{{ company_id or '' }}">
     <section class="fa-hero">
@@ -34,8 +47,11 @@
     <section class="fa-card">
         <div class="fa-card__header">
             <div>
-                <p class="fa-eyebrow">Filtros</p>
+                <p class="fa-eyebrow">Operação</p>
                 <h2>Grade operacional</h2>
+                <p class="fa-muted fa-card__subtitle">
+                    Use o botão <strong>Filtros</strong> na barra superior para refinar a grade no padrão Versus.
+                </p>
             </div>
             <div class="fa-inline">
                 <button type="button" class="fa-btn fa-btn--secondary" id="fa-mark-validated">Marcar validados</button>
@@ -44,46 +60,12 @@
             </div>
         </div>
         <div class="fa-card__body">
-            <form class="fa-filters" id="fa-filters">
-                <label>
-                    <span>Status</span>
-                    <select id="filter-status">
-                        <option value="">Todos</option>
-                        <option value="imported">Importada</option>
-                        <option value="validated">Validada</option>
-                        <option value="generated">Gerada</option>
-                        <option value="excluded">Excluída</option>
-                    </select>
-                </label>
-                <label>
-                    <span>Origem</span>
-                    <select id="filter-origin">
-                        <option value="">Todas</option>
-                    </select>
-                </label>
-                <label>
-                    <span>Tipo documental</span>
-                    <select id="filter-document-type">
-                        <option value="">Todos</option>
-                    </select>
-                </label>
-                <label>
-                    <span>Competência de</span>
-                    <input type="date" id="filter-competence-from">
-                </label>
-                <label>
-                    <span>Competência até</span>
-                    <input type="date" id="filter-competence-to">
-                </label>
-                <label>
-                    <span>Vencimento de</span>
-                    <input type="date" id="filter-due-from">
-                </label>
-                <label>
-                    <span>Vencimento até</span>
-                    <input type="date" id="filter-due-to">
-                </label>
-            </form>
+            <div class="fa-filters-summary">
+                <span class="fa-filters-summary__label">Filtros ativos</span>
+                <div class="fa-filters-summary__chips" id="fa-active-filters">
+                    <span class="fa-filter-chip fa-filter-chip--muted">Sem filtros ativos</span>
+                </div>
+            </div>
 
             <div class="fa-table-wrap">
                 <table class="fa-table">
@@ -93,27 +75,19 @@
                             <th>Status</th>
                             <th>Documento</th>
                             <th>Origem</th>
-                            <th>Emitente / Destinatário</th>
-                            <th>Número / Chave</th>
                             <th>Tipo</th>
                             <th>Situação</th>
-                            <th>Descrição</th>
                             <th>Favorecido</th>
                             <th>Valor</th>
-                            <th>Competência</th>
                             <th>Vencimento</th>
-                            <th>Conta</th>
-                            <th>Conta contábil</th>
-                            <th>Centro</th>
-                            <th>Projeto/Processo</th>
                             <th>Confiança</th>
                             <th>Pendências</th>
-                            <th>Origem</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="fa-records-body">
                         <tr>
-                            <td colspan="20" class="fa-empty">Carregando registros...</td>
+                            <td colspan="11" class="fa-empty">Carregando registros...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -185,6 +159,178 @@
         </div>
     </form>
 </dialog>
+
+<dialog id="fa-review-dialog" class="fa-dialog">
+    <form method="dialog" class="fa-dialog__content fa-dialog__content--review">
+        <div class="fa-dialog__header">
+            <div>
+                <p class="fa-eyebrow">Revisão operacional</p>
+                <h3 id="fa-review-title">Revisar registro</h3>
+                <p class="fa-muted fa-review-subtitle" id="fa-review-subtitle">Selecione um registro para revisar.</p>
+            </div>
+            <button type="submit" class="fa-btn fa-btn--ghost">Fechar</button>
+        </div>
+        <div class="fa-dialog__body fa-review-layout">
+            <aside class="fa-review-summary">
+                <div class="fa-review-summary__block">
+                    <span class="fa-review-summary__label">Status</span>
+                    <div id="fa-review-status"></div>
+                </div>
+                <div class="fa-review-summary__block">
+                    <span class="fa-review-summary__label">Documento</span>
+                    <div id="fa-review-document"></div>
+                </div>
+                <div class="fa-review-summary__block">
+                    <span class="fa-review-summary__label">Origem</span>
+                    <div id="fa-review-origin"></div>
+                </div>
+                <div class="fa-review-summary__block">
+                    <span class="fa-review-summary__label">Partes</span>
+                    <div id="fa-review-parties"></div>
+                </div>
+                <div class="fa-review-summary__block">
+                    <span class="fa-review-summary__label">Número / chave</span>
+                    <div id="fa-review-key"></div>
+                </div>
+                <div class="fa-review-summary__block">
+                    <span class="fa-review-summary__label">Pendências</span>
+                    <div id="fa-review-pendencies"></div>
+                </div>
+            </aside>
+
+            <section class="fa-review-form">
+                <input type="hidden" id="fa-review-record-id">
+
+                <div class="fa-review-grid fa-review-grid--double">
+                    <label>
+                        <span>Tipo</span>
+                        <select id="fa-review-entry-direction"></select>
+                    </label>
+                    <label>
+                        <span>Situação</span>
+                        <select id="fa-review-settlement-state"></select>
+                    </label>
+                </div>
+
+                <label>
+                    <span>Descrição</span>
+                    <input type="text" id="fa-review-description" placeholder="Descreva a natureza financeira do documento">
+                </label>
+
+                <div class="fa-review-grid fa-review-grid--double">
+                    <label>
+                        <span>Favorecido</span>
+                        <select id="fa-review-counterparty"></select>
+                        <small class="fa-muted" id="fa-review-counterparty-note"></small>
+                    </label>
+                    <label>
+                        <span>Valor</span>
+                        <input type="number" step="0.01" id="fa-review-amount">
+                    </label>
+                </div>
+
+                <div class="fa-review-grid fa-review-grid--double">
+                    <label>
+                        <span>Competência</span>
+                        <input type="date" id="fa-review-competence-date">
+                    </label>
+                    <label>
+                        <span>Vencimento</span>
+                        <input type="date" id="fa-review-due-date">
+                    </label>
+                </div>
+
+                <div class="fa-review-grid fa-review-grid--triple">
+                    <label>
+                        <span>Conta bancária</span>
+                        <select id="fa-review-bank-account"></select>
+                    </label>
+                    <label>
+                        <span>Conta contábil</span>
+                        <select id="fa-review-chart-account"></select>
+                        <small class="fa-muted" id="fa-review-chart-account-note"></small>
+                    </label>
+                    <label>
+                        <span>Centro</span>
+                        <select id="fa-review-cost-center"></select>
+                        <small class="fa-muted" id="fa-review-cost-center-note"></small>
+                    </label>
+                </div>
+
+                <label>
+                    <span>Projeto / Processo</span>
+                    <select id="fa-review-domain-link"></select>
+                </label>
+
+                <div class="fa-review-actions">
+                    <button type="button" class="fa-btn fa-btn--secondary" id="fa-review-origin-action">Ver origem</button>
+                    <button type="button" class="fa-btn fa-btn--primary" id="fa-review-save">Salvar revisão</button>
+                </div>
+            </section>
+        </div>
+    </form>
+</dialog>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="fa-sidebar-subtitle">Padrão Versus: filtros operacionais na sidebar direita.</p>
+</div>
+
+<div class="sidebar-content-ws fa-sidebar-filters">
+    <form id="fa-filters" class="fa-sidebar-form">
+        <div class="filter-group">
+            <label class="filter-label" for="filter-status">Status</label>
+            <select id="filter-status" class="filter-select">
+                <option value="">Todos</option>
+                <option value="imported">Importada</option>
+                <option value="validated">Validada</option>
+                <option value="generated">Gerada</option>
+                <option value="excluded">Excluída</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="filter-origin">Origem</label>
+            <select id="filter-origin" class="filter-select">
+                <option value="">Todas</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="filter-document-type">Tipo documental</label>
+            <select id="filter-document-type" class="filter-select">
+                <option value="">Todos</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="filter-competence-from">Competência de</label>
+            <input type="date" id="filter-competence-from" class="filter-input">
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="filter-competence-to">Competência até</label>
+            <input type="date" id="filter-competence-to" class="filter-input">
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="filter-due-from">Vencimento de</label>
+            <input type="date" id="filter-due-from" class="filter-input">
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="filter-due-to">Vencimento até</label>
+            <input type="date" id="filter-due-to" class="filter-input">
+        </div>
+    </form>
+
+    <div class="fa-sidebar-actions">
+        <button type="button" class="fa-btn fa-btn--primary" id="fa-apply-filters">Aplicar filtros</button>
+        <button type="button" class="fa-btn fa-btn--secondary" id="fa-clear-filters">Limpar filtros</button>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
