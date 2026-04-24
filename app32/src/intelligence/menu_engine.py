@@ -1,3 +1,4 @@
+import base64
 import json
 import re
 import unicodedata
@@ -150,6 +151,8 @@ from src.intelligence.workflows.telemetry import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SESSION_BYTES_MARKER = "__gv_bytes_b64__"
 
 
 @dataclass
@@ -790,6 +793,7 @@ def start_channel_workflow(
             intercept_stage="workflow_start",
         )
     except Exception:
+        db.session.rollback()
         logger.exception("Erro ao iniciar fluxo de canal %s", workflow_code)
         return MenuInterceptResult(
             handled=True,
@@ -1465,6 +1469,32 @@ def _public_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _serialize_session_payload(value: Any) -> Any:
+    if isinstance(value, (bytes, bytearray)):
+        return {_SESSION_BYTES_MARKER: base64.b64encode(bytes(value)).decode("ascii")}
+    if isinstance(value, dict):
+        return {key: _serialize_session_payload(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_serialize_session_payload(item) for item in value]
+    if isinstance(value, tuple):
+        return [_serialize_session_payload(item) for item in value]
+    return value
+
+
+def _deserialize_session_payload(value: Any) -> Any:
+    if isinstance(value, dict):
+        marker_value = value.get(_SESSION_BYTES_MARKER)
+        if marker_value is not None and len(value) == 1:
+            try:
+                return base64.b64decode(str(marker_value))
+            except Exception:
+                return b""
+        return {key: _deserialize_session_payload(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_deserialize_session_payload(item) for item in value]
+    return value
+
+
 def _resolve_user_first_name(user_id: int) -> Optional[str]:
     from models import User
 
@@ -1499,7 +1529,7 @@ def _inject_session_context_into_payload(
     option: AgentMenuOption,
     payload: Dict[str, Any],
 ) -> Dict[str, Any]:
-    updated = dict(payload or {})
+    updated = dict(_deserialize_session_payload(payload or {}) or {})
     explicit_company_id = _resolve_explicit_company_id_from_payload(
         payload=updated,
         user_id=session.user_id,
@@ -1562,7 +1592,7 @@ def _transition_session_state(
     _build_session_navigation_runtime().transition_state(
         session,
         status=status,
-        payload=payload,
+        payload=_serialize_session_payload(payload) if payload is not None else None,
         missing_fields=missing_fields,
         push_history=push_history,
     )
@@ -4222,14 +4252,15 @@ def _execute_option_with_payload(
     option: AgentMenuOption,
     payload: Dict[str, Any],
 ) -> MenuInterceptResult:
+    normalized_payload = dict(_deserialize_session_payload(payload or {}) or {})
     effective_company_id = _resolve_effective_company_id_for_payload(
-        payload=payload,
+        payload=normalized_payload,
         fallback_company_id=session.company_id,
         user_id=session.user_id,
     )
     direct_execution = _try_execute_direct_option_result(
         option=option,
-        payload=payload,
+        payload=normalized_payload,
         company_id=effective_company_id,
         user_id=session.user_id,
         channel=session.channel or "web",
@@ -4243,7 +4274,7 @@ def _execute_option_with_payload(
         )
     return MenuInterceptResult(
         handled=False,
-        override_message=_build_execution_prompt(option, payload, str(session.last_user_message or "")),
+        override_message=_build_execution_prompt(option, normalized_payload, str(session.last_user_message or "")),
     )
 
 

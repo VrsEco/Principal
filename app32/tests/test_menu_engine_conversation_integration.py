@@ -505,6 +505,7 @@ def test_start_channel_workflow_preserves_hidden_attachment_payload_through_comp
     assert "Escolha a empresa para continuar:" in result.response_text
     assert session.status == menu_engine.COMPANY_SELECTION_STATUS
     assert session.collected_data["_attachment"]["file_name"] == "recibo.pdf"
+    assert menu_engine._SESSION_BYTES_MARKER in session.collected_data["_attachment"]["file_bytes"]
 
     result = menu_engine.handle_menu_message(
         user_id=10,
@@ -523,6 +524,50 @@ def test_start_channel_workflow_preserves_hidden_attachment_payload_through_comp
     assert captured["payload"]["_attachment"]["file_bytes"] == b"PDF"
     assert captured["payload"]["_source_label"] == "WhatsApp - recibo.pdf"
     assert session.status == "idle"
+
+
+def test_start_channel_workflow_rolls_back_session_when_transition_fails(monkeypatch):
+    option = AgentMenuOption(
+        code="361",
+        title="Enviar recibo para automacao",
+        action_key="finance.receipt_ingest",
+        required_fields=[],
+    )
+    option.id = 361
+    session = _DummySession(option)
+    rollback_calls = []
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(
+        menu_engine,
+        "_find_option_by_code",
+        lambda company_id, code, include_inactive=False: option if code == option.code else None,
+    )
+    monkeypatch.setattr(
+        menu_engine,
+        "_prepare_company_selection_flow_if_needed",
+        lambda session, option, collected: (_ for _ in ()).throw(TypeError("boom")),
+    )
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: rollback_calls.append("rollback"))
+
+    result = menu_engine.start_channel_workflow(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-receipt-error",
+        workflow_code="361",
+        user_message="segue recibo",
+        payload={
+            "_attachment": {"file_name": "recibo.pdf", "file_bytes": b"PDF"},
+            "_source_label": "WhatsApp - recibo.pdf",
+        },
+    )
+
+    assert result.handled is True
+    assert result.response_text == "Nao consegui iniciar o fluxo solicitado agora. Tente novamente em seguida."
+    assert rollback_calls == ["rollback"]
 
 
 def test_handle_menu_message_attaches_discovery_metadata_for_implicit_selection(monkeypatch):
