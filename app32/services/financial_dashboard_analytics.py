@@ -149,15 +149,30 @@ class FinancialDashboardAnalytics:
         period_end: date,
     ) -> Dict:
         entries = list(entries)
+        account_groups = FinancialDashboardAnalytics.chart_account_groups(company_id)
         rows: Dict[str, Dict[str, Decimal]] = {}
         totals = {key: Decimal("0") for key in ("budget", "competence", "due", "liquidation")}
-        budget_rows = FinancialDashboardAnalytics.load_budget_totals(company_id=company_id, period_start=period_start, period_end=period_end)
+        budget_rows = FinancialDashboardAnalytics.load_budget_totals(
+            company_id=company_id,
+            period_start=period_start,
+            period_end=period_end,
+            account_groups=account_groups,
+        )
 
-        def ensure_row(group_name: str) -> Dict[str, Decimal]:
-            return rows.setdefault(group_name, {key: Decimal("0") for key in totals})
+        def ensure_row(group_meta: Dict[str, str]) -> Dict[str, Decimal]:
+            return rows.setdefault(
+                group_meta["key"],
+                {
+                    "key": group_meta["key"],
+                    "code": group_meta["code"],
+                    "label": group_meta["label"],
+                    **{key: Decimal("0") for key in totals},
+                },
+            )
 
-        for group_name, amount in budget_rows.items():
-            row = ensure_row(group_name)
+        for budget_payload in budget_rows.values():
+            row = ensure_row(budget_payload)
+            amount = Decimal(str(budget_payload["budget"]))
             row["budget"] += amount
             totals["budget"] += amount
 
@@ -165,8 +180,9 @@ class FinancialDashboardAnalytics:
             if FinancialDashboardAnalytics.is_transfer_entry(entry):
                 continue
 
-            row_name = FinancialDashboardAnalytics.chart_account_name(company_id, entry.chart_account_id)
-            row = ensure_row(row_name)
+            row = ensure_row(
+                FinancialDashboardAnalytics.chart_account_group(company_id, entry.chart_account_id, account_groups)
+            )
             sign = FinancialDashboardAnalytics.entry_sign(entry)
 
             if FinancialDashboardAnalytics.affects_competence(entry) and period_start <= entry.competence_date <= period_end:
@@ -186,8 +202,9 @@ class FinancialDashboardAnalytics:
             entry = entries_by_id.get(settlement.financial_entry_id)
             if not entry or not FinancialDashboardAnalytics.affects_liquidation(entry):
                 continue
-            row_name = FinancialDashboardAnalytics.chart_account_name(company_id, entry.chart_account_id)
-            row = ensure_row(row_name)
+            row = ensure_row(
+                FinancialDashboardAnalytics.chart_account_group(company_id, entry.chart_account_id, account_groups)
+            )
             amount = FinancialDashboardAnalytics.settlement_amount(settlement) * FinancialDashboardAnalytics.entry_sign(entry)
             row["liquidation"] += amount
             totals["liquidation"] += amount
@@ -197,13 +214,15 @@ class FinancialDashboardAnalytics:
             "period_end": period_end.isoformat(),
             "rows": [
                 {
-                    "group": group_name,
+                    "group": f'{row["code"]} - {row["label"]}',
+                    "code": row["code"],
+                    "label": row["label"],
                     "budget": float(row["budget"]),
                     "competence": float(row["competence"]),
                     "due": float(row["due"]),
                     "liquidation": float(row["liquidation"]),
                 }
-                for group_name, row in sorted(rows.items())
+                for _, row in sorted(rows.items(), key=lambda item: item[1]["code"])
             ],
             "totals": {key: float(value) for key, value in totals.items()},
         }
@@ -362,6 +381,58 @@ class FinancialDashboardAnalytics:
         return item.name if item else f"Conta #{chart_account_id}"
 
     @staticmethod
+    def chart_account_groups(company_id: int) -> Dict[int, Dict[str, str]]:
+        accounts = (
+            FinancialChartAccount.query.filter(
+                FinancialChartAccount.company_id == company_id,
+                FinancialChartAccount.deleted_at.is_(None),
+            )
+            .order_by(FinancialChartAccount.code.asc(), FinancialChartAccount.id.asc())
+            .all()
+        )
+        if not accounts:
+            return {}
+
+        accounts_by_id = {account.id: account for account in accounts}
+        resolved: Dict[int, Dict[str, str]] = {}
+
+        def resolve_group(account_id: Optional[int]) -> Dict[str, str]:
+            if not account_id or account_id not in accounts_by_id:
+                return {"key": "sem-conta", "code": "Sem conta", "label": "Sem conta contábil"}
+            if account_id in resolved:
+                return resolved[account_id]
+
+            current = accounts_by_id[account_id]
+            visited = set()
+            while current.parent_id and current.parent_id in accounts_by_id and current.parent_id not in visited:
+                visited.add(current.id)
+                current = accounts_by_id[current.parent_id]
+
+            code = (current.code or "").strip() or f"Conta {current.id}"
+            label = (current.name or "").strip() or f"Conta #{current.id}"
+            payload = {"key": f"{code}|{label}", "code": code, "label": label}
+            resolved[account_id] = payload
+            return payload
+
+        for account in accounts:
+            resolve_group(account.id)
+        return resolved
+
+    @staticmethod
+    def chart_account_group(
+        company_id: int,
+        chart_account_id: Optional[int],
+        account_groups: Optional[Dict[int, Dict[str, str]]] = None,
+    ) -> Dict[str, str]:
+        groups = account_groups if account_groups is not None else FinancialDashboardAnalytics.chart_account_groups(company_id)
+        if not chart_account_id:
+            return {"key": "sem-conta", "code": "Sem conta", "label": "Sem conta contábil"}
+        return groups.get(
+            chart_account_id,
+            {"key": f"conta-{chart_account_id}", "code": f"Conta {chart_account_id}", "label": f"Conta #{chart_account_id}"},
+        )
+
+    @staticmethod
     def format_period_label(period_start: date, period_end: date) -> str:
         return f"{period_start.strftime('%d/%m/%Y')} até {period_end.strftime('%d/%m/%Y')}"
 
@@ -414,7 +485,13 @@ class FinancialDashboardAnalytics:
         return Decimal("0")
 
     @staticmethod
-    def load_budget_totals(*, company_id: int, period_start: date, period_end: date) -> Dict[str, Decimal]:
+    def load_budget_totals(
+        *,
+        company_id: int,
+        period_start: date,
+        period_end: date,
+        account_groups: Optional[Dict[int, Dict[str, str]]] = None,
+    ) -> Dict[str, Dict[str, Decimal | str]]:
         versions = FinancialBudgetVersion.query.filter(
             FinancialBudgetVersion.company_id == company_id,
             FinancialBudgetVersion.deleted_at.is_(None),
@@ -425,7 +502,7 @@ class FinancialDashboardAnalytics:
         if not versions:
             return {}
 
-        totals: Dict[str, Decimal] = {}
+        totals: Dict[str, Dict[str, Decimal | str]] = {}
         version_ids = [item.id for item in versions]
         rows = (
             FinancialBudgetLine.query.filter(
@@ -438,15 +515,22 @@ class FinancialDashboardAnalytics:
             .all()
         )
         for row in rows:
-            row_name = FinancialDashboardAnalytics.chart_account_name(company_id, row.chart_account_id)
+            group_meta = FinancialDashboardAnalytics.chart_account_group(company_id, row.chart_account_id, account_groups)
             sign = Decimal("1") if row.movement_nature == "credit" else Decimal("-1")
             line_total = Decimal(str(row.planned_amount or 0))
+            bucket = totals.setdefault(
+                group_meta["key"],
+                {
+                    "key": group_meta["key"],
+                    "code": group_meta["code"],
+                    "label": group_meta["label"],
+                    "budget": Decimal("0"),
+                },
+            )
             if line_total > 0:
-                totals.setdefault(row_name, Decimal("0"))
-                totals[row_name] += line_total * sign
+                bucket["budget"] += line_total * sign
                 continue
             for amount in row.amounts.filter(FinancialBudgetAmount.deleted_at.is_(None)).all():
                 if period_start <= amount.period_month <= period_end:
-                    totals.setdefault(row_name, Decimal("0"))
-                    totals[row_name] += Decimal(amount.budget_amount or 0) * sign
+                    bucket["budget"] += Decimal(amount.budget_amount or 0) * sign
         return totals

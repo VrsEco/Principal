@@ -43,8 +43,8 @@
             <section class="dash-panel">
                 <div class="dash-panel__header">
                     <p class="dash-eyebrow">DRE gerencial</p>
-                    <h2>Grupos da demonstração</h2>
-                    <p class="dash-muted">Visualização agrupada para leitura direta do comportamento econômico e financeiro do período.</p>
+                    <h2>Contas pai do plano</h2>
+                    <p class="dash-muted">Leitura consolidada nas contas raiz da DRE, no mesmo padrão visual do demonstrativo.</p>
                 </div>
                 <div class="dash-panel__body">
                     <div id="dre-table"></div>
@@ -55,85 +55,103 @@
 </div>
 
 <style>
-    .fin-dash-page { padding:0 2rem 2rem; }
+    .fin-dash-page { padding:0 1.25rem 1.1rem; }
     .dash-layout { display:block; }
-    .dash-main-stack { display:flex; flex-direction:column; gap:1rem; }
-    .dash-main-grid { display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(0, .9fr); gap:1rem; }
-    .dash-panel { background:var(--surface); border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow-sm); overflow:hidden; }
-    .dash-panel__header { padding:1.2rem 1.3rem 0; }
-    .dash-panel__body { padding:1.15rem 1.3rem 1.3rem; }
-    .dash-eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
-    .dash-muted { color:var(--text-secondary); }
+    .dash-main-stack { display:flex; flex-direction:column; gap:.75rem; }
+    .dash-main-grid { display:grid; grid-template-columns:minmax(0, 1.08fr) minmax(0, .92fr); gap:.75rem; }
+    .dash-panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); overflow:hidden; }
+    .dash-panel__header { padding:.85rem 1rem 0; }
+    .dash-panel__header h2 { margin:0; font-size:1.02rem; line-height:1.2; }
+    .dash-panel__body { padding:.85rem 1rem 1rem; }
+    .dash-eyebrow { margin:0 0 .2rem; font-size:.67rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .dash-muted { color:var(--text-secondary); font-size:.79rem; line-height:1.35; }
     .dash-panel--manager { background:linear-gradient(135deg, rgba(37,99,235,.05), rgba(255,255,255,.98)); }
-    .dash-manager-summary { display:grid; grid-template-columns:1.15fr .85fr; gap:1rem; }
-    .dash-manager-main { border:1px solid rgba(37,99,235,.12); border-radius:18px; padding:1.1rem 1.15rem; background:#ffffff; }
-    .dash-manager-main strong { display:block; font-size:1.06rem; margin-bottom:.45rem; color:var(--text-primary); }
-    .dash-manager-main p { margin:0; color:var(--text-secondary); line-height:1.62; }
-    .dash-manager-alerts { display:grid; gap:.75rem; }
-    .dash-alert { border-radius:18px; padding:1rem 1.05rem; border:1px solid var(--border); background:var(--surface-secondary); }
-    .dash-alert strong { display:block; margin-bottom:.18rem; font-size:.92rem; }
-    .dash-alert span { color:var(--text-secondary); font-size:.87rem; line-height:1.45; }
+    .dash-manager-summary { display:grid; grid-template-columns:1.2fr .8fr; gap:.75rem; }
+    .dash-manager-main { border:1px solid rgba(37,99,235,.12); border-radius:15px; padding:.8rem .9rem; background:#ffffff; }
+    .dash-manager-main strong { display:block; font-size:.94rem; margin-bottom:.3rem; color:var(--text-primary); }
+    .dash-manager-main p { margin:0; color:var(--text-secondary); line-height:1.45; font-size:.83rem; }
+    .dash-manager-alerts { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.55rem; }
+    .dash-alert { border-radius:14px; padding:.7rem .8rem; border:1px solid var(--border); background:var(--surface-secondary); min-height:100%; }
+    .dash-alert strong { display:block; margin-bottom:.1rem; font-size:.82rem; }
+    .dash-alert span { color:var(--text-secondary); font-size:.76rem; line-height:1.3; }
     .dash-alert--positive { border-color:#bbf7d0; background:#f0fdf4; }
     .dash-alert--warning { border-color:#fde68a; background:#fffbeb; }
     .dash-alert--negative { border-color:#fecaca; background:#fef2f2; }
     .dash-title-row { display:flex; justify-content:space-between; gap:1rem; align-items:center; }
     .dash-title-row h1, .dash-title-row h2 { margin:0; }
-    .dash-subtitle { color:var(--text-secondary); }
+    .dash-title-row strong { font-size:.9rem; }
     .dash-actions-inline { display:flex; gap:.75rem; flex-wrap:wrap; }
-    .dash-btn { border:none; border-radius:12px; padding:.82rem 1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:.45rem; text-decoration:none; }
+    .dash-btn { border:none; border-radius:12px; padding:.7rem .9rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:.45rem; text-decoration:none; }
     .dash-btn--primary { background:var(--primary); color:#fff; }
     .dash-btn--secondary { background:var(--surface-secondary); border:1px solid var(--border); color:var(--text-primary); }
-    .dash-filter-form { display:grid; gap:.9rem; }
-    .dash-filter-form label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); font-size:.92rem; }
-    .dash-filter-form input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .88rem; color:var(--text-primary); }
+    .dash-filter-form { display:grid; gap:.75rem; }
+    .dash-filter-form label { display:flex; flex-direction:column; gap:.3rem; color:var(--text-secondary); font-size:.82rem; }
+    .dash-filter-form input { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.68rem .82rem; color:var(--text-primary); }
     .dash-filter-form--sidebar { grid-template-columns:1fr; }
-    .dash-metric-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.8rem; }
-    .dash-metric { border:1px solid var(--border); border-radius:16px; padding:.95rem; background:var(--surface-secondary); }
-    .dash-metric label { display:block; color:var(--text-secondary); font-size:.8rem; margin-bottom:.35rem; }
-    .dash-metric strong { display:block; font-size:1.12rem; }
-    .dash-periods { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1rem; margin-top:1rem; }
-    .dash-period-card { border:1px solid var(--border); border-radius:18px; padding:1rem; background:var(--surface-secondary); }
-    .dash-period-card__grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.75rem; margin-top:.8rem; }
-    .dash-stack { display:flex; flex-direction:column; gap:.75rem; }
-    .dash-dual-list { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.85rem; }
-    .dash-list-card { border:1px solid var(--border); border-radius:18px; background:var(--surface-secondary); overflow:hidden; }
-    .dash-list-card__header { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:.9rem 1rem; border-bottom:1px solid var(--border); background:#f8fafc; }
+    .dash-metric-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.55rem; }
+    .dash-metric { border:1px solid var(--border); border-radius:14px; padding:.7rem .8rem; background:var(--surface-secondary); }
+    .dash-metric label { display:block; color:var(--text-secondary); font-size:.72rem; margin-bottom:.2rem; line-height:1.25; }
+    .dash-metric strong { display:block; font-size:.94rem; line-height:1.2; }
+    .dash-metric small { display:block; margin-top:.12rem; font-size:.72rem; }
+    .dash-periods { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.75rem; margin-top:.75rem; }
+    .dash-period-card { border:1px solid var(--border); border-radius:15px; padding:.75rem; background:var(--surface-secondary); }
+    .dash-period-card__grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.55rem; margin-top:.55rem; }
+    .dash-stack { display:flex; flex-direction:column; gap:.65rem; }
+    .dash-dual-list { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.65rem; }
+    .dash-list-card { border:1px solid var(--border); border-radius:15px; background:var(--surface-secondary); overflow:hidden; }
+    .dash-list-card__header { display:flex; justify-content:space-between; gap:.75rem; align-items:center; padding:.7rem .8rem; border-bottom:1px solid var(--border); background:#f8fafc; }
+    .dash-list-card__header strong { font-size:.84rem; }
+    .dash-list-card__header span { font-size:.76rem; }
     .dash-list { display:flex; flex-direction:column; }
-    .dash-list-row { display:flex; justify-content:space-between; gap:1rem; padding:.85rem 1rem; border-bottom:1px solid var(--border); }
+    .dash-list-row { display:flex; justify-content:space-between; gap:.75rem; padding:.65rem .8rem; border-bottom:1px solid var(--border); }
     .dash-list-row:last-child { border-bottom:none; }
-    .dash-list-row strong { font-size:.94rem; }
-    .dash-list-row span { color:var(--text-secondary); font-size:.83rem; }
-    .dash-empty { color:var(--text-tertiary); text-align:center; padding:1rem; }
-    .dre-groups { display:grid; gap:.8rem; }
-    .dre-group-card { border:1px solid var(--border); border-radius:18px; background:var(--surface-secondary); padding:1rem 1.05rem; }
-    .dre-group-card__top { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.75rem; }
-    .dre-group-card__top strong { font-size:1rem; color:var(--text-primary); }
-    .dre-group-card__grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:.7rem; }
-    .dre-group-metric { background:#fff; border:1px solid var(--border); border-radius:14px; padding:.75rem .8rem; }
-    .dre-group-metric span { display:block; color:var(--text-secondary); font-size:.76rem; margin-bottom:.22rem; }
-    .dre-group-metric strong { display:block; font-size:.96rem; }
-    .dre-total-card { border:1px solid rgba(37,99,235,.16); background:linear-gradient(135deg, rgba(37,99,235,.06), #fff); }
-    .is-positive { color:#15803d; }
+    .dash-list-row strong { font-size:.82rem; }
+    .dash-list-row span { color:var(--text-secondary); font-size:.72rem; }
+    .dash-empty { color:var(--text-tertiary); text-align:center; padding:.9rem; font-size:.82rem; }
+    .is-positive { color:#2563eb; }
     .is-negative { color:#b91c1c; }
+    .dre-compact-wrap { border:1px solid #cddcff; border-radius:14px; overflow:hidden; }
+    .dre-compact-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+    .dre-compact-table thead th { background:linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color:#fff; font-size:.64rem; text-transform:uppercase; letter-spacing:.05em; padding:.58rem .55rem; }
+    .dre-compact-table .col-account { width:40%; text-align:left; }
+    .dre-compact-table .col-value { width:15%; text-align:right; }
+    .dre-compact-table tbody td,
+    .dre-compact-table tfoot th,
+    .dre-compact-table tfoot td { border-bottom:1px solid #e5edf9; padding:.56rem .55rem; }
+    .dre-compact-table tbody tr:nth-child(odd) { background:#f8fbff; }
+    .dre-compact-table tbody tr:nth-child(even) { background:#ffffff; }
+    .dre-compact-table tbody tr:hover { background:#eef4ff; }
+    .dre-account-inline { display:flex; align-items:center; gap:0; min-width:0; }
+    .dre-account-code { font-weight:800; color:#1d4ed8; font-size:.81rem; }
+    .dre-account-sep { color:#64748b; font-weight:700; }
+    .dre-account-name { color:#0f172a; font-weight:700; font-size:.81rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dre-amount { font-variant-numeric:tabular-nums; text-align:right; font-size:.8rem; font-weight:800; color:#0f172a; }
+    .dre-amount--positive { color:#2563eb; }
+    .dre-amount--negative { color:#dc2626; }
+    .dre-compact-table tfoot tr { background:linear-gradient(180deg, #eff6ff 0%, #e5efff 100%); }
+    .dre-compact-table tfoot th,
+    .dre-compact-table tfoot td { font-size:.8rem; font-weight:800; color:#0f172a; }
 
     .fin-dash-sidebar { padding:1rem; display:flex; flex-direction:column; gap:1rem; }
     .fin-dash-sidebar__header { padding:.2rem .2rem 0; }
     .fin-dash-sidebar__eyebrow { margin:0 0 .3rem; font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
-    .fin-dash-sidebar__header h3 { margin:0 0 .35rem; font-size:1rem; }
-    .fin-dash-sidebar__header p { margin:0; color:var(--text-secondary); font-size:.9rem; }
+    .fin-dash-sidebar__header h3 { margin:0 0 .2rem; font-size:.96rem; }
+    .fin-dash-sidebar__header p { margin:0; color:var(--text-secondary); font-size:.8rem; line-height:1.35; }
 
     @media (max-width: 1280px) {
         .dash-manager-summary,
         .dash-main-grid,
         .dash-periods,
         .dash-dual-list,
-        .dre-group-card__grid { grid-template-columns:1fr; }
+        .dash-manager-alerts { grid-template-columns:1fr; }
     }
     @media (max-width: 768px) {
         .fin-dash-page { padding:0 1rem 1.5rem; }
         .dash-actions-inline, .dash-title-row { flex-direction:column; align-items:stretch; }
         .dash-metric-grid, .dash-period-card__grid { grid-template-columns:1fr; }
         .dash-btn { width:100%; }
+        .dre-compact-wrap { overflow:auto; }
+        .dre-compact-table { min-width:640px; }
     }
 </style>
 
@@ -285,56 +303,52 @@
             return;
         }
 
+        const amountClass = (value) => {
+            const number = Number(value || 0);
+            if (number > 0) return 'dre-amount dre-amount--positive';
+            if (number < 0) return 'dre-amount dre-amount--negative';
+            return 'dre-amount';
+        };
+
         table.innerHTML = `
-            <div class="dre-groups">
-                ${rows.map((row) => `
-                    <article class="dre-group-card">
-                        <div class="dre-group-card__top">
-                            <strong>${row.group}</strong>
-                        </div>
-                        <div class="dre-group-card__grid">
-                            <div class="dre-group-metric">
-                                <span>Orçado</span>
-                                <strong class="${cssClassForValue(row.budget)}">${formatCurrency(row.budget)}</strong>
-                            </div>
-                            <div class="dre-group-metric">
-                                <span>Competência</span>
-                                <strong class="${cssClassForValue(row.competence)}">${formatCurrency(row.competence)}</strong>
-                            </div>
-                            <div class="dre-group-metric">
-                                <span>Vencimento</span>
-                                <strong class="${cssClassForValue(row.due)}">${formatCurrency(row.due)}</strong>
-                            </div>
-                            <div class="dre-group-metric">
-                                <span>Liquidação</span>
-                                <strong class="${cssClassForValue(row.liquidation)}">${formatCurrency(row.liquidation)}</strong>
-                            </div>
-                        </div>
-                    </article>
-                `).join('')}
-                <article class="dre-group-card dre-total-card">
-                    <div class="dre-group-card__top">
-                        <strong>Total consolidado</strong>
-                    </div>
-                    <div class="dre-group-card__grid">
-                        <div class="dre-group-metric">
-                            <span>Orçado</span>
-                            <strong class="${cssClassForValue(totals.budget)}">${formatCurrency(totals.budget)}</strong>
-                        </div>
-                        <div class="dre-group-metric">
-                            <span>Competência</span>
-                            <strong class="${cssClassForValue(totals.competence)}">${formatCurrency(totals.competence)}</strong>
-                        </div>
-                        <div class="dre-group-metric">
-                            <span>Vencimento</span>
-                            <strong class="${cssClassForValue(totals.due)}">${formatCurrency(totals.due)}</strong>
-                        </div>
-                        <div class="dre-group-metric">
-                            <span>Liquidação</span>
-                            <strong class="${cssClassForValue(totals.liquidation)}">${formatCurrency(totals.liquidation)}</strong>
-                        </div>
-                    </div>
-                </article>
+            <div class="dre-compact-wrap">
+                <table class="dre-compact-table">
+                    <thead>
+                        <tr>
+                            <th class="col-account">Conta contábil</th>
+                            <th class="col-value">Orçado</th>
+                            <th class="col-value">Competência</th>
+                            <th class="col-value">Vencimento</th>
+                            <th class="col-value">Baixa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((row) => `
+                            <tr>
+                                <td class="col-account">
+                                    <div class="dre-account-inline">
+                                        <span class="dre-account-code">${row.code || ''}</span>
+                                        <span class="dre-account-sep">&nbsp;-&nbsp;</span>
+                                        <span class="dre-account-name">${row.label || row.group || '-'}</span>
+                                    </div>
+                                </td>
+                                <td class="col-value"><span class="${amountClass(row.budget)}">${formatCurrency(row.budget)}</span></td>
+                                <td class="col-value"><span class="${amountClass(row.competence)}">${formatCurrency(row.competence)}</span></td>
+                                <td class="col-value"><span class="${amountClass(row.due)}">${formatCurrency(row.due)}</span></td>
+                                <td class="col-value"><span class="${amountClass(row.liquidation)}">${formatCurrency(row.liquidation)}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th class="col-account">Total consolidado</th>
+                            <td class="col-value"><span class="${amountClass(totals.budget)}">${formatCurrency(totals.budget)}</span></td>
+                            <td class="col-value"><span class="${amountClass(totals.competence)}">${formatCurrency(totals.competence)}</span></td>
+                            <td class="col-value"><span class="${amountClass(totals.due)}">${formatCurrency(totals.due)}</span></td>
+                            <td class="col-value"><span class="${amountClass(totals.liquidation)}">${formatCurrency(totals.liquidation)}</span></td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
         `;
     }
