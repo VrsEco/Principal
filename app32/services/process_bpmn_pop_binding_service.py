@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from sqlalchemy import func
 
 from models import db, Process, ProcessRoutine
+
+ACTIVITY_CODE_NAME_RE = re.compile(
+    r"^\s*([A-Z]{1,6}(?:\.[A-Z0-9]+)+\.\d{2})\s*[-–—:]\s*(.+?)\s*$"
+)
 
 
 def open_or_create_pop_activity_for_bpmn(
@@ -25,13 +30,17 @@ def open_or_create_pop_activity_for_bpmn(
         raise ValueError("bpmn_element_id é obrigatório.")
 
     bpmn_element_type = _clean_text(payload.get("bpmn_element_type") or payload.get("type"))
-    bpmn_element_name = (
-        _strip_bpmn_code_prefix(
-            _clean_text(payload.get("bpmn_element_name") or payload.get("name")),
-            bpmn_element_id,
-        )
-        or _default_activity_name(bpmn_element_id)
+    raw_bpmn_element_name = _clean_text(payload.get("bpmn_element_name") or payload.get("name"))
+    business_code, bpmn_element_name = split_activity_business_code_and_name(
+        raw_bpmn_element_name,
+        process_code=process.code,
+        fallback_code=bpmn_element_id,
     )
+    bpmn_element_name = (
+        _strip_bpmn_code_prefix(bpmn_element_name, bpmn_element_id)
+        or _default_activity_name(business_code or bpmn_element_id)
+    )
+    routine_code = business_code or bpmn_element_id
     data_objects = _normalize_data_objects(payload.get("data_objects"))
 
     existing = (
@@ -45,7 +54,16 @@ def open_or_create_pop_activity_for_bpmn(
         .first()
     )
     if existing:
+        existing.code = routine_code or existing.code
         existing.name = _strip_bpmn_code_prefix(existing.name, bpmn_element_id) or bpmn_element_name
+        normalized_code, normalized_name = split_activity_business_code_and_name(
+            existing.name,
+            process_code=process.code,
+            fallback_code=existing.code,
+        )
+        if normalized_code:
+            existing.code = normalized_code
+            existing.name = normalized_name or existing.name
         existing.bpmn_element_type = bpmn_element_type or existing.bpmn_element_type
         existing.bpmn_data_objects = data_objects or existing.bpmn_data_objects
         db.session.commit()
@@ -61,7 +79,7 @@ def open_or_create_pop_activity_for_bpmn(
     routine = ProcessRoutine(
         company_id=process.company_id,
         process_id=process.id,
-        code=bpmn_element_id,
+        code=routine_code,
         name=bpmn_element_name,
         description=_build_description(bpmn_element_id=bpmn_element_id, data_objects=data_objects),
         order_index=next_order,
@@ -134,6 +152,40 @@ def _clean_text(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def split_activity_business_code_and_name(
+    value: Any,
+    *,
+    process_code: str | None = None,
+    fallback_code: str | None = None,
+) -> tuple[str | None, str | None]:
+    """Extrai código APP32 e nome humano de labels BPMN no padrão CODIGO - Nome.
+
+    Exemplo legado de produção:
+      value='AA.C.1.1.2.04 - Atividade 04', fallback_code='Activity_03y9xr2'
+      -> ('AA.C.1.1.2.04', 'Atividade 04')
+    """
+    text = _clean_text(value)
+    fallback_code = _clean_text(fallback_code)
+    if text:
+        match = ACTIVITY_CODE_NAME_RE.match(text)
+        if match:
+            candidate_code = match.group(1).strip()
+            candidate_name = _clean_text(match.group(2))
+            return candidate_code, candidate_name
+
+    if fallback_code and not _is_generated_bpmn_id(fallback_code):
+        return fallback_code, _strip_bpmn_code_prefix(text, fallback_code) if text else None
+
+    return fallback_code, text
+
+
+def _is_generated_bpmn_id(value: str | None) -> bool:
+    return bool(
+        value
+        and re.match(r"^(Activity|Task|SubProcess|CallActivity)_[A-Za-z0-9]+$", value)
+    )
 
 
 def _strip_bpmn_code_prefix(value: Any, code: str) -> str | None:
