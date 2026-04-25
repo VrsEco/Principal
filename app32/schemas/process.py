@@ -1,7 +1,7 @@
 from marshmallow import fields
 from . import ma
 from marshmallow import fields, EXCLUDE
-from models.process import ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance
+from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessRoutine, ProcessStep, ProcessInstance
 
 class ProcessStepSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -27,6 +27,18 @@ class ProcessRoutineSchema(ma.SQLAlchemyAutoSchema):
 
     # Evitar carregar steps via relationship (process_steps pode referenciar tabelas diferentes)
     steps = fields.List(fields.Dict(), dump_only=True)
+
+class ProcessBpmnDiagramSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProcessBpmnDiagram
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+    published_at = fields.String(dump_only=True)
+    metadata_json = fields.Dict(allow_none=True)
 
 class ProcessSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -145,6 +157,8 @@ process_area_schema = ProcessAreaSchema()
 process_areas_schema = ProcessAreaSchema(many=True)
 process_routine_schema = ProcessRoutineSchema()
 process_routines_schema = ProcessRoutineSchema(many=True)
+process_bpmn_diagram_schema = ProcessBpmnDiagramSchema()
+process_bpmn_diagrams_schema = ProcessBpmnDiagramSchema(many=True)
 process_step_schema = ProcessStepSchema()
 process_steps_schema = ProcessStepSchema(many=True)
 process_instance_schema = ProcessInstanceSchema()

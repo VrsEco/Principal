@@ -56,6 +56,28 @@ class Process(db.Model):
     # Relationships
     routines = db.relationship('ProcessRoutine', backref='process', lazy='dynamic', cascade='all, delete-orphan')
 
+class ProcessBpmnDiagram(db.Model):
+    __tablename__ = 'process_bpmn_diagrams'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    process_id = db.Column(db.Integer, db.ForeignKey('processes.id'), nullable=False, index=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    status = db.Column(db.String(30), nullable=False, default='draft')  # draft, published, archived
+    name = db.Column(db.String(255), nullable=True)
+    bpmn_xml = db.Column(db.Text, nullable=False)
+    svg_snapshot = db.Column(db.Text, nullable=True)
+    png_snapshot = db.Column(db.Text, nullable=True)
+    metadata_json = db.Column(db.JSON, nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    published_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    process = db.relationship('Process', backref=db.backref('bpmn_diagrams', lazy='dynamic', cascade='all, delete-orphan'))
+
 class ProcessRoutine(db.Model):
     __tablename__ = 'process_routines'
     __table_args__ = {'extend_existing': True}
@@ -66,6 +88,9 @@ class ProcessRoutine(db.Model):
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
     order_index = db.Column(db.Integer, default=0)
+    bpmn_element_id = db.Column(db.String(255), nullable=True)
+    bpmn_element_type = db.Column(db.String(80), nullable=True)
+    bpmn_data_objects = db.Column(db.JSON, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     

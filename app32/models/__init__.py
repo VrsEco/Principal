@@ -19,7 +19,7 @@ from .okr_area import OKRArea, KeyResultArea
 # Execution
 from .portfolio import Portfolio
 from .project import Project, ProjectTask, ProjectTaskDependency, ProjectActivityCollaborator
-from .process import ProcessArea, MacroProcess, Process, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator
+from .process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator
 from .routine import Routine, RoutineCollaborator, RoutineJourneyBinding
 from .financial import (
     FinancialAccountCategory,
@@ -119,7 +119,7 @@ __all__ = [
     'Indicator', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
-    'ProcessArea', 'MacroProcess', 'Process', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator',
+    'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator',
     'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialSettlementComponent', 'FinancialTitleAdjustment', 'FinancialTitleAdjustmentAllocation', 'FinancialTitleCalculationLog', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',

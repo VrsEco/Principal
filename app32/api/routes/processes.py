@@ -13,6 +13,7 @@ from datetime import datetime
 from database import get_db
 from models import db, Company, Process, ProcessInstance, Employee, Indicator
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
+from services.process_bpmn_service import get_latest_diagram, serialize_flow_snapshot
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company
 
 processes_bp = Blueprint('processes', __name__)
@@ -48,6 +49,15 @@ def _get_current_company_employee(company_id: int):
     if not current_user.is_authenticated or not company_id:
         return None
     return Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+
+
+def _build_published_bpmn_flow_payload(process: Process) -> dict | None:
+    diagram = get_latest_diagram(
+        process_id=process.id,
+        company_id=process.company_id,
+        status="published",
+    )
+    return serialize_flow_snapshot(diagram)
 
 
 def _fetch_routine_scope(cursor, routine_id: int):
@@ -146,6 +156,7 @@ def _build_process_details_payload(process: Process) -> dict:
         'order_index': getattr(process, 'order_index', None),
         'flow_document': getattr(process, 'flow_document', None),
         'flow_mermaid': getattr(process, 'flow_mermaid', None),
+        'bpmn_flow': _build_published_bpmn_flow_payload(process),
         'notes': getattr(process, 'notes', None),
         'is_active': getattr(process, 'is_active', None),
         'incentive_indicator': ind.to_dict() if ind else None,
@@ -301,6 +312,24 @@ def process_details(process_id):
                             company=company,
                             company_id=process.company_id,
                             process_payload=_build_process_details_payload(process))
+
+
+@processes_bp.route('/processes/<int:process_id>/bpmn-modeler')
+@permission_required('processes', 'view')
+def process_bpmn_modeler(process_id):
+    """APP32 BPMN Modeler page."""
+    process = _get_process_with_access(process_id, action='view')
+    if is_collaborator_in_company(process.company_id):
+        abort(403, description="Acesso negado: Colaboradores não podem acessar a modelagem BPMN do processo.")
+
+    company = Company.query.get_or_404(process.company_id)
+    return render_template(
+        'modules/processes/bpmn_modeler.html',
+        process=process,
+        process_id=process.id,
+        company=company,
+        company_id=process.company_id,
+    )
 
 
 @processes_bp.route('/processes/<int:process_id>/book')

@@ -272,6 +272,22 @@
       border-radius: 14px;
     }
 
+    .flow-frame .bpmn-svg {
+      width: 100%;
+      height: 100%;
+      min-height: 470px;
+      background: #fff;
+      border-radius: 14px;
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .flow-frame .bpmn-svg svg {
+      width: 100%;
+      height: auto;
+      min-height: 430px;
+    }
+
     .empty-state {
       width: 100%;
       text-align: center;
@@ -648,12 +664,21 @@
           <div class="section-header" style="border-bottom:0; padding-bottom:0; margin-bottom:10px;">
             <div class="section-title-wrap">
               <h2>Fluxo do processo</h2>
-              <p>Fluxo em página exclusiva para melhor leitura e impressão.</p>
+              <p>
+                Fluxo em página exclusiva para melhor leitura e impressão.
+                {% if first_page.bpmn_svg %}
+                  BPMN {{ first_page.bpmn_status }} · versão {{ first_page.bpmn_version }}.
+                {% endif %}
+              </p>
             </div>
           </div>
 
           <div class="flow-frame">
-            {% if first_page.flow_is_image and first_page.flow_url %}
+            {% if first_page.bpmn_svg %}
+              <div class="bpmn-svg">
+                {{ first_page.bpmn_svg|safe }}
+              </div>
+            {% elif first_page.flow_is_image and first_page.flow_url %}
               <img src="{{ first_page.flow_url }}" alt="Fluxo do processo">
             {% elif first_page.flow_is_pdf and first_page.flow_url %}
               <iframe src="{{ first_page.flow_url }}#toolbar=0&navpanes=0&scrollbar=0"></iframe>

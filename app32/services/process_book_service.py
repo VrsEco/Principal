@@ -15,11 +15,13 @@ from models import (
     IndicatorData,
     IndicatorGoal,
     Process,
+    ProcessBpmnDiagram,
     ProcessRoutine,
     ProcessStep,
     Routine,
     RoutineCollaborator,
 )
+from services.process_bpmn_service import sanitize_svg_snapshot
 
 
 STRUCTURING_LABELS = {
@@ -126,6 +128,7 @@ def _build_first_page(
 
     flow_url = _resolve_asset_url(getattr(process, "flow_document", None), root_url=root_url)
     flow_extension = _extract_extension(getattr(process, "flow_document", None))
+    bpmn_diagram = _load_book_bpmn_diagram(process_id=process.id, company_id=process.company_id)
 
     return {
         "title": _compose_process_title(process.code, process.name),
@@ -142,12 +145,39 @@ def _build_first_page(
         "flow_url": flow_url,
         "flow_is_image": flow_extension in {"png", "jpg", "jpeg", "webp", "gif", "svg"},
         "flow_is_pdf": flow_extension == "pdf",
+        "bpmn_svg": sanitize_svg_snapshot(bpmn_diagram.svg_snapshot) if bpmn_diagram and bpmn_diagram.svg_snapshot else None,
+        "bpmn_status": bpmn_diagram.status if bpmn_diagram else None,
+        "bpmn_version": bpmn_diagram.version if bpmn_diagram else None,
         "stats": [
             {"label": "Atividades POP", "value": pop_count},
             {"label": "Rotinas", "value": routine_count},
             {"label": "Indicadores", "value": indicator_count},
         ],
     }
+
+
+def _load_book_bpmn_diagram(*, process_id: int, company_id: int) -> ProcessBpmnDiagram | None:
+    published = (
+        ProcessBpmnDiagram.query.filter_by(
+            company_id=company_id,
+            process_id=process_id,
+            status="published",
+        )
+        .order_by(ProcessBpmnDiagram.version.desc(), ProcessBpmnDiagram.updated_at.desc())
+        .first()
+    )
+    if published:
+        return published
+
+    return (
+        ProcessBpmnDiagram.query.filter_by(
+            company_id=company_id,
+            process_id=process_id,
+            status="draft",
+        )
+        .order_by(ProcessBpmnDiagram.updated_at.desc(), ProcessBpmnDiagram.id.desc())
+        .first()
+    )
 
 
 def _load_pop_activities(*, process_id: int, company_id: int, root_url: str) -> list[dict[str, Any]]:

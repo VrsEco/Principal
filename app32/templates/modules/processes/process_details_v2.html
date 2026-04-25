@@ -86,6 +86,10 @@
                 <input type="file" id="flowUploadInput" style="display: none;" accept="image/*,.pdf"
                     onchange="uploadFlowDocument(this)">
                 <div class="process-section__actions">
+                    <a class="btn btn-primary btn-sm"
+                        href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">
+                        Abrir APP32 BPMN Modeler
+                    </a>
                     <button class="btn btn-secondary btn-sm"
                         onclick="document.getElementById('flowUploadInput').click()">Upload Novo Fluxo</button>
                 </div>
@@ -1078,6 +1082,89 @@
         border: 1px dashed var(--border);
     }
 
+    .flow-container--bpmn {
+        align-items: stretch;
+        justify-content: stretch;
+        padding: 1rem;
+        border-style: solid;
+        background: #f8fafc;
+    }
+
+    .bpmn-flow-preview {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .bpmn-flow-preview__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+    }
+
+    .bpmn-flow-preview__header strong,
+    .bpmn-flow-preview__header small {
+        display: block;
+    }
+
+    .bpmn-flow-preview__header small {
+        margin-top: 0.15rem;
+        color: var(--text-tertiary);
+        font-size: 0.78rem;
+    }
+
+    .bpmn-flow-preview__eyebrow {
+        display: block;
+        color: var(--primary);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .bpmn-flow-preview__canvas {
+        width: 100%;
+        min-height: 420px;
+        overflow: auto;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .bpmn-flow-preview__canvas svg {
+        display: block;
+        min-width: 100%;
+        height: auto;
+    }
+
+    .bpmn-pop-binding-badge {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin: -0.2rem 1rem 0.85rem;
+        padding: 0.5rem 0.7rem;
+        border: 1px solid rgba(37, 99, 235, 0.16);
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .bpmn-pop-binding-badge span {
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
     /* Side Sidebar Cards */
     .sidebar-card {
         padding: 1rem;
@@ -1449,6 +1536,7 @@
             renderRoutines();
             renderIndicators();
             renderInstances();
+            applyNavigationTargetFromUrl();
         } catch (error) {
             console.error("Error loading process details:", error);
             setElementText('detName', "Erro ao carregar dados");
@@ -1593,7 +1681,52 @@
             return;
         }
 
-        if (state.process.flow_document) {
+        const bpmnFlow = state.process.bpmn_flow;
+        if (bpmnFlow && bpmnFlow.svg_snapshot) {
+            const versionLabel = bpmnFlow.version ? `Versão ${escapeHtml(bpmnFlow.version)}` : 'Versão publicada';
+            const publishedLabel = bpmnFlow.published_at
+                ? new Date(bpmnFlow.published_at).toLocaleString('pt-BR')
+                : 'publicação registrada';
+            flowContainer.className = 'flow-container flow-container--bpmn';
+            flowContainer.innerHTML = `
+                <div class="bpmn-flow-preview">
+                    <div class="bpmn-flow-preview__header">
+                        <div>
+                            <span class="bpmn-flow-preview__eyebrow">BPMN publicado</span>
+                            <strong>${versionLabel}</strong>
+                            <small>Publicado em ${escapeHtml(publishedLabel)}</small>
+                        </div>
+                        <a class="btn btn-secondary btn-sm" href="/processes/${processId}/bpmn-modeler">
+                            Editar no Modeler
+                        </a>
+                    </div>
+                    <div class="bpmn-flow-preview__canvas">
+                        ${bpmnFlow.svg_snapshot}
+                    </div>
+                </div>
+            `;
+        } else if (!state.process._bpmnFlowChecked) {
+            state.process._bpmnFlowChecked = true;
+            flowContainer.className = 'flow-container';
+            flowContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📐</div>
+                    <p>Verificando BPMN publicado...</p>
+                </div>
+            `;
+            fetchPublishedBpmnFlow()
+                .then((publishedFlow) => {
+                    if (publishedFlow) {
+                        state.process.bpmn_flow = publishedFlow;
+                    }
+                    renderFlow();
+                })
+                .catch((error) => {
+                    console.warn('Falha ao verificar BPMN publicado; usando fluxo legado se existir.', error);
+                    renderFlow();
+                });
+        } else if (state.process.flow_document) {
+            flowContainer.className = 'flow-container';
             const isPdf = state.process.flow_document.toLowerCase().endsWith('.pdf');
             if (isPdf) {
                 flowContainer.innerHTML = `
@@ -1605,7 +1738,7 @@
             } else {
                 flowContainer.innerHTML = `
                     <div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-                        <img src="/uploads/${state.process.flow_document}" alt="Fluxo do Processo" 
+                        <img src="/uploads/${state.process.flow_document}" alt="Fluxo do Processo"
                             style="max-width: 100%; max-height: 800px; border-radius: 8px; box-shadow: var(--shadow-md); cursor: pointer;"
                             onclick="window.open('/uploads/${state.process.flow_document}', '_blank')">
                         <p class="text-tertiary" style="font-size: 0.8rem;">Arquivo: ${state.process.flow_document}</p>
@@ -1613,14 +1746,52 @@
                 `;
             }
         } else {
-            flowContainer.innerHTML = `
+                flowContainer.className = 'flow-container';
+                flowContainer.innerHTML = `
                 <div class="empty-state" onclick="document.getElementById('flowUploadInput').click()" style="cursor: pointer;">
                     <div class="empty-icon">📐</div>
                     <p>Nenhum documento de fluxo anexado.</p>
-                    <span class="text-tertiary" style="font-size: 0.8rem;">Clique para fazer upload</span>
+                    <span class="text-tertiary" style="font-size: 0.8rem;">Clique para fazer upload ou use o APP32 BPMN Modeler</span>
+                    <div style="margin-top: 1rem;">
+                        <a class="btn btn-primary btn-sm" href="/processes/${processId}/bpmn-modeler" onclick="event.stopPropagation();">
+                            Abrir APP32 BPMN Modeler
+                        </a>
+                    </div>
                 </div>
             `;
         }
+    }
+
+    async function fetchPublishedBpmnFlow() {
+        const res = await fetch(`/api/processes/${processId}/bpmn-diagram?status=published`, {
+            headers: { Accept: 'application/json' }
+        });
+
+        if (!res.ok) {
+            return null;
+        }
+
+        const diagram = await res.json();
+        if (!diagram || diagram.status !== 'published' || !diagram.svg_snapshot) {
+            return null;
+        }
+
+        return {
+            id: diagram.id,
+            status: diagram.status,
+            version: diagram.version,
+            name: diagram.name,
+            svg_snapshot: sanitizeSvgSnapshot(diagram.svg_snapshot),
+            published_at: diagram.published_at,
+            updated_at: diagram.updated_at
+        };
+    }
+
+    function sanitizeSvgSnapshot(svg) {
+        return String(svg || '')
+            .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/\s+on[a-zA-Z]+\s*=\s*(['"]).*?\1/gi, '')
+            .replace(/javascript:/gi, '');
     }
 
     async function uploadFlowDocument(input) {
@@ -1665,11 +1836,29 @@
         return stages[stage] || 'Experimental';
     }
 
-    function switchTab(tab) {
+    function switchTab(tab, triggerElement) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        document.getElementById(`tab-${tab}`).classList.add('active');
+        const activeButton = triggerElement
+            || (typeof event !== 'undefined' && event.currentTarget)
+            || document.querySelector(`.process-tab-btn[onclick*="'${tab}'"]`);
+        if (activeButton) activeButton.classList.add('active');
+        const tabContent = document.getElementById(`tab-${tab}`);
+        if (tabContent) tabContent.classList.add('active');
+    }
+
+    function applyNavigationTargetFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const targetTab = params.get('tab');
+        const routineId = params.get('routine_id') || (window.location.hash || '').replace('#routine-', '');
+
+        if (targetTab === 'pops' || routineId) {
+            switchTab('pops');
+        }
+
+        if (routineId) {
+            setTimeout(() => scrollToRoutine(routineId), 150);
+        }
     }
 
     function renderRoutines() {
@@ -1730,7 +1919,7 @@
                         </div>
                         <div class="pop-code-group" style="flex: 1;">
                             <label class="pop-field-label">Nome da atividade</label>
-                            <input type="text" id="routine-name-${r.id}" class="form-control activity-title-input" value="${r.name}" 
+                            <input type="text" id="routine-name-${r.id}" class="form-control activity-title-input" value="${r.name}"
                                 style="font-weight: 700; border: none; background: transparent; padding-left: 0;" disabled>
                         </div>
                         <div class="pop-code-group" style="width: 100px;">
@@ -1746,7 +1935,8 @@
                         <button class="btn btn-secondary btn-sm" data-action="toggle-collapse" onclick="toggleActivityCollapse(${r.id})">↕</button>
                     </div>
                 </div>
-                
+                ${renderBpmnBindingBadge(r)}
+
                 <div class="activity-entries" id="steps-container-${r.id}">
                     ${(r.steps || []).sort((a, b) => a.order_index - b.order_index).map((s, idx) => `
                         <div class="activity-entry-form" id="step-${s.id}">
@@ -1768,7 +1958,7 @@
                                 <div class="entry-image-preview" style="width: ${s.image_width || 280}px; border-right: ${s.layout === 'dual' ? '1px solid var(--border)' : 'none'};">
                                     ${s.image_path ? `
                                         <img src="/uploads/${s.image_path}" alt="Passo ${idx + 1}">
-                                        <button class="btn btn-icon btn-sm remove-img-btn" style="position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.8); border: 1px solid var(--border); display: none;" 
+                                        <button class="btn btn-icon btn-sm remove-img-btn" style="position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.8); border: 1px solid var(--border); display: none;"
                                             onclick="removeStepImage(${s.id})">×</button>
                                     ` : `
                                         <div style="text-align: center; color: var(--text-tertiary); font-size: 0.8rem; padding: 2rem; width: 100%;">
@@ -1799,6 +1989,21 @@
                     <!-- Placeholder for adding new step -->
                     <div id="new-step-placeholder-${r.id}"></div>
                 </div>
+            </div>
+        `;
+    }
+
+    function renderBpmnBindingBadge(r) {
+        if (!r.bpmn_element_id) return '';
+        const dataObjects = Array.isArray(r.bpmn_data_objects) ? r.bpmn_data_objects : [];
+        const dataObjectLabel = dataObjects
+            .map(item => item.name || item.id)
+            .filter(Boolean)
+            .join(', ');
+        return `
+            <div class="bpmn-pop-binding-badge">
+                <strong>BPMN:</strong> ${escapeHtml(r.bpmn_element_id)}
+                ${dataObjectLabel ? `<span>Data Object: ${escapeHtml(dataObjectLabel)}</span>` : ''}
             </div>
         `;
     }
@@ -1835,7 +2040,7 @@
                     document.body.style.cursor = 'default';
                     const finalWidth = parseInt(imagePreview.style.width);
                     // Persist locally for immediate save or auto-save if desired
-                    // updateStepField(stepId, 'image_width', finalWidth); 
+                    // updateStepField(stepId, 'image_width', finalWidth);
                 }
             });
         });

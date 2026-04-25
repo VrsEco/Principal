@@ -4,7 +4,7 @@ import uuid
 import json
 from datetime import datetime, date
 from decimal import Decimal
-from flask import request, current_app, session
+from flask import request, current_app, session, Response
 from flask_restful import Resource
 from flask_login import current_user
 from marshmallow import ValidationError
@@ -22,6 +22,7 @@ from models import (
     ProcessArea,
     MacroProcess,
     Process,
+    ProcessBpmnDiagram,
     ProcessRoutine,
     ProcessStep,
     ProcessInstance,
@@ -39,6 +40,16 @@ from utils.sql_execution import execute_formatted_query
 from database import get_db
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
+from services.process_bpmn_service import (
+    get_latest_diagram,
+    serialize_diagram,
+    serialize_flow_snapshot,
+    upsert_process_bpmn_diagram,
+)
+from services.process_bpmn_pop_binding_service import (
+    open_or_create_pop_activity_for_bpmn,
+    serialize_pop_binding,
+)
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 PROCESS_SOURCE_MODULES = ("processo", "process")
@@ -218,6 +229,7 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
                 """
                 SELECT id, process_id, code, name, description,
                        COALESCE(order_index, 0) AS order_index,
+                       bpmn_element_id, bpmn_element_type, bpmn_data_objects,
                        CAST(created_at AS TIMESTAMP) AS created_at,
                        CAST(is_active AS BOOLEAN) AS is_active,
                        'process_routines' AS source,
@@ -227,6 +239,7 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
                 UNION ALL
                 SELECT id, process_id, NULL as code, name, description,
                        0 AS order_index,
+                       NULL AS bpmn_element_id, NULL AS bpmn_element_type, NULL::jsonb AS bpmn_data_objects,
                        CAST(created_at AS TIMESTAMP) AS created_at,
                        CAST(is_active AS BOOLEAN) AS is_active,
                        'routines' AS source,
@@ -242,6 +255,7 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
                 """
                 SELECT id, process_id, code, name, description,
                        COALESCE(order_index, 0) AS order_index,
+                       bpmn_element_id, bpmn_element_type, bpmn_data_objects,
                        CAST(created_at AS TIMESTAMP) AS created_at,
                        CAST(is_active AS BOOLEAN) AS is_active,
                        'process_routines' AS source,
@@ -324,6 +338,17 @@ def _get_process_with_access(process_id: int, action: str = 'view', sync_session
         session['active_company_id'] = process.company_id
 
     return process
+
+
+def _dump_process_with_bpmn_flow(process: Process) -> dict:
+    payload = process_schema.dump(process)
+    published_bpmn = get_latest_diagram(
+        process_id=process.id,
+        company_id=process.company_id,
+        status="published",
+    )
+    payload['bpmn_flow'] = serialize_flow_snapshot(published_bpmn)
+    return payload
 
 
 def _get_process_delete_blockers(process: Process) -> dict[str, int]:
@@ -412,6 +437,7 @@ def fetch_pop_routine_by_id(routine_id: int):
         """
         SELECT id, process_id, code, name, description,
                COALESCE(order_index, 0) AS order_index,
+               bpmn_element_id, bpmn_element_type, bpmn_data_objects,
                CAST(created_at AS TIMESTAMP) AS created_at,
                CAST(is_active AS BOOLEAN) AS is_active,
                'process_routines' AS source
@@ -420,6 +446,7 @@ def fetch_pop_routine_by_id(routine_id: int):
         UNION ALL
         SELECT id, process_id, code, name, description,
                COALESCE(order_index, 0) AS order_index,
+               NULL AS bpmn_element_id, NULL AS bpmn_element_type, NULL::jsonb AS bpmn_data_objects,
                CAST(created_at AS TIMESTAMP) AS created_at,
                CAST(is_active AS BOOLEAN) AS is_active,
                'routines' AS source
@@ -1194,7 +1221,7 @@ class ProcessResource(Resource):
                 )
                 return {"error": "Permission denied: view on processes"}, 403
 
-            payload = process_schema.dump(process)
+            payload = _dump_process_with_bpmn_flow(process)
             current_app.logger.info(
                 'ProcessResource.get success process_id=%s company_id=%s macro_id=%s user_id=%s',
                 process_id,
@@ -1235,7 +1262,7 @@ class ProcessResource(Resource):
                 # ... other fields if needed
                 
                 db.session.commit()
-                return process_schema.dump(process), 200
+                return _dump_process_with_bpmn_flow(process), 200
             else:
                 # Handle standard JSON
                 data = request.get_json()
@@ -1246,7 +1273,7 @@ class ProcessResource(Resource):
                     process.code = generate_process_code(process.macro_id, process.order_index)
                     
                 db.session.commit()
-                return process_schema.dump(process), 200
+                return _dump_process_with_bpmn_flow(process), 200
         except ValidationError as err:
             return {"errors": err.messages}, 400
         except Exception as e:
@@ -1293,6 +1320,127 @@ class ProcessResource(Resource):
                 getattr(process, 'company_id', None),
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+class ProcessBpmnDiagramResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+
+        status = request.args.get('status')
+        if status:
+            status = status.strip().lower()
+            if status not in {"draft", "published", "archived"}:
+                return {"error": "Status BPMN inválido."}, 400
+
+        try:
+            diagram = get_latest_diagram(
+                process_id=process.id,
+                company_id=process.company_id,
+                status=status,
+            )
+            return serialize_diagram(diagram, process), 200
+        except Exception:
+            current_app.logger.exception(
+                "Erro ao carregar BPMN process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def put(self, process_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
+
+        try:
+            payload = request.get_json(silent=True) or {}
+            diagram = upsert_process_bpmn_diagram(
+                process=process,
+                payload=payload,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return serialize_diagram(diagram, process), 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao salvar BPMN process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'create')
+    def post(self, process_id):
+        return self.put(process_id)
+
+
+class ProcessBpmnDiagramExportResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+
+        try:
+            status = request.args.get('status')
+            if status:
+                status = status.strip().lower()
+                if status not in {"draft", "published", "archived"}:
+                    return {"error": "Status BPMN inválido."}, 400
+            diagram = get_latest_diagram(
+                process_id=process.id,
+                company_id=process.company_id,
+                status=status,
+            )
+            payload = serialize_diagram(diagram, process)
+            filename_code = (getattr(process, 'code', None) or f"processo_{process.id}").replace("/", "-").replace("\\", "-")
+            filename = f"{filename_code}.bpmn"
+            return Response(
+                payload.get("bpmn_xml") or "",
+                mimetype="application/xml",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            )
+        except Exception:
+            current_app.logger.exception(
+                "Erro ao exportar BPMN process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessBpmnPopBindingResource(Resource):
+    @permission_required('processes', 'create')
+    def post(self, process_id):
+        process = _get_process_with_access(process_id, action='create', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: create on processes"}, 403
+
+        try:
+            payload = request.get_json(silent=True) or {}
+            routine, created = open_or_create_pop_activity_for_bpmn(
+                process=process,
+                payload=payload,
+            )
+            return serialize_pop_binding(routine, created=created), (201 if created else 200)
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao abrir/criar POP por BPMN process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
 
 class ProcessRoutineListResource(Resource):
     @permission_required('processes', 'view')
