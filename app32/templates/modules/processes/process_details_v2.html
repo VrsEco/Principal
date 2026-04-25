@@ -913,6 +913,35 @@
         gap: 1rem;
     }
 
+    .activity-entry-form.is-editing {
+        border-color: rgba(37, 99, 235, 0.45);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+    }
+
+    .step-paste-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.6rem;
+        border: 1px dashed rgba(37, 99, 235, 0.35);
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.07);
+        color: #1d4ed8;
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+
+    .step-paste-status {
+        display: none;
+        color: var(--text-tertiary);
+        font-size: 0.72rem;
+        margin-top: 0.35rem;
+    }
+
+    .activity-entry-form.is-editing .step-paste-status {
+        display: block;
+    }
+
     .entry-preview {
         display: flex;
         gap: 0;
@@ -1392,6 +1421,7 @@
         schedules: [],
         employees: []
     };
+    let activeStepEditId = null;
 
     /**
      * Adiciona um novo passo a uma atividade
@@ -1449,6 +1479,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         init();
+        document.addEventListener('paste', handleStepImagePaste);
         const routineForm = document.getElementById('routineForm');
         const stepForm = document.getElementById('stepForm');
 
@@ -1898,7 +1929,7 @@
         if (sidebar) {
             sidebar.innerHTML = state.routines.map(r => `
                 <div class="sidebar-card" onclick="scrollToRoutine(${r.id})">
-                    <div style="font-weight: 600; font-size: 0.85rem;">${r.code || ''} ${r.name}</div>
+                    <div style="font-weight: 600; font-size: 0.85rem;">${escapeHtml(r.code || '')} ${escapeHtml(displayRoutineName(r))}</div>
                     <div style="font-size: 0.75rem; color: var(--text-tertiary);">${r.steps?.length || 0} passos</div>
                 </div>
             `).join('');
@@ -1909,17 +1940,18 @@
     }
 
     function renderActivityCard(r) {
+        const routineName = displayRoutineName(r);
         return `
             <div class="activity-card" id="routine-${r.id}">
                 <div class="activity-card-header">
                     <div class="activity-card-meta">
                         <div class="pop-code-group">
                             <label class="pop-field-label">Código</label>
-                            <input type="text" id="routine-code-${r.id}" class="form-control form-control-sm font-monospace" value="${r.code || ''}" disabled>
+                            <input type="text" id="routine-code-${r.id}" class="form-control form-control-sm font-monospace" value="${escapeHtml(r.code || '')}" disabled>
                         </div>
                         <div class="pop-code-group" style="flex: 1;">
                             <label class="pop-field-label">Nome da atividade</label>
-                            <input type="text" id="routine-name-${r.id}" class="form-control activity-title-input" value="${r.name}"
+                            <input type="text" id="routine-name-${r.id}" class="form-control activity-title-input" value="${escapeHtml(routineName)}"
                                 style="font-weight: 700; border: none; background: transparent; padding-left: 0;" disabled>
                         </div>
                         <div class="pop-code-group" style="width: 100px;">
@@ -1951,8 +1983,10 @@
                                         <option value="single" ${s.layout === 'single' ? 'selected' : ''}>Texto apenas</option>
                                         <option value="dual" ${s.layout === 'dual' ? 'selected' : ''}>Texto + Imagem</option>
                                     </select>
+                                    <span class="step-paste-hint" title="Durante a edição, copie um print e pressione Ctrl+V dentro deste passo.">📋 Ctrl+V print</span>
                                 </div>
                             </div>
+                            <div class="step-paste-status" id="step-paste-status-${s.id}">Edite o passo e cole um print com Ctrl+V para anexar automaticamente.</div>
 
                             <div class="entry-preview ${s.layout || 'single'}" style="background: #fff; border-radius: 8px;">
                                 <div class="entry-image-preview" style="width: ${s.image_width || 280}px; border-right: ${s.layout === 'dual' ? '1px solid var(--border)' : 'none'};">
@@ -1965,7 +1999,7 @@
                                             <input type="file" id="file-${s.id}" class="step-file-input" style="display:none" onchange="uploadStepImage(${s.id}, this)" disabled>
                                             <label for="file-${s.id}" class="step-file-label" style="cursor:pointer; color: var(--text-tertiary); font-weight: 600; display: block; pointer-events: none;">
                                                 <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📷</div>
-                                                Adicionar Imagem
+                                                Adicionar imagem ou colar print com Ctrl+V
                                             </label>
                                         </div>
                                     `}
@@ -1991,6 +2025,15 @@
                 </div>
             </div>
         `;
+    }
+
+    function displayRoutineName(r) {
+        const name = String(r?.name || '').trim();
+        const code = String(r?.code || r?.bpmn_element_id || '').trim();
+        if (!name || !code) return name;
+        if (name === code) return '';
+        const escapedCode = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return name.replace(new RegExp(`^${escapedCode}\\s*[-–—:]\\s*`), '').trim();
     }
 
     function renderBpmnBindingBadge(r) {
@@ -2084,6 +2127,7 @@
                 body: JSON.stringify(data)
             });
             if (res.ok) {
+                activeStepEditId = null;
                 await fetchRoutines();
                 renderRoutines();
             }
@@ -2092,9 +2136,15 @@
 
     function enableStepEdit(id) {
         const step = document.getElementById(`step-${id}`);
+        activeStepEditId = id;
+        if (step) {
+            step.classList.add('is-editing');
+            step.setAttribute('tabindex', '-1');
+        }
         document.getElementById(`step-edit-btn-${id}`).style.display = 'none';
         document.getElementById(`step-save-btn-${id}`).style.display = 'inline-block';
         step.querySelectorAll('input, textarea, select').forEach(el => el.disabled = false);
+        updateStepPasteStatus(id, 'Agora você pode copiar um print da tela e colar aqui com Ctrl+V.');
 
         // Enable image removal and upload
         const removeBtn = step.querySelector('.remove-img-btn');
@@ -2169,16 +2219,95 @@
 
     async function uploadStepImage(id, input) {
         if (!input.files || !input.files[0]) return;
+        await uploadStepImageFile(id, input.files[0], { input });
+    }
+
+    async function uploadStepImageFile(id, file, options = {}) {
+        if (!file || !String(file.type || '').startsWith('image/')) return;
+
+        const imageFile = ensureNamedImageFile(file, `print-passo-${id}-${Date.now()}.png`);
         const formData = new FormData();
-        formData.append('image', input.files[0]);
+        formData.append('image', imageFile);
+        formData.append('layout', 'dual');
+        formData.append('image_width', '360');
+
+        updateStepPasteStatus(id, 'Enviando print...');
 
         try {
             const res = await fetch(`/api/process-steps/${id}`, {
                 method: 'PUT',
                 body: formData
             });
-            if (res.ok) await init();
-        } catch (err) { console.error(err); }
+            if (!res.ok) {
+                const err = await safeJson(res);
+                throw new Error(err.error || err.message || 'Falha ao enviar print');
+            }
+
+            await fetchRoutines();
+            renderRoutines();
+            setTimeout(() => {
+                enableStepEdit(id);
+                updateStepPasteStatus(id, 'Print anexado. Você pode continuar editando ou salvar o passo.');
+                const el = document.getElementById(`step-${id}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 120);
+        } catch (err) {
+            console.error(err);
+            updateStepPasteStatus(id, `Erro ao enviar print: ${err.message}`);
+            alert(`Erro ao enviar print: ${err.message}`);
+        } finally {
+            if (options.input) options.input.value = '';
+        }
+    }
+
+    function ensureNamedImageFile(file, fallbackName) {
+        if (file.name) return file;
+        try {
+            return new File([file], fallbackName, { type: file.type || 'image/png' });
+        } catch (err) {
+            return file;
+        }
+    }
+
+    function updateStepPasteStatus(id, message) {
+        const status = document.getElementById(`step-paste-status-${id}`);
+        if (status) status.textContent = message;
+    }
+
+    function getClipboardImageFile(event) {
+        const items = event.clipboardData && event.clipboardData.items;
+        if (!items) return null;
+        for (const item of items) {
+            if (String(item.type || '').startsWith('image/')) {
+                return item.getAsFile();
+            }
+        }
+        return null;
+    }
+
+    function resolveStepFromPasteEvent(event) {
+        const targetStep = event.target && event.target.closest
+            ? event.target.closest('.activity-entry-form')
+            : null;
+        if (targetStep && targetStep.classList.contains('is-editing')) return targetStep;
+        if (activeStepEditId) return document.getElementById(`step-${activeStepEditId}`);
+        return document.querySelector('.activity-entry-form.is-editing');
+    }
+
+    async function handleStepImagePaste(event) {
+        const file = getClipboardImageFile(event);
+        if (!file) return;
+
+        const step = resolveStepFromPasteEvent(event);
+        if (!step || !step.id || !step.id.startsWith('step-')) return;
+
+        const stepId = step.id.replace('step-', '');
+        event.preventDefault();
+        await uploadStepImageFile(stepId, file, { fromPaste: true });
+    }
+
+    async function safeJson(res) {
+        try { return await res.json(); } catch (_) { return {}; }
     }
 
     async function removeStepImage(id) {

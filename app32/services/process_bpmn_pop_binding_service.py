@@ -25,7 +25,13 @@ def open_or_create_pop_activity_for_bpmn(
         raise ValueError("bpmn_element_id é obrigatório.")
 
     bpmn_element_type = _clean_text(payload.get("bpmn_element_type") or payload.get("type"))
-    bpmn_element_name = _clean_text(payload.get("bpmn_element_name") or payload.get("name")) or bpmn_element_id
+    bpmn_element_name = (
+        _strip_bpmn_code_prefix(
+            _clean_text(payload.get("bpmn_element_name") or payload.get("name")),
+            bpmn_element_id,
+        )
+        or _default_activity_name(bpmn_element_id)
+    )
     data_objects = _normalize_data_objects(payload.get("data_objects"))
 
     existing = (
@@ -39,6 +45,7 @@ def open_or_create_pop_activity_for_bpmn(
         .first()
     )
     if existing:
+        existing.name = _strip_bpmn_code_prefix(existing.name, bpmn_element_id) or bpmn_element_name
         existing.bpmn_element_type = bpmn_element_type or existing.bpmn_element_type
         existing.bpmn_data_objects = data_objects or existing.bpmn_data_objects
         db.session.commit()
@@ -127,3 +134,30 @@ def _clean_text(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _strip_bpmn_code_prefix(value: Any, code: str) -> str | None:
+    text = _clean_text(value)
+    code = _clean_text(code)
+    if not text or not code:
+        return text
+    if text == code:
+        return None
+    prefixes = (
+        f"{code} - ",
+        f"{code}-",
+        f"{code} – ",
+        f"{code} — ",
+        f"{code}: ",
+    )
+    for prefix in prefixes:
+        if text.startswith(prefix):
+            return _clean_text(text[len(prefix):])
+    return text
+
+
+def _default_activity_name(code: str) -> str:
+    suffix = (_clean_text(code) or "").split(".")[-1]
+    if suffix.isdigit():
+        return f"Atividade {suffix}"
+    return "Atividade"

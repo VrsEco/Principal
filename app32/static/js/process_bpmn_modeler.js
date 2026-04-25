@@ -4,6 +4,7 @@
 
   const processId = root.dataset.processId;
   const processName = root.dataset.processName || 'Processo';
+  const processCode = root.dataset.processCode || '';
   const statusEl = document.getElementById('bpmnSaveStatus');
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
@@ -85,6 +86,7 @@
     if (!modeler) return;
     setStatus(status === 'published' ? 'Publicando...' : 'Salvando...');
     try {
+      const codeResult = normalizeActivityCodes({ silent: true });
       const [{ xml }, { svg }] = await Promise.all([
         modeler.saveXML({ format: true }),
         modeler.saveSVG()
@@ -98,6 +100,9 @@
         metadata_json: {
           source: 'app32_bpmn_modeler',
           saved_at_client: new Date().toISOString(),
+          activity_code_rule: 'process_code_dot_two_digit_sequence',
+          activity_code_prefix: processCode || null,
+          activity_code_normalized_count: codeResult.changed,
           pop_binding_rule: 'activity_with_data_object_reference',
           pop_candidates: extractPopBindingCandidates()
         }
@@ -117,7 +122,9 @@
       updateMeta();
       setStatus(
         status === 'published' ? 'Versão publicada' : 'Rascunho salvo',
-        status === 'published' ? 'BPMN publicado e disponível na aba Fluxo do processo.' : 'BPMN salvo no APP32.'
+        status === 'published'
+          ? `BPMN publicado e disponível na aba Fluxo do processo.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
+          : `BPMN salvo no APP32.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
       );
     } catch (err) {
       console.error('[APP32 BPMN] save error', err);
@@ -194,6 +201,7 @@
 
   function inspectElementsForPopBinding() {
     if (!modeler) return;
+    normalizeActivityCodes({ silent: true });
     const panel = document.getElementById('bpmnPopBindingPanel');
     const list = document.getElementById('bpmnElementList');
     if (!panel || !list) return;
@@ -236,12 +244,127 @@
     return getOperationalActivities()
       .map((element) => ({
         id: element.id,
+        code: element.id,
         type: element.businessObject.$type.replace('bpmn:', ''),
         name: element.businessObject.name || '(sem nome)',
         data_objects: getAssociatedDataObjectRefs(element)
       }))
       .filter((item) => item.data_objects.length > 0)
       .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  function normalizeActivityCodes(options) {
+    const opts = options || {};
+    if (!modeler) return { changed: 0, skipped: 'modeler_not_ready' };
+    if (!processCode) {
+      if (!opts.silent) {
+        setStatus('Código do processo ausente', 'Não foi possível gerar códigos automáticos para as atividades.', true);
+      }
+      return { changed: 0, skipped: 'process_code_missing' };
+    }
+
+    const activities = getOperationalActivities().sort(compareElementsByCanvasPosition);
+    const usedNumbers = new Set();
+    const assignments = [];
+
+    for (const element of activities) {
+      const currentCode = getSemanticActivityCode(element);
+      if (currentCode) {
+        usedNumbers.add(currentCode.number);
+        continue;
+      }
+      const nextNumber = nextActivityNumber(usedNumbers);
+      usedNumbers.add(nextNumber);
+      assignments.push({
+        element,
+        oldId: element.id,
+        newCode: `${processCode}.${String(nextNumber).padStart(2, '0')}`
+      });
+    }
+
+    if (!assignments.length) {
+      if (!opts.silent) setStatus('Atividades já codificadas', `Todas as atividades já seguem o padrão ${processCode}.NN.`);
+      return { changed: 0 };
+    }
+
+    const modeling = modeler.get('modeling');
+    for (const assignment of assignments) {
+      const currentName = assignment.element.businessObject.name || '';
+      const nextName = buildActivityLabel(assignment.newCode, currentName, assignment.oldId);
+      modeling.updateProperties(assignment.element, {
+        id: assignment.newCode,
+        name: nextName
+      });
+    }
+
+    if (!opts.silent) {
+      setStatus(
+        'Atividades codificadas',
+        `${assignments.length} atividade(s) convertida(s) para o padrão ${processCode}.NN.`
+      );
+    }
+    return { changed: assignments.length };
+  }
+
+  function getSemanticActivityCode(element) {
+    const id = element && element.id;
+    if (!id || !processCode) return null;
+    const escapedPrefix = escapeRegExp(processCode);
+    const match = String(id).match(new RegExp(`^${escapedPrefix}\\.(\\d{2})$`));
+    if (!match) return null;
+    return { code: id, number: Number(match[1]) };
+  }
+
+  function nextActivityNumber(usedNumbers) {
+    let number = 1;
+    while (usedNumbers.has(number)) number += 1;
+    return number;
+  }
+
+  function compareElementsByCanvasPosition(left, right) {
+    const leftX = Number.isFinite(left.x) ? left.x : 0;
+    const rightX = Number.isFinite(right.x) ? right.x : 0;
+    if (leftX !== rightX) return leftX - rightX;
+
+    const leftY = Number.isFinite(left.y) ? left.y : 0;
+    const rightY = Number.isFinite(right.y) ? right.y : 0;
+    if (leftY !== rightY) return leftY - rightY;
+
+    return String(left.id || '').localeCompare(String(right.id || ''));
+  }
+
+  function buildActivityLabel(code, currentName, oldId) {
+    const cleanName = String(currentName || '').trim();
+    if (!cleanName || cleanName === oldId || isGeneratedBpmnId(cleanName)) return defaultActivityNameFromCode(code);
+    return stripActivityCodePrefix(cleanName, code) || defaultActivityNameFromCode(code);
+  }
+
+  function isGeneratedBpmnId(value) {
+    return /^(Activity|Task|SubProcess|CallActivity)_[a-zA-Z0-9]+$/.test(String(value || ''));
+  }
+
+  function stripActivityCodePrefix(value, code) {
+    const cleanValue = String(value || '').trim();
+    if (!cleanValue) return '';
+    if (cleanValue === code) return '';
+
+    const exactCodePattern = escapeRegExp(code);
+    const exactCodePrefix = new RegExp(`^${exactCodePattern}\\s*[-–—:]\\s*`);
+    const withoutExactCode = cleanValue.replace(exactCodePrefix, '').trim();
+    if (withoutExactCode !== cleanValue) return withoutExactCode;
+
+    if (!processCode) return cleanValue;
+    const genericCodePrefix = new RegExp(`^${escapeRegExp(processCode)}\\.\\d{2}\\s*[-–—:]\\s*`);
+    return cleanValue.replace(genericCodePrefix, '').trim();
+  }
+
+  function defaultActivityNameFromCode(code) {
+    const suffix = String(code || '').split('.').pop();
+    return /^\d+$/.test(suffix) ? `Atividade ${suffix}` : 'Atividade';
+  }
+
+  function escapeRegExp(value) {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   function getOperationalActivities() {
@@ -333,7 +456,7 @@
           Accept: 'application/json'
         },
         body: JSON.stringify({
-          bpmn_element_id: candidate.id,
+          bpmn_element_id: candidate.code || candidate.id,
           bpmn_element_type: candidate.type,
           bpmn_element_name: candidate.name,
           data_objects: candidate.data_objects
@@ -383,6 +506,7 @@
     if (action === 'import') importInput.click();
     if (action === 'save') saveDiagram('draft');
     if (action === 'publish') saveDiagram('published');
+    if (action === 'normalize-codes') normalizeActivityCodes();
     if (action === 'export') exportBpmn();
     if (action === 'svg') exportSvg();
     if (action === 'zoom-in') zoom(0.2);

@@ -70,6 +70,7 @@
     </div>
     <div class="bpmn-ribbon-group">
       <span class="bpmn-ribbon-title">POP IA</span>
+      <button type="button" class="bpmn-tool-btn" data-action="normalize-codes">Codificar atividades</button>
       <button type="button" class="bpmn-tool-btn" data-action="inspect-elements">Preparar vínculo com POP</button>
     </div>
     <div class="bpmn-ribbon-hint">
@@ -91,7 +92,9 @@
       <p>
         A leitura considera como atividade candidata ao POP somente a atividade BPMN que possuir um
         <strong>Data Object Reference</strong> associado. Esse marcador indica que a atividade exige
-        documentação operacional, POP humano e futura versão para IA.
+        documentação operacional, POP humano e futura versão para IA. As atividades operacionais são
+        codificadas automaticamente no padrão <strong>código do processo + .NN</strong>, por exemplo
+        <strong>{{ process.code or 'AA.C.1.1.2' }}.04</strong>.
       </p>
     </div>
     <div id="bpmnElementList" class="bpmn-element-list"></div>
