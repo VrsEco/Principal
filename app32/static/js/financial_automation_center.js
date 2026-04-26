@@ -44,6 +44,7 @@
   const filterDefinitions = [
     { key: 'status', id: 'filter-status', label: 'Status', format: (value) => statusLabels[value] || value },
     { key: 'origin_type', id: 'filter-origin', label: 'Origem', format: (value) => originLabels[value] || value },
+    { key: 'batch_id', id: 'filter-batch', label: 'Lote', format: (value) => batchOptionLabel(value) },
     { key: 'document_type', id: 'filter-document-type', label: 'Tipo documental', format: (value) => documentTypeLabels[value] || value },
     { key: 'competence_date_from', id: 'filter-competence-from', label: 'Competência de' },
     { key: 'competence_date_to', id: 'filter-competence-to', label: 'Competência até' },
@@ -271,6 +272,29 @@
     return [companyCode, 'D', receivedDate || '000000', padNumber(documentId)].join('.');
   }
 
+  function batchDisplayCode(batch) {
+    if (!batch?.id) return '-';
+    const receivedDate = compactDate(batch.created_at);
+    return [companyCode, 'L', receivedDate || '000000', padNumber(batch.id)].join('.');
+  }
+
+  function batchOptionLabel(batchId) {
+    const batch = (state.options?.batch_options || []).find((item) => String(item.id) === String(batchId));
+    if (!batch) return `Lote #${batchId}`;
+    const label = batch.source_label ? ` · ${batch.source_label}` : '';
+    return `${batchDisplayCode(batch)}${label}`;
+  }
+
+  function batchLabel(record) {
+    const batch = record.batch || {};
+    if (!batch.id) return '<span class="fa-muted">Sem lote</span>';
+    const label = batch.source_label || originLabels[batch.origin_type] || batch.origin_type || 'Lote operacional';
+    return `
+      <strong>${escapeHtml(batchDisplayCode(batch))}</strong>
+      <span class="fa-cell-document__meta">${escapeHtml(label)}</span>
+    `;
+  }
+
   function sourceDisplayCode(record) {
     const sequence = padNumber(record.batch?.id || record.document?.batch_id || record.id);
     return [companyCode, 'R', sourceToken(record), sequence].join('.');
@@ -339,14 +363,11 @@
       <tr data-record-id="${record.id}">
         <td><input type="checkbox" class="fa-record-select" value="${record.id}"></td>
         <td>${badge(record.status)}</td>
-        <td class="fa-cell-document">
-          <strong>${escapeHtml(documentDisplayCode(record))}</strong>
-          <span class="fa-cell-document__meta">${escapeHtml(documentLabel(record))}</span>
-          ${dedupeLabel(record)}
-        </td>
+        <td class="fa-cell-batch">${batchLabel(record)}</td>
         <td class="fa-cell-origin">
           <strong>${escapeHtml(sourceDisplayCode(record))}</strong>
           <span class="fa-cell-document__meta">${escapeHtml(originLabel(record))}</span>
+          ${dedupeLabel(record)}
         </td>
         <td><span class="fa-type-pill fa-type-pill--${record.entry_direction === 'receivable' ? 'receivable' : 'payable'}">${record.entry_direction === 'receivable' ? 'Receber' : 'Pagar'}</span></td>
         <td><span class="fa-state-pill fa-state-pill--${record.settlement_state === 'settled' ? 'settled' : 'open'}">${record.settlement_state === 'settled' ? 'Já pago/recebido' : 'Em aberto'}</span></td>
@@ -589,6 +610,10 @@
     const documentOptions = state.options?.document_type_options || Object.keys(documentTypeLabels);
     documentTypeFilter.innerHTML = '<option value="">Todos</option>' + documentOptions
       .map((item) => `<option value="${item}">${documentTypeLabels[item] || item}</option>`).join('');
+    const batchFilter = byId('filter-batch');
+    const batchOptions = state.options?.batch_options || [];
+    batchFilter.innerHTML = '<option value="">Todos</option>' + batchOptions
+      .map((item) => `<option value="${item.id}">${escapeHtml(batchOptionLabel(item.id))}</option>`).join('');
   }
 
   async function loadRecords() {
@@ -754,7 +779,11 @@
   async function excludeRecord(recordId) {
     const id = Number(recordId || 0);
     if (!id) return;
-    const confirmed = window.confirm('Deseja excluir este registro da Central de Automação?');
+    const record = state.records.find((item) => item.id === id);
+    const details = record
+      ? `\n\nLote: ${batchOptionLabel(record.batch_id)}\nDocumento: ${documentDisplayCode(record)} · ${documentLabel(record)}`
+      : '';
+    const confirmed = window.confirm(`Deseja excluir este registro da Central de Automação?${details}`);
     if (!confirmed) return;
     await api(`/api/financial/automation/records/bulk-status?company_id=${companyId}`, {
       method: 'POST',

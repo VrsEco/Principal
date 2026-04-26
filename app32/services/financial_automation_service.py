@@ -1442,11 +1442,22 @@ class FinancialAutomationService:
                     }
                 )
 
+        batch_options = [
+            item.to_dict()
+            for item in FinancialAutomationBatch.query.filter(
+                FinancialAutomationBatch.company_id == company_id,
+                FinancialAutomationBatch.deleted_at.is_(None),
+            )
+            .order_by(FinancialAutomationBatch.created_at.desc(), FinancialAutomationBatch.id.desc())
+            .all()
+        ]
+
         return {
             "bank_accounts": [item.to_dict() for item in _ordered_items(FinancialBankAccount)],
             "chart_accounts": [item.to_dict() for item in _ordered_items(FinancialChartAccount)],
             "cost_centers": [item.to_dict() for item in _ordered_items(FinancialCostCenter)],
             "counterparties": [item.to_dict() for item in _ordered_items(FinancialCounterparty)],
+            "batch_options": batch_options,
             "domain_options": domain_options,
             "status_options": ["imported", "validated", "generated", "excluded"],
             "entry_direction_options": ["payable", "receivable"],

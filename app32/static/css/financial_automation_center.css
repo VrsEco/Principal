@@ -40,8 +40,8 @@
 .fa-table th,.fa-table td{padding:.58rem .52rem;border-bottom:1px solid var(--border);vertical-align:top}
 .fa-table th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:left}
 .fa-table tbody tr:hover{background:rgba(37,99,235,.03)}
-.fa-cell-document{min-width:200px}
-.fa-cell-document strong,.fa-cell-origin strong{display:block;font-size:.9rem;color:var(--text-primary);line-height:1.25}
+.fa-cell-document,.fa-cell-batch{min-width:200px}
+.fa-cell-document strong,.fa-cell-batch strong,.fa-cell-origin strong{display:block;font-size:.9rem;color:var(--text-primary);line-height:1.25}
 .fa-cell-document__meta{display:block;margin-top:.15rem;color:var(--text-tertiary);font-size:.76rem}
 .fa-cell-origin,.fa-cell-counterparty,.fa-cell-pendencies{font-size:.84rem;line-height:1.35}
 .fa-cell-amount{font-weight:800;color:var(--text-primary);white-space:nowrap}

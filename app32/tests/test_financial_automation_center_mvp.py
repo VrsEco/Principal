@@ -124,7 +124,10 @@ def test_automation_center_template_contains_bulk_validation_flow():
     assert "Gerada" in template
     assert "Excluída" in template
     assert 'id="fa-import-files"' in template
+    assert 'id="filter-batch"' in template
     assert 'id="filter-document-type"' in template
+    assert "<th>Lote</th>" in template
+    assert "<th>Documento</th>" not in template
     assert "XML fiscal" in template
     assert "Baixar planilha modelo" in template
     assert "/financial/automation/template" in template
@@ -140,6 +143,9 @@ def test_automation_center_js_uses_data_field_mapping_and_origin_labels():
     assert "row.querySelectorAll('[data-field]')" in script
     assert "'domain_link'" in script
     assert "record.batch?.source_label" in script
+    assert "batch_options" in script
+    assert "batchDisplayCode" in script
+    assert "filter-batch" in script
     assert "/api/financial/automation/uploads" in script
     assert "new FormData()" in script
     assert "documentTypeLabels" in script

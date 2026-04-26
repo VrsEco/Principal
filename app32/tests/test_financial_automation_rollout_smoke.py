@@ -36,9 +36,14 @@ def test_financial_automation_rollout_frontend_has_upload_parse_generate_smoke_f
     assert 'id="fa-import-files"' in html
     assert 'id="fa-submit-import"' in html
     assert 'id="fa-generate"' in html
+    assert "<th>Lote</th>" in html
+    assert "<th>Documento</th>" not in html
+    assert 'id="filter-batch"' in html
     assert "/api/financial/automation/uploads" in script
     assert "/parse?company_id=" in script
     assert "/api/financial/automation/generate" in script
+    assert "batch_options" in script
+    assert "batch_id" in script
     assert "Upload concluído" in script
 
 
