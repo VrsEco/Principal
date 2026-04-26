@@ -1,7 +1,8 @@
 # Paper — APP32 - BPMN
 
-**Status:** paper de evolução arquitetural
+**Status:** paper de evolução arquitetural — atualizado com MVP operacional implementado
 **Data:** 25/04/2026
+**Última atualização:** 25/04/2026
 **Especialista líder:** @ARQUITETO
 **Apoios naturais:** @FRONTEND, @BACKEND_API, @BACKEND_SERVICE, @DBA, @AI_ENGINEER, @QA_AUTOMATION
 
@@ -85,6 +86,77 @@ Arquivos relevantes existentes:
 Conclusão arquitetural:
 
 > O APP32 não precisa começar do zero. Ele precisa evoluir o módulo atual de processos para suportar semântica operacional e interoperabilidade BPMN.
+
+### 3.1 Estado implementado em 25/04/2026
+
+Após a primeira onda de implementação, o APP32 já deixou de ser apenas um repositório de imagem de fluxo e passou a ter um **MVP BPMN operacional**. O que já foi entregue:
+
+```text
+APP32 BPMN — MVP implementado
+├── APP32 BPMN Modeler
+│   ├── modelagem BPMN 2.0 no navegador
+│   ├── biblioteca bpmn-js embarcada localmente
+│   ├── importação .bpmn
+│   ├── exportação .bpmn
+│   ├── salvar rascunho
+│   └── publicar versão
+│
+├── Persistência e versionamento inicial
+│   ├── tabela process_bpmn_diagrams
+│   ├── status draft | published | archived
+│   ├── bpmn_xml
+│   ├── svg_snapshot
+│   ├── version
+│   └── published_at
+│
+├── Exibição do fluxo publicado
+│   ├── aba Fluxo do processo
+│   ├── Book do Processo
+│   └── badge FLX no card quando há BPMN salvo/publicado
+│
+├── Integração BPMN → POP
+│   ├── Data Object Reference como marcador de atividade documentável
+│   ├── criação/abertura de atividade POP a partir do elemento BPMN
+│   ├── bpmn_element_id em process_routines
+│   ├── bpmn_data_objects em process_routines
+│   └── geração automática de código da atividade pelo código do processo
+│
+├── POP operacional aprimorado
+│   ├── colar print diretamente com Ctrl+V
+│   ├── upload tenant-safe de imagens
+│   ├── ajuste visual do tamanho da imagem por passo
+│   ├── Book respeitando o tamanho da imagem configurado no POP
+│   └── ocultação do metadado técnico BPMN/Data Object na interface do POP
+│
+└── Book do Processo aprimorado
+    ├── página do fluxo em A4 paisagem
+    ├── renderização do BPMN publicado via snapshot SVG
+    ├── POP com prints e tamanhos preservados
+    └── consolidação com rotinas e indicadores
+```
+
+Arquivos implementados ou significativamente evoluídos:
+
+- `C:\GestaoVersus\app32\app32\templates\modules\processes\bpmn_modeler.html`
+- `C:\GestaoVersus\app32\app32\static\js\process_bpmn_modeler.js`
+- `C:\GestaoVersus\app32\app32\static\css\process_bpmn_modeler.css`
+- `C:\GestaoVersus\app32\app32\static\vendor\bpmn-js\18.6.3\...`
+- `C:\GestaoVersus\app32\app32\services\process_bpmn_service.py`
+- `C:\GestaoVersus\app32\app32\services\process_book_service.py`
+- `C:\GestaoVersus\app32\app32\api\resources\process.py`
+- `C:\GestaoVersus\app32\app32\models\process.py`
+- `C:\GestaoVersus\app32\app32\templates\modules\processes\process_details_v2.html`
+- `C:\GestaoVersus\app32\app32\templates\reports\process_book_v2.html`
+
+Migrações relevantes:
+
+- `20260425_0900_create_process_bpmn_diagrams.py`
+- `20260425_1010_add_bpmn_binding_to_process_routines.py`
+- `20260425_1030_backfill_bpmn_pop_activity_codes.py`
+
+Decisão consolidada:
+
+> O APP32 - BPMN passa a ter um núcleo funcional real: o BPMN é editável e versionável, a publicação aparece no fluxo e no Book, e o Data Object Reference se torna o gatilho prático para abrir documentação POP vinculada à atividade.
 
 ---
 
@@ -267,7 +339,7 @@ Campos-chave:
 
 ### 7.2 Diagrama BPMN
 
-Nova entidade sugerida:
+Entidade já implementada:
 
 ```text
 process_bpmn_diagrams
@@ -279,8 +351,8 @@ process_bpmn_diagrams
 ├── bpmn_xml
 ├── svg_snapshot
 ├── png_snapshot
-├── created_by
-├── updated_by
+├── created_by_user_id
+├── updated_by_user_id
 ├── created_at
 └── updated_at
 ```
@@ -293,9 +365,16 @@ Objetivo:
 - renderizar no Book;
 - permitir mapeamento de atividades BPMN para atividades POP.
 
+Estado atual:
+
+- `bpmn_xml` é salvo no PostgreSQL com escopo por `company_id`;
+- `svg_snapshot` é usado para renderizar o fluxo publicado no detalhe do processo e no Book;
+- publicação de nova versão arquiva/substitui a versão publicada anterior no contexto do processo;
+- a biblioteca `bpmn-js` está embarcada localmente no APP32 para reduzir dependência de CDN.
+
 ### 7.3 Atividade operacional
 
-Pode evoluir a estrutura atual de `process_routines` ou criar uma entidade mais explícita.
+No MVP atual, a atividade operacional vinculada ao POP está sendo materializada em `process_routines`, com colunas adicionais para vínculo BPMN.
 
 Campos sugeridos:
 
@@ -318,6 +397,15 @@ process_activities
 Observação:
 
 > A coluna `bpmn_element_id` é crítica. Ela conecta o elemento visual do BPMN à documentação operacional do APP32.
+
+Estado atual implementado:
+
+- `bpmn_element_id` guarda o identificador/código do elemento BPMN que originou a atividade POP;
+- `bpmn_element_type` guarda o tipo BPMN;
+- `bpmn_data_objects` guarda os Data Object References associados;
+- atividades com Data Object Reference podem abrir/criar atividade POP;
+- códigos de atividade POP são gerados automaticamente a partir do código do processo, sem repetir o código no nome da atividade;
+- o metadado técnico BPMN/Data Object foi mantido no banco, mas removido da interface humana do POP para não poluir a experiência do usuário.
 
 ### 7.4 Contrato operacional da atividade
 
@@ -1316,9 +1404,52 @@ Book do Processo
 └── 12. Anexo AI-readable
 ```
 
+### 12.1 Evolução já implementada no Book
+
+O Book atual já incorporou parte importante da visão 3.0:
+
+- o fluxo BPMN publicado é renderizado no Book a partir do `svg_snapshot`;
+- a página do fluxo usa orientação **A4 paisagem**, melhorando a leitura e a impressão;
+- o POP preserva as imagens dos passos;
+- o tamanho ajustado da imagem no POP passa a ser refletido no Book por meio de `image_width`;
+- a saída humana permanece limpa, sem exibir metadados técnicos como `BPMN: Activity_...` ou `Data Object: ...`;
+- o Book continua consolidando fluxo, POP, rotinas e indicadores.
+
+Pendências para Book 3.0 completo:
+
+- incluir contrato operacional por atividade;
+- incluir anexo AI-readable;
+- incluir histórico formal de versões do processo/documento;
+- incluir seção de riscos, controles e evidências auditáveis.
+
 ---
 
 ## 13. MVP recomendado
+
+### Situação atual do MVP
+
+```text
+Fase 1 — BPMN como fluxo editável ................ IMPLEMENTADA
+Fase 2 — Vincular atividade BPMN ao POP .......... IMPLEMENTADA PARCIALMENTE
+Fase 3 — Contrato operacional da atividade ....... PENDENTE
+Fase 4 — Manifesto AI-readable ................... PENDENTE
+Fase 5 — Book do Processo 3.0 .................... IMPLEMENTADA PARCIALMENTE
+Fase 6 — Copiloto de POP ......................... INICIADO NA CAPTURA DE PRINTS
+Fase 7 — Squad de Agentes da Empresa ............. CONCEITUAL
+Fase 8 — Squad de Arquitetura e Modelagem ........ CONCEITUAL
+```
+
+O MVP real já validou o fluxo principal:
+
+```text
+Modelar BPMN no APP32
+→ publicar versão
+→ exibir fluxo publicado no processo e no Book
+→ detectar atividade marcada por Data Object Reference
+→ abrir/criar atividade POP vinculada
+→ documentar passos com texto, print colado e tamanho de imagem
+→ imprimir Book com fluxo em paisagem e POP preservado
+```
 
 ### Fase 1 — BPMN como fluxo editável
 
@@ -1345,6 +1476,10 @@ Critério de sucesso:
 
 > Um processo deixa de depender exclusivamente de imagem e passa a ter um fluxo BPMN editável e versionável.
 
+Status em 25/04/2026:
+
+> Implementado no APP32 BPMN Modeler com `bpmn-js` local, persistência em `process_bpmn_diagrams`, exportação `.bpmn`, publicação de versão e renderização do fluxo publicado no processo/Book.
+
 ### Fase 2 — Vincular atividade BPMN ao POP
 
 Objetivo:
@@ -1358,6 +1493,10 @@ Critério de sucesso:
 
 > Toda atividade relevante do fluxo pode possuir documentação operacional vinculada.
 
+Status em 25/04/2026:
+
+> Implementado parcialmente. O Data Object Reference funciona como marcador prático de atividade documentável. A rotina POP é criada/aberta com `bpmn_element_id`, `bpmn_element_type` e `bpmn_data_objects`. Falta evoluir validações formais de completude e checklist de atividades marcadas sem POP aprovado.
+
 ### Fase 3 — Contrato operacional da atividade
 
 Objetivo:
@@ -1368,6 +1507,10 @@ Objetivo:
 Critério de sucesso:
 
 > A atividade deixa de ser apenas texto livre e passa a ser entendível por humano, sistema e IA.
+
+Status em 25/04/2026:
+
+> Pendente. Esta passa a ser a próxima camada de maturidade após estabilizar o vínculo BPMN → POP.
 
 ### Fase 4 — Manifesto AI-readable
 
@@ -1381,6 +1524,10 @@ Critério de sucesso:
 
 > Uma IA consegue ler o processo e entender o que deve ser executado, validado e monitorado.
 
+Status em 25/04/2026:
+
+> Pendente. O caminho foi preparado pela estrutura BPMN/POP, mas ainda falta gerar o contrato AI-readable canônico.
+
 ### Fase 5 — Book do Processo 3.0
 
 Objetivo:
@@ -1390,6 +1537,10 @@ Objetivo:
 Critério de sucesso:
 
 > O Book passa a ser uma peça completa para treinamento, auditoria, operação e inteligência artificial.
+
+Status em 25/04/2026:
+
+> Implementado parcialmente. O Book já mostra o BPMN publicado em paisagem, preserva POP, prints e tamanho de imagem. Ainda faltam contrato operacional, manifesto AI-readable, riscos/controles e histórico formal de versão documental.
 
 ### Fase 6 — Copiloto de POP
 
@@ -1403,6 +1554,10 @@ Objetivo:
 Critério de sucesso:
 
 > Um usuário consegue documentar uma etapa operacional com print e anotação simples, e o APP32 gera um POP revisável com campos humanos e AI-readable preenchidos.
+
+Status em 25/04/2026:
+
+> Iniciado. Já é possível colar print diretamente no passo do POP com Ctrl+V. Falta a IA transformar print + anotação em conteúdo estruturado humano e AI-readable.
 
 ### Fase 7 — Squad de Agentes da Empresa
 
