@@ -27,6 +27,11 @@
       margin: 14mm;
     }
 
+    @page process-flow-landscape {
+      size: A4 landscape;
+      margin: 14mm;
+    }
+
     body {
       margin: 0;
       font-family: "Segoe UI", Arial, sans-serif;
@@ -409,6 +414,7 @@
 
     .section-flow {
       min-height: 0;
+      page: process-flow-landscape;
     }
 
     .pop-section {
@@ -506,7 +512,7 @@
         background: var(--page-bg);
       }
       .report-shell {
-        width: 210mm;
+        width: 297mm;
         max-width: calc(100vw - 24px);
         margin: 20px auto 40px;
       }
@@ -524,10 +530,20 @@
         min-height: calc(297mm - 28mm);
       }
       .section-flow .page-inner {
-        min-height: calc(297mm - 28mm);
+        min-height: calc(210mm - 28mm);
+      }
+      .section-flow {
+        width: 297mm;
+        min-height: 210mm;
+      }
+      .section-flow .flow-panel {
+        min-height: calc(210mm - 28mm);
       }
       .flow-frame {
         min-height: 220mm;
+      }
+      .section-flow .flow-frame {
+        min-height: 132mm;
       }
     }
 
@@ -558,6 +574,15 @@
       .first-page { min-height: auto; }
       .flow-frame {
         min-height: 235mm;
+      }
+      .section-flow {
+        page: process-flow-landscape;
+      }
+      .section-flow .flow-panel {
+        min-height: calc(210mm - 28mm);
+      }
+      .section-flow .flow-frame {
+        min-height: 132mm;
       }
       .panel, .detail-card, .mini-item, .activity-card, .routine-card, .indicator-card, .step-card {
         box-shadow: none !important;
@@ -665,7 +690,7 @@
             <div class="section-title-wrap">
               <h2>Fluxo do processo</h2>
               <p>
-                Fluxo em página exclusiva para melhor leitura e impressão.
+                Fluxo em página exclusiva, em paisagem, para melhor leitura e impressão.
                 {% if first_page.bpmn_svg %}
                   BPMN {{ first_page.bpmn_status }} · versão {{ first_page.bpmn_version }}.
                 {% endif %}
