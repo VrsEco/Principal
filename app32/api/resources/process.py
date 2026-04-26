@@ -28,6 +28,7 @@ from models import (
     ProcessInstance,
     ProcessInstanceCollaborator,
     Company,
+    Employee,
     Indicator,
     IndicatorData,
     ActivityWorkLog,
@@ -53,6 +54,35 @@ from services.process_bpmn_pop_binding_service import (
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 PROCESS_SOURCE_MODULES = ("processo", "process")
+
+
+def _normalize_macro_owner_from_employee(data: dict, company_id: int | None, *, required: bool = False) -> str | None:
+    """Valida que o dono do macroprocesso veio do cadastro de colaboradores do tenant."""
+    if not isinstance(data, dict):
+        return "Payload inválido."
+
+    owner = str(data.get('owner') or '').strip()
+    if not owner:
+        return "Selecione um colaborador para Dono do Processo." if required else None
+
+    if not company_id:
+        return "company_id is required"
+
+    employee = (
+        Employee.query
+        .filter(
+            Employee.company_id == company_id,
+            Employee.name == owner,
+            or_(Employee.status == 'active', Employee.status.is_(None)),
+        )
+        .order_by(Employee.name.asc())
+        .first()
+    )
+    if not employee:
+        return "Dono do Processo deve ser um colaborador ativo cadastrado nesta empresa."
+
+    data['owner'] = employee.name
+    return None
 
 
 def _append_process_instance_put_debug(message: str):
@@ -1088,6 +1118,10 @@ class MacroProcessListResource(Resource):
             
             if not data.get('company_id'):
                 return {"error": "company_id is required"}, 400
+
+            owner_error = _normalize_macro_owner_from_employee(data, data.get('company_id'), required=True)
+            if owner_error:
+                return {"error": owner_error}, 400
                 
             macro = macro_process_schema.load(data)
             
@@ -1116,6 +1150,13 @@ class MacroProcessResource(Resource):
         macro = MacroProcess.query.get_or_404(macro_id)
         try:
             data = request.get_json()
+            if data and 'owner' in data:
+                owner_error = _normalize_macro_owner_from_employee(
+                    data, data.get('company_id') or macro.company_id, required=True
+                )
+                if owner_error:
+                    return {"error": owner_error}, 400
+
             macro = macro_process_schema.load(data, instance=macro, partial=True)
             
             # Recalculate code if sequence or area changed
