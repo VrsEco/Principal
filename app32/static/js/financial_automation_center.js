@@ -281,18 +281,13 @@
   function batchOptionLabel(batchId) {
     const batch = (state.options?.batch_options || []).find((item) => String(item.id) === String(batchId));
     if (!batch) return `Lote #${batchId}`;
-    const label = batch.source_label ? ` · ${batch.source_label}` : '';
-    return `${batchDisplayCode(batch)}${label}`;
+    return batchDisplayCode(batch);
   }
 
   function batchLabel(record) {
     const batch = record.batch || {};
     if (!batch.id) return '<span class="fa-muted">Sem lote</span>';
-    const label = batch.source_label || originLabels[batch.origin_type] || batch.origin_type || 'Lote operacional';
-    return `
-      <strong>${escapeHtml(batchDisplayCode(batch))}</strong>
-      <span class="fa-cell-document__meta">${escapeHtml(label)}</span>
-    `;
+    return `<strong>${escapeHtml(batchDisplayCode(batch))}</strong>`;
   }
 
   function sourceDisplayCode(record) {

@@ -44,6 +44,7 @@ def test_financial_automation_rollout_frontend_has_upload_parse_generate_smoke_f
     assert "/api/financial/automation/generate" in script
     assert "batch_options" in script
     assert "batch_id" in script
+    assert "batch.source_label ? ` ·" not in script
     assert "Upload concluído" in script
 
 

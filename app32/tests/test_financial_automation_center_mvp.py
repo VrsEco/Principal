@@ -146,6 +146,7 @@ def test_automation_center_js_uses_data_field_mapping_and_origin_labels():
     assert "batch_options" in script
     assert "batchDisplayCode" in script
     assert "filter-batch" in script
+    assert "batch.source_label ? ` ·" not in script
     assert "/api/financial/automation/uploads" in script
     assert "new FormData()" in script
     assert "documentTypeLabels" in script
