@@ -138,7 +138,7 @@ function renderKanban() {
         if (!dz) return;
 
         // Calculate Technical Badges
-        const hasFlux = p.flow_mermaid || p.flow_document;
+        const hasFlux = p.flow_mermaid || p.flow_document || p.has_bpmn_flow || p.bpmn_flow;
         const routines = p.routines || [];
         const hasRoutine = routines.length > 0;
         const hasPop = routines.some(r => r.steps && r.steps.length > 0);
@@ -153,7 +153,7 @@ function renderKanban() {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                 <span class="kanban-card-code">${p.code || 'S/C'}</span>
                 <div class="tech-badges">
-                    <span class="tech-badge ${hasFlux ? 'active' : ''}" title="Fluxograma">FLX</span>
+                    <span class="tech-badge ${hasFlux ? 'active' : ''}" title="Fluxograma / BPMN">FLX</span>
                     <span class="tech-badge ${hasRoutine ? 'active' : ''}" title="Rotinas">RTN</span>
                     <span class="tech-badge ${hasPop ? 'active' : ''}" title="POP">POP</span>
                     <span class="tech-badge ${hasInd ? 'active' : ''}" title="Indicadores">IND</span>

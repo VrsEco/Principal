@@ -351,6 +351,23 @@ def _dump_process_with_bpmn_flow(process: Process) -> dict:
     return payload
 
 
+def _get_process_ids_with_bpmn_flow(company_id: int, process_ids: list[int]) -> set[int]:
+    """Retorna processos que possuem diagrama BPMN salvo/publicado para o badge FLX."""
+    if not company_id or not process_ids:
+        return set()
+
+    rows = (
+        db.session.query(ProcessBpmnDiagram.process_id)
+        .filter(ProcessBpmnDiagram.company_id == company_id)
+        .filter(ProcessBpmnDiagram.process_id.in_(process_ids))
+        .filter(ProcessBpmnDiagram.status.in_(["draft", "published"]))
+        .filter(ProcessBpmnDiagram.bpmn_xml.isnot(None))
+        .distinct()
+        .all()
+    )
+    return {int(row[0]) for row in rows if row and row[0]}
+
+
 def _get_process_delete_blockers(process: Process) -> dict[str, int]:
     if not process:
         return {}
@@ -1141,11 +1158,14 @@ class ProcessListResource(Resource):
             
             # Dump basic data
             result = processes_schema.dump(processes)
+            process_ids = [process.id for process in processes if getattr(process, 'id', None)]
+            bpmn_flow_process_ids = _get_process_ids_with_bpmn_flow(company_id, process_ids)
             
             # Enrich with Routines (RTN/POP) and Indicators (IND) for badges
             for p_data in result:
                 pid = p_data.get('id')
                 if pid:
+                    p_data['has_bpmn_flow'] = pid in bpmn_flow_process_ids
                     # Fetch Routines (unifying `routines` and `process_routines`)
                     p_data['routines'] = fetch_pop_routines(pid)
                     
