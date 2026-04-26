@@ -50,6 +50,10 @@ SCHEDULE_LABELS = {
 
 PROCESS_SOURCE_MODULES = ("processo", "process")
 
+POP_IMAGE_WIDTH_DEFAULT = 280
+POP_IMAGE_WIDTH_MIN = 140
+POP_IMAGE_WIDTH_MAX = 560
+
 
 @dataclass(frozen=True)
 class ProcessBookContext:
@@ -203,6 +207,7 @@ def _load_pop_activities(*, process_id: int, company_id: int, root_url: str) -> 
 
     steps_by_routine: dict[int, list[dict[str, Any]]] = {}
     for step in steps:
+        image_width = _coerce_pop_image_width(step.image_width)
         steps_by_routine.setdefault(step.routine_id, []).append(
             {
                 "name": step.name,
@@ -210,7 +215,7 @@ def _load_pop_activities(*, process_id: int, company_id: int, root_url: str) -> 
                 "expected_result": step.expected_result,
                 "layout": step.layout or "single",
                 "image_url": _resolve_asset_url(step.image_path, root_url=root_url),
-                "image_width": int(step.image_width or 280),
+                "image_width": image_width,
                 "text_content": _join_non_empty(
                     [
                         step.description,
@@ -230,6 +235,14 @@ def _load_pop_activities(*, process_id: int, company_id: int, root_url: str) -> 
         }
         for routine in routines
     ]
+
+
+def _coerce_pop_image_width(value: Any) -> int:
+    try:
+        width = int(value or POP_IMAGE_WIDTH_DEFAULT)
+    except (TypeError, ValueError):
+        width = POP_IMAGE_WIDTH_DEFAULT
+    return max(POP_IMAGE_WIDTH_MIN, min(width, POP_IMAGE_WIDTH_MAX))
 
 
 def _load_routines(*, process_id: int, company_id: int) -> list[dict[str, Any]]:

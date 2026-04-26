@@ -438,7 +438,20 @@
     }
 
     .step-content.with-image {
-      grid-template-columns: minmax(160px, 230px) minmax(0, 1fr);
+      grid-template-columns: minmax(140px, var(--pop-image-width, 230px)) minmax(0, 1fr);
+    }
+
+    .step-content.single-image {
+      display: block;
+    }
+
+    .step-image {
+      width: var(--pop-image-width, 280px);
+      max-width: 100%;
+    }
+
+    .step-content.single-image .step-image {
+      margin: 0 auto 8px;
     }
 
     .step-content img {
@@ -746,9 +759,11 @@
               {% for entry in activity.entries %}
               <div class="step-card">
                 <div class="step-header">Passo {{ loop.index }}{% if entry.name %} - {{ entry.name }}{% endif %}</div>
-                <div class="step-content {% if entry.image_url %}with-image{% endif %}">
+                {% set entry_image_width = entry.image_width or 280 %}
+                {% set entry_layout = entry.layout or 'single' %}
+                <div class="step-content {% if entry.image_url %}{% if entry_layout == 'dual' %}with-image{% else %}single-image{% endif %}{% endif %}"{% if entry.image_url %} style="--pop-image-width: {{ entry_image_width }}px;"{% endif %}>
                   {% if entry.image_url %}
-                  <div>
+                  <div class="step-image">
                     <img src="{{ entry.image_url }}" alt="Passo {{ loop.index }}">
                   </div>
                   {% endif %}

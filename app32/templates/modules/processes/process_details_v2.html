@@ -2045,18 +2045,7 @@
     }
 
     function renderBpmnBindingBadge(r) {
-        if (!r.bpmn_element_id) return '';
-        const dataObjects = Array.isArray(r.bpmn_data_objects) ? r.bpmn_data_objects : [];
-        const dataObjectLabel = dataObjects
-            .map(item => item.name || item.id)
-            .filter(Boolean)
-            .join(', ');
-        return `
-            <div class="bpmn-pop-binding-badge">
-                <strong>BPMN:</strong> ${escapeHtml(r.bpmn_element_id)}
-                ${dataObjectLabel ? `<span>Data Object: ${escapeHtml(dataObjectLabel)}</span>` : ''}
-            </div>
-        `;
+        return '';
     }
 
 
