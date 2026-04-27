@@ -16,6 +16,8 @@
 {% elif report_definition.code == 'ledger' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260423d') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_ledger_report.css', v='20260423d') }}">
+{% elif report_definition.code == 'cash_flow' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260427d') }}">
 {% endif %}
 {% endblock %}
 
@@ -730,6 +732,10 @@
     .report-block-field select[multiple] { min-height:148px; }
     .report-block-field small { color:var(--text-secondary); opacity:.9; }
     .checkbox-list { display:flex; flex-direction:column; gap:.45rem; padding:.85rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-secondary); }
+    .cash-flow-report-sidebar .checkbox-list { padding:.6rem; border-radius:14px; background:var(--surface); }
+    .cash-flow-report-sidebar .check-field { align-items:flex-start; }
+    .cash-flow-report-sidebar .report-workspace-sidebar__footer .btn,
+    .cash-flow-report-sidebar .report-workspace-sidebar__footer a.btn { text-align:center; }
     .cash-flow-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:1rem; }
     .cash-flow-layout--single { display:block; }
     .cash-flow-sidebar, .cash-flow-main { display:flex; flex-direction:column; gap:1rem; }
@@ -838,7 +844,8 @@
 {% elif report_definition.code == 'ledger' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260423d') }}"></script>
 {% elif report_definition.code == 'cash_flow' %}
-<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260427b') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260427d') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260427d') }}"></script>
 {% else %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
