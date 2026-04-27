@@ -148,9 +148,10 @@
     <section class="report-panel">
         <form method="get"
               id="{{ 'cash-flow-filter-form' if is_cash_flow else 'financial-report-filter-form' }}"
-              action="/financial/reports/{{ report_definition.slug }}/view"
+              action="/financial/reports/{{ report_definition.slug }}{% if not is_cash_flow %}/view{% endif %}"
               class="report-filter-grid{% if is_dre %} report-filter-grid--dre{% endif %}{% if is_cash_flow %} report-filter-grid--cash-flow{% endif %}{% if is_ledger %} report-filter-grid--ledger{% endif %}{% if is_working_capital %} report-filter-grid--working-capital{% endif %}"
-              data-view-action="/financial/reports/{{ report_definition.slug }}/view"
+              data-view-action="/financial/reports/{{ report_definition.slug }}{% if not is_cash_flow %}/view{% endif %}"
+              {% if is_cash_flow %}data-apply-filters-only="true"{% endif %}
               data-pdf-action="/financial/reports/{{ report_definition.slug }}/export-pdf">
             {% if is_schedule_report %}
             <div class="dre-dates-grid">
@@ -416,7 +417,7 @@
                             <input type="checkbox" value="true" data-cash-flow-exclusion-toggle {% if title_exclusion_enabled %}checked{% endif %}>
                             <span>Retirar agendamentos financeiros do fluxo</span>
                         </label>
-                        <small class="cash-flow-banner__hint">Use os filtros no painel lateral direito, processe a busca e marque abaixo os agendamentos/títulos que não devem compor o saldo projetado.</small>
+                        <small class="cash-flow-banner__hint">Use os filtros no painel lateral direito, clique em Aplicar Filtros e marque abaixo os agendamentos/títulos que não devem compor o saldo projetado.</small>
                     </div>
 
                     <div class="cash-flow-selected-inputs" data-cash-flow-selected-inputs>
@@ -432,7 +433,7 @@
                         <div class="cash-flow-preview__toolbar">
                             <div>
                                 <strong>Agendamentos elegíveis para retirada</strong>
-                                <small data-cash-flow-preview-summary>Abra os filtros no botão superior, ajuste o período e clique em <strong>Processar filtros</strong>.</small>
+                                <small data-cash-flow-preview-summary>Abra os filtros no botão superior, ajuste o período e clique em <strong>Aplicar Filtros</strong>.</small>
                             </div>
                             <div class="cash-flow-preview__selected">
                                 <span data-cash-flow-selected-count>{{ selected_excluded_entry_ids|length }}</span>
@@ -866,7 +867,7 @@
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260423d') }}"></script>
 {% elif report_definition.code == 'cash_flow' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260427d') }}"></script>
-<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260427d') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260427e') }}"></script>
 {% else %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {

@@ -87,12 +87,14 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert "Retirar agendamentos financeiros do fluxo" in template
     assert "report_filters_cash_flow_sidebar.html" in template
     assert 'cash-flow-filter-form' in template
+    assert 'action="/financial/reports/{{ report_definition.slug }}{% if not is_cash_flow %}/view{% endif %}"' in template
+    assert 'data-apply-filters-only="true"' in template
     assert 'name="enable_title_exclusions"' in template
-    assert 'data-cash-flow-process' in combined_template
+    assert 'data-cash-flow-process' not in combined_template
     assert 'name="excluded_entry_ids"' in template
     assert '/projected-titles' in template
     assert 'form="cash-flow-filter-form" type="hidden" name="bank_account_ids" value="-1"' in sidebar_template
-    assert "Processar filtros" in sidebar_template
+    assert "Processar filtros" not in sidebar_template
     assert "Aplicar Filtros" in sidebar_template
     assert "Gerar fluxo" not in sidebar_template
     assert 'name="projected_values_mode" value="with_financial_correction"' in sidebar_template

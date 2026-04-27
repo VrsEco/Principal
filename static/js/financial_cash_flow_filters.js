@@ -22,6 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     form.addEventListener('submit', () => {
+        if (form.dataset.applyFiltersOnly === 'true') {
+            form.action = form.dataset.viewAction;
+            return;
+        }
         const outputMode = resolveOutputMode();
         form.action = outputMode === 'pdf' ? form.dataset.pdfAction : form.dataset.viewAction;
     });
@@ -45,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedCount = form.querySelector('[data-cash-flow-selected-count]');
     const toggle = form.querySelector('[data-cash-flow-exclusion-toggle]');
     const flagInput = form.querySelector('[data-cash-flow-exclusion-flag]');
-    const processButton = document.querySelector('[data-cash-flow-process]');
     const selectedInputsContainer = form.querySelector('[data-cash-flow-selected-inputs]');
     const periodStartInput = scopedSelector('input[name="period_start"]');
     const periodEndInput = scopedSelector('input[name="period_end"]');
@@ -100,8 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         renderEmpty(
-            'Clique em Processar filtros para listar os títulos em aberto do período informado.',
-            'Filtros prontos para processar os títulos do período.'
+            'Clique em Aplicar Filtros para atualizar a página e listar os títulos em aberto do período informado.',
+            'Filtros prontos para atualizar os títulos do período.'
         );
     };
 
@@ -199,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        renderEmpty('Carregando títulos em aberto do período...', 'Processando filtros...');
+        renderEmpty('Carregando títulos em aberto do período...', 'Atualizando filtros...');
         try {
             const response = await fetch(`${previewEndpoint}?${buildPreviewQuery().toString()}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -212,17 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             renderEmpty(
                 error?.message || 'Falha ao buscar os títulos do fluxo de caixa.',
-                'Erro ao processar os filtros.'
+                'Erro ao atualizar os filtros.'
             );
         }
     };
 
     toggle?.addEventListener('change', (event) => {
         updateEnabledState(Boolean(event.target.checked));
-    });
-
-    processButton?.addEventListener('click', () => {
-        processFilters();
     });
 
     syncSelectedInputs();
