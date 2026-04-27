@@ -4,12 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    const formId = form.getAttribute('id');
+    const resolveAssociatedControl = (selector) => {
+        if (!formId) {
+            return form.querySelector(selector) || document.querySelector(selector);
+        }
+        return form.querySelector(selector) || document.querySelector(`${selector}[form="${formId}"]`);
+    };
+
     const resolveOutputMode = () => {
-        const radio = form.querySelector('input[name="output_mode"]:checked');
+        const radio = resolveAssociatedControl('input[name="output_mode"]:checked');
         if (radio) {
             return radio.value;
         }
-        const select = form.querySelector('select[name="output_mode"]');
+        const select = resolveAssociatedControl('select[name="output_mode"]');
         return select ? select.value : '';
     };
 
@@ -17,6 +25,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const outputMode = resolveOutputMode();
         form.action = outputMode === 'pdf' ? form.dataset.pdfAction : form.dataset.viewAction;
     });
+
+    const scopedSelector = (selector) => {
+        if (!formId) {
+            return form.querySelector(selector) || document.querySelector(selector);
+        }
+        return resolveAssociatedControl(selector);
+    };
 
     const preview = form.querySelector('[data-cash-flow-preview]');
     if (!preview) {
@@ -26,14 +41,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewEndpoint = preview.dataset.previewEndpoint;
     const previewBody = form.querySelector('[data-cash-flow-preview-body]');
     const previewSummary = form.querySelector('[data-cash-flow-preview-summary]');
-    const selectionPanel = form.querySelector('[data-cash-flow-selection-panel]');
+    const selectionPanel = document.querySelector('[data-cash-flow-selection-panel]');
     const selectedCount = form.querySelector('[data-cash-flow-selected-count]');
     const toggle = form.querySelector('[data-cash-flow-exclusion-toggle]');
     const flagInput = form.querySelector('[data-cash-flow-exclusion-flag]');
-    const processButton = form.querySelector('[data-cash-flow-process]');
+    const processButton = document.querySelector('[data-cash-flow-process]');
     const selectedInputsContainer = form.querySelector('[data-cash-flow-selected-inputs]');
-    const periodStartInput = form.querySelector('input[name="period_start"]');
-    const periodEndInput = form.querySelector('input[name="period_end"]');
+    const periodStartInput = scopedSelector('input[name="period_start"]');
+    const periodEndInput = scopedSelector('input[name="period_end"]');
 
     const selectedIds = new Set(
         Array.from(selectedInputsContainer.querySelectorAll('input[name="excluded_entry_ids"]'))
@@ -74,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateEnabledState = (enabled) => {
         flagInput.value = enabled ? 'true' : 'false';
         preview.dataset.enabled = enabled ? 'true' : 'false';
-        selectionPanel.classList.toggle('is-hidden', !enabled);
+        selectionPanel?.classList.toggle('is-hidden', !enabled);
         if (!enabled) {
             selectedIds.clear();
             syncSelectedInputs();

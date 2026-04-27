@@ -1,0 +1,164 @@
+{% set selected_frequency = (filters.get('frequency', ['daily']) | first) %}
+
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="report-workspace-sidebar-subtitle">Parâmetros do Fluxo de Caixa. A área central fica dedicada à retirada de agendamentos.</p>
+</div>
+
+<div class="sidebar-content-ws report-workspace-sidebar cash-flow-report-sidebar">
+    <section class="report-workspace-sidebar__section cash-flow-sidebar-section">
+        <p class="filter-label">Contas Correntes</p>
+        <div class="checkbox-list">
+            <input form="cash-flow-filter-form" type="hidden" name="bank_account_ids" value="-1" data-filter-input data-default-value="-1">
+            {% for item in options.bank_accounts %}
+            {% set option_id = item.id|string %}
+            <label class="check-field">
+                <input form="cash-flow-filter-form" type="checkbox" name="bank_account_ids" value="{{ item.id }}" {% if cash_flow_all_bank_accounts_selected or option_id in selected_bank_accounts %}checked{% endif %} data-filter-input data-default-value="">
+                <span>{{ item.label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <small class="report-workspace-field-help">Todas entram no fluxo inicialmente. Desmarque contas para retirar da projeção os títulos já vinculados a elas.</small>
+    </section>
+
+    <section class="report-workspace-sidebar__section cash-flow-sidebar-section">
+        <p class="filter-label">Período</p>
+        <div class="report-workspace-date-pair">
+            <label>
+                <span>Data Inicial</span>
+                <input form="cash-flow-filter-form" type="date" name="period_start" value="{{ cash_period_start }}" required data-filter-input data-default-value="{{ default_period_start }}">
+            </label>
+            <label>
+                <span>Data Final</span>
+                <input form="cash-flow-filter-form" type="date" name="period_end" value="{{ cash_period_end }}" required data-filter-input data-default-value="{{ default_period_end }}">
+            </label>
+        </div>
+    </section>
+
+    <section class="report-workspace-sidebar__section cash-flow-sidebar-section">
+        <p class="filter-label">Periodicidade</p>
+        <div class="report-workspace-radio-grid">
+            <label class="report-workspace-choice-card"><input form="cash-flow-filter-form" type="radio" name="frequency" value="daily" {% if selected_frequency == 'daily' %}checked{% endif %} data-filter-input data-default-value="daily"><span>Diário</span></label>
+            <label class="report-workspace-choice-card"><input form="cash-flow-filter-form" type="radio" name="frequency" value="weekly" {% if selected_frequency == 'weekly' %}checked{% endif %} data-filter-input data-default-value="daily"><span>Semanal</span></label>
+            <label class="report-workspace-choice-card"><input form="cash-flow-filter-form" type="radio" name="frequency" value="monthly" {% if selected_frequency == 'monthly' %}checked{% endif %} data-filter-input data-default-value="daily"><span>Mensal</span></label>
+        </div>
+    </section>
+
+    <section class="report-workspace-sidebar__section cash-flow-sidebar-section">
+        <p class="filter-label">Valores projetados</p>
+        <div class="report-workspace-choice-grid">
+            <label class="report-workspace-choice-card"><input form="cash-flow-filter-form" type="radio" name="projected_values_mode" value="with_financial_correction" {% if selected_projected_values_mode == 'with_financial_correction' %}checked{% endif %} data-filter-input data-default-value="with_financial_correction"><span>Com correção financeira</span></label>
+            <label class="report-workspace-choice-card"><input form="cash-flow-filter-form" type="radio" name="projected_values_mode" value="without_financial_correction" {% if selected_projected_values_mode == 'without_financial_correction' %}checked{% endif %} data-filter-input data-default-value="with_financial_correction"><span>Sem correção financeira</span></label>
+        </div>
+    </section>
+
+    <section class="report-workspace-sidebar__section cash-flow-sidebar-section">
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-chart-accounts">Plano de Contas</label>
+            <select form="cash-flow-filter-form" id="cash-flow-chart-accounts" name="chart_account_ids" multiple size="6" data-filter-input data-default-value="">
+                {% for item in options.chart_accounts %}
+                {% set option_id = item.id|string %}
+                <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-cost-centers">Centro de Resultados</label>
+            <select form="cash-flow-filter-form" id="cash-flow-cost-centers" name="cost_center_ids" multiple size="5" data-filter-input data-default-value="">
+                {% for item in options.cost_centers %}
+                {% set option_id = item.id|string %}
+                <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-projects">Projeto</label>
+            <select form="cash-flow-filter-form" id="cash-flow-projects" name="project_ids" multiple size="5" data-filter-input data-default-value="">
+                {% for item in options.projects %}
+                {% set option_id = item.id|string %}
+                <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-processes">Processo</label>
+            <select form="cash-flow-filter-form" id="cash-flow-processes" name="process_ids" multiple size="5" data-filter-input data-default-value="">
+                {% for item in options.processes %}
+                {% set option_id = item.id|string %}
+                <option value="{{ item.id }}" {% if option_id in selected_processes %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </section>
+
+    <section class="report-workspace-sidebar__section cash-flow-sidebar-section{% if not title_exclusion_enabled %} is-hidden{% endif %}" data-cash-flow-selection-panel>
+        <div class="cash-flow-filters-panel__header">
+            <div>
+                <strong>Filtros para retirada</strong>
+                <small>Refine a busca antes de marcar os agendamentos na tela central.</small>
+            </div>
+            <button type="button" class="btn btn-secondary" data-cash-flow-process>Processar filtros</button>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-title-movement">Movimento</label>
+            <select form="cash-flow-filter-form" id="cash-flow-title-movement" name="title_filter_movement_nature" data-filter-input data-default-value="">
+                <option value="">Todos</option>
+                <option value="credit" {% if title_filter_movement_nature == 'credit' %}selected{% endif %}>Entrada</option>
+                <option value="debit" {% if title_filter_movement_nature == 'debit' %}selected{% endif %}>Saída</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-title-counterparty">Favorecido</label>
+            <select form="cash-flow-filter-form" id="cash-flow-title-counterparty" name="title_filter_counterparty_id" data-filter-input data-default-value="">
+                <option value="">Todos</option>
+                {% for item in options.counterparties %}
+                <option value="{{ item.id }}" {% if title_filter_counterparty_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-title-chart">Plano de conta da retirada</label>
+            <select form="cash-flow-filter-form" id="cash-flow-title-chart" name="title_filter_chart_account_id" data-filter-input data-default-value="">
+                <option value="">Todos</option>
+                {% for item in options.chart_accounts %}
+                <option value="{{ item.id }}" {% if title_filter_chart_account_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-title-center">Centro de resultados da retirada</label>
+            <select form="cash-flow-filter-form" id="cash-flow-title-center" name="title_filter_cost_center_id" data-filter-input data-default-value="">
+                <option value="">Todos</option>
+                {% for item in options.cost_centers %}
+                <option value="{{ item.id }}" {% if title_filter_cost_center_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-title-search">Buscar agendamento</label>
+            <input form="cash-flow-filter-form" id="cash-flow-title-search" type="text" name="title_filter_search" value="{{ title_filter_search }}" placeholder="Histórico, número ou código" data-filter-input data-default-value="">
+        </div>
+    </section>
+
+    <section class="report-workspace-sidebar__section cash-flow-sidebar-section">
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-orientation">Orientação</label>
+            <select form="cash-flow-filter-form" id="cash-flow-orientation" name="orientation" data-filter-input data-default-value="landscape">
+                <option value="landscape" {% if selected_orientation == 'landscape' %}selected{% endif %}>Paisagem</option>
+                <option value="portrait" {% if selected_orientation == 'portrait' %}selected{% endif %}>Retrato</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="cash-flow-output-mode">Imprimir</label>
+            <select form="cash-flow-filter-form" id="cash-flow-output-mode" name="output_mode" data-filter-input data-default-value="screen">
+                <option value="screen" {% if selected_output_mode == 'screen' %}selected{% endif %}>Na Tela</option>
+                <option value="pdf" {% if selected_output_mode == 'pdf' %}selected{% endif %}>PDF</option>
+            </select>
+        </div>
+    </section>
+
+    <div class="report-workspace-sidebar__footer">
+        <button form="cash-flow-filter-form" type="submit" class="btn btn-primary w-100">Gerar fluxo</button>
+        <a class="btn btn-secondary w-100" href="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">Limpar filtros</a>
+    </div>
+</div>

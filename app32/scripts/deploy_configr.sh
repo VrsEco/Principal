@@ -99,6 +99,58 @@ if [ -f "$WWW/passenger_wsgi.py" ]; then
     touch "$WWW/passenger_wsgi.py"
 fi
 
+# 5. MCP HTTP remoto (fallback operacional quando systemd não está instalado)
+echo "🧠 Validando runtime MCP HTTP remoto..."
+MCP_HEALTH_URL="http://127.0.0.1:8101/healthz"
+MCP_STDOUT_LOG="$APP/logs/mcp_http_stdout.log"
+MCP_STDERR_LOG="$APP/logs/mcp_http_stderr.log"
+
+if [ -f "$APP/scripts/start_mcp_http.sh" ]; then
+    mkdir -p "$APP/logs"
+    chmod +x "$APP/scripts/start_mcp_http.sh"
+
+    set +e
+    curl -fsS --max-time 5 "$MCP_HEALTH_URL" >/dev/null
+    MCP_HEALTH_CODE=$?
+    set -e
+
+    if [ "$MCP_HEALTH_CODE" -eq 0 ]; then
+        echo "✅ MCP HTTP remoto já está ativo em 127.0.0.1:8101."
+    else
+        echo "   - MCP HTTP remoto indisponível; iniciando fallback via nohup..."
+        set +e
+        pkill -TERM -f "APP32_MCP_HTTP_PORT=8101|start_mcp_http.sh|src.core.mcp_http_server"
+        set -e
+
+        nohup env \
+            APP32_MCP_PUBLIC_BASE_URL="https://app.gestaoversus.com.br" \
+            APP32_MCP_HTTP_PORT="8101" \
+            "$APP/scripts/start_mcp_http.sh" \
+            >> "$MCP_STDOUT_LOG" 2>> "$MCP_STDERR_LOG" < /dev/null &
+
+        MCP_OK=0
+        for i in {1..20}; do
+            set +e
+            curl -fsS --max-time 5 "$MCP_HEALTH_URL" >/dev/null
+            MCP_HEALTH_CODE=$?
+            set -e
+            if [ "$MCP_HEALTH_CODE" -eq 0 ]; then
+                MCP_OK=1
+                break
+            fi
+            sleep 1
+        done
+
+        if [ "$MCP_OK" -eq 1 ]; then
+            echo "✅ MCP HTTP remoto ativo em 127.0.0.1:8101."
+        else
+            echo "⚠️  Aviso: MCP HTTP remoto não respondeu ao health local após start."
+        fi
+    fi
+else
+    echo "⚠️  Aviso: script start_mcp_http.sh não encontrado; pulando MCP HTTP remoto."
+fi
+
 echo "----------------------------------------------------"
 echo "✨ DEPLOY CONCLUÍDO COM SUCESSO!"
 echo "----------------------------------------------------"

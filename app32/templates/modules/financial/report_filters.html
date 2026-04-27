@@ -72,6 +72,17 @@
     </button>
     <div class="user-avatar-mini" title="Meu Perfil">MV</div>
 </div>
+{% elif report_definition.code == 'cash_flow' %}
+<div style="display:flex;align-items:center;gap:.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="report-workspace-filter-count cash-flow-navbar-filter-count" id="cash-flow-report-filter-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
 {% else %}
 {{ super() }}
 {% endif %}
@@ -134,6 +145,7 @@
 
     <section class="report-panel">
         <form method="get"
+              id="{{ 'cash-flow-filter-form' if is_cash_flow else 'financial-report-filter-form' }}"
               action="/financial/reports/{{ report_definition.slug }}/view"
               class="report-filter-grid{% if is_dre %} report-filter-grid--dre{% endif %}{% if is_cash_flow %} report-filter-grid--cash-flow{% endif %}{% if is_ledger %} report-filter-grid--ledger{% endif %}{% if is_working_capital %} report-filter-grid--working-capital{% endif %}"
               data-view-action="/financial/reports/{{ report_definition.slug }}/view"
@@ -394,151 +406,15 @@
                 </fieldset>
             </div>
             {% elif is_cash_flow %}
-            <div class="cash-flow-layout">
-                <div class="cash-flow-sidebar">
-                    <label class="report-block-field">
-                        <span>Contas Correntes</span>
-                        <div class="checkbox-list">
-                            <input type="hidden" name="bank_account_ids" value="-1">
-                            {% for item in options.bank_accounts %}
-                            {% set option_id = item.id|string %}
-                            <label class="check-field">
-                                <input type="checkbox" name="bank_account_ids" value="{{ item.id }}" {% if cash_flow_all_bank_accounts_selected or option_id in selected_bank_accounts %}checked{% endif %}>
-                                <span>{{ item.label }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                        <small class="filter-hint">Todas entram no fluxo inicialmente. Desmarque contas para retirar da projeção os títulos já vinculados a elas. Títulos sem conta bancária vinculada continuam elegíveis no fluxo.</small>
-                    </label>
-
-                    <label>
-                        <span>Data Inicial</span>
-                        <input type="date" name="period_start" value="{{ cash_period_start }}" required>
-                    </label>
-
-                    <label>
-                        <span>Data Final</span>
-                        <input type="date" name="period_end" value="{{ cash_period_end }}" required>
-                    </label>
-
-                    <fieldset class="cash-flow-fieldset">
-                        <legend>Periodicidade</legend>
-                        {% set selected_frequency = (filters.get('frequency', ['daily']) | first) %}
-                        <label class="radio-field"><input type="radio" name="frequency" value="daily" {% if selected_frequency == 'daily' %}checked{% endif %}><span>Diário</span></label>
-                        <label class="radio-field"><input type="radio" name="frequency" value="weekly" {% if selected_frequency == 'weekly' %}checked{% endif %}><span>Semanal</span></label>
-                        <label class="radio-field"><input type="radio" name="frequency" value="monthly" {% if selected_frequency == 'monthly' %}checked{% endif %}><span>Mensal</span></label>
-                    </fieldset>
-
-                    <fieldset class="cash-flow-fieldset">
-                        <legend>Valores projetados</legend>
-                        <label class="radio-field"><input type="radio" name="projected_values_mode" value="with_financial_correction" {% if selected_projected_values_mode == 'with_financial_correction' %}checked{% endif %}><span>Com correção financeira</span></label>
-                        <label class="radio-field"><input type="radio" name="projected_values_mode" value="without_financial_correction" {% if selected_projected_values_mode == 'without_financial_correction' %}checked{% endif %}><span>Sem correção financeira</span></label>
-                    </fieldset>
-
-                    <label class="report-block-field">
-                        <span>Plano de Contas</span>
-                        <select name="chart_account_ids" multiple size="6">
-                            {% for item in options.chart_accounts %}
-                            {% set option_id = item.id|string %}
-                            <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %}>{{ item.label }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="filter-hint">Refina títulos realizados, abertos e agendamentos projetados por plano de contas.</small>
-                    </label>
-
-                    <label class="report-block-field">
-                        <span>Centro de Resultados</span>
-                        <select name="cost_center_ids" multiple size="5">
-                            {% for item in options.cost_centers %}
-                            {% set option_id = item.id|string %}
-                            <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %}>{{ item.label }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="filter-hint">Opcional. Mantém o fluxo restrito aos centros selecionados.</small>
-                    </label>
-
-                    <label class="report-block-field">
-                        <span>Projeto/Processo · Projetos</span>
-                        <select name="project_ids" multiple size="5">
-                            {% for item in options.projects %}
-                            {% set option_id = item.id|string %}
-                            <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="filter-hint">Aplicado quando o título ou agendamento possui vínculo de projeto.</small>
-                    </label>
-
-                    <label class="report-block-field">
-                        <span>Projeto/Processo · Processos</span>
-                        <select name="process_ids" multiple size="5">
-                            {% for item in options.processes %}
-                            {% set option_id = item.id|string %}
-                            <option value="{{ item.id }}" {% if option_id in selected_processes %}selected{% endif %}>{{ item.label }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="filter-hint">Aplicado quando o título ou agendamento possui vínculo de processo.</small>
-                    </label>
-                </div>
-
+            <div class="cash-flow-layout cash-flow-layout--single">
                 <div class="cash-flow-main">
                     <div class="cash-flow-banner">
                         <input type="hidden" name="enable_title_exclusions" value="{{ 'true' if title_exclusion_enabled else 'false' }}" data-cash-flow-exclusion-flag>
                         <label class="check-field">
                             <input type="checkbox" value="true" data-cash-flow-exclusion-toggle {% if title_exclusion_enabled %}checked{% endif %}>
-                            <span>Retirar títulos financeiros do fluxo</span>
+                            <span>Retirar agendamentos financeiros do fluxo</span>
                         </label>
-                        <small class="cash-flow-banner__hint">Ao habilitar, o sistema lista os títulos em aberto do período para você marcar apenas os que não devem compor o saldo projetado.</small>
-                    </div>
-
-                    <div class="cash-flow-filters-panel{% if not title_exclusion_enabled %} is-hidden{% endif %}" data-cash-flow-selection-panel>
-                        <div class="cash-flow-filters-panel__header">
-                            <div>
-                                <strong>Filtros para retirada de títulos</strong>
-                                <small>Use a Data Inicial/Data Final e refine a busca antes de marcar os títulos que sairão do fluxo.</small>
-                            </div>
-                            <button type="button" class="btn btn-secondary" data-cash-flow-process>Processar filtros</button>
-                        </div>
-                        <div class="cash-flow-extra-grid">
-                            <label>
-                                <span>Movimento</span>
-                                <select name="title_filter_movement_nature">
-                                    <option value="">Todos</option>
-                                    <option value="credit" {% if title_filter_movement_nature == 'credit' %}selected{% endif %}>Entrada</option>
-                                    <option value="debit" {% if title_filter_movement_nature == 'debit' %}selected{% endif %}>Saída</option>
-                                </select>
-                            </label>
-                            <label>
-                                <span>Favorecido</span>
-                                <select name="title_filter_counterparty_id">
-                                    <option value="">Todos</option>
-                                    {% for item in options.counterparties %}
-                                    <option value="{{ item.id }}" {% if title_filter_counterparty_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label>
-                                <span>Plano de conta</span>
-                                <select name="title_filter_chart_account_id">
-                                    <option value="">Todos</option>
-                                    {% for item in options.chart_accounts %}
-                                    <option value="{{ item.id }}" {% if title_filter_chart_account_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label>
-                                <span>Centro de resultados</span>
-                                <select name="title_filter_cost_center_id">
-                                    <option value="">Todos</option>
-                                    {% for item in options.cost_centers %}
-                                    <option value="{{ item.id }}" {% if title_filter_cost_center_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label class="cash-flow-extra-grid__search">
-                                <span>Buscar título</span>
-                                <input type="text" name="title_filter_search" value="{{ title_filter_search }}" placeholder="Histórico, número ou código">
-                            </label>
-                        </div>
+                        <small class="cash-flow-banner__hint">Use os filtros no painel lateral direito, processe a busca e marque abaixo os agendamentos/títulos que não devem compor o saldo projetado.</small>
                     </div>
 
                     <div class="cash-flow-selected-inputs" data-cash-flow-selected-inputs>
@@ -553,8 +429,8 @@
                          data-enabled="{{ 'true' if title_exclusion_enabled else 'false' }}">
                         <div class="cash-flow-preview__toolbar">
                             <div>
-                                <strong>Títulos elegíveis para retirada</strong>
-                                <small data-cash-flow-preview-summary>Marque a opção acima, ajuste os filtros e clique em <strong>Processar filtros</strong>.</small>
+                                <strong>Agendamentos elegíveis para retirada</strong>
+                                <small data-cash-flow-preview-summary>Abra os filtros no botão superior, ajuste o período e clique em <strong>Processar filtros</strong>.</small>
                             </div>
                             <div class="cash-flow-preview__selected">
                                 <span data-cash-flow-selected-count>{{ selected_excluded_entry_ids|length }}</span>
@@ -574,26 +450,9 @@
                         </div>
                         <div class="cash-flow-preview__body" data-cash-flow-preview-body>
                             <div class="cash-flow-preview__empty">
-                                Os títulos em aberto do período aparecerão aqui para marcação individual.
+                                Os agendamentos/títulos em aberto do período aparecerão aqui para marcação individual.
                             </div>
                         </div>
-                    </div>
-
-                    <div class="cash-flow-report-settings">
-                        <label>
-                            <span>Orientação</span>
-                            <select name="orientation">
-                                <option value="landscape" {% if selected_orientation == 'landscape' %}selected{% endif %}>Paisagem</option>
-                                <option value="portrait" {% if selected_orientation == 'portrait' %}selected{% endif %}>Retrato</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Imprimir</span>
-                            <select name="output_mode">
-                                <option value="screen" {% if selected_output_mode == 'screen' %}selected{% endif %}>Na Tela</option>
-                                <option value="pdf" {% if selected_output_mode == 'pdf' %}selected{% endif %}>PDF</option>
-                            </select>
-                        </label>
                     </div>
                 </div>
             </div>
@@ -872,6 +731,7 @@
     .report-block-field small { color:var(--text-secondary); opacity:.9; }
     .checkbox-list { display:flex; flex-direction:column; gap:.45rem; padding:.85rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-secondary); }
     .cash-flow-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:1rem; }
+    .cash-flow-layout--single { display:block; }
     .cash-flow-sidebar, .cash-flow-main { display:flex; flex-direction:column; gap:1rem; }
     .cash-flow-fieldset { border:1px solid var(--border); border-radius:16px; padding:1rem; background:var(--surface-secondary); }
     .cash-flow-fieldset legend { padding:0 .4rem; font-weight:700; color:var(--text-primary); }
@@ -880,7 +740,7 @@
     .cash-flow-banner__hint { display:block; margin-top:.45rem; color:rgba(255,255,255,.86); font-weight:600; }
     .filter-hint { display:block; margin-top:.45rem; color:var(--text-tertiary); font-weight:600; line-height:1.35; }
     .cash-flow-filters-panel { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
-    .cash-flow-filters-panel.is-hidden { display:none; }
+    .cash-flow-filters-panel.is-hidden, .cash-flow-sidebar-section.is-hidden { display:none; }
     .cash-flow-filters-panel__header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; padding:1rem 1rem 0; }
     .cash-flow-filters-panel__header strong { display:block; color:var(--text-primary); }
     .cash-flow-filters-panel__header small { display:block; margin-top:.25rem; color:var(--text-secondary); line-height:1.4; }
@@ -960,6 +820,9 @@
 {% elif report_definition.code == 'ledger' %}
 {% set filters = current_filters or {} %}
 {% include 'modules/financial/partials/report_filters_ledger_sidebar.html' %}
+{% elif report_definition.code == 'cash_flow' %}
+{% set filters = current_filters or {} %}
+{% include 'modules/financial/partials/report_filters_cash_flow_sidebar.html' %}
 {% endif %}
 {% endblock %}
 
@@ -975,7 +838,7 @@
 {% elif report_definition.code == 'ledger' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260423d') }}"></script>
 {% elif report_definition.code == 'cash_flow' %}
-<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260421f') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260427b') }}"></script>
 {% else %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -993,3 +856,5 @@
 </script>
 {% endif %}
 {% endblock %}
+
+
