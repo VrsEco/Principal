@@ -79,20 +79,26 @@ def test_cash_flow_filter_template_uses_exclusion_language():
         / "report_filters.html"
     )
     template = template_path.read_text(encoding="utf-8")
+    sidebar_template = (
+        template_path.parent / "partials" / "report_filters_cash_flow_sidebar.html"
+    ).read_text(encoding="utf-8")
+    combined_template = template + sidebar_template
 
-    assert "Retirar títulos financeiros do fluxo" in template
+    assert "Retirar agendamentos financeiros do fluxo" in template
+    assert "report_filters_cash_flow_sidebar.html" in template
+    assert 'cash-flow-filter-form' in template
     assert 'name="enable_title_exclusions"' in template
-    assert 'data-cash-flow-process' in template
+    assert 'data-cash-flow-process' in combined_template
     assert 'name="excluded_entry_ids"' in template
     assert '/projected-titles' in template
-    assert 'name="bank_account_ids" value="-1"' in template
-    assert "Processar filtros" in template
-    assert 'name="projected_values_mode" value="with_financial_correction"' in template
-    assert 'name="projected_values_mode" value="without_financial_correction"' in template
-    assert 'name="chart_account_ids"' in template
-    assert 'name="cost_center_ids"' in template
-    assert 'name="project_ids"' in template
-    assert 'name="process_ids"' in template
+    assert 'form="cash-flow-filter-form" type="hidden" name="bank_account_ids" value="-1"' in sidebar_template
+    assert "Processar filtros" in sidebar_template
+    assert 'name="projected_values_mode" value="with_financial_correction"' in sidebar_template
+    assert 'name="projected_values_mode" value="without_financial_correction"' in sidebar_template
+    assert 'name="chart_account_ids"' in sidebar_template
+    assert 'name="cost_center_ids"' in sidebar_template
+    assert 'name="project_ids"' in sidebar_template
+    assert 'name="process_ids"' in sidebar_template
 
 
 def test_cash_flow_filters_accept_manual_title_exclusions():
