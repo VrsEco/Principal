@@ -733,7 +733,28 @@
     .report-block-field small { color:var(--text-secondary); opacity:.9; }
     .checkbox-list { display:flex; flex-direction:column; gap:.45rem; padding:.85rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-secondary); }
     .cash-flow-report-sidebar .checkbox-list { padding:.6rem; border-radius:14px; background:var(--surface); }
-    .cash-flow-report-sidebar .check-field { align-items:flex-start; }
+    .cash-flow-report-sidebar .checkbox-list .check-field {
+        display:grid !important;
+        grid-template-columns:18px minmax(0,1fr);
+        align-items:start;
+        gap:.55rem !important;
+        min-height:auto;
+        padding:.35rem .2rem;
+    }
+    .cash-flow-report-sidebar .checkbox-list .check-field input[type="checkbox"] {
+        width:16px !important;
+        height:16px;
+        min-width:16px;
+        margin:.2rem 0 0;
+        padding:0;
+        justify-self:start;
+    }
+    .cash-flow-report-sidebar .checkbox-list .check-field span {
+        min-width:0;
+        line-height:1.32;
+        color:var(--text-primary);
+        overflow-wrap:anywhere;
+    }
     .cash-flow-report-sidebar .report-workspace-sidebar__footer .btn,
     .cash-flow-report-sidebar .report-workspace-sidebar__footer a.btn { text-align:center; }
     .cash-flow-layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:1rem; }
