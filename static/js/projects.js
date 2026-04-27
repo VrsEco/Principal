@@ -435,14 +435,15 @@ function toggleCollapsible(id) {
     const container = document.getElementById(id);
     if (!container) return;
 
-    const content = container.querySelector('.dashboard-summary-content');
+    const header = container.querySelector('.dashboard-summary-header');
     const chevron = container.querySelector('.chevron');
+    const isCollapsed = container.classList.toggle('is-collapsed');
 
-    if (content.style.maxHeight) {
-        content.style.maxHeight = null;
-        chevron.style.transform = 'rotate(0deg)';
-    } else {
-        content.style.maxHeight = content.scrollHeight + 'px';
-        chevron.style.transform = 'rotate(180deg)';
+    if (header) {
+        header.setAttribute('aria-expanded', (!isCollapsed).toString());
+    }
+
+    if (chevron) {
+        chevron.style.transform = '';
     }
 }

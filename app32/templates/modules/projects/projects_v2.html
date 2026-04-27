@@ -154,6 +154,7 @@
     }
 
     .dashboard-summary-header {
+        width: 100%;
         padding: 1rem 1.5rem;
         background: var(--surface-secondary);
         display: flex;
@@ -162,6 +163,12 @@
         cursor: pointer;
         transition: background 0.2s;
         border-bottom: 1px solid var(--border);
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+        color: inherit;
+        font: inherit;
+        text-align: left;
     }
 
     .dashboard-summary-header:hover {
@@ -185,7 +192,21 @@
     .dashboard-summary-content {
         padding: 1.5rem;
         max-height: 1000px;
-        transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+        overflow: hidden;
+        opacity: 1;
+        transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out, opacity 0.25s ease-in-out;
+    }
+
+    .dashboard-summary-container.is-collapsed .dashboard-summary-content {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .dashboard-summary-container.is-collapsed .dashboard-summary-header .chevron {
+        transform: rotate(-90deg);
     }
 
     /* Refine stat-cards for horizontal display */
@@ -377,15 +398,16 @@
 
     <!-- Dashboard Summary (Collapsible like My Work) -->
     <div class="dashboard-summary-container" id="projects-summary">
-        <div class="dashboard-summary-header" onclick="toggleCollapsible('projects-summary')">
+        <button type="button" class="dashboard-summary-header" onclick="toggleCollapsible('projects-summary')"
+            aria-controls="projects-summary-content" aria-expanded="true">
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="3">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
             <h3>Dashboard de Visão Geral</h3>
-        </div>
+        </button>
 
-        <div class="dashboard-summary-content">
+        <div class="dashboard-summary-content" id="projects-summary-content">
             <div class="status-summary fade-in">
                 <!-- 1. Total -->
                 <div class="stat-card stat-card--total">
@@ -635,5 +657,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/projects.js') }}?v=20260311b"></script>
+<script src="{{ url_for('static', filename='js/projects.js') }}?v=20260427a"></script>
 {% endblock %}
