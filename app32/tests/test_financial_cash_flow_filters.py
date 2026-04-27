@@ -93,6 +93,8 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert '/projected-titles' in template
     assert 'form="cash-flow-filter-form" type="hidden" name="bank_account_ids" value="-1"' in sidebar_template
     assert "Processar filtros" in sidebar_template
+    assert "Aplicar Filtros" in sidebar_template
+    assert "Gerar fluxo" not in sidebar_template
     assert 'name="projected_values_mode" value="with_financial_correction"' in sidebar_template
     assert 'name="projected_values_mode" value="without_financial_correction"' in sidebar_template
     assert 'name="chart_account_ids"' in sidebar_template
