@@ -96,6 +96,7 @@
 {% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
 {% set selected_cost_centers = filters.get('cost_center_ids', []) %}
 {% set selected_projects = filters.get('project_ids', []) %}
+{% set selected_processes = filters.get('process_ids', []) %}
 {% set selected_bank_accounts_raw = filters.get('bank_account_ids') %}
 {% set selected_bank_accounts = selected_bank_accounts_raw or [] %}
 {% set cash_flow_all_bank_accounts_selected = is_cash_flow and selected_bank_accounts_raw is none %}
@@ -433,6 +434,50 @@
                         <label class="radio-field"><input type="radio" name="projected_values_mode" value="with_financial_correction" {% if selected_projected_values_mode == 'with_financial_correction' %}checked{% endif %}><span>Com correção financeira</span></label>
                         <label class="radio-field"><input type="radio" name="projected_values_mode" value="without_financial_correction" {% if selected_projected_values_mode == 'without_financial_correction' %}checked{% endif %}><span>Sem correção financeira</span></label>
                     </fieldset>
+
+                    <label class="report-block-field">
+                        <span>Plano de Contas</span>
+                        <select name="chart_account_ids" multiple size="6">
+                            {% for item in options.chart_accounts %}
+                            {% set option_id = item.id|string %}
+                            <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="filter-hint">Refina títulos realizados, abertos e agendamentos projetados por plano de contas.</small>
+                    </label>
+
+                    <label class="report-block-field">
+                        <span>Centro de Resultados</span>
+                        <select name="cost_center_ids" multiple size="5">
+                            {% for item in options.cost_centers %}
+                            {% set option_id = item.id|string %}
+                            <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="filter-hint">Opcional. Mantém o fluxo restrito aos centros selecionados.</small>
+                    </label>
+
+                    <label class="report-block-field">
+                        <span>Projeto/Processo · Projetos</span>
+                        <select name="project_ids" multiple size="5">
+                            {% for item in options.projects %}
+                            {% set option_id = item.id|string %}
+                            <option value="{{ item.id }}" {% if option_id in selected_projects %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="filter-hint">Aplicado quando o título ou agendamento possui vínculo de projeto.</small>
+                    </label>
+
+                    <label class="report-block-field">
+                        <span>Projeto/Processo · Processos</span>
+                        <select name="process_ids" multiple size="5">
+                            {% for item in options.processes %}
+                            {% set option_id = item.id|string %}
+                            <option value="{{ item.id }}" {% if option_id in selected_processes %}selected{% endif %}>{{ item.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="filter-hint">Aplicado quando o título ou agendamento possui vínculo de processo.</small>
+                    </label>
                 </div>
 
                 <div class="cash-flow-main">

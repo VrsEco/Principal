@@ -1030,6 +1030,33 @@ class FinancialReportService:
         return query.order_by(FinancialEntry.due_date.asc(), FinancialEntry.id.asc()).all()
 
     @staticmethod
+    def _cash_flow_dimension_filtered_entries(company_id: int, filters: FinancialManagementReportFiltersInput) -> List[FinancialEntry]:
+        query = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        )
+        chart_account_ids = FinancialReportService._selected_ids(
+            getattr(filters, "chart_account_id", None),
+            getattr(filters, "chart_account_ids", None),
+        )
+        if chart_account_ids:
+            query = query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
+        cost_center_ids = FinancialReportService._selected_ids(
+            getattr(filters, "cost_center_id", None),
+            getattr(filters, "cost_center_ids", None),
+        )
+        if cost_center_ids:
+            query = query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
+        entries = query.all()
+        project_ids = list(getattr(filters, "project_ids", None) or [])
+        if project_ids:
+            entries = [entry for entry in entries if FinancialReportService._entry_matches_projects(entry, project_ids)]
+        process_ids = list(getattr(filters, "process_ids", None) or [])
+        if process_ids:
+            entries = [entry for entry in entries if FinancialReportService._entry_matches_processes(entry, process_ids)]
+        return entries
+
+    @staticmethod
     def _settlement_query(company_id: int, filters: FinancialManagementReportFiltersInput):
         query = FinancialSettlement.query.filter(
             FinancialSettlement.company_id == company_id,
@@ -1093,6 +1120,19 @@ class FinancialReportService:
                 )
             )
 
+        chart_account_ids = FinancialReportService._selected_ids(
+            getattr(filters, "chart_account_id", None),
+            getattr(filters, "chart_account_ids", None),
+        )
+        if chart_account_ids:
+            query = query.filter(FinancialEntry.chart_account_id.in_(chart_account_ids))
+        cost_center_ids = FinancialReportService._selected_ids(
+            getattr(filters, "cost_center_id", None),
+            getattr(filters, "cost_center_ids", None),
+        )
+        if cost_center_ids:
+            query = query.filter(FinancialEntry.cost_center_id.in_(cost_center_ids))
+
         positive_entry_ids = FinancialReportService._selected_ids(None, entry_ids or [])
         if positive_entry_ids:
             query = query.filter(FinancialEntry.id.in_(positive_entry_ids))
@@ -1154,6 +1194,19 @@ class FinancialReportService:
                     FinancialSchedule.bank_account_id.is_(None),
                 )
             )
+
+        chart_account_ids = FinancialReportService._selected_ids(
+            getattr(filters, "chart_account_id", None),
+            getattr(filters, "chart_account_ids", None),
+        )
+        if chart_account_ids:
+            query = query.filter(FinancialSchedule.chart_account_id.in_(chart_account_ids))
+        cost_center_ids = FinancialReportService._selected_ids(
+            getattr(filters, "cost_center_id", None),
+            getattr(filters, "cost_center_ids", None),
+        )
+        if cost_center_ids:
+            query = query.filter(FinancialSchedule.cost_center_id.in_(cost_center_ids))
 
         normalized_selection_filters = FinancialReportService._normalize_cash_flow_title_selection_filters(selection_filters)
         movement_nature = normalized_selection_filters.get("movement_nature")
@@ -1261,6 +1314,18 @@ class FinancialReportService:
             normalized_filters,
             selection_filters=selection_filters,
         ).all()
+        if normalized_filters.project_ids:
+            entries = [
+                entry
+                for entry in entries
+                if FinancialReportService._entry_matches_projects(entry, normalized_filters.project_ids)
+            ]
+        if normalized_filters.process_ids:
+            entries = [
+                entry
+                for entry in entries
+                if FinancialReportService._entry_matches_processes(entry, normalized_filters.process_ids)
+            ]
         settlement_totals = FinancialReportService._entry_settlement_totals(
             company_id,
             entry_ids=[entry.id for entry in entries],
@@ -2535,7 +2600,17 @@ class FinancialReportService:
             preserve_empty_marker=True,
         )
         settlements = FinancialReportService._settlement_query(company_id, filters).order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc()).all()
-        entries = {item.id: item for item in FinancialEntry.query.filter(FinancialEntry.company_id == company_id, FinancialEntry.deleted_at.is_(None)).all()}
+        flow_entries = {
+            item.id: item
+            for item in FinancialReportService._cash_flow_dimension_filtered_entries(company_id, filters)
+        }
+        all_entries = {
+            item.id: item
+            for item in FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            ).all()
+        }
         if bank_account_ids == [-1]:
             bank_accounts_label = "Nenhuma conta selecionada"
         elif bank_account_ids:
@@ -2576,7 +2651,11 @@ class FinancialReportService:
         )
         if bank_account_ids:
             history_query = history_query.filter(FinancialSettlement.bank_account_id.in_(bank_account_ids))
-        initial_balance = FinancialDashboardAnalytics.calculate_current_balance(settlements=history_query.all(), entries_by_id=entries, as_of_date=filters.period_start)
+        initial_balance = FinancialDashboardAnalytics.calculate_current_balance(
+            settlements=history_query.all(),
+            entries_by_id=flow_entries,
+            as_of_date=filters.period_start,
+        )
 
         def _empty_cash_flow_slot() -> Dict[str, Decimal]:
             return {
@@ -2590,7 +2669,7 @@ class FinancialReportService:
         realized_in = Decimal("0")
         realized_out = Decimal("0")
         for settlement in settlements:
-            entry = entries.get(settlement.financial_entry_id)
+            entry = flow_entries.get(settlement.financial_entry_id)
             if not entry:
                 continue
             slot = daily.setdefault(settlement.settlement_date, _empty_cash_flow_slot())
@@ -2622,6 +2701,18 @@ class FinancialReportService:
         payable_open_total = Decimal("0")
         if filters.include_projected:
             projected_entries = FinancialReportService._cash_flow_projected_entry_query(company_id, filters).all()
+            if filters.project_ids:
+                projected_entries = [
+                    entry
+                    for entry in projected_entries
+                    if FinancialReportService._entry_matches_projects(entry, filters.project_ids)
+                ]
+            if filters.process_ids:
+                projected_entries = [
+                    entry
+                    for entry in projected_entries
+                    if FinancialReportService._entry_matches_processes(entry, filters.process_ids)
+                ]
             projected_settlement_totals = FinancialReportService._entry_settlement_totals(
                 company_id,
                 entry_ids=[entry.id for entry in projected_entries],
@@ -2898,7 +2989,7 @@ class FinancialReportService:
             )
             account_balance = FinancialDashboardAnalytics.calculate_current_balance(
                 settlements=settlements_by_bank.get(account.id, []),
-                entries_by_id=entries,
+                entries_by_id=all_entries,
                 as_of_date=balance_reference_date,
             )
             account_available_total = account_balance + account_limit

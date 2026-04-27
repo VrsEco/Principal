@@ -89,6 +89,10 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert "Processar filtros" in template
     assert 'name="projected_values_mode" value="with_financial_correction"' in template
     assert 'name="projected_values_mode" value="without_financial_correction"' in template
+    assert 'name="chart_account_ids"' in template
+    assert 'name="cost_center_ids"' in template
+    assert 'name="project_ids"' in template
+    assert 'name="process_ids"' in template
 
 
 def test_cash_flow_filters_accept_manual_title_exclusions():
@@ -280,6 +284,43 @@ def test_cash_flow_projected_query_with_empty_bank_marker_keeps_only_titles_with
     FinancialReportService._cash_flow_projected_entry_query(9, filters)
 
     assert ("is", None) in query.filters
+
+
+def test_cash_flow_projected_query_applies_account_and_center_filters(monkeypatch):
+    query = _QueryStub()
+    entry_model = type(
+        "FinancialEntryStub",
+        (),
+        {
+            "company_id": _Column(),
+            "deleted_at": _Column(),
+            "status": _Column(),
+            "due_date": _Column(),
+            "bank_account_id": _Column(),
+            "chart_account_id": _Column(),
+            "cost_center_id": _Column(),
+            "id": _Column(),
+            "query": query,
+        },
+    )
+    monkeypatch.setattr(report_module, "FinancialEntry", entry_model)
+    monkeypatch.setattr(report_module, "or_", lambda *args: ("or", args))
+
+    filters = SimpleNamespace(
+        period_start=date(2026, 5, 1),
+        period_end=date(2026, 5, 31),
+        bank_account_id=None,
+        bank_account_ids=[],
+        chart_account_id=None,
+        chart_account_ids=[10, 11],
+        cost_center_id=None,
+        cost_center_ids=[20],
+    )
+
+    FinancialReportService._cash_flow_projected_entry_query(9, filters)
+
+    assert ("in", [10, 11]) in query.filters
+    assert ("in", [20]) in query.filters
 
 
 def test_cash_flow_build_includes_schedule_titles_when_entries_do_not_exist(monkeypatch):
