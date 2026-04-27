@@ -58,6 +58,7 @@
 .schedule-table .col-correction_amount,
 .schedule-table .col-balance_amount {
   width: 10%;
+  text-align: right;
 }
 
 .schedule-table .col-balance_amount {
