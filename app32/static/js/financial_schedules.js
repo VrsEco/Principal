@@ -98,26 +98,33 @@
   const round2 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
   const round4 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 10000) / 10000;
 
+  const isValidDateParts = (day, month, year) => {
+    const dayNumber = Number(day);
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+    const candidate = new Date(yearNumber, monthNumber - 1, dayNumber);
+    return candidate.getFullYear() === yearNumber && candidate.getMonth() + 1 === monthNumber && candidate.getDate() === dayNumber;
+  };
+
   const normalizeDateInput = (value) => {
     const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
-    if (digits.length <= 4) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 4)}/${digits.slice(4)}`;
-    return `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
   };
 
   const parseDateToIso = (value) => {
     const digits = String(value || '').replace(/\D/g, '');
     if (digits.length !== 8) return null;
-    const [year, month, day] = [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6)];
-    const candidate = new Date(Number(year), Number(month) - 1, Number(day));
-    if (candidate.getFullYear() !== Number(year) || candidate.getMonth() + 1 !== Number(month) || candidate.getDate() !== Number(day)) return null;
+    const [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)];
+    if (!isValidDateParts(day, month, year)) return null;
     return `${year}-${month}-${day}`;
   };
 
   const formatIso = (value) => {
     if (!value) return '';
     const [year, month, day] = String(value).split('-');
-    return year && month && day ? `${year}/${month}/${day}` : value;
+    return year && month && day ? `${day}/${month}/${year}` : value;
   };
   const compareIsoDates = (left, right) => {
     if (!left || !right) return 0;
@@ -228,6 +235,10 @@
     const enabled = fieldValue('field-repeat-toggle', 'false') === 'true';
     document.querySelectorAll('.repeat-field').forEach((field) => field.classList.toggle('hidden', !enabled));
   };
+
+  const normalizeCompetenceMode = (value) => (
+    String(value || '').trim() === 'due_date' ? 'due_date' : 'same_competence'
+  );
 
   const buildOptions = (items, placeholder, formatter) => [`<option value="">${placeholder}</option>`]
     .concat((items || []).map((item) => `<option value="${item.id}">${formatter ? formatter(item) : (item.display_label || item.name || item.code || item.id)}</option>`))
@@ -1002,6 +1013,7 @@
     setFieldValue('field-frequency', schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly');
     setFieldValue('field-interval-value', schedule.interval_value || 1);
     setFieldValue('field-repeat-count', schedule.metadata_json?.repeat_count || 1);
+    setFieldValue('field-competence-mode', normalizeCompetenceMode(schedule.metadata_json?.competence_mode));
     clearPendingAttachments();
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
@@ -1068,6 +1080,7 @@
     syncAdjustmentAllocationRows();
     validateAllocationSummary();
     const frequency = fieldValue('field-repeat-toggle', 'false') === 'true' ? fieldValue('field-frequency', 'weekly') : 'one_time';
+    const competenceMode = normalizeCompetenceMode(fieldValue('field-competence-mode', 'same_competence'));
     const primaryAllocation = getBaseAllocationRows()[0] || allocationRows[0] || {};
     const isUpdate = Boolean(form.schedule_id?.value);
     return {
@@ -1103,6 +1116,7 @@
         discount_rule_id: Number(fieldValue('field-discount-rule') || 0) || null,
         discount_amount_override: $('field-discount-configured')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
         repeat_count: Number(fieldValue('field-repeat-count', '1') || 1),
+        competence_mode: frequency === 'one_time' ? 'same_competence' : competenceMode,
         attachments: selectedSchedule?.attachments || [],
         counterparty_name: $('field-counterparty')?.selectedOptions?.[0]?.textContent || null,
         allocations: getBaseAllocationRows().map((row) => ({
@@ -1202,6 +1216,7 @@
     $('baixas-tab-button')?.classList.add('hidden');
     $('calculation-log-tab-button')?.classList.add('hidden');
     setFieldValue('field-frequency', 'weekly');
+    setFieldValue('field-competence-mode', 'same_competence');
     setDiscountAmountField(0, { manual: false });
     window.toggleRepeatFields();
     syncAdjustmentAllocationRows();

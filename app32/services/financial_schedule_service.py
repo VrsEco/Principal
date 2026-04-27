@@ -46,6 +46,8 @@ logger = logging.getLogger(__name__)
 
 class FinancialScheduleService:
     AUTO_GENERATED_SCHEDULE_CODE_MAX_ATTEMPTS = 5
+    COMPETENCE_MODE_SAME = "same_competence"
+    COMPETENCE_MODE_DUE_DATE = "due_date"
 
     @staticmethod
     def _sanitize_json(value: Any) -> Any:
@@ -60,6 +62,30 @@ class FinancialScheduleService:
         if hasattr(value, "model_dump") and callable(value.model_dump):
             return FinancialScheduleService._sanitize_json(value.model_dump())
         return value
+
+    @staticmethod
+    def _normalize_competence_mode(value: Any) -> str:
+        return (
+            FinancialScheduleService.COMPETENCE_MODE_DUE_DATE
+            if str(value or "").strip() == FinancialScheduleService.COMPETENCE_MODE_DUE_DATE
+            else FinancialScheduleService.COMPETENCE_MODE_SAME
+        )
+
+    @staticmethod
+    def _normalize_schedule_metadata(metadata_json: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        metadata = FinancialScheduleService._sanitize_json(dict(metadata_json or {}))
+        metadata["competence_mode"] = FinancialScheduleService._normalize_competence_mode(
+            metadata.get("competence_mode")
+        )
+        return metadata
+
+    @staticmethod
+    def _resolve_generated_entry_competence_date(*, schedule: FinancialSchedule, due_date: Optional[date]) -> Optional[date]:
+        metadata = dict(schedule.metadata_json or {})
+        competence_mode = FinancialScheduleService._normalize_competence_mode(metadata.get("competence_mode"))
+        if competence_mode == FinancialScheduleService.COMPETENCE_MODE_DUE_DATE:
+            return due_date or getattr(schedule, "competence_date", None)
+        return getattr(schedule, "competence_date", None) or due_date
 
     @staticmethod
     def _format_schedule_payload_error(exc: Exception, *, operation: str) -> str:
@@ -232,7 +258,7 @@ class FinancialScheduleService:
             "domain_label": effective_domain_label,
             "domain_value": domain_value,
         }
-        metadata_json.pop("competence_mode", None)
+        metadata_json = FinancialScheduleService._normalize_schedule_metadata(metadata_json)
         metadata_json["allocations"] = FinancialScheduleService._build_budget_document_schedule_allocations(
             company_id=company_id,
             line=line,
@@ -486,13 +512,12 @@ class FinancialScheduleService:
         normalized = data.model_dump()
         normalized.update(budget_links or {})
         normalized["competence_date"] = normalized.get("competence_date") or normalized.get("start_date")
-        normalized["metadata_json"] = FinancialScheduleService._sanitize_json(
+        normalized["metadata_json"] = FinancialScheduleService._normalize_schedule_metadata(
             FinancialService._merge_budget_metadata(
                 normalized_metadata_json,
                 budget_links,
             )
         )
-        normalized["metadata_json"].pop("competence_mode", None)
         normalized["next_due_date"] = normalized.get("next_due_date") or normalized["first_due_date"]
         max_attempts = FinancialScheduleService.AUTO_GENERATED_SCHEDULE_CODE_MAX_ATTEMPTS if auto_generated_code else 1
         current_schedule_code = normalized["schedule_code"]
@@ -648,13 +673,12 @@ class FinancialScheduleService:
         try:
             merged.update(budget_links or {})
             merged["competence_date"] = competence_date
-            merged["metadata_json"] = FinancialScheduleService._sanitize_json(
+            merged["metadata_json"] = FinancialScheduleService._normalize_schedule_metadata(
                 FinancialService._merge_budget_metadata(
                     merged_metadata_json,
                     budget_links,
                 )
             )
-            merged["metadata_json"].pop("competence_mode", None)
             for key, value in merged.items():
                 setattr(schedule, key, value)
             if auto_commit:
@@ -809,6 +833,12 @@ class FinancialScheduleService:
                 occurrence_date=due_date,
             )
             existing.original_amount = entry_payload["original_amount"]
+            existing.issue_date = entry_payload["issue_date"]
+            existing.competence_date = entry_payload["competence_date"]
+            existing.due_date = entry_payload["due_date"]
+            existing.occurred_on = entry_payload["occurred_on"]
+            existing.status = entry_payload["status"]
+            existing.review_status = entry_payload["review_status"]
             existing.chart_account_id = entry_payload["chart_account_id"]
             existing.cost_center_id = entry_payload["cost_center_id"]
             existing.metadata_json = entry_payload["metadata_json"]
@@ -1154,6 +1184,12 @@ class FinancialScheduleService:
         elif schedule.document_number_prefix and due_date:
             document_number = f"{schedule.document_number_prefix}-{due_date.strftime('%Y%m%d')}"
 
+        competence_date = FinancialScheduleService._resolve_generated_entry_competence_date(
+            schedule=schedule,
+            due_date=due_date,
+        )
+        competence_mode = FinancialScheduleService._normalize_competence_mode(metadata.get("competence_mode"))
+
         return {
             "company_id": schedule.company_id,
             "entry_code": entry_code,
@@ -1169,7 +1205,7 @@ class FinancialScheduleService:
             "origin_reference": schedule.schedule_code,
             "financial_schedule_id": schedule.id,
             "issue_date": due_date,
-            "competence_date": getattr(schedule, "competence_date", None) or due_date,
+            "competence_date": competence_date,
             "due_date": due_date,
             "occurred_on": due_date if (schedule.auto_post or force_posted) else None,
             "original_amount": Decimal(str(adjustment_totals.get("updated_amount") or schedule.template_amount or 0)),
@@ -1197,6 +1233,8 @@ class FinancialScheduleService:
                 "schedule_discount_amount": adjustment_totals.get("discount_amount"),
                 "schedule_updated_amount": adjustment_totals.get("updated_amount"),
                 "schedule_due_date": due_date.isoformat() if due_date else None,
+                "schedule_competence_date": competence_date.isoformat() if competence_date else None,
+                "schedule_competence_mode": competence_mode,
             },
         }
 

@@ -48,3 +48,14 @@ def test_schedule_allocation_excludes_financial_adjustments_from_rateio():
     assert "valor principal do título financeiro" in schedule_js
     assert "allocations: getBaseAllocationRows().map((row) => ({" in schedule_js
     assert "metadata_json: {}" in schedule_js
+
+
+def test_schedule_recurrence_competence_mode_field_is_available():
+    schedule_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\schedules.html").read_text(encoding="utf-8")
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert "field-competence-mode" in schedule_template
+    assert "Mesma data de competência do título base" in schedule_template
+    assert "Competência conforme vencimento de cada título" in schedule_template
+    assert "normalizeCompetenceMode" in schedule_js
+    assert "competence_mode: frequency === 'one_time' ? 'same_competence' : competenceMode" in schedule_js

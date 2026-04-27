@@ -68,6 +68,119 @@ def test_sanitize_json_converts_decimal_date_datetime_and_sequences():
     assert sanitized["nested"][0]["discount"] == 5.25
 
 
+
+def test_build_entry_payload_uses_same_competence_mode_by_default(monkeypatch):
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": Decimal("1000.00"),
+            "correction_amount": Decimal("0.00"),
+            "discount_amount": Decimal("0.00"),
+            "updated_amount": Decimal("1000.00"),
+        },
+    )
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 15,
+            "company_id": 9,
+            "schedule_code": "SCH-015",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "origin_type": "manual",
+            "auto_post": False,
+            "frequency": "monthly",
+            "description": "Aluguel recorrente",
+            "memo": None,
+            "next_due_date": date(2026, 5, 10),
+            "first_due_date": date(2026, 4, 10),
+            "competence_date": date(2026, 4, 1),
+            "template_amount": Decimal("1000.00"),
+            "currency_code": "BRL",
+            "bank_account_id": None,
+            "counterparty_id": 2,
+            "chart_account_id": 3,
+            "cost_center_id": 4,
+            "budget_line_id": None,
+            "budget_contract_id": None,
+            "budget_document_id": None,
+            "activity_id": None,
+            "process_instance_id": None,
+            "routine_id": None,
+            "created_by_user_id": None,
+            "created_by_employee_id": None,
+            "created_by_agent": None,
+            "notes": None,
+            "document_number_prefix": None,
+            "metadata_json": {"competence_mode": "same_competence"},
+        },
+    )()
+
+    payload = FinancialScheduleService._build_entry_payload(schedule=schedule, entry_code="SCH-015-2026-05-10")
+
+    assert payload["competence_date"] == date(2026, 4, 1)
+    assert payload["metadata_json"]["schedule_competence_date"] == "2026-04-01"
+    assert payload["metadata_json"]["schedule_competence_mode"] == "same_competence"
+
+
+def test_build_entry_payload_can_use_due_date_as_competence(monkeypatch):
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        lambda **kwargs: {
+            "template_amount": Decimal("1000.00"),
+            "correction_amount": Decimal("0.00"),
+            "discount_amount": Decimal("0.00"),
+            "updated_amount": Decimal("1000.00"),
+        },
+    )
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 15,
+            "company_id": 9,
+            "schedule_code": "SCH-015",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "origin_type": "manual",
+            "auto_post": False,
+            "frequency": "monthly",
+            "description": "Aluguel recorrente",
+            "memo": None,
+            "next_due_date": date(2026, 5, 10),
+            "first_due_date": date(2026, 4, 10),
+            "competence_date": date(2026, 4, 1),
+            "template_amount": Decimal("1000.00"),
+            "currency_code": "BRL",
+            "bank_account_id": None,
+            "counterparty_id": 2,
+            "chart_account_id": 3,
+            "cost_center_id": 4,
+            "budget_line_id": None,
+            "budget_contract_id": None,
+            "budget_document_id": None,
+            "activity_id": None,
+            "process_instance_id": None,
+            "routine_id": None,
+            "created_by_user_id": None,
+            "created_by_employee_id": None,
+            "created_by_agent": None,
+            "notes": None,
+            "document_number_prefix": None,
+            "metadata_json": {"competence_mode": "due_date"},
+        },
+    )()
+
+    payload = FinancialScheduleService._build_entry_payload(schedule=schedule, entry_code="SCH-015-2026-05-10")
+
+    assert payload["competence_date"] == date(2026, 5, 10)
+    assert payload["metadata_json"]["schedule_competence_date"] == "2026-05-10"
+    assert payload["metadata_json"]["schedule_competence_mode"] == "due_date"
+
+
 def test_create_schedule_sanitizes_metadata_json_before_insert(monkeypatch):
     captured = {}
 

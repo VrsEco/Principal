@@ -65,11 +65,11 @@
                             </label>
                             <label class="field field-span-1 field-compact">
                                 <span>Competência</span>
-                                <input id="field-competence" name="competence_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="AAAA/MM/DD" required>
+                                <input id="field-competence" name="competence_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="DD/MM/AAAA" required>
                             </label>
                             <label class="field field-span-1 field-compact">
                                 <span>Vencimento</span>
-                                <input id="field-due-date" name="due_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="AAAA/MM/DD" required>
+                                <input id="field-due-date" name="due_date_display" inputmode="numeric" data-format="date-ymd" autocomplete="off" placeholder="DD/MM/AAAA" required>
                             </label>
                             <label class="field field-span-2 field-compact">
                                 <span>Correção Financeira</span>
@@ -176,6 +176,14 @@
                             <label class="field repeat-field">
                                 <span>Nº de repetições</span>
                                 <input id="field-repeat-count" type="number" min="1" step="1" value="1">
+                            </label>
+                            <label class="field repeat-field field-span-2">
+                                <span>Competência dos novos títulos</span>
+                                <select id="field-competence-mode">
+                                    <option value="same_competence" selected>Mesma data de competência do título base</option>
+                                    <option value="due_date">Competência conforme vencimento de cada título</option>
+                                </select>
+                                <small>Define se as parcelas geradas pela recorrência mantêm a competência original ou acompanham o vencimento.</small>
                             </label>
                         </div>
                     </section>
