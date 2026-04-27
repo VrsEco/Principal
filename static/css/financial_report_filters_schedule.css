@@ -11,10 +11,17 @@
 }
 
 .schedule-table thead th {
+  box-sizing: border-box;
   padding: 0.34rem 0.32rem;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.18;
+  vertical-align: middle;
 }
 
 .schedule-table tbody td {
+  box-sizing: border-box;
   font-size: 0.62rem;
   padding: 0.28rem 0.32rem;
   white-space: normal;
@@ -27,17 +34,32 @@
   white-space: nowrap;
   font-weight: 700;
   color: var(--text-primary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .schedule-table .col-title_number {
-  width: 11%;
+  width: 8%;
+}
+
+.schedule-table .col-installment {
+  width: 6%;
+}
+
+.schedule-table .col-history {
+  width: 18%;
 }
 
 .schedule-table .col-counterparty {
-  width: 22%;
+  width: 16%;
 }
 
 .schedule-table .col-title_amount,
+.schedule-table .col-correction_amount,
+.schedule-table .col-balance_amount {
+  width: 10%;
+}
+
 .schedule-table .col-balance_amount {
   width: 13%;
 }
@@ -45,7 +67,8 @@
 .schedule-table .col-competence_date,
 .schedule-table .col-due_date,
 .schedule-table .col-settlement_date {
-  width: 13.5%;
+  width: 6.3%;
+  text-align: center;
 }
 
 .sr-date-pair {

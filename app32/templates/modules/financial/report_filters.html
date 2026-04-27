@@ -6,7 +6,7 @@
 {{ super() }}
 {% if report_definition.code == 'schedule_report' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419b') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_schedule.css', v='20260419b') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_schedule.css', v='20260427b') }}">
 {% elif report_definition.code in ['income_statement', 'income_statement_2'] %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419d') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421e') }}">
