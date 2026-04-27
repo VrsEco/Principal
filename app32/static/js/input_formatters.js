@@ -116,25 +116,38 @@
     return Math.round(((totalMinutes / 60) + Number.EPSILON) * 100) / 100;
   }
 
+  function isValidDateParts(day, month, year) {
+    const dayNumber = Number(day);
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+    const candidate = new Date(yearNumber, monthNumber - 1, dayNumber);
+    return (
+      candidate.getFullYear() === yearNumber
+      && candidate.getMonth() + 1 === monthNumber
+      && candidate.getDate() === dayNumber
+    );
+  }
+
   function formatDateYMD(value) {
     const raw = String(value ?? '').trim();
     if (!raw) return '';
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
       const [year, month, day] = raw.split('-');
-      return `${year}/${month}/${day}`;
+      return `${day}/${month}/${year}`;
     }
     const digits = onlyDigits(raw).slice(0, 8);
-    if (digits.length <= 4) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 4)}/${digits.slice(4)}`;
-    return `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
   }
 
   function parseDateYMD(value) {
     const digits = onlyDigits(value).slice(0, 8);
     if (digits.length !== 8) return '';
-    const year = digits.slice(0, 4);
-    const month = digits.slice(4, 6);
-    const day = digits.slice(6, 8);
+    const day = digits.slice(0, 2);
+    const month = digits.slice(2, 4);
+    const year = digits.slice(4, 8);
+    if (!isValidDateParts(day, month, year)) return '';
     return `${year}-${month}-${day}`;
   }
 

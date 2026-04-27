@@ -201,6 +201,27 @@ def test_handle_menu_message_project_task_create_full_cycle(monkeypatch):
     assert session.selected_option_id is None
 
 
+def test_handle_menu_message_orients_company_onboarding_question(monkeypatch):
+    option = _build_project_task_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="web",
+        thread_id="thread-1",
+        message="COMO CADASTRAR CLIENTE",
+    )
+
+    assert result.handled is True
+    assert "Para cadastrar um cliente" in result.response_text
+    assert "/companies/new" in result.response_text
+    assert result.metadata["menu_engine"]["intercept_stage"] == "system_guidance"
+    assert result.metadata["workflow_discovery"]["topic"] == "company_onboarding"
+    assert session.status == "idle"
+
+
 def test_handle_menu_message_back_navigation_restores_previous_steps(monkeypatch):
     option = _build_project_task_option()
     session = _DummySession(option)

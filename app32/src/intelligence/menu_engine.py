@@ -319,6 +319,21 @@ COMMAND_SCOPE_HINTS = (
     "capacidade",
     "carga",
     "auditoria",
+    "cliente",
+    "clientes",
+)
+GUIDANCE_QUERY_HINTS = (
+    "como ",
+    "como eu ",
+    "como faço",
+    "como faco",
+    "onde ",
+    "por onde ",
+    "me ensine",
+    "me orientar",
+    "me oriente",
+    "ajuda para",
+    "preciso de ajuda",
 )
 COMMAND_STATUS_HINTS = (
     "aberto",
@@ -634,6 +649,26 @@ def handle_menu_message(
                 session=session,
                 option=None,
                 intercept_stage="root_menu",
+            )
+
+        guidance_response = _build_system_guidance_response(lower, channel=channel)
+        if guidance_response:
+            return _attach_menu_intercept_metadata(
+                MenuInterceptResult(
+                    handled=True,
+                    response_text=guidance_response,
+                    metadata={
+                        "workflow_discovery": {
+                            "strategy": "system_guidance",
+                            "route": "answered",
+                            "topic": "company_onboarding",
+                            "candidate_count": 1,
+                        }
+                    },
+                ),
+                session=session,
+                option=None,
+                intercept_stage="system_guidance",
             )
 
         # Fallback de ambiguidade em modo comando: somente quando parece ação operacional.
@@ -1151,6 +1186,37 @@ def _looks_like_command(lower_text: str) -> bool:
     if is_hitl_operation or is_pending_decision_query or is_deadline_rewrite or is_task_completion_operation:
         return True
     return (has_command or has_query) and (has_scope or has_status)
+
+
+def _looks_like_guidance_query(normalized_text: str) -> bool:
+    if not normalized_text:
+        return False
+    return any(token in normalized_text for token in GUIDANCE_QUERY_HINTS)
+
+
+def _build_system_guidance_response(lower_text: str, *, channel: str = "web") -> Optional[str]:
+    normalized = _normalize_text(lower_text)
+    if not _looks_like_guidance_query(normalized):
+        return None
+
+    is_company_onboarding = bool(
+        re.search(r"\b(cadastr(?:ar|o)|criar|novo|nova)\b", normalized)
+        and re.search(r"\b(cliente|clientes|empresa|empresas)\b", normalized)
+    )
+    if not is_company_onboarding:
+        return None
+
+    response = (
+        "Para cadastrar um cliente no Gestão Versus, use o cadastro de empresa/onboarding.\n\n"
+        "Caminho recomendado:\n"
+        "1 - Acesse Cadastros > Empresas.\n"
+        "2 - Clique em Nova empresa / Onboarding.\n"
+        "3 - Preencha nome, código do cliente e dados básicos.\n"
+        "4 - Avance pelo wizard para completar identidade, pessoas, processos e acessos.\n\n"
+        "Atalho: /companies/new\n\n"
+        "Se preferir, digite: iniciar onboarding assistido."
+    )
+    return sanitize_for_channel(response, channel=channel)
 
 
 def _is_context_disambiguation_reply(text: str, lower_text: str) -> bool:

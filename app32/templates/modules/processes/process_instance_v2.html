@@ -678,6 +678,16 @@
         }
     }
 
+    function formatDateBR(value, fallback = '') {
+        if (!value) return fallback;
+        const raw = String(value);
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+            ? new Date(Number(raw.slice(0, 4)), Number(raw.slice(5, 7)) - 1, Number(raw.slice(8, 10)))
+            : new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw || fallback;
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
     function renderWorkLogs() {
         const container = document.getElementById('workLogsHistoryTable');
         const emptyState = document.getElementById('logsEmptyState');
@@ -695,7 +705,7 @@
                         <div style="font-weight: 500;">${log.employee_name || 'Usuário'}</div>
                     </td>
                     <td>
-                        ${new Date(log.work_date).toLocaleDateString()}
+                        ${formatDateBR(log.work_date, '-')}
                     </td>
                     <td>
                         <strong>${parseFloat(log.hours_worked).toFixed(1)}h</strong>

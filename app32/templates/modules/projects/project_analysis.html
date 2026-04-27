@@ -1510,7 +1510,7 @@
                             <div class="work-log-role">${log.role || 'Colaborador'}</div>
                         </div>
                         <div class="work-log-hours">${log.worked_hours}h</div>
-                        <div style="font-size: 0.7rem; color: var(--text-tertiary);">${new Date(log.created_at).toLocaleDateString()}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-tertiary);">${new Date(log.created_at).toLocaleDateString('pt-BR')}</div>
                     `;
                     list.appendChild(div);
                 });

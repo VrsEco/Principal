@@ -361,8 +361,12 @@ function isDelayed(deadline) {
 
 function formatDate(dateString) {
     if (!dateString) return 'Sem prazo';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+    const raw = String(dateString);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+        ? new Date(Number(raw.slice(0, 4)), Number(raw.slice(5, 7)) - 1, Number(raw.slice(8, 10)))
+        : new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function filterProjects() {

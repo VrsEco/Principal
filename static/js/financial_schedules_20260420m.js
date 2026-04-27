@@ -98,26 +98,33 @@
   const round2 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
   const round4 = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 10000) / 10000;
 
+  const isValidDateParts = (day, month, year) => {
+    const dayNumber = Number(day);
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+    const candidate = new Date(yearNumber, monthNumber - 1, dayNumber);
+    return candidate.getFullYear() === yearNumber && candidate.getMonth() + 1 === monthNumber && candidate.getDate() === dayNumber;
+  };
+
   const normalizeDateInput = (value) => {
     const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
-    if (digits.length <= 4) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 4)}/${digits.slice(4)}`;
-    return `${digits.slice(0, 4)}/${digits.slice(4, 6)}/${digits.slice(6)}`;
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
   };
 
   const parseDateToIso = (value) => {
     const digits = String(value || '').replace(/\D/g, '');
     if (digits.length !== 8) return null;
-    const [year, month, day] = [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6)];
-    const candidate = new Date(Number(year), Number(month) - 1, Number(day));
-    if (candidate.getFullYear() !== Number(year) || candidate.getMonth() + 1 !== Number(month) || candidate.getDate() !== Number(day)) return null;
+    const [day, month, year] = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)];
+    if (!isValidDateParts(day, month, year)) return null;
     return `${year}-${month}-${day}`;
   };
 
   const formatIso = (value) => {
     if (!value) return '';
     const [year, month, day] = String(value).split('-');
-    return year && month && day ? `${year}/${month}/${day}` : value;
+    return year && month && day ? `${day}/${month}/${year}` : value;
   };
   const compareIsoDates = (left, right) => {
     if (!left || !right) return 0;
