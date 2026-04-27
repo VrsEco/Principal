@@ -321,6 +321,12 @@ COMMAND_SCOPE_HINTS = (
     "auditoria",
     "cliente",
     "clientes",
+    "favorecido",
+    "favorecidos",
+    "fornecedor",
+    "fornecedores",
+    "beneficiario",
+    "beneficiarios",
 )
 GUIDANCE_QUERY_HINTS = (
     "como ",
@@ -651,17 +657,17 @@ def handle_menu_message(
                 intercept_stage="root_menu",
             )
 
-        guidance_response = _build_system_guidance_response(lower, channel=channel)
-        if guidance_response:
+        guidance = _build_system_guidance_response(lower, channel=channel)
+        if guidance:
             return _attach_menu_intercept_metadata(
                 MenuInterceptResult(
                     handled=True,
-                    response_text=guidance_response,
+                    response_text=guidance["response_text"],
                     metadata={
                         "workflow_discovery": {
                             "strategy": "system_guidance",
                             "route": "answered",
-                            "topic": "company_onboarding",
+                            "topic": guidance["topic"],
                             "candidate_count": 1,
                         }
                     },
@@ -1194,29 +1200,68 @@ def _looks_like_guidance_query(normalized_text: str) -> bool:
     return any(token in normalized_text for token in GUIDANCE_QUERY_HINTS)
 
 
-def _build_system_guidance_response(lower_text: str, *, channel: str = "web") -> Optional[str]:
+def _build_system_guidance_response(lower_text: str, *, channel: str = "web") -> Optional[Dict[str, str]]:
     normalized = _normalize_text(lower_text)
     if not _looks_like_guidance_query(normalized):
         return None
 
-    is_company_onboarding = bool(
-        re.search(r"\b(cadastr(?:ar|o)|criar|novo|nova)\b", normalized)
-        and re.search(r"\b(cliente|clientes|empresa|empresas)\b", normalized)
-    )
-    if not is_company_onboarding:
+    is_create_or_register = bool(re.search(r"\b(cadastr(?:ar|o)|criar|novo|nova)\b", normalized))
+    if not is_create_or_register:
         return None
 
-    response = (
-        "Para cadastrar um cliente no Gestão Versus, use o cadastro de empresa/onboarding.\n\n"
-        "Caminho recomendado:\n"
-        "1 - Acesse Cadastros > Empresas.\n"
-        "2 - Clique em Nova empresa / Onboarding.\n"
-        "3 - Preencha nome, código do cliente e dados básicos.\n"
-        "4 - Avance pelo wizard para completar identidade, pessoas, processos e acessos.\n\n"
-        "Atalho: /companies/new\n\n"
-        "Se preferir, digite: iniciar onboarding assistido."
+    mentions_company = bool(re.search(r"\b(empresa|empresas)\b", normalized))
+    mentions_counterparty = bool(
+        re.search(r"\b(favorecido|favorecidos|fornecedor|fornecedores|beneficiario|beneficiarios)\b", normalized)
     )
-    return sanitize_for_channel(response, channel=channel)
+    mentions_client = bool(re.search(r"\b(cliente|clientes)\b", normalized))
+
+    if mentions_counterparty:
+        response = (
+            "Para cadastrar um favorecido no Gestão Versus, use o cadastro financeiro de favorecidos.\n\n"
+            "Caminho recomendado:\n"
+            "1 - Acesse Financeiro > Cadastros > Favorecidos.\n"
+            "2 - Clique em Novo favorecido.\n"
+            "3 - Informe nome/razão social, CPF/CNPJ se houver e dados financeiros padrão.\n"
+            "4 - Salve para usar o favorecido em lançamentos, agendamentos, contratos e documentos.\n\n"
+            "Atalho: /financial/catalogs/counterparties\n\n"
+            "Dica: em Lançamento Direto e Agendamentos também existe o botão Novo favorecido."
+        )
+        return {
+            "topic": "financial_counterparty",
+            "response_text": sanitize_for_channel(response, channel=channel),
+        }
+
+    if mentions_client and not mentions_company:
+        response = (
+            "No Gestão Versus, 'cliente' pode significar duas coisas. Para eu te orientar corretamente, escolha:\n\n"
+            "1 - Empresa cliente / onboarding: cadastrar uma nova empresa no sistema.\n"
+            "   Atalho: /companies/new\n\n"
+            "2 - Favorecido financeiro: cadastrar pessoa/empresa usada em lançamentos, pagamentos, recebimentos ou contratos.\n"
+            "   Atalho: /financial/catalogs/counterparties\n\n"
+            "Se sua intenção é financeiro, digite: como cadastrar favorecido."
+        )
+        return {
+            "topic": "client_ambiguous_company_or_counterparty",
+            "response_text": sanitize_for_channel(response, channel=channel),
+        }
+
+    if mentions_company:
+        response = (
+            "Para cadastrar uma empresa cliente no Gestão Versus, use o cadastro de empresa/onboarding.\n\n"
+            "Caminho recomendado:\n"
+            "1 - Acesse Cadastros > Empresas.\n"
+            "2 - Clique em Nova empresa / Onboarding.\n"
+            "3 - Preencha nome, código do cliente e dados básicos.\n"
+            "4 - Avance pelo wizard para completar identidade, pessoas, processos e acessos.\n\n"
+            "Atalho: /companies/new\n\n"
+            "Se preferir, digite: iniciar onboarding assistido."
+        )
+        return {
+            "topic": "company_onboarding",
+            "response_text": sanitize_for_channel(response, channel=channel),
+        }
+
+    return None
 
 
 def _is_context_disambiguation_reply(text: str, lower_text: str) -> bool:

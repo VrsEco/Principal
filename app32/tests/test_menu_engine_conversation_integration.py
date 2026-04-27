@@ -201,7 +201,7 @@ def test_handle_menu_message_project_task_create_full_cycle(monkeypatch):
     assert session.selected_option_id is None
 
 
-def test_handle_menu_message_orients_company_onboarding_question(monkeypatch):
+def test_handle_menu_message_disambiguates_client_guidance_question(monkeypatch):
     option = _build_project_task_option()
     session = _DummySession(option)
     _install_common_patches(monkeypatch, session, option)
@@ -215,10 +215,33 @@ def test_handle_menu_message_orients_company_onboarding_question(monkeypatch):
     )
 
     assert result.handled is True
-    assert "Para cadastrar um cliente" in result.response_text
+    assert "'cliente' pode significar duas coisas" in result.response_text
     assert "/companies/new" in result.response_text
+    assert "/financial/catalogs/counterparties" in result.response_text
     assert result.metadata["menu_engine"]["intercept_stage"] == "system_guidance"
-    assert result.metadata["workflow_discovery"]["topic"] == "company_onboarding"
+    assert result.metadata["workflow_discovery"]["topic"] == "client_ambiguous_company_or_counterparty"
+    assert session.status == "idle"
+
+
+def test_handle_menu_message_orients_financial_counterparty_question(monkeypatch):
+    option = _build_project_task_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="web",
+        thread_id="thread-1",
+        message="como cadastrar um favorecido",
+    )
+
+    assert result.handled is True
+    assert "Para cadastrar um favorecido" in result.response_text
+    assert "Financeiro > Cadastros > Favorecidos" in result.response_text
+    assert "/financial/catalogs/counterparties" in result.response_text
+    assert result.metadata["menu_engine"]["intercept_stage"] == "system_guidance"
+    assert result.metadata["workflow_discovery"]["topic"] == "financial_counterparty"
     assert session.status == "idle"
 
 
