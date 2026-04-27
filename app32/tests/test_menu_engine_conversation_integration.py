@@ -216,6 +216,11 @@ def test_handle_menu_message_disambiguates_client_guidance_question(monkeypatch)
 
     assert result.handled is True
     assert "'cliente' pode significar duas coisas" in result.response_text
+    assert "A - Empresa cliente / onboarding" in result.response_text
+    assert "B - Favorecido financeiro" in result.response_text
+    assert "Responda com A ou B" in result.response_text
+    assert "1 - Empresa cliente" not in result.response_text
+    assert "2 - Favorecido financeiro" not in result.response_text
     assert "/companies/new" in result.response_text
     assert "/financial/catalogs/counterparties" in result.response_text
     assert result.metadata["menu_engine"]["intercept_stage"] == "system_guidance"
@@ -227,7 +232,7 @@ def test_handle_menu_message_disambiguates_client_guidance_question(monkeypatch)
         company_id=None,
         channel="web",
         thread_id="thread-1",
-        message="2",
+        message="B",
     )
 
     assert result.handled is True
@@ -236,6 +241,37 @@ def test_handle_menu_message_disambiguates_client_guidance_question(monkeypatch)
     assert "Submenu 2" not in result.response_text
     assert result.metadata["workflow_discovery"]["topic"] == "financial_counterparty"
     assert session.status == "idle"
+
+
+def test_handle_menu_message_client_guidance_rejects_numeric_reply_without_opening_menu(monkeypatch):
+    option = _build_project_task_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="web",
+        thread_id="thread-1",
+        message="como eu cadastro um cliente?",
+    )
+    assert result.handled is True
+    assert session.status == menu_engine.CLIENT_GUIDANCE_DISAMBIGUATION_STATUS
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="web",
+        thread_id="thread-1",
+        message="2",
+    )
+
+    assert result.handled is True
+    assert "Responda com:" in result.response_text
+    assert "A - Empresa cliente / onboarding" in result.response_text
+    assert "B - Favorecido financeiro" in result.response_text
+    assert "Submenu 2" not in result.response_text
+    assert session.status == menu_engine.CLIENT_GUIDANCE_DISAMBIGUATION_STATUS
 
 
 def test_handle_menu_message_orients_financial_counterparty_question(monkeypatch):

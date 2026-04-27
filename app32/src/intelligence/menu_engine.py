@@ -462,7 +462,6 @@ def handle_menu_message(
             and _is_context_disambiguation_reply(text, lower)
         ) or (
             session.status == CLIENT_GUIDANCE_DISAMBIGUATION_STATUS
-            and _extract_selection_index(text) in {1, 2}
         ):
             explicit_code = None
         is_item_selection_reply = (
@@ -491,7 +490,6 @@ def handle_menu_message(
         )
         is_client_guidance_reply = (
             session.status == CLIENT_GUIDANCE_DISAMBIGUATION_STATUS
-            and _extract_selection_index(text) in {1, 2}
         )
 
         should_prompt_context_disambiguation = _should_prompt_context_disambiguation(
@@ -1266,11 +1264,11 @@ def _build_system_guidance_response(lower_text: str, *, channel: str = "web") ->
     if mentions_client and not mentions_company:
         response = (
             "No Gestão Versus, 'cliente' pode significar duas coisas. Para eu te orientar corretamente, escolha:\n\n"
-            "1 - Empresa cliente / onboarding: cadastrar uma nova empresa no sistema.\n"
+            "A - Empresa cliente / onboarding: cadastrar uma nova empresa no sistema.\n"
             "   Atalho: /companies/new\n\n"
-            "2 - Favorecido financeiro: cadastrar pessoa/empresa usada em lançamentos, pagamentos, recebimentos ou contratos.\n"
+            "B - Favorecido financeiro: cadastrar pessoa/empresa usada em lançamentos, pagamentos, recebimentos ou contratos.\n"
             "   Atalho: /financial/catalogs/counterparties\n\n"
-            "Se sua intenção é financeiro, digite: como cadastrar favorecido."
+            "Responda com A ou B."
         )
         return {
             "topic": "client_ambiguous_company_or_counterparty",
@@ -1302,10 +1300,10 @@ def _handle_client_guidance_disambiguation_state(
     text: str,
     channel: str,
 ) -> MenuInterceptResult:
-    selected_index = _extract_selection_index(text)
+    selected_choice = _extract_client_guidance_choice(text)
     normalized = _normalize_text(text)
 
-    if selected_index == 1 or "empresa" in normalized or "onboarding" in normalized:
+    if selected_choice == "A" or "empresa" in normalized or "onboarding" in normalized:
         guidance = _build_system_guidance_response("como cadastrar empresa", channel=channel)
         _reset_session(session)
         return MenuInterceptResult(
@@ -1316,13 +1314,13 @@ def _handle_client_guidance_disambiguation_state(
                     "strategy": "system_guidance_selection",
                     "route": "answered",
                     "topic": "company_onboarding",
-                    "selected_index": 1,
+                    "selected_choice": "A",
                     "candidate_count": 1,
                 }
             },
         )
 
-    if selected_index == 2 or any(token in normalized for token in ("favorecido", "fornecedor", "financeiro")):
+    if selected_choice == "B" or any(token in normalized for token in ("favorecido", "fornecedor", "financeiro")):
         guidance = _build_system_guidance_response("como cadastrar favorecido", channel=channel)
         _reset_session(session)
         return MenuInterceptResult(
@@ -1333,7 +1331,7 @@ def _handle_client_guidance_disambiguation_state(
                     "strategy": "system_guidance_selection",
                     "route": "answered",
                     "topic": "financial_counterparty",
-                    "selected_index": 2,
+                    "selected_choice": "B",
                     "candidate_count": 1,
                 }
             },
@@ -1343,10 +1341,21 @@ def _handle_client_guidance_disambiguation_state(
         handled=True,
         response_text=(
             "Responda com:\n"
-            "1 - Empresa cliente / onboarding\n"
-            "2 - Favorecido financeiro"
+            "A - Empresa cliente / onboarding\n"
+            "B - Favorecido financeiro"
         ),
     )
+
+
+def _extract_client_guidance_choice(text: str) -> Optional[str]:
+    normalized = _normalize_text(text)
+    cleaned = re.sub(r"[^a-z0-9]+", " ", normalized).strip()
+    first_token = cleaned.split(" ")[0] if cleaned else ""
+    if first_token in {"a", "empresa", "onboarding"}:
+        return "A"
+    if first_token in {"b", "favorecido", "fornecedor", "financeiro"}:
+        return "B"
+    return None
 
 
 def _is_context_disambiguation_reply(text: str, lower_text: str) -> bool:
