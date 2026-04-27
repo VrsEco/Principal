@@ -377,6 +377,7 @@ SUMMARY_ACTION_PERIOD = dict(SUMMARY_ACTION_PERIOD_MAP)
 SUMMARY_EMAIL_CONFIRM_STATUS = "awaiting_summary_email_confirmation"
 SUMMARY_EMAIL_CUSTOM_STATUS = "awaiting_summary_email_custom"
 CONTEXT_DISAMBIGUATION_STATUS = "awaiting_context_disambiguation"
+CLIENT_GUIDANCE_DISAMBIGUATION_STATUS = "awaiting_client_guidance_disambiguation"
 COMPANY_SELECTION_STATUS = "awaiting_operation_company"
 ADDITIONAL_FIELDS_STATUS = "awaiting_additional_fields"
 SUMMARY_SELECTION_STATUSES = SUMMARY_WIZARD_STATUSES | {
@@ -456,7 +457,13 @@ def handle_menu_message(
         )
 
         explicit_code = _extract_explicit_code(text, lower)
-        if session.status == CONTEXT_DISAMBIGUATION_STATUS and _is_context_disambiguation_reply(text, lower):
+        if (
+            session.status == CONTEXT_DISAMBIGUATION_STATUS
+            and _is_context_disambiguation_reply(text, lower)
+        ) or (
+            session.status == CLIENT_GUIDANCE_DISAMBIGUATION_STATUS
+            and _extract_selection_index(text) in {1, 2}
+        ):
             explicit_code = None
         is_item_selection_reply = (
             session.status == "awaiting_item_selection"
@@ -482,6 +489,10 @@ def handle_menu_message(
             session.status == "awaiting_confirmation"
             and bool(_extract_fields_from_text(text))
         )
+        is_client_guidance_reply = (
+            session.status == CLIENT_GUIDANCE_DISAMBIGUATION_STATUS
+            and _extract_selection_index(text) in {1, 2}
+        )
 
         should_prompt_context_disambiguation = _should_prompt_context_disambiguation(
             session,
@@ -502,6 +513,7 @@ def handle_menu_message(
             or is_summary_selection_reply
             or is_missing_fields_reply
             or is_confirmation_adjustment_reply
+            or is_client_guidance_reply
         ) and (_is_menu_request(lower) or explicit_code):
             _reset_session(session)
 
@@ -529,6 +541,18 @@ def handle_menu_message(
                 session=session,
                 option=selected_option,
                 intercept_stage=CONTEXT_DISAMBIGUATION_STATUS,
+            )
+
+        if session.status == CLIENT_GUIDANCE_DISAMBIGUATION_STATUS:
+            return _attach_menu_intercept_metadata(
+                _handle_client_guidance_disambiguation_state(
+                    session=session,
+                    text=text,
+                    channel=channel,
+                ),
+                session=session,
+                option=selected_option,
+                intercept_stage=CLIENT_GUIDANCE_DISAMBIGUATION_STATUS,
             )
 
         if should_prompt_context_disambiguation:
@@ -659,6 +683,14 @@ def handle_menu_message(
 
         guidance = _build_system_guidance_response(lower, channel=channel)
         if guidance:
+            if guidance["topic"] == "client_ambiguous_company_or_counterparty":
+                _transition_session_state(
+                    session=session,
+                    status=CLIENT_GUIDANCE_DISAMBIGUATION_STATUS,
+                    payload={"_client_guidance_pending": True},
+                    missing_fields=[],
+                    push_history=False,
+                )
             return _attach_menu_intercept_metadata(
                 MenuInterceptResult(
                     handled=True,
@@ -1262,6 +1294,59 @@ def _build_system_guidance_response(lower_text: str, *, channel: str = "web") ->
         }
 
     return None
+
+
+def _handle_client_guidance_disambiguation_state(
+    *,
+    session: AgentMenuSession,
+    text: str,
+    channel: str,
+) -> MenuInterceptResult:
+    selected_index = _extract_selection_index(text)
+    normalized = _normalize_text(text)
+
+    if selected_index == 1 or "empresa" in normalized or "onboarding" in normalized:
+        guidance = _build_system_guidance_response("como cadastrar empresa", channel=channel)
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=(guidance or {}).get("response_text") or "Use /companies/new para cadastrar uma empresa cliente.",
+            metadata={
+                "workflow_discovery": {
+                    "strategy": "system_guidance_selection",
+                    "route": "answered",
+                    "topic": "company_onboarding",
+                    "selected_index": 1,
+                    "candidate_count": 1,
+                }
+            },
+        )
+
+    if selected_index == 2 or any(token in normalized for token in ("favorecido", "fornecedor", "financeiro")):
+        guidance = _build_system_guidance_response("como cadastrar favorecido", channel=channel)
+        _reset_session(session)
+        return MenuInterceptResult(
+            handled=True,
+            response_text=(guidance or {}).get("response_text") or "Use /financial/catalogs/counterparties para cadastrar um favorecido.",
+            metadata={
+                "workflow_discovery": {
+                    "strategy": "system_guidance_selection",
+                    "route": "answered",
+                    "topic": "financial_counterparty",
+                    "selected_index": 2,
+                    "candidate_count": 1,
+                }
+            },
+        )
+
+    return MenuInterceptResult(
+        handled=True,
+        response_text=(
+            "Responda com:\n"
+            "1 - Empresa cliente / onboarding\n"
+            "2 - Favorecido financeiro"
+        ),
+    )
 
 
 def _is_context_disambiguation_reply(text: str, lower_text: str) -> bool:

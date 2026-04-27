@@ -220,6 +220,21 @@ def test_handle_menu_message_disambiguates_client_guidance_question(monkeypatch)
     assert "/financial/catalogs/counterparties" in result.response_text
     assert result.metadata["menu_engine"]["intercept_stage"] == "system_guidance"
     assert result.metadata["workflow_discovery"]["topic"] == "client_ambiguous_company_or_counterparty"
+    assert session.status == menu_engine.CLIENT_GUIDANCE_DISAMBIGUATION_STATUS
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="web",
+        thread_id="thread-1",
+        message="2",
+    )
+
+    assert result.handled is True
+    assert "Para cadastrar um favorecido" in result.response_text
+    assert "/financial/catalogs/counterparties" in result.response_text
+    assert "Submenu 2" not in result.response_text
+    assert result.metadata["workflow_discovery"]["topic"] == "financial_counterparty"
     assert session.status == "idle"
 
 
