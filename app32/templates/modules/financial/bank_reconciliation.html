@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block workspace_content %}
-<div class="recon-page fade-in" data-company-id="{{ company_id or '' }}">
+<div class="recon-page fade-in" data-company-id="{{ company_id or (active_company.id if active_company else '') }}">
     <header class="recon-header">
         <div>
             <p class="recon-eyebrow">Gestão Financeira · Conciliação operacional</p>
@@ -178,7 +178,17 @@
 </style>
 
 <script>
-const companyId = Number(document.querySelector('.recon-page')?.dataset.companyId);
+function resolveCompanyId(){
+    const fromPage = Number(document.querySelector('.recon-page')?.dataset.companyId || 0);
+    if(Number.isFinite(fromPage) && fromPage > 0) return fromPage;
+    const fromWindow = Number(window.companyId || 0);
+    if(Number.isFinite(fromWindow) && fromWindow > 0) return fromWindow;
+    const fromUrl = Number(new URLSearchParams(window.location.search).get('company_id') || 0);
+    if(Number.isFinite(fromUrl) && fromUrl > 0) return fromUrl;
+    return null;
+}
+
+let companyId = resolveCompanyId();
 const state = {
     accounts: [],
     selectedBankAccountId: null,
@@ -194,8 +204,40 @@ const state = {
 
 function brl(value){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value || 0)); }
 function badge(label, kind='mute'){ return `<span class="badge badge--${kind}">${label}</span>`; }
-async function api(url, options={}){ const response = await fetch(url, options); const payload = await response.json(); if(!response.ok) throw new Error(payload.error || 'Falha na operação.'); return payload; }
+function companyQuery(extra={}){
+    const params = new URLSearchParams();
+    if(companyId) params.set('company_id', companyId);
+    Object.entries(extra || {}).forEach(([key, value]) => {
+        if(value !== null && value !== undefined && value !== '') params.set(key, value);
+    });
+    const text = params.toString();
+    return text ? `?${text}` : '';
+}
+async function api(url, options={}){
+    const response = await fetch(url, options);
+    const contentType = response.headers.get('content-type') || '';
+    const payload = contentType.includes('application/json')
+        ? await response.json()
+        : { error: await response.text() };
+    if(!response.ok) throw new Error(payload.error || 'Falha na operação.');
+    return payload;
+}
 function escapeHtml(value){ return String(value || '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+function renderAccountsError(message){
+    const grid = document.getElementById('accounts-grid');
+    const uploadSelect = document.getElementById('upload-bank-account');
+    if(grid){
+        grid.innerHTML = `
+            <div class="account-card">
+                <h3>Não foi possível carregar as contas bancárias</h3>
+                <p>${escapeHtml(message || 'Atualize a página ou selecione novamente a empresa no topo.')}</p>
+                <div class="inline-actions">
+                    <button type="button" class="btn btn-primary" onclick="loadOverview()">Tentar novamente</button>
+                </div>
+            </div>`;
+    }
+    if(uploadSelect) uploadSelect.innerHTML = '<option value="">Erro ao carregar contas</option>';
+}
 
 function rowStatusKind(row){
     if(row?.created_entry_id || row?.matches?.confirmed_count) return 'ok';
@@ -348,7 +390,7 @@ function renderSystemRows(){
                 ${badge(item.match_mode || 'unmatched', 'mute')}
             </div>
             <div class="inline-actions">
-                <a class="btn btn-secondary" href="/financial/entries/${item.id}?company_id=${companyId}" style="text-decoration:none;">Abrir lançamento</a>
+                <a class="btn btn-secondary" href="/financial/entries/${item.id}${companyQuery()}" style="text-decoration:none;">Abrir lançamento</a>
                 ${!selectedIds.has(Number(item.id)) ? `<button type="button" class="btn btn-secondary" onclick="toggleEntrySelection(${item.id})">Selecionar</button>` : ''}
             </div>
         </article>
@@ -498,11 +540,19 @@ function renderWorkspace(){
 }
 
 async function loadOverview(){
-    state.accounts = (await api(`/api/financial/reconciliation/overview?company_id=${companyId}`)).items || [];
-    renderAccounts();
+    try{
+        companyId = resolveCompanyId();
+        const payload = await api(`/api/financial/reconciliation/overview${companyQuery()}`);
+        state.accounts = payload.items || [];
+        renderAccounts();
+    } catch(error){
+        console.error('Falha ao carregar contas bancárias da conciliação:', error);
+        renderAccountsError(error.message);
+    }
 }
 
 async function openWorkspace(bankAccountId, batchId=null){
+    companyId = resolveCompanyId();
     state.selectedBankAccountId = bankAccountId;
     state.selectedBatchId = batchId;
     state.selectedEntryIds = [];
@@ -510,9 +560,7 @@ async function openWorkspace(bankAccountId, batchId=null){
     state.rowCandidates = {};
     state.showCreateEntry = false;
     renderAccounts();
-    const params = new URLSearchParams({ company_id: companyId, bank_account_id: bankAccountId });
-    if(batchId) params.set('batch_id', batchId);
-    state.workspace = await api(`/api/financial/reconciliation/workspace?${params.toString()}`);
+    state.workspace = await api(`/api/financial/reconciliation/workspace${companyQuery({bank_account_id: bankAccountId, batch_id: batchId})}`);
     const preferredRow = (state.workspace.bank_rows_without_link || [])[0] || (state.workspace.bank_rows_with_suggestion || [])[0] || (state.workspace.bank_rows || [])[0] || null;
     state.activeRowId = preferredRow?.id || null;
     if(state.activeRowId) await loadCandidates(state.activeRowId);
@@ -532,7 +580,7 @@ function setBankFilter(filterKey){
 }
 
 async function loadCandidates(rowId){
-    state.rowCandidates[rowId] = await api(`/api/financial/reconciliation/rows/${rowId}/candidates?company_id=${companyId}&limit=8`);
+    state.rowCandidates[rowId] = await api(`/api/financial/reconciliation/rows/${rowId}/candidates${companyQuery({limit: 8})}`);
 }
 
 async function selectBankRow(rowId){
@@ -572,7 +620,7 @@ function clearSelectedEntries(){
 }
 
 async function confirmSuggestedMatch(matchId){
-    await api(`/api/financial/reconciliation-matches/${matchId}/review?company_id=${companyId}`, {
+    await api(`/api/financial/reconciliation-matches/${matchId}/review${companyQuery()}`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ decision:'confirmed' }),
@@ -591,7 +639,7 @@ async function confirmSelectedMatches(){
         financial_entry_id: item.financial_entry_id,
         principal_amount: Number(item.principal_amount || 0),
     }));
-    await api(`/api/financial/reconciliation/rows/${row.id}/match?company_id=${companyId}`, {
+    await api(`/api/financial/reconciliation/rows/${row.id}/match${companyQuery()}`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -611,7 +659,7 @@ async function cancelRowReconciliation(){
     if(!row) return;
     const reason = window.prompt('Informe o motivo do cancelamento da conciliação:');
     if(reason === null) return;
-    await api(`/api/financial/reconciliation/rows/${row.id}/match?company_id=${companyId}`, {
+    await api(`/api/financial/reconciliation/rows/${row.id}/match${companyQuery()}`, {
         method:'DELETE',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ reason }),
@@ -635,7 +683,7 @@ async function submitCreateEntry(event){
     ['counterparty_id','chart_account_id','cost_center_id','bank_account_id'].forEach((field) => {
         payload[field] = payload[field] ? Number(payload[field]) : null;
     });
-    await api(`/api/financial/reconciliation/rows/${row.id}/create-entry?company_id=${companyId}`, {
+    await api(`/api/financial/reconciliation/rows/${row.id}/create-entry${companyQuery()}`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(payload),
@@ -650,7 +698,7 @@ document.getElementById('upload-form').addEventListener('submit', async (event) 
     const formData = new FormData(event.currentTarget);
     formData.append('integration_channel', 'file');
     formData.append('reconciliation_mode', '1');
-    const payload = await api(`/api/financial/imports?company_id=${companyId}`, { method:'POST', body: formData });
+    const payload = await api(`/api/financial/imports${companyQuery()}`, { method:'POST', body: formData });
     const reconciliationSummary = payload.reconciliation
         ? ` Sugestões automáticas: ${payload.reconciliation.suggested_count || 0}. Sem match: ${payload.reconciliation.unmatched_count || 0}.`
         : '';
