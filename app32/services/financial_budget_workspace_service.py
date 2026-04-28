@@ -1178,6 +1178,13 @@ class FinancialBudgetWorkspaceService:
             or document_metadata.get("domain_type")
             or default_suggestions.get("domain_type")
         )
+        domain_source_kind = (
+            line_metadata.get("domain_source_kind")
+            or contract_metadata.get("domain_source_kind")
+            or document_metadata.get("domain_source_kind")
+            or default_suggestions.get("domain_source_kind")
+            or "routine"
+        )
         domain_source_id = (
             line_metadata.get("domain_source_id")
             or contract_metadata.get("domain_source_id")
@@ -1203,6 +1210,7 @@ class FinancialBudgetWorkspaceService:
             "contract_metadata": contract_metadata,
             "document_metadata": document_metadata,
             "domain_type": domain_type,
+            "domain_source_kind": domain_source_kind,
             "domain_source_id": domain_source_id,
             "domain_label": domain_label,
         }, None
@@ -1237,6 +1245,7 @@ class FinancialBudgetWorkspaceService:
             default_suggestions=context.get("default_suggestions"),
             default_correction_index_id=context.get("default_correction_index_id"),
             domain_type=context.get("domain_type"),
+            domain_source_kind=context.get("domain_source_kind"),
             domain_source_id=context.get("domain_source_id"),
             domain_label=context.get("domain_label"),
         )

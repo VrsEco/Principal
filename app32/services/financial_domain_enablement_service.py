@@ -27,7 +27,21 @@ class FinancialDomainEnablementService:
         return FinancialDomainEnablementService.DOMAIN_MODELS.get(str(domain_type or "").strip().lower())
 
     @staticmethod
-    def _load_source(company_id: int, domain_type: str, source_id: int):
+    def _load_source(company_id: int, domain_type: str, source_id: int, source_kind: str = "routine"):
+        normalized_kind = str(source_kind or "routine").strip().lower() or "routine"
+        if normalized_kind == "manual":
+            from services.financial_manual_domain_service import FinancialManualDomainService
+
+            item, error = FinancialManualDomainService.load_item(
+                company_id=company_id,
+                item_id=source_id,
+            )
+            if error:
+                return None, error
+            if item.domain_type != str(domain_type or "").strip().lower():
+                return None, "Cadastro manual incompatível com o tipo de projeto/processo informado."
+            return item, None
+
         model = FinancialDomainEnablementService._get_model(domain_type)
         if not model:
             return None, "Tipo de vínculo financeiro inválido."

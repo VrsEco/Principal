@@ -33,6 +33,7 @@ from services.financial_classification_hybrid_service import FinancialClassifica
 from services.financial_classification_dashboard_service import FinancialClassificationDashboardService
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
+from services.financial_manual_domain_service import FinancialManualDomainService
 from services.financial_report_service import FinancialReportService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_title_calculation_service import FinancialTitleCalculationService
@@ -339,6 +340,61 @@ class FinancialDomainEnablementToggleResource(Resource):
             domain_type=domain_type,
             source_id=source_id,
             is_enabled=bool(payload.get("is_enabled")),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
+class FinancialManualDomainListResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialManualDomainService.list_items(
+            company_id=company_id,
+            domain_type=request.args.get("domain_type"),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "create")
+    def post(self):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialManualDomainService.create_item(
+            company_id=company_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
+class FinancialManualDomainResource(Resource):
+    @permission_required("financial", "edit")
+    def put(self, item_id: int):
+        company_id = get_request_company_id()
+        payload = _sanitize_update_payload(request.get_json(silent=True))
+        result, error = FinancialManualDomainService.update_item(
+            company_id=company_id,
+            item_id=item_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "delete")
+    def delete(self, item_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialManualDomainService.delete_item(
+            company_id=company_id,
+            item_id=item_id,
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

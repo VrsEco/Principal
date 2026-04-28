@@ -26,6 +26,7 @@ from models.financial import (
     IMPORT_ROW_STATUS_VALUES,
     IMPORT_SOURCE_VALUES,
     CLASSIFICATION_OPERATOR_VALUES,
+    DOMAIN_SOURCE_KIND_VALUES,
     MOVEMENT_NATURE_VALUES,
     RECONCILIATION_STATUS_VALUES,
     REVIEW_STATUS_VALUES,
@@ -673,6 +674,43 @@ class FinancialDomainEnablementUpdateInput(BaseModel):
         return _normalize_text(value)
 
 
+class FinancialManualDomainInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    domain_type: str = Field(..., pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
+    code: Optional[str] = Field(None, max_length=40)
+    name: str = Field(..., min_length=2, max_length=160)
+    is_active: bool = True
+    is_enabled: bool = True
+    is_default_suggestion: bool = False
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("code", "name", "notes", mode="before")
+    @classmethod
+    def normalize_text_fields(cls, value):
+        return _normalize_text(value)
+
+
+class FinancialManualDomainUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    domain_type: Optional[str] = Field(None, pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
+    code: Optional[str] = Field(None, max_length=40)
+    name: Optional[str] = Field(None, min_length=2, max_length=160)
+    is_active: Optional[bool] = None
+    is_enabled: Optional[bool] = None
+    is_default_suggestion: Optional[bool] = None
+    notes: Optional[str] = None
+    metadata_json: Optional[Dict[str, Any]] = None
+
+    @field_validator("code", "name", "notes", mode="before")
+    @classmethod
+    def normalize_text_fields(cls, value):
+        return _normalize_text(value)
+
+
 class FinancialCounterpartyInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1248,6 +1286,7 @@ class FinancialDirectEntryAllocationInput(BaseModel):
     budget_contract_id: Optional[int] = None
     budget_document_id: Optional[int] = None
     domain_type: Optional[str] = Field(None, pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
+    domain_source_kind: Optional[str] = Field("routine", pattern=_choices_pattern(DOMAIN_SOURCE_KIND_VALUES))
     domain_source_id: Optional[int] = None
     domain_label: Optional[str] = Field(None, max_length=255)
     allocation_type: str = Field(..., pattern=_choices_pattern(ALLOCATION_TYPE_VALUES))

@@ -14,6 +14,7 @@ from models.financial_budget import (
 )
 from schemas.financial import FinancialDirectEntryCreateInput
 from services.financial_catalog_service import FinancialCatalogService
+from services.financial_manual_domain_service import FinancialManualDomainService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
 
@@ -216,6 +217,10 @@ class FinancialDirectEntryService:
                         "budget_line_id": item.budget_line_id,
                         "budget_contract_id": item.budget_contract_id,
                         "budget_document_id": item.budget_document_id,
+                        "domain_source_kind": item.domain_source_kind or "routine",
+                        "domain_type": item.domain_type,
+                        "domain_source_id": item.domain_source_id,
+                        "domain_label": item.domain_label,
                         "allocation_type": item.allocation_type,
                         "percentage": item.percentage,
                         "allocated_amount": item.allocated_amount,
@@ -276,6 +281,7 @@ class FinancialDirectEntryService:
                     "notes": item.notes,
                     "metadata_json": {
                         **(item.metadata_json or {}),
+                        "domain_source_kind": item.domain_source_kind or "routine",
                         "domain_type": item.domain_type,
                         "domain_source_id": item.domain_source_id,
                         "domain_label": item.domain_label,
@@ -347,7 +353,11 @@ class FinancialDirectEntryService:
         allocations: Sequence[Any],
     ) -> Optional[str]:
         selected_pairs = {
-            (item.domain_type, int(item.domain_source_id))
+            (
+                str(item.domain_source_kind or "routine").strip().lower() or "routine",
+                item.domain_type,
+                int(item.domain_source_id),
+            )
             for item in allocations
             if item.domain_type and item.domain_source_id
         }
@@ -355,15 +365,21 @@ class FinancialDirectEntryService:
             return None
 
         enabled_pairs = {
-            (record.domain_type, int(record.source_id))
+            ("routine", record.domain_type, int(record.source_id))
             for record in FinancialDomainEnablement.query.filter(
                 FinancialDomainEnablement.company_id == company_id,
                 FinancialDomainEnablement.deleted_at.is_(None),
                 FinancialDomainEnablement.is_enabled.is_(True),
             ).all()
         }
-        for domain_type, source_id in selected_pairs:
-            if (domain_type, source_id) not in enabled_pairs:
+        manual_enabled, error = FinancialManualDomainService.list_enabled_items(company_id=company_id)
+        if error:
+            return error
+        for record in manual_enabled or []:
+            enabled_pairs.add(("manual", record["domain_type"], int(record["source_id"])))
+
+        for source_kind, domain_type, source_id in selected_pairs:
+            if (source_kind, domain_type, source_id) not in enabled_pairs:
                 label = "projeto" if domain_type == "project" else "processo"
                 return f"O {label} selecionado no rateio não está habilitado no Financeiro."
         return None
@@ -416,6 +432,7 @@ class FinancialDirectEntryService:
                     "allocation_type": item.allocation_type,
                     "percentage": item.percentage,
                     "allocated_amount": item.allocated_amount,
+                    "domain_source_kind": item.domain_source_kind or "routine",
                     "domain_type": item.domain_type,
                     "domain_source_id": item.domain_source_id,
                     "domain_label": item.domain_label,

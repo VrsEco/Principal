@@ -236,10 +236,6 @@
     document.querySelectorAll('.repeat-field').forEach((field) => field.classList.toggle('hidden', !enabled));
   };
 
-  const normalizeCompetenceMode = (value) => (
-    String(value || '').trim() === 'due_date' ? 'due_date' : 'same_competence'
-  );
-
   const buildOptions = (items, placeholder, formatter) => [`<option value="">${placeholder}</option>`]
     .concat((items || []).map((item) => `<option value="${item.id}">${formatter ? formatter(item) : (item.display_label || item.name || item.code || item.id)}</option>`))
     .join('');
@@ -248,7 +244,10 @@
     const groups = ['project', 'process'].map((domainType) => {
       const options = optionsCache.enabled_domains
         .filter((item) => item.domain_type === domainType)
-        .map((item) => `<option value="${domainType}:${item.source_id}" ${value === `${domainType}:${item.source_id}` ? 'selected' : ''}>${item.display_label}</option>`).join('');
+        .map((item) => {
+          const optionValue = item.domain_value || `${item.source_kind || 'routine'}:${domainType}:${item.source_id}`;
+          return `<option value="${optionValue}" ${value === optionValue ? 'selected' : ''}>${item.display_label}</option>`;
+        }).join('');
       return options ? `<optgroup label="${domainType === 'project' ? 'Projetos' : 'Processos'}">${options}</optgroup>` : '';
     }).join('');
     return `<option value="">Selecione...</option>${groups}`;
@@ -490,6 +489,7 @@
 
     const suggestions = defaultSuggestions();
     const domainType = config.domain_type || suggestions.domain_type || null;
+    const domainSourceKind = config.domain_source_kind || suggestions.domain_source_kind || 'routine';
     const domainSourceId = config.domain_source_id || suggestions.domain_source_id || null;
     const defaults = {
       chart_account_id: asOptionValue(config.chart_account_id || ''),
@@ -502,10 +502,11 @@
       budget_contract_code: null,
       budget_document_id: '',
       budget_document_code: null,
+      domain_source_kind: domainSourceKind,
       domain_type: domainType,
       domain_source_id: domainSourceId,
       domain_label: config.domain_label || suggestions.domain_label || null,
-      domain_value: domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '',
+      domain_value: domainType && domainSourceId ? `${domainSourceKind}:${domainType}:${domainSourceId}` : '',
       adjustment_kind: kind,
       adjustment_label: config.adjustment_label || null,
       notes: config.notes || null,
@@ -521,6 +522,7 @@
         ...defaults,
         chart_account_id: current.chart_account_id || defaults.chart_account_id,
         cost_center_id: current.cost_center_id || defaults.cost_center_id,
+        domain_source_kind: current.domain_source_kind || defaults.domain_source_kind,
         domain_type: current.domain_type || defaults.domain_type,
         domain_source_id: current.domain_source_id || defaults.domain_source_id,
         domain_label: current.domain_label || defaults.domain_label,
@@ -569,6 +571,7 @@
     allocationRows.push({
       chart_account_id: '',
       cost_center_id: '',
+      domain_source_kind: 'routine',
       domain_type: null,
       domain_source_id: null,
       domain_label: null,
@@ -625,6 +628,7 @@
 
   function createAllocationRow(defaults = {}) {
     const suggestions = defaultSuggestions();
+    const domainSourceKind = defaults.domain_source_kind || suggestions.domain_source_kind || 'routine';
     const domainType = defaults.domain_type || suggestions.domain_type || null;
     const domainSourceId = defaults.domain_source_id || suggestions.domain_source_id || null;
     return {
@@ -638,10 +642,11 @@
       budget_contract_code: defaults.budget_contract_code || null,
       budget_document_id: asOptionValue(defaults.budget_document_id || suggestions.budget_document_id || ''),
       budget_document_code: defaults.budget_document_code || null,
+      domain_source_kind: domainSourceKind,
       domain_type: domainType,
       domain_source_id: domainSourceId,
       domain_label: defaults.domain_label || suggestions.domain_label || null,
-      domain_value: domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '',
+      domain_value: domainType && domainSourceId ? `${domainSourceKind}:${domainType}:${domainSourceId}` : '',
       adjustment_kind: defaults.adjustment_kind || null,
       adjustment_label: defaults.adjustment_label || null,
       percentage: defaults.percentage ?? '100',
@@ -971,6 +976,7 @@
       budget_contract_code: item.budget_contract_code || item.metadata_json?.budget_contract_code || null,
       budget_document_id: item.budget_document_id || item.metadata_json?.budget_document_id || '',
       budget_document_code: item.budget_document_code || item.metadata_json?.budget_document_code || null,
+      domain_source_kind: item.domain_source_kind || item.metadata_json?.domain_source_kind || 'routine',
       domain_type: item.domain_type || null,
       domain_source_id: item.domain_source_id || null,
       domain_label: item.domain_label || null,
@@ -1013,7 +1019,6 @@
     setFieldValue('field-frequency', schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly');
     setFieldValue('field-interval-value', schedule.interval_value || 1);
     setFieldValue('field-repeat-count', schedule.metadata_json?.repeat_count || 1);
-    setFieldValue('field-competence-mode', normalizeCompetenceMode(schedule.metadata_json?.competence_mode));
     clearPendingAttachments();
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
@@ -1080,7 +1085,6 @@
     syncAdjustmentAllocationRows();
     validateAllocationSummary();
     const frequency = fieldValue('field-repeat-toggle', 'false') === 'true' ? fieldValue('field-frequency', 'weekly') : 'one_time';
-    const competenceMode = normalizeCompetenceMode(fieldValue('field-competence-mode', 'same_competence'));
     const primaryAllocation = getBaseAllocationRows()[0] || allocationRows[0] || {};
     const isUpdate = Boolean(form.schedule_id?.value);
     return {
@@ -1116,7 +1120,6 @@
         discount_rule_id: Number(fieldValue('field-discount-rule') || 0) || null,
         discount_amount_override: $('field-discount-configured')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
         repeat_count: Number(fieldValue('field-repeat-count', '1') || 1),
-        competence_mode: frequency === 'one_time' ? 'same_competence' : competenceMode,
         attachments: selectedSchedule?.attachments || [],
         counterparty_name: $('field-counterparty')?.selectedOptions?.[0]?.textContent || null,
         allocations: getBaseAllocationRows().map((row) => ({
@@ -1130,6 +1133,7 @@
           budget_contract_code: row.budget_contract_code || null,
           budget_document_id: Number(row.budget_document_id || 0) || null,
           budget_document_code: row.budget_document_code || null,
+          domain_source_kind: row.domain_source_kind || 'routine',
           domain_type: row.domain_type || null,
           domain_source_id: row.domain_source_id || null,
           domain_label: row.domain_label || null,
@@ -1216,7 +1220,6 @@
     $('baixas-tab-button')?.classList.add('hidden');
     $('calculation-log-tab-button')?.classList.add('hidden');
     setFieldValue('field-frequency', 'weekly');
-    setFieldValue('field-competence-mode', 'same_competence');
     setDiscountAmountField(0, { manual: false });
     window.toggleRepeatFields();
     syncAdjustmentAllocationRows();
@@ -1794,13 +1797,15 @@
       const value = event.target.value;
       allocationRows[index].domain_value = value;
       if (!value) {
+        allocationRows[index].domain_source_kind = 'routine';
         allocationRows[index].domain_type = null;
         allocationRows[index].domain_source_id = null;
         allocationRows[index].domain_label = null;
         return;
       }
-      const [domainType, sourceId] = value.split(':');
-      const item = optionsCache.enabled_domains.find((candidate) => candidate.domain_type === domainType && String(candidate.source_id) === String(sourceId));
+      const [sourceKind, domainType, sourceId] = value.split(':');
+      const item = optionsCache.enabled_domains.find((candidate) => (candidate.domain_value || `${candidate.source_kind || 'routine'}:${candidate.domain_type}:${candidate.source_id}`) === value);
+      allocationRows[index].domain_source_kind = sourceKind || 'routine';
       allocationRows[index].domain_type = domainType;
       allocationRows[index].domain_source_id = Number(sourceId);
       allocationRows[index].domain_label = item?.display_label || null;

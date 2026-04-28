@@ -74,6 +74,7 @@ def test_create_direct_entry_passes_due_date_to_schedule_allocation_validation(m
     assert captured["template_amount"] == Decimal("100000.00")
     assert captured["due_date"] == date(2026, 3, 29)
     assert captured["metadata_json"]["allocations"][0]["chart_account_id"] == 7
+    assert captured["metadata_json"]["allocations"][0]["domain_source_kind"] == "routine"
 
 
 def test_build_schedule_payload_delegates_schedule_code_generation():
@@ -104,3 +105,103 @@ def test_build_schedule_payload_delegates_schedule_code_generation():
     )
 
     assert "schedule_code" not in payload
+
+
+def test_build_schedule_payload_keeps_manual_domain_source_kind():
+    payload = FinancialDirectEntryService._build_schedule_payload(
+        FinancialDirectEntryCreateInput.model_validate(
+            {
+                "company_id": 9,
+                "entry_type": "receivable",
+                "description": "Teste manual",
+                "document_number": "DOC-2",
+                "counterparty_id": 1,
+                "bank_account_id": 2,
+                "competence_date": date(2026, 3, 29),
+                "occurred_on": date(2026, 3, 29),
+                "due_date": date(2026, 3, 30),
+                "original_amount": Decimal("2500.00"),
+                "allocations": [
+                    {
+                        "chart_account_id": 7,
+                        "cost_center_id": 6,
+                        "domain_source_kind": "manual",
+                        "domain_type": "project",
+                        "domain_source_id": 44,
+                        "domain_label": "PRJ-MAN-44 - Projeto Manual",
+                        "allocation_type": "amount",
+                        "allocated_amount": Decimal("2500.00"),
+                        "metadata_json": {},
+                    }
+                ],
+            }
+        )
+    )
+
+    allocation = payload["metadata_json"]["allocations"][0]
+    assert allocation["domain_source_kind"] == "manual"
+    assert allocation["domain_type"] == "project"
+    assert allocation["domain_source_id"] == 44
+
+
+def test_validate_enabled_domains_accepts_manual_records(monkeypatch):
+    class _Column:
+        def __eq__(self, other):
+            return self
+
+        def is_(self, other):
+            return self
+
+    class _RoutineRecord:
+        def __init__(self, domain_type, source_id):
+            self.domain_type = domain_type
+            self.source_id = source_id
+
+    class _RoutineQuery:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return [_RoutineRecord("project", 10)]
+
+    monkeypatch.setattr(
+        direct_entry_module,
+        "FinancialDomainEnablement",
+        type(
+            "RoutineEnablementStub",
+            (),
+            {
+                "query": _RoutineQuery(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "is_enabled": _Column(),
+            },
+        ),
+    )
+
+    class _Allocation:
+        domain_source_kind = "manual"
+        domain_type = "process"
+        domain_source_id = 33
+
+    monkeypatch.setattr(
+        direct_entry_module,
+        "FinancialManualDomainService",
+        type(
+            "ManualSvcStub",
+            (),
+            {
+                "list_enabled_items": staticmethod(
+                    lambda **kwargs: ([{"domain_type": "process", "source_id": 33}], None)
+                )
+            },
+        ),
+        raising=False,
+    )
+
+    error = FinancialDirectEntryService._validate_enabled_domains(
+        company_id=9,
+        allocations=[_Allocation()],
+    )
+
+    assert error is None

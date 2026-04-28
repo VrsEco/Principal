@@ -36,6 +36,7 @@ from schemas.financial import FinancialScheduleCreateInput, FinancialScheduleUpd
 from services.financial_budget_schedule_policy import FinancialBudgetSchedulePolicy
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
+from services.financial_manual_domain_service import FinancialManualDomainService
 from services.financial_service import FinancialService
 from services.financial_title_amount_service import FinancialTitleAmountService
 from services.financial_title_balance_service import FinancialTitleBalanceService
@@ -48,6 +49,21 @@ class FinancialScheduleService:
     AUTO_GENERATED_SCHEDULE_CODE_MAX_ATTEMPTS = 5
     COMPETENCE_MODE_SAME = "same_competence"
     COMPETENCE_MODE_DUE_DATE = "due_date"
+
+    @staticmethod
+    def _normalize_domain_source_kind(value: Any) -> str:
+        return "manual" if str(value or "").strip().lower() == "manual" else "routine"
+
+    @staticmethod
+    def _build_domain_value(
+        domain_type: Optional[str],
+        domain_source_id: Optional[int],
+        domain_source_kind: Optional[str] = None,
+    ) -> str:
+        if not domain_type or domain_source_id in ("", None):
+            return ""
+        normalized_kind = FinancialScheduleService._normalize_domain_source_kind(domain_source_kind)
+        return f"{normalized_kind}:{domain_type}:{domain_source_id}"
 
     @staticmethod
     def _sanitize_json(value: Any) -> Any:
@@ -201,6 +217,7 @@ class FinancialScheduleService:
         default_suggestions: Optional[Dict[str, Any]] = None,
         default_correction_index_id: Optional[int] = None,
         domain_type: Optional[str] = None,
+        domain_source_kind: Optional[str] = None,
         domain_source_id: Optional[int] = None,
         domain_label: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -223,12 +240,13 @@ class FinancialScheduleService:
         effective_due_date = due_date
         effective_competence_date = competence_date or due_date
         effective_domain_type = domain_type
+        effective_domain_source_kind = FinancialScheduleService._normalize_domain_source_kind(domain_source_kind)
         effective_domain_source_id = domain_source_id
         effective_domain_label = domain_label
-        domain_value = (
-            f"{effective_domain_type}:{effective_domain_source_id}"
-            if effective_domain_type and effective_domain_source_id is not None
-            else ""
+        domain_value = FinancialScheduleService._build_domain_value(
+            effective_domain_type,
+            effective_domain_source_id,
+            effective_domain_source_kind,
         )
         correction_index_id = base_metadata.get("correction_index_id") or default_correction_index_id
         allocation_notes = f"{normalized_label} | {document.title}"
@@ -254,6 +272,7 @@ class FinancialScheduleService:
             "budget_document_title": document.title,
             "contract_name": contract.name,
             "domain_type": effective_domain_type,
+            "domain_source_kind": effective_domain_source_kind,
             "domain_source_id": effective_domain_source_id,
             "domain_label": effective_domain_label,
             "domain_value": domain_value,
@@ -269,6 +288,7 @@ class FinancialScheduleService:
             due_date=effective_due_date,
             allocation_notes=allocation_notes,
             domain_type=effective_domain_type,
+            domain_source_kind=effective_domain_source_kind,
             domain_source_id=effective_domain_source_id,
             domain_label=effective_domain_label,
             domain_value=domain_value,
@@ -317,6 +337,7 @@ class FinancialScheduleService:
         due_date: Any,
         allocation_notes: str,
         domain_type: Optional[str],
+        domain_source_kind: Optional[str],
         domain_source_id: Optional[int],
         domain_label: Optional[str],
         domain_value: str,
@@ -330,6 +351,7 @@ class FinancialScheduleService:
                 "allocated_amount": float(template_amount),
                 "notes": allocation_notes,
                 "domain_type": domain_type,
+                "domain_source_kind": FinancialScheduleService._normalize_domain_source_kind(domain_source_kind),
                 "domain_source_id": domain_source_id,
                 "domain_label": domain_label,
                 "domain_value": domain_value,
@@ -358,6 +380,7 @@ class FinancialScheduleService:
         chart_account_id: Optional[int],
         cost_center_id: Optional[int],
         domain_type: Optional[str],
+        domain_source_kind: Optional[str],
         domain_source_id: Optional[int],
         domain_label: Optional[str],
         domain_value: str,
@@ -371,6 +394,7 @@ class FinancialScheduleService:
             "allocated_amount": float(amount),
             "notes": notes,
             "domain_type": domain_type,
+            "domain_source_kind": FinancialScheduleService._normalize_domain_source_kind(domain_source_kind),
             "domain_source_id": domain_source_id,
             "domain_label": domain_label,
             "domain_value": domain_value,
@@ -469,6 +493,10 @@ class FinancialScheduleService:
             metadata_json=normalized_metadata_json,
             fallback_chart_account_id=data.chart_account_id,
             fallback_cost_center_id=data.cost_center_id,
+            fallback_domain_type=normalized_metadata_json.get("domain_type"),
+            fallback_domain_source_kind=normalized_metadata_json.get("domain_source_kind"),
+            fallback_domain_source_id=normalized_metadata_json.get("domain_source_id"),
+            fallback_domain_label=normalized_metadata_json.get("domain_label"),
         )
 
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
@@ -624,6 +652,10 @@ class FinancialScheduleService:
             metadata_json=merged_metadata_json,
             fallback_chart_account_id=merged.get("chart_account_id", schedule.chart_account_id),
             fallback_cost_center_id=merged.get("cost_center_id", schedule.cost_center_id),
+            fallback_domain_type=merged_metadata_json.get("domain_type"),
+            fallback_domain_source_kind=merged_metadata_json.get("domain_source_kind"),
+            fallback_domain_source_id=merged_metadata_json.get("domain_source_id"),
+            fallback_domain_label=merged_metadata_json.get("domain_label"),
         )
 
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
@@ -1253,6 +1285,10 @@ class FinancialScheduleService:
             metadata_json=metadata,
             fallback_chart_account_id=getattr(schedule, "chart_account_id", None),
             fallback_cost_center_id=getattr(schedule, "cost_center_id", None),
+            fallback_domain_type=metadata.get("domain_type"),
+            fallback_domain_source_kind=metadata.get("domain_source_kind"),
+            fallback_domain_source_id=metadata.get("domain_source_id"),
+            fallback_domain_label=metadata.get("domain_label"),
         )
         if not raw_allocations:
             return None
@@ -1281,6 +1317,7 @@ class FinancialScheduleService:
                     "metadata_json": {
                         **row_metadata,
                         "domain_type": item.get("domain_type"),
+                        "domain_source_kind": item.get("domain_source_kind"),
                         "domain_source_id": item.get("domain_source_id"),
                         "domain_label": item.get("domain_label"),
                         "budget_version_id": item.get("budget_version_id"),
@@ -1311,6 +1348,7 @@ class FinancialScheduleService:
         fallback_chart_account_id: Optional[int] = None,
         fallback_cost_center_id: Optional[int] = None,
         fallback_domain_type: Optional[str] = None,
+        fallback_domain_source_kind: Optional[str] = None,
         fallback_domain_source_id: Optional[int] = None,
         fallback_domain_label: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
@@ -1335,6 +1373,17 @@ class FinancialScheduleService:
                 row.get("allocation_type")
                 or ("amount" if row.get("allocated_amount") not in ("", None) else "percentage")
             ).strip().lower() or "percentage"
+            row["domain_type"] = row.get("domain_type") or fallback_domain_type
+            row["domain_source_kind"] = FinancialScheduleService._normalize_domain_source_kind(
+                row.get("domain_source_kind") or fallback_domain_source_kind
+            )
+            row["domain_source_id"] = row.get("domain_source_id") or fallback_domain_source_id
+            row["domain_label"] = row.get("domain_label") or fallback_domain_label
+            row["domain_value"] = FinancialScheduleService._build_domain_value(
+                row.get("domain_type"),
+                row.get("domain_source_id"),
+                row.get("domain_source_kind"),
+            )
             normalized_allocations.append(row)
 
         return normalized_allocations
@@ -1438,6 +1487,19 @@ class FinancialScheduleService:
             if child_center:
                 return f"O centro de resultado da linha {index} do rateio precisa ser analítico/final."
 
+            domain_type = item.get("domain_type")
+            domain_source_id = item.get("domain_source_id")
+            domain_source_kind = item.get("domain_source_kind") or "routine"
+            if domain_type and domain_source_id:
+                _, domain_error = FinancialDomainEnablementService._load_source(
+                    company_id,
+                    domain_type,
+                    int(domain_source_id),
+                    source_kind=domain_source_kind,
+                )
+                if domain_error:
+                    return f"Linha {index} do rateio: {domain_error}"
+
             percentage_value = item.get("percentage")
             allocated_amount_value = item.get("allocated_amount")
             try:
@@ -1500,6 +1562,10 @@ class FinancialScheduleService:
             metadata_json=metadata,
             fallback_chart_account_id=getattr(schedule, "chart_account_id", None),
             fallback_cost_center_id=getattr(schedule, "cost_center_id", None),
+            fallback_domain_type=metadata.get("domain_type"),
+            fallback_domain_source_kind=metadata.get("domain_source_kind"),
+            fallback_domain_source_id=metadata.get("domain_source_id"),
+            fallback_domain_label=metadata.get("domain_label"),
         )
         payload["document_number"] = metadata.get("document_number")
         payload["correction_index_id"] = metadata.get("correction_index_id")
@@ -1716,7 +1782,34 @@ class FinancialScheduleService:
         for domain_type in ("project", "process"):
             for item in items_by_type.get(domain_type, []):
                 if item.get("is_enabled"):
-                    enabled.append(item)
+                    enabled.append(
+                        {
+                            **item,
+                            "source_kind": "routine",
+                            "domain_value": FinancialScheduleService._build_domain_value(
+                                item.get("domain_type"),
+                                item.get("source_id"),
+                                "routine",
+                            ),
+                        }
+                    )
+        manual_items, manual_error = FinancialManualDomainService.list_enabled_items(
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if manual_error:
+            return None, manual_error
+        for item in manual_items or []:
+            enabled.append(
+                {
+                    **item,
+                    "domain_value": FinancialScheduleService._build_domain_value(
+                        item.get("domain_type"),
+                        item.get("source_id"),
+                        item.get("source_kind"),
+                    ),
+                }
+            )
         return enabled, None
 
     @staticmethod
@@ -1776,8 +1869,21 @@ class FinancialScheduleService:
             )
             if default_item:
                 result["domain_type"] = default_item.get("domain_type")
+                result["domain_source_kind"] = "routine"
                 result["domain_source_id"] = default_item.get("source_id")
                 result["domain_label"] = default_item.get("display_label")
+
+        manual_default, manual_error = FinancialManualDomainService.get_default_suggestion(
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if manual_error:
+            return None, manual_error
+        if manual_default:
+            result["domain_type"] = manual_default.get("domain_type")
+            result["domain_source_kind"] = manual_default.get("source_kind")
+            result["domain_source_id"] = manual_default.get("source_id")
+            result["domain_label"] = manual_default.get("display_label")
 
         default_document = (
             FinancialBudgetDocument.query.filter(

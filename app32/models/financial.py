@@ -96,6 +96,7 @@ BORDERO_SETTLEMENT_STATUS_VALUES = ("posted", "cancelled")
 AUTOMATION_TRIGGER_STATUS_VALUES = ("pending", "in_progress", "completed", "overdue", "any")
 AUTOMATION_EXECUTION_STATUS_VALUES = ("success", "skipped", "error")
 DOMAIN_ENABLEMENT_TYPE_VALUES = ("project", "process")
+DOMAIN_SOURCE_KIND_VALUES = ("routine", "manual")
 INGESTION_SOURCE_VALUES = (
     "manual",
     "import_csv",
@@ -509,6 +510,52 @@ class FinancialDomainEnablement(db.Model):
             "company_id": self.company_id,
             "domain_type": self.domain_type,
             "source_id": self.source_id,
+            "is_enabled": self.is_enabled,
+            "is_default_suggestion": self.is_default_suggestion,
+            "notes": self.notes,
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialManualDomain(db.Model):
+    __tablename__ = "financial_manual_domains"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "company_id",
+            "domain_type",
+            "code",
+            name="uq_financial_manual_domains_company_type_code",
+        ),
+        db.CheckConstraint(
+            f"domain_type IN {DOMAIN_ENABLEMENT_TYPE_VALUES}",
+            name="ck_financial_manual_domains_domain_type",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    domain_type = db.Column(db.String(20), nullable=False, index=True)
+    code = db.Column(db.String(40), nullable=True)
+    name = db.Column(db.String(160), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_enabled = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_default_suggestion = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "domain_type": self.domain_type,
+            "code": self.code,
+            "name": self.name,
+            "is_active": self.is_active,
             "is_enabled": self.is_enabled,
             "is_default_suggestion": self.is_default_suggestion,
             "notes": self.notes,

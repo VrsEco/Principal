@@ -659,6 +659,8 @@ def register_api_resources(api):
         FinancialDomainEnablementListResource,
         FinancialDomainEnablementResource,
         FinancialDomainEnablementToggleResource,
+        FinancialManualDomainListResource,
+        FinancialManualDomainResource,
         FinancialIngestionRecordListResource,
         FinancialIngestionRecordResource,
         FinancialIngestionRecordReviewResource,
@@ -860,6 +862,8 @@ def register_api_resources(api):
     api.add_resource(FinancialDomainEnablementListResource, '/api/financial/domain-enablements')
     api.add_resource(FinancialDomainEnablementResource, '/api/financial/domain-enablements/<string:domain_type>/<int:source_id>')
     api.add_resource(FinancialDomainEnablementToggleResource, '/api/financial/domain-enablements/<string:domain_type>/<int:source_id>/toggle')
+    api.add_resource(FinancialManualDomainListResource, '/api/financial/manual-domains')
+    api.add_resource(FinancialManualDomainResource, '/api/financial/manual-domains/<int:item_id>')
     api.add_resource(FinancialIngestionRecordListResource, '/api/financial/ingestions')
     api.add_resource(FinancialIngestionRecordResource, '/api/financial/ingestions/<int:record_id>')
     api.add_resource(FinancialIngestionRecordReviewResource, '/api/financial/ingestions/<int:record_id>/review')

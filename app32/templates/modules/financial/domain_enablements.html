@@ -16,6 +16,9 @@
         <div>
             <h1>Projetos / Processos</h1>
         </div>
+        <div class="fde-header-actions">
+            <button type="button" id="fde-new-manual-btn" class="btn btn-primary" style="display:none;" onclick="newManualItem()">Novo cadastro manual</button>
+        </div>
     </header>
 
     <section class="fde-shell">
@@ -24,6 +27,7 @@
                 <div class="fde-switcher">
                     <button type="button" class="fde-switcher-btn active" data-domain-type="project" onclick="switchDomainType('project')">Projetos</button>
                     <button type="button" class="fde-switcher-btn" data-domain-type="process" onclick="switchDomainType('process')">Processos</button>
+                    <button type="button" class="fde-switcher-btn" data-domain-type="manual" onclick="switchDomainType('manual')">Cadastro manual</button>
                 </div>
                 <label class="fde-search">
                     <span>Buscar</span>
@@ -51,7 +55,7 @@
     .fde-shell { display:grid; grid-template-columns:minmax(420px, 540px) minmax(0,1fr); gap:1rem; align-items:start; }
     .fde-rail { position:sticky; top:1rem; }
     .fde-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem; }
-    .fde-switcher { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; margin-bottom:.9rem; }
+    .fde-switcher { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin-bottom:.9rem; }
     .fde-switcher-btn { border:1px solid var(--border); background:var(--surface-secondary); color:var(--text-secondary); border-radius:12px; padding:.72rem .85rem; font-weight:700; cursor:pointer; }
     .fde-switcher-btn.active { background:var(--primary-light); color:var(--primary); border-color:rgba(37, 99, 235, 0.16); }
     .fde-search { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); font-weight:600; margin-bottom:.85rem; }
@@ -349,22 +353,25 @@
         return renderProcessGroups(buildProcessTree(items));
     }
 
+    function renderManualList(items) {
+        return items.map(renderLeaf).join('');
+    }
+
     function renderList(items) {
         const container = document.getElementById('fde-list');
         if (!items.length) {
             container.innerHTML = '<div class="empty-state">Nenhum registro disponível.</div>';
             return;
         }
+        if (currentDomainType === 'manual') {
+            container.innerHTML = `<div class="fde-tree">${renderManualList(items)}</div>`;
+            return;
+        }
         container.innerHTML = `<div class="fde-tree">${currentDomainType === 'project' ? renderProjectTree(items) : renderProcessTree(items)}</div>`;
     }
 
-    function renderForm(item) {
-        const form = document.getElementById('fde-form');
-        if (!item) {
-            form.innerHTML = '<div class="fde-empty-form">Selecione um projeto ou processo para habilitar no Financeiro.</div>';
-            return;
-        }
-        form.innerHTML = `
+    function renderRoutineForm(item) {
+        return `
             <div class="fde-form-grid">
                 <label>
                     <span>Tipo</span>
@@ -410,6 +417,83 @@
                 <button type="submit" class="btn btn-primary">Salvar</button>
             </div>
         `;
+    }
+
+    function renderManualForm(item) {
+        return `
+            <div class="fde-form-grid">
+                <label>
+                    <span>Tipo manual</span>
+                    <select name="domain_type">
+                        <option value="project" ${item.domain_type === 'project' ? 'selected' : ''}>Projeto</option>
+                        <option value="process" ${item.domain_type === 'process' ? 'selected' : ''}>Processo</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Status do cadastro</span>
+                    <div class="fde-readonly">${item.id ? 'Cadastro existente' : 'Novo cadastro manual'}</div>
+                </label>
+                <label>
+                    <span>Código</span>
+                    <input name="code" maxlength="40" value="${escapeHtml(item.source_code || item.code || '')}" placeholder="Ex.: PRJ-MAN-001">
+                </label>
+                <label>
+                    <span>Nome</span>
+                    <input name="name" maxlength="160" value="${escapeHtml(item.source_name || item.name || '')}" placeholder="Nome do projeto/processo manual" required>
+                </label>
+                <label>
+                    <span>Cadastro ativo</span>
+                    <select name="is_active">
+                        <option value="true" ${(item.is_active ?? item.source_is_active ?? true) ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!(item.is_active ?? item.source_is_active ?? true) ? 'selected' : ''}>Não</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Habilitado no Financeiro</span>
+                    <select name="is_enabled">
+                        <option value="true" ${item.is_enabled ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!item.is_enabled ? 'selected' : ''}>Não</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Registro padrão</span>
+                    <select name="is_default_suggestion">
+                        <option value="false" ${!item.is_default_suggestion ? 'selected' : ''}>Não</option>
+                        <option value="true" ${item.is_default_suggestion ? 'selected' : ''}>Sim</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Origem</span>
+                    <div class="fde-readonly">Cadastro manual do Financeiro</div>
+                </label>
+                <label style="grid-column:1 / -1;">
+                    <span>Observações</span>
+                    <textarea name="notes" rows="5" placeholder="Observações e regras financeiras para este cadastro manual.">${escapeHtml(item.notes || '')}</textarea>
+                </label>
+            </div>
+            <div class="fde-actions">
+                ${item.id ? '<button type="button" class="btn btn-secondary" onclick="deleteManualItem()">Excluir</button>' : ''}
+                <button type="submit" class="btn btn-primary">${item.id ? 'Salvar' : 'Criar cadastro manual'}</button>
+            </div>
+        `;
+    }
+
+    function updateHeaderActions() {
+        const manualButton = document.getElementById('fde-new-manual-btn');
+        if (manualButton) {
+            manualButton.style.display = currentDomainType === 'manual' ? 'inline-flex' : 'none';
+        }
+    }
+
+    function renderForm(item) {
+        const form = document.getElementById('fde-form');
+        if (!item) {
+            form.innerHTML = currentDomainType === 'manual'
+                ? '<div class="fde-empty-form">Clique em "Novo cadastro manual" ou selecione um registro já criado.</div>'
+                : '<div class="fde-empty-form">Selecione um projeto ou processo para habilitar no Financeiro.</div>';
+            return;
+        }
+        form.innerHTML = currentDomainType === 'manual' ? renderManualForm(item) : renderRoutineForm(item);
         form.onsubmit = saveSelectedItem;
     }
 
@@ -433,9 +517,9 @@
 
     function applySearchFilter() {
         const search = normalizeText(document.getElementById('fde-search')?.value).toLowerCase();
-        allItems = rawItems.filter(item => !search || `${item.source_code || ''} ${item.source_name || ''}`.toLowerCase().includes(search));
+        allItems = rawItems.filter(item => !search || `${item.source_code || ''} ${item.source_name || ''} ${item.domain_type || ''}`.toLowerCase().includes(search));
         if (selectedItem) {
-            selectedItem = rawItems.find(item => item.source_id === selectedItem.source_id) || null;
+            selectedItem = rawItems.find(item => item.source_id === selectedItem.source_id) || selectedItem;
         }
         renderList(allItems);
         renderForm(selectedItem);
@@ -447,12 +531,16 @@
         document.querySelectorAll('.fde-switcher-btn').forEach(button => {
             button.classList.toggle('active', button.dataset.domainType === domainType);
         });
+        updateHeaderActions();
         loadItems();
     }
 
     async function loadItems() {
         restoreCollapsedGroups();
-        const response = await fetch(`/api/financial/domain-enablements?company_id=${companyId}&domain_type=${currentDomainType}`);
+        const endpoint = currentDomainType === 'manual'
+            ? `/api/financial/manual-domains?company_id=${companyId}`
+            : `/api/financial/domain-enablements?company_id=${companyId}&domain_type=${currentDomainType}`;
+        const response = await fetch(endpoint);
         const result = await response.json();
         if (!response.ok) {
             alert(result.error || 'Falha ao carregar habilitações financeiras.');
@@ -466,6 +554,35 @@
         event.preventDefault();
         if (!selectedItem) return;
         const formData = new FormData(event.currentTarget);
+        if (currentDomainType === 'manual') {
+            const payload = {
+                domain_type: formData.get('domain_type'),
+                code: formData.get('code') || null,
+                name: formData.get('name') || null,
+                is_active: formData.get('is_active') === 'true',
+                is_enabled: formData.get('is_enabled') === 'true',
+                is_default_suggestion: formData.get('is_default_suggestion') === 'true',
+                notes: formData.get('notes') || null,
+            };
+            const response = await fetch(selectedItem.id
+                ? `/api/financial/manual-domains/${selectedItem.id}?company_id=${companyId}`
+                : `/api/financial/manual-domains?company_id=${companyId}`, {
+                method: selectedItem.id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                alert(result.error || 'Falha ao salvar cadastro manual.');
+                return;
+            }
+            selectedItem = result;
+            await loadItems();
+            selectedItem = rawItems.find(item => item.source_id === result.source_id) || result;
+            renderList(allItems);
+            renderForm(selectedItem);
+            return;
+        }
         const payload = {
             is_enabled: formData.get('is_enabled') === 'true',
             is_default_suggestion: formData.get('is_default_suggestion') === 'true',
@@ -482,6 +599,44 @@
             return;
         }
         selectedItem = result;
+        await loadItems();
+    }
+
+    function newManualItem() {
+        currentDomainType = 'manual';
+        document.querySelectorAll('.fde-switcher-btn').forEach(button => {
+            button.classList.toggle('active', button.dataset.domainType === 'manual');
+        });
+        updateHeaderActions();
+        selectedItem = {
+            id: null,
+            source_id: null,
+            source_code: '',
+            source_name: '',
+            domain_type: 'project',
+            source_kind: 'manual',
+            is_active: true,
+            source_is_active: true,
+            is_enabled: true,
+            is_default_suggestion: false,
+            notes: '',
+        };
+        renderList(allItems);
+        renderForm(selectedItem);
+    }
+
+    async function deleteManualItem() {
+        if (!selectedItem?.id) return;
+        if (!window.confirm('Deseja excluir este cadastro manual do Financeiro?')) return;
+        const response = await fetch(`/api/financial/manual-domains/${selectedItem.id}?company_id=${companyId}`, {
+            method: 'DELETE',
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            alert(result.error || 'Falha ao excluir cadastro manual.');
+            return;
+        }
+        selectedItem = null;
         await loadItems();
     }
 
@@ -505,8 +660,13 @@
     window.switchDomainType = switchDomainType;
     window.toggleSelectedItem = toggleSelectedItem;
     window.toggleGroup = toggleGroup;
+    window.newManualItem = newManualItem;
+    window.deleteManualItem = deleteManualItem;
 
     document.getElementById('fde-search').addEventListener('input', applySearchFilter);
-    document.addEventListener('DOMContentLoaded', loadItems);
+    document.addEventListener('DOMContentLoaded', () => {
+        updateHeaderActions();
+        loadItems();
+    });
 </script>
 {% endblock %}

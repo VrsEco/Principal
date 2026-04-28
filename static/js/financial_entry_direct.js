@@ -97,7 +97,10 @@
     const groups = ['project', 'process'].map((domainType) => {
       const options = optionsCache.enabled_domains
         .filter((item) => item.domain_type === domainType)
-        .map((item) => `<option value="${domainType}:${item.source_id}" ${value === `${domainType}:${item.source_id}` ? 'selected' : ''}>${item.display_label}</option>`).join('');
+        .map((item) => {
+          const optionValue = item.domain_value || `${item.source_kind || 'routine'}:${domainType}:${item.source_id}`;
+          return `<option value="${optionValue}" ${value === optionValue ? 'selected' : ''}>${item.display_label}</option>`;
+        }).join('');
       return options ? `<optgroup label="${domainType === 'project' ? 'Projetos' : 'Processos'}">${options}</optgroup>` : '';
     }).join('');
     return `<option value="">Selecione...</option>${groups}`;
@@ -186,6 +189,7 @@
     allocationRows.push({
       chart_account_id: '',
       cost_center_id: '',
+      domain_source_kind: 'routine',
       domain_type: null,
       domain_source_id: null,
       domain_label: null,
@@ -207,6 +211,7 @@
 
   function createAllocationRow(defaults = {}) {
     const suggestions = defaultSuggestions();
+    const domainSourceKind = defaults.domain_source_kind || suggestions.domain_source_kind || 'routine';
     const domainType = defaults.domain_type || suggestions.domain_type || null;
     const domainSourceId = defaults.domain_source_id || suggestions.domain_source_id || null;
     return {
@@ -216,10 +221,11 @@
       budget_line_id: asOptionValue(defaults.budget_line_id || suggestions.budget_line_id || ''),
       budget_contract_id: asOptionValue(defaults.budget_contract_id || suggestions.budget_contract_id || ''),
       budget_document_id: asOptionValue(defaults.budget_document_id || suggestions.budget_document_id || ''),
+      domain_source_kind: domainSourceKind,
       domain_type: domainType,
       domain_source_id: domainSourceId,
       domain_label: defaults.domain_label || suggestions.domain_label || null,
-      domain_value: domainType && domainSourceId ? `${domainType}:${domainSourceId}` : '',
+      domain_value: domainType && domainSourceId ? `${domainSourceKind}:${domainType}:${domainSourceId}` : '',
       percentage: defaults.percentage ?? '100',
       allocated_amount: defaults.allocated_amount ?? null,
       allocated_amount_display: defaults.allocated_amount_display || '',
@@ -379,6 +385,7 @@
         budget_line_id: Number(row.budget_line_id || 0) || null,
         budget_contract_id: Number(row.budget_contract_id || 0) || null,
         budget_document_id: Number(row.budget_document_id || 0) || null,
+        domain_source_kind: row.domain_source_kind || 'routine',
         domain_type: row.domain_type || null,
         domain_source_id: row.domain_source_id || null,
         domain_label: row.domain_label || null,
@@ -536,13 +543,15 @@
       const value = event.target.value;
       allocationRows[index].domain_value = value;
       if (!value) {
+        allocationRows[index].domain_source_kind = 'routine';
         allocationRows[index].domain_type = null;
         allocationRows[index].domain_source_id = null;
         allocationRows[index].domain_label = null;
         return;
       }
-      const [domainType, sourceId] = value.split(':');
-      const item = optionsCache.enabled_domains.find((candidate) => candidate.domain_type === domainType && String(candidate.source_id) === String(sourceId));
+      const [sourceKind, domainType, sourceId] = value.split(':');
+      const item = optionsCache.enabled_domains.find((candidate) => (candidate.domain_value || `${candidate.source_kind || 'routine'}:${candidate.domain_type}:${candidate.source_id}`) === value);
+      allocationRows[index].domain_source_kind = sourceKind || 'routine';
       allocationRows[index].domain_type = domainType;
       allocationRows[index].domain_source_id = Number(sourceId);
       allocationRows[index].domain_label = item?.display_label || null;
