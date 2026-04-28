@@ -404,7 +404,8 @@ function buildAllocationDraft(){
     return state.selectedEntryIds.map((entryId) => {
         const systemEntry = (state.workspace?.system_rows || []).find(item => String(item.id) === String(entryId)) || {};
         const current = state.entryAllocations[entryId];
-        const suggested = Math.max(0, Math.min(Number(systemEntry.remaining_amount ?? systemEntry.original_amount ?? remaining || 0), remaining));
+        const fallbackAmount = systemEntry.remaining_amount ?? systemEntry.original_amount ?? remaining ?? 0;
+        const suggested = Math.max(0, Math.min(Number(fallbackAmount), remaining));
         const principal = current != null ? Number(current) : suggested;
         remaining = Math.max(0, remaining - principal);
         return {
