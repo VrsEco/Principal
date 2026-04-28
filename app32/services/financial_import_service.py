@@ -495,8 +495,9 @@ class FinancialImportService:
             return None, f"Falha ao interpretar arquivo importado: {str(exc)}"
 
         try:
+            batch_payload = data.model_dump(exclude={"file_hash"})
             batch = FinancialImportBatch(
-                **data.model_dump(),
+                **batch_payload,
                 file_hash=hashlib.sha256(file_bytes).hexdigest(),
                 status="parsed",
             )
