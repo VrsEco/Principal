@@ -353,8 +353,42 @@
         return renderProcessGroups(buildProcessTree(items));
     }
 
-    function renderManualList(items) {
-        return items.map(renderLeaf).join('');
+    function renderManualTree(items) {
+        const grouped = new Map();
+        items.forEach(item => {
+            const key = item.domain_type === 'process' ? 'process' : 'project';
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    key: `manual:${key}`,
+                    levelClass: key,
+                    code: '',
+                    name: key === 'project' ? 'Projetos manuais' : 'Processos manuais',
+                    items: [],
+                });
+            }
+            grouped.get(key).items.push(item);
+        });
+
+        return Array.from(grouped.values()).map(group => {
+            const collapsed = collapsedGroupKeys.has(group.key);
+            const sortedItems = group.items.sort(sortByCodeThenName);
+            return `
+                <div class="fde-tree-group">
+                    <div class="fde-group-row ${group.levelClass}">
+                        <div class="fde-group-main">
+                            <button type="button" class="fde-toggle" onclick="event.stopPropagation(); toggleGroup('${escapeHtml(group.key)}')" aria-expanded="${collapsed ? 'false' : 'true'}" title="${collapsed ? 'Expandir' : 'Recolher'} ${escapeHtml(group.name)}">${collapsed ? '▸' : '▾'}</button>
+                            <div class="fde-group-label">
+                                ${renderGroupLabel(group.code, group.name)}
+                            </div>
+                        </div>
+                        <span class="fde-group-count">${sortedItems.length}</span>
+                    </div>
+                    <div class="fde-tree-children ${collapsed ? 'collapsed' : ''}">
+                        ${sortedItems.map(renderLeaf).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     function renderList(items) {
@@ -364,7 +398,7 @@
             return;
         }
         if (currentDomainType === 'manual') {
-            container.innerHTML = `<div class="fde-tree">${renderManualList(items)}</div>`;
+            container.innerHTML = `<div class="fde-tree">${renderManualTree(items)}</div>`;
             return;
         }
         container.innerHTML = `<div class="fde-tree">${currentDomainType === 'project' ? renderProjectTree(items) : renderProcessTree(items)}</div>`;
@@ -546,7 +580,12 @@
             alert(result.error || 'Falha ao carregar habilitações financeiras.');
             return;
         }
-        rawItems = Array.isArray(result.items) ? result.items : [];
+        if (currentDomainType === 'manual') {
+            const itemsByType = result.items_by_type || {};
+            rawItems = Object.values(itemsByType).flatMap(items => Array.isArray(items) ? items : []);
+        } else {
+            rawItems = Array.isArray(result.items) ? result.items : [];
+        }
         applySearchFilter();
     }
 
