@@ -230,11 +230,17 @@ function renderAccounts(){
     const uploadSelect = document.getElementById('upload-bank-account');
     if(!state.accounts.length){
         grid.innerHTML = '<div class="account-card"><p>Nenhuma conta bancária ativa encontrada.</p></div>';
+        if(uploadSelect) uploadSelect.innerHTML = '<option value="">Nenhuma conta disponível</option>';
         return;
     }
-    uploadSelect.innerHTML = '<option value="">Selecione</option>' + state.accounts.map(item => `<option value="${item.bank_account.id}">${escapeHtml(item.bank_account.name)}</option>`).join('');
+    if(uploadSelect){
+        uploadSelect.innerHTML = '<option value="">Selecione</option>' + state.accounts.map(item => `<option value="${item.bank_account.id}">${escapeHtml(item.bank_account.name)}</option>`).join('');
+        if(state.selectedBankAccountId){
+            uploadSelect.value = String(state.selectedBankAccountId);
+        }
+    }
     grid.innerHTML = state.accounts.map(item => `
-        <article class="account-card ${String(item.bank_account.id) === String(state.selectedBankAccountId) ? 'is-selected' : ''}">
+        <article class="account-card ${String(item.bank_account.id) === String(state.selectedBankAccountId) ? 'is-selected' : ''}" onclick="selectBankAccountCard(${item.bank_account.id})">
             <h3>${escapeHtml(item.bank_account.name)}</h3>
             <p>${escapeHtml(item.bank_account.bank_name || '-')} · ${escapeHtml(item.bank_account.account_number || 'sem conta informada')}</p>
             <p>${escapeHtml(item.status_message || 'Sem status')}</p>
@@ -244,10 +250,15 @@ function renderAccounts(){
                 ${item.last_reconciled_date ? badge(`Última ${item.last_reconciled_date}`, 'ok') : badge('Sem histórico', 'mute')}
             </div>
             <div class="inline-actions">
-                <button type="button" class="btn btn-primary" onclick="openWorkspace(${item.bank_account.id})">Abrir workspace</button>
+                <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); openWorkspace(${item.bank_account.id})">Abrir workspace</button>
             </div>
         </article>
     `).join('');
+}
+
+function selectBankAccountCard(bankAccountId){
+    state.selectedBankAccountId = Number(bankAccountId);
+    renderAccounts();
 }
 
 function renderSummary(){
@@ -655,6 +666,15 @@ document.getElementById('upload-form').addEventListener('submit', async (event) 
 
 document.getElementById('batch-select').addEventListener('change', async (event) => {
     await openWorkspace(state.selectedBankAccountId, Number(event.target.value));
+});
+
+document.getElementById('upload-bank-account').addEventListener('change', async (event) => {
+    const bankAccountId = Number(event.target.value || 0);
+    state.selectedBankAccountId = bankAccountId || null;
+    renderAccounts();
+    if(bankAccountId){
+        await openWorkspace(bankAccountId);
+    }
 });
 
 document.getElementById('system-search').addEventListener('input', (event) => {
