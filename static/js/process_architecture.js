@@ -15,6 +15,7 @@ const state = {
     areas: [],
     macros: [],
     processes: [],
+    employees: [],
     companyId: normalizedCompanyId,
     viewType: localStorage.getItem('arch_view_type') || 'classic'
 };
@@ -25,6 +26,24 @@ document.addEventListener('DOMContentLoaded', () => {
     checkUrlParams();
     updateViewToggleUI();
 });
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function buildEmployeeOptions(employees, placeholder) {
+    const options = Array.isArray(employees) ? employees : [];
+    return `<option value="">${escapeHtml(placeholder)}</option>` +
+        options
+            .filter(e => e && e.name)
+            .map(e => `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`)
+            .join('');
+}
 
 function updateViewToggleUI() {
     document.querySelectorAll('.btn-view-type').forEach(btn => {
@@ -312,6 +331,7 @@ function renderTables() {
 
 async function populateSelects() {
     const sMacroArea = document.getElementById('selectMacroArea');
+    const sMacroOwner = document.getElementById('selectMacroOwner');
     const sProcessMacro = document.getElementById('selectProcessMacro');
     const sProcessResponsible = document.getElementById('selectProcessResponsible');
 
@@ -325,17 +345,25 @@ async function populateSelects() {
             state.macros.map(m => `<option value="${m.id}">${m.code ? m.code + ' - ' : ''}${m.name}</option>`).join('');
     }
 
-    if (sProcessResponsible) {
+    if (sMacroOwner || sProcessResponsible) {
         try {
             const res = await fetch(`/api/dashboard/filter-options?company_id=${state.companyId || ''}`).then(r => r.json());
-            if (res.employees) {
+            const employees = Array.isArray(res.employees) ? res.employees : [];
+            state.employees = employees;
+
+            if (sMacroOwner) {
+                const current = sMacroOwner.value;
+                sMacroOwner.innerHTML = buildEmployeeOptions(employees, 'Selecione um colaborador...');
+                if (current) sMacroOwner.value = current;
+            }
+
+            if (sProcessResponsible) {
                 const current = sProcessResponsible.value;
-                sProcessResponsible.innerHTML = '<option value="">Selecione um colaborador...</option>' +
-                    res.employees.map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+                sProcessResponsible.innerHTML = buildEmployeeOptions(employees, 'Selecione um colaborador...');
                 if (current) sProcessResponsible.value = current;
             }
         } catch (e) {
-            console.error("Error loading employees for select:", e);
+            console.error("Error loading employees for selects:", e);
         }
     }
 }

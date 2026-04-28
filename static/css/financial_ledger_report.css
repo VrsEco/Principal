@@ -1,0 +1,271 @@
+.ledger-report-page {
+  --report-print-size: A4 landscape;
+  --report-stats-columns: 4;
+  --report-info-columns: 4;
+}
+
+.ledger-report-header {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0f172a 0%, #16213a 55%, #1d4ed8 100%);
+  border: none;
+  color: #fff;
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.25);
+}
+
+.ledger-report-header h1,
+.ledger-report-header .report-workspace-subtitle,
+.ledger-report-header .report-workspace-eyebrow {
+  color: #fff;
+}
+
+.ledger-report-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.ledger-report-viewer {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.22), transparent 28%),
+    linear-gradient(180deg, #0b1120 0%, #111827 100%);
+}
+
+.ledger-report-sheet {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  gap: 0.6rem;
+}
+
+.ledger-section {
+  border-radius: 14px;
+}
+
+.ledger-section--insight {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+}
+
+.ledger-insight-card {
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.ledger-insight-card__label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2563eb;
+  margin-bottom: 0.2rem;
+}
+
+.ledger-insight-card strong {
+  color: #0f172a;
+  font-size: 0.84rem;
+}
+
+.ledger-filters-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.28rem 0.7rem;
+}
+
+.ledger-stats-grid,
+.ledger-info-grid {
+  gap: 0.55rem;
+}
+
+.ledger-stat,
+.ledger-info-card {
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.ledger-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ledger-group-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.ledger-group-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  color: #fff;
+}
+
+.ledger-group-card__eyebrow {
+  display: block;
+  margin-bottom: 0.18rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(191, 219, 254, 0.95);
+  font-weight: 800;
+}
+
+.ledger-group-card__header h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.ledger-group-card__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.14rem;
+  text-align: right;
+}
+
+.ledger-group-card__meta span {
+  font-size: 0.7rem;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.ledger-group-card__meta strong {
+  font-size: 1rem;
+  color: #fff;
+}
+
+.ledger-table-wrap {
+  border: none;
+  border-radius: 0;
+}
+
+.ledger-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-size: 0.6rem;
+}
+
+.ledger-table tbody td {
+  font-size: 0.65rem;
+  color: #334155;
+}
+
+.ledger-table .is-currency {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.ledger-group-badge,
+.ledger-group-ghost {
+  display: inline-flex;
+  min-width: 92px;
+}
+
+.ledger-group-badge {
+  padding: 0.18rem 0.46rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.ledger-group-ghost {
+  color: #94a3b8;
+}
+
+.ledger-type-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.42rem;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.ledger-type-chip--credit {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ledger-type-chip--debit {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ledger-table .col-historico { min-width: 220px; }
+.ledger-table .col-favorecido { min-width: 180px; }
+.ledger-table .col-plano_contas { min-width: 190px; }
+.ledger-table .col-centro_resultado { min-width: 170px; }
+.ledger-table .col-projeto_processo { min-width: 220px; }
+.ledger-table .col-numero_qtd_rateio { min-width: 180px; }
+
+.ledger-report-sidebar .report-workspace-choice-grid,
+.ledger-report-sidebar .report-workspace-radio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.ledger-report-sidebar .report-workspace-choice-grid--compact {
+  grid-template-columns: 1fr;
+}
+
+.ledger-report-sidebar .report-workspace-choice-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  padding: 0.7rem 0.78rem;
+}
+
+.ledger-report-sidebar .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ledger-report-sidebar select[multiple] {
+  min-height: 128px;
+}
+
+@media (max-width: 1200px) {
+  .ledger-section--insight,
+  .ledger-filters-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .ledger-section--insight,
+  .ledger-filters-grid,
+  .ledger-report-sidebar .report-workspace-choice-grid,
+  .ledger-report-sidebar .report-workspace-radio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-group-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ledger-group-card__meta {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
