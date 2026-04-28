@@ -26,6 +26,10 @@ class FinancialReconciliationService:
     """Motor determinístico inicial de matching entre staging e ledger."""
 
     @staticmethod
+    def _decimal(value) -> Decimal:
+        return Decimal(str(value or 0))
+
+    @staticmethod
     def _get_remaining_principal(entry: FinancialEntry) -> Decimal:
         total_liquidated = (
             db.session.query(db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0))
@@ -116,6 +120,18 @@ class FinancialReconciliationService:
             actor_reason=f"Match {match.id} confirmado via conciliação bancária.",
         )
         return settlement.to_dict(), None
+
+    @staticmethod
+    def _update_entry_reconciliation_metadata(
+        *,
+        entry: FinancialEntry,
+        reconciled: bool,
+        actor_reason: Optional[str] = None,
+    ) -> None:
+        metadata = dict(entry.metadata_json or {})
+        metadata["reconciled"] = bool(reconciled)
+        metadata["reconciliation_updated_reason"] = actor_reason
+        entry.metadata_json = metadata
 
     @staticmethod
     def _resolve_row_context(company_id: int, row: FinancialImportRow) -> Dict:
@@ -472,6 +488,7 @@ class FinancialReconciliationService:
         row_id: int,
         financial_entry_id: int,
         company_id: int,
+        financial_entry_ids: Optional[Sequence[int]] = None,
         adjustments: Optional[Dict] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
@@ -487,50 +504,244 @@ class FinancialReconciliationService:
         if not row:
             return None, "Linha de extrato não encontrada no escopo da empresa."
 
-        match = FinancialReconciliationMatch.query.filter(
-            FinancialReconciliationMatch.company_id == company_id,
-            FinancialReconciliationMatch.import_row_id == row.id,
-            FinancialReconciliationMatch.financial_entry_id == financial_entry_id,
-            FinancialReconciliationMatch.deleted_at.is_(None),
+        raw_entry_ids = [financial_entry_id, *(financial_entry_ids or [])]
+        selected_entry_ids: List[int] = []
+        seen_entry_ids = set()
+        for raw_id in raw_entry_ids:
+            try:
+                current_id = int(raw_id or 0)
+            except (TypeError, ValueError):
+                current_id = 0
+            if current_id > 0 and current_id not in seen_entry_ids:
+                seen_entry_ids.add(current_id)
+                selected_entry_ids.append(current_id)
+
+        if not selected_entry_ids:
+            return None, "Selecione ao menos um lançamento do sistema para vincular à linha do extrato."
+
+        adjustments = dict(adjustments or {})
+        allocations_payload = adjustments.pop("allocations", []) or []
+        allocation_map: Dict[int, Dict] = {}
+        for item in allocations_payload:
+            try:
+                entry_id = int((item or {}).get("financial_entry_id") or 0)
+            except (TypeError, ValueError):
+                entry_id = 0
+            if entry_id > 0:
+                allocation_map[entry_id] = dict(item or {})
+
+        batch = FinancialImportBatch.query.filter(
+            FinancialImportBatch.id == row.import_batch_id,
+            FinancialImportBatch.company_id == company_id,
+            FinancialImportBatch.deleted_at.is_(None),
         ).first()
-        if not match:
-            batch = FinancialImportBatch.query.filter(
-                FinancialImportBatch.id == row.import_batch_id,
-                FinancialImportBatch.company_id == company_id,
-                FinancialImportBatch.deleted_at.is_(None),
-            ).first()
+        if not batch:
+            return None, "Lote da linha de extrato não encontrado para preparar a conciliação."
+
+        row_context = FinancialReconciliationService._resolve_row_context(company_id, row)
+        remaining_row_amount = FinancialReconciliationService._decimal(row.amount or 0)
+        confirmations: List[Dict] = []
+
+        for entry_id in selected_entry_ids:
             entry = FinancialEntry.query.filter(
-                FinancialEntry.id == financial_entry_id,
+                FinancialEntry.id == entry_id,
                 FinancialEntry.company_id == company_id,
                 FinancialEntry.deleted_at.is_(None),
             ).first()
-            if not batch or not entry:
-                return None, "Não foi possível preparar o match manual para a linha selecionada."
-            score, reason = FinancialReconciliationService._score_match(
-                row,
-                entry,
-                row_context=FinancialReconciliationService._resolve_row_context(company_id, row),
-            )
-            match = FinancialReconciliationMatch(
-                company_id=company_id,
-                import_batch_id=batch.id,
-                import_row_id=row.id,
-                financial_entry_id=entry.id,
-                match_status="suggested",
-                confidence_score=score,
-                match_reason=f"match manual: {reason}",
-                matched_amount=row.amount,
-                matched_date=row.occurred_on or row.due_date,
-                metadata_json={"manual_selection": True},
-            )
-            db.session.add(match)
-            db.session.flush()
+            if not entry:
+                return None, f"Lançamento {entry_id} não encontrado no escopo da empresa."
 
-        return FinancialReconciliationService.review_match(
-            match_id=match.id,
-            company_id=company_id,
-            decision="confirmed",
-            selected_entry_id=financial_entry_id,
-            adjustments=adjustments,
-            allowed_company_ids=allowed_company_ids,
+            match = FinancialReconciliationMatch.query.filter(
+                FinancialReconciliationMatch.company_id == company_id,
+                FinancialReconciliationMatch.import_row_id == row.id,
+                FinancialReconciliationMatch.financial_entry_id == entry_id,
+                FinancialReconciliationMatch.deleted_at.is_(None),
+            ).first()
+            if not match:
+                score, reason = FinancialReconciliationService._score_match(
+                    row,
+                    entry,
+                    row_context=row_context,
+                )
+                match = FinancialReconciliationMatch(
+                    company_id=company_id,
+                    import_batch_id=batch.id,
+                    import_row_id=row.id,
+                    financial_entry_id=entry.id,
+                    match_status="suggested",
+                    confidence_score=score,
+                    match_reason=f"match manual: {reason}",
+                    matched_amount=row.amount,
+                    matched_date=row.occurred_on or row.due_date,
+                    metadata_json={"manual_selection": True},
+                )
+                db.session.add(match)
+                db.session.flush()
+
+            remaining_entry_amount = FinancialReconciliationService._get_remaining_principal(entry)
+            entry_allocation = allocation_map.get(entry_id, {})
+            principal_amount = entry_allocation.get("principal_amount")
+            if principal_amount is None:
+                principal_amount = min(remaining_entry_amount, remaining_row_amount)
+            principal_amount = FinancialReconciliationService._decimal(principal_amount)
+            if principal_amount <= 0:
+                return None, f"O lançamento {entry_id} não possui saldo elegível para a vinculação manual."
+            if principal_amount > remaining_entry_amount:
+                return None, f"O valor alocado para o lançamento {entry_id} excede o saldo em aberto."
+            if principal_amount > remaining_row_amount:
+                return None, "A soma das vinculações excede o valor disponível na linha do extrato."
+
+            confirmation_payload = {
+                **adjustments,
+                **{k: v for k, v in entry_allocation.items() if k != "financial_entry_id"},
+                "principal_amount": principal_amount,
+            }
+            confirmation, error = FinancialReconciliationService.review_match(
+                match_id=match.id,
+                company_id=company_id,
+                decision="confirmed",
+                selected_entry_id=entry_id,
+                adjustments=confirmation_payload,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if error:
+                return None, error
+            confirmations.append(confirmation)
+            remaining_row_amount -= principal_amount
+
+        row.matched_entry_id = selected_entry_ids[0]
+        row.processing_status = "validated" if row.processing_status != "imported" else row.processing_status
+        row.error_message = None
+        db.session.commit()
+
+        return {
+            "row_id": row.id,
+            "match_mode": "1:N" if len(confirmations) > 1 else "1:1",
+            "confirmed_matches": confirmations,
+            "remaining_row_amount": float(remaining_row_amount),
+        }, None
+
+    @staticmethod
+    def cancel_row_reconciliation(
+        *,
+        row_id: int,
+        company_id: int,
+        reason: Optional[str] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        row = FinancialImportRow.query.filter(
+            FinancialImportRow.id == row_id,
+            FinancialImportRow.company_id == company_id,
+            FinancialImportRow.deleted_at.is_(None),
+        ).first()
+        if not row:
+            return None, "Linha de extrato não encontrada no escopo da empresa."
+
+        active_matches = (
+            FinancialReconciliationMatch.query.filter(
+                FinancialReconciliationMatch.company_id == company_id,
+                FinancialReconciliationMatch.import_row_id == row.id,
+                FinancialReconciliationMatch.deleted_at.is_(None),
+                FinancialReconciliationMatch.match_status.in_(["suggested", "confirmed"]),
+            )
+            .order_by(FinancialReconciliationMatch.id.asc())
+            .all()
         )
+        if not active_matches and not row.created_entry_id and not row.matched_entry_id:
+            return None, "A linha selecionada não possui conciliação ativa para cancelamento."
+
+        reason_text = (reason or "").strip() or "Cancelamento manual da conciliação bancária."
+        reverted_settlements = 0
+        reverted_matches = 0
+        released_entries: List[int] = []
+
+        try:
+            for match in active_matches:
+                linked_settlements = FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.external_reference == f"reconciliation-match:{match.id}",
+                    FinancialSettlement.deleted_at.is_(None),
+                ).all()
+                for settlement in linked_settlements:
+                    settlement.reconciliation_status = "pending"
+                    settlement.settlement_status = "cancelled"
+                    settlement.notes = (
+                        f"{(settlement.notes or '').strip()}\nCancelamento da conciliação: {reason_text}".strip()
+                    )
+                    reverted_settlements += 1
+                if match.financial_entry_id:
+                    entry = FinancialEntry.query.filter(
+                        FinancialEntry.id == match.financial_entry_id,
+                        FinancialEntry.company_id == company_id,
+                        FinancialEntry.deleted_at.is_(None),
+                    ).first()
+                    if entry:
+                        has_other_active_settlements = FinancialSettlement.query.filter(
+                            FinancialSettlement.company_id == company_id,
+                            FinancialSettlement.financial_entry_id == entry.id,
+                            FinancialSettlement.deleted_at.is_(None),
+                            FinancialSettlement.settlement_status != "cancelled",
+                            FinancialSettlement.reconciliation_status.in_(["matched", "reconciled"]),
+                        ).first()
+                        FinancialReconciliationService._update_entry_reconciliation_metadata(
+                            entry=entry,
+                            reconciled=bool(has_other_active_settlements),
+                            actor_reason=reason_text,
+                        )
+                        released_entries.append(entry.id)
+                match.match_status = "rejected"
+                match.match_reason = f"{(match.match_reason or '').strip()} · cancelado: {reason_text}".strip()[:255]
+                match.metadata_json = {
+                    **(match.metadata_json or {}),
+                    "reconciliation_cancelled": True,
+                    "reconciliation_cancel_reason": reason_text,
+                }
+                reverted_matches += 1
+
+            if row.created_entry_id:
+                created_entry = FinancialEntry.query.filter(
+                    FinancialEntry.id == row.created_entry_id,
+                    FinancialEntry.company_id == company_id,
+                    FinancialEntry.deleted_at.is_(None),
+                ).first()
+                created_settlements = FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.external_reference == f"reconciliation-row:{row.id}",
+                    FinancialSettlement.deleted_at.is_(None),
+                ).all()
+                for settlement in created_settlements:
+                    settlement.reconciliation_status = "pending"
+                    settlement.settlement_status = "cancelled"
+                    settlement.notes = (
+                        f"{(settlement.notes or '').strip()}\nCancelamento da conciliação: {reason_text}".strip()
+                    )
+                    reverted_settlements += 1
+                if created_entry:
+                    FinancialReconciliationService._update_entry_reconciliation_metadata(
+                        entry=created_entry,
+                        reconciled=False,
+                        actor_reason=reason_text,
+                    )
+                    released_entries.append(created_entry.id)
+                row.created_entry_id = None
+
+            row.matched_entry_id = None
+            row.processing_status = "validated"
+            row.error_message = reason_text
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao cancelar conciliação da linha %s", row_id)
+            return None, f"Erro ao cancelar conciliação: {str(exc)}"
+
+        return {
+            "row_id": row.id,
+            "reverted_matches": reverted_matches,
+            "reverted_settlements": reverted_settlements,
+            "released_entry_ids": sorted(set(released_entries)),
+            "reason": reason_text,
+        }, None

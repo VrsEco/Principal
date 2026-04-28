@@ -1468,6 +1468,7 @@ class FinancialBankReconciliationRowMatchResource(Resource):
             company_id=company_id,
             row_id=row_id,
             financial_entry_id=int(payload.get("financial_entry_id") or 0),
+            financial_entry_ids=payload.get("financial_entry_ids") or [],
             adjustments={
                 "principal_amount": payload.get("principal_amount"),
                 "interest_amount": payload.get("interest_amount"),
@@ -1475,7 +1476,22 @@ class FinancialBankReconciliationRowMatchResource(Resource):
                 "discount_amount": payload.get("discount_amount"),
                 "fee_amount": payload.get("fee_amount"),
                 "other_adjustments_amount": payload.get("other_adjustments_amount"),
+                "allocations": payload.get("allocations") or [],
             },
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "edit")
+    def delete(self, row_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialReconciliationService.cancel_row_reconciliation(
+            company_id=company_id,
+            row_id=row_id,
+            reason=payload.get("reason"),
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

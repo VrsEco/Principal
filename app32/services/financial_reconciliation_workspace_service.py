@@ -19,6 +19,88 @@ from services.financial_service import FinancialService
 
 class FinancialReconciliationWorkspaceService:
     @staticmethod
+    def _group_matches_by_row(matches: Sequence[FinancialReconciliationMatch]) -> Dict[int, List[FinancialReconciliationMatch]]:
+        grouped: Dict[int, List[FinancialReconciliationMatch]] = {}
+        for match in matches or []:
+            grouped.setdefault(int(match.import_row_id), []).append(match)
+        for row_matches in grouped.values():
+            row_matches.sort(
+                key=lambda item: (
+                    0 if str(item.match_status or "").lower() == "confirmed" else 1,
+                    -(float(item.confidence_score or 0)),
+                    item.id,
+                )
+            )
+        return grouped
+
+    @staticmethod
+    def _get_primary_match(row_matches: Sequence[FinancialReconciliationMatch]) -> Optional[FinancialReconciliationMatch]:
+        if not row_matches:
+            return None
+        return next(
+            (item for item in row_matches if str(item.match_status or "").lower() == "confirmed"),
+            row_matches[0],
+        )
+
+    @staticmethod
+    def _build_row_match_snapshot(row_matches: Sequence[FinancialReconciliationMatch]) -> Dict:
+        items = [match.to_dict() for match in row_matches or []]
+        confirmed = [item for item in items if str(item.get("match_status") or "").lower() == "confirmed"]
+        suggested = [item for item in items if str(item.get("match_status") or "").lower() == "suggested"]
+        rejected = [item for item in items if str(item.get("match_status") or "").lower() == "rejected"]
+        linked_entry_ids = [
+            int(item["financial_entry_id"])
+            for item in items
+            if item.get("financial_entry_id") is not None and str(item.get("match_status") or "").lower() != "rejected"
+        ]
+        return {
+            "all_matches": items,
+            "confirmed_matches": confirmed,
+            "suggested_matches": suggested,
+            "rejected_matches": rejected,
+            "linked_entry_ids": linked_entry_ids,
+            "confirmed_count": len(confirmed),
+            "suggested_count": len(suggested),
+            "rejected_count": len(rejected),
+            "match_mode": (
+                "1:N" if len(confirmed) > 1 else
+                "1:1" if len(confirmed) == 1 else
+                "suggested" if suggested else
+                "unmatched"
+            ),
+        }
+
+    @staticmethod
+    def _entry_remaining_amount(entry: FinancialEntry) -> Decimal:
+        settled_amount = (
+            db.session.query(db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0))
+            .filter(
+                FinancialSettlement.company_id == entry.company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            )
+            .scalar()
+        ) or Decimal("0")
+        remaining = Decimal(entry.original_amount or 0) - Decimal(settled_amount)
+        return remaining if remaining > 0 else Decimal("0")
+
+    @staticmethod
+    def _serialize_system_entry(
+        entry: FinancialEntry,
+        *,
+        linked_row_ids: Optional[Sequence[int]] = None,
+    ) -> Dict:
+        payload = FinancialService.serialize_entry(entry, include_children=False)
+        linked_row_ids = [int(item) for item in (linked_row_ids or [])]
+        payload["remaining_amount"] = float(FinancialReconciliationWorkspaceService._entry_remaining_amount(entry))
+        payload["is_reconciled"] = FinancialService.is_entry_reconciled(entry)
+        payload["linked_row_ids"] = linked_row_ids
+        payload["linked_rows_count"] = len(linked_row_ids)
+        payload["match_mode"] = "N:1" if len(linked_row_ids) > 1 else ("1:1" if len(linked_row_ids) == 1 else "unmatched")
+        return payload
+
+    @staticmethod
     def _batch_matches_bank_account(batch: FinancialImportBatch, bank_account_id: int) -> bool:
         metadata_bank_id = (batch.metadata_json or {}).get("bank_account_id")
         if metadata_bank_id and int(metadata_bank_id) == int(bank_account_id):
@@ -52,9 +134,11 @@ class FinancialReconciliationWorkspaceService:
         ]
 
     @staticmethod
-    def _serialize_row(row: FinancialImportRow, match_map: Dict[int, FinancialReconciliationMatch]) -> Dict:
+    def _serialize_row(row: FinancialImportRow, row_matches: Optional[Sequence[FinancialReconciliationMatch]] = None) -> Dict:
         payload = row.to_dict()
-        match = match_map.get(row.id)
+        row_matches = list(row_matches or [])
+        match = FinancialReconciliationWorkspaceService._get_primary_match(row_matches)
+        match_snapshot = FinancialReconciliationWorkspaceService._build_row_match_snapshot(row_matches)
         created_entry = None
         if row.created_entry_id:
             created_entry = FinancialEntry.query.filter(
@@ -63,10 +147,48 @@ class FinancialReconciliationWorkspaceService:
                 FinancialEntry.deleted_at.is_(None),
             ).first()
         payload["match"] = match.to_dict() if match else None
+        payload["matches"] = match_snapshot
         payload["created_entry"] = FinancialService.serialize_entry(created_entry, include_children=False) if created_entry else None
         payload["can_create_entry"] = not bool(row.created_entry_id)
-        payload["needs_manual_action"] = not bool(match and match.match_status == "confirmed") and not bool(row.created_entry_id)
+        payload["is_fully_reconciled"] = bool(match_snapshot["confirmed_count"] or row.created_entry_id)
+        payload["needs_manual_action"] = not payload["is_fully_reconciled"]
         return payload
+
+    @staticmethod
+    def _load_workspace_entries(
+        *,
+        company_id: int,
+        bank_account_id: int,
+        rows: Sequence[FinancialImportRow],
+    ) -> List[FinancialEntry]:
+        query = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+            FinancialEntry.status.in_(["scheduled", "posted", "partially_settled", "settled"]),
+            FinancialEntry.bank_account_id == bank_account_id,
+        )
+
+        reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
+        if reference_dates:
+            start_date = min(reference_dates)
+            end_date = max(reference_dates)
+            query = query.filter(
+                db.or_(
+                    FinancialEntry.occurred_on.between(start_date, end_date),
+                    FinancialEntry.due_date.between(start_date, end_date),
+                    FinancialEntry.competence_date.between(start_date, end_date),
+                )
+            )
+
+        return (
+            query.order_by(
+                FinancialEntry.occurred_on.desc(),
+                FinancialEntry.due_date.desc(),
+                FinancialEntry.id.desc(),
+            )
+            .limit(200)
+            .all()
+        )
 
     @staticmethod
     def _build_status_message(
@@ -119,7 +241,7 @@ class FinancialReconciliationWorkspaceService:
             )
             statement_dates = [row.occurred_on or row.due_date for row in rows if row.occurred_on or row.due_date]
             statement_end = max(statement_dates) if statement_dates else None
-            match_map = {
+            match_groups = {
                 item.import_row_id: item
                 for item in FinancialReconciliationMatch.query.filter(
                     FinancialReconciliationMatch.company_id == company_id,
@@ -130,7 +252,9 @@ class FinancialReconciliationWorkspaceService:
             pending_count = sum(
                 1
                 for row in rows
-                if not row.created_entry_id and not (match_map.get(row.id) and match_map[row.id].match_status == "confirmed")
+                if not row.created_entry_id and not (
+                    match_groups.get(row.id) and str(match_groups[row.id].match_status or "").lower() == "confirmed"
+                )
             )
             last_reconciled = (
                 FinancialSettlement.query.filter(
@@ -204,18 +328,59 @@ class FinancialReconciliationWorkspaceService:
             if selected_batch
             else []
         )
-        match_map = {item.import_row_id: item for item in matches}
+        match_groups = FinancialReconciliationWorkspaceService._group_matches_by_row(matches)
+        rows_payload = [
+            FinancialReconciliationWorkspaceService._serialize_row(row, match_groups.get(int(row.id), []))
+            for row in rows
+        ]
+        pending_rows = [row for row in rows_payload if row.get("needs_manual_action")]
+        suggested_rows = [row for row in rows_payload if (row.get("matches") or {}).get("suggested_count")]
+        confirmed_rows = [row for row in rows_payload if (row.get("matches") or {}).get("confirmed_count") or row.get("created_entry_id")]
+
+        linked_entry_ids: Dict[int, List[int]] = {}
+        for row in rows_payload:
+            row_id = int(row["id"])
+            if row.get("created_entry_id"):
+                linked_entry_ids.setdefault(int(row["created_entry_id"]), []).append(row_id)
+            for entry_id in (row.get("matches") or {}).get("linked_entry_ids", []):
+                linked_entry_ids.setdefault(int(entry_id), []).append(row_id)
+
+        system_entries = FinancialReconciliationWorkspaceService._load_workspace_entries(
+            company_id=company_id,
+            bank_account_id=bank_account_id,
+            rows=rows,
+        )
+        system_rows = [
+            FinancialReconciliationWorkspaceService._serialize_system_entry(
+                entry,
+                linked_row_ids=linked_entry_ids.get(int(entry.id), []),
+            )
+            for entry in system_entries
+        ]
+        system_unmatched_rows = [
+            item for item in system_rows
+            if not item["linked_rows_count"] and not item["is_reconciled"]
+        ]
 
         return {
             "bank_account": account.to_dict(),
             "selected_batch": selected_batch.to_dict() if selected_batch else None,
             "available_batches": [batch.to_dict() for batch in batches],
-            "rows": [FinancialReconciliationWorkspaceService._serialize_row(row, match_map) for row in rows],
+            "rows": rows_payload,
+            "bank_rows": rows_payload,
+            "bank_rows_without_link": pending_rows,
+            "bank_rows_with_suggestion": suggested_rows,
+            "bank_rows_reconciled": confirmed_rows,
+            "system_rows": system_rows,
+            "system_rows_without_link": system_unmatched_rows,
             "summary": {
                 "total_rows": len(rows),
-                "pending_rows": sum(1 for row in rows if not row.created_entry_id and not (match_map.get(row.id) and match_map[row.id].match_status == "confirmed")),
+                "pending_rows": len(pending_rows),
                 "confirmed_matches": sum(1 for item in matches if item.match_status == "confirmed"),
                 "suggested_matches": sum(1 for item in matches if item.match_status == "suggested"),
+                "unmatched_bank_rows": len(pending_rows),
+                "unmatched_system_rows": len(system_unmatched_rows),
+                "system_rows": len(system_rows),
             },
         }, None
 
