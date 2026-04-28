@@ -40,25 +40,26 @@
                 <p>O fluxo aceita arquivos OFX, XLS, XLSX e CSV e já tenta sugerir vínculos automáticos após o envio.</p>
             </div>
         </div>
-        <form id="upload-form" class="upload-grid">
+        <form id="upload-form" class="upload-grid" novalidate>
             <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
             <label><span>Fonte</span>
-                <select name="source_type">
+                <select name="source_type" id="upload-source-type">
                     <option value="ofx">OFX</option>
                     <option value="xlsx">XLSX</option>
                     <option value="xls">XLS</option>
                     <option value="csv">CSV</option>
                 </select>
             </label>
-            <label><span>Código do lote</span><input name="batch_code" placeholder="REC-20260428-001" required></label>
+            <label><span>Código do lote</span><input name="batch_code" id="upload-batch-code" placeholder="REC-20260428-001" required></label>
             <label class="upload-dropzone">
                 <span>Arquivo do extrato</span>
-                <input type="file" name="file" accept=".ofx,.xlsx,.xls,.csv" required>
+                <input type="file" name="file" id="upload-file" accept=".ofx,.xlsx,.xls,.csv" required>
                 <small>Arraste ou selecione o arquivo.</small>
             </label>
             <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato Itaú abril/2026"></label>
+            <div id="upload-status" class="upload-status col-span-2" aria-live="polite"></div>
             <div class="col-span-2 actions-right">
-                <button type="submit" class="btn btn-primary">Enviar extrato</button>
+                <button type="submit" id="upload-submit-button" class="btn btn-primary">Enviar extrato</button>
             </div>
         </form>
     </section>
@@ -140,6 +141,11 @@
     }
     .upload-dropzone{background:linear-gradient(180deg,rgba(59,130,246,.06),rgba(59,130,246,.02));border:1px dashed rgba(59,130,246,.32);border-radius:16px;padding:1rem}
     .upload-dropzone small{color:var(--text-secondary);font-weight:500}
+    .upload-status{display:none;border-radius:14px;padding:.85rem 1rem;font-weight:700}
+    .upload-status.is-visible{display:block}
+    .upload-status--info{background:#dbeafe;color:#1d4ed8}
+    .upload-status--success{background:#dcfce7;color:#166534}
+    .upload-status--error{background:#fee2e2;color:#b91c1c}
     .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary);padding:1rem}
     .account-card.is-selected,.row-card.is-selected,.slot-card.is-selected{border-color:var(--primary);box-shadow:0 0 0 1px rgba(59,130,246,.14)}
     .badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem}
@@ -694,23 +700,126 @@ async function submitCreateEntry(event){
     await refreshWorkspace();
 }
 
+function generateBatchCode(){
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const suffix = String(Math.floor(Date.now() / 1000) % 1000).padStart(3, '0');
+    return `REC-${yyyy}${mm}${dd}-${suffix}`;
+}
+
+function ensureUploadBatchCode(){
+    const input = document.getElementById('upload-batch-code');
+    if(input && !String(input.value || '').trim()){
+        input.value = generateBatchCode();
+    }
+    return input?.value || '';
+}
+
+function detectSourceFromFileName(fileName){
+    const extension = String(fileName || '').split('.').pop().toLowerCase();
+    if(['ofx', 'xlsx', 'xls', 'csv'].includes(extension)) return extension;
+    return null;
+}
+
+function syncUploadSourceFromFile(){
+    const fileInput = document.getElementById('upload-file');
+    const sourceSelect = document.getElementById('upload-source-type');
+    const fileName = fileInput?.files?.[0]?.name || '';
+    const detectedSource = detectSourceFromFileName(fileName);
+    if(sourceSelect && detectedSource){
+        sourceSelect.value = detectedSource;
+    }
+}
+
+function showUploadStatus(message, kind='info'){
+    const status = document.getElementById('upload-status');
+    if(!status) return;
+    status.className = `upload-status upload-status--${kind} is-visible col-span-2`;
+    status.textContent = message || '';
+}
+
+function clearUploadStatus(){
+    const status = document.getElementById('upload-status');
+    if(!status) return;
+    status.className = 'upload-status col-span-2';
+    status.textContent = '';
+}
+
+function setUploadBusy(isBusy){
+    const button = document.getElementById('upload-submit-button');
+    if(!button) return;
+    button.disabled = Boolean(isBusy);
+    button.textContent = isBusy ? 'Enviando...' : 'Enviar extrato';
+}
+
+function initializeUploadForm(){
+    ensureUploadBatchCode();
+    syncUploadSourceFromFile();
+}
+
 document.getElementById('upload-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    formData.append('integration_channel', 'file');
-    formData.append('reconciliation_mode', '1');
-    const payload = await api(`/api/financial/imports${companyQuery()}`, { method:'POST', body: formData });
-    const reconciliationSummary = payload.reconciliation
-        ? ` Sugestões automáticas: ${payload.reconciliation.suggested_count || 0}. Sem match: ${payload.reconciliation.unmatched_count || 0}.`
-        : '';
-    const reconciliationWarning = payload.reconciliation_warning
-        ? ` Atenção: ${payload.reconciliation_warning}.`
-        : '';
-    alert(`Extrato enviado com sucesso. Lote ${payload.batch.batch_code}.${reconciliationSummary}${reconciliationWarning}`);
-    event.currentTarget.reset();
-    await loadOverview();
-    const bankAccountId = Number(formData.get('bank_account_id'));
-    if(bankAccountId) await openWorkspace(bankAccountId, payload.batch.id);
+    const form = event.currentTarget;
+    clearUploadStatus();
+    ensureUploadBatchCode();
+    syncUploadSourceFromFile();
+
+    const formData = new FormData(form);
+    const bankAccountId = Number(formData.get('bank_account_id') || state.selectedBankAccountId || 0);
+    const fileInput = document.getElementById('upload-file');
+    const selectedFile = fileInput?.files?.[0] || null;
+    const batchCode = String(formData.get('batch_code') || '').trim();
+
+    if(!bankAccountId){
+        showUploadStatus('Selecione uma conta bancária antes de enviar o extrato.', 'error');
+        return;
+    }
+    if(!selectedFile){
+        showUploadStatus('Selecione um arquivo OFX, XLS, XLSX ou CSV para importar.', 'error');
+        return;
+    }
+    if(!batchCode){
+        const generatedCode = generateBatchCode();
+        formData.set('batch_code', generatedCode);
+        const batchInput = document.getElementById('upload-batch-code');
+        if(batchInput) batchInput.value = generatedCode;
+    }
+
+    formData.set('bank_account_id', String(bankAccountId));
+    formData.set('integration_channel', 'file');
+    formData.set('reconciliation_mode', '1');
+
+    const detectedSource = detectSourceFromFileName(selectedFile.name);
+    if(detectedSource){
+        formData.set('source_type', detectedSource);
+    }
+
+    try{
+        setUploadBusy(true);
+        showUploadStatus('Enviando extrato e preparando sugestões automáticas...', 'info');
+        const payload = await api(`/api/financial/imports${companyQuery()}`, { method:'POST', body: formData });
+        const reconciliationSummary = payload.reconciliation
+            ? ` Sugestões automáticas: ${payload.reconciliation.suggested_count || 0}. Sem match: ${payload.reconciliation.unmatched_count || 0}.`
+            : '';
+        const reconciliationWarning = payload.reconciliation_warning
+            ? ` Atenção: ${payload.reconciliation_warning}.`
+            : '';
+        showUploadStatus(`Extrato enviado com sucesso. Lote ${payload.batch.batch_code}.${reconciliationSummary}${reconciliationWarning}`, 'success');
+        form.reset();
+        state.selectedBankAccountId = bankAccountId;
+        initializeUploadForm();
+        await loadOverview();
+        const uploadSelect = document.getElementById('upload-bank-account');
+        if(uploadSelect) uploadSelect.value = String(bankAccountId);
+        if(payload.batch?.id) await openWorkspace(bankAccountId, payload.batch.id);
+    } catch(error){
+        console.error('Falha ao enviar extrato bancário para conciliação:', error);
+        showUploadStatus(error.message || 'Falha ao enviar extrato. Confira o arquivo e tente novamente.', 'error');
+    } finally {
+        setUploadBusy(false);
+    }
 });
 
 document.getElementById('batch-select').addEventListener('change', async (event) => {
@@ -726,11 +835,19 @@ document.getElementById('upload-bank-account').addEventListener('change', async 
     }
 });
 
+document.getElementById('upload-file').addEventListener('change', () => {
+    syncUploadSourceFromFile();
+    ensureUploadBatchCode();
+});
+
 document.getElementById('system-search').addEventListener('input', (event) => {
     state.systemSearch = event.target.value || '';
     renderSystemRows();
 });
 
-document.addEventListener('DOMContentLoaded', loadOverview);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeUploadForm();
+    loadOverview();
+});
 </script>
 {% endblock %}
