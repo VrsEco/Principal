@@ -9,10 +9,10 @@
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
   const importInput = document.getElementById('bpmnImportInput');
-  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 360;
-  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 560;
-  const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 100;
-  const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 120;
+  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 220;
+  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 320;
+  const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
+  const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 110;
   let modeler = null;
   let currentDiagram = null;
   let currentZoom = 1;
@@ -61,6 +61,12 @@
 
       modeler = new Modeler({
         container: '#bpmnCanvas',
+        additionalModules: [
+          {
+            __init__: ['app32OperationalActivityResizeRules'],
+            app32OperationalActivityResizeRules: ['type', App32OperationalActivityResizeRules]
+          }
+        ],
         keyboard: {
           bindTo: document
         }
@@ -69,7 +75,6 @@
 
       currentDiagram = await fetchDiagram();
       await importXml(currentDiagram.bpmn_xml);
-      normalizeOperationalActivitySizes({ silent: true });
       updateMeta();
       setStatus('Pronto para modelar', 'Use a paleta BPMN no canvas.');
     } catch (err) {
@@ -93,7 +98,6 @@
     setStatus(status === 'published' ? 'Publicando...' : 'Salvando...');
     try {
       const codeResult = normalizeActivityCodes({ silent: true });
-      const sizeResult = normalizeOperationalActivitySizes({ silent: true });
       const [{ xml }, { svg }] = await Promise.all([
         modeler.saveXML({ format: true }),
         modeler.saveSVG()
@@ -110,7 +114,6 @@
           activity_code_rule: 'process_code_dot_two_digit_sequence',
           activity_code_prefix: processCode || null,
           activity_code_normalized_count: codeResult.changed,
-          activity_shape_normalized_count: sizeResult.changed,
           pop_binding_rule: 'activity_with_data_object_reference',
           pop_candidates: extractPopBindingCandidates()
         }
@@ -131,14 +134,34 @@
       setStatus(
         status === 'published' ? 'Versão publicada' : 'Rascunho salvo',
         status === 'published'
-          ? `BPMN publicado e disponível na aba Fluxo do processo.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}${sizeResult.changed ? ` ${sizeResult.changed} atividade(s) redimensionada(s).` : ''}`
-          : `BPMN salvo no APP32.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}${sizeResult.changed ? ` ${sizeResult.changed} atividade(s) redimensionada(s).` : ''}`
+          ? `BPMN publicado e disponível na aba Fluxo do processo.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
+          : `BPMN salvo no APP32.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
       );
     } catch (err) {
       console.error('[APP32 BPMN] save error', err);
       setStatus('Erro ao salvar', err.message, true);
     }
   }
+
+  function App32OperationalActivityResizeRules(eventBus, rules) {
+    const allowOperationalResize = (context) => {
+      const shape = context && context.shape;
+      if (!shape || !isOperationalActivityType(shape.businessObject && shape.businessObject.$type)) {
+        return undefined;
+      }
+      return true;
+    };
+
+    rules.addRule('shape.resize', 1500, allowOperationalResize);
+    rules.addRule('shape.create', 1500, (context) => {
+      const shape = context && context.shape;
+      if (!shape || !isOperationalActivityType(shape.businessObject && shape.businessObject.$type)) {
+        return undefined;
+      }
+      return true;
+    });
+  }
+  App32OperationalActivityResizeRules.$inject = ['eventBus', 'rules'];
 
   function installOperationalActivityAutoSizing() {
     if (!modeler) return;
@@ -362,27 +385,6 @@
     let number = 1;
     while (usedNumbers.has(number)) number += 1;
     return number;
-  }
-
-  function normalizeOperationalActivitySizes(options) {
-    const opts = options || {};
-    if (!modeler) return { changed: 0, skipped: 'modeler_not_ready' };
-
-    let changed = 0;
-    for (const element of getOperationalActivities()) {
-      if (ensureOperationalActivityShapeSize(element)) changed += 1;
-    }
-
-    if (!opts.silent) {
-      setStatus(
-        changed ? 'Atividades redimensionadas' : 'Atividades já dimensionadas',
-        changed
-          ? `${changed} atividade(s) ajustada(s) para melhor leitura de código, nome e símbolo BPMN.`
-          : 'Todas as atividades operacionais já estão com tamanho adequado.'
-      );
-    }
-
-    return { changed };
   }
 
   function ensureOperationalActivityShapeSize(element) {
