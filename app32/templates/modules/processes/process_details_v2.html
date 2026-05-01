@@ -1764,29 +1764,22 @@
                         </a>
                     </div>
                     <div class="bpmn-flow-preview__canvas">
-                        ${bpmnFlow.bpmn_xml
-                            ? `<div id="${viewerId}" class="bpmn-flow-preview__viewer"></div>`
-                            : bpmnFlow.svg_snapshot}
+                        ${bpmnFlow.svg_snapshot
+                            ? bpmnFlow.svg_snapshot
+                            : (bpmnFlow.bpmn_xml
+                                ? `<div id="${viewerId}" class="bpmn-flow-preview__viewer"></div>`
+                                : '<div class="empty-state"><p>Fluxo publicado indisponível.</p></div>')}
                     </div>
                 </div>
             `;
-            if (bpmnFlow.bpmn_xml) {
+            if (!bpmnFlow.svg_snapshot && bpmnFlow.bpmn_xml) {
                 renderPublishedBpmnViewer(viewerId, bpmnFlow).catch((error) => {
                     console.warn('Falha ao renderizar BPMN publicado via XML; usando snapshot SVG.', error);
                     const viewerHost = document.getElementById(viewerId);
                     if (viewerHost) {
                         viewerHost.outerHTML = bpmnFlow.svg_snapshot || '<div class="empty-state"><p>Falha ao carregar o BPMN publicado.</p></div>';
-                        const canvasHost = flowContainer.querySelector('.bpmn-flow-preview__canvas');
-                        if (canvasHost) {
-                            requestAnimationFrame(() => tightenPublishedSvgViewport(canvasHost));
-                        }
                     }
                 });
-            } else {
-                const canvasHost = flowContainer.querySelector('.bpmn-flow-preview__canvas');
-                if (canvasHost) {
-                    requestAnimationFrame(() => tightenPublishedSvgViewport(canvasHost));
-                }
             }
         } else if (!state.process._bpmnFlowChecked) {
             state.process._bpmnFlowChecked = true;
@@ -1909,7 +1902,6 @@
             }
         }
 
-        requestAnimationFrame(() => tightenPublishedSvgViewport(host));
     }
 
     function getPublishedDiagramUsefulBounds(viewer) {
@@ -1960,37 +1952,6 @@
             width: maxX - minX,
             height: maxY - minY
         };
-    }
-
-    function tightenPublishedSvgViewport(host) {
-        if (!host) return;
-
-        const svg = host.querySelector('svg');
-        if (!svg || typeof svg.querySelector !== 'function') {
-            return;
-        }
-
-        const viewport = svg.querySelector('.viewport') || svg.querySelector('g');
-        if (!viewport || typeof viewport.getBBox !== 'function') {
-            return;
-        }
-
-        try {
-            const box = viewport.getBBox();
-            if (!box || !Number.isFinite(box.width) || !Number.isFinite(box.height) || box.width <= 0 || box.height <= 0) {
-                return;
-            }
-
-            const paddingX = Math.max(24, box.width * 0.03);
-            const paddingY = Math.max(24, box.height * 0.06);
-            svg.setAttribute('viewBox', `${box.x - paddingX} ${box.y - paddingY} ${box.width + (paddingX * 2)} ${box.height + (paddingY * 2)}`);
-            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            svg.style.width = '100%';
-            svg.style.height = 'auto';
-            svg.style.maxWidth = '100%';
-        } catch (error) {
-            console.warn('Falha ao ajustar viewBox do BPMN publicado.', error);
-        }
     }
 
     function sanitizeSvgSnapshot(svg) {

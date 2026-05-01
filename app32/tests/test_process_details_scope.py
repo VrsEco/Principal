@@ -190,7 +190,7 @@ def test_process_details_template_uses_app32_visual_pattern():
     assert 'indicator-process-card' not in content
 
 
-def test_process_details_template_prefers_bpmn_xml_viewer_for_published_flow():
+def test_process_details_template_prefers_svg_snapshot_and_keeps_xml_fallback_for_published_flow():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:
         content = handle.read()
@@ -198,11 +198,13 @@ def test_process_details_template_prefers_bpmn_xml_viewer_for_published_flow():
     assert "filename='vendor/bpmn-js/18.6.3/dist/assets/diagram-js.css'" in content
     assert "filename='vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js'" in content
     assert 'bpmn_xml: diagram.bpmn_xml,' in content
+    assert 'bpmnFlow.svg_snapshot' in content
+    assert 'if (!bpmnFlow.svg_snapshot && bpmnFlow.bpmn_xml)' in content
     assert 'renderPublishedBpmnViewer(viewerId, bpmnFlow)' in content
     assert 'getPublishedDiagramUsefulBounds(publishedBpmnViewer)' in content
     assert 'canvas.viewbox({' in content
-    assert 'tightenPublishedSvgViewport(host)' in content
-    assert 'svg.setAttribute(\'viewBox\'' in content
+    assert 'tightenPublishedSvgViewport(host)' not in content
+    assert 'svg.setAttribute(\'viewBox\'' not in content
     assert 'window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler' in content
 
 
