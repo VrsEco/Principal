@@ -76,3 +76,22 @@ def test_process_details_template_contains_book_action():
     assert "url_for('processes.process_book', process_id=process_id)" in content
     assert 'Versão de Impressão' in content
     assert 'Abrir Book' not in content
+
+
+def test_process_book_template_uses_print_optimized_bpmn_labels():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'templates',
+            'reports',
+            'process_book_v2.html',
+        )
+    )
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert '@page process-flow-landscape' in content
+    assert 'margin: 8mm' in content
+    assert '.flow-frame .bpmn-svg svg .djs-label' in content
+    assert 'font-size: 24px !important' in content
