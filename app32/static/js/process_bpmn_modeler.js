@@ -9,8 +9,8 @@
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
   const importInput = document.getElementById('bpmnImportInput');
-  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 220;
-  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 320;
+  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 200;
+  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 280;
   const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
   const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 110;
   let modeler = null;
