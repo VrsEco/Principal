@@ -260,24 +260,44 @@ Isso deve ser atributo do domínio, e não regra escondida em processo.
 ## 7.1. Abas core sugeridas
 
 1. **Resumo**
-2. **Partes**
+2. **Cliente**
 3. **Itens do Contrato**
 4. **Itens de Faturamento**
-5. **Financeiro**
+5. **Periodicidade**
 6. **Fiscal**
-7. **Datas e Gatilhos**
-8. **Retenções**
-9. **Observações**
+7. **Cobrança**
+8. **Observações**
+9. **Revisão**
 
 ## 7.2. Abas capability sugeridas
 
-1. **Validação / Edição do Contrato**
+1. **Validar / Editar Contrato**
 2. **Gerar PDF**
-3. **Documentos**
+3. **Documentos / Anexos**
 4. **Contrato Assinado**
 5. **Histórico do Processo**
 6. **Integrações**
 7. **Faturamento Derivado**
+
+### Shell MVP implementado em 2026-05-01
+
+O MVP publicado do módulo passou a refletir esta matriz com:
+
+- favorecido com card de **Classificação** e opções explícitas `Cliente` / `Fornecedor`;
+- contrato com abas:
+  - `Resumo`
+  - `Cliente`
+  - `Itens do Contrato`
+  - `Itens de Faturamento`
+  - `Periodicidade`
+  - `Fiscal`
+  - `Cobrança`
+  - `Observações`
+  - `Revisão`
+  - `Validar / Editar Contrato`
+  - `Gerar PDF`
+  - `Contrato Assinado`
+  - `Documentos / Anexos`
 
 ## 7.3. Abas extension possíveis
 

@@ -32,6 +32,22 @@ from models.financial import (
 
 
 class ContractService:
+    TAB_REGISTRY = (
+        {"key": "resumo", "label": "Resumo", "scope": "core", "description": "Dados centrais do contrato."},
+        {"key": "cliente", "label": "Cliente", "scope": "core", "description": "Favorecido cliente vinculado ao contrato."},
+        {"key": "itens", "label": "Itens do Contrato", "scope": "core", "description": "Escopo, serviços e itens negociados."},
+        {"key": "faturamento", "label": "Itens de Faturamento", "scope": "core", "description": "Itens e regras de faturamento."},
+        {"key": "periodicidade", "label": "Periodicidade", "scope": "core", "description": "Datas-base, competência, vencimento e gatilhos."},
+        {"key": "fiscal", "label": "Fiscal", "scope": "core", "description": "Perfil fiscal e retenções."},
+        {"key": "cobranca", "label": "Cobrança", "scope": "core", "description": "Condições financeiras e de cobrança."},
+        {"key": "observacoes", "label": "Observações", "scope": "core", "description": "Contexto operacional e observações livres."},
+        {"key": "revisao", "label": "Revisão", "scope": "core", "description": "Checklist de consistência do cadastro."},
+        {"key": "validar", "label": "Validar / Editar Contrato", "scope": "capability", "description": "Aprovação operacional e ajustes finais."},
+        {"key": "gerar_pdf", "label": "Gerar PDF", "scope": "capability", "description": "Upload/controle da versão em PDF."},
+        {"key": "contrato_assinado", "label": "Contrato Assinado", "scope": "capability", "description": "Upload da via assinada escaneada."},
+        {"key": "documentos", "label": "Documentos / Anexos", "scope": "capability", "description": "Artefatos gerais vinculados ao contrato."},
+    )
+
     @staticmethod
     def _normalize_text(value: object) -> str:
         return str(value or "").strip()
@@ -116,6 +132,18 @@ class ContractService:
         )
 
     @staticmethod
+    def list_customer_parties(company_id: int):
+        return (
+            ContractParty.query.filter(
+                ContractParty.company_id == company_id,
+                ContractParty.deleted_at.is_(None),
+                ContractParty.is_customer.is_(True),
+            )
+            .order_by(ContractParty.name.asc())
+            .all()
+        )
+
+    @staticmethod
     def list_contracts(company_id: int):
         return (
             Contract.query.filter(Contract.company_id == company_id, Contract.deleted_at.is_(None))
@@ -168,6 +196,10 @@ class ContractService:
         ).first()
 
     @staticmethod
+    def get_tab_registry() -> list[dict]:
+        return [dict(item) for item in ContractService.TAB_REGISTRY]
+
+    @staticmethod
     def create_party(*, company_id: int, payload: dict, user_id: Optional[int]):
         party = ContractParty(
             company_id=company_id,
@@ -196,7 +228,7 @@ class ContractService:
         party.financial_counterparty_id = ContractService._normalize_int(payload.get("financial_counterparty_id"))
         party.updated_by_user_id = user_id
         if not party.is_customer and not party.is_supplier:
-            party.is_customer = True
+            raise ValueError("Selecione ao menos uma classificação: Cliente, Fornecedor ou ambos.")
         if not is_new:
             db.session.commit()
         return party
@@ -219,23 +251,86 @@ class ContractService:
         title = ContractService._normalize_text(payload.get("title"))
         if title:
             contract.title = title
-        contract.party_id = ContractService._normalize_int(payload.get("party_id")) or contract.party_id
-        contract.status = ContractService._normalize_text(payload.get("status")) or contract.status or "draft"
-        contract.contract_type = ContractService._normalize_text(payload.get("contract_type")) or None
-        contract.currency_code = ContractService._normalize_text(payload.get("currency_code")) or "BRL"
-        contract.signed_at = ContractService._normalize_date(payload.get("signed_at"))
-        contract.service_start_at = ContractService._normalize_date(payload.get("service_start_at"))
-        contract.service_end_at = ContractService._normalize_date(payload.get("service_end_at"))
-        contract.billing_start_at = ContractService._normalize_date(payload.get("billing_start_at"))
-        contract.billing_end_at = ContractService._normalize_date(payload.get("billing_end_at"))
-        contract.periodicity = ContractService._normalize_text(payload.get("periodicity")) or None
-        contract.competence_rule = ContractService._normalize_text(payload.get("competence_rule")) or None
-        contract.due_rule = ContractService._normalize_text(payload.get("due_rule")) or None
-        contract.renewal_rule = ContractService._normalize_text(payload.get("renewal_rule")) or None
-        contract.notes = ContractService._normalize_text(payload.get("notes")) or None
+        if "party_id" in payload:
+            contract.party_id = ContractService._normalize_int(payload.get("party_id")) or contract.party_id
+        if "status" in payload:
+            contract.status = ContractService._normalize_text(payload.get("status")) or contract.status or "draft"
+        if "contract_type" in payload:
+            contract.contract_type = ContractService._normalize_text(payload.get("contract_type")) or None
+        if "currency_code" in payload:
+            contract.currency_code = ContractService._normalize_text(payload.get("currency_code")) or "BRL"
+        if "signed_at" in payload:
+            contract.signed_at = ContractService._normalize_date(payload.get("signed_at"))
+        if "service_start_at" in payload:
+            contract.service_start_at = ContractService._normalize_date(payload.get("service_start_at"))
+        if "service_end_at" in payload:
+            contract.service_end_at = ContractService._normalize_date(payload.get("service_end_at"))
+        if "billing_start_at" in payload:
+            contract.billing_start_at = ContractService._normalize_date(payload.get("billing_start_at"))
+        if "billing_end_at" in payload:
+            contract.billing_end_at = ContractService._normalize_date(payload.get("billing_end_at"))
+        if "periodicity" in payload:
+            contract.periodicity = ContractService._normalize_text(payload.get("periodicity")) or None
+        if "competence_rule" in payload:
+            contract.competence_rule = ContractService._normalize_text(payload.get("competence_rule")) or None
+        if "due_rule" in payload:
+            contract.due_rule = ContractService._normalize_text(payload.get("due_rule")) or None
+        if "renewal_rule" in payload:
+            contract.renewal_rule = ContractService._normalize_text(payload.get("renewal_rule")) or None
+        if "notes" in payload:
+            contract.notes = ContractService._normalize_text(payload.get("notes")) or None
         contract.updated_by_user_id = user_id
         if not is_new:
             db.session.commit()
+        return contract
+
+    @staticmethod
+    def update_contract_summary(*, contract: Contract, payload: dict, user_id: Optional[int]):
+        return ContractService.update_contract_general(contract=contract, payload=payload, user_id=user_id)
+
+    @staticmethod
+    def update_contract_customer(*, contract: Contract, payload: dict, user_id: Optional[int]):
+        party_id = ContractService._normalize_int(payload.get("party_id"))
+        if not party_id:
+            raise ValueError("Selecione um favorecido cliente para o contrato.")
+        contract.party_id = party_id
+        contract.updated_by_user_id = user_id
+        db.session.commit()
+        return contract
+
+    @staticmethod
+    def update_contract_schedule(*, contract: Contract, payload: dict, user_id: Optional[int]):
+        schedule_payload = {
+            "signed_at": payload.get("signed_at"),
+            "service_start_at": payload.get("service_start_at"),
+            "service_end_at": payload.get("service_end_at"),
+            "billing_start_at": payload.get("billing_start_at"),
+            "billing_end_at": payload.get("billing_end_at"),
+            "periodicity": payload.get("periodicity"),
+            "competence_rule": payload.get("competence_rule"),
+            "due_rule": payload.get("due_rule"),
+            "renewal_rule": payload.get("renewal_rule"),
+        }
+        return ContractService.update_contract_general(contract=contract, payload=schedule_payload, user_id=user_id)
+
+    @staticmethod
+    def update_contract_notes(*, contract: Contract, payload: dict, user_id: Optional[int]):
+        return ContractService.update_contract_general(
+            contract=contract,
+            payload={"notes": payload.get("notes")},
+            user_id=user_id,
+        )
+
+    @staticmethod
+    def update_contract_validation(*, contract: Contract, payload: dict, user_id: Optional[int]):
+        metadata = dict(contract.metadata_json or {})
+        metadata["validation_status"] = ContractService._normalize_text(payload.get("validation_status")) or "pending"
+        metadata["validation_notes"] = ContractService._normalize_text(payload.get("validation_notes")) or None
+        metadata["last_validation_user_id"] = user_id
+        metadata["last_validation_at"] = datetime.utcnow().isoformat()
+        contract.metadata_json = metadata
+        contract.updated_by_user_id = user_id
+        db.session.commit()
         return contract
 
     @staticmethod

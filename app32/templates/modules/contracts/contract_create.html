@@ -37,6 +37,7 @@
                     <option value="{{ party.id }}">{{ party.code }} · {{ party.name }}</option>
                     {% endfor %}
                 </select>
+                <small class="field-hint">A lista mostra apenas favorecidos classificados como cliente.</small>
             </label>
             <label>
                 <span>Tipo de contrato</span>
@@ -82,6 +83,13 @@
             <button class="btn btn-primary" type="submit">Criar contrato</button>
         </div>
     </form>
+    {% if not parties %}
+    <div class="panel soft-panel">
+        <div class="panel-body">
+            <p class="empty-state">Nenhum favorecido classificado como cliente foi encontrado. Cadastre primeiro um favorecido com a opção <strong>Cliente</strong> marcada.</p>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% include "modules/contracts/_styles.html" %}
 {% endblock %}

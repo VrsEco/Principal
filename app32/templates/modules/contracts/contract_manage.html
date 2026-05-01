@@ -13,306 +13,510 @@
 {% endblock %}
 
 {% block workspace_content %}
-{% set tabs = [
-    ('geral', 'Resumo'),
-    ('itens', 'Itens do Contrato'),
-    ('faturamento', 'Itens de Faturamento'),
-    ('financeiro', 'Financeiro'),
-    ('fiscal', 'Fiscal'),
-    ('gatilhos', 'Datas / Gatilhos'),
-    ('documentos', 'Documentos')
-] %}
+{% set validation_status = (contract.metadata_json or {}).get('validation_status', 'pending') %}
+{% set validation_notes = (contract.metadata_json or {}).get('validation_notes', '') %}
+{% set review_flags = {
+    'cliente': contract.party_id,
+    'itens': contract.items.count(),
+    'faturamento': contract.billing_items.count(),
+    'periodicidade': contract.periodicity or contract.billing_start_at or contract.signed_at,
+    'fiscal': fiscal_terms or contract.retentions.count(),
+    'cobranca': financial_terms,
+    'pdf': pdf_documents|length,
+    'assinado': signed_documents|length
+} %}
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
             <p class="eyebrow">Contrato</p>
             <h1>{{ contract.code }} · {{ contract.title }}</h1>
-            <p class="subtitle">{{ contract.party.name if contract.party else 'Sem favorecido' }} · status {{ contract.status }}</p>
+            <p class="subtitle">{{ contract.party.name if contract.party else 'Sem cliente vinculado' }} · status {{ contract.status }}</p>
+            <div class="context-badges">
+                <span class="mini-badge active">core</span>
+                <span class="mini-badge active">capability</span>
+                <span class="mini-badge">{{ contract.currency_code or 'BRL' }}</span>
+            </div>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Voltar</a>
         </div>
     </header>
 
-    <nav class="tab-nav">
-        {% for tab_key, tab_label in tabs %}
-        <a href="/contracts/{{ contract.id }}?company_id={{ company_id }}&tab={{ tab_key }}" class="tab-link {{ 'active' if active_tab == tab_key else '' }}">{{ tab_label }}</a>
-        {% endfor %}
-    </nav>
+    <section class="contract-shell-grid">
+        <aside class="panel shell-sidebar">
+            <div class="panel-header"><h2>Mapa de abas</h2></div>
+            <div class="panel-body shell-tab-stack">
+                {% for tab in tabs %}
+                <a href="/contracts/{{ contract.id }}?company_id={{ company_id }}&tab={{ tab.key }}" class="shell-tab-card {{ 'active' if active_tab == tab.key else '' }}">
+                    <div class="shell-tab-head">
+                        <strong>{{ tab.label }}</strong>
+                        <span class="scope-pill scope-{{ tab.scope }}">{{ tab.scope }}</span>
+                    </div>
+                    <small>{{ tab.description }}</small>
+                </a>
+                {% endfor %}
+            </div>
+        </aside>
 
-    {% if active_tab == 'geral' %}
-    <form method="post" class="panel form-panel">
-        <input type="hidden" name="section" value="geral">
-        <div class="panel-body form-grid">
-            <label class="full-width"><span>Título</span><input type="text" name="title" value="{{ contract.title }}" required></label>
-            <label><span>Favorecido</span>
-                <select name="party_id" required>
-                    {% for party in parties %}
-                    <option value="{{ party.id }}" {% if contract.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label><span>Tipo</span><input type="text" name="contract_type" value="{{ contract.contract_type or '' }}"></label>
-            <label><span>Status</span>
-                <select name="status">
-                    {% for status in ['draft', 'active', 'signed', 'implanting', 'closed'] %}
-                    <option value="{{ status }}" {% if contract.status == status %}selected{% endif %}>{{ status }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label><span>Moeda</span><input type="text" name="currency_code" value="{{ contract.currency_code or 'BRL' }}"></label>
-            <label><span>Periodicidade</span><input type="text" name="periodicity" value="{{ contract.periodicity or '' }}"></label>
-            <label><span>Competência</span><input type="text" name="competence_rule" value="{{ contract.competence_rule or '' }}"></label>
-            <label><span>Vencimento</span><input type="text" name="due_rule" value="{{ contract.due_rule or '' }}"></label>
-            <label><span>Renovação</span><input type="text" name="renewal_rule" value="{{ contract.renewal_rule or '' }}"></label>
-            <label class="full-width"><span>Observações</span><textarea name="notes" rows="5">{{ contract.notes or '' }}</textarea></label>
-        </div>
-        <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar resumo</button></div>
-    </form>
-    {% elif active_tab == 'itens' %}
-    <div class="grid-two">
-        <form method="post" class="panel form-panel">
-            <input type="hidden" name="section" value="itens">
-            <div class="panel-header"><h2>Novo item contratual</h2></div>
-            <div class="panel-body form-grid">
-                <label><span>Código</span><input type="text" name="item_code"></label>
-                <label><span>Tipo</span><input type="text" name="item_type"></label>
-                <label class="full-width"><span>Descrição</span><textarea name="description" rows="3" required></textarea></label>
-                <label><span>Quantidade</span><input type="number" step="0.01" name="quantity" value="1"></label>
-                <label><span>Unidade</span><input type="text" name="unit_code"></label>
-                <label><span>Preço unitário</span><input type="text" name="unit_price" value="0,00"></label>
-            </div>
-            <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar item</button></div>
-        </form>
-        <div class="panel">
-            <div class="panel-header"><h2>Itens cadastrados</h2></div>
-            <div class="panel-body">
-                {% if contract.items.count() %}
-                <div class="list-stack">
-                    {% for item in contract.items.all() %}
-                    <form method="post" class="list-item list-item-form">
-                        <input type="hidden" name="section" value="itens">
-                        <input type="hidden" name="delete_item_id" value="{{ item.id }}">
-                        <div><strong>{{ item.item_code or '-' }} · {{ item.description }}</strong><small>{{ item.quantity }} x {{ item.unit_price }}</small></div>
-                        <button class="btn btn-danger" type="submit">Remover</button>
-                    </form>
-                    {% endfor %}
+        <div class="shell-main">
+            <nav class="tab-nav">
+                {% for tab in tabs %}
+                <a href="/contracts/{{ contract.id }}?company_id={{ company_id }}&tab={{ tab.key }}" class="tab-link {{ 'active' if active_tab == tab.key else '' }}">
+                    {{ tab.label }}
+                    <span class="scope-dot scope-{{ tab.scope }}"></span>
+                </a>
+                {% endfor %}
+            </nav>
+
+            {% if active_tab == 'resumo' %}
+            <form method="post" class="panel form-panel">
+                <input type="hidden" name="section" value="resumo">
+                <div class="panel-header">
+                    <h2>Resumo</h2>
+                    <span class="scope-pill scope-core">core</span>
                 </div>
-                {% else %}<p class="empty-state">Nenhum item cadastrado.</p>{% endif %}
-            </div>
-        </div>
-    </div>
-    {% elif active_tab == 'faturamento' %}
-    <div class="grid-two">
-        <form method="post" class="panel form-panel">
-            <input type="hidden" name="section" value="faturamento">
-            <div class="panel-header"><h2>Novo item de faturamento</h2></div>
-            <div class="panel-body form-grid">
-                <label><span>Código</span><input type="text" name="billing_code"></label>
-                <label><span>Item do contrato</span>
-                    <select name="contract_item_id">
-                        <option value="">Sem vínculo</option>
-                        {% for item in contract.items.all() %}
-                        <option value="{{ item.id }}">{{ item.item_code or '-' }} · {{ item.description }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label class="full-width"><span>Descrição</span><textarea name="description" rows="3" required></textarea></label>
-                <label><span>Valor</span><input type="text" name="amount" value="0,00"></label>
-                <label><span>Periodicidade</span><input type="text" name="billing_periodicity"></label>
-                <label><span>Competência</span><input type="text" name="competence_rule"></label>
-                <label><span>Vencimento</span><input type="text" name="due_rule"></label>
-                <label><span>Data gatilho</span><input type="text" name="trigger_reference_date" placeholder="dia 5, assinatura..."></label>
-                <label class="checkbox-inline"><input type="checkbox" name="is_recurring" checked> Recorrente</label>
-            </div>
-            <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar faturamento</button></div>
-        </form>
-        <div class="panel">
-            <div class="panel-header"><h2>Itens de faturamento</h2></div>
-            <div class="panel-body">
-                {% if contract.billing_items.count() %}
-                <div class="list-stack">
-                    {% for item in contract.billing_items.all() %}
-                    <form method="post" class="list-item list-item-form">
-                        <input type="hidden" name="section" value="faturamento">
-                        <input type="hidden" name="delete_billing_item_id" value="{{ item.id }}">
-                        <div><strong>{{ item.billing_code or '-' }} · {{ item.description }}</strong><small>R$ {{ item.amount }} · {{ item.billing_periodicity or 'sem periodicidade' }}</small></div>
-                        <button class="btn btn-danger" type="submit">Remover</button>
-                    </form>
-                    {% endfor %}
-                </div>
-                {% else %}<p class="empty-state">Nenhum item de faturamento cadastrado.</p>{% endif %}
-            </div>
-        </div>
-    </div>
-    {% elif active_tab == 'financeiro' %}
-    <form method="post" class="panel form-panel">
-        <input type="hidden" name="section" value="financeiro">
-        <div class="panel-body form-grid">
-            <label><span>Tipo do prazo</span><input type="text" name="payment_term_type" value="{{ financial_terms.payment_term_type if financial_terms else '' }}"></label>
-            <label><span>Dias do prazo</span><input type="number" name="payment_term_days" value="{{ financial_terms.payment_term_days if financial_terms else '' }}"></label>
-            <label><span>Método de faturamento</span><input type="text" name="billing_method" value="{{ financial_terms.billing_method if financial_terms else '' }}"></label>
-            <label><span>Modelo de precificação</span><input type="text" name="pricing_model" value="{{ financial_terms.pricing_model if financial_terms else '' }}"></label>
-            <label><span>Regra de reajuste</span><input type="text" name="adjustment_rule" value="{{ financial_terms.adjustment_rule if financial_terms else '' }}"></label>
-            <label><span>Conta bancária padrão</span>
-                <select name="default_bank_account_id">
-                    <option value="">Selecione</option>
-                    {% for item in references.bank_accounts %}
-                    <option value="{{ item.id }}" {% if financial_terms and financial_terms.default_bank_account_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label><span>Forma financeira padrão</span>
-                <select name="default_payment_method_id">
-                    <option value="">Selecione</option>
-                    {% for item in references.payment_methods %}
-                    <option value="{{ item.id }}" {% if financial_terms and financial_terms.default_payment_method_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label><span>Correção financeira</span>
-                <select name="correction_index_id">
-                    <option value="">Selecione</option>
-                    {% for item in references.correction_indexes %}
-                    <option value="{{ item.id }}" {% if financial_terms and financial_terms.correction_index_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label class="full-width"><span>Observações financeiras</span><textarea name="notes" rows="4">{{ financial_terms.notes if financial_terms else '' }}</textarea></label>
-        </div>
-        <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar financeiro</button></div>
-    </form>
-    {% elif active_tab == 'fiscal' %}
-    <div class="grid-two">
-        <form method="post" class="panel form-panel">
-            <input type="hidden" name="section" value="fiscal">
-            <div class="panel-body form-grid">
-                <label><span>Perfil fiscal</span><input type="text" name="fiscal_profile_code" value="{{ fiscal_terms.fiscal_profile_code if fiscal_terms else '' }}"></label>
-                <label><span>Cidade do serviço</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else '' }}"></label>
-                <label><span>Natureza tributária</span><input type="text" name="tax_nature" value="{{ fiscal_terms.tax_nature if fiscal_terms else '' }}"></label>
-                <label class="full-width"><span>Observação tributária</span><textarea name="tax_observation" rows="4">{{ fiscal_terms.tax_observation if fiscal_terms else '' }}</textarea></label>
-                <label class="full-width"><span>Observações fiscais</span><textarea name="notes" rows="4">{{ fiscal_terms.notes if fiscal_terms else '' }}</textarea></label>
-            </div>
-            <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar fiscal</button></div>
-        </form>
-        <div class="panel form-panel">
-            <form method="post">
-                <input type="hidden" name="section" value="fiscal">
-                <div class="panel-header"><h2>Retenções</h2></div>
                 <div class="panel-body form-grid">
-                    <label><span>Tipo</span><input type="text" name="retention_type"></label>
-                    <label><span>Modo</span><input type="text" name="calculation_mode"></label>
-                    <label><span>Percentual</span><input type="text" name="rate_percent" value="0,00"></label>
-                    <label><span>Valor fixo</span><input type="text" name="fixed_amount" value="0,00"></label>
-                    <label class="full-width"><span>Observações</span><textarea name="notes" rows="3"></textarea></label>
+                    <label class="full-width"><span>Título</span><input type="text" name="title" value="{{ contract.title }}" required></label>
+                    <label><span>Tipo</span><input type="text" name="contract_type" value="{{ contract.contract_type or '' }}"></label>
+                    <label><span>Status</span>
+                        <select name="status">
+                            {% for status in ['draft', 'active', 'signed', 'implanting', 'closed'] %}
+                            <option value="{{ status }}" {% if contract.status == status %}selected{% endif %}>{{ status }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label><span>Moeda</span><input type="text" name="currency_code" value="{{ contract.currency_code or 'BRL' }}"></label>
+                    <label><span>Código</span><input type="text" value="{{ contract.code }}" disabled></label>
                 </div>
-                <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar retenção</button></div>
+                <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar resumo</button></div>
             </form>
-            <div class="panel-body">
-                {% if contract.retentions.count() %}
-                <div class="list-stack">
-                    {% for retention in contract.retentions.all() %}
-                    <form method="post" class="list-item list-item-form">
-                        <input type="hidden" name="section" value="fiscal">
-                        <input type="hidden" name="delete_retention_id" value="{{ retention.id }}">
-                        <div><strong>{{ retention.retention_type }}</strong><small>{{ retention.calculation_mode or '-' }} · {{ retention.rate_percent or retention.fixed_amount or 0 }}</small></div>
-                        <button class="btn btn-danger" type="submit">Remover</button>
-                    </form>
-                    {% endfor %}
+
+            {% elif active_tab == 'cliente' %}
+            <form method="post" class="panel form-panel">
+                <input type="hidden" name="section" value="cliente">
+                <div class="panel-header">
+                    <h2>Cliente</h2>
+                    <span class="scope-pill scope-core">core</span>
                 </div>
-                {% else %}<p class="empty-state">Nenhuma retenção cadastrada.</p>{% endif %}
-            </div>
-        </div>
-    </div>
-    {% elif active_tab == 'gatilhos' %}
-    <div class="grid-two">
-        <form method="post" class="panel form-panel">
-            <input type="hidden" name="section" value="gatilhos">
-            <div class="panel-header"><h2>Datas-base do contrato</h2></div>
-            <div class="panel-body form-grid">
-                <label><span>Data de assinatura</span><input type="date" name="signed_at" value="{{ contract.signed_at.isoformat() if contract.signed_at else '' }}"></label>
-                <label><span>Início dos serviços</span><input type="date" name="service_start_at" value="{{ contract.service_start_at.isoformat() if contract.service_start_at else '' }}"></label>
-                <label><span>Fim dos serviços</span><input type="date" name="service_end_at" value="{{ contract.service_end_at.isoformat() if contract.service_end_at else '' }}"></label>
-                <label><span>Início do faturamento</span><input type="date" name="billing_start_at" value="{{ contract.billing_start_at.isoformat() if contract.billing_start_at else '' }}"></label>
-                <label><span>Fim do faturamento</span><input type="date" name="billing_end_at" value="{{ contract.billing_end_at.isoformat() if contract.billing_end_at else '' }}"></label>
-                <label><span>Periodicidade</span><input type="text" name="periodicity" value="{{ contract.periodicity or '' }}"></label>
-                <label><span>Competência</span><input type="text" name="competence_rule" value="{{ contract.competence_rule or '' }}"></label>
-                <label><span>Regra de vencimento</span><input type="text" name="due_rule" value="{{ contract.due_rule or '' }}"></label>
-                <label class="full-width"><span>Regra de renovação</span><input type="text" name="renewal_rule" value="{{ contract.renewal_rule or '' }}"></label>
-            </div>
-            <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar datas-base</button></div>
-        </form>
-        <div class="panel form-panel">
-            <form method="post">
-                <input type="hidden" name="section" value="gatilhos">
-                <div class="panel-header"><h2>Novo gatilho</h2></div>
                 <div class="panel-body form-grid">
-                    <label><span>Tipo</span><input type="text" name="trigger_type" placeholder="faturamento, renovação..."></label>
-                    <label><span>Data de referência</span><input type="text" name="reference_date_type" placeholder="assinatura, início..."></label>
-                    <label><span>Valor da data</span><input type="date" name="reference_date_value"></label>
-                    <label><span>Offset (dias)</span><input type="number" name="offset_days"></label>
-                    <label><span>Periodicidade</span><input type="text" name="periodicity"></label>
-                    <label><span>Alertar antes (dias)</span><input type="number" name="alert_before_days"></label>
-                </div>
-                <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar gatilho</button></div>
-            </form>
-            <div class="panel-body">
-                {% if contract.triggers.count() %}
-                <div class="list-stack">
-                    {% for trigger in contract.triggers.all() %}
-                    <form method="post" class="list-item list-item-form">
-                        <input type="hidden" name="section" value="gatilhos">
-                        <input type="hidden" name="delete_trigger_id" value="{{ trigger.id }}">
-                        <div><strong>{{ trigger.trigger_type }}</strong><small>{{ trigger.reference_date_type or '-' }} · {{ trigger.reference_date_value or '-' }}</small></div>
-                        <button class="btn btn-danger" type="submit">Remover</button>
-                    </form>
-                    {% endfor %}
-                </div>
-                {% else %}<p class="empty-state">Nenhum gatilho cadastrado.</p>{% endif %}
-            </div>
-        </div>
-    </div>
-    {% elif active_tab == 'documentos' %}
-    <div class="grid-two">
-        <form method="post" enctype="multipart/form-data" class="panel form-panel">
-            <input type="hidden" name="section" value="documentos">
-            <div class="panel-body form-grid">
-                <label><span>Tipo do documento</span>
-                    <select name="document_type">
-                        <option value="minuta">Minuta</option>
-                        <option value="pdf_gerado">PDF gerado</option>
-                        <option value="contrato_assinado">Contrato assinado escaneado</option>
-                        <option value="anexo">Anexo</option>
-                    </select>
-                </label>
-                <label><span>Versão</span><input type="text" name="document_version" placeholder="v1, final..."></label>
-                <label class="checkbox-inline"><input type="checkbox" name="is_signed_version"> Versão assinada</label>
-                <label class="full-width"><span>Arquivo</span><input type="file" name="file" required></label>
-            </div>
-            <div class="panel-footer"><button class="btn btn-primary" type="submit">Anexar documento</button></div>
-        </form>
-        <div class="panel">
-            <div class="panel-header"><h2>Documentos do contrato</h2></div>
-            <div class="panel-body">
-                {% if contract.documents.count() %}
-                <div class="list-stack">
-                    {% for document in contract.documents.all() %}
-                    <form method="post" class="list-item list-item-form">
-                        <input type="hidden" name="section" value="documentos">
-                        <input type="hidden" name="delete_document_id" value="{{ document.id }}">
-                        <div>
-                            <strong><a href="/uploads/{{ document.file_path }}" target="_blank">{{ document.file_name }}</a></strong>
-                            <small>{{ document.document_type }} · {{ document.document_version or 'sem versão' }}</small>
+                    <label class="full-width"><span>Favorecido cliente</span>
+                        <select name="party_id" required>
+                            <option value="">Selecione</option>
+                            {% for party in parties %}
+                            <option value="{{ party.id }}" {% if contract.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="field-hint">A lista exibe apenas favorecidos marcados como cliente.</small>
+                    </label>
+                    <div class="info-card full-width">
+                        <strong>Snapshot do cliente atual</strong>
+                        <div class="info-grid">
+                            <span><strong>Nome:</strong> {{ contract.party.name if contract.party else '-' }}</span>
+                            <span><strong>Documento:</strong> {{ contract.party.document_number if contract.party else '-' }}</span>
+                            <span><strong>E-mail:</strong> {{ contract.party.email if contract.party else '-' }}</span>
+                            <span><strong>Telefone:</strong> {{ contract.party.phone if contract.party else '-' }}</span>
                         </div>
-                        <button class="btn btn-danger" type="submit">Remover</button>
-                    </form>
-                    {% endfor %}
+                    </div>
                 </div>
-                {% else %}<p class="empty-state">Nenhum documento anexado.</p>{% endif %}
+                <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar cliente</button></div>
+            </form>
+
+            {% elif active_tab == 'itens' %}
+            <div class="grid-two">
+                <form method="post" class="panel form-panel">
+                    <input type="hidden" name="section" value="itens">
+                    <div class="panel-header"><h2>Novo item contratual</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-body form-grid">
+                        <label><span>Código</span><input type="text" name="item_code"></label>
+                        <label><span>Tipo</span><input type="text" name="item_type"></label>
+                        <label class="full-width"><span>Descrição</span><textarea name="description" rows="3" required></textarea></label>
+                        <label><span>Quantidade</span><input type="number" step="0.01" name="quantity" value="1"></label>
+                        <label><span>Unidade</span><input type="text" name="unit_code"></label>
+                        <label><span>Preço unitário</span><input type="text" name="unit_price" value="0,00"></label>
+                    </div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar item</button></div>
+                </form>
+                <div class="panel">
+                    <div class="panel-header"><h2>Itens cadastrados</h2></div>
+                    <div class="panel-body">
+                        {% if contract.items.count() %}
+                        <div class="list-stack">
+                            {% for item in contract.items.all() %}
+                            <form method="post" class="list-item list-item-form">
+                                <input type="hidden" name="section" value="itens">
+                                <input type="hidden" name="delete_item_id" value="{{ item.id }}">
+                                <div><strong>{{ item.item_code or '-' }} · {{ item.description }}</strong><small>{{ item.quantity }} x {{ item.unit_price }}</small></div>
+                                <button class="btn btn-danger" type="submit">Remover</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                        {% else %}<p class="empty-state">Nenhum item cadastrado.</p>{% endif %}
+                    </div>
+                </div>
             </div>
+
+            {% elif active_tab == 'faturamento' %}
+            <div class="grid-two">
+                <form method="post" class="panel form-panel">
+                    <input type="hidden" name="section" value="faturamento">
+                    <div class="panel-header"><h2>Novo item de faturamento</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-body form-grid">
+                        <label><span>Código</span><input type="text" name="billing_code"></label>
+                        <label><span>Item do contrato</span>
+                            <select name="contract_item_id">
+                                <option value="">Sem vínculo</option>
+                                {% for item in contract.items.all() %}
+                                <option value="{{ item.id }}">{{ item.item_code or '-' }} · {{ item.description }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="full-width"><span>Descrição</span><textarea name="description" rows="3" required></textarea></label>
+                        <label><span>Valor</span><input type="text" name="amount" value="0,00"></label>
+                        <label><span>Periodicidade</span><input type="text" name="billing_periodicity"></label>
+                        <label><span>Competência</span><input type="text" name="competence_rule"></label>
+                        <label><span>Vencimento</span><input type="text" name="due_rule"></label>
+                        <label><span>Data gatilho</span><input type="text" name="trigger_reference_date" placeholder="dia 5, assinatura..."></label>
+                        <label class="checkbox-inline"><input type="checkbox" name="is_recurring" checked> Recorrente</label>
+                    </div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar faturamento</button></div>
+                </form>
+                <div class="panel">
+                    <div class="panel-header"><h2>Itens de faturamento</h2></div>
+                    <div class="panel-body">
+                        {% if contract.billing_items.count() %}
+                        <div class="list-stack">
+                            {% for item in contract.billing_items.all() %}
+                            <form method="post" class="list-item list-item-form">
+                                <input type="hidden" name="section" value="faturamento">
+                                <input type="hidden" name="delete_billing_item_id" value="{{ item.id }}">
+                                <div><strong>{{ item.billing_code or '-' }} · {{ item.description }}</strong><small>R$ {{ item.amount }} · {{ item.billing_periodicity or 'sem periodicidade' }}</small></div>
+                                <button class="btn btn-danger" type="submit">Remover</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                        {% else %}<p class="empty-state">Nenhum item de faturamento cadastrado.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% elif active_tab == 'periodicidade' %}
+            <div class="grid-two">
+                <form method="post" class="panel form-panel">
+                    <input type="hidden" name="section" value="periodicidade">
+                    <div class="panel-header"><h2>Periodicidade e datas-base</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-body form-grid">
+                        <label><span>Data de assinatura</span><input type="date" name="signed_at" value="{{ contract.signed_at.isoformat() if contract.signed_at else '' }}"></label>
+                        <label><span>Início dos serviços</span><input type="date" name="service_start_at" value="{{ contract.service_start_at.isoformat() if contract.service_start_at else '' }}"></label>
+                        <label><span>Fim dos serviços</span><input type="date" name="service_end_at" value="{{ contract.service_end_at.isoformat() if contract.service_end_at else '' }}"></label>
+                        <label><span>Início do faturamento</span><input type="date" name="billing_start_at" value="{{ contract.billing_start_at.isoformat() if contract.billing_start_at else '' }}"></label>
+                        <label><span>Fim do faturamento</span><input type="date" name="billing_end_at" value="{{ contract.billing_end_at.isoformat() if contract.billing_end_at else '' }}"></label>
+                        <label><span>Periodicidade</span><input type="text" name="periodicity" value="{{ contract.periodicity or '' }}"></label>
+                        <label><span>Competência</span><input type="text" name="competence_rule" value="{{ contract.competence_rule or '' }}"></label>
+                        <label><span>Regra de vencimento</span><input type="text" name="due_rule" value="{{ contract.due_rule or '' }}"></label>
+                        <label class="full-width"><span>Regra de renovação</span><input type="text" name="renewal_rule" value="{{ contract.renewal_rule or '' }}"></label>
+                    </div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar periodicidade</button></div>
+                </form>
+                <div class="panel form-panel">
+                    <form method="post">
+                        <input type="hidden" name="section" value="periodicidade">
+                        <div class="panel-header"><h2>Novo gatilho</h2></div>
+                        <div class="panel-body form-grid">
+                            <label><span>Tipo</span><input type="text" name="trigger_type" placeholder="faturamento, renovação..."></label>
+                            <label><span>Data de referência</span><input type="text" name="reference_date_type" placeholder="assinatura, início..."></label>
+                            <label><span>Valor da data</span><input type="date" name="reference_date_value"></label>
+                            <label><span>Offset (dias)</span><input type="number" name="offset_days"></label>
+                            <label><span>Periodicidade</span><input type="text" name="periodicity"></label>
+                            <label><span>Alertar antes (dias)</span><input type="number" name="alert_before_days"></label>
+                        </div>
+                        <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar gatilho</button></div>
+                    </form>
+                    <div class="panel-body">
+                        {% if contract.triggers.count() %}
+                        <div class="list-stack">
+                            {% for trigger in contract.triggers.all() %}
+                            <form method="post" class="list-item list-item-form">
+                                <input type="hidden" name="section" value="periodicidade">
+                                <input type="hidden" name="delete_trigger_id" value="{{ trigger.id }}">
+                                <div><strong>{{ trigger.trigger_type }}</strong><small>{{ trigger.reference_date_type or '-' }} · {{ trigger.reference_date_value or '-' }}</small></div>
+                                <button class="btn btn-danger" type="submit">Remover</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                        {% else %}<p class="empty-state">Nenhum gatilho cadastrado.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% elif active_tab == 'fiscal' %}
+            <div class="grid-two">
+                <form method="post" class="panel form-panel">
+                    <input type="hidden" name="section" value="fiscal">
+                    <div class="panel-header"><h2>Fiscal</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-body form-grid">
+                        <label><span>Perfil fiscal</span><input type="text" name="fiscal_profile_code" value="{{ fiscal_terms.fiscal_profile_code if fiscal_terms else '' }}"></label>
+                        <label><span>Cidade do serviço</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else '' }}"></label>
+                        <label><span>Natureza tributária</span><input type="text" name="tax_nature" value="{{ fiscal_terms.tax_nature if fiscal_terms else '' }}"></label>
+                        <label class="full-width"><span>Observação tributária</span><textarea name="tax_observation" rows="4">{{ fiscal_terms.tax_observation if fiscal_terms else '' }}</textarea></label>
+                        <label class="full-width"><span>Observações fiscais</span><textarea name="notes" rows="4">{{ fiscal_terms.notes if fiscal_terms else '' }}</textarea></label>
+                    </div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar fiscal</button></div>
+                </form>
+                <div class="panel form-panel">
+                    <form method="post">
+                        <input type="hidden" name="section" value="fiscal">
+                        <div class="panel-header"><h2>Retenções</h2></div>
+                        <div class="panel-body form-grid">
+                            <label><span>Tipo</span><input type="text" name="retention_type"></label>
+                            <label><span>Modo</span><input type="text" name="calculation_mode"></label>
+                            <label><span>Percentual</span><input type="text" name="rate_percent" value="0,00"></label>
+                            <label><span>Valor fixo</span><input type="text" name="fixed_amount" value="0,00"></label>
+                            <label class="full-width"><span>Observações</span><textarea name="notes" rows="3"></textarea></label>
+                        </div>
+                        <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar retenção</button></div>
+                    </form>
+                    <div class="panel-body">
+                        {% if contract.retentions.count() %}
+                        <div class="list-stack">
+                            {% for retention in contract.retentions.all() %}
+                            <form method="post" class="list-item list-item-form">
+                                <input type="hidden" name="section" value="fiscal">
+                                <input type="hidden" name="delete_retention_id" value="{{ retention.id }}">
+                                <div><strong>{{ retention.retention_type }}</strong><small>{{ retention.calculation_mode or '-' }} · {{ retention.rate_percent or retention.fixed_amount or 0 }}</small></div>
+                                <button class="btn btn-danger" type="submit">Remover</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                        {% else %}<p class="empty-state">Nenhuma retenção cadastrada.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% elif active_tab == 'cobranca' %}
+            <form method="post" class="panel form-panel">
+                <input type="hidden" name="section" value="cobranca">
+                <div class="panel-header">
+                    <h2>Cobrança</h2>
+                    <span class="scope-pill scope-core">core</span>
+                </div>
+                <div class="panel-body form-grid">
+                    <label><span>Tipo do prazo</span><input type="text" name="payment_term_type" value="{{ financial_terms.payment_term_type if financial_terms else '' }}"></label>
+                    <label><span>Dias do prazo</span><input type="number" name="payment_term_days" value="{{ financial_terms.payment_term_days if financial_terms else '' }}"></label>
+                    <label><span>Método de faturamento</span><input type="text" name="billing_method" value="{{ financial_terms.billing_method if financial_terms else '' }}"></label>
+                    <label><span>Modelo de precificação</span><input type="text" name="pricing_model" value="{{ financial_terms.pricing_model if financial_terms else '' }}"></label>
+                    <label><span>Regra de reajuste</span><input type="text" name="adjustment_rule" value="{{ financial_terms.adjustment_rule if financial_terms else '' }}"></label>
+                    <label><span>Conta bancária padrão</span>
+                        <select name="default_bank_account_id">
+                            <option value="">Selecione</option>
+                            {% for item in references.bank_accounts %}
+                            <option value="{{ item.id }}" {% if financial_terms and financial_terms.default_bank_account_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label><span>Forma financeira padrão</span>
+                        <select name="default_payment_method_id">
+                            <option value="">Selecione</option>
+                            {% for item in references.payment_methods %}
+                            <option value="{{ item.id }}" {% if financial_terms and financial_terms.default_payment_method_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label><span>Correção financeira</span>
+                        <select name="correction_index_id">
+                            <option value="">Selecione</option>
+                            {% for item in references.correction_indexes %}
+                            <option value="{{ item.id }}" {% if financial_terms and financial_terms.correction_index_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="full-width"><span>Observações financeiras</span><textarea name="notes" rows="4">{{ financial_terms.notes if financial_terms else '' }}</textarea></label>
+                </div>
+                <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar cobrança</button></div>
+            </form>
+
+            {% elif active_tab == 'observacoes' %}
+            <form method="post" class="panel form-panel">
+                <input type="hidden" name="section" value="observacoes">
+                <div class="panel-header">
+                    <h2>Observações</h2>
+                    <span class="scope-pill scope-core">core</span>
+                </div>
+                <div class="panel-body form-grid">
+                    <label class="full-width">
+                        <span>Observações operacionais do contrato</span>
+                        <textarea name="notes" rows="10">{{ contract.notes or '' }}</textarea>
+                        <small class="field-hint">Use esta aba para contexto, exceções, riscos ou apontamentos que não pertencem às abas estruturadas.</small>
+                    </label>
+                </div>
+                <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar observações</button></div>
+            </form>
+
+            {% elif active_tab == 'revisao' %}
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Revisão</h2>
+                    <span class="scope-pill scope-core">core</span>
+                </div>
+                <div class="panel-body">
+                    <div class="review-grid">
+                        <article class="review-card {{ 'ok' if review_flags.cliente else 'pending' }}">
+                            <strong>Cliente</strong>
+                            <span>{{ 'OK' if review_flags.cliente else 'Pendente' }}</span>
+                        </article>
+                        <article class="review-card {{ 'ok' if review_flags.itens else 'pending' }}">
+                            <strong>Itens do Contrato</strong>
+                            <span>{{ review_flags.itens or 'Pendente' }}</span>
+                        </article>
+                        <article class="review-card {{ 'ok' if review_flags.faturamento else 'pending' }}">
+                            <strong>Itens de Faturamento</strong>
+                            <span>{{ review_flags.faturamento or 'Pendente' }}</span>
+                        </article>
+                        <article class="review-card {{ 'ok' if review_flags.periodicidade else 'pending' }}">
+                            <strong>Periodicidade</strong>
+                            <span>{{ 'OK' if review_flags.periodicidade else 'Pendente' }}</span>
+                        </article>
+                        <article class="review-card {{ 'ok' if review_flags.fiscal else 'pending' }}">
+                            <strong>Fiscal</strong>
+                            <span>{{ 'OK' if review_flags.fiscal else 'Pendente' }}</span>
+                        </article>
+                        <article class="review-card {{ 'ok' if review_flags.cobranca else 'pending' }}">
+                            <strong>Cobrança</strong>
+                            <span>{{ 'OK' if review_flags.cobranca else 'Pendente' }}</span>
+                        </article>
+                        <article class="review-card {{ 'ok' if review_flags.pdf else 'pending' }}">
+                            <strong>PDF</strong>
+                            <span>{{ review_flags.pdf or 'Pendente' }}</span>
+                        </article>
+                        <article class="review-card {{ 'ok' if review_flags.assinado else 'pending' }}">
+                            <strong>Contrato Assinado</strong>
+                            <span>{{ review_flags.assinado or 'Pendente' }}</span>
+                        </article>
+                    </div>
+                </div>
+            </div>
+
+            {% elif active_tab == 'validar' %}
+            <form method="post" class="panel form-panel">
+                <input type="hidden" name="section" value="validar">
+                <div class="panel-header">
+                    <h2>Validar / Editar Contrato</h2>
+                    <span class="scope-pill scope-capability">capability</span>
+                </div>
+                <div class="panel-body form-grid">
+                    <label><span>Status de validação</span>
+                        <select name="validation_status">
+                            <option value="pending" {% if validation_status == 'pending' %}selected{% endif %}>Pendente</option>
+                            <option value="in_review" {% if validation_status == 'in_review' %}selected{% endif %}>Em revisão</option>
+                            <option value="approved" {% if validation_status == 'approved' %}selected{% endif %}>Aprovado</option>
+                            <option value="needs_changes" {% if validation_status == 'needs_changes' %}selected{% endif %}>Ajustes necessários</option>
+                        </select>
+                    </label>
+                    <label class="full-width"><span>Notas da validação</span><textarea name="validation_notes" rows="8">{{ validation_notes }}</textarea></label>
+                </div>
+                <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar validação</button></div>
+            </form>
+
+            {% elif active_tab == 'gerar_pdf' %}
+            <div class="grid-two">
+                <form method="post" enctype="multipart/form-data" class="panel form-panel">
+                    <input type="hidden" name="section" value="gerar_pdf">
+                    <div class="panel-header"><h2>Gerar PDF</h2><span class="scope-pill scope-capability">capability</span></div>
+                    <div class="panel-body form-grid">
+                        <label><span>Versão</span><input type="text" name="document_version" placeholder="v1, final..."></label>
+                        <label class="full-width"><span>Arquivo PDF</span><input type="file" name="file" accept=".pdf" required></label>
+                        <label class="full-width"><span>Observação</span><textarea rows="4" disabled>Capability preparada para registrar o PDF do contrato enquanto a automação de geração ainda não foi acoplada.</textarea></label>
+                    </div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Registrar PDF</button></div>
+                </form>
+                <div class="panel">
+                    <div class="panel-header"><h2>PDFs registrados</h2></div>
+                    <div class="panel-body">
+                        {% if pdf_documents %}
+                        <div class="list-stack">
+                            {% for document in pdf_documents %}
+                            <form method="post" class="list-item list-item-form">
+                                <input type="hidden" name="section" value="gerar_pdf">
+                                <input type="hidden" name="delete_document_id" value="{{ document.id }}">
+                                <div><strong><a href="/uploads/{{ document.file_path }}" target="_blank">{{ document.file_name }}</a></strong><small>{{ document.document_version or 'sem versão' }}</small></div>
+                                <button class="btn btn-danger" type="submit">Remover</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                        {% else %}<p class="empty-state">Nenhum PDF do contrato registrado.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% elif active_tab == 'contrato_assinado' %}
+            <div class="grid-two">
+                <form method="post" enctype="multipart/form-data" class="panel form-panel">
+                    <input type="hidden" name="section" value="contrato_assinado">
+                    <div class="panel-header"><h2>Contrato Assinado</h2><span class="scope-pill scope-capability">capability</span></div>
+                    <div class="panel-body form-grid">
+                        <label><span>Versão</span><input type="text" name="document_version" placeholder="assinada, final..."></label>
+                        <label class="full-width"><span>Arquivo assinado escaneado</span><input type="file" name="file" required></label>
+                    </div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Anexar contrato assinado</button></div>
+                </form>
+                <div class="panel">
+                    <div class="panel-header"><h2>Versões assinadas</h2></div>
+                    <div class="panel-body">
+                        {% if signed_documents %}
+                        <div class="list-stack">
+                            {% for document in signed_documents %}
+                            <form method="post" class="list-item list-item-form">
+                                <input type="hidden" name="section" value="contrato_assinado">
+                                <input type="hidden" name="delete_document_id" value="{{ document.id }}">
+                                <div><strong><a href="/uploads/{{ document.file_path }}" target="_blank">{{ document.file_name }}</a></strong><small>{{ document.document_version or 'sem versão' }}</small></div>
+                                <button class="btn btn-danger" type="submit">Remover</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                        {% else %}<p class="empty-state">Nenhuma via assinada anexada.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% elif active_tab == 'documentos' %}
+            <div class="grid-two">
+                <form method="post" enctype="multipart/form-data" class="panel form-panel">
+                    <input type="hidden" name="section" value="documentos">
+                    <div class="panel-header"><h2>Documentos / Anexos</h2><span class="scope-pill scope-capability">capability</span></div>
+                    <div class="panel-body form-grid">
+                        <label><span>Tipo do documento</span>
+                            <select name="document_type">
+                                <option value="minuta">Minuta</option>
+                                <option value="anexo">Anexo</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </label>
+                        <label><span>Versão</span><input type="text" name="document_version" placeholder="v1, final..."></label>
+                        <label class="checkbox-inline"><input type="checkbox" name="is_signed_version"> Versão assinada</label>
+                        <label class="full-width"><span>Arquivo</span><input type="file" name="file" required></label>
+                    </div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Anexar documento</button></div>
+                </form>
+                <div class="panel">
+                    <div class="panel-header"><h2>Documentos gerais</h2></div>
+                    <div class="panel-body">
+                        {% if generic_documents %}
+                        <div class="list-stack">
+                            {% for document in generic_documents %}
+                            <form method="post" class="list-item list-item-form">
+                                <input type="hidden" name="section" value="documentos">
+                                <input type="hidden" name="delete_document_id" value="{{ document.id }}">
+                                <div><strong><a href="/uploads/{{ document.file_path }}" target="_blank">{{ document.file_name }}</a></strong><small>{{ document.document_type }} · {{ document.document_version or 'sem versão' }}</small></div>
+                                <button class="btn btn-danger" type="submit">Remover</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                        {% else %}<p class="empty-state">Nenhum documento geral anexado.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
-    </div>
-    {% endif %}
+    </section>
 </div>
 {% include "modules/contracts/_styles.html" %}
 {% endblock %}

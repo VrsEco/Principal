@@ -73,10 +73,17 @@
                     {% endfor %}
                 </select>
             </label>
-            <div class="checkbox-card">
+            <div class="checkbox-card full-width">
                 <span>Classificação</span>
-                <label class="checkbox-inline"><input type="checkbox" name="is_customer" {% if not party or party.is_customer %}checked{% endif %}> Cliente</label>
-                <label class="checkbox-inline"><input type="checkbox" name="is_supplier" {% if party and party.is_supplier %}checked{% endif %}> Fornecedor</label>
+                <p class="field-hint">Marque ao menos um papel operacional. O mesmo favorecido pode ser cliente e fornecedor.</p>
+                <div class="checkbox-inline-wrap">
+                    <label class="checkbox-inline"><input type="checkbox" name="is_customer" {% if not party or party.is_customer %}checked{% endif %}> Cliente</label>
+                    <label class="checkbox-inline"><input type="checkbox" name="is_supplier" {% if party and party.is_supplier %}checked{% endif %}> Fornecedor</label>
+                </div>
+                <div class="role-preview">
+                    <span class="mini-badge {{ 'active' if not party or party.is_customer else '' }}">Cliente</span>
+                    <span class="mini-badge {{ 'active' if party and party.is_supplier else '' }}">Fornecedor</span>
+                </div>
             </div>
             <label class="full-width">
                 <span>Observações</span>

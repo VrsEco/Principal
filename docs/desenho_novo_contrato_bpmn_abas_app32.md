@@ -180,6 +180,18 @@ Exemplos:
 - **Gerar PDF**
 - **Contrato Assinado**
 
+### Estado aplicado no MVP atual
+
+O shell publicado do módulo `Gestão de Contratos` deve refletir esta matriz em UI com:
+
+- tela de favorecidos contendo a classificação explícita `Cliente` / `Fornecedor`, admitindo ambos;
+- tela `Gerir Contratos` com abas core e capability separadas visualmente;
+- capabilities dedicadas para:
+  - `Validar / Editar Contrato`
+  - `Gerar PDF`
+  - `Contrato Assinado`
+  - `Documentos / Anexos`
+
 ## 6.3. Abas de extensão
 Usadas apenas quando houver necessidade específica controlada.
 

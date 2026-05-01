@@ -1,6 +1,10 @@
 from pathlib import Path
 import sys
 from decimal import Decimal
+from datetime import date
+from types import SimpleNamespace
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app32"))
 
@@ -27,3 +31,47 @@ def test_normalize_int_returns_none_for_invalid_values():
 def test_normalize_date_parses_iso_pattern():
     value = ContractService._normalize_date("2026-05-01")
     assert value.isoformat() == "2026-05-01"
+
+
+def test_update_party_requires_explicit_customer_or_supplier():
+    party = SimpleNamespace(
+        name="Favorecido",
+        legal_name=None,
+        document_type=None,
+        document_number=None,
+        email=None,
+        phone=None,
+        is_customer=False,
+        is_supplier=False,
+        status="active",
+        notes=None,
+        financial_counterparty_id=None,
+        updated_by_user_id=None,
+    )
+    with pytest.raises(ValueError):
+        ContractService.update_party(party=party, payload={"name": "Fav", "is_customer": "", "is_supplier": ""}, user_id=1, is_new=True)
+
+
+def test_update_contract_general_keeps_existing_fields_when_payload_is_partial():
+    contract = SimpleNamespace(
+        title="Contrato A",
+        party_id=7,
+        status="draft",
+        contract_type="prestacao",
+        currency_code="BRL",
+        signed_at=date(2026, 5, 1),
+        service_start_at=None,
+        service_end_at=None,
+        billing_start_at=None,
+        billing_end_at=None,
+        periodicity="monthly",
+        competence_rule="mes atual",
+        due_rule="30 dias",
+        renewal_rule="auto",
+        notes="base",
+        updated_by_user_id=None,
+    )
+    ContractService.update_contract_general(contract=contract, payload={"title": "Contrato B"}, user_id=9, is_new=True)
+    assert contract.title == "Contrato B"
+    assert contract.periodicity == "monthly"
+    assert contract.signed_at.isoformat() == "2026-05-01"
