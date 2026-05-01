@@ -24,7 +24,7 @@ def sanitize_svg_snapshot(svg: str | None) -> str | None:
 
 def serialize_flow_snapshot(diagram: ProcessBpmnDiagram | None) -> dict[str, Any] | None:
     """Payload enxuto para exibição do BPMN publicado na área Fluxo do processo."""
-    if not diagram or not diagram.svg_snapshot:
+    if not diagram or (not diagram.svg_snapshot and not diagram.bpmn_xml):
         return None
 
     return {
@@ -32,6 +32,7 @@ def serialize_flow_snapshot(diagram: ProcessBpmnDiagram | None) -> dict[str, Any
         "status": diagram.status,
         "version": diagram.version,
         "name": diagram.name,
+        "bpmn_xml": diagram.bpmn_xml,
         "svg_snapshot": sanitize_svg_snapshot(diagram.svg_snapshot),
         "published_at": diagram.published_at.isoformat() if diagram.published_at else None,
         "updated_at": diagram.updated_at.isoformat() if diagram.updated_at else None,

@@ -202,6 +202,28 @@ def test_process_details_template_prefers_bpmn_xml_viewer_for_published_flow():
     assert 'window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler' in content
 
 
+def test_serialize_flow_snapshot_includes_bpmn_xml_for_ssr_payload():
+    from types import SimpleNamespace
+    from services.process_bpmn_service import serialize_flow_snapshot
+
+    diagram = SimpleNamespace(
+        id=77,
+        status='published',
+        version=3,
+        name='Fluxo publicado',
+        bpmn_xml='<bpmn:definitions id="Defs_1"></bpmn:definitions>',
+        svg_snapshot='<svg><rect width="10" height="10"/></svg>',
+        published_at=None,
+        updated_at=None,
+    )
+
+    payload = serialize_flow_snapshot(diagram)
+
+    assert payload is not None
+    assert payload['bpmn_xml'] == '<bpmn:definitions id="Defs_1"></bpmn:definitions>'
+    assert payload['svg_snapshot'] == '<svg><rect width="10" height="10"/></svg>'
+
+
 def test_process_details_template_exposes_back_to_kanban_action():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:
