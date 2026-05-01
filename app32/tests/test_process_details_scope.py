@@ -139,7 +139,9 @@ def test_bpmn_modeler_keeps_saved_layout_on_import():
     assert 'svg_snapshot: svg,' in content
     assert "downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');" in content
     assert "eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);" in content
-    assert "eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);" in content
+    assert "eventBus.on('commandStack.shape.replace.postExecute', preserveContextShapeOnReplace);" in content
+    assert 'preserveOperationalActivityShapeSize(oldShape, newShape)' in content
+    assert 'getReplacedOperationalActivityShape(context)' in content
     assert 'scheduleOperationalActivityLabelRefresh();' not in content
 
 

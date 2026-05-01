@@ -165,9 +165,20 @@
       const shape = event && event.context && (event.context.newShape || event.context.shape);
       ensureOperationalActivityShapeSize(shape);
     };
+    const preserveContextShapeOnReplace = (event) => {
+      const context = event && event.context;
+      const newShape = context && (context.newShape || context.shape);
+      const oldShape = getReplacedOperationalActivityShape(context);
+
+      if (preserveOperationalActivityShapeSize(oldShape, newShape)) {
+        return;
+      }
+
+      ensureOperationalActivityShapeSize(newShape);
+    };
 
     eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
-    eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);
+    eventBus.on('commandStack.shape.replace.postExecute', preserveContextShapeOnReplace);
     installOperationalActivityAutoSizing._installed = true;
   }
 
@@ -535,6 +546,34 @@
     return true;
   }
 
+  function preserveOperationalActivityShapeSize(sourceShape, targetShape) {
+    if (!modeler || !sourceShape || !targetShape) return false;
+
+    const sourceType = sourceShape.businessObject && sourceShape.businessObject.$type;
+    const targetType = targetShape.businessObject && targetShape.businessObject.$type;
+    if (!isOperationalActivityType(sourceType) || !isOperationalActivityType(targetType)) {
+      return false;
+    }
+
+    const width = Number.isFinite(sourceShape.width) ? Math.round(sourceShape.width) : 0;
+    const height = Number.isFinite(sourceShape.height) ? Math.round(sourceShape.height) : 0;
+    if (!width || !height) return false;
+
+    const currentWidth = Number.isFinite(targetShape.width) ? Math.round(targetShape.width) : 0;
+    const currentHeight = Number.isFinite(targetShape.height) ? Math.round(targetShape.height) : 0;
+    if (currentWidth === width && currentHeight === height) {
+      return true;
+    }
+
+    resizeOperationalActivityShape(targetShape, {
+      x: targetShape.x,
+      y: targetShape.y,
+      width,
+      height
+    });
+    return true;
+  }
+
   function resizeOperationalActivityShape(element, bounds) {
     if (!modeler || !element || !bounds) return false;
 
@@ -677,6 +716,15 @@
       type.includes('SubProcess') ||
       type.includes('CallActivity')
     ));
+  }
+
+  function getReplacedOperationalActivityShape(context) {
+    if (!context) return null;
+    return context.oldShape
+      || context.oldElement
+      || context.replacedShape
+      || context.target
+      || null;
   }
 
   function getAssociatedDataObjectRefs(element) {
