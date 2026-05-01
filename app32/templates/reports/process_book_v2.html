@@ -281,9 +281,12 @@
       width: 100%;
       height: 100%;
       min-height: 470px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: #fff;
       border-radius: 14px;
-      overflow: auto;
+      overflow: hidden;
       padding: 4px;
     }
 
@@ -300,18 +303,6 @@
       font-family: "Segoe UI", Arial, sans-serif !important;
       fill: #0f172a !important;
       text-rendering: geometricPrecision;
-    }
-
-    .flow-frame .bpmn-svg svg .djs-label,
-    .flow-frame .bpmn-svg svg text.djs-label,
-    .flow-frame .bpmn-svg svg .djs-label text {
-      font-size: 24px !important;
-      font-weight: 650 !important;
-    }
-
-    .flow-frame .bpmn-svg svg .djs-label tspan {
-      font-size: inherit !important;
-      font-weight: inherit !important;
     }
 
     .empty-state {
@@ -888,5 +879,47 @@
       </div>
     </section>
   </div>
+  <script>
+    (function () {
+      function fitInlineBpmnSvg() {
+        const wrappers = document.querySelectorAll('.flow-frame .bpmn-svg');
+        wrappers.forEach((wrapper) => {
+          const svg = wrapper.querySelector('svg');
+          if (!svg || svg.dataset.bookAutoFit === 'done') return;
+
+          const target =
+            svg.querySelector('.viewport') ||
+            svg.querySelector('g.djs-group') ||
+            svg.querySelector('g');
+
+          if (!target || typeof target.getBBox !== 'function') return;
+
+          try {
+            const box = target.getBBox();
+            if (!box || box.width <= 0 || box.height <= 0) return;
+
+            const paddingX = Math.max(24, box.width * 0.03);
+            const paddingY = Math.max(18, box.height * 0.04);
+            const viewBox = [
+              Math.max(0, box.x - paddingX),
+              Math.max(0, box.y - paddingY),
+              Math.max(1, box.width + paddingX * 2),
+              Math.max(1, box.height + paddingY * 2)
+            ].join(' ');
+
+            svg.setAttribute('viewBox', viewBox);
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            svg.dataset.bookAutoFit = 'done';
+          } catch (error) {
+            console.warn('Falha ao ajustar SVG BPMN do Book:', error);
+          }
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', fitInlineBpmnSvg);
+      window.addEventListener('load', fitInlineBpmnSvg);
+      window.addEventListener('beforeprint', fitInlineBpmnSvg);
+    })();
+  </script>
 </body>
 </html>

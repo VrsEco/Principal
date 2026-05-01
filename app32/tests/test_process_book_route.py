@@ -93,5 +93,6 @@ def test_process_book_template_uses_print_optimized_bpmn_labels():
 
     assert '@page process-flow-landscape' in content
     assert 'margin: 8mm' in content
-    assert '.flow-frame .bpmn-svg svg .djs-label' in content
-    assert 'font-size: 24px !important' in content
+    assert 'function fitInlineBpmnSvg()' in content
+    assert "window.addEventListener('beforeprint', fitInlineBpmnSvg)" in content
+    assert "svg.setAttribute('viewBox', viewBox)" in content
