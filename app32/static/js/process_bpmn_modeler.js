@@ -264,15 +264,13 @@
     }
 
     const activities = getOperationalActivities().sort(compareElementsByCanvasPosition);
-    const usedNumbers = new Set();
+    const usedNumbers = collectUsedActivityNumbers(activities);
     const assignments = [];
 
     for (const element of activities) {
       const currentCode = getSemanticActivityCode(element);
       let targetCode = currentCode && currentCode.code;
-      if (currentCode) {
-        usedNumbers.add(currentCode.number);
-      } else {
+      if (!currentCode) {
         const nextNumber = nextActivityNumber(usedNumbers);
         usedNumbers.add(nextNumber);
         targetCode = `${processCode}.${String(nextNumber).padStart(2, '0')}`;
@@ -283,9 +281,7 @@
       const shouldUpdateId = element.id !== targetCode;
       const shouldUpdateName = String(currentName || '').trim() !== nextName;
 
-      if (!shouldUpdateId && !shouldUpdateName) {
-        continue;
-      }
+      if (!shouldUpdateId && !shouldUpdateName) continue;
 
       assignments.push({
         element,
@@ -328,6 +324,15 @@
     const match = String(id).match(new RegExp(`^${escapedPrefix}\\.(\\d{2})$`));
     if (!match) return null;
     return { code: id, number: Number(match[1]) };
+  }
+
+  function collectUsedActivityNumbers(activities) {
+    const usedNumbers = new Set();
+    for (const element of activities || []) {
+      const currentCode = getSemanticActivityCode(element);
+      if (currentCode) usedNumbers.add(currentCode.number);
+    }
+    return usedNumbers;
   }
 
   function nextActivityNumber(usedNumbers) {
