@@ -2206,6 +2206,11 @@ class FinancialAutomationService:
             merged["settlement_date"] = None
         elif next_settlement_state == "settled" and next_settlement_date is None:
             merged["settlement_date"] = item.due_date or item.competence_date or item.issue_date or datetime.utcnow().date()
+        FinancialAutomationService._sync_generate_target_fields(
+            item=item,
+            merged=merged,
+            settlement_state=next_settlement_state,
+        )
         reference_error = FinancialAutomationService._validate_catalog_links(
             company_id=company_id,
             bank_account_id=merged.get("bank_account_id", item.bank_account_id),
@@ -2230,6 +2235,7 @@ class FinancialAutomationService:
             if item.status == "validated":
                 item.validated_by_user_id = performed_by_user_id
                 item.validated_at = datetime.utcnow()
+            FinancialAutomationService._sync_generate_target_fields(item=item)
             FinancialAutomationService._refresh_batch_summary(item.batch)
             item.updated_at = datetime.utcnow()
             FinancialAutomationService._append_history(
@@ -2289,6 +2295,7 @@ class FinancialAutomationService:
                 elif data.status != "generated":
                     item.generated_by_user_id = None
                     item.generated_at = None
+                FinancialAutomationService._sync_generate_target_fields(item=item)
                 FinancialAutomationService._append_history(
                     company_id=data.company_id,
                     record_id=item.id,
@@ -2354,6 +2361,52 @@ class FinancialAutomationService:
         metadata["financial_automation_record_id"] = record.id
         metadata["financial_automation_batch_id"] = record.batch_id
         return metadata
+
+    @staticmethod
+    def _resolve_generate_target(
+        settlement_state: Optional[str],
+        metadata_json: Optional[Dict[str, Any]] = None,
+        normalized_payload_json: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        canonical = "entry" if str(settlement_state or "").strip().lower() == "settled" else "schedule"
+        explicit = str(
+            (metadata_json or {}).get("generate_target")
+            or (normalized_payload_json or {}).get("generate_target")
+            or ""
+        ).strip().lower()
+        if explicit == canonical:
+            return explicit
+        return canonical
+
+    @staticmethod
+    def _sync_generate_target_fields(
+        *,
+        item: FinancialAutomationRecord,
+        merged: Optional[Dict[str, Any]] = None,
+        settlement_state: Optional[str] = None,
+    ) -> str:
+        payload = merged if merged is not None else {}
+        target_state = settlement_state or payload.get("settlement_state", item.settlement_state)
+        target = FinancialAutomationService._resolve_generate_target(
+            target_state,
+            payload.get("metadata_json", item.metadata_json),
+            payload.get("normalized_payload_json", item.normalized_payload_json),
+        )
+        metadata_json = dict(payload.get("metadata_json", item.metadata_json) or {})
+        metadata_json["generate_target"] = target
+        if merged is None:
+            item.metadata_json = metadata_json
+        else:
+            payload["metadata_json"] = metadata_json
+
+        normalized_payload_json = dict(payload.get("normalized_payload_json", item.normalized_payload_json) or {})
+        if normalized_payload_json or payload.get("normalized_payload_json") is not None:
+            normalized_payload_json["generate_target"] = target
+            if merged is None:
+                item.normalized_payload_json = normalized_payload_json
+            else:
+                payload["normalized_payload_json"] = normalized_payload_json
+        return target
 
     @staticmethod
     def _build_default_schedule_allocations(record: FinancialAutomationRecord) -> List[Dict[str, Any]]:
@@ -2523,10 +2576,9 @@ class FinancialAutomationService:
         try:
             for item in items:
                 before = item.to_dict()
-                generate_target = (
-                    (item.metadata_json or {}).get("generate_target")
-                    or (item.normalized_payload_json or {}).get("generate_target")
-                    or ("entry" if item.settlement_state == "settled" else "schedule")
+                generate_target = FinancialAutomationService._sync_generate_target_fields(
+                    item=item,
+                    settlement_state=item.settlement_state,
                 )
                 if generate_target == "entry":
                     entry_id, error = FinancialAutomationService._generate_entry_from_record(
