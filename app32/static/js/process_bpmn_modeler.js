@@ -9,10 +9,10 @@
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
   const importInput = document.getElementById('bpmnImportInput');
-  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 200;
-  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 280;
+  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 140;
+  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 196;
   const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
-  const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 110;
+  const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 130;
   let modeler = null;
   let currentDiagram = null;
   let currentZoom = 1;
@@ -389,7 +389,7 @@
     const label = getOperationalActivityDisplayLabel(element);
     const width = Math.max(
       OPERATIONAL_ACTIVITY_BASE_WIDTH,
-      Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, 320 + Math.ceil(label.length * 2.7))
+      Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, 120 + Math.ceil(label.length * 1.4))
     );
     const height = label.length > 72 ? OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT : OPERATIONAL_ACTIVITY_BASE_HEIGHT;
     return { width, height };
