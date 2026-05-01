@@ -3,6 +3,14 @@
 ## Uso
 Consulte este arquivo quando precisar entender o escopo de cada papel. As instruções operacionais devem continuar nos agentes e skills, não aqui.
 
+## Comunicação
+- respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
+- manter exigência técnica alta mesmo com concisão
+
+## Comunicação
+- respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
+- manter exigência técnica alta mesmo com concisão
+
 ### @ARQUITETO
 Lidera desenho, boundary, segurança e auditoria transversal.
 

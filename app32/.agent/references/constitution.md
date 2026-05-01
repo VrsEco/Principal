@@ -19,4 +19,5 @@
 ## Comunicação
 - responder em Português-Brasil
 - exigência técnica alta
+- respostas curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
 - priorizar clareza arquitetural e evolução sustentável

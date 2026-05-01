@@ -25,3 +25,9 @@ Quando a mudança couber claramente em componente já existente e um novo arquiv
 - `SKILL.md`: curto, preferencialmente até ~60 linhas
 - agente: curto, preferencialmente até ~40 linhas
 - detalhes extensos: extrair
+
+## Diretriz de resposta
+- respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
+
+## Diretriz de resposta
+- respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento

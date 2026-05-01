@@ -30,6 +30,7 @@ Skill obrigatória de governança do projeto.
 - multi-tenancy com `company_id`
 - MCP First quando houver estado operacional
 - sem lógica de negócio em rota
+- respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
 - sem documentação longa dentro desta skill
 - sem execução 3+ etapas sem cards reais em `AA.J.31`
 - para Sapiens: arvore oficial por dominio, nao por estrutura legada

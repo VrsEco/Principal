@@ -1,0 +1,237 @@
+.runtime-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.runtime-shell-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 1rem;
+}
+
+.runtime-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.6fr);
+  gap: 1rem;
+}
+
+.runtime-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.runtime-panel {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.runtime-panel h2,
+.runtime-panel h3,
+.runtime-panel p {
+  margin-top: 0;
+}
+
+.runtime-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.runtime-metric {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
+}
+
+.runtime-metric span {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 0.35rem;
+}
+
+.runtime-metric strong {
+  color: var(--text-primary);
+}
+
+.runtime-flow-shell {
+  position: relative;
+  min-height: 520px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.runtime-flow-canvas {
+  width: 100%;
+  min-height: 520px;
+  background-color: #fbfdff;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.runtime-flow-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.runtime-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.runtime-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.runtime-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.runtime-swatch-completed { background: #16a34a; }
+.runtime-swatch-active { background: #2563eb; }
+.runtime-swatch-pending { background: #94a3b8; }
+.runtime-swatch-paused { background: #d97706; }
+.runtime-swatch-waiting { background: #7c3aed; }
+.runtime-swatch-failed { background: #dc2626; }
+
+.runtime-empty-card,
+.runtime-activity-card,
+.runtime-timeline-item {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.runtime-activity-head,
+.runtime-activity-body {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.runtime-activity-sub,
+.runtime-timeline-time {
+  color: var(--text-tertiary);
+  font-size: 0.82rem;
+}
+
+.runtime-activity-body div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.runtime-activity-body span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--text-tertiary);
+}
+
+.runtime-activity-description,
+.runtime-timeline-item p {
+  margin: 0.75rem 0 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.runtime-timeline-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.runtime-timeline-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.runtime-timeline-dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 0.3rem;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.runtime-badge {
+  text-transform: uppercase;
+}
+
+.runtime-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.runtime-flow-canvas .djs-palette,
+.runtime-flow-canvas .djs-context-pad {
+  display: none !important;
+}
+
+.runtime-flow-canvas .djs-container .djs-element.is-completed .djs-visual > *,
+.runtime-flow-canvas .djs-container .djs-connection.is-completed .djs-visual > * {
+  stroke: #16a34a !important;
+}
+
+.runtime-flow-canvas .djs-container .djs-element.is-active .djs-visual > *,
+.runtime-flow-canvas .djs-container .djs-connection.is-active .djs-visual > * {
+  stroke: #2563eb !important;
+  stroke-width: 3px !important;
+}
+
+.runtime-flow-canvas .djs-container .djs-element.is-pending .djs-visual > *,
+.runtime-flow-canvas .djs-container .djs-connection.is-pending .djs-visual > * {
+  stroke: #94a3b8 !important;
+}
+
+.runtime-flow-canvas .djs-container .djs-element.is-paused .djs-visual > *,
+.runtime-flow-canvas .djs-container .djs-connection.is-paused .djs-visual > * {
+  stroke: #d97706 !important;
+}
+
+.runtime-flow-canvas .djs-container .djs-element.is-waiting-external .djs-visual > *,
+.runtime-flow-canvas .djs-container .djs-connection.is-waiting-external .djs-visual > * {
+  stroke: #7c3aed !important;
+}
+
+.runtime-flow-canvas .djs-container .djs-element.is-failed .djs-visual > *,
+.runtime-flow-canvas .djs-container .djs-connection.is-failed .djs-visual > * {
+  stroke: #dc2626 !important;
+}
+
+.runtime-flow-canvas .djs-container .djs-element.is-skipped .djs-visual > *,
+.runtime-flow-canvas .djs-container .djs-connection.is-skipped .djs-visual > * {
+  stroke: #64748b !important;
+  stroke-dasharray: 6 4 !important;
+}
+
+@media (max-width: 1100px) {
+  .runtime-shell-hero,
+  .runtime-grid,
+  .runtime-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}

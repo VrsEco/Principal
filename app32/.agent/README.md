@@ -26,3 +26,5 @@ O arquivo `skills/gestao_versus_core/SKILL.md` permanece como ponto de entrada o
 - Não colocar checklists longos em agentes.
 - Não colocar documentação longa em skills.
 - Não duplicar regras entre skill, agente e referência.
+- Responder de forma curta e objetiva, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento.
+- Responder de forma curta e objetiva, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento.

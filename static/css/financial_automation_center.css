@@ -39,6 +39,8 @@
 .fa-table{width:100%;border-collapse:collapse;min-width:1160px}
 .fa-table th,.fa-table td{padding:.58rem .52rem;border-bottom:1px solid var(--border);vertical-align:top}
 .fa-table th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);text-align:left}
+.fa-table th:first-child,.fa-table td:first-child{width:3.25rem;text-align:center;vertical-align:middle}
+#fa-select-all,.fa-record-select{width:1.1rem !important;height:1.1rem !important;cursor:pointer;accent-color:var(--primary);display:inline-block}
 .fa-table tbody tr:hover{background:rgba(37,99,235,.03)}
 .fa-cell-document,.fa-cell-batch{min-width:200px}
 .fa-cell-document strong,.fa-cell-batch strong,.fa-cell-origin strong{display:block;font-size:.9rem;color:var(--text-primary);line-height:1.25}

@@ -427,6 +427,21 @@
     completeButton.textContent = record?.status === 'validated' ? 'Revisão concluída' : 'Revisão completa';
   }
 
+  function syncSettlementDateField(settlementState, settlementDate = '') {
+    const input = byId('fa-review-settlement-date');
+    const help = byId('fa-review-settlement-date-help');
+    if (!input) return;
+    const isSettled = settlementState === 'settled';
+    input.disabled = !isSettled;
+    if (!isSettled) {
+      input.value = '';
+      if (help) help.textContent = 'Disponível apenas quando o documento já estiver pago/recebido.';
+      return;
+    }
+    input.value = settlementDate || input.value || '';
+    if (help) help.textContent = 'Será usada como data da baixa na geração financeira.';
+  }
+
   function reviewPreviewFallback(message, links = '') {
     return `
       <div class="fa-review-preview__fallback">
@@ -515,6 +530,7 @@
     byId('fa-review-amount').value = record.amount || 0;
     byId('fa-review-competence-date').value = record.competence_date || '';
     byId('fa-review-due-date').value = record.due_date || '';
+    syncSettlementDateField(record.settlement_state, record.settlement_date || '');
 
     byId('fa-review-counterparty-note').innerHTML = suggestionNote(record, 'counterparty').replace(/^<div class="fa-muted">|<\/div>$/g, '');
     byId('fa-review-chart-account-note').innerHTML = suggestionNote(record, 'chart_account').replace(/^<div class="fa-muted">|<\/div>$/g, '');
@@ -536,6 +552,7 @@
       amount: byId('fa-review-amount').value ? Number(byId('fa-review-amount').value) : 0,
       competence_date: byId('fa-review-competence-date').value || null,
       due_date: byId('fa-review-due-date').value || null,
+      settlement_date: byId('fa-review-settlement-date').disabled ? null : (byId('fa-review-settlement-date').value || null),
     };
     const domainValue = byId('fa-review-domain-link').value;
     if (domainValue) {
@@ -764,11 +781,17 @@
   async function bulkStatus(status) {
     const ids = selectedIds();
     if (!ids.length) return alert('Selecione ao menos um registro.');
-    await api(`/api/financial/automation/records/bulk-status?company_id=${companyId}`, {
-      method: 'POST',
-      body: JSON.stringify({ record_ids: ids, status }),
-    });
-    await loadRecords();
+    try {
+      const payload = await api(`/api/financial/automation/records/bulk-status?company_id=${companyId}`, {
+        method: 'POST',
+        body: JSON.stringify({ record_ids: ids, status }),
+      });
+      await loadRecords();
+      const label = statusLabels[status] || status;
+      alert(`${payload.count || 0} registro(s) atualizado(s) para ${label}.`);
+    } catch (error) {
+      alert(error.message);
+    }
   }
 
   async function excludeRecord(recordId) {
@@ -789,11 +812,23 @@
 
   async function generateSelected() {
     const ids = selectedIds();
-    await api(`/api/financial/automation/generate?company_id=${companyId}`, {
-      method: 'POST',
-      body: JSON.stringify({ record_ids: ids.length ? ids : null }),
-    });
-    await loadRecords();
+    try {
+      const payload = await api(`/api/financial/automation/generate?company_id=${companyId}`, {
+        method: 'POST',
+        body: JSON.stringify({ record_ids: ids.length ? ids : null }),
+      });
+      await loadRecords();
+      const count = Number(payload?.count || 0);
+      if (count <= 0) {
+        alert(ids.length
+          ? 'Nenhum dos registros selecionados estava apto para gerar como validado.'
+          : 'Nenhum registro validado encontrado para geração.');
+        return;
+      }
+      alert(`${count} registro(s) gerado(s) com sucesso.`);
+    } catch (error) {
+      alert(error.message);
+    }
   }
 
   async function createBatch() {
@@ -858,6 +893,7 @@
   byId('fa-review-complete')?.addEventListener('click', completeReview);
   byId('fa-review-origin-action')?.addEventListener('click', openReviewDocumentExternal);
   byId('fa-review-preview-open')?.addEventListener('click', openReviewDocumentExternal);
+  byId('fa-review-settlement-state')?.addEventListener('change', (event) => syncSettlementDateField(event.target.value));
   byId('fa-select-all').addEventListener('change', (event) => {
     document.querySelectorAll('.fa-record-select').forEach((el) => { el.checked = event.target.checked; });
   });

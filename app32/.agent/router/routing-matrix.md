@@ -18,5 +18,11 @@
 ## Regra de contenção
 Se o pedido couber em 1 skill + 1 especialista, não expandir para mais componentes.
 
+## Regra de resposta
+As respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento.
+
+## Regra de resposta
+As respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento.
+
 ## Regra mandatória
 Se houver 3 ou mais etapas, a execução deve começar por `aa-j-31-card-execution`, com cards reais em `AA.J.31 (Produção)` e fechamento sequencial de cada passo.
