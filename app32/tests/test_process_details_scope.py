@@ -134,6 +134,8 @@ def test_bpmn_modeler_keeps_saved_layout_on_import():
 
     assert 'const result = await modeler.importXML(xml);' in content
     assert 'resizeAllOperationalActivities();' not in content
+    assert 'svg_snapshot: svg,' in content
+    assert "downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');" in content
     assert "eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);" in content
     assert "eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);" in content
 
@@ -186,6 +188,18 @@ def test_process_details_template_uses_app32_visual_pattern():
     assert 'btn-instance-action' in content
     assert 'compact-meta' in content
     assert 'indicator-process-card' not in content
+
+
+def test_process_details_template_prefers_bpmn_xml_viewer_for_published_flow():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert "filename='vendor/bpmn-js/18.6.3/dist/assets/diagram-js.css'" in content
+    assert "filename='vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js'" in content
+    assert 'bpmn_xml: diagram.bpmn_xml,' in content
+    assert 'renderPublishedBpmnViewer(viewerId, bpmnFlow)' in content
+    assert 'window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler' in content
 
 
 def test_process_details_template_exposes_back_to_kanban_action():

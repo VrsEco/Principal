@@ -2,6 +2,14 @@
 
 {% block title %}Detalhes do Processo | Versus{% endblock %}
 
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/diagram-js.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-js.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-font/css/bpmn.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-font/css/bpmn-embedded.css') }}">
+{% endblock %}
+
 {% block breadcrumb %}
 <a href="/my-work">Meu Trabalho</a>
 <span class="sep">/</span>
@@ -1176,6 +1184,27 @@
         height: auto;
     }
 
+    .bpmn-flow-preview__viewer {
+        width: 100%;
+        min-height: 620px;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .bpmn-flow-preview__viewer .djs-container,
+    .bpmn-flow-preview__viewer .djs-container > svg {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .bpmn-flow-preview__viewer .djs-palette,
+    .bpmn-flow-preview__viewer .djs-context-pad,
+    .bpmn-flow-preview__viewer .djs-popup,
+    .bpmn-flow-preview__viewer .bjs-powered-by {
+        display: none !important;
+    }
+
     .bpmn-pop-binding-badge {
         display: flex;
         flex-wrap: wrap;
@@ -1715,11 +1744,12 @@
         }
 
         const bpmnFlow = state.process.bpmn_flow;
-        if (bpmnFlow && bpmnFlow.svg_snapshot) {
+        if (bpmnFlow && (bpmnFlow.bpmn_xml || bpmnFlow.svg_snapshot)) {
             const versionLabel = bpmnFlow.version ? `Versão ${escapeHtml(bpmnFlow.version)}` : 'Versão publicada';
             const publishedLabel = bpmnFlow.published_at
                 ? new Date(bpmnFlow.published_at).toLocaleString('pt-BR')
                 : 'publicação registrada';
+            const viewerId = `publishedBpmnViewer-${processId}`;
             flowContainer.className = 'flow-container flow-container--bpmn';
             flowContainer.innerHTML = `
                 <div class="bpmn-flow-preview">
@@ -1734,10 +1764,21 @@
                         </a>
                     </div>
                     <div class="bpmn-flow-preview__canvas">
-                        ${bpmnFlow.svg_snapshot}
+                        ${bpmnFlow.bpmn_xml
+                            ? `<div id="${viewerId}" class="bpmn-flow-preview__viewer"></div>`
+                            : bpmnFlow.svg_snapshot}
                     </div>
                 </div>
             `;
+            if (bpmnFlow.bpmn_xml) {
+                renderPublishedBpmnViewer(viewerId, bpmnFlow).catch((error) => {
+                    console.warn('Falha ao renderizar BPMN publicado via XML; usando snapshot SVG.', error);
+                    const viewerHost = document.getElementById(viewerId);
+                    if (viewerHost) {
+                        viewerHost.outerHTML = bpmnFlow.svg_snapshot || '<div class="empty-state"><p>Falha ao carregar o BPMN publicado.</p></div>';
+                    }
+                });
+            }
         } else if (!state.process._bpmnFlowChecked) {
             state.process._bpmnFlowChecked = true;
             flowContainer.className = 'flow-container';
@@ -1814,10 +1855,38 @@
             status: diagram.status,
             version: diagram.version,
             name: diagram.name,
+            bpmn_xml: diagram.bpmn_xml,
             svg_snapshot: sanitizeSvgSnapshot(diagram.svg_snapshot),
             published_at: diagram.published_at,
             updated_at: diagram.updated_at
         };
+    }
+
+    let publishedBpmnViewer = null;
+
+    async function renderPublishedBpmnViewer(containerId, bpmnFlow) {
+        const host = document.getElementById(containerId);
+        if (!host || !bpmnFlow || !bpmnFlow.bpmn_xml) return;
+
+        const ViewerCtor = window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler;
+        if (!ViewerCtor) {
+            throw new Error('Biblioteca BPMN viewer indisponível.');
+        }
+
+        if (publishedBpmnViewer && typeof publishedBpmnViewer.destroy === 'function') {
+            publishedBpmnViewer.destroy();
+        }
+
+        publishedBpmnViewer = new ViewerCtor({
+            container: host
+        });
+
+        await publishedBpmnViewer.importXML(bpmnFlow.bpmn_xml);
+
+        const canvas = publishedBpmnViewer.get && publishedBpmnViewer.get('canvas');
+        if (canvas) {
+            canvas.zoom('fit-viewport', 'auto');
+        }
     }
 
     function sanitizeSvgSnapshot(svg) {
@@ -2620,6 +2689,7 @@
     }
 
 </style>
+<script src="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js') }}"></script>
 {% endblock %}
 
 {% block sidebar_right %}{% endblock %}

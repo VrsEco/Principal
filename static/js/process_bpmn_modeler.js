@@ -103,13 +103,12 @@
         modeler.saveXML({ format: true }),
         modeler.saveSVG()
       ]);
-      const enhancedSvg = enhanceOperationalActivitySvgSnapshot(svg);
       const payload = {
         id: currentDiagram && currentDiagram.id,
         name: processName,
         status: status || 'draft',
         bpmn_xml: xml,
-        svg_snapshot: enhancedSvg,
+        svg_snapshot: svg,
         metadata_json: {
           source: 'app32_bpmn_modeler',
           saved_at_client: new Date().toISOString(),
@@ -300,7 +299,7 @@
   async function exportSvg() {
     if (!modeler) return;
     const { svg } = await modeler.saveSVG();
-    downloadText(`${safeFileName(processName)}.svg`, enhanceOperationalActivitySvgSnapshot(svg), 'image/svg+xml');
+    downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');
   }
 
   function downloadText(filename, content, type) {
