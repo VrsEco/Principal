@@ -93,8 +93,11 @@ def test_process_book_template_uses_print_optimized_bpmn_labels():
 
     assert '@page process-flow-landscape' in content
     assert 'margin: 8mm' in content
-    assert 'function fitInlineBpmnSvg()' in content
-    assert "window.addEventListener('beforeprint', fitInlineBpmnSvg)" in content
-    assert "svg.setAttribute('viewBox', viewBox)" in content
+    assert 'function prepareBpmnBookFlow()' in content
+    assert 'function buildFlowSegmentPages(svg, box)' in content
+    assert "window.addEventListener('beforeprint', prepareBpmnBookFlow)" in content
+    assert "document.getElementById('flowSegmentPages')" in content
+    assert 'const segmentZoomFactor = 0.58' in content
+    assert 'font-size: 18px !important' in content
     assert 'box.x - paddingX' in content
     assert 'box.y - paddingY' in content
