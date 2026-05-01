@@ -111,3 +111,9 @@ def test_update_contract_general_supports_last_billing_and_binary_status():
 def test_get_contract_status_group_maps_legacy_active_statuses():
     contract = SimpleNamespace(status="signed")
     assert ContractService.get_contract_status_group(contract) == "active"
+
+
+def test_infer_document_type_detects_cpf_and_cnpj():
+    assert ContractService.infer_document_type("123.456.789-01") == "cpf"
+    assert ContractService.infer_document_type("12.345.678/0001-99") == "cnpj"
+    assert ContractService.infer_document_type("ABC") is None

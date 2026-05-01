@@ -15,10 +15,11 @@
 {% block navbar_actions %}{% endblock %}
 
 {% block workspace_content %}
-<div class="cp-page fade-in" data-company-id="{{ company_id or '' }}">
+<div class="cp-page fade-in" data-company-id="{{ company_id or '' }}" data-selected-counterparty-id="{{ selected_counterparty_id or '' }}">
     <header class="cp-header">
         <div>
             <h1>{{ catalog_page.title }}</h1>
+            <p class="subtitle">Cadastro mestre compartilhado com contratos. Marque <strong>Cliente</strong> para habilitar o favorecido na abertura de contrato.</p>
         </div>
         <button class="btn btn-primary" type="button" onclick="startNewCounterparty()">Novo favorecido</button>
     </header>
@@ -71,6 +72,14 @@
                                 <span>Status</span>
                                 <input id="cp-status-display" value="Ativo" readonly tabindex="-1">
                             </label>
+                            <div class="checkbox-card col-span-2">
+                                <span>Classificação operacional</span>
+                                <p class="field-hint">O mesmo cadastro atende Financeiro e Contratos. Para iniciar contrato, o flag de cliente é obrigatório.</p>
+                                <div class="checkbox-inline-wrap">
+                                    <label class="checkbox-inline"><input type="checkbox" name="is_customer"> Cliente</label>
+                                    <label class="checkbox-inline"><input type="checkbox" name="is_supplier" checked> Fornecedor</label>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
@@ -257,6 +266,15 @@
         font-size:.78rem;
         font-weight:600;
     }
+    .checkbox-card {
+        border:1px dashed var(--border);
+        border-radius:12px;
+        padding:.9rem 1rem;
+        justify-content:center;
+    }
+    .checkbox-inline-wrap { display:flex; gap:1rem; flex-wrap:wrap; }
+    .checkbox-inline { display:inline-flex; align-items:center; gap:.55rem; }
+    .checkbox-inline input { width:auto; }
     .col-span-2 { grid-column:span 2; }
     .cp-form-actions { display:flex; gap:.75rem; flex-wrap:wrap; justify-content:flex-end; padding-top:.5rem; }
     .btn { border:none; border-radius:12px; padding:.8rem 1rem; font-weight:700; cursor:pointer; }
@@ -498,7 +516,9 @@
 </style>
 
 <script>
-    const companyId = Number(document.querySelector('.cp-page')?.dataset.companyId);
+    const pageEl = document.querySelector('.cp-page');
+    const companyId = Number(pageEl?.dataset.companyId);
+    const selectedCounterpartyId = Number(pageEl?.dataset.selectedCounterpartyId || 0);
     const catalogType = 'counterparties';
     const sections = [
         { key: 'main', label: 'Dados principais' },
@@ -581,6 +601,7 @@
     function normalizeValue(field, value) {
         if (value === '') return null;
         if (['default_chart_account_id', 'default_cost_center_id'].includes(field)) return Number(value);
+        if (['is_customer', 'is_supplier'].includes(field)) return value === 'on';
         return value;
     }
 
@@ -637,6 +658,8 @@
         document.getElementById('cp-form').reset();
         document.querySelector('#cp-form [name="id"]').value = '';
         document.querySelector('#cp-form [name="code"]').value = '';
+        document.querySelector('#cp-form [name="is_customer"]').checked = false;
+        document.querySelector('#cp-form [name="is_supplier"]').checked = true;
         hydrateDefaultSelects();
         updateStatusDisplay(true);
         updateDocumentTypeLabel('');
@@ -657,7 +680,12 @@
         form.querySelector('[name="id"]').value = item.id;
         Object.entries(item).forEach(([key, value]) => {
             const field = form.querySelector(`[name="${key}"]`);
-            if (field) field.value = value ?? '';
+            if (!field) return;
+            if (field.type === 'checkbox') {
+                field.checked = value === true;
+                return;
+            }
+            field.value = value ?? '';
         });
         hydrateDefaultSelects(item);
         handleDocumentInput(form.querySelector('[name="document_number"]'));
@@ -679,12 +707,13 @@
                 <div class="cp-list-item-line">
                     <div class="cp-list-item-title">
                         <strong>${item.code || '-'}</strong>
-                        <span>${item.name || '-'}</span>
+                        <span>${item.name || '-'}${item.is_customer ? ' · cliente' : ''}${item.is_supplier ? ' · fornecedor' : ''}</span>
                     </div>
                     <span class="cp-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
                 </div>
                 <div class="cp-list-item-actions" onclick="event.stopPropagation()">
                     <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
+                    ${item.is_customer ? `<a class="btn btn-secondary" href="/contracts/new?company_id=${companyId}&counterparty_id=${item.id}" target="_self">Usar em contrato</a>` : ''}
                     <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                 </div>
             </article>
@@ -716,6 +745,13 @@
         const result = await response.json();
         allItems = Array.isArray(result) ? result : [];
         renderList(allItems);
+        if (selectedCounterpartyId) {
+            const selectedByQuery = allItems.find(item => item.id === selectedCounterpartyId);
+            if (selectedByQuery) {
+                fillForm(selectedByQuery);
+                return;
+            }
+        }
         if (selectedListId) {
             const selected = allItems.find(item => item.id === selectedListId);
             if (selected) {
@@ -726,12 +762,15 @@
 
     async function saveCounterparty(event) {
         event.preventDefault();
+        const form = event.currentTarget;
         const formData = new FormData(event.currentTarget);
         const payload = {};
         for (const [key, value] of formData.entries()) {
             if (key === 'id') continue;
             payload[key] = normalizeValue(key, value);
         }
+        payload.is_customer = !!form.querySelector('[name="is_customer"]')?.checked;
+        payload.is_supplier = !!form.querySelector('[name="is_supplier"]')?.checked;
         const id = formData.get('id');
         const url = id
             ? `/api/financial/catalogs/${catalogType}/${id}?company_id=${companyId}`

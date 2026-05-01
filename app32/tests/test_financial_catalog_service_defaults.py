@@ -143,3 +143,34 @@ def test_validate_cost_center_default_rule_requires_analytic():
     )
 
     assert error == "Somente centros de custo analíticos podem ser definidos como padrão."
+
+
+def test_prepare_counterparty_payload_maps_roles_to_metadata():
+    payload = FinancialCatalogService._prepare_catalog_payload(
+        catalog_type="counterparties",
+        company_id=9,
+        data={
+            "company_id": 9,
+            "code": "001",
+            "name": "Cliente Teste",
+            "is_customer": True,
+            "is_supplier": False,
+            "metadata_json": {"origin": "manual"},
+        },
+    )
+
+    assert "is_customer" not in payload
+    assert "is_supplier" not in payload
+    assert payload["metadata_json"]["is_customer"] is True
+    assert payload["metadata_json"]["is_supplier"] is False
+    assert payload["metadata_json"]["origin"] == "manual"
+
+
+def test_validate_related_scope_requires_counterparty_role_flag():
+    error = FinancialCatalogService._validate_related_scope(
+        catalog_type="counterparties",
+        company_id=9,
+        data={"metadata_json": {"is_customer": False, "is_supplier": False}},
+    )
+
+    assert error == "Selecione ao menos uma classificação para o favorecido: Cliente, Fornecedor ou ambos."

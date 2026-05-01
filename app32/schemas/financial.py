@@ -726,6 +726,8 @@ class FinancialCounterpartyInput(BaseModel):
     pix_key: Optional[str] = Field(None, max_length=120)
     notes: Optional[str] = None
     is_active: bool = True
+    is_customer: bool = False
+    is_supplier: bool = True
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("code", mode="before")
@@ -756,6 +758,8 @@ class FinancialCounterpartyUpdateInput(BaseModel):
     pix_key: Optional[str] = Field(None, max_length=120)
     notes: Optional[str] = None
     is_active: Optional[bool] = None
+    is_customer: Optional[bool] = None
+    is_supplier: Optional[bool] = None
     metadata_json: Optional[Dict[str, Any]] = None
 
     @field_validator("code", mode="before")

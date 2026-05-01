@@ -362,6 +362,7 @@ def financial_catalog_detail_page(catalog_slug: str):
         catalog_slug=catalog_slug,
         catalog_pages=FINANCIAL_CATALOG_PAGES,
         catalog_page=catalog_page,
+        selected_counterparty_id=request.args.get("counterparty_id", type=int),
     )
 
 

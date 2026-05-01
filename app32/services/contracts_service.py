@@ -91,6 +91,15 @@ class ContractService:
             return None
 
     @staticmethod
+    def infer_document_type(value: object) -> Optional[str]:
+        digits = re.sub(r"\D", "", str(value or ""))
+        if len(digits) == 11:
+            return "cpf"
+        if len(digits) == 14:
+            return "cnpj"
+        return None
+
+    @staticmethod
     def calculate_total_price(quantity: object, unit_price: object) -> Decimal:
         qty = ContractService._normalize_decimal(quantity)
         price = ContractService._normalize_decimal(unit_price)
@@ -127,6 +136,7 @@ class ContractService:
 
     @staticmethod
     def list_parties(company_id: int):
+        ContractService.sync_parties_from_counterparties(company_id)
         return (
             ContractParty.query.filter(ContractParty.company_id == company_id, ContractParty.deleted_at.is_(None))
             .order_by(ContractParty.name.asc())
@@ -135,6 +145,7 @@ class ContractService:
 
     @staticmethod
     def list_customer_parties(company_id: int):
+        ContractService.sync_parties_from_counterparties(company_id, only_customer=True)
         return (
             ContractParty.query.filter(
                 ContractParty.company_id == company_id,
@@ -147,11 +158,86 @@ class ContractService:
 
     @staticmethod
     def list_contracts(company_id: int):
+        ContractService.sync_parties_from_counterparties(company_id)
         return (
             Contract.query.filter(Contract.company_id == company_id, Contract.deleted_at.is_(None))
             .order_by(Contract.updated_at.desc())
             .all()
         )
+
+    @staticmethod
+    def sync_parties_from_counterparties(company_id: int, *, only_customer: bool = False) -> None:
+        counterparties = FinancialCounterparty.query.filter(
+            FinancialCounterparty.company_id == company_id,
+            FinancialCounterparty.deleted_at.is_(None),
+        ).all()
+        changed = False
+        for counterparty in counterparties:
+            metadata = dict(counterparty.metadata_json or {})
+            is_customer = bool(metadata.get("is_customer"))
+            is_supplier = bool(metadata.get("is_supplier"))
+            if only_customer and not is_customer:
+                continue
+            if not is_customer and not is_supplier:
+                continue
+            party = ContractParty.query.filter(
+                ContractParty.company_id == company_id,
+                ContractParty.financial_counterparty_id == counterparty.id,
+                ContractParty.deleted_at.is_(None),
+            ).first()
+            payload = {
+                "name": counterparty.name,
+                "legal_name": counterparty.legal_name,
+                "document_type": ContractService.infer_document_type(counterparty.document_number),
+                "document_number": counterparty.document_number,
+                "email": counterparty.email,
+                "phone": counterparty.phone,
+                "is_customer": is_customer,
+                "is_supplier": is_supplier,
+                "status": "active" if counterparty.is_active else "inactive",
+                "notes": counterparty.notes,
+                "financial_counterparty_id": counterparty.id,
+            }
+            if party is None:
+                party = ContractParty(
+                    company_id=company_id,
+                    code=ContractService._next_code(ContractParty, company_id, "PART"),
+                )
+                ContractService.update_party(party=party, payload=payload, user_id=None, is_new=True)
+                db.session.add(party)
+                changed = True
+                continue
+            before = (
+                party.name,
+                party.legal_name,
+                party.document_type,
+                party.document_number,
+                party.email,
+                party.phone,
+                bool(party.is_customer),
+                bool(party.is_supplier),
+                party.status,
+                party.notes,
+                party.financial_counterparty_id,
+            )
+            ContractService.update_party(party=party, payload=payload, user_id=None, is_new=True)
+            after = (
+                party.name,
+                party.legal_name,
+                party.document_type,
+                party.document_number,
+                party.email,
+                party.phone,
+                bool(party.is_customer),
+                bool(party.is_supplier),
+                party.status,
+                party.notes,
+                party.financial_counterparty_id,
+            )
+            if before != after:
+                changed = True
+        if changed:
+            db.session.commit()
 
     @staticmethod
     def get_contract_start_date(contract: Contract) -> Optional[date]:
@@ -168,6 +254,7 @@ class ContractService:
 
     @staticmethod
     def list_customer_contract_tree(company_id: int) -> list[dict]:
+        ContractService.sync_parties_from_counterparties(company_id, only_customer=True)
         parties = ContractService.list_customer_parties(company_id)
         contracts = (
             Contract.query.filter(
@@ -225,9 +312,19 @@ class ContractService:
 
     @staticmethod
     def get_party(company_id: int, party_id: int) -> Optional[ContractParty]:
+        ContractService.sync_parties_from_counterparties(company_id)
         return ContractParty.query.filter(
             ContractParty.id == party_id,
             ContractParty.company_id == company_id,
+            ContractParty.deleted_at.is_(None),
+        ).first()
+
+    @staticmethod
+    def get_party_by_counterparty_id(company_id: int, counterparty_id: int) -> Optional[ContractParty]:
+        ContractService.sync_parties_from_counterparties(company_id)
+        return ContractParty.query.filter(
+            ContractParty.company_id == company_id,
+            ContractParty.financial_counterparty_id == counterparty_id,
             ContractParty.deleted_at.is_(None),
         ).first()
 

@@ -53,28 +53,21 @@ def contracts_party_manage(party_id: int | None = None):
     company = get_active_company()
     if not company:
         abort(400, description="Empresa ativa não localizada.")
-
-    party = ContractService.get_party(company.id, party_id) if party_id else None
-    if party_id and not party:
-        abort(404)
-
-    if request.method == "POST":
-        if not has_permission(company.id, "contracts", "edit"):
-            abort(403)
-        payload = request.form.to_dict()
-        try:
-            if party is None:
-                party = ContractService.create_party(company_id=company.id, payload=payload, user_id=current_user.id if current_user.is_authenticated else None)
-                flash("Favorecido criado com sucesso.", "success")
-            else:
-                ContractService.update_party(party=party, payload=payload, user_id=current_user.id if current_user.is_authenticated else None)
-                flash("Favorecido atualizado com sucesso.", "success")
-            return redirect(url_for("contracts.contracts_party_manage", party_id=party.id, company_id=company.id))
-        except Exception as exc:
-            flash(f"Não foi possível salvar o favorecido: {exc}", "error")
-
-    counterparties = ContractService.list_financial_counterparties(company.id)
-    return render_template("modules/contracts/party_manage.html", company=company, company_id=company.id, party=party, counterparties=counterparties)
+    selected_counterparty_id = request.args.get("counterparty_id", type=int)
+    if party_id:
+        party = ContractService.get_party(company.id, party_id)
+        if not party:
+            abort(404)
+        if party.financial_counterparty_id:
+            selected_counterparty_id = party.financial_counterparty_id
+    return redirect(
+        url_for(
+            "financial.financial_catalog_detail_page",
+            catalog_slug="counterparties",
+            company_id=company.id,
+            counterparty_id=selected_counterparty_id,
+        )
+    )
 
 
 @contracts_bp.route("/contracts/list")
@@ -94,6 +87,7 @@ def contracts_create():
 
     selected_contract_id = request.args.get("contract_id", type=int)
     selected_party_id = request.args.get("party_id", type=int)
+    selected_counterparty_id = request.args.get("counterparty_id", type=int)
 
     if request.method == "POST":
         section = (request.form.get("section") or "create_contract").strip().lower()
@@ -123,6 +117,8 @@ def contracts_create():
     selected_contract = ContractService.get_contract(company.id, selected_contract_id) if selected_contract_id else None
     if selected_contract and selected_contract.party:
         selected_party = selected_contract.party
+    elif selected_counterparty_id:
+        selected_party = ContractService.get_party_by_counterparty_id(company.id, selected_counterparty_id)
     elif selected_party_id:
         selected_party = ContractService.get_party(company.id, selected_party_id)
     else:

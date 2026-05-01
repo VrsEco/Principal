@@ -298,6 +298,14 @@ class FinancialCounterparty(db.Model):
     default_chart_account = db.relationship("FinancialChartAccount", foreign_keys=[default_chart_account_id])
     default_cost_center = db.relationship("FinancialCostCenter", foreign_keys=[default_cost_center_id])
 
+    @property
+    def is_customer(self) -> bool:
+        return bool((self.metadata_json or {}).get("is_customer"))
+
+    @property
+    def is_supplier(self) -> bool:
+        return bool((self.metadata_json or {}).get("is_supplier"))
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -313,6 +321,8 @@ class FinancialCounterparty(db.Model):
             "pix_key": self.pix_key,
             "notes": self.notes,
             "is_active": self.is_active,
+            "is_customer": self.is_customer,
+            "is_supplier": self.is_supplier,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

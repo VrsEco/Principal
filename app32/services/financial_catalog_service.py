@@ -242,6 +242,59 @@ class FinancialCatalogService:
         return value
 
     @staticmethod
+    def _extract_counterparty_roles(data: Dict) -> tuple[Optional[bool], Optional[bool]]:
+        metadata = dict(data.get("metadata_json") or {})
+        is_customer = data.get("is_customer")
+        is_supplier = data.get("is_supplier")
+        if is_customer is None and "is_customer" in metadata:
+            is_customer = bool(metadata.get("is_customer"))
+        if is_supplier is None and "is_supplier" in metadata:
+            is_supplier = bool(metadata.get("is_supplier"))
+        return is_customer, is_supplier
+
+    @staticmethod
+    def _sync_contract_party_projection(counterparty: FinancialCounterparty) -> None:
+        from models.contracts import ContractParty
+        from services.contracts_service import ContractService
+
+        metadata = dict(counterparty.metadata_json or {})
+        is_customer = bool(metadata.get("is_customer"))
+        is_supplier = bool(metadata.get("is_supplier"))
+        if not is_customer and not is_supplier:
+            return
+
+        party = ContractParty.query.filter(
+            ContractParty.company_id == counterparty.company_id,
+            ContractParty.financial_counterparty_id == counterparty.id,
+            ContractParty.deleted_at.is_(None),
+        ).first()
+
+        payload = {
+            "name": counterparty.name,
+            "legal_name": counterparty.legal_name,
+            "document_type": ContractService.infer_document_type(counterparty.document_number),
+            "document_number": counterparty.document_number,
+            "email": counterparty.email,
+            "phone": counterparty.phone,
+            "is_customer": is_customer,
+            "is_supplier": is_supplier,
+            "status": "active" if counterparty.is_active else "inactive",
+            "notes": counterparty.notes,
+            "financial_counterparty_id": counterparty.id,
+        }
+
+        if party is None:
+            party = ContractParty(
+                company_id=counterparty.company_id,
+                code=ContractService._next_code(ContractParty, counterparty.company_id, "PART"),
+            )
+            ContractService.update_party(party=party, payload=payload, user_id=None, is_new=True)
+            db.session.add(party)
+            return
+
+        ContractService.update_party(party=party, payload=payload, user_id=None, is_new=True)
+
+    @staticmethod
     def _clear_default_cost_center_suggestions(*, company_id: int, exclude_item_id: Optional[int] = None) -> None:
         query = FinancialCostCenter.query.filter(
             FinancialCostCenter.company_id == company_id,
@@ -385,6 +438,11 @@ class FinancialCatalogService:
                 if field_name in prepared:
                     metadata[field_name] = prepared.pop(field_name)
 
+        if catalog_type == "counterparties":
+            for field_name in ("is_customer", "is_supplier"):
+                if field_name in prepared:
+                    metadata[field_name] = bool(prepared.pop(field_name))
+
         if catalog_type in {
             "account_categories",
             "asset_accounts",
@@ -495,6 +553,11 @@ class FinancialCatalogService:
             ).first()
             if not center:
                 return "Centro padrão fora do escopo da empresa."
+
+        if catalog_type == "counterparties":
+            is_customer, is_supplier = FinancialCatalogService._extract_counterparty_roles(data)
+            if is_customer is False and is_supplier is False:
+                return "Selecione ao menos uma classificação para o favorecido: Cliente, Fornecedor ou ambos."
 
         if catalog_type == "discount_rules" and data.get("chart_account_id"):
             chart = FinancialChartAccount.query.filter(
@@ -788,6 +851,9 @@ class FinancialCatalogService:
         try:
             item = model(**data)
             db.session.add(item)
+            if catalog_type == "counterparties":
+                db.session.flush()
+                FinancialCatalogService._sync_contract_party_projection(item)
             if catalog_type == "cost_centers" and bool(data.get("is_default_suggestion")):
                 db.session.flush()
                 FinancialCatalogService._clear_default_cost_center_suggestions(
@@ -907,6 +973,8 @@ class FinancialCatalogService:
         try:
             for key, value in data.items():
                 setattr(item, key, value)
+            if catalog_type == "counterparties":
+                FinancialCatalogService._sync_contract_party_projection(item)
             if catalog_type == "cost_centers" and bool(getattr(item, "is_default_suggestion", False)):
                 FinancialCatalogService._clear_default_cost_center_suggestions(
                     company_id=company_id,
@@ -974,6 +1042,8 @@ class FinancialCatalogService:
 
         try:
             item.is_active = bool(is_active)
+            if catalog_type == "counterparties":
+                FinancialCatalogService._sync_contract_party_projection(item)
             if not item.is_active and catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):
                 item.is_default_suggestion = False
             if not item.is_active and catalog_type == "payment_methods" and getattr(item, "is_default_suggestion", False):

@@ -23,8 +23,9 @@
             {% if selected_party %}
             <a class="btn btn-primary" href="/contracts/new?company_id={{ company_id }}&party_id={{ selected_party.id }}">Novo contrato para {{ selected_party.name }}</a>
             {% else %}
-            <a class="btn btn-primary" href="/contracts/parties/new?company_id={{ company_id }}">Cadastrar cliente</a>
+            <a class="btn btn-primary" href="/financial/catalogs/counterparties?company_id={{ company_id }}">Cadastrar favorecido</a>
             {% endif %}
+            <a class="btn btn-secondary" href="/financial/catalogs/counterparties?company_id={{ company_id }}">Gerir favorecidos</a>
         </div>
     </header>
 
@@ -71,7 +72,7 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="empty-state">Nenhum cliente contratual encontrado. Cadastre primeiro um favorecido marcado como cliente.</p>
+                <p class="empty-state">Nenhum cliente contratual encontrado. Cadastre ou edite um favorecido no Financeiro e marque o flag <strong>Cliente</strong>.</p>
                 {% endif %}
             </div>
         </aside>
@@ -219,8 +220,8 @@
             </form>
             {% else %}
             <div class="panel-body">
-                <p class="empty-state">Selecione um cliente na lateral para iniciar o contrato.</p>
-                <a class="btn btn-secondary" href="/contracts/parties/new?company_id={{ company_id }}">Cadastrar favorecido cliente</a>
+                <p class="empty-state">Selecione um cliente na lateral para iniciar o contrato. Se o favorecido ainda não aparecer aqui, edite o cadastro financeiro e marque o flag <strong>Cliente</strong>.</p>
+                <a class="btn btn-secondary" href="/financial/catalogs/counterparties?company_id={{ company_id }}">Cadastrar ou editar favorecido</a>
             </div>
             {% endif %}
         </main>
