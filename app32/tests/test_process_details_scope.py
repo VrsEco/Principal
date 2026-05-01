@@ -201,6 +201,8 @@ def test_process_details_template_prefers_bpmn_xml_viewer_for_published_flow():
     assert 'renderPublishedBpmnViewer(viewerId, bpmnFlow)' in content
     assert 'getPublishedDiagramUsefulBounds(publishedBpmnViewer)' in content
     assert 'canvas.viewbox({' in content
+    assert 'tightenPublishedSvgViewport(host)' in content
+    assert 'svg.setAttribute(\'viewBox\'' in content
     assert 'window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler' in content
 
 
