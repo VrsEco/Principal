@@ -199,6 +199,8 @@ def test_process_details_template_prefers_bpmn_xml_viewer_for_published_flow():
     assert "filename='vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js'" in content
     assert 'bpmn_xml: diagram.bpmn_xml,' in content
     assert 'renderPublishedBpmnViewer(viewerId, bpmnFlow)' in content
+    assert 'getPublishedDiagramUsefulBounds(publishedBpmnViewer)' in content
+    assert 'canvas.viewbox({' in content
     assert 'window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler' in content
 
 

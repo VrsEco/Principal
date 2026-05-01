@@ -1846,7 +1846,7 @@
         }
 
         const diagram = await res.json();
-        if (!diagram || diagram.status !== 'published' || !diagram.svg_snapshot) {
+        if (!diagram || diagram.status !== 'published' || (!diagram.svg_snapshot && !diagram.bpmn_xml)) {
             return null;
         }
 
@@ -1885,8 +1885,70 @@
 
         const canvas = publishedBpmnViewer.get && publishedBpmnViewer.get('canvas');
         if (canvas) {
-            canvas.zoom('fit-viewport', 'auto');
+            const usefulBounds = getPublishedDiagramUsefulBounds(publishedBpmnViewer);
+            if (usefulBounds && typeof canvas.viewbox === 'function') {
+                const paddingX = Math.max(40, usefulBounds.width * 0.04);
+                const paddingY = Math.max(40, usefulBounds.height * 0.08);
+                canvas.viewbox({
+                    x: usefulBounds.x - paddingX,
+                    y: usefulBounds.y - paddingY,
+                    width: usefulBounds.width + (paddingX * 2),
+                    height: usefulBounds.height + (paddingY * 2)
+                });
+            } else {
+                canvas.zoom('fit-viewport', 'auto');
+            }
         }
+    }
+
+    function getPublishedDiagramUsefulBounds(viewer) {
+        const elementRegistry = viewer && viewer.get && viewer.get('elementRegistry');
+        if (!elementRegistry || typeof elementRegistry.getAll !== 'function') {
+            return null;
+        }
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        elementRegistry.getAll().forEach((element) => {
+            if (!element || element.type === 'label') {
+                return;
+            }
+
+            if (Array.isArray(element.waypoints) && element.waypoints.length) {
+                element.waypoints.forEach((point) => {
+                    if (!point) return;
+                    if (Number.isFinite(point.x)) {
+                        minX = Math.min(minX, point.x);
+                        maxX = Math.max(maxX, point.x);
+                    }
+                    if (Number.isFinite(point.y)) {
+                        minY = Math.min(minY, point.y);
+                        maxY = Math.max(maxY, point.y);
+                    }
+                });
+            }
+
+            if (Number.isFinite(element.x) && Number.isFinite(element.y)) {
+                minX = Math.min(minX, element.x);
+                minY = Math.min(minY, element.y);
+                maxX = Math.max(maxX, element.x + (Number.isFinite(element.width) ? element.width : 0));
+                maxY = Math.max(maxY, element.y + (Number.isFinite(element.height) ? element.height : 0));
+            }
+        });
+
+        if (![minX, minY, maxX, maxY].every(Number.isFinite) || maxX <= minX || maxY <= minY) {
+            return null;
+        }
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
     }
 
     function sanitizeSvgSnapshot(svg) {
