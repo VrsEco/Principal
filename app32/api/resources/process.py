@@ -15,7 +15,9 @@ from schemas.process import (
     process_schema, processes_schema,
     process_routine_schema, process_routines_schema,
     process_step_schema, process_steps_schema,
-    process_instance_schema, process_instances_schema
+    process_instance_schema, process_instances_schema,
+    process_instance_execution_schema, process_instance_executions_schema,
+    process_activity_execution_contract_schema, process_activity_execution_contracts_schema,
 )
 from models import (
     db,
@@ -27,6 +29,8 @@ from models import (
     ProcessStep,
     ProcessInstance,
     ProcessInstanceCollaborator,
+    ProcessInstanceExecution,
+    ProcessActivityExecutionContract,
     Company,
     Employee,
     Indicator,
@@ -50,6 +54,21 @@ from services.process_bpmn_service import (
 from services.process_bpmn_pop_binding_service import (
     open_or_create_pop_activity_for_bpmn,
     serialize_pop_binding,
+)
+from services.process_execution_runtime_service import (
+    apply_runtime_defaults,
+    build_instance_timeline,
+    build_runtime_overlay,
+    build_runtime_payload,
+    pause_instance,
+    resume_instance,
+    validate_execution_status,
+    validate_instance_status,
+)
+from services.process_execution_contract_service import (
+    apply_contract_defaults,
+    normalize_execution_mode,
+    resolve_activity_execution_contract,
 )
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
@@ -730,7 +749,12 @@ class ProcessInstanceListResource(Resource):
                     if proc.responsible_id:
                         data['responsible_id'] = proc.responsible_id
 
+            if data.get('status') is not None:
+                data['status'] = validate_instance_status(data.get('status'))
+
             instance = process_instance_schema.load(data)
+            instance.status = validate_instance_status(getattr(instance, 'status', None))
+            apply_runtime_defaults(instance)
             db.session.add(instance)
             db.session.commit()
             
@@ -832,6 +856,13 @@ class ProcessInstanceResource(Resource):
             # Map frontend 'end_date' is now handled by Schema alias
 
             instance = process_instance_schema.load(data, instance=instance, partial=True)
+            instance.status = validate_instance_status(getattr(instance, 'status', None))
+            apply_runtime_defaults(instance)
+            if instance.status == 'paused' and not instance.paused_at:
+                instance.paused_at = datetime.utcnow()
+            if instance.status != 'paused':
+                instance.paused_at = None
+                instance.pause_reason = None if instance.status == 'in_progress' else instance.pause_reason
             db.session.commit()
             current_status = getattr(instance, 'status', None)
             current_actual_end_date = getattr(instance, 'actual_end_date', None)
@@ -901,6 +932,12 @@ class ProcessInstanceResource(Resource):
 class ProcessInstanceWorkLogResource(Resource):
     @permission_required('processes', 'view')
     def get(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_company_full_access(instance.company_id):
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
+            if not employee or not _instance_visible_to_employee(instance, employee.id):
+                return {"error": "Acesso negado à instância."}, 403
         logs = ActivityWorkLog.query.filter_by(
             activity_type='process_instance',
             activity_id=instance_id
@@ -913,6 +950,8 @@ class ProcessInstanceWorkLogResource(Resource):
         try:
             data = request.get_json()
             instance = ProcessInstance.query.get_or_404(instance_id)
+            if not has_permission(instance.company_id, 'processes', 'edit'):
+                return {"error": "Permission denied: edit on processes"}, 403
             
             # Create Log
             log = ActivityWorkLog(
@@ -940,6 +979,194 @@ class ProcessInstanceWorkLogResource(Resource):
             
         except Exception as e:
             db.session.rollback()
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessInstanceRuntimeResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_company_full_access(instance.company_id):
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
+            if not employee or not _instance_visible_to_employee(instance, employee.id):
+                return {"error": "Acesso negado à instância."}, 403
+        return build_runtime_payload(instance), 200
+
+
+class ProcessInstanceTimelineResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_company_full_access(instance.company_id):
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
+            if not employee or not _instance_visible_to_employee(instance, employee.id):
+                return {"error": "Acesso negado à instância."}, 403
+        return build_instance_timeline(instance), 200
+
+
+class ProcessInstanceOverlayResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_company_full_access(instance.company_id):
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
+            if not employee or not _instance_visible_to_employee(instance, employee.id):
+                return {"error": "Acesso negado à instância."}, 403
+        return build_runtime_overlay(instance), 200
+
+
+class ProcessInstancePauseResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_permission(instance.company_id, 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        payload = request.get_json(silent=True) or {}
+        pause_instance(instance=instance, reason=payload.get('reason'))
+        db.session.commit()
+        return build_runtime_payload(instance), 200
+
+
+class ProcessInstanceResumeResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_permission(instance.company_id, 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        resume_instance(instance=instance)
+        db.session.commit()
+        return build_runtime_payload(instance), 200
+
+
+class ProcessInstanceExecutionListResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_company_full_access(instance.company_id):
+            from models.employee import Employee
+            employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
+            if not employee or not _instance_visible_to_employee(instance, employee.id):
+                return {"error": "Acesso negado à instância."}, 403
+
+        executions = (
+            ProcessInstanceExecution.query
+            .filter_by(company_id=instance.company_id, process_instance_id=instance.id)
+            .order_by(ProcessInstanceExecution.created_at.asc(), ProcessInstanceExecution.id.asc())
+            .all()
+        )
+        return process_instance_executions_schema.dump(executions), 200
+
+    @permission_required('processes', 'edit')
+    def post(self, instance_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        if not has_permission(instance.company_id, 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = request.get_json(silent=True) or {}
+            contract = resolve_activity_execution_contract(
+                company_id=instance.company_id,
+                process_id=instance.process_id,
+                bpmn_element_id=payload.get('bpmn_element_id'),
+                process_routine_id=payload.get('process_routine_id'),
+            )
+            payload['company_id'] = instance.company_id
+            payload['process_instance_id'] = instance.id
+            payload['process_id'] = instance.process_id
+            payload['process_bpmn_diagram_id'] = payload.get('process_bpmn_diagram_id') or instance.process_bpmn_diagram_id
+            payload['status'] = validate_execution_status(payload.get('status'))
+            payload = apply_contract_defaults(payload, contract)
+
+            execution = process_instance_execution_schema.load(payload)
+            if execution.status == 'in_progress' and not execution.started_at:
+                execution.started_at = datetime.utcnow()
+            if execution.status == 'completed' and not execution.completed_at:
+                execution.completed_at = datetime.utcnow()
+            if execution.status == 'paused' and not execution.paused_at:
+                execution.paused_at = datetime.utcnow()
+            if execution.status == 'waiting_external' and not execution.waiting_since:
+                execution.waiting_since = datetime.utcnow()
+
+            db.session.add(execution)
+            if execution.bpmn_element_id:
+                instance.current_bpmn_element_id = execution.bpmn_element_id
+            if instance.status == 'pending':
+                instance.status = 'in_progress'
+                if not instance.started_at:
+                    instance.started_at = datetime.utcnow()
+            db.session.commit()
+            return process_instance_execution_schema.dump(execution), 201
+        except ValidationError as err:
+            db.session.rollback()
+            return {"errors": err.messages}, 400
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao criar execução de atividade instance_id=%s company_id=%s",
+                instance_id,
+                instance.company_id,
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessInstanceExecutionResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, instance_id, execution_id):
+        instance = ProcessInstance.query.get_or_404(instance_id)
+        execution = ProcessInstanceExecution.query.filter_by(
+            id=execution_id,
+            process_instance_id=instance.id,
+            company_id=instance.company_id,
+        ).first_or_404()
+        if not has_permission(instance.company_id, 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = request.get_json(silent=True) or {}
+            if payload.get('status') is not None:
+                payload['status'] = validate_execution_status(payload.get('status'))
+            if payload.get('execution_mode') is not None:
+                payload['execution_mode'] = normalize_execution_mode(payload.get('execution_mode'))
+            execution = process_instance_execution_schema.load(payload, instance=execution, partial=True)
+            execution.status = validate_execution_status(execution.status)
+            execution.execution_mode = normalize_execution_mode(execution.execution_mode)
+
+            if execution.status == 'in_progress' and not execution.started_at:
+                execution.started_at = datetime.utcnow()
+            if execution.status == 'completed' and not execution.completed_at:
+                execution.completed_at = datetime.utcnow()
+            if execution.status == 'paused' and not execution.paused_at:
+                execution.paused_at = datetime.utcnow()
+            if execution.status == 'waiting_external' and not execution.waiting_since:
+                execution.waiting_since = datetime.utcnow()
+            if execution.status == 'completed' and execution.started_at and not execution.duration_seconds:
+                execution.duration_seconds = int((execution.completed_at - execution.started_at).total_seconds())
+
+            if execution.bpmn_element_id:
+                instance.current_bpmn_element_id = execution.bpmn_element_id
+            if execution.status == 'completed':
+                instance.status = 'in_progress'
+
+            db.session.commit()
+            return process_instance_execution_schema.dump(execution), 200
+        except ValidationError as err:
+            db.session.rollback()
+            return {"errors": err.messages}, 400
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao atualizar execução de atividade execution_id=%s instance_id=%s company_id=%s",
+                execution_id,
+                instance_id,
+                instance.company_id,
+            )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ActivityWorkLogItemResource(Resource):
@@ -1501,6 +1728,106 @@ class ProcessBpmnPopBindingResource(Resource):
                 getattr(process, 'company_id', None),
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessActivityExecutionContractListResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+
+        contracts = (
+            ProcessActivityExecutionContract.query
+            .filter_by(company_id=process.company_id, process_id=process.id)
+            .order_by(
+                ProcessActivityExecutionContract.bpmn_element_id.asc().nulls_last(),
+                ProcessActivityExecutionContract.version.desc(),
+                ProcessActivityExecutionContract.id.desc(),
+            )
+            .all()
+        )
+        return process_activity_execution_contracts_schema.dump(contracts), 200
+
+    @permission_required('processes', 'edit')
+    def post(self, process_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = request.get_json(silent=True) or {}
+            payload['company_id'] = process.company_id
+            payload['process_id'] = process.id
+            payload['execution_mode'] = normalize_execution_mode(payload.get('execution_mode'))
+
+            contract = process_activity_execution_contract_schema.load(payload)
+            db.session.add(contract)
+            db.session.commit()
+            return process_activity_execution_contract_schema.dump(contract), 201
+        except ValidationError as err:
+            db.session.rollback()
+            return {"errors": err.messages}, 400
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao criar contrato de execução process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessActivityExecutionContractResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, contract_id):
+        contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
+        process = _get_process_with_access(contract.process_id, action='view', sync_session=True)
+        if not process or process.company_id != contract.company_id:
+            return {"error": "Permission denied: view on processes"}, 403
+        return process_activity_execution_contract_schema.dump(contract), 200
+
+    @permission_required('processes', 'edit')
+    def put(self, contract_id):
+        contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
+        process = _get_process_with_access(contract.process_id, action='edit', sync_session=True)
+        if not process or process.company_id != contract.company_id:
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = request.get_json(silent=True) or {}
+            if payload.get('execution_mode') is not None:
+                payload['execution_mode'] = normalize_execution_mode(payload.get('execution_mode'))
+
+            contract = process_activity_execution_contract_schema.load(payload, instance=contract, partial=True)
+            contract.execution_mode = normalize_execution_mode(contract.execution_mode)
+            db.session.commit()
+            return process_activity_execution_contract_schema.dump(contract), 200
+        except ValidationError as err:
+            db.session.rollback()
+            return {"errors": err.messages}, 400
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao atualizar contrato de execução contract_id=%s company_id=%s",
+                contract_id,
+                contract.company_id,
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'delete')
+    def delete(self, contract_id):
+        contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
+        process = _get_process_with_access(contract.process_id, action='delete', sync_session=True)
+        if not process or process.company_id != contract.company_id:
+            return {"error": "Permission denied: delete on processes"}, 403
+        contract.is_active = False
+        db.session.commit()
+        return {"message": "Contrato de execução desativado com sucesso."}, 200
 
 
 class ProcessRoutineListResource(Resource):

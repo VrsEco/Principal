@@ -15,6 +15,8 @@
 
 
 {% block workspace_content %}
+<link rel="stylesheet" href="/static/css/process_bpmn_modeler.css">
+<link rel="stylesheet" href="/static/css/process_instance_runtime.css">
 <div class="workspace-wrapper">
     <!-- Header -->
     <div class="workspace-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -33,6 +35,15 @@
             <p class="text-secondary">{{ instance.description or 'Gerenciamento e execução do processo.' }}</p>
         </div>
         <div class="header-actions" id="mainHeaderActions">
+            <button type="button" class="btn btn-outline btn-sm" id="btnPauseRuntime">
+                ⏸️ Pausar
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btnResumeRuntime" hidden>
+                ▶️ Retomar
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btnRefreshRuntime">
+                🔄 Atualizar Fluxo
+            </button>
             <button type="button" class="btn btn-outline btn-sm" onclick="showFinalizarModal()">
                 🏁 Finalizar Execução
             </button>
@@ -41,6 +52,84 @@
 
     <!-- Content Grid -->
     <div class="instance-content mt-4">
+        <div id="processRuntimeShell"
+            class="runtime-shell"
+            data-instance-id="{{ instance.id }}"
+            data-process-id="{{ instance.process_id }}">
+            <div class="runtime-shell-hero">
+                <div class="surface-card runtime-panel">
+                    <span class="bpmn-eyebrow">Runtime BPMN/BPMS</span>
+                    <h2 class="text-h2" style="margin: 0.35rem 0 0.6rem;">Fluxo vivo da execução</h2>
+                    <p class="text-secondary" id="runtimeFlowMeta">
+                        Carregando contexto visual do fluxo...
+                    </p>
+                    <div class="runtime-legend">
+                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-completed"></i>Concluído</span>
+                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-active"></i>Em execução</span>
+                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-pending"></i>Pendente</span>
+                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-paused"></i>Pausado</span>
+                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-waiting"></i>Aguardando externo</span>
+                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-failed"></i>Falha</span>
+                    </div>
+                </div>
+                <div class="surface-card runtime-panel">
+                    <h3 class="text-h3">Resumo da instância</h3>
+                    <div class="runtime-meta-grid">
+                        <div class="runtime-metric">
+                            <span>Status</span>
+                            <strong id="runtimeStatusLabel">{{ instance.status }}</strong>
+                        </div>
+                        <div class="runtime-metric">
+                            <span>Início</span>
+                            <strong id="runtimeStartedAt">{{ instance.started_at or '—' }}</strong>
+                        </div>
+                        <div class="runtime-metric">
+                            <span>Conclusão</span>
+                            <strong id="runtimeCompletedAt">{{ instance.completed_at or '—' }}</strong>
+                        </div>
+                        <div class="runtime-metric" style="grid-column: 1 / -1;">
+                            <span>Elemento atual</span>
+                            <strong id="runtimeCurrentElement">{{ instance.current_bpmn_element_id or 'Sem ponteiro BPMN' }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="runtime-grid">
+                <div class="surface-card runtime-panel">
+                    <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;flex-wrap:wrap;">
+                        <div>
+                            <h3 class="text-h3">Mapa BPMN da execução</h3>
+                            <p class="text-secondary" style="margin-bottom:0;">A instância continua operando mesmo sem fluxo publicado; neste caso o APP32 mantém o controle manual.</p>
+                        </div>
+                        <div class="runtime-actions">
+                            <button type="button" class="btn btn-outline btn-sm" id="btnRefreshRuntimeSecondary">Atualizar</button>
+                        </div>
+                    </div>
+                    <div class="runtime-flow-shell mt-4">
+                        <div id="runtimeBpmnCanvas" class="runtime-flow-canvas"></div>
+                        <div id="runtimeFlowEmpty" class="runtime-flow-empty" hidden>
+                            <div>
+                                <strong>Processo sem BPMN publicado</strong>
+                                <p class="text-secondary">O controle da execução continua ativo via rotina, checklist, horários e diário de bordo.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="runtime-stack">
+                    <div class="surface-card runtime-panel">
+                        <h3 class="text-h3">Atividade atual</h3>
+                        <div id="runtimeCurrentActivity"></div>
+                    </div>
+
+                    <div class="surface-card runtime-panel">
+                        <h3 class="text-h3">Timeline da execução</h3>
+                        <div id="runtimeTimeline" class="runtime-timeline-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- 1. Lançamento de Horas (Card) -->
         <div class="surface-card mb-4">
@@ -1147,6 +1236,8 @@
     }
 
 </script>
+<script src="/static/vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js"></script>
+<script src="/static/js/process_instance_runtime.js"></script>
 {% endblock %}
 
 {% block sidebar_right %}

@@ -627,11 +627,16 @@ def register_api_resources(api):
         MacroProcessListResource, MacroProcessResource,
         ProcessListResource, ProcessResource,
         ProcessBpmnDiagramResource, ProcessBpmnDiagramExportResource, ProcessBpmnPopBindingResource,
+        ProcessActivityExecutionContractListResource, ProcessActivityExecutionContractResource,
         ProcessRoutineListResource, ProcessRoutineResource,
         ProcessScheduleListResource,
         ProcessStepListResource, ProcessStepResource,
         ProcessInstanceListResource, ProcessInstanceResource,
-        ProcessInstanceWorkLogResource, ActivityWorkLogItemResource
+        ProcessInstanceWorkLogResource, ProcessInstanceRuntimeResource,
+        ProcessInstanceTimelineResource, ProcessInstanceOverlayResource,
+        ProcessInstancePauseResource, ProcessInstanceResumeResource,
+        ProcessInstanceExecutionListResource, ProcessInstanceExecutionResource,
+        ActivityWorkLogItemResource
     )
     from api.resources.okr import (
         OKRGlobalListResource, OKRGlobalResource,
@@ -792,6 +797,8 @@ def register_api_resources(api):
     api.add_resource(ProcessBpmnDiagramResource, '/api/processes/<int:process_id>/bpmn-diagram')
     api.add_resource(ProcessBpmnDiagramExportResource, '/api/processes/<int:process_id>/bpmn-diagram/export')
     api.add_resource(ProcessBpmnPopBindingResource, '/api/processes/<int:process_id>/bpmn-pop-bindings')
+    api.add_resource(ProcessActivityExecutionContractListResource, '/api/processes/<int:process_id>/activity-execution-contracts')
+    api.add_resource(ProcessActivityExecutionContractResource, '/api/process-activity-execution-contracts/<int:contract_id>')
     api.add_resource(ProcessRoutineListResource, '/api/process-routines')
     api.add_resource(ProcessRoutineResource, '/api/process-routines/<int:routine_id>')
     api.add_resource(ProcessScheduleListResource, '/api/process-schedules')
@@ -800,6 +807,13 @@ def register_api_resources(api):
     api.add_resource(ProcessInstanceListResource, '/api/process-instances', '/api/companies/<int:company_id>/process-instances')
     api.add_resource(ProcessInstanceResource, '/api/process-instances/<int:instance_id>')
     api.add_resource(ProcessInstanceWorkLogResource, '/api/process-instances/<int:instance_id>/work-logs')
+    api.add_resource(ProcessInstanceRuntimeResource, '/api/process-instances/<int:instance_id>/runtime')
+    api.add_resource(ProcessInstanceTimelineResource, '/api/process-instances/<int:instance_id>/timeline')
+    api.add_resource(ProcessInstanceOverlayResource, '/api/process-instances/<int:instance_id>/bpmn-overlay')
+    api.add_resource(ProcessInstancePauseResource, '/api/process-instances/<int:instance_id>/pause')
+    api.add_resource(ProcessInstanceResumeResource, '/api/process-instances/<int:instance_id>/resume')
+    api.add_resource(ProcessInstanceExecutionListResource, '/api/process-instances/<int:instance_id>/executions')
+    api.add_resource(ProcessInstanceExecutionResource, '/api/process-instances/<int:instance_id>/executions/<int:execution_id>')
     api.add_resource(ActivityWorkLogItemResource, '/api/activity-work-logs/<int:log_id>')
     api.add_resource(OKRGlobalListResource, '/api/okrs-global')
     api.add_resource(OKRGlobalResource, '/api/okrs-global/<int:okr_id>')

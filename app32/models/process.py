@@ -103,6 +103,12 @@ class ProcessRoutine(db.Model):
         cascade='all, delete-orphan',
         backref='pop_routine'
     )
+    execution_contracts = db.relationship(
+        'ProcessActivityExecutionContract',
+        backref='process_routine',
+        lazy='dynamic',
+        cascade='all, delete-orphan'
+    )
 
 class ProcessStep(db.Model):
     __tablename__ = 'process_steps'
@@ -124,15 +130,21 @@ class ProcessInstance(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False)
     process_id = db.Column(db.Integer, db.ForeignKey('processes.id'), nullable=False)
     routine_id = db.Column(db.Integer, db.ForeignKey('routines.id'), nullable=True)
+    process_bpmn_diagram_id = db.Column(db.Integer, db.ForeignKey('process_bpmn_diagrams.id'), nullable=True)
+    process_version = db.Column(db.Integer, nullable=True)
     instance_code = db.Column(db.String(100))
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    status = db.Column(db.String(50), default='pending') # pending, in_progress, completed, overdue
+    status = db.Column(db.String(50), default='pending') # pending, in_progress, paused, waiting_external, completed, failed, cancelled, overdue
     priority = db.Column(db.String(20), default='normal') # low, normal, high, urgent
     due_date = db.Column(db.Date)
     actual_end_date = db.Column(db.Date) # Date when it was actually finished
     started_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)
+    paused_at = db.Column(db.DateTime)
+    pause_reason = db.Column(db.Text)
+    current_bpmn_element_id = db.Column(db.String(255))
+    runtime_context_json = db.Column(db.JSON)
     worked_hours = db.Column(db.Numeric(10, 2), default=0)
     estimated_hours = db.Column(db.Numeric(10, 2), default=0)
     actual_hours = db.Column(db.Numeric(10, 2), default=0)
@@ -168,6 +180,12 @@ class ProcessInstance(db.Model):
             'due_date': self.due_date.isoformat() if hasattr(self.due_date, 'isoformat') else self.due_date,
             'started_at': self.started_at.isoformat() if hasattr(self.started_at, 'isoformat') else self.started_at,
             'completed_at': self.completed_at.isoformat() if hasattr(self.completed_at, 'isoformat') else self.completed_at,
+            'paused_at': self.paused_at.isoformat() if hasattr(self.paused_at, 'isoformat') else self.paused_at,
+            'pause_reason': self.pause_reason,
+            'current_bpmn_element_id': self.current_bpmn_element_id,
+            'process_bpmn_diagram_id': self.process_bpmn_diagram_id,
+            'process_version': self.process_version,
+            'runtime_context_json': self.runtime_context_json,
             'worked_hours': float(self.worked_hours or 0),
             'estimated_hours': float(self.estimated_hours or 0),
             'actual_hours': float(self.actual_hours or 0),
@@ -181,6 +199,7 @@ class ProcessInstance(db.Model):
 
     # Relationships
     process_rel = db.relationship('Process', backref='instances')
+    bpmn_diagram = db.relationship('ProcessBpmnDiagram', foreign_keys=[process_bpmn_diagram_id], backref='process_instances')
     
     # Link to the Schedule (Routine)
     routine = db.relationship('Routine', foreign_keys=[routine_id], backref='instances')
@@ -191,6 +210,12 @@ class ProcessInstance(db.Model):
         primaryjoin="ProcessInstance.routine_id==ProcessRoutine.id",
         foreign_keys='ProcessInstance.routine_id',
         viewonly=True
+    )
+    executions = db.relationship(
+        'ProcessInstanceExecution',
+        backref='process_instance',
+        lazy='dynamic',
+        cascade='all, delete-orphan'
     )
 
 class ProcessInstanceCollaborator(db.Model):
@@ -208,3 +233,130 @@ class ProcessInstanceCollaborator(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ProcessInstanceExecution(db.Model):
+    __tablename__ = 'process_instance_executions'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    process_instance_id = db.Column(db.Integer, db.ForeignKey('process_instances.id'), nullable=False, index=True)
+    process_id = db.Column(db.Integer, db.ForeignKey('processes.id'), nullable=False, index=True)
+    process_bpmn_diagram_id = db.Column(db.Integer, db.ForeignKey('process_bpmn_diagrams.id'), nullable=True, index=True)
+    bpmn_element_id = db.Column(db.String(255), nullable=False, index=True)
+    bpmn_element_name = db.Column(db.String(255), nullable=True)
+    bpmn_element_type = db.Column(db.String(80), nullable=True)
+    execution_mode = db.Column(db.String(50), nullable=False, default='human_task')
+    interaction_mode = db.Column(db.String(50), nullable=True)
+    handler_key = db.Column(db.String(120), nullable=True)
+    capability_key = db.Column(db.String(120), nullable=True)
+    status = db.Column(db.String(50), nullable=False, default='pending')
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    paused_at = db.Column(db.DateTime, nullable=True)
+    waiting_since = db.Column(db.DateTime, nullable=True)
+    duration_seconds = db.Column(db.Integer, nullable=True)
+    estimated_hours = db.Column(db.Numeric(10, 2), default=0)
+    actual_hours = db.Column(db.Numeric(10, 2), default=0)
+    performed_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    performer_type = db.Column(db.String(50), nullable=True)
+    external_ref = db.Column(db.String(255), nullable=True)
+    request_payload_json = db.Column(db.JSON, nullable=True)
+    response_payload_json = db.Column(db.JSON, nullable=True)
+    error_payload_json = db.Column(db.JSON, nullable=True)
+    metadata_json = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    process = db.relationship('Process', backref=db.backref('instance_executions', lazy='dynamic'))
+    bpmn_diagram = db.relationship('ProcessBpmnDiagram', foreign_keys=[process_bpmn_diagram_id], backref='instance_executions')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'process_instance_id': self.process_instance_id,
+            'process_id': self.process_id,
+            'process_bpmn_diagram_id': self.process_bpmn_diagram_id,
+            'bpmn_element_id': self.bpmn_element_id,
+            'bpmn_element_name': self.bpmn_element_name,
+            'bpmn_element_type': self.bpmn_element_type,
+            'execution_mode': self.execution_mode,
+            'interaction_mode': self.interaction_mode,
+            'handler_key': self.handler_key,
+            'capability_key': self.capability_key,
+            'status': self.status,
+            'started_at': self.started_at.isoformat() if hasattr(self.started_at, 'isoformat') else self.started_at,
+            'completed_at': self.completed_at.isoformat() if hasattr(self.completed_at, 'isoformat') else self.completed_at,
+            'paused_at': self.paused_at.isoformat() if hasattr(self.paused_at, 'isoformat') else self.paused_at,
+            'waiting_since': self.waiting_since.isoformat() if hasattr(self.waiting_since, 'isoformat') else self.waiting_since,
+            'duration_seconds': self.duration_seconds,
+            'estimated_hours': float(self.estimated_hours or 0),
+            'actual_hours': float(self.actual_hours or 0),
+            'performed_by_user_id': self.performed_by_user_id,
+            'performer_type': self.performer_type,
+            'external_ref': self.external_ref,
+            'request_payload_json': self.request_payload_json or {},
+            'response_payload_json': self.response_payload_json or {},
+            'error_payload_json': self.error_payload_json or {},
+            'metadata_json': self.metadata_json or {},
+            'created_at': self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
+            'updated_at': self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
+        }
+
+
+class ProcessActivityExecutionContract(db.Model):
+    __tablename__ = 'process_activity_execution_contracts'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    process_id = db.Column(db.Integer, db.ForeignKey('processes.id'), nullable=False, index=True)
+    process_routine_id = db.Column(db.Integer, db.ForeignKey('process_routines.id'), nullable=True, index=True)
+    bpmn_element_id = db.Column(db.String(255), nullable=True, index=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    execution_mode = db.Column(db.String(50), nullable=False, default='manual_external')
+    interaction_mode = db.Column(db.String(50), nullable=True)
+    capability_key = db.Column(db.String(120), nullable=True)
+    route_name = db.Column(db.String(255), nullable=True)
+    ui_schema_json = db.Column(db.JSON, nullable=True)
+    rest_config_json = db.Column(db.JSON, nullable=True)
+    mcp_config_json = db.Column(db.JSON, nullable=True)
+    auto_service_key = db.Column(db.String(120), nullable=True)
+    requires_human_gate = db.Column(db.Boolean, default=False)
+    allows_pause = db.Column(db.Boolean, default=True)
+    allows_retry = db.Column(db.Boolean, default=True)
+    sla_minutes = db.Column(db.Integer, nullable=True)
+    completion_rules_json = db.Column(db.JSON, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    process = db.relationship('Process', backref=db.backref('activity_execution_contracts', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'process_id': self.process_id,
+            'process_routine_id': self.process_routine_id,
+            'bpmn_element_id': self.bpmn_element_id,
+            'version': self.version,
+            'execution_mode': self.execution_mode,
+            'interaction_mode': self.interaction_mode,
+            'capability_key': self.capability_key,
+            'route_name': self.route_name,
+            'ui_schema_json': self.ui_schema_json or {},
+            'rest_config_json': self.rest_config_json or {},
+            'mcp_config_json': self.mcp_config_json or {},
+            'auto_service_key': self.auto_service_key,
+            'requires_human_gate': bool(self.requires_human_gate),
+            'allows_pause': bool(self.allows_pause),
+            'allows_retry': bool(self.allows_retry),
+            'sla_minutes': self.sla_minutes,
+            'completion_rules_json': self.completion_rules_json or {},
+            'is_active': bool(self.is_active),
+            'created_at': self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
+            'updated_at': self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
+        }

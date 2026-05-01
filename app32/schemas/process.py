@@ -1,7 +1,7 @@
 from marshmallow import fields
 from . import ma
 from marshmallow import fields, EXCLUDE
-from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessRoutine, ProcessStep, ProcessInstance
+from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceExecution, ProcessActivityExecutionContract
 
 class ProcessStepSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -90,8 +90,14 @@ class ProcessInstanceSchema(ma.SQLAlchemyAutoSchema):
     estimated_hours = fields.Float()
     actual_hours = fields.Float()
     
-    started_at = fields.String(dump_only=True)
-    completed_at = fields.String(dump_only=True)
+    started_at = fields.DateTime(format='iso', allow_none=True)
+    completed_at = fields.DateTime(format='iso', allow_none=True)
+    paused_at = fields.DateTime(format='iso', allow_none=True)
+    process_bpmn_diagram_id = fields.Integer(allow_none=True)
+    process_version = fields.Integer(allow_none=True)
+    current_bpmn_element_id = fields.String(allow_none=True)
+    pause_reason = fields.String(allow_none=True)
+    runtime_context_json = fields.Dict(allow_none=True)
     trigger_type = fields.String()
     score_weight = fields.Float()
     actual_end_date = fields.Method("get_actual_end_date", "load_actual_end_date", allow_none=True)
@@ -148,6 +154,40 @@ class ProcessInstanceSchema(ma.SQLAlchemyAutoSchema):
     def get_process_code(self, obj):
         return obj.process_rel.code if obj.process_rel else None
 
+class ProcessInstanceExecutionSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProcessInstanceExecution
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    estimated_hours = fields.Float()
+    actual_hours = fields.Float()
+    started_at = fields.DateTime(format='iso', allow_none=True)
+    completed_at = fields.DateTime(format='iso', allow_none=True)
+    paused_at = fields.DateTime(format='iso', allow_none=True)
+    waiting_since = fields.DateTime(format='iso', allow_none=True)
+    request_payload_json = fields.Dict(allow_none=True)
+    response_payload_json = fields.Dict(allow_none=True)
+    error_payload_json = fields.Dict(allow_none=True)
+    metadata_json = fields.Dict(allow_none=True)
+    created_at = fields.DateTime(format='iso', dump_only=True)
+    updated_at = fields.DateTime(format='iso', dump_only=True)
+
+class ProcessActivityExecutionContractSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProcessActivityExecutionContract
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    ui_schema_json = fields.Dict(allow_none=True)
+    rest_config_json = fields.Dict(allow_none=True)
+    mcp_config_json = fields.Dict(allow_none=True)
+    completion_rules_json = fields.Dict(allow_none=True)
+    created_at = fields.DateTime(format='iso', dump_only=True)
+    updated_at = fields.DateTime(format='iso', dump_only=True)
+
 # Instances for easy import
 process_schema = ProcessSchema()
 processes_schema = ProcessSchema(many=True)
@@ -163,3 +203,7 @@ process_step_schema = ProcessStepSchema()
 process_steps_schema = ProcessStepSchema(many=True)
 process_instance_schema = ProcessInstanceSchema()
 process_instances_schema = ProcessInstanceSchema(many=True)
+process_instance_execution_schema = ProcessInstanceExecutionSchema()
+process_instance_executions_schema = ProcessInstanceExecutionSchema(many=True)
+process_activity_execution_contract_schema = ProcessActivityExecutionContractSchema()
+process_activity_execution_contracts_schema = ProcessActivityExecutionContractSchema(many=True)

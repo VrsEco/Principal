@@ -497,6 +497,8 @@ def export_my_work_pdf():
 def process_instance_view(instance_id):
     """Detailed view of a process execution"""
     instance = ProcessInstance.query.get_or_404(instance_id)
+    if not _user_has_company_access(instance.company_id):
+        abort(403)
     company = Company.query.get(instance.company_id)
     return render_template('modules/processes/process_instance_v2.html', 
                           instance=instance, 
