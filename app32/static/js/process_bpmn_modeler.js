@@ -9,14 +9,19 @@
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
   const importInput = document.getElementById('bpmnImportInput');
+  const canvasCardEl = root.closest('.bpmn-canvas-card');
   const OPERATIONAL_ACTIVITY_BASE_WIDTH = 140;
   const OPERATIONAL_ACTIVITY_MAX_WIDTH = 196;
   const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
   const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 130;
+  const OPERATIONAL_ACTIVITY_MIN_WIDTH = 120;
+  const OPERATIONAL_ACTIVITY_MIN_HEIGHT = 72;
   let modeler = null;
   let currentDiagram = null;
   let currentZoom = 1;
   let popCandidatesByElementId = new Map();
+  let manualResizeHandleEl = null;
+  let manualResizeState = null;
 
   function setStatus(text, detail, isError) {
     if (statusEl) {
@@ -66,6 +71,7 @@
         }
       });
       installOperationalActivityAutoSizing();
+      installOperationalActivityManualResize();
 
       currentDiagram = await fetchDiagram();
       await importXml(currentDiagram.bpmn_xml);
@@ -150,6 +156,137 @@
     eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
     eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);
     installOperationalActivityAutoSizing._installed = true;
+  }
+
+  function installOperationalActivityManualResize() {
+    if (!modeler || installOperationalActivityManualResize._installed) return;
+    ensureManualResizeHandle();
+
+    const eventBus = modeler.get('eventBus');
+    eventBus.on('selection.changed', (event) => {
+      const shape = getSingleOperationalActivity(event && event.newSelection);
+      attachManualResizeHandle(shape);
+    });
+    eventBus.on('elements.changed', () => {
+      syncManualResizeHandlePosition();
+    });
+    eventBus.on('canvas.viewbox.changed', () => {
+      syncManualResizeHandlePosition();
+    });
+    eventBus.on('shape.remove', () => {
+      syncManualResizeHandlePosition();
+    });
+
+    installOperationalActivityManualResize._installed = true;
+  }
+
+  function ensureManualResizeHandle() {
+    if (manualResizeHandleEl || !canvasCardEl) return;
+
+    manualResizeHandleEl = document.createElement('button');
+    manualResizeHandleEl.type = 'button';
+    manualResizeHandleEl.className = 'bpmn-manual-resize-handle';
+    manualResizeHandleEl.title = 'Arraste para redimensionar a atividade';
+    manualResizeHandleEl.setAttribute('aria-label', 'Arraste para redimensionar a atividade BPMN');
+    manualResizeHandleEl.hidden = true;
+    manualResizeHandleEl.addEventListener('mousedown', startManualResizeDrag);
+    canvasCardEl.appendChild(manualResizeHandleEl);
+  }
+
+  function getSingleOperationalActivity(selection) {
+    if (!Array.isArray(selection) || selection.length !== 1) return null;
+    const [shape] = selection;
+    return isOperationalActivityType(shape && shape.businessObject && shape.businessObject.$type) ? shape : null;
+  }
+
+  function attachManualResizeHandle(shape) {
+    ensureManualResizeHandle();
+    manualResizeState = shape ? { shape } : null;
+    syncManualResizeHandlePosition();
+  }
+
+  function syncManualResizeHandlePosition() {
+    if (!manualResizeHandleEl || !canvasCardEl || !manualResizeState || !manualResizeState.shape) {
+      hideManualResizeHandle();
+      return;
+    }
+
+    const shape = manualResizeState.shape;
+    const elementRegistry = modeler && modeler.get('elementRegistry');
+    const gfx = elementRegistry && elementRegistry.getGraphics(shape);
+    if (!gfx || typeof gfx.getBoundingClientRect !== 'function') {
+      hideManualResizeHandle();
+      return;
+    }
+
+    const shapeRect = gfx.getBoundingClientRect();
+    const canvasRect = canvasCardEl.getBoundingClientRect();
+    if (!shapeRect.width || !shapeRect.height || !canvasRect.width || !canvasRect.height) {
+      hideManualResizeHandle();
+      return;
+    }
+
+    manualResizeHandleEl.hidden = false;
+    manualResizeHandleEl.style.left = `${shapeRect.right - canvasRect.left - 8}px`;
+    manualResizeHandleEl.style.top = `${shapeRect.bottom - canvasRect.top - 8}px`;
+  }
+
+  function hideManualResizeHandle() {
+    if (!manualResizeHandleEl) return;
+    manualResizeHandleEl.hidden = true;
+  }
+
+  function startManualResizeDrag(event) {
+    if (!manualResizeState || !manualResizeState.shape || !modeler) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const shape = manualResizeState.shape;
+    const canvas = modeler.get('canvas');
+    const viewbox = canvas && canvas.viewbox ? canvas.viewbox() : null;
+    const scale = viewbox && Number.isFinite(viewbox.scale) ? viewbox.scale : 1;
+
+    manualResizeHandleEl.classList.add('is-dragging');
+
+    const dragState = {
+      shape,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startWidth: Number.isFinite(shape.width) ? shape.width : OPERATIONAL_ACTIVITY_MIN_WIDTH,
+      startHeight: Number.isFinite(shape.height) ? shape.height : OPERATIONAL_ACTIVITY_MIN_HEIGHT,
+      scale
+    };
+
+    const onMouseMove = (moveEvent) => {
+      moveEvent.preventDefault();
+      const bounds = calculateManualResizeBounds(dragState, moveEvent);
+      modeler.get('modeling').resizeShape(shape, bounds);
+      if (manualResizeState) manualResizeState.shape = shape;
+      syncManualResizeHandlePosition();
+    };
+
+    const finishDrag = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', finishDrag);
+      manualResizeHandleEl.classList.remove('is-dragging');
+      syncManualResizeHandlePosition();
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', finishDrag);
+  }
+
+  function calculateManualResizeBounds(dragState, moveEvent) {
+    const deltaX = (moveEvent.clientX - dragState.startClientX) / dragState.scale;
+    const deltaY = (moveEvent.clientY - dragState.startClientY) / dragState.scale;
+    const width = Math.max(OPERATIONAL_ACTIVITY_MIN_WIDTH, Math.round(dragState.startWidth + deltaX));
+    const height = Math.max(OPERATIONAL_ACTIVITY_MIN_HEIGHT, Math.round(dragState.startHeight + deltaY));
+    return {
+      x: dragState.shape.x,
+      y: dragState.shape.y,
+      width,
+      height
+    };
   }
 
   async function exportBpmn() {
