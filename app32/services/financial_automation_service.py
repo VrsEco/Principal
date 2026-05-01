@@ -2356,6 +2356,34 @@ class FinancialAutomationService:
         return metadata
 
     @staticmethod
+    def _build_default_schedule_allocations(record: FinancialAutomationRecord) -> List[Dict[str, Any]]:
+        if not record.chart_account_id or not record.cost_center_id:
+            return []
+        domain_source_kind = (
+            (record.metadata_json or {}).get("domain_source_kind")
+            or (record.normalized_payload_json or {}).get("domain_source_kind")
+            or "routine"
+        )
+        return [
+            {
+                "chart_account_id": record.chart_account_id,
+                "cost_center_id": record.cost_center_id,
+                "allocation_type": "amount",
+                "percentage": 100,
+                "allocated_amount": float(record.amount or 0),
+                "notes": "Rateio padrão gerado pela Central de Automação Financeira.",
+                "domain_type": record.domain_type,
+                "domain_source_kind": domain_source_kind,
+                "domain_source_id": record.domain_source_id,
+                "metadata_json": {
+                    "adjustment_kind": None,
+                    "adjustment_label": None,
+                    "generated_by_financial_automation": True,
+                },
+            }
+        ]
+
+    @staticmethod
     def _generate_entry_from_record(
         record: FinancialAutomationRecord,
         generated_by_user_id: Optional[int],
@@ -2422,6 +2450,9 @@ class FinancialAutomationService:
         allowed_company_ids: Optional[Sequence[int]],
     ) -> Tuple[Optional[int], Optional[str]]:
         base_date = record.competence_date or record.due_date or datetime.utcnow().date()
+        metadata = FinancialAutomationService._build_generation_metadata(record)
+        if not list((metadata or {}).get("allocations") or []):
+            metadata["allocations"] = FinancialAutomationService._build_default_schedule_allocations(record)
         payload = {
             "company_id": record.company_id,
             "name": (record.description or "Registro da Central")[:120],
@@ -2442,7 +2473,7 @@ class FinancialAutomationService:
             "cost_center_id": record.cost_center_id,
             "created_by_user_id": generated_by_user_id,
             "notes": record.validation_notes,
-            "metadata_json": FinancialAutomationService._build_generation_metadata(record),
+            "metadata_json": metadata,
         }
         result, error = FinancialScheduleService.create_schedule(
             payload=payload,
