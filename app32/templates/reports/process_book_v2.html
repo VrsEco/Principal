@@ -901,8 +901,8 @@
             const paddingX = Math.max(24, box.width * 0.03);
             const paddingY = Math.max(18, box.height * 0.04);
             const viewBox = [
-              Math.max(0, box.x - paddingX),
-              Math.max(0, box.y - paddingY),
+              box.x - paddingX,
+              box.y - paddingY,
               Math.max(1, box.width + paddingX * 2),
               Math.max(1, box.height + paddingY * 2)
             ].join(' ');

@@ -96,3 +96,5 @@ def test_process_book_template_uses_print_optimized_bpmn_labels():
     assert 'function fitInlineBpmnSvg()' in content
     assert "window.addEventListener('beforeprint', fitInlineBpmnSvg)" in content
     assert "svg.setAttribute('viewBox', viewBox)" in content
+    assert 'box.x - paddingX' in content
+    assert 'box.y - paddingY' in content
