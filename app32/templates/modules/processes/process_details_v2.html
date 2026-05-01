@@ -32,6 +32,7 @@
             <p class="text-secondary process-hero__description" id="detDescription">Aguarde enquanto carregamos as informações.</p>
         </div>
         <div class="process-hero__actions">
+            <a href="{{ url_for('processes.processes_list', company_id=company.id) }}" class="btn btn-ghost" onclick="setTimeout(() => this.blur(), 150)">← Voltar ao Kanban</a>
             <a href="{{ url_for('processes.bpms_analysis_for_process', company_id=company.id, process_id=process_id) }}" class="btn btn-primary" onclick="setTimeout(() => this.blur(), 150)">🧠 Análise BPMS deste Processo</a>
             <a href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank" class="btn btn-secondary" onclick="setTimeout(() => this.blur(), 150)">🖨️ Versão de Impressão</a>
         </div>

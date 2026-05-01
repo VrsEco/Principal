@@ -144,3 +144,12 @@ def test_process_details_template_uses_app32_visual_pattern():
     assert 'btn-instance-action' in content
     assert 'compact-meta' in content
     assert 'indicator-process-card' not in content
+
+
+def test_process_details_template_exposes_back_to_kanban_action():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert "url_for('processes.processes_list', company_id=company.id)" in content
+    assert 'Voltar ao Kanban' in content
