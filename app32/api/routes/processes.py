@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
@@ -18,6 +19,20 @@ from utils.permissions import get_default_company_id, permission_required, has_p
 
 processes_bp = Blueprint('processes', __name__)
 logger = logging.getLogger(__name__)
+
+
+def _process_bpmn_modeler_asset_version() -> str:
+    root = Path(current_app.root_path)
+    candidates = [
+        root / 'static' / 'css' / 'process_bpmn_modeler.css',
+        root / 'static' / 'js' / 'process_bpmn_modeler.js',
+        root / 'templates' / 'modules' / 'processes' / 'bpmn_modeler.html',
+    ]
+    existing = [path for path in candidates if path.exists()]
+    if not existing:
+        return '1'
+    latest_mtime = max(int(path.stat().st_mtime) for path in existing)
+    return str(latest_mtime)
 
 
 def _coerce_optional_int(value, default=0):
@@ -329,6 +344,7 @@ def process_bpmn_modeler(process_id):
         process_id=process.id,
         company=company,
         company_id=process.company_id,
+        asset_version=_process_bpmn_modeler_asset_version(),
     )
 
 

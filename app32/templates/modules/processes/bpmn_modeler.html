@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-js.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-font/css/bpmn.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-font/css/bpmn-embedded.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/process_bpmn_modeler.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/process_bpmn_modeler.css', v=asset_version) }}">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -105,5 +105,5 @@
 {% block scripts %}
 {{ super() }}
 <script src="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/process_bpmn_modeler.js') }}"></script>
+<script src="{{ url_for('static', filename='js/process_bpmn_modeler.js', v=asset_version) }}"></script>
 {% endblock %}

@@ -48,6 +48,7 @@ def test_process_details_route_syncs_active_company_from_process(monkeypatch):
     monkeypatch.setattr(process_routes, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
     monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
     monkeypatch.setattr(process_routes, 'is_collaborator_in_company', lambda company_id: False)
+    monkeypatch.setattr(process_routes, '_build_process_details_payload', lambda process: {'company_id': process.company_id, 'name': process.name})
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
     with app.test_request_context('/processes/287'):
@@ -61,6 +62,27 @@ def test_process_details_route_syncs_active_company_from_process(monkeypatch):
     assert response['context']['company_id'] == 22
     assert response['context']['process_payload']['company_id'] == 22
     assert response['context']['process_payload']['name'] == 'Processo X'
+
+
+def test_process_bpmn_modeler_route_exposes_asset_version(monkeypatch):
+    app = _build_app()
+    fake_process = SimpleNamespace(id=287, company_id=22, name='Processo X')
+    fake_company = SimpleNamespace(id=22, name='Empresa X')
+
+    monkeypatch.setattr(process_routes, 'current_user', SimpleNamespace(is_authenticated=True, role='collaborator'))
+    monkeypatch.setattr(process_routes, 'has_permission', lambda company_id, resource, action: company_id == 22)
+    monkeypatch.setattr(process_routes, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
+    monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
+    monkeypatch.setattr(process_routes, 'is_collaborator_in_company', lambda company_id: False)
+    monkeypatch.setattr(process_routes, '_process_bpmn_modeler_asset_version', lambda: '123456')
+    monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
+
+    with app.test_request_context('/processes/287/bpmn-modeler'):
+        response = process_routes.process_bpmn_modeler.__wrapped__(287)
+
+    assert response['template'] == 'modules/processes/bpmn_modeler.html'
+    assert response['context']['company_id'] == 22
+    assert response['context']['asset_version'] == '123456'
 
 
 def test_process_resource_checks_permission_against_process_company(monkeypatch):
@@ -94,6 +116,15 @@ def test_process_details_template_uses_resilient_loading():
 
     assert 'Promise.allSettled' in content
     assert 'Falha parcial ao carregar' in content
+
+
+def test_bpmn_modeler_template_cache_busts_served_assets():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'bpmn_modeler.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert "filename='css/process_bpmn_modeler.css', v=asset_version" in content
+    assert "filename='js/process_bpmn_modeler.js', v=asset_version" in content
 
 
 def test_occurrences_loader_sends_company_scope_and_falls_back_gracefully():
