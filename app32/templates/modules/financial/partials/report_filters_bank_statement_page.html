@@ -2,7 +2,6 @@
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
 {% set report_filters = report.filters if report else [] %}
 {% set report_summary_cards = report.summary_cards if report else [] %}
-{% set report_general_info = report.general_info if report else [] %}
 {% set report_rows = report.rows if report else [] %}
 
 <div class="report-workspace-page bank-report-page fade-in"
@@ -43,15 +42,6 @@
                 'bank-stat',
                 'bank-stat__value',
                 'bank-stat__label'
-            ) }}
-
-            {{ report_macros.workspace_info(
-                report_general_info,
-                'Visão operacional',
-                'bank-section bank-section--info',
-                'bank-section-title',
-                'bank-info-grid',
-                'bank-info-card'
             ) }}
 
             <section class="report-workspace-section bank-section bank-section--table">

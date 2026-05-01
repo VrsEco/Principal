@@ -317,6 +317,53 @@ def test_cash_flow_report_view_renders_dedicated_layout():
     assert "Títulos financeiros em aberto" not in html
 
 
+def test_bank_statement_filters_page_hides_redundant_operational_info():
+    app = _build_app()
+    company = SimpleNamespace(id=7, name="Empresa Teste")
+    company.to_dict = lambda: {"id": 7, "name": "Empresa Teste"}
+    report = {
+        "report_type": "bank_statement",
+        "report_slug": "extrato-bancario",
+        "title": "Extrato Bancário",
+        "subtitle": "Extrato gerencial.",
+        "filters": [
+            {"label": "Período", "value": "2026-03-01 até 2026-04-30"},
+            {"label": "Conta bancária", "value": "003 - Caixinha Carol"},
+            {"label": "Somente conciliados", "value": "Não"},
+        ],
+        "summary_cards": [
+            {"label": "Saldo inicial", "value": "R$ 0,00", "tone": "neutral"},
+            {"label": "Saídas", "value": "R$ 996,28", "tone": "negative"},
+        ],
+        "general_info": [
+            {"label": "Janela analisada", "value": "2026-03-01 até 2026-04-30"},
+            {"label": "Recorte", "value": "003 - Caixinha Carol"},
+            {"label": "Movimentos", "value": "4"},
+            {"label": "Somente conciliados", "value": "Não"},
+        ],
+        "rows": [],
+        "generated_at": "30/04/2026 23:18",
+    }
+
+    with app.test_request_context("/financial/reports/extrato-bancario?period_start=2026-03-01&period_end=2026-04-30"):
+        html = render_template(
+            "modules/financial/partials/report_filters_bank_statement_page.html",
+            company=company,
+            company_id=company.id,
+            report_definition={
+                "slug": "extrato-bancario",
+                "label": "Extrato Bancário",
+                "description": "Extrato gerencial.",
+            },
+            report=report,
+        )
+
+    assert "Visão operacional" not in html
+    assert "Janela analisada" not in html
+    assert "Recorte" not in html
+    assert "Movimentos" not in html
+
+
 def test_income_statement_filters_page_builds_report_context(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)

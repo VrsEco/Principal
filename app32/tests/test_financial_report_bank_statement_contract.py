@@ -95,3 +95,55 @@ def test_build_bank_statement_exposes_component_allocations(monkeypatch):
     assert result["rows"][0]["rateio_principal_itens"] == 1
     assert result["rows"][0]["rateio_correcao_itens"] == 2
     assert result["rows"][0]["rateio_desconto_itens"] == 0
+
+
+def test_export_pdf_bank_statement_uses_dedicated_app32_layout():
+    payload = {
+        "report_type": "bank_statement",
+        "report_slug": "extrato-bancario",
+        "title": "Extrato Bancário",
+        "subtitle": "Extrato gerencial.",
+        "company_name": "Empresa Teste",
+        "generated_at": "30/04/2026 23:18",
+        "filters": [
+            {"label": "Período", "value": "2026-03-01 até 2026-04-30"},
+            {"label": "Conta bancária", "value": "003 - Caixinha Carol"},
+        ],
+        "summary_cards": [
+            {"label": "Saldo inicial", "value": "R$ 0,00", "tone": "neutral"},
+            {"label": "Saldo final", "value": "R$ -996,28", "tone": "negative"},
+        ],
+        "columns": [
+            {"key": "data", "label": "Data"},
+            {"key": "codigo", "label": "Liquidação"},
+            {"key": "conta_bancaria", "label": "Conta bancária"},
+            {"key": "descricao", "label": "Descrição"},
+            {"key": "movimento", "label": "Movimento"},
+            {"key": "valor", "label": "Valor"},
+            {"key": "conciliacao", "label": "Conciliação"},
+            {"key": "saldo", "label": "Saldo"},
+        ],
+        "rows": [
+            {
+                "data": "2026-04-13",
+                "codigo": "BX-000004",
+                "conta_bancaria": "003 - Caixinha Carol",
+                "descricao": "Averbação teste",
+                "movimento": "Saída",
+                "movimento_tone": "negative",
+                "valor": "101.86",
+                "valor_label": "R$ 101,86",
+                "conciliacao": "pending",
+                "conciliacao_label": "Pendente",
+                "conciliacao_tone": "neutral",
+                "saldo": "-996.28",
+                "saldo_label": "R$ -996,28",
+                "saldo_tone": "negative",
+            }
+        ],
+    }
+
+    pdf_bytes = FinancialReportService.export_pdf(payload)
+
+    assert pdf_bytes.startswith(b"%PDF")
+    assert len(pdf_bytes) > 1000

@@ -5051,6 +5051,20 @@ class FinancialReportService:
             buffer.seek(0)
             return buffer.getvalue()
 
+        if report_payload.get("report_type") == "bank_statement":
+            elements = FinancialReportService._build_bank_statement_pdf_elements(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+            )
+            doc.build(
+                elements,
+                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            )
+            buffer.seek(0)
+            return buffer.getvalue()
+
         if report_payload.get("report_type") == "working_capital":
             elements = FinancialReportService._build_working_capital_pdf_elements(
                 report_payload=report_payload,
@@ -6162,6 +6176,267 @@ class FinancialReportService:
             f"Emitido em: {FinancialReportService._pdf_generated_at_label(report_payload)}",
         )
         canvas.restoreState()
+
+    @staticmethod
+    def _build_bank_statement_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
+        eyebrow_style = ParagraphStyle(
+            "BankStatementPdfEyebrow",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#CBD5E1"),
+        )
+        title_style = ParagraphStyle(
+            "BankStatementPdfTitle",
+            parent=styles["Heading1"],
+            fontSize=18,
+            leading=22,
+            textColor=colors.white,
+            spaceAfter=3,
+        )
+        subtitle_style = ParagraphStyle(
+            "BankStatementPdfSubtitle",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#E2E8F0"),
+        )
+        section_title_style = ParagraphStyle(
+            "BankStatementPdfSectionTitle",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=5,
+        )
+        filter_cell_style = ParagraphStyle(
+            "BankStatementPdfFilterCell",
+            parent=styles["BodyText"],
+            fontSize=7.5,
+            leading=9,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        stat_label_style = ParagraphStyle(
+            "BankStatementPdfStatLabel",
+            parent=styles["BodyText"],
+            fontSize=5.5,
+            leading=7,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#475569"),
+        )
+        stat_value_style = ParagraphStyle(
+            "BankStatementPdfStatValue",
+            parent=styles["BodyText"],
+            fontSize=8.5,
+            leading=10,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+        )
+        table_header_style = ParagraphStyle(
+            "BankStatementPdfTableHeader",
+            parent=styles["BodyText"],
+            fontSize=6.4,
+            leading=7.2,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.white,
+        )
+        table_cell_style = ParagraphStyle(
+            "BankStatementPdfTableCell",
+            parent=styles["BodyText"],
+            fontSize=6.3,
+            leading=7.2,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        table_cell_center_style = ParagraphStyle(
+            "BankStatementPdfTableCellCenter",
+            parent=table_cell_style,
+            alignment=TA_CENTER,
+        )
+        table_cell_amount_style = ParagraphStyle(
+            "BankStatementPdfTableCellAmount",
+            parent=table_cell_style,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+        )
+        empty_style = ParagraphStyle(
+            "BankStatementPdfEmpty",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#475569"),
+        )
+
+        company_name = str(report_payload.get("company_name") or "Versus Gestão Corporativa").strip()
+        hero_content = [
+            Paragraph("Gestão Financeira · Extrato Bancário", eyebrow_style),
+            Paragraph(report_payload.get("title", "Extrato Bancário"), title_style),
+        ]
+        if company_name:
+            hero_content.append(Paragraph(company_name, subtitle_style))
+        if report_payload.get("subtitle"):
+            hero_content.append(Paragraph(str(report_payload.get("subtitle")), subtitle_style))
+        hero_content.append(Paragraph(f"Emitido em {FinancialReportService._pdf_generated_at_label(report_payload)}", subtitle_style))
+
+        hero_table = Table([[hero_content]], colWidths=[available_width], hAlign="LEFT")
+        hero_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                    ("TOPPADDING", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ]
+            )
+        )
+
+        elements: List[Any] = [hero_table, Spacer(1, 8)]
+        elements.append(Paragraph("Filtros aplicados", section_title_style))
+        elements.append(
+            FinancialReportService._build_schedule_pdf_filter_cards(
+                report_filters=report_payload.get("filters") or [],
+                available_width=available_width,
+                content_style=filter_cell_style,
+            )
+        )
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph("Resumo do período", section_title_style))
+        elements.append(
+            FinancialReportService._build_schedule_pdf_summary_cards(
+                report_summary_cards=report_payload.get("summary_cards") or [],
+                available_width=available_width,
+                label_style=stat_label_style,
+                value_style=stat_value_style,
+            )
+        )
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph("Movimentações", section_title_style))
+
+        report_columns = report_payload.get("columns") or []
+        report_rows = report_payload.get("rows") or []
+        if report_columns:
+            elements.append(
+                FinancialReportService._build_bank_statement_pdf_data_table(
+                    report_columns=report_columns,
+                    report_rows=report_rows,
+                    available_width=available_width,
+                    header_style=table_header_style,
+                    cell_style=table_cell_style,
+                    cell_center_style=table_cell_center_style,
+                    cell_amount_style=table_cell_amount_style,
+                )
+            )
+        else:
+            elements.append(Paragraph("Nenhum movimento liquidado encontrado para os filtros informados.", empty_style))
+
+        return elements
+
+    @staticmethod
+    def _build_bank_statement_pdf_data_table(
+        *,
+        report_columns: List[Dict[str, Any]],
+        report_rows: List[Dict[str, Any]],
+        available_width: float,
+        header_style,
+        cell_style,
+        cell_center_style,
+        cell_amount_style,
+    ) -> Table:
+        width_ratio_map = {
+            "data": 0.82,
+            "codigo": 0.92,
+            "conta_bancaria": 1.18,
+            "lancamento": 1.45,
+            "descricao": 2.75,
+            "favorecido": 1.2,
+            "movimento": 0.84,
+            "valor": 0.62,
+            "conciliacao": 0.86,
+            "saldo": 0.72,
+        }
+        total_ratio = sum(width_ratio_map.get(column.get("key"), 1.0) for column in report_columns) or 1.0
+        col_widths = [
+            available_width * (width_ratio_map.get(column.get("key"), 1.0) / total_ratio)
+            for column in report_columns
+        ]
+
+        header_row = [Paragraph(str(column.get("label") or ""), header_style) for column in report_columns]
+        body_rows: List[List[Any]] = []
+        for item in report_rows:
+            row_cells: List[Any] = []
+            for column in report_columns:
+                key = str(column.get("key") or "")
+                raw_value = str(item.get(key, "") or "")
+                style = cell_style
+                if key in {"data", "codigo", "movimento", "conciliacao"}:
+                    style = cell_center_style
+                if key in {"valor", "saldo"}:
+                    tone = str(item.get(f"{key}_tone") or item.get("movimento_tone") or "neutral").lower()
+                    color = {
+                        "positive": "#15803D",
+                        "negative": "#B91C1C",
+                        "primary": "#1D4ED8",
+                    }.get(tone, "#0F172A")
+                    style = ParagraphStyle(
+                        f"BankStatementPdfAmount_{key}_{tone}",
+                        parent=cell_amount_style,
+                        textColor=colors.HexColor(color),
+                    )
+                    raw_value = str(item.get(f"{key}_label") or raw_value)
+                elif key == "movimento":
+                    tone = str(item.get("movimento_tone") or "neutral").lower()
+                    color = {
+                        "positive": "#15803D",
+                        "negative": "#B91C1C",
+                        "primary": "#1D4ED8",
+                    }.get(tone, "#475569")
+                    style = ParagraphStyle(
+                        f"BankStatementPdfMovement_{tone}",
+                        parent=cell_center_style,
+                        fontName="Helvetica-Bold",
+                        textColor=colors.HexColor(color),
+                    )
+                elif key == "conciliacao":
+                    tone = str(item.get("conciliacao_tone") or "neutral").lower()
+                    color = {
+                        "positive": "#15803D",
+                        "negative": "#B91C1C",
+                        "primary": "#1D4ED8",
+                    }.get(tone, "#475569")
+                    style = ParagraphStyle(
+                        f"BankStatementPdfReconciliation_{tone}",
+                        parent=cell_center_style,
+                        fontName="Helvetica-Bold",
+                        textColor=colors.HexColor(color),
+                    )
+                    raw_value = str(item.get("conciliacao_label") or raw_value)
+                row_cells.append(Paragraph(raw_value, style))
+            body_rows.append(row_cells)
+
+        data = [header_row] + body_rows
+        table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
+        table_styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1D4ED8")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+        for row_index in range(1, len(data)):
+            background = colors.HexColor("#FFFFFF") if row_index % 2 else colors.HexColor("#F8FAFC")
+            table_styles.append(("BACKGROUND", (0, row_index), (-1, row_index), background))
+        table.setStyle(TableStyle(table_styles))
+        return table
 
     @staticmethod
     def _build_schedule_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
