@@ -68,6 +68,17 @@ from .financial_budget import (
     FinancialBudgetContract,
     FinancialBudgetDocument,
 )
+from .contracts import (
+    Contract,
+    ContractBillingItem,
+    ContractDocument,
+    ContractFinancialTerm,
+    ContractFiscalTerm,
+    ContractItem,
+    ContractParty,
+    ContractRetention,
+    ContractTrigger,
+)
 
 # Operations & Governance
 from .meeting import Meeting, MeetingAgendaItem
@@ -126,6 +137,7 @@ __all__ = [
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialSettlementComponent', 'FinancialTitleAdjustment', 'FinancialTitleAdjustmentAllocation', 'FinancialTitleCalculationLog', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',
     'FinancialAutomationBatch', 'FinancialAutomationDocument', 'FinancialAutomationHistory', 'FinancialAutomationRecord',
     'FinancialBudgetCycle', 'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',
+    'Contract', 'ContractParty', 'ContractItem', 'ContractBillingItem', 'ContractFinancialTerm', 'ContractFiscalTerm', 'ContractRetention', 'ContractTrigger', 'ContractDocument',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'AppComplianceReport', 'AppComplianceReportItem',
     'ProjectTaskDueDateChangeRequest',

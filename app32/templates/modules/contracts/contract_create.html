@@ -1,0 +1,87 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Novo Contrato{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão de Contratos</a>
+<span class="sep">/</span>
+<span class="current">Novo contrato</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Cadastro inicial</p>
+            <h1>Novo contrato</h1>
+            <p class="subtitle">Cadastre o núcleo do contrato e depois complemente os dados nas abas de gestão.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Voltar</a>
+        </div>
+    </header>
+
+    <form method="post" class="panel form-panel">
+        <div class="panel-body form-grid">
+            <label class="full-width">
+                <span>Título do contrato</span>
+                <input type="text" name="title" required>
+            </label>
+            <label>
+                <span>Favorecido</span>
+                <select name="party_id" required>
+                    <option value="">Selecione</option>
+                    {% for party in parties %}
+                    <option value="{{ party.id }}">{{ party.code }} · {{ party.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Tipo de contrato</span>
+                <input type="text" name="contract_type" placeholder="Prestação de serviço, fornecimento...">
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    {% for status in ['draft', 'active', 'signed', 'implanting', 'closed'] %}
+                    <option value="{{ status }}">{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Moeda</span>
+                <input type="text" name="currency_code" value="BRL">
+            </label>
+            <label>
+                <span>Periodicidade</span>
+                <select name="periodicity">
+                    <option value="">Selecione</option>
+                    <option value="monthly">Mensal</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="quarterly">Trimestral</option>
+                    <option value="semiannual">Semestral</option>
+                    <option value="annual">Anual</option>
+                </select>
+            </label>
+            <label>
+                <span>Competência</span>
+                <input type="text" name="competence_rule" placeholder="mês atual, mês anterior...">
+            </label>
+            <label>
+                <span>Regra de vencimento</span>
+                <input type="text" name="due_rule" placeholder="30 dias após faturamento...">
+            </label>
+            <label class="full-width">
+                <span>Observações</span>
+                <textarea name="notes" rows="4"></textarea>
+            </label>
+        </div>
+        <div class="panel-footer">
+            <button class="btn btn-primary" type="submit">Criar contrato</button>
+        </div>
+    </form>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

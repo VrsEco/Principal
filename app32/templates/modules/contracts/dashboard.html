@@ -1,0 +1,102 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Gestão de Contratos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<span class="current">Gestão de Contratos</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Gestão Comercial</p>
+            <h1>Gestão de Contratos</h1>
+            <p class="subtitle">Módulo núcleo para cadastro de favorecidos, contratos e operação por abas canônicas.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/parties?company_id={{ company_id }}">Favorecidos</a>
+            <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Contratos</a>
+            <a class="btn btn-primary" href="/contracts/new?company_id={{ company_id }}">Novo contrato</a>
+        </div>
+    </header>
+
+    <section class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">Contratos</span>
+            <strong>{{ dashboard.counts.contracts or 0 }}</strong>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">Rascunhos</span>
+            <strong>{{ dashboard.counts.drafts or 0 }}</strong>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">Ativos</span>
+            <strong>{{ dashboard.counts.active or 0 }}</strong>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">Favorecidos</span>
+            <strong>{{ dashboard.counts.parties or 0 }}</strong>
+        </article>
+    </section>
+
+    <section class="grid-two">
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Últimos contratos</h2>
+                <a href="/contracts/list?company_id={{ company_id }}">Ver todos</a>
+            </div>
+            <div class="panel-body">
+                {% if dashboard.latest_contracts %}
+                <div class="list-stack">
+                    {% for contract in dashboard.latest_contracts %}
+                    <a class="list-item" href="/contracts/{{ contract.id }}?company_id={{ company_id }}">
+                        <div>
+                            <strong>{{ contract.code }}</strong>
+                            <div>{{ contract.title }}</div>
+                            <small>{{ contract.party.name if contract.party else 'Sem favorecido' }}</small>
+                        </div>
+                        <span class="badge">{{ contract.status }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-state">Nenhum contrato cadastrado ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Últimos favorecidos</h2>
+                <a href="/contracts/parties?company_id={{ company_id }}">Ver todos</a>
+            </div>
+            <div class="panel-body">
+                {% if dashboard.latest_parties %}
+                <div class="list-stack">
+                    {% for party in dashboard.latest_parties %}
+                    <a class="list-item" href="/contracts/parties/{{ party.id }}?company_id={{ company_id }}">
+                        <div>
+                            <strong>{{ party.code }}</strong>
+                            <div>{{ party.name }}</div>
+                            <small>
+                                {% if party.is_customer %}Cliente{% endif %}
+                                {% if party.is_customer and party.is_supplier %} / {% endif %}
+                                {% if party.is_supplier %}Fornecedor{% endif %}
+                            </small>
+                        </div>
+                        <span class="badge">{{ party.status }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-state">Nenhum favorecido cadastrado ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

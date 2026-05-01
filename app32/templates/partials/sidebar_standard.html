@@ -91,6 +91,29 @@
         </div>
     </div>
 
+    {% if has_permission('contracts', 'view') %}
+    <div class="sidebar-group {{ 'open' if '/contracts' in request.path }}">
+        <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16"></path>
+                <path d="M4 12h16"></path>
+                <path d="M4 18h16"></path>
+                <path d="M8 6v12"></path>
+            </svg>
+            Gestão Comercial
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <a href="/contracts" class="sub-nav-link {{ 'active' if request.path == '/contracts' or request.path == '/contracts/dashboard' or request.path == '/contracts/list' or '/contracts/' in request.path }}">
+                Gestão de Contratos
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Gestão Financeira -->
     {% if has_permission('financial', 'view') %}
     <div class="sidebar-group {{ 'open' if '/financial' in request.path and '/financial/classification-rules' not in request.path and '/financial/classification-memories' not in request.path and '/financial/automation-rules' not in request.path and '/financial/automation-audit' not in request.path }}">

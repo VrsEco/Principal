@@ -1,0 +1,59 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Contratos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão de Contratos</a>
+<span class="sep">/</span>
+<span class="current">Contratos</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Cadastro operacional</p>
+            <h1>Contratos</h1>
+            <p class="subtitle">Gerencie o núcleo do contrato e evolua cada registro pelas abas canônicas do módulo.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Voltar</a>
+            <a class="btn btn-primary" href="/contracts/new?company_id={{ company_id }}">Novo contrato</a>
+        </div>
+    </header>
+
+    <div class="panel">
+        <div class="panel-body">
+            {% if contracts %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Favorecido</th>
+                        <th>Status</th>
+                        <th>Periodicidade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contract in contracts %}
+                    <tr>
+                        <td><a href="/contracts/{{ contract.id }}?company_id={{ company_id }}">{{ contract.code }}</a></td>
+                        <td>{{ contract.title }}</td>
+                        <td>{{ contract.party.name if contract.party else '-' }}</td>
+                        <td><span class="badge">{{ contract.status }}</span></td>
+                        <td>{{ contract.periodicity or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-state">Nenhum contrato cadastrado ainda.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

@@ -5,7 +5,7 @@ from flask_login import current_user
 from sqlalchemy import func, or_
 
 _ADMIN_ROLE_TITLES = {"superuser", "administrador", "administrator", "admin"}
-_COLLABORATOR_BASELINE_VIEW = {"projects", "processes"}
+_COLLABORATOR_BASELINE_VIEW = {"projects", "processes", "contracts"}
 
 PROFILE_ADMINISTRATOR = "administrator"
 PROFILE_CLIENT = "client"

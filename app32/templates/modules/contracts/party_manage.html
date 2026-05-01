@@ -1,0 +1,92 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Favorecido{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão de Contratos</a>
+<span class="sep">/</span>
+<a href="/contracts/parties?company_id={{ company_id }}">Favorecidos</a>
+<span class="sep">/</span>
+<span class="current">{{ party.code if party else 'Novo favorecido' }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Cadastro nuclear</p>
+            <h1>{{ party.code ~ ' · ' ~ party.name if party else 'Novo favorecido' }}</h1>
+            <p class="subtitle">Use a classificação para marcar cliente, fornecedor ou ambos, com vínculo opcional ao cadastro financeiro.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/parties?company_id={{ company_id }}">Voltar</a>
+        </div>
+    </header>
+
+    <form method="post" class="panel form-panel">
+        <div class="panel-body form-grid">
+            <label>
+                <span>Nome operacional</span>
+                <input type="text" name="name" value="{{ party.name if party else '' }}" required>
+            </label>
+            <label>
+                <span>Razão social</span>
+                <input type="text" name="legal_name" value="{{ party.legal_name if party else '' }}">
+            </label>
+            <label>
+                <span>Tipo de documento</span>
+                <select name="document_type">
+                    <option value="">Selecione</option>
+                    <option value="cnpj" {% if party and party.document_type == 'cnpj' %}selected{% endif %}>CNPJ</option>
+                    <option value="cpf" {% if party and party.document_type == 'cpf' %}selected{% endif %}>CPF</option>
+                    <option value="other" {% if party and party.document_type == 'other' %}selected{% endif %}>Outro</option>
+                </select>
+            </label>
+            <label>
+                <span>Número do documento</span>
+                <input type="text" name="document_number" value="{{ party.document_number if party else '' }}">
+            </label>
+            <label>
+                <span>E-mail</span>
+                <input type="email" name="email" value="{{ party.email if party else '' }}">
+            </label>
+            <label>
+                <span>Telefone</span>
+                <input type="text" name="phone" value="{{ party.phone if party else '' }}">
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    {% for status in ['active', 'inactive', 'pending_review'] %}
+                    <option value="{{ status }}" {% if party and party.status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Vínculo financeiro (opcional)</span>
+                <select name="financial_counterparty_id">
+                    <option value="">Sem vínculo</option>
+                    {% for counterparty in counterparties %}
+                    <option value="{{ counterparty.id }}" {% if party and party.financial_counterparty_id == counterparty.id %}selected{% endif %}>{{ counterparty.code }} · {{ counterparty.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <div class="checkbox-card">
+                <span>Classificação</span>
+                <label class="checkbox-inline"><input type="checkbox" name="is_customer" {% if not party or party.is_customer %}checked{% endif %}> Cliente</label>
+                <label class="checkbox-inline"><input type="checkbox" name="is_supplier" {% if party and party.is_supplier %}checked{% endif %}> Fornecedor</label>
+            </div>
+            <label class="full-width">
+                <span>Observações</span>
+                <textarea name="notes" rows="5">{{ party.notes if party else '' }}</textarea>
+            </label>
+        </div>
+        <div class="panel-footer">
+            <button class="btn btn-primary" type="submit">Salvar favorecido</button>
+        </div>
+    </form>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

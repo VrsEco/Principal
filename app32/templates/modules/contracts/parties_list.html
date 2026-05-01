@@ -1,0 +1,63 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Favorecidos de Contratos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão de Contratos</a>
+<span class="sep">/</span>
+<span class="current">Favorecidos</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Cadastros</p>
+            <h1>Favorecidos</h1>
+            <p class="subtitle">Cadastro nuclear de contrapartes com classificação cliente, fornecedor ou ambos.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Voltar</a>
+            <a class="btn btn-primary" href="/contracts/parties/new?company_id={{ company_id }}">Novo favorecido</a>
+        </div>
+    </header>
+
+    <div class="panel">
+        <div class="panel-body">
+            {% if parties %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Classificação</th>
+                        <th>Documento</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for party in parties %}
+                    <tr>
+                        <td><a href="/contracts/parties/{{ party.id }}?company_id={{ company_id }}">{{ party.code }}</a></td>
+                        <td>{{ party.name }}</td>
+                        <td>
+                            {% if party.is_customer %}Cliente{% endif %}
+                            {% if party.is_customer and party.is_supplier %} / {% endif %}
+                            {% if party.is_supplier %}Fornecedor{% endif %}
+                        </td>
+                        <td>{{ party.document_number or '-' }}</td>
+                        <td><span class="badge">{{ party.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-state">Ainda não há favorecidos cadastrados.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

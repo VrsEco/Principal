@@ -1,0 +1,47 @@
+<style>
+    .contracts-page { padding: 0 1.5rem 2rem; }
+    .contracts-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1.5rem; }
+    .eyebrow { margin:0 0 .35rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; }
+    .subtitle { color:var(--text-secondary); max-width:860px; }
+    .page-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; border-radius:12px; padding:.8rem 1rem; text-decoration:none; border:none; cursor:pointer; font-weight:700; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .btn-danger { background:#fff1f2; color:#be123c; border:1px solid #fecdd3; padding:.55rem .8rem; }
+    .stats-grid, .grid-two, .form-grid { display:grid; gap:1rem; }
+    .stats-grid { grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:1rem; }
+    .grid-two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); overflow:hidden; }
+    .panel-header, .panel-footer { padding:1rem 1.2rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    .panel-footer { border-bottom:none; border-top:1px solid var(--border); }
+    .panel-body { padding:1rem 1.2rem; }
+    .form-panel .panel-body { display:grid; gap:1rem; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1rem 1.15rem; box-shadow:var(--shadow-sm); }
+    .stat-label { display:block; color:var(--text-secondary); font-size:.85rem; margin-bottom:.35rem; }
+    .stat-card strong { font-size:1.75rem; color:var(--text-primary); }
+    .list-stack { display:flex; flex-direction:column; gap:.75rem; }
+    .list-item { display:flex; align-items:center; justify-content:space-between; gap:1rem; border:1px solid var(--border); border-radius:14px; padding:.9rem 1rem; color:inherit; text-decoration:none; background:var(--surface-secondary); }
+    .list-item strong { display:block; }
+    .list-item small { color:var(--text-secondary); }
+    .badge { display:inline-flex; align-items:center; border-radius:999px; padding:.3rem .65rem; background:var(--primary-light); color:var(--primary); font-size:.75rem; font-weight:700; text-transform:lowercase; }
+    .empty-state { color:var(--text-secondary); margin:0; }
+    .data-table { width:100%; border-collapse:collapse; }
+    .data-table th, .data-table td { text-align:left; padding:.85rem .65rem; border-bottom:1px solid var(--border); vertical-align:top; }
+    .data-table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary); }
+    .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .form-grid label, .checkbox-card { display:flex; flex-direction:column; gap:.45rem; }
+    .form-grid .full-width { grid-column:1 / -1; }
+    .form-grid input, .form-grid select, .form-grid textarea { width:100%; padding:.75rem .85rem; border:1px solid var(--border); border-radius:12px; background:#fff; color:var(--text-primary); }
+    .checkbox-inline { display:inline-flex; align-items:center; gap:.55rem; margin-right:1rem; }
+    .checkbox-inline input { width:auto; }
+    .checkbox-card { border:1px dashed var(--border); border-radius:12px; padding:.9rem 1rem; justify-content:center; }
+    .tab-nav { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
+    .tab-link { text-decoration:none; color:var(--text-secondary); border:1px solid var(--border); background:var(--surface); border-radius:999px; padding:.65rem .9rem; font-weight:600; }
+    .tab-link.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .list-item-form { margin:0; }
+    @media (max-width: 960px) {
+        .contracts-page { padding:0 1rem 1.25rem; }
+        .stats-grid, .grid-two, .form-grid { grid-template-columns:1fr; }
+        .contracts-header { flex-direction:column; }
+    }
+</style>
