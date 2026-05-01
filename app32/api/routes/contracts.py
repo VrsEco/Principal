@@ -107,6 +107,7 @@ def contracts_create():
         company=company,
         company_id=company.id,
         parties=ContractService.list_customer_parties(company.id),
+        tabs=ContractService.get_tab_registry(),
     )
 
 

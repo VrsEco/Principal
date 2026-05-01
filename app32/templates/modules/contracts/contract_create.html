@@ -16,80 +16,120 @@
         <div>
             <p class="eyebrow">Cadastro inicial</p>
             <h1>Novo contrato</h1>
-            <p class="subtitle">Cadastre o núcleo do contrato e depois complemente os dados nas abas de gestão.</p>
+            <p class="subtitle">O contrato nasce pelo núcleo mínimo e, após salvar, abre o shell completo com abas core e capability.</p>
+            <div class="context-badges">
+                <span class="mini-badge active">core</span>
+                <span class="mini-badge active">capability</span>
+                <span class="mini-badge">tenant-safe</span>
+            </div>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Voltar</a>
         </div>
     </header>
 
-    <form method="post" class="panel form-panel">
-        <div class="panel-body form-grid">
-            <label class="full-width">
-                <span>Título do contrato</span>
-                <input type="text" name="title" required>
-            </label>
-            <label>
-                <span>Favorecido</span>
-                <select name="party_id" required>
-                    <option value="">Selecione</option>
-                    {% for party in parties %}
-                    <option value="{{ party.id }}">{{ party.code }} · {{ party.name }}</option>
-                    {% endfor %}
-                </select>
-                <small class="field-hint">A lista mostra apenas favorecidos classificados como cliente.</small>
-            </label>
-            <label>
-                <span>Tipo de contrato</span>
-                <input type="text" name="contract_type" placeholder="Prestação de serviço, fornecimento...">
-            </label>
-            <label>
-                <span>Status</span>
-                <select name="status">
-                    {% for status in ['draft', 'active', 'signed', 'implanting', 'closed'] %}
-                    <option value="{{ status }}">{{ status }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>
-                <span>Moeda</span>
-                <input type="text" name="currency_code" value="BRL">
-            </label>
-            <label>
-                <span>Periodicidade</span>
-                <select name="periodicity">
-                    <option value="">Selecione</option>
-                    <option value="monthly">Mensal</option>
-                    <option value="weekly">Semanal</option>
-                    <option value="quarterly">Trimestral</option>
-                    <option value="semiannual">Semestral</option>
-                    <option value="annual">Anual</option>
-                </select>
-            </label>
-            <label>
-                <span>Competência</span>
-                <input type="text" name="competence_rule" placeholder="mês atual, mês anterior...">
-            </label>
-            <label>
-                <span>Regra de vencimento</span>
-                <input type="text" name="due_rule" placeholder="30 dias após faturamento...">
-            </label>
-            <label class="full-width">
-                <span>Observações</span>
-                <textarea name="notes" rows="4"></textarea>
-            </label>
+    <section class="contract-shell-grid">
+        <aside class="panel shell-sidebar">
+            <div class="panel-header"><h2>Abas previstas</h2></div>
+            <div class="panel-body shell-tab-stack">
+                {% for tab in tabs %}
+                <div class="shell-tab-card {{ 'active' if loop.first else '' }} disabled">
+                    <div class="shell-tab-head">
+                        <strong>{{ tab.label }}</strong>
+                        <span class="scope-pill scope-{{ tab.scope }}">{{ tab.scope }}</span>
+                    </div>
+                    <small>{{ tab.description }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <div class="shell-main">
+            <nav class="tab-nav">
+                {% for tab in tabs %}
+                <span class="tab-link {{ 'active' if loop.first else '' }} disabled">
+                    {{ tab.label }}
+                    <span class="scope-dot scope-{{ tab.scope }}"></span>
+                </span>
+                {% endfor %}
+            </nav>
+
+            <form method="post" class="panel form-panel">
+                <div class="panel-header">
+                    <h2>Resumo inicial</h2>
+                    <span class="scope-pill scope-core">core</span>
+                </div>
+                <div class="panel-body form-grid">
+                    <label class="full-width">
+                        <span>Título do contrato</span>
+                        <input type="text" name="title" required>
+                    </label>
+                    <label>
+                        <span>Cliente / favorecido</span>
+                        <select name="party_id" required>
+                            <option value="">Selecione</option>
+                            {% for party in parties %}
+                            <option value="{{ party.id }}">{{ party.code }} · {{ party.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="field-hint">A lista exibe apenas favorecidos marcados como cliente.</small>
+                    </label>
+                    <label>
+                        <span>Tipo de contrato</span>
+                        <input type="text" name="contract_type" placeholder="Prestação de serviço, fornecimento...">
+                    </label>
+                    <label>
+                        <span>Status</span>
+                        <select name="status">
+                            {% for status in ['draft', 'active', 'signed', 'implanting', 'closed'] %}
+                            <option value="{{ status }}">{{ status }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Moeda</span>
+                        <input type="text" name="currency_code" value="BRL">
+                    </label>
+                    <label>
+                        <span>Periodicidade</span>
+                        <select name="periodicity">
+                            <option value="">Selecione</option>
+                            <option value="monthly">Mensal</option>
+                            <option value="weekly">Semanal</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="semiannual">Semestral</option>
+                            <option value="annual">Anual</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Competência</span>
+                        <input type="text" name="competence_rule" placeholder="mês atual, mês anterior...">
+                    </label>
+                    <label>
+                        <span>Regra de vencimento</span>
+                        <input type="text" name="due_rule" placeholder="30 dias após faturamento...">
+                    </label>
+                    <label class="full-width">
+                        <span>Observações</span>
+                        <textarea name="notes" rows="4"></textarea>
+                    </label>
+                </div>
+                <div class="panel-footer">
+                    <span class="field-hint">Após criar o núcleo, o sistema abre as abas: Cliente, Itens, Faturamento, Periodicidade, Fiscal, Cobrança, Observações, Revisão e capabilities de PDF/assinado.</span>
+                    <button class="btn btn-primary" type="submit">Criar contrato e abrir shell</button>
+                </div>
+            </form>
+
+            {% if not parties %}
+            <div class="panel soft-panel">
+                <div class="panel-body">
+                    <p class="empty-state">Nenhum favorecido classificado como cliente foi encontrado. Cadastre primeiro um favorecido com a opção <strong>Cliente</strong> marcada.</p>
+                    <a class="btn btn-secondary" href="/contracts/parties/new?company_id={{ company_id }}">Cadastrar favorecido cliente</a>
+                </div>
+            </div>
+            {% endif %}
         </div>
-        <div class="panel-footer">
-            <button class="btn btn-primary" type="submit">Criar contrato</button>
-        </div>
-    </form>
-    {% if not parties %}
-    <div class="panel soft-panel">
-        <div class="panel-body">
-            <p class="empty-state">Nenhum favorecido classificado como cliente foi encontrado. Cadastre primeiro um favorecido com a opção <strong>Cliente</strong> marcada.</p>
-        </div>
-    </div>
-    {% endif %}
+    </section>
 </div>
 {% include "modules/contracts/_styles.html" %}
 {% endblock %}
