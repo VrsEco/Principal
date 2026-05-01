@@ -78,7 +78,7 @@ def test_process_details_template_contains_book_action():
     assert 'Abrir Book' not in content
 
 
-def test_process_book_template_retunes_bpmn_task_fonts_for_print():
+def test_process_book_template_keeps_published_snapshot_without_runtime_bpmn_mutation():
     template_path = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
@@ -94,8 +94,5 @@ def test_process_book_template_retunes_bpmn_task_fonts_for_print():
     assert '@page process-flow-landscape' in content
     assert 'margin: 8mm' in content
     assert '{{ first_page.bpmn_svg|safe }}' in content
-    assert 'function prepareBpmnBookFlow()' in content
-    assert 'const BOOK_BPMN_TASK_FONT_SCALE = 1.5;' in content
-    assert 'const BOOK_BPMN_TASK_ID_PATTERN = /\\.\\d{2}$/' in content
-    assert 'scaleBookSvgFontNode(node, BOOK_BPMN_TASK_FONT_SCALE);' in content
-    assert 'growBookTaskShapeIfNeeded(group);' in content
+    assert 'function prepareBpmnBookFlow()' not in content
+    assert 'const BOOK_BPMN_TASK_FONT_SCALE = 1.5;' not in content

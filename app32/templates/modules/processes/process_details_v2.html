@@ -1772,14 +1772,12 @@
                     </div>
                 </div>
             `;
-            requestAnimationFrame(() => enhancePublishedBpmnTaskLabels(flowContainer));
             if (!bpmnFlow.svg_snapshot && bpmnFlow.bpmn_xml) {
                 renderPublishedBpmnViewer(viewerId, bpmnFlow).catch((error) => {
                     console.warn('Falha ao renderizar BPMN publicado via XML; usando snapshot SVG.', error);
                     const viewerHost = document.getElementById(viewerId);
                     if (viewerHost) {
                         viewerHost.outerHTML = bpmnFlow.svg_snapshot || '<div class="empty-state"><p>Falha ao carregar o BPMN publicado.</p></div>';
-                        requestAnimationFrame(() => enhancePublishedBpmnTaskLabels(flowContainer));
                     }
                 });
             }
@@ -1866,8 +1864,6 @@
         };
     }
 
-    const PUBLISHED_BPMN_TASK_FONT_SCALE = 1.5;
-    const PUBLISHED_BPMN_TASK_ID_PATTERN = /\.\d{2}$/;
     let publishedBpmnViewer = null;
 
     async function renderPublishedBpmnViewer(containerId, bpmnFlow) {
@@ -1884,7 +1880,19 @@
         }
 
         publishedBpmnViewer = new ViewerCtor({
-            container: host
+            container: host,
+            textRenderer: {
+                defaultStyle: {
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: 16.5,
+                    lineHeight: 1.2
+                },
+                externalStyle: {
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: 16.5,
+                    lineHeight: 1.2
+                }
+            }
         });
 
         await publishedBpmnViewer.importXML(bpmnFlow.bpmn_xml);
@@ -1904,85 +1912,6 @@
             } else {
                 canvas.zoom('fit-viewport', 'auto');
             }
-        }
-        requestAnimationFrame(() => enhancePublishedBpmnTaskLabels(host));
-    }
-
-    function enhancePublishedBpmnTaskLabels(host) {
-        if (!host) return;
-        const svg = host.querySelector('svg');
-        if (!svg) return;
-
-        getPublishedOperationalTaskGroups(svg).forEach((group) => {
-            group.querySelectorAll('text.djs-label, text.djs-label tspan').forEach((node) => {
-                scalePublishedSvgFontNode(node, PUBLISHED_BPMN_TASK_FONT_SCALE);
-            });
-            growPublishedTaskShapeIfNeeded(group);
-        });
-    }
-
-    function getPublishedOperationalTaskGroups(svg) {
-        if (!svg || typeof svg.querySelectorAll !== 'function') return [];
-        return Array.from(svg.querySelectorAll('.djs-element.djs-shape[data-element-id]')).filter((node) => {
-            const elementId = String(node.getAttribute('data-element-id') || '').trim();
-            return PUBLISHED_BPMN_TASK_ID_PATTERN.test(elementId);
-        });
-    }
-
-    function scalePublishedSvgFontNode(node, scale) {
-        if (!node) return;
-
-        const style = node.getAttribute('style') || '';
-        const styleMatch = style.match(/font-size:\s*([0-9.]+)px/i);
-        if (styleMatch) {
-            const baseSize = parseFloat(node.dataset.gvBaseFontSize || styleMatch[1]);
-            if (!Number.isFinite(baseSize) || baseSize <= 0) return;
-            node.dataset.gvBaseFontSize = String(baseSize);
-            const nextSize = Math.round(baseSize * scale * 100) / 100;
-            node.setAttribute('style', style.replace(/font-size:\s*[0-9.]+px/i, `font-size: ${nextSize}px`));
-            return;
-        }
-
-        const attrSize = parseFloat(node.dataset.gvBaseFontSize || node.getAttribute('font-size') || '');
-        if (Number.isFinite(attrSize) && attrSize > 0) {
-            node.dataset.gvBaseFontSize = String(attrSize);
-            node.setAttribute('font-size', String(Math.round(attrSize * scale * 100) / 100));
-        }
-    }
-
-    function growPublishedTaskShapeIfNeeded(group) {
-        if (!group) return;
-
-        const visualRect = group.querySelector('.djs-visual > rect');
-        const label = group.querySelector('text.djs-label');
-        if (!visualRect || !label || typeof visualRect.getBBox !== 'function' || typeof label.getBBox !== 'function') {
-            return;
-        }
-
-        try {
-            const rectBox = visualRect.getBBox();
-            const labelBox = label.getBBox();
-            if (!rectBox || !labelBox || labelBox.width <= 0 || labelBox.height <= 0) return;
-
-            const targetWidth = Math.max(rectBox.width, labelBox.width + 28);
-            const targetHeight = Math.max(rectBox.height, labelBox.height + 18);
-            if (targetWidth <= rectBox.width && targetHeight <= rectBox.height) return;
-
-            const nextX = rectBox.x - ((targetWidth - rectBox.width) / 2);
-            const nextY = rectBox.y - ((targetHeight - rectBox.height) / 2);
-            visualRect.setAttribute('x', String(nextX));
-            visualRect.setAttribute('y', String(nextY));
-            visualRect.setAttribute('width', String(targetWidth));
-            visualRect.setAttribute('height', String(targetHeight));
-
-            group.querySelectorAll('rect.djs-hit').forEach((hitRect) => {
-                hitRect.setAttribute('x', String(nextX));
-                hitRect.setAttribute('y', String(nextY));
-                hitRect.setAttribute('width', String(targetWidth));
-                hitRect.setAttribute('height', String(targetHeight));
-            });
-        } catch (error) {
-            console.debug('Falha ao ajustar a TASK do BPMN publicado.', error);
         }
     }
 

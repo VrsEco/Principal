@@ -17,15 +17,12 @@
   const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 130;
   const OPERATIONAL_ACTIVITY_MIN_WIDTH = 240;
   const OPERATIONAL_ACTIVITY_MIN_HEIGHT = 72;
-  const OPERATIONAL_ACTIVITY_LABEL_FONT_SCALE = 1.5;
-  const OPERATIONAL_TASK_ID_PATTERN = /\.\d{2}$/;
   let modeler = null;
   let currentDiagram = null;
   let currentZoom = 1;
   let popCandidatesByElementId = new Map();
   let manualResizeHandleEl = null;
   let manualResizeState = null;
-  let operationalLabelRefreshFrame = null;
 
   function setStatus(text, detail, isError) {
     if (statusEl) {
@@ -57,7 +54,6 @@
     const canvas = modeler.get('canvas');
     canvas.zoom('fit-viewport', 'auto');
     currentZoom = 1;
-    scheduleOperationalActivityLabelRefresh();
     return result;
   }
 
@@ -73,6 +69,18 @@
         container: '#bpmnCanvas',
         keyboard: {
           bindTo: document
+        },
+        textRenderer: {
+          defaultStyle: {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: 16.5,
+            lineHeight: 1.2
+          },
+          externalStyle: {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: 16.5,
+            lineHeight: 1.2
+          }
         }
       });
       installOperationalActivityAutoSizing();
@@ -102,7 +110,6 @@
     if (!modeler) return;
     setStatus(status === 'published' ? 'Publicando...' : 'Salvando...');
     try {
-      refreshOperationalActivityLabelPresentation();
       const codeResult = normalizeActivityCodes({ silent: true });
       const [{ xml }, { svg }] = await Promise.all([
         modeler.saveXML({ format: true }),
@@ -113,7 +120,7 @@
         name: processName,
         status: status || 'draft',
         bpmn_xml: xml,
-        svg_snapshot: enhanceOperationalActivitySvgSnapshot(svg),
+        svg_snapshot: svg,
         metadata_json: {
           source: 'app32_bpmn_modeler',
           saved_at_client: new Date().toISOString(),
@@ -157,14 +164,10 @@
     const resizeContextShape = (event) => {
       const shape = event && event.context && (event.context.newShape || event.context.shape);
       ensureOperationalActivityShapeSize(shape);
-      scheduleOperationalActivityLabelRefresh();
     };
 
     eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
     eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);
-    eventBus.on('commandStack.element.updateLabel.postExecute', () => {
-      scheduleOperationalActivityLabelRefresh();
-    });
     installOperationalActivityAutoSizing._installed = true;
   }
 
@@ -179,7 +182,6 @@
     });
     eventBus.on('elements.changed', () => {
       syncManualResizeHandlePosition();
-      scheduleOperationalActivityLabelRefresh();
     });
     eventBus.on('canvas.viewbox.changed', () => {
       syncManualResizeHandlePosition();
@@ -308,9 +310,8 @@
 
   async function exportSvg() {
     if (!modeler) return;
-    refreshOperationalActivityLabelPresentation();
     const { svg } = await modeler.saveSVG();
-    downloadText(`${safeFileName(processName)}.svg`, enhanceOperationalActivitySvgSnapshot(svg), 'image/svg+xml');
+    downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');
   }
 
   function downloadText(filename, content, type) {
@@ -574,75 +575,15 @@
 
   function getOperationalActivityTargetSize(element) {
     const label = getOperationalActivityDisplayLabel(element);
-    const scaledLabelLength = label.length * OPERATIONAL_ACTIVITY_LABEL_FONT_SCALE;
-    const baseMeasuredWidth = Math.max(164, Math.min(220, 132 + Math.ceil(scaledLabelLength * 1.55)));
+    const baseMeasuredWidth = Math.max(156, Math.min(214, 128 + Math.ceil(label.length * 1.65)));
     const width = Math.max(
       OPERATIONAL_ACTIVITY_BASE_WIDTH,
       Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, baseMeasuredWidth * 2)
     );
-    const estimatedLines = Math.max(2, Math.ceil(scaledLabelLength / 38));
-    const dynamicHeight = 54 + (estimatedLines * 18);
-    const height = Math.max(
-      OPERATIONAL_ACTIVITY_BASE_HEIGHT,
-      Math.min(OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT + 18, dynamicHeight)
-    );
+    const estimatedLines = Math.max(2, Math.ceil(label.length / 34));
+    const dynamicHeight = 52 + (estimatedLines * 16);
+    const height = Math.max(OPERATIONAL_ACTIVITY_BASE_HEIGHT, Math.min(OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT, dynamicHeight));
     return { width, height };
-  }
-
-  function scheduleOperationalActivityLabelRefresh() {
-    if (operationalLabelRefreshFrame) {
-      window.cancelAnimationFrame(operationalLabelRefreshFrame);
-    }
-    operationalLabelRefreshFrame = window.requestAnimationFrame(() => {
-      operationalLabelRefreshFrame = null;
-      refreshOperationalActivityLabelPresentation();
-    });
-  }
-
-  function refreshOperationalActivityLabelPresentation() {
-    if (!canvasEl) return;
-    const svg = canvasEl.querySelector('svg');
-    if (!svg) return;
-    retuneOperationalTaskLabels(svg);
-  }
-
-  function retuneOperationalTaskLabels(svgRoot) {
-    getOperationalTaskGroupsFromSvg(svgRoot).forEach((group) => {
-      group.querySelectorAll('text.djs-label, text.djs-label tspan').forEach((labelNode) => {
-        scaleSvgFontNode(labelNode, OPERATIONAL_ACTIVITY_LABEL_FONT_SCALE);
-      });
-    });
-  }
-
-  function getOperationalTaskGroupsFromSvg(svgRoot) {
-    if (!svgRoot || typeof svgRoot.querySelectorAll !== 'function') return [];
-    return Array.from(svgRoot.querySelectorAll('.djs-element.djs-shape[data-element-id]')).filter((node) => {
-      const elementId = String(node.getAttribute('data-element-id') || '').trim();
-      return OPERATIONAL_TASK_ID_PATTERN.test(elementId);
-    });
-  }
-
-  function scaleSvgFontNode(node, scale) {
-    if (!node || !Number.isFinite(scale) || scale <= 0) return;
-
-    const style = node.getAttribute('style') || '';
-    const styleMatch = style.match(/font-size:\s*([0-9.]+)px/i);
-    if (styleMatch) {
-      const baseSize = parseFloat(node.dataset.gvBaseFontSize || styleMatch[1]);
-      if (!Number.isFinite(baseSize) || baseSize <= 0) return;
-      node.dataset.gvBaseFontSize = String(baseSize);
-      node.dataset.gvFontScale = String(scale);
-      const nextSize = Math.round(baseSize * scale * 100) / 100;
-      node.setAttribute('style', style.replace(/font-size:\s*[0-9.]+px/i, `font-size: ${nextSize}px`));
-      return;
-    }
-
-    const attrSize = parseFloat(node.dataset.gvBaseFontSize || node.getAttribute('font-size') || '');
-    if (Number.isFinite(attrSize) && attrSize > 0) {
-      node.dataset.gvBaseFontSize = String(attrSize);
-      node.dataset.gvFontScale = String(scale);
-      node.setAttribute('font-size', String(Math.round(attrSize * scale * 100) / 100));
-    }
   }
 
   function enhanceOperationalActivitySvgSnapshot(svgMarkup) {
@@ -653,14 +594,6 @@
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(svgMarkup, 'image/svg+xml');
-      const taskGroups = getOperationalTaskGroupsFromSvg(doc);
-
-      taskGroups.forEach((group) => {
-        group.querySelectorAll('text.djs-label, text.djs-label tspan').forEach((label) => {
-          scaleSvgFontNode(label, OPERATIONAL_ACTIVITY_LABEL_FONT_SCALE);
-        });
-      });
-
       return new XMLSerializer().serializeToString(doc);
     } catch (error) {
       console.warn('[APP32 BPMN] snapshot enhancement failed', error);
