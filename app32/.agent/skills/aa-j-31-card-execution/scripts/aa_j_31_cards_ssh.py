@@ -361,7 +361,7 @@ def cmd_ensure_steps(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-parser = argparse.ArgumentParser(description='Opera cards do projeto AA.J.1 via SSH no app Gestão Versus.')
+    parser = argparse.ArgumentParser(description='Opera cards do projeto AA.J.1 via SSH no app Gestão Versus.')
     sub = parser.add_subparsers(dest='command', required=True)
 
     list_parser = sub.add_parser('list')

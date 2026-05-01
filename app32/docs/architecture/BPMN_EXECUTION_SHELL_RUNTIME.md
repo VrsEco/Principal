@@ -59,6 +59,34 @@ Regra central:
 > O elemento BPMN não deve apontar diretamente para uma rota hardcoded.  
 > Ele deve resolver um **contrato de execução** e o runtime decide como executar.
 
+### 2.1. Esteira oficial de descoberta e execução
+
+A evolução correta do APP32 não começa pela criação direta de tela, automação ou módulo a partir de uma activity isolada.
+
+Ela segue a esteira abaixo:
+
+```text
+1. Modelar o processo em BPMN
+2. Analisar necessidades reveladas pelo processo
+3. Analisar capacidades já existentes no APP32
+4. Classificar cada necessidade como:
+   - núcleo novo
+   - capability/complemento reutilizável
+   - execução externa sem vínculo
+   - execução externa com vínculo REST/MCP
+   - uso de capacidade já existente
+5. Projetar e implementar o que faltar
+6. Configurar o BPMS para orquestrar essas capacidades
+7. Vincular rotina, instância, SLA e monitoramento em shell único
+```
+
+Regra mandatória:
+
+> O BPMN revela a demanda.  
+> A arquitetura classifica a demanda.  
+> O produto cria ou reaproveita capacidades.  
+> O BPMS orquestra a execução final.
+
 ---
 
 ## 3. Estado atual aproveitável
@@ -147,6 +175,11 @@ Observação:
 
 > Todo processo BPMS parte de uma base modelada, mas nem todo processo modelado precisa virar BPMS.
 
+Complemento:
+
+> O BPMS é sempre a camada final de acoplamento operacional.  
+> Ele não substitui o domínio funcional e não deve concentrar cadastro nuclear do negócio.
+
 ---
 
 ## 3.2. Regra de compatibilidade obrigatória
@@ -188,6 +221,11 @@ A instância deve abrir em uma **shell única de processo** contendo:
 - histórico de execução;
 - horas opcionais;
 - logs técnicos/operacionais.
+
+Definição de produto:
+
+> O shell não é “mais um módulo”.  
+> Ele é uma camada transversal de trabalho que reúne tudo o que o usuário precisa para executar, controlar e retomar a atividade, mesmo quando os dados e capacidades vêm de módulos diferentes.
 
 ## 4.2. Estados visuais do fluxo
 

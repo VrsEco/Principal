@@ -73,6 +73,31 @@ sem exigir alteração de código para toda variação operacional.
 
 **Limite importante:** BPMN resolve fluxo, mas não substitui um modelo de dados de domínio bem desenhado.
 
+### 3.2-A. Esteira oficial de descoberta a partir do processo
+
+Para evitar tanto o erro de “tudo vira módulo novo” quanto o erro de “tudo vira workflow parametrizado”, o APP32 deve adotar a seguinte esteira:
+
+```text
+1. Modelar o processo em BPMN
+2. Analisar necessidades operacionais reveladas pelo fluxo
+3. Analisar capacidades já existentes na plataforma
+4. Classificar o gap em:
+   - núcleo novo
+   - capability complementar reutilizável
+   - execução externa sem vínculo
+   - execução externa com vínculo REST/MCP
+   - simples reaproveitamento de capacidade existente
+5. Projetar e implementar o que faltar
+6. Configurar o BPMS para orquestrar essas capacidades
+```
+
+Tese de governança:
+
+> O BPMN descobre a necessidade.  
+> A arquitetura classifica a necessidade.  
+> A plataforma cria ou reaproveita capacidades.  
+> O BPMS orquestra a execução final.
+
 
 ### 3.3. O BPMN deve atuar como orquestrador de capabilities e experiência guiada
 
@@ -140,6 +165,10 @@ Componentes reaproveitáveis entre soluções, ainda que inicialmente surjam em 
 - automações e gatilhos
 - regras de workflow parametrizáveis
 
+Regra importante:
+
+> Uma capability pode nascer por demanda de um único processo, mas deve ser modelada como building block quando houver potencial de reuso.
+
 ### 4.3. Configuração por tenant
 
 Camada destinada a adaptar o sistema por empresa sem bifurcar código:
@@ -203,6 +232,8 @@ Essas extensões devem permanecer **isoladas, explicitadas e governadas**, e nã
 ## 5. Classificação das demandas
 
 Toda evolução nova deve ser classificada antes de entrar no código.
+
+Essa classificação deve acontecer explicitamente logo após a leitura do BPMN e da necessidade operacional.
 
 ### 5.1. Core
 

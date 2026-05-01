@@ -42,12 +42,42 @@ Ele chama uma **capability** e o runtime resolve:
 - quais abas aparecem
 - quais dados precisam ser carregados/preenchidos
 
+Complemento de governança:
+
+> O BPMN do processo “Novo Contrato” não deve ser confundido com o módulo de contratos.  
+> O fluxo descobre e orquestra a necessidade; o domínio de contratos concentra o cadastro e as regras nucleares do negócio.
+
+Este desenho deve seguir a esteira oficial:
+
+1. modelar o processo;
+2. analisar necessidades reveladas pelo processo;
+3. analisar capacidades existentes;
+4. decidir o que será núcleo, capability complementar, integração ou execução externa;
+5. implementar o que faltar;
+6. só então configurar o BPMS final da jornada.
+
 ---
 
 ## 3. Entidades principais do domínio
 
 ### 3.1. Entidade raiz
 - `contract`
+
+### Regra estrutural
+
+O cadastro de contrato deve nascer como **domínio funcional próprio**, não como mero payload de activity BPMN.
+
+Portanto, dados como:
+
+- itens negociados
+- termos financeiros
+- termos fiscais
+- gatilhos/datas
+- retenções
+- observações
+- artefatos/documentos
+
+devem pertencer ao domínio de contratos e apenas serem consumidos/orquestrados pelo BPMS.
 
 ### 3.2. Entidades relacionadas
 - `customer`
@@ -128,12 +158,13 @@ Estas abas devem compor a tela principal do cadastro/edição de contrato.
 
 1. **Resumo**
 2. **Cliente**
-3. **Serviços**
-4. **Periodicidade**
-5. **Fiscal**
-6. **Cobrança**
-7. **Observações**
-8. **Revisão**
+3. **Itens do Contrato**
+4. **Itens de Faturamento**
+5. **Periodicidade**
+6. **Fiscal**
+7. **Cobrança**
+8. **Observações**
+9. **Revisão**
 
 ## 6.2. Abas capability
 Podem ser habilitadas conforme tenant/produto/contexto.
@@ -145,6 +176,9 @@ Exemplos:
 - **Histórico do Processo**
 - **Integrações**
 - **Financeiro Derivado**
+- **Validar / Editar Contrato**
+- **Gerar PDF**
+- **Contrato Assinado**
 
 ## 6.3. Abas de extensão
 Usadas apenas quando houver necessidade específica controlada.
@@ -159,6 +193,16 @@ Exemplos:
 - aba core = estável e transversal
 - aba capability = vinculada a recurso compartilhável
 - aba extensão = controlada, tenant-safe e não pode contaminar o core
+
+### Exemplo explícito — favorecido
+
+O cadastro de favorecido deve suportar ao menos uma aba/segmento de **Classificação**, permitindo marcar:
+
+- cliente;
+- fornecedor;
+- ambos.
+
+Essa classificação pertence ao domínio funcional e pode ser consumida por múltiplos processos, inclusive contratos.
 
 ---
 
@@ -210,6 +254,36 @@ Exemplo conceitual:
 | Cobrança | `contract.billing_contacts.configure` | humana | definir responsáveis e canais |
 | Revisão | `contract.review.summary` | humana | revisar consistência |
 | Geração final | `contract.create_or_publish` | automática/humana | persistir contrato e disparos iniciais |
+
+### 8.1-A. Classificação arquitetural da demanda
+
+As capabilities deste processo devem ser classificadas em quatro grupos:
+
+1. **núcleo de contratos**
+   - cadastro do contrato
+   - itens negociados
+   - termos financeiros
+   - termos fiscais
+   - gatilhos, vigência e retenções
+
+2. **capacidades complementares reutilizáveis**
+   - seleção/criação de cliente
+   - anexos
+   - revisão
+   - histórico
+
+3. **execução externa / integração**
+   - assinatura
+   - envio
+   - faturamento futuro
+   - integrações fiscal/financeiro
+
+4. **orquestração BPMS**
+   - sequência
+   - SLA
+   - retomada
+   - rotina
+   - monitoramento
 
 ### 8.2. Capabilities auxiliares
 - `service_catalog.select_or_create`

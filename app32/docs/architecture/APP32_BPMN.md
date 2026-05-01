@@ -188,6 +188,33 @@ POP responde: como executar cada atividade corretamente.
 Contrato operacional responde: quais dados, regras, evidências e resultados tornam a atividade válida.
 ```
 
+### 4.2-A BPMN revela necessidade; BPMS não nasce antes do domínio
+
+O BPMN não deve ser tratado como gerador automático de módulo. Ele deve funcionar como instrumento de descoberta operacional.
+
+Esteira correta:
+
+```text
+BPMN
+→ revela necessidade do processo
+→ exige análise funcional
+→ exige análise de capacidades existentes
+→ classifica o que será:
+   - núcleo novo
+   - capability complementar
+   - execução externa
+   - integração REST/MCP
+   - reaproveitamento de capacidade existente
+→ projeto e implementação
+→ configuração BPMS
+```
+
+Regra central:
+
+> O BPMS nunca deve substituir o domínio funcional.  
+> O domínio guarda a verdade do negócio.  
+> O BPMS orquestra como essa verdade é operada ao longo do fluxo.
+
 ### 4.3 Documento duplo: humano e máquina
 
 Cada processo deve gerar duas saídas complementares, com separação explícita para evitar que a necessidade de um público prejudique o outro:
@@ -236,6 +263,25 @@ Quando agentes precisarem consultar processos, POPs, rotinas, indicadores ou man
 
 ## 5. Conceito central: Atividade BPMN enriquecida
 
+### 5.0 Esteira oficial de evolução
+
+Toda iniciativa derivada de processo deve seguir a sequência abaixo:
+
+1. **Modelagem BPMN**
+2. **Análise das necessidades do processo**
+3. **Análise das capacidades do APP32**
+4. **Classificação do gap**
+   - módulo núcleo
+   - capability complementar
+   - execução externa sem vínculo
+   - execução externa com vínculo REST/MCP
+   - uso de capacidade já existente
+5. **Projeto e execução do que faltar**
+6. **Configuração do BPMS**
+7. **Vinculação com rotina, indicadores e shell de execução**
+
+O passo 6 só deve acontecer depois do 4 e do 5.
+
 A unidade mais importante do APP32 - BPMN não é apenas o processo. É a **atividade enriquecida**.
 
 Cada atividade do fluxo deve poder apontar para uma estrutura operacional:
@@ -271,6 +317,10 @@ Atividade BPMN
     ├── SLA
     └── qualidade da execução
 ```
+
+Observação importante:
+
+> O contrato operacional da atividade não define o domínio do negócio; ele define como a activity consome, altera, valida ou aciona uma capacidade de domínio.
 
 ---
 
