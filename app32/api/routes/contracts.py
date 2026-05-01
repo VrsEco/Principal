@@ -92,22 +92,54 @@ def contracts_create():
     if not company:
         abort(400, description="Empresa ativa não localizada.")
 
+    selected_contract_id = request.args.get("contract_id", type=int)
+    selected_party_id = request.args.get("party_id", type=int)
+
     if request.method == "POST":
-        if not has_permission(company.id, "contracts", "create"):
-            abort(403)
+        section = (request.form.get("section") or "create_contract").strip().lower()
         try:
-            contract = ContractService.create_contract(company_id=company.id, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
-            flash("Contrato criado com sucesso.", "success")
-            return redirect(url_for("contracts.contracts_manage", contract_id=contract.id, company_id=company.id))
+            if section == "create_contract":
+                if not has_permission(company.id, "contracts", "create"):
+                    abort(403)
+                contract = ContractService.create_contract(company_id=company.id, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+                flash("Contrato criado com sucesso.", "success")
+                return redirect(url_for("contracts.contracts_create", company_id=company.id, contract_id=contract.id, party_id=contract.party_id))
+            if section == "resumo":
+                if not has_permission(company.id, "contracts", "edit"):
+                    abort(403)
+                contract_id = request.form.get("contract_id", type=int)
+                contract = ContractService.get_contract(company.id, contract_id) if contract_id else None
+                if not contract:
+                    abort(404)
+                ContractService.update_contract_summary(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+                flash("Resumo do contrato atualizado.", "success")
+                return redirect(url_for("contracts.contracts_create", company_id=company.id, contract_id=contract.id, party_id=contract.party_id))
+            flash("Ação do workspace de contratos não reconhecida.", "error")
         except Exception as exc:
-            flash(f"Não foi possível criar o contrato: {exc}", "error")
+            action_label = "salvar o contrato" if section == "resumo" else "criar o contrato"
+            flash(f"Não foi possível {action_label}: {exc}", "error")
+
+    parties = ContractService.list_customer_parties(company.id)
+    selected_contract = ContractService.get_contract(company.id, selected_contract_id) if selected_contract_id else None
+    if selected_contract and selected_contract.party:
+        selected_party = selected_contract.party
+    elif selected_party_id:
+        selected_party = ContractService.get_party(company.id, selected_party_id)
+    else:
+        selected_party = parties[0] if parties else None
 
     return render_template(
-        "modules/contracts/contract_create.html",
+        "modules/contracts/contracts_workspace.html",
         company=company,
         company_id=company.id,
-        parties=ContractService.list_customer_parties(company.id),
+        parties=parties,
+        selected_contract=selected_contract,
+        selected_party=selected_party,
+        contract_tree=ContractService.list_customer_contract_tree(company.id),
         tabs=ContractService.get_tab_registry(),
+        contract_status_label=ContractService.get_contract_status_label,
+        contract_status_group=ContractService.get_contract_status_group,
+        contract_start_date=ContractService.get_contract_start_date,
     )
 
 

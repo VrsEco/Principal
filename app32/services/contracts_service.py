@@ -32,6 +32,8 @@ from models.financial import (
 
 
 class ContractService:
+    ACTIVE_STATUSES = {"active", "signed", "implanting"}
+    INACTIVE_STATUSES = {"inactive", "closed", "draft"}
     TAB_REGISTRY = (
         {"key": "resumo", "label": "Resumo", "scope": "core", "description": "Dados centrais do contrato."},
         {"key": "cliente", "label": "Cliente", "scope": "core", "description": "Favorecido cliente vinculado ao contrato."},
@@ -152,6 +154,48 @@ class ContractService:
         )
 
     @staticmethod
+    def get_contract_start_date(contract: Contract) -> Optional[date]:
+        return contract.service_start_at or contract.billing_start_at or contract.signed_at
+
+    @staticmethod
+    def get_contract_status_group(contract: Contract) -> str:
+        status = ContractService._normalize_text(getattr(contract, "status", "")).lower()
+        return "active" if status in ContractService.ACTIVE_STATUSES else "inactive"
+
+    @staticmethod
+    def get_contract_status_label(contract: Contract) -> str:
+        return "Ativo" if ContractService.get_contract_status_group(contract) == "active" else "Inativo"
+
+    @staticmethod
+    def list_customer_contract_tree(company_id: int) -> list[dict]:
+        parties = ContractService.list_customer_parties(company_id)
+        contracts = (
+            Contract.query.filter(
+                Contract.company_id == company_id,
+                Contract.deleted_at.is_(None),
+            )
+            .order_by(ContractParty.name.asc(), Contract.title.asc())
+            .join(ContractParty, ContractParty.id == Contract.party_id)
+            .all()
+        )
+        contracts_by_party: dict[int, list[Contract]] = {}
+        for contract in contracts:
+            contracts_by_party.setdefault(contract.party_id, []).append(contract)
+
+        tree = []
+        for party in parties:
+            party_contracts = contracts_by_party.get(party.id, [])
+            tree.append(
+                {
+                    "party": party,
+                    "contracts": party_contracts,
+                    "contract_count": len(party_contracts),
+                    "active_count": sum(1 for item in party_contracts if ContractService.get_contract_status_group(item) == "active"),
+                }
+            )
+        return tree
+
+    @staticmethod
     def list_financial_counterparties(company_id: int):
         return (
             FinancialCounterparty.query.filter(
@@ -254,7 +298,13 @@ class ContractService:
         if "party_id" in payload:
             contract.party_id = ContractService._normalize_int(payload.get("party_id")) or contract.party_id
         if "status" in payload:
-            contract.status = ContractService._normalize_text(payload.get("status")) or contract.status or "draft"
+            normalized_status = ContractService._normalize_text(payload.get("status")).lower()
+            if normalized_status in {"active", "inactive"}:
+                contract.status = normalized_status
+            elif normalized_status:
+                contract.status = normalized_status
+            else:
+                contract.status = contract.status or "draft"
         if "contract_type" in payload:
             contract.contract_type = ContractService._normalize_text(payload.get("contract_type")) or None
         if "currency_code" in payload:
@@ -269,6 +319,8 @@ class ContractService:
             contract.billing_start_at = ContractService._normalize_date(payload.get("billing_start_at"))
         if "billing_end_at" in payload:
             contract.billing_end_at = ContractService._normalize_date(payload.get("billing_end_at"))
+        if "last_billing_at" in payload:
+            contract.last_billing_at = ContractService._normalize_date(payload.get("last_billing_at"))
         if "periodicity" in payload:
             contract.periodicity = ContractService._normalize_text(payload.get("periodicity")) or None
         if "competence_rule" in payload:
@@ -306,6 +358,7 @@ class ContractService:
             "service_end_at": payload.get("service_end_at"),
             "billing_start_at": payload.get("billing_start_at"),
             "billing_end_at": payload.get("billing_end_at"),
+            "last_billing_at": payload.get("last_billing_at"),
             "periodicity": payload.get("periodicity"),
             "competence_rule": payload.get("competence_rule"),
             "due_rule": payload.get("due_rule"),

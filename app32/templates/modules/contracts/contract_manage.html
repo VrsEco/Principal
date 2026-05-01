@@ -80,13 +80,14 @@
                     <label><span>Tipo</span><input type="text" name="contract_type" value="{{ contract.contract_type or '' }}"></label>
                     <label><span>Status</span>
                         <select name="status">
-                            {% for status in ['draft', 'active', 'signed', 'implanting', 'closed'] %}
-                            <option value="{{ status }}" {% if contract.status == status %}selected{% endif %}>{{ status }}</option>
-                            {% endfor %}
+                            <option value="active" {% if contract.status in ['active', 'signed', 'implanting'] %}selected{% endif %}>active</option>
+                            <option value="inactive" {% if contract.status in ['inactive', 'closed', 'draft'] %}selected{% endif %}>inactive</option>
                         </select>
                     </label>
                     <label><span>Moeda</span><input type="text" name="currency_code" value="{{ contract.currency_code or 'BRL' }}"></label>
                     <label><span>Código</span><input type="text" value="{{ contract.code }}" disabled></label>
+                    <label><span>Início</span><input type="date" name="service_start_at" value="{{ contract.service_start_at.isoformat() if contract.service_start_at else '' }}"></label>
+                    <label><span>Último faturamento</span><input type="date" name="last_billing_at" value="{{ contract.last_billing_at.isoformat() if contract.last_billing_at else '' }}"></label>
                 </div>
                 <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar resumo</button></div>
             </form>

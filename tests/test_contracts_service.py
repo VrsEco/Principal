@@ -64,6 +64,7 @@ def test_update_contract_general_keeps_existing_fields_when_payload_is_partial()
         service_end_at=None,
         billing_start_at=None,
         billing_end_at=None,
+        last_billing_at=None,
         periodicity="monthly",
         competence_rule="mes atual",
         due_rule="30 dias",
@@ -75,3 +76,38 @@ def test_update_contract_general_keeps_existing_fields_when_payload_is_partial()
     assert contract.title == "Contrato B"
     assert contract.periodicity == "monthly"
     assert contract.signed_at.isoformat() == "2026-05-01"
+
+
+def test_update_contract_general_supports_last_billing_and_binary_status():
+    contract = SimpleNamespace(
+        title="Contrato X",
+        party_id=9,
+        status="signed",
+        contract_type=None,
+        currency_code="BRL",
+        signed_at=None,
+        service_start_at=None,
+        service_end_at=None,
+        billing_start_at=None,
+        billing_end_at=None,
+        last_billing_at=None,
+        periodicity=None,
+        competence_rule=None,
+        due_rule=None,
+        renewal_rule=None,
+        notes=None,
+        updated_by_user_id=None,
+    )
+    ContractService.update_contract_general(
+        contract=contract,
+        payload={"status": "inactive", "last_billing_at": "2026-04-30"},
+        user_id=3,
+        is_new=True,
+    )
+    assert contract.status == "inactive"
+    assert contract.last_billing_at.isoformat() == "2026-04-30"
+
+
+def test_get_contract_status_group_maps_legacy_active_statuses():
+    contract = SimpleNamespace(status="signed")
+    assert ContractService.get_contract_status_group(contract) == "active"

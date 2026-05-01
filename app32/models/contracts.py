@@ -75,6 +75,7 @@ class Contract(db.Model):
     service_end_at = db.Column(db.Date)
     billing_start_at = db.Column(db.Date)
     billing_end_at = db.Column(db.Date)
+    last_billing_at = db.Column(db.Date)
     periodicity = db.Column(db.String(30))
     competence_rule = db.Column(db.String(60))
     due_rule = db.Column(db.String(60))
@@ -110,6 +111,7 @@ class Contract(db.Model):
             "service_end_at": self.service_end_at.isoformat() if self.service_end_at else None,
             "billing_start_at": self.billing_start_at.isoformat() if self.billing_start_at else None,
             "billing_end_at": self.billing_end_at.isoformat() if self.billing_end_at else None,
+            "last_billing_at": self.last_billing_at.isoformat() if self.last_billing_at else None,
             "periodicity": self.periodicity,
             "competence_rule": self.competence_rule,
             "due_rule": self.due_rule,
