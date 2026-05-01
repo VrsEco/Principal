@@ -9,7 +9,8 @@
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
   const importInput = document.getElementById('bpmnImportInput');
-  const canvasCardEl = root.closest('.bpmn-canvas-card');
+  const canvasEl = document.getElementById('bpmnCanvas');
+  const canvasCardEl = canvasEl ? canvasEl.closest('.bpmn-canvas-card') : root.querySelector('.bpmn-canvas-card');
   const OPERATIONAL_ACTIVITY_BASE_WIDTH = 140;
   const OPERATIONAL_ACTIVITY_MAX_WIDTH = 196;
   const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
@@ -260,7 +261,7 @@
     const onMouseMove = (moveEvent) => {
       moveEvent.preventDefault();
       const bounds = calculateManualResizeBounds(dragState, moveEvent);
-      modeler.get('modeling').resizeShape(shape, bounds);
+      resizeOperationalActivityShape(shape, bounds);
       if (manualResizeState) manualResizeState.shape = shape;
       syncManualResizeHandlePosition();
     };
@@ -513,12 +514,50 @@
 
     if (currentWidth >= targetWidth && currentHeight >= targetHeight) return false;
 
-    modeler.get('modeling').resizeShape(element, {
+    resizeOperationalActivityShape(element, {
       x: element.x,
       y: element.y,
       width: targetWidth,
       height: targetHeight
     });
+    return true;
+  }
+
+  function resizeOperationalActivityShape(element, bounds) {
+    if (!modeler || !element || !bounds) return false;
+
+    const nextBounds = {
+      x: Number.isFinite(bounds.x) ? bounds.x : element.x,
+      y: Number.isFinite(bounds.y) ? bounds.y : element.y,
+      width: Math.max(OPERATIONAL_ACTIVITY_MIN_WIDTH, Math.round(bounds.width || element.width || OPERATIONAL_ACTIVITY_MIN_WIDTH)),
+      height: Math.max(OPERATIONAL_ACTIVITY_MIN_HEIGHT, Math.round(bounds.height || element.height || OPERATIONAL_ACTIVITY_MIN_HEIGHT))
+    };
+
+    element.x = nextBounds.x;
+    element.y = nextBounds.y;
+    element.width = nextBounds.width;
+    element.height = nextBounds.height;
+
+    const di = element.di || (element.businessObject && element.businessObject.di);
+    if (di && di.bounds) {
+      di.bounds.x = nextBounds.x;
+      di.bounds.y = nextBounds.y;
+      di.bounds.width = nextBounds.width;
+      di.bounds.height = nextBounds.height;
+    }
+
+    const elementRegistry = modeler.get('elementRegistry');
+    const graphicsFactory = modeler.get('graphicsFactory');
+    const eventBus = modeler.get('eventBus');
+    const gfx = elementRegistry && elementRegistry.getGraphics(element);
+
+    if (gfx && graphicsFactory) {
+      graphicsFactory.update('shape', element, gfx);
+    }
+    if (eventBus) {
+      eventBus.fire('elements.changed', { elements: [element] });
+    }
+
     return true;
   }
 
