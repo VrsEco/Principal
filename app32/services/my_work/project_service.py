@@ -26,6 +26,7 @@ def fetch_project_directory(company_ids: List[int]) -> List[Dict[str, Any]]:
     try:
         results = db.session.query(
             Project.id,
+            Project.code_sequence,
             Project.name.label("title"),
             Project.company_id,
             Company.name.label("company_name"),
@@ -38,8 +39,10 @@ def fetch_project_directory(company_ids: List[int]) -> List[Dict[str, Any]]:
         for r in results:
             if r.id is None:
                 continue
-            
-            project_code = f"{r.company_code or (r.company_name[:2].upper() if r.company_name else 'CP')}.J.{r.id}"
+
+            company_code = r.company_code or (r.company_name[:2].upper() if r.company_name else 'CP')
+            project_sequence = getattr(r, "code_sequence", None) or r.id
+            project_code = f"{company_code}.J.{project_sequence}"
 
             projects.append({
                 "id": r.id,
@@ -103,8 +106,10 @@ def fetch_normalized_project_rows(
     for pt, prj, plan_name, plan_mode, company_name, company_code, employee_name_joined in query.all():
         # Anti-N+1: Prevent pt.code and prj.code from querying the database
         c_code = company_code or (company_name[:2].upper() if company_name else 'CP')
-        prj_code = f"{c_code}.J.{prj.id}"
-        pt_code = f"{c_code}.J.{prj.id}.{pt.id}"
+        project_sequence = prj.code_sequence or prj.id
+        task_sequence = pt.code_sequence or pt.id
+        prj_code = f"{c_code}.J.{project_sequence}"
+        pt_code = f"{prj_code}.{task_sequence}"
         emp_name = employee_name_joined or pt.who or "Sem responsável"
         
         table_activities.append({

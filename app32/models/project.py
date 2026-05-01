@@ -1,4 +1,7 @@
 from datetime import datetime
+
+from sqlalchemy import UniqueConstraint, event, func, select, text
+
 from . import db
 
 
@@ -6,7 +9,10 @@ class Project(db.Model):
     """Project model"""
 
     __tablename__ = "projects"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        UniqueConstraint("company_id", "code_sequence", name="uq_projects_company_code_sequence"),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
@@ -25,6 +31,7 @@ class Project(db.Model):
     progress = db.Column(db.Integer, default=0)
     priority = db.Column(db.String(20), default="medium") # low, medium, high
     portfolio_id = db.Column(db.Integer, db.ForeignKey("portfolios.id"), nullable=True)
+    code_sequence = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
@@ -69,14 +76,21 @@ class Project(db.Model):
 
     @property
     def code(self):
-        """Generates the project code in format: COMPANY.J.ID"""
+        """Generates the project code in format: COMPANY.J.SEQUENCE."""
+        sequence = self.code_sequence or self.id
+        return f"{self.company_code}.J.{sequence}"
+
+    @property
+    def company_code(self):
         from models.company import Company
+
         company = Company.query.get(self.company_id)
-        # Use client_code if available, otherwise name prefix logic... Actually we use client_code or id
-        client_code = ""
         if company:
-            client_code = company.client_code or company.name[:2].upper()
-        return f"{client_code}.J.{self.id}"
+            raw_code = company.client_code or company.name[:2].upper()
+            cleaned = "".join(ch for ch in str(raw_code or "").strip().upper() if ch.isalnum())
+            if cleaned:
+                return cleaned
+        return str(self.company_id or "").zfill(2) or "00"
 
     def to_dict(self):
         """Convert to dictionary"""
@@ -86,6 +100,7 @@ class Project(db.Model):
             "code": self.code,
             "company_id": self.company_id,
             "portfolio_id": self.portfolio_id,
+            "code_sequence": self.code_sequence,
             "plan_id": self.plan_id,
             "name": self.name,
             "okr_links": self.okr_links,
@@ -114,7 +129,10 @@ class ProjectTask(db.Model):
     """Project task model"""
 
     __tablename__ = "project_tasks"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        UniqueConstraint("project_id", "code_sequence", name="uq_project_tasks_project_code_sequence"),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
@@ -139,6 +157,7 @@ class ProjectTask(db.Model):
     deleted_at = db.Column(db.DateTime)
     deleted_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     delete_reason = db.Column(db.Text)
+    code_sequence = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
@@ -161,16 +180,12 @@ class ProjectTask(db.Model):
 
     @property
     def code(self):
-        """Generates the activity code in format: COMPANY.J.PROJECT_ID.TASK_ID"""
+        """Generates the activity code in format: COMPANY.J.PROJECT_SEQUENCE.TASK_SEQUENCE."""
         if not self.project:
             return f"IND.{self.id}"
-        
-        from models.company import Company
-        company = Company.query.get(self.project.company_id)
-        client_code = ""
-        if company:
-            client_code = company.client_code or company.name[:2].upper()
-        return f"{client_code}.J.{self.project_id}.{self.id}"
+
+        sequence = self.code_sequence or self.id
+        return f"{self.project.code}.{sequence}"
 
     def to_dict(self):
         """Convert to dictionary"""
@@ -178,6 +193,7 @@ class ProjectTask(db.Model):
             "id": self.id,
             "code": self.code,
             "project_id": self.project_id,
+            "code_sequence": self.code_sequence,
             "what": self.what,
             "who": self.who,
             "employee_id": self.employee_id,
@@ -209,6 +225,39 @@ class ProjectTask(db.Model):
 
     def __repr__(self):
         return f"<ProjectTask {self.what[:50]}...>"
+
+
+def _dialect_is_postgresql(connection) -> bool:
+    return getattr(getattr(connection, "dialect", None), "name", "") == "postgresql"
+
+
+def _allocate_scoped_sequence(connection, table_name: str, scope_column: str, scope_value: int) -> int:
+    if _dialect_is_postgresql(connection):
+        lock_key = 1001 if table_name == "projects" else 1002
+        connection.execute(
+            text("SELECT pg_advisory_xact_lock(:lock_key, :scope_value)"),
+            {"lock_key": lock_key, "scope_value": int(scope_value)},
+        )
+
+    table = Project.__table__ if table_name == "projects" else ProjectTask.__table__
+    stmt = select(func.coalesce(func.max(table.c.code_sequence), 0) + 1).where(
+        getattr(table.c, scope_column) == scope_value
+    )
+    return int(connection.execute(stmt).scalar() or 1)
+
+
+@event.listens_for(Project, "before_insert")
+def _assign_project_code_sequence(mapper, connection, target):
+    if target.code_sequence or not target.company_id:
+        return
+    target.code_sequence = _allocate_scoped_sequence(connection, "projects", "company_id", target.company_id)
+
+
+@event.listens_for(ProjectTask, "before_insert")
+def _assign_project_task_code_sequence(mapper, connection, target):
+    if target.code_sequence or not target.project_id:
+        return
+    target.code_sequence = _allocate_scoped_sequence(connection, "project_tasks", "project_id", target.project_id)
 
 
 class ProjectActivityCollaborator(db.Model):

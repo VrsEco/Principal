@@ -26,6 +26,24 @@ class ProjectTaskService:
             return None
 
     @staticmethod
+    def _sanitize_company_code(raw_value: Optional[str], company_id: Optional[int] = None) -> str:
+        cleaned = "".join(ch for ch in str(raw_value or "").strip().upper() if ch.isalnum())
+        if cleaned:
+            return cleaned
+        return str(company_id or "").zfill(2) or "00"
+
+    @staticmethod
+    def parse_project_code(code_value: str) -> Tuple[Optional[str], Optional[int]]:
+        raw = str(code_value or "").strip()
+        parts = raw.split(".")
+        if len(parts) != 3 or parts[1] != "J":
+            return None, None
+        try:
+            return parts[0].strip().upper(), int(parts[2])
+        except (TypeError, ValueError):
+            return parts[0].strip().upper(), None
+
+    @staticmethod
     def parse_due_date(value: Optional[str]) -> Tuple[Optional[date], Optional[str]]:
         raw = str(value or "").strip()
         if not raw:
@@ -44,17 +62,37 @@ class ProjectTaskService:
         project_code: str,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Project], Optional[str]]:
-        project_id = ProjectTaskService.extract_id_from_code(project_code)
-        if not project_id:
+        company_prefix, code_sequence = ProjectTaskService.parse_project_code(project_code)
+        if not company_prefix or not code_sequence:
             return None, f"Não consegui identificar o projeto no código '{project_code}'."
-
-        query = Project.query.filter(Project.id == project_id)
 
         if allowed_company_ids is not None:
             normalized_company_ids = [int(cid) for cid in allowed_company_ids if cid]
             if not normalized_company_ids:
                 return None, "Nenhuma empresa autorizada encontrada para criar a atividade."
-            query = query.filter(Project.company_id.in_(normalized_company_ids))
+        else:
+            normalized_company_ids = None
+
+        company_query = Company.query
+        if normalized_company_ids is not None:
+            company_query = company_query.filter(Company.id.in_(normalized_company_ids))
+
+        companies = company_query.all()
+        matched_company_ids = [
+            company.id
+            for company in companies
+            if ProjectTaskService._sanitize_company_code(company.client_code or company.name[:2], company.id) == company_prefix
+        ]
+
+        if not matched_company_ids and normalized_company_ids and len(normalized_company_ids) == 1:
+            matched_company_ids = normalized_company_ids
+        if not matched_company_ids:
+            return None, f"Empresa do código '{project_code}' não encontrada no contexto informado."
+
+        query = Project.query.filter(
+            Project.company_id.in_(matched_company_ids),
+            Project.code_sequence == code_sequence,
+        )
 
         project = query.first()
         if not project:

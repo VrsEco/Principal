@@ -201,14 +201,14 @@ def normalize_project_activities(
                     pass
             
             if project_num is not None:
-                item["code"] = f"{company_code}.J.{project_num}.{next_sequence:02d}"
+                item["code"] = f"{company_code}.J.{project_num}.{next_sequence}"
             else:
                 # Fallback: use project_code as is
-                item["code"] = f"{project_code}.{next_sequence:02d}"
+                item["code"] = f"{project_code}.{next_sequence}"
         elif project_code:
-            item["code"] = f"{project_code}.{next_sequence:02d}"
+            item["code"] = f"{project_code}.{next_sequence}"
         else:
-            item["code"] = f"ATV-{next_sequence:02d}"
+            item["code"] = f"ATV-{next_sequence}"
 
         assigned_sequences.add(next_sequence)
         if next_sequence > max_sequence:

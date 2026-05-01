@@ -391,6 +391,7 @@ def _fetch_project_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
             SELECT cp.id,
                    cp.title,
                    cp.code,
+                   cp.code_sequence,
                    cp.company_id,
                    c.name AS company_name,
                    c.client_code AS company_code
@@ -410,6 +411,10 @@ def _fetch_project_directory(cursor, company_ids: List[int]) -> List[Dict[str, A
             code = row_dict.get("code")
             if isinstance(code, str):
                 code = code.strip() or None
+            if not code:
+                company_code = row_dict.get("company_code") or (row_dict.get("company_name") or "CP")[:2].upper()
+                project_sequence = row_dict.get("code_sequence") or project_id
+                code = f"{company_code}.J.{project_sequence}"
             projects.append(
                 {
                     "id": project_id,
@@ -985,11 +990,17 @@ def _fetch_normalized_project_rows(
         )
         return legacy_activities + v2_activities
 
-    project_code_expression = (
-        "COALESCE(NULLIF(TRIM(cp.code), ''), 'PRJ-' || cp.id::text)"
-        if _table_has_column(cursor, "company_projects", "code")
-        else "'PRJ-' || cp.id::text"
-    )
+    if _table_has_column(cursor, "company_projects", "code"):
+        if _table_has_column(cursor, "company_projects", "code_sequence"):
+            project_code_expression = (
+                "COALESCE(NULLIF(TRIM(cp.code), ''), "
+                "COALESCE(NULLIF(TRIM(c.client_code), ''), UPPER(SUBSTRING(COALESCE(c.name, 'CP') FROM 1 FOR 2))) "
+                "|| '.J.' || COALESCE(cp.code_sequence, cp.id)::text)"
+            )
+        else:
+            project_code_expression = "COALESCE(NULLIF(TRIM(cp.code), ''), 'PRJ-' || cp.id::text)"
+    else:
+        project_code_expression = "'PRJ-' || cp.id::text"
     activity_code_expression = (
         f"COALESCE(NULLIF(TRIM(pa.code), ''), {project_code_expression} || '.' || pa.id::text)"
         if _table_has_column(cursor, "project_activities", "code")
