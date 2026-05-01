@@ -51,7 +51,6 @@
 
   async function importXml(xml) {
     const result = await modeler.importXML(xml);
-    resizeAllOperationalActivities();
     const canvas = modeler.get('canvas');
     canvas.zoom('fit-viewport', 'auto');
     currentZoom = 1;
@@ -159,11 +158,6 @@
     eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
     eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);
     installOperationalActivityAutoSizing._installed = true;
-  }
-
-  function resizeAllOperationalActivities() {
-    const activities = getOperationalActivities();
-    activities.forEach((element) => ensureOperationalActivityShapeSize(element));
   }
 
   function installOperationalActivityManualResize() {

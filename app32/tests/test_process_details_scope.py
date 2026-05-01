@@ -127,6 +127,17 @@ def test_bpmn_modeler_template_cache_busts_served_assets():
     assert "filename='js/process_bpmn_modeler.js', v=asset_version" in content
 
 
+def test_bpmn_modeler_keeps_saved_layout_on_import():
+    js_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'js', 'process_bpmn_modeler.js'))
+    with open(js_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'const result = await modeler.importXML(xml);' in content
+    assert 'resizeAllOperationalActivities();' not in content
+    assert "eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);" in content
+    assert "eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);" in content
+
+
 def test_occurrences_loader_sends_company_scope_and_falls_back_gracefully():
     js_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'process_details_occurrences.js'))
     with open(js_path, 'r', encoding='utf-8') as handle:
