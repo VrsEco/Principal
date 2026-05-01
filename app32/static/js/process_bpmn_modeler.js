@@ -9,6 +9,10 @@
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
   const importInput = document.getElementById('bpmnImportInput');
+  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 360;
+  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 560;
+  const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 100;
+  const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 120;
   let modeler = null;
   let currentDiagram = null;
   let currentZoom = 1;
@@ -61,9 +65,11 @@
           bindTo: document
         }
       });
+      installOperationalActivityAutoSizing();
 
       currentDiagram = await fetchDiagram();
       await importXml(currentDiagram.bpmn_xml);
+      normalizeOperationalActivitySizes({ silent: true });
       updateMeta();
       setStatus('Pronto para modelar', 'Use a paleta BPMN no canvas.');
     } catch (err) {
@@ -87,6 +93,7 @@
     setStatus(status === 'published' ? 'Publicando...' : 'Salvando...');
     try {
       const codeResult = normalizeActivityCodes({ silent: true });
+      const sizeResult = normalizeOperationalActivitySizes({ silent: true });
       const [{ xml }, { svg }] = await Promise.all([
         modeler.saveXML({ format: true }),
         modeler.saveSVG()
@@ -103,6 +110,7 @@
           activity_code_rule: 'process_code_dot_two_digit_sequence',
           activity_code_prefix: processCode || null,
           activity_code_normalized_count: codeResult.changed,
+          activity_shape_normalized_count: sizeResult.changed,
           pop_binding_rule: 'activity_with_data_object_reference',
           pop_candidates: extractPopBindingCandidates()
         }
@@ -123,13 +131,28 @@
       setStatus(
         status === 'published' ? 'Versão publicada' : 'Rascunho salvo',
         status === 'published'
-          ? `BPMN publicado e disponível na aba Fluxo do processo.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
-          : `BPMN salvo no APP32.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
+          ? `BPMN publicado e disponível na aba Fluxo do processo.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}${sizeResult.changed ? ` ${sizeResult.changed} atividade(s) redimensionada(s).` : ''}`
+          : `BPMN salvo no APP32.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}${sizeResult.changed ? ` ${sizeResult.changed} atividade(s) redimensionada(s).` : ''}`
       );
     } catch (err) {
       console.error('[APP32 BPMN] save error', err);
       setStatus('Erro ao salvar', err.message, true);
     }
+  }
+
+  function installOperationalActivityAutoSizing() {
+    if (!modeler) return;
+    const eventBus = modeler.get('eventBus');
+    if (!eventBus || installOperationalActivityAutoSizing._installed) return;
+
+    const resizeContextShape = (event) => {
+      const shape = event && event.context && (event.context.newShape || event.context.shape);
+      ensureOperationalActivityShapeSize(shape);
+    };
+
+    eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
+    eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);
+    installOperationalActivityAutoSizing._installed = true;
   }
 
   async function exportBpmn() {
@@ -339,6 +362,74 @@
     let number = 1;
     while (usedNumbers.has(number)) number += 1;
     return number;
+  }
+
+  function normalizeOperationalActivitySizes(options) {
+    const opts = options || {};
+    if (!modeler) return { changed: 0, skipped: 'modeler_not_ready' };
+
+    let changed = 0;
+    for (const element of getOperationalActivities()) {
+      if (ensureOperationalActivityShapeSize(element)) changed += 1;
+    }
+
+    if (!opts.silent) {
+      setStatus(
+        changed ? 'Atividades redimensionadas' : 'Atividades já dimensionadas',
+        changed
+          ? `${changed} atividade(s) ajustada(s) para melhor leitura de código, nome e símbolo BPMN.`
+          : 'Todas as atividades operacionais já estão com tamanho adequado.'
+      );
+    }
+
+    return { changed };
+  }
+
+  function ensureOperationalActivityShapeSize(element) {
+    if (!modeler || !element || !isOperationalActivityType(element.businessObject && element.businessObject.$type)) {
+      return false;
+    }
+
+    const targetSize = getOperationalActivityTargetSize(element);
+    if (!targetSize) return false;
+
+    const currentWidth = Number.isFinite(element.width) ? element.width : 0;
+    const currentHeight = Number.isFinite(element.height) ? element.height : 0;
+    const targetWidth = Math.max(currentWidth, targetSize.width);
+    const targetHeight = Math.max(currentHeight, targetSize.height);
+
+    if (currentWidth >= targetWidth && currentHeight >= targetHeight) return false;
+
+    modeler.get('modeling').resizeShape(element, {
+      x: element.x,
+      y: element.y,
+      width: targetWidth,
+      height: targetHeight
+    });
+    return true;
+  }
+
+  function getOperationalActivityTargetSize(element) {
+    const label = getOperationalActivityDisplayLabel(element);
+    const width = Math.max(
+      OPERATIONAL_ACTIVITY_BASE_WIDTH,
+      Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, 320 + Math.ceil(label.length * 2.7))
+    );
+    const height = label.length > 72 ? OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT : OPERATIONAL_ACTIVITY_BASE_HEIGHT;
+    return { width, height };
+  }
+
+  function getOperationalActivityDisplayLabel(element) {
+    const businessObject = element && element.businessObject;
+    if (!businessObject) return '';
+
+    const currentName = String(businessObject.name || '').trim();
+    const currentCode = getSemanticActivityCode(element);
+    if (currentCode) {
+      return buildActivityLabel(currentCode.code, currentName, element.id);
+    }
+
+    return currentName || processCode || 'Atividade';
   }
 
   function compareElementsByCanvasPosition(left, right) {
