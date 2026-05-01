@@ -371,6 +371,77 @@ def process_routines_redirect():
     
     return redirect(url_for('my_work.my_work'))
 
+@processes_bp.route('/bpms-analysis')
+@permission_required('processes', 'view')
+def bpms_analysis_redirect():
+    company_id = session.get('active_company_id')
+    if not company_id:
+        company_id = get_default_company_id()
+        if company_id:
+            session['active_company_id'] = company_id
+
+    if company_id:
+        return redirect(url_for('processes.bpms_analysis_page', company_id=company_id))
+
+    return redirect(url_for('my_work.my_work'))
+
+@processes_bp.route('/companies/<int:company_id>/bpms-analysis')
+@permission_required('processes', 'view')
+def bpms_analysis_page(company_id):
+    from services.process_bpms_analysis_service import build_bpms_analysis_page_context
+
+    selected_analysis_id = request.args.get('analysis_id', type=int)
+    selected_process_id = request.args.get('process_id', type=int)
+    context = build_bpms_analysis_page_context(
+        company_id=company_id,
+        selected_analysis_id=selected_analysis_id,
+        selected_process_id=selected_process_id,
+    )
+    context['is_collaborator'] = is_collaborator_in_company(company_id)
+    return render_template('modules/processes/bpms_analysis.html', **context)
+
+@processes_bp.route('/companies/<int:company_id>/bpms-analysis/save', methods=['POST'])
+@permission_required('processes', 'edit')
+def bpms_analysis_save(company_id):
+    from services.process_bpms_analysis_service import save_bpms_analysis
+
+    if is_collaborator_in_company(company_id):
+        abort(403, description="Acesso negado: Colaboradores não podem editar análises BPMS.")
+
+    try:
+        analysis = save_bpms_analysis(
+            company_id=company_id,
+            form_data=request.form.to_dict(flat=True),
+            actor_user_id=current_user.id if current_user.is_authenticated else None,
+        )
+        flash('Análise BPMS salva com sucesso.', 'success')
+        return redirect(url_for(
+            'processes.bpms_analysis_page',
+            company_id=company_id,
+            analysis_id=analysis.id,
+            process_id=analysis.process_id,
+        ))
+    except ValueError as exc:
+        flash(str(exc), 'warning')
+    except Exception:
+        current_app.logger.exception('Falha ao salvar análise BPMS para company_id=%s', company_id)
+        flash('Não foi possível salvar a análise BPMS agora. Tente novamente em instantes.', 'error')
+
+    process_id = request.form.get('process_id', type=int)
+    analysis_id = request.form.get('analysis_id', type=int)
+    return redirect(url_for(
+        'processes.bpms_analysis_page',
+        company_id=company_id,
+        process_id=process_id,
+        analysis_id=analysis_id,
+    ))
+
+@processes_bp.route('/companies/<int:company_id>/processes/<int:process_id>/bpms-analysis')
+@permission_required('processes', 'view')
+def bpms_analysis_for_process(company_id, process_id):
+    process = Process.query.filter_by(company_id=company_id, id=process_id).first_or_404()
+    return redirect(url_for('processes.bpms_analysis_page', company_id=company_id, process_id=process.id))
+
 @processes_bp.route('/process-instances')
 @permission_required('processes', 'view')
 def process_instances_redirect():

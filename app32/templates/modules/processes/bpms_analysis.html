@@ -1,0 +1,418 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Análise BPMS | Versus{% endblock %}
+
+{% set analysis = selected_analysis or {} %}
+{% set selected_process = selected_process or None %}
+{% set is_collaborator = is_collaborator or False %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('my_work.my_work') }}">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="{{ url_for('processes.processes_list') }}">Processos</a>
+<span class="sep">/</span>
+<span class="current">Análise BPMS</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="space-y-6">
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="space-y-3">
+                <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">BPMN · BPMS · Aderência</span>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Análise BPMS</h1>
+                    <p class="mt-2 max-w-3xl text-sm text-slate-600">
+                        Use esta análise para decidir com rigor o que é implantação, parametrização, customização ou desenvolvimento novo.
+                    </p>
+                </div>
+                {% if selected_process %}
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    Processo vinculado: <strong>{{ selected_process.label }}</strong>
+                </div>
+                {% endif %}
+            </div>
+            <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 lg:w-[28rem]">
+                <div>
+                    <strong class="block text-slate-900">Como usar</strong>
+                    <span>1. Defina objetivo e meta. 2. Descreva AS-IS/TO-BE. 3. Varra o app. 4. Classifique gaps. 5. Encaminhe ao especialista correto.</span>
+                </div>
+                <div>
+                    <strong class="block text-slate-900">Local no sidebar</strong>
+                    <span>Gestão da Rotina &gt; Gestão de Processos &gt; Análise BPMS</span>
+                </div>
+                {% if selected_process %}
+                <div>
+                    <strong class="block text-slate-900">Entrada por processo</strong>
+                    <span>Detalhes do Processo &gt; 🧠 Análise BPMS deste Processo</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            {% if is_collaborator %}
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Você está em modo colaborador. A visualização está liberada, mas a edição da análise BPMS é restrita.
+            </div>
+            {% endif %}
+
+            <form method="post" action="{{ url_for('processes.bpms_analysis_save', company_id=company.id) }}" class="mt-6 space-y-8" id="bpmsAnalysisForm">
+                <input type="hidden" name="analysis_id" value="{{ analysis.id or '' }}">
+                <input type="hidden" name="app_adherence_json" id="appAdherenceJson" value='{{ (analysis.app_adherence_json or [])|tojson|safe }}'>
+                <input type="hidden" name="gap_classification_json" id="gapClassificationJson" value='{{ (analysis.gap_classification_json or [])|tojson|safe }}'>
+                <input type="hidden" name="prioritization_json" id="prioritizationJson" value='{{ (analysis.prioritization_json or [])|tojson|safe }}'>
+
+                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div class="xl:col-span-2">
+                        <label class="mb-2 block text-sm font-medium text-slate-700">Título</label>
+                        <input type="text" name="title" value="{{ analysis.title or '' }}" class="form-control w-full" placeholder="Ex.: Análise BPMS - Onboarding Comercial" {% if is_collaborator %}disabled{% endif %}>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-700">Processo</label>
+                        <select name="process_id" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
+                            <option value="">Sem vínculo específico</option>
+                            {% for option in process_options %}
+                            <option value="{{ option.id }}" {% if analysis.process_id == option.id %}selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Status</label>
+                            <select name="status" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
+                                <option value="draft" {% if (analysis.status or 'draft') == 'draft' %}selected{% endif %}>Rascunho</option>
+                                <option value="ready" {% if analysis.status == 'ready' %}selected{% endif %}>Pronta para decisão</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Escopo</label>
+                            <select name="scope" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
+                                <option value="pessoal" {% if analysis.scope == 'pessoal' %}selected{% endif %}>Pessoal</option>
+                                <option value="equipe" {% if analysis.scope == 'equipe' %}selected{% endif %}>Equipe</option>
+                                <option value="empresa" {% if (analysis.scope or 'empresa') == 'empresa' %}selected{% endif %}>Empresa</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-slate-900">Objetivo, meta e problema</h2>
+                        <textarea name="objective" class="form-control min-h-[120px] w-full" placeholder="Objetivo estratégico da análise" {% if is_collaborator %}disabled{% endif %}>{{ analysis.objective or '' }}</textarea>
+                        <textarea name="goal" class="form-control min-h-[100px] w-full" placeholder="Meta ou resultado-alvo" {% if is_collaborator %}disabled{% endif %}>{{ analysis.goal or '' }}</textarea>
+                        <textarea name="problem_statement" class="form-control min-h-[100px] w-full" placeholder="Problema central / hipótese" {% if is_collaborator %}disabled{% endif %}>{{ analysis.problem_statement or '' }}</textarea>
+                        <textarea name="expected_result" class="form-control min-h-[100px] w-full" placeholder="Resultado esperado" {% if is_collaborator %}disabled{% endif %}>{{ analysis.expected_result or '' }}</textarea>
+                    </div>
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-slate-900">Indicadores</h2>
+                        <textarea name="current_indicators" class="form-control min-h-[110px] w-full" placeholder="Indicadores atuais" {% if is_collaborator %}disabled{% endif %}>{{ analysis.current_indicators or '' }}</textarea>
+                        <textarea name="missing_indicators" class="form-control min-h-[110px] w-full" placeholder="Indicadores faltantes" {% if is_collaborator %}disabled{% endif %}>{{ analysis.missing_indicators or '' }}</textarea>
+                        <textarea name="success_measurement" class="form-control min-h-[110px] w-full" placeholder="Como medir sucesso / SLA / ganho esperado" {% if is_collaborator %}disabled{% endif %}>{{ analysis.success_measurement or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-slate-900">AS-IS</h2>
+                        <textarea name="as_is_summary" class="form-control min-h-[90px] w-full" placeholder="Resumo do fluxo atual" {% if is_collaborator %}disabled{% endif %}>{{ analysis.as_is_summary or '' }}</textarea>
+                        <textarea name="as_is_steps" class="form-control min-h-[120px] w-full" placeholder="Etapas atuais" {% if is_collaborator %}disabled{% endif %}>{{ analysis.as_is_steps or '' }}</textarea>
+                        <textarea name="as_is_exceptions" class="form-control min-h-[100px] w-full" placeholder="Exceções / desvios" {% if is_collaborator %}disabled{% endif %}>{{ analysis.as_is_exceptions or '' }}</textarea>
+                        <textarea name="bottlenecks" class="form-control min-h-[100px] w-full" placeholder="Gargalos" {% if is_collaborator %}disabled{% endif %}>{{ analysis.bottlenecks or '' }}</textarea>
+                        <textarea name="operational_risks" class="form-control min-h-[100px] w-full" placeholder="Riscos operacionais" {% if is_collaborator %}disabled{% endif %}>{{ analysis.operational_risks or '' }}</textarea>
+                        <textarea name="dependencies" class="form-control min-h-[100px] w-full" placeholder="Dependências" {% if is_collaborator %}disabled{% endif %}>{{ analysis.dependencies or '' }}</textarea>
+                    </div>
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-slate-900">TO-BE</h2>
+                        <textarea name="to_be_summary" class="form-control min-h-[90px] w-full" placeholder="Resumo do fluxo futuro" {% if is_collaborator %}disabled{% endif %}>{{ analysis.to_be_summary or '' }}</textarea>
+                        <textarea name="to_be_steps" class="form-control min-h-[120px] w-full" placeholder="Etapas futuras" {% if is_collaborator %}disabled{% endif %}>{{ analysis.to_be_steps or '' }}</textarea>
+                        <textarea name="controls" class="form-control min-h-[100px] w-full" placeholder="Controles, POPs, checkpoints" {% if is_collaborator %}disabled{% endif %}>{{ analysis.controls or '' }}</textarea>
+                        <textarea name="expected_automation" class="form-control min-h-[100px] w-full" placeholder="Automação esperada / BPMS / integrações" {% if is_collaborator %}disabled{% endif %}>{{ analysis.expected_automation or '' }}</textarea>
+                        <textarea name="desired_indicators" class="form-control min-h-[100px] w-full" placeholder="Indicadores desejados" {% if is_collaborator %}disabled{% endif %}>{{ analysis.desired_indicators or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="text-lg font-semibold text-slate-900">Aderência do app</h2>
+                        {% if not is_collaborator %}
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="bpmsRepeaters.add('appAdherence')">Adicionar linha</button>
+                        {% endif %}
+                    </div>
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Etapa</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Existe?</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Onde?</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Observação</th>
+                                    {% if not is_collaborator %}<th class="px-4 py-3"></th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="appAdherenceRows" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="text-lg font-semibold text-slate-900">Gaps e classificação</h2>
+                        {% if not is_collaborator %}
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="bpmsRepeaters.add('gapClassification')">Adicionar gap</button>
+                        {% endif %}
+                    </div>
+                    <textarea name="identified_gaps" class="form-control min-h-[100px] w-full" placeholder="Resumo dos gaps identificados" {% if is_collaborator %}disabled{% endif %}>{{ analysis.identified_gaps or '' }}</textarea>
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Gap</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Classificação</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Justificativa</th>
+                                    {% if not is_collaborator %}<th class="px-4 py-3"></th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="gapClassificationRows" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="text-lg font-semibold text-slate-900">Priorização</h2>
+                        {% if not is_collaborator %}
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="bpmsRepeaters.add('prioritization')">Adicionar item</button>
+                        {% endif %}
+                    </div>
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Item</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Impacto</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Esforço</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Risco</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Prioridade</th>
+                                    {% if not is_collaborator %}<th class="px-4 py-3"></th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="prioritizationRows" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-slate-900">Arquitetura e governança</h2>
+                        <textarea name="architectural_impact" class="form-control min-h-[110px] w-full" placeholder="Impactos em arquitetura, multi-tenancy, dados, segurança" {% if is_collaborator %}disabled{% endif %}>{{ analysis.architectural_impact or '' }}</textarea>
+                        <textarea name="governance_notes" class="form-control min-h-[110px] w-full" placeholder="Governança, auditoria, compliance, ownership" {% if is_collaborator %}disabled{% endif %}>{{ analysis.governance_notes or '' }}</textarea>
+                        <div class="grid gap-3 md:grid-cols-2">
+                            {% for field, label in [
+                                ('requires_architect', '@ARQUITETO'),
+                                ('requires_backend_service', '@BACKEND_SERVICE'),
+                                ('requires_backend_api', '@BACKEND_API'),
+                                ('requires_ai_engineer', '@AI_ENGINEER'),
+                                ('requires_dba', '@DBA'),
+                                ('requires_qa_automation', '@QA_AUTOMATION')
+                            ] %}
+                            <label class="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                                <input type="checkbox" name="{{ field }}" value="1" {% if analysis[field] %}checked{% endif %} {% if is_collaborator %}disabled{% endif %}>
+                                <span>Acionar {{ label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-slate-900">Recomendação final</h2>
+                        <textarea name="recommendation_summary" class="form-control min-h-[90px] w-full" placeholder="Síntese executiva da recomendação" {% if is_collaborator %}disabled{% endif %}>{{ analysis.recommendation_summary or '' }}</textarea>
+                        <textarea name="implement_now" class="form-control min-h-[80px] w-full" placeholder="O que é só implantar agora" {% if is_collaborator %}disabled{% endif %}>{{ analysis.implement_now or '' }}</textarea>
+                        <textarea name="parameterize_now" class="form-control min-h-[80px] w-full" placeholder="O que é parametrizar/customizar leve" {% if is_collaborator %}disabled{% endif %}>{{ analysis.parameterize_now or '' }}</textarea>
+                        <textarea name="customize_later" class="form-control min-h-[80px] w-full" placeholder="O que é customizar depois" {% if is_collaborator %}disabled{% endif %}>{{ analysis.customize_later or '' }}</textarea>
+                        <textarea name="develop_for_real" class="form-control min-h-[80px] w-full" placeholder="O que é desenvolvimento real" {% if is_collaborator %}disabled{% endif %}>{{ analysis.develop_for_real or '' }}</textarea>
+                        <textarea name="not_now" class="form-control min-h-[80px] w-full" placeholder="O que não fazer agora" {% if is_collaborator %}disabled{% endif %}>{{ analysis.not_now or '' }}</textarea>
+                        <textarea name="next_action" class="form-control min-h-[80px] w-full" placeholder="Próxima ação recomendada" {% if is_collaborator %}disabled{% endif %}>{{ analysis.next_action or '' }}</textarea>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-slate-700">Especialista líder</label>
+                                <select name="lead_specialist" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
+                                    <option value="">Definir depois</option>
+                                    {% for option in lead_specialist_options %}
+                                    <option value="{{ option.value }}" {% if analysis.lead_specialist == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-slate-700">Dependências antes da execução</label>
+                                <textarea name="dependencies_before_execution" class="form-control min-h-[80px] w-full" placeholder="Migração, dados, processo, treinamento..." {% if is_collaborator %}disabled{% endif %}>{{ analysis.dependencies_before_execution or '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 border-t border-slate-200 pt-6">
+                    {% if not is_collaborator %}
+                    <button type="submit" class="btn btn-primary">Salvar análise BPMS</button>
+                    {% endif %}
+                    <a href="{{ url_for('processes.bpms_analysis_page', company_id=company.id, process_id=selected_process_id) }}" class="btn btn-secondary">Nova análise</a>
+                </div>
+            </form>
+        </section>
+
+        <aside class="space-y-6">
+            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 class="text-lg font-semibold text-slate-900">Análises salvas</h2>
+                <div class="mt-4 space-y-3">
+                    {% if analyses %}
+                        {% for item in analyses %}
+                        <a href="{{ url_for('processes.bpms_analysis_page', company_id=company.id, analysis_id=item.id, process_id=item.process_id) }}" class="block rounded-xl border border-slate-200 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50/40">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <strong class="block text-sm text-slate-900">{{ item.title }}</strong>
+                                    <span class="mt-1 block text-xs text-slate-500">{{ item.process_label }}</span>
+                                </div>
+                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">{{ item.status }}</span>
+                            </div>
+                            <div class="mt-2 text-xs text-slate-500">Escopo: {{ item.scope }} · Atualizada em {{ item.updated_at or '—' }}</div>
+                        </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                            Nenhuma análise BPMS salva ainda para este contexto.
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+<script>
+(() => {
+    const isCollaborator = {{ 'true' if is_collaborator else 'false' }};
+    const configs = {
+        appAdherence: {
+            hiddenId: 'appAdherenceJson',
+            tbodyId: 'appAdherenceRows',
+            fields: ['stage', 'exists', 'where', 'observation'],
+            createRow(data = {}) {
+                return `
+                    <tr>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="stage" value="${escapeHtml(data.stage || '')}" class="form-control w-full" placeholder="Etapa do processo"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="exists" value="${escapeHtml(data.exists || '')}" class="form-control w-full" placeholder="Já existe / parcial / não existe"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="where" value="${escapeHtml(data.where || '')}" class="form-control w-full" placeholder="Tela / módulo / serviço"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="observation" value="${escapeHtml(data.observation || '')}" class="form-control w-full" placeholder="Observação"></td>
+                        ${isCollaborator ? '' : '<td class="px-4 py-3 text-right"><button type="button" class="btn btn-ghost btn-sm" data-remove-row>Remover</button></td>'}
+                    </tr>
+                `;
+            }
+        },
+        gapClassification: {
+            hiddenId: 'gapClassificationJson',
+            tbodyId: 'gapClassificationRows',
+            fields: ['gap', 'classification', 'justification'],
+            createRow(data = {}) {
+                return `
+                    <tr>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="gap" value="${escapeHtml(data.gap || '')}" class="form-control w-full" placeholder="Gap"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="classification" value="${escapeHtml(data.classification || '')}" class="form-control w-full" placeholder="Implantar / parametrizar / customizar / desenvolver / adiar"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="justification" value="${escapeHtml(data.justification || '')}" class="form-control w-full" placeholder="Justificativa"></td>
+                        ${isCollaborator ? '' : '<td class="px-4 py-3 text-right"><button type="button" class="btn btn-ghost btn-sm" data-remove-row>Remover</button></td>'}
+                    </tr>
+                `;
+            }
+        },
+        prioritization: {
+            hiddenId: 'prioritizationJson',
+            tbodyId: 'prioritizationRows',
+            fields: ['item', 'impact', 'effort', 'risk', 'priority'],
+            createRow(data = {}) {
+                return `
+                    <tr>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="item" value="${escapeHtml(data.item || '')}" class="form-control w-full" placeholder="Item"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="impact" value="${escapeHtml(data.impact || '')}" class="form-control w-full" placeholder="Alto / médio / baixo"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="effort" value="${escapeHtml(data.effort || '')}" class="form-control w-full" placeholder="Alto / médio / baixo"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="risk" value="${escapeHtml(data.risk || '')}" class="form-control w-full" placeholder="Risco"></td>
+                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="priority" value="${escapeHtml(data.priority || '')}" class="form-control w-full" placeholder="P1 / P2 / P3"></td>
+                        ${isCollaborator ? '' : '<td class="px-4 py-3 text-right"><button type="button" class="btn btn-ghost btn-sm" data-remove-row>Remover</button></td>'}
+                    </tr>
+                `;
+            }
+        }
+    };
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function parseRows(hiddenId) {
+        const raw = document.getElementById(hiddenId)?.value || '[]';
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) && parsed.length ? parsed : [{}];
+        } catch {
+            return [{}];
+        }
+    }
+
+    function serialize(type) {
+        const config = configs[type];
+        const tbody = document.getElementById(config.tbodyId);
+        const rows = [...tbody.querySelectorAll('tr')].map((tr) => {
+            const row = {};
+            config.fields.forEach((field) => {
+                row[field] = tr.querySelector(`[data-field="${field}"]`)?.value?.trim() || '';
+            });
+            return row;
+        }).filter((row) => Object.values(row).some(Boolean));
+        document.getElementById(config.hiddenId).value = JSON.stringify(rows);
+    }
+
+    function render(type) {
+        const config = configs[type];
+        const tbody = document.getElementById(config.tbodyId);
+        tbody.innerHTML = parseRows(config.hiddenId).map((row) => config.createRow(row)).join('');
+        bind(type);
+        serialize(type);
+    }
+
+    function bind(type) {
+        const config = configs[type];
+        const tbody = document.getElementById(config.tbodyId);
+        tbody.querySelectorAll('[data-remove-row]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                btn.closest('tr')?.remove();
+                if (!tbody.querySelector('tr')) {
+                    tbody.innerHTML = config.createRow({});
+                    bind(type);
+                }
+                serialize(type);
+            });
+        });
+        tbody.querySelectorAll('input').forEach((input) => input.addEventListener('input', () => serialize(type)));
+    }
+
+    window.bpmsRepeaters = {
+        add(type) {
+            const config = configs[type];
+            const tbody = document.getElementById(config.tbodyId);
+            tbody.insertAdjacentHTML('beforeend', config.createRow({}));
+            bind(type);
+            serialize(type);
+        }
+    };
+
+    Object.keys(configs).forEach(render);
+    document.getElementById('bpmsAnalysisForm')?.addEventListener('submit', () => {
+        Object.keys(configs).forEach(serialize);
+    });
+})();
+</script>
+{% endblock %}

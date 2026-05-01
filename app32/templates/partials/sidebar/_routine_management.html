@@ -1,5 +1,5 @@
 {% set _routine_projects_active = '/project-portfolios' in request.path or '/projects' in request.path %}
-{% set _routine_processes_active = '/process-map' in request.path or '/processes' in request.path or '/process-routines' in request.path or '/process-instances' in request.path or '/routines' in request.path %}
+{% set _routine_processes_active = '/process-map' in request.path or '/processes' in request.path or '/process-routines' in request.path or '/process-instances' in request.path or '/bpms-analysis' in request.path or '/routines' in request.path %}
 {% set _routine_meetings_active = '/meetings' in request.path %}
 {% set _routine_occurrences_active = '/process-occurrences' in request.path %}
 {% set _routine_journey_active = '/work-journey' in request.path or '/process-routines/analysis' in request.path or '/efficiency-analysis' in request.path %}
@@ -39,6 +39,10 @@
                 <a href="{{ url_for('processes.process_routines_redirect') }}"
                     class="sub-nav-link {{ 'active' if '/process-routines' in request.path or '/routines' in request.path }}">
                     Rotina de Processos
+                </a>
+                <a href="{{ url_for('processes.bpms_analysis_redirect') }}"
+                    class="sub-nav-link {{ 'active' if '/bpms-analysis' in request.path }}">
+                    Análise BPMS
                 </a>
                 <a href="{{ url_for('processes.process_instances_redirect') }}"
                     class="sub-nav-link {{ 'active' if '/process-instances' in request.path }}">

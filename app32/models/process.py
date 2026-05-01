@@ -78,6 +78,115 @@ class ProcessBpmnDiagram(db.Model):
 
     process = db.relationship('Process', backref=db.backref('bpmn_diagrams', lazy='dynamic', cascade='all, delete-orphan'))
 
+class ProcessBpmsAnalysis(db.Model):
+    __tablename__ = 'process_bpms_analyses'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    process_id = db.Column(db.Integer, db.ForeignKey('processes.id'), nullable=True, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(30), nullable=False, default='draft')
+    scope = db.Column(db.String(30), nullable=False, default='empresa')
+    objective = db.Column(db.Text, nullable=True)
+    goal = db.Column(db.Text, nullable=True)
+    problem_statement = db.Column(db.Text, nullable=True)
+    expected_result = db.Column(db.Text, nullable=True)
+    current_indicators = db.Column(db.Text, nullable=True)
+    missing_indicators = db.Column(db.Text, nullable=True)
+    success_measurement = db.Column(db.Text, nullable=True)
+    as_is_summary = db.Column(db.Text, nullable=True)
+    as_is_steps = db.Column(db.Text, nullable=True)
+    as_is_exceptions = db.Column(db.Text, nullable=True)
+    bottlenecks = db.Column(db.Text, nullable=True)
+    operational_risks = db.Column(db.Text, nullable=True)
+    dependencies = db.Column(db.Text, nullable=True)
+    to_be_summary = db.Column(db.Text, nullable=True)
+    to_be_steps = db.Column(db.Text, nullable=True)
+    controls = db.Column(db.Text, nullable=True)
+    expected_automation = db.Column(db.Text, nullable=True)
+    desired_indicators = db.Column(db.Text, nullable=True)
+    app_adherence_json = db.Column(db.JSON, nullable=True)
+    identified_gaps = db.Column(db.Text, nullable=True)
+    gap_classification_json = db.Column(db.JSON, nullable=True)
+    prioritization_json = db.Column(db.JSON, nullable=True)
+    architectural_impact = db.Column(db.Text, nullable=True)
+    requires_architect = db.Column(db.Boolean, default=False)
+    requires_backend_service = db.Column(db.Boolean, default=False)
+    requires_backend_api = db.Column(db.Boolean, default=False)
+    requires_ai_engineer = db.Column(db.Boolean, default=False)
+    requires_dba = db.Column(db.Boolean, default=False)
+    requires_qa_automation = db.Column(db.Boolean, default=False)
+    governance_notes = db.Column(db.Text, nullable=True)
+    recommendation_summary = db.Column(db.Text, nullable=True)
+    implement_now = db.Column(db.Text, nullable=True)
+    parameterize_now = db.Column(db.Text, nullable=True)
+    customize_later = db.Column(db.Text, nullable=True)
+    develop_for_real = db.Column(db.Text, nullable=True)
+    not_now = db.Column(db.Text, nullable=True)
+    next_action = db.Column(db.Text, nullable=True)
+    lead_specialist = db.Column(db.String(120), nullable=True)
+    dependencies_before_execution = db.Column(db.Text, nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    process = db.relationship('Process', backref=db.backref('bpms_analyses', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'process_id': self.process_id,
+            'title': self.title,
+            'status': self.status,
+            'scope': self.scope,
+            'objective': self.objective,
+            'goal': self.goal,
+            'problem_statement': self.problem_statement,
+            'expected_result': self.expected_result,
+            'current_indicators': self.current_indicators,
+            'missing_indicators': self.missing_indicators,
+            'success_measurement': self.success_measurement,
+            'as_is_summary': self.as_is_summary,
+            'as_is_steps': self.as_is_steps,
+            'as_is_exceptions': self.as_is_exceptions,
+            'bottlenecks': self.bottlenecks,
+            'operational_risks': self.operational_risks,
+            'dependencies': self.dependencies,
+            'to_be_summary': self.to_be_summary,
+            'to_be_steps': self.to_be_steps,
+            'controls': self.controls,
+            'expected_automation': self.expected_automation,
+            'desired_indicators': self.desired_indicators,
+            'app_adherence_json': self.app_adherence_json or [],
+            'identified_gaps': self.identified_gaps,
+            'gap_classification_json': self.gap_classification_json or [],
+            'prioritization_json': self.prioritization_json or [],
+            'architectural_impact': self.architectural_impact,
+            'requires_architect': bool(self.requires_architect),
+            'requires_backend_service': bool(self.requires_backend_service),
+            'requires_backend_api': bool(self.requires_backend_api),
+            'requires_ai_engineer': bool(self.requires_ai_engineer),
+            'requires_dba': bool(self.requires_dba),
+            'requires_qa_automation': bool(self.requires_qa_automation),
+            'governance_notes': self.governance_notes,
+            'recommendation_summary': self.recommendation_summary,
+            'implement_now': self.implement_now,
+            'parameterize_now': self.parameterize_now,
+            'customize_later': self.customize_later,
+            'develop_for_real': self.develop_for_real,
+            'not_now': self.not_now,
+            'next_action': self.next_action,
+            'lead_specialist': self.lead_specialist,
+            'dependencies_before_execution': self.dependencies_before_execution,
+            'created_by_user_id': self.created_by_user_id,
+            'updated_by_user_id': self.updated_by_user_id,
+            'created_at': self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
+            'updated_at': self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
+        }
+
 class ProcessRoutine(db.Model):
     __tablename__ = 'process_routines'
     __table_args__ = {'extend_existing': True}
