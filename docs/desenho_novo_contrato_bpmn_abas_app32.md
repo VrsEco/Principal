@@ -194,6 +194,14 @@ Exemplos:
 - aba capability = vinculada a recurso compartilhável
 - aba extensão = controlada, tenant-safe e não pode contaminar o core
 
+### Regra de persistência
+
+As abas não devem gerar modelos paralelos no workflow.
+
+Elas devem persistir no modelo canônico do domínio de contratos, conforme definido em:
+
+- `C:\GestaoVersus\app32\app32\docs\architecture\CONTRACTS_DATA_MODEL.md`
+
 ### Exemplo explícito — favorecido
 
 O cadastro de favorecido deve suportar ao menos uma aba/segmento de **Classificação**, permitindo marcar:

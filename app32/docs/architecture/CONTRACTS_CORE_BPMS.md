@@ -465,3 +465,9 @@ Frase-guia:
 > O processo vive no BPMN.  
 > A execução vive no BPMS.  
 > A experiência do usuário vive no shell único.
+
+## 14. Documentos complementares
+
+Para o detalhamento lógico de entidades, relacionamentos, abas por entidade, índices e MVP de implementação, consultar:
+
+- `C:\GestaoVersus\app32\app32\docs\architecture\CONTRACTS_DATA_MODEL.md`
