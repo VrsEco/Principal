@@ -7,5 +7,6 @@
   "tests/test_email_service_templates.py::test_send_email_autowraps_corporate_html": true,
   "tests/test_email_service_templates.py::test_send_email_preserves_explicit_html": true,
   "tests/test_menu_engine_summary_flow_helpers.py::test_handle_item_selection_state_for_project_picker_advances_to_remaining_fields": true,
-  "tests/test_menu_engine_summary_flow_helpers.py::test_handle_menu_message_prompts_company_first_for_whatsapp_multi_company": true
+  "tests/test_menu_engine_summary_flow_helpers.py::test_handle_menu_message_prompts_company_first_for_whatsapp_multi_company": true,
+  "tests/test_process_details_scope.py::test_process_details_route_syncs_active_company_from_process": true
 }

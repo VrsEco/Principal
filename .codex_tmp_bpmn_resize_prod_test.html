@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://app.gestaoversus.com.br/static/vendor/bpmn-js/18.6.3/dist/assets/diagram-js.css?v=074677df">
+  <link rel="stylesheet" href="https://app.gestaoversus.com.br/static/vendor/bpmn-js/18.6.3/dist/assets/bpmn-js.css?v=074677df">
+  <link rel="stylesheet" href="https://app.gestaoversus.com.br/static/vendor/bpmn-js/18.6.3/dist/assets/bpmn-font/css/bpmn.css?v=074677df">
+  <link rel="stylesheet" href="https://app.gestaoversus.com.br/static/css/process_bpmn_modeler.css?v=074677df">
+  <style>body{margin:0}.bpmn-canvas-card{height:720px}.bpmn-canvas{height:720px}</style>
+</head>
+<body>
+<div id="app32BpmnModeler" class="bpmn-modeler-shell" data-process-id="15" data-company-id="9" data-process-name="Teste" data-process-code="AA.C.2.2.1">
+  <section class="bpmn-modeler-hero"><div class="bpmn-status-panel"><strong id="bpmnSaveStatus">Carregando...</strong><small id="bpmnDiagramMeta"></small></div></section>
+  <button type="button" data-action="save" id="testSave">Salvar rascunho</button>
+  <section class="bpmn-workbench"><div class="bpmn-canvas-card"><div id="bpmnCanvas" class="bpmn-canvas"></div><div id="bpmnLoading" class="bpmn-loading">Carregando</div></div></section>
+  <input type="file" id="bpmnImportInput" hidden>
+  <section class="bpmn-pop-binding-panel" id="bpmnPopBindingPanel" hidden><div></div><div id="bpmnElementList"></div></section>
+</div>
+<script>
+const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false"><bpmn:startEvent id="StartEvent_1" /></bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1"><bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><dc:Bounds x="180" y="180" width="36" height="36" /></bpmndi:BPMNShape></bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+window.lastPutBody = null;
+window.fetch = async (url, options) => {
+  if (String(url).includes('/bpmn-diagram')) {
+    if ((options && options.method) === 'PUT') { window.lastPutBody = options.body; return new Response(options.body, { status: 200, headers: {'Content-Type':'application/json'} }); }
+    return new Response(JSON.stringify({ id: 1, name: 'Teste', status: 'draft', version: 1, bpmn_xml: xml, updated_at: new Date().toISOString() }), { status: 200, headers: {'Content-Type':'application/json'} });
+  }
+  return new Response('{}', { status: 200, headers: {'Content-Type':'application/json'} });
+};
+</script>
+<script src="https://app.gestaoversus.com.br/static/vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js?v=074677df"></script>
+<script src="https://app.gestaoversus.com.br/static/js/process_bpmn_modeler.js?v=074677df"></script>
+</body>
+</html>

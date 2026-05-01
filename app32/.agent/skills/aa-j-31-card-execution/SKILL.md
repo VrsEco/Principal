@@ -1,15 +1,15 @@
 ---
 name: aa-j-31-card-execution
-description: Use quando a execução tiver 3 ou mais etapas e precisar ser conduzida por passos com cards em AA.J.31 (Produção), executando, testando, corrigindo e concluindo um passo por vez.
+description: Use quando a execução tiver 3 ou mais etapas e precisar ser conduzida por passos com cards em AA.J.1 (Produção), executando, testando, corrigindo e concluindo um passo por vez.
 ---
 
-# AA.J.31 Card Execution
+# AA.J.1 Card Execution
 
 Use esta skill quando a demanda exigir execução longa com 3 ou mais etapas.
 
 ## Obrigatório
 - quebrar a execução em passos
-- criar ou atualizar um card por passo em `AA.J.31 (Produção)` antes da execução
+- criar ou atualizar um card por passo em `AA.J.1 (Produção)` antes da execução
 - nomear o card no padrão `[<nome da etapa> - Passo X de N]`
 - executar um passo por vez
 - testar e corrigir antes de avançar
@@ -24,8 +24,8 @@ Use esta skill quando a demanda exigir execução longa com 3 ou mais etapas.
 6. Repetir até o fim
 
 ## Integração real
-- usar `scripts/aa_j_31_cards_ssh.py` para listar, criar, concluir ou materializar passos em `AA.J.31`
-- o script opera via SSH no app.gestaoversus.com.br sobre `ProjectTask` do projeto `AA.J.31`
+- usar `scripts/aa_j_31_cards_ssh.py` para listar, criar, concluir ou materializar passos em `AA.J.1`
+- o script opera via SSH no app.gestaoversus.com.br sobre `ProjectTask` do projeto `AA.J.1`
 - usar `scripts/aa_j_31_step_wrapper.py` como entrada preferencial quando já existir uma lista explícita de passos da execução
 
 ## Regras

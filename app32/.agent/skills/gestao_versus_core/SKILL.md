@@ -32,7 +32,7 @@ Skill obrigatória de governança do projeto.
 - sem lógica de negócio em rota
 - respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
 - sem documentação longa dentro desta skill
-- sem execução 3+ etapas sem cards reais em `AA.J.31`
+- sem execução 3+ etapas sem cards reais em `AA.J.1`
 - para Sapiens: arvore oficial por dominio, nao por estrutura legada
 - para Sapiens: codigos de menu sem ponto, ex: `111`, `145`, `183`
 - para Sapiens: escopo operacional explicito entre pessoal, equipe e empresa

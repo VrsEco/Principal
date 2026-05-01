@@ -23,7 +23,7 @@ Interpretar a solicitação, classificar o tipo de trabalho e decidir qual skill
 
 ## Regra mandatória para 3+ etapas
 - quebrar a execução em passos antes de codar
-- criar ou atualizar os cards em `AA.J.31 (Produção)` no padrão `[<nome da etapa> - Passo X de N]`
+- criar ou atualizar os cards em `AA.J.1 (Produção)` no padrão `[<nome da etapa> - Passo X de N]`
 - executar, testar, corrigir e concluir um passo por vez
 - não abrir frente paralela sem o card correspondente
 

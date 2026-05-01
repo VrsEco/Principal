@@ -1,7 +1,7 @@
-# Integração remota com AA.J.31
+# Integração remota com AA.J.1
 
 ## Alvo confirmado em produção
-- projeto: `AA.J.31`
+- projeto: `AA.J.1`
 - nome atual: `DEV APP Gestão Versus`
 - empresa: `AA - Versus Gestao Corporativa`
 - company_id: `9`
@@ -24,7 +24,7 @@
 - criar card:
   - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_cards_ssh.py create --title "[Nome da Etapa - Passo 1 de 4]" --due-date 2026-04-20`
 - concluir card:
-  - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_cards_ssh.py complete --identifier "AA.J.31.123" --evidence "Passo validado"`
+- `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_cards_ssh.py complete --identifier "AA.J.1.123" --evidence "Passo validado"`
 - materializar passos:
   - `python .agent/skills/aa-j-31-card-execution/scripts/aa_j_31_cards_ssh.py ensure-steps --stage-name "Alterar Front End Página XYZ" --total-steps 4`
 - materializar uma execução com descrições:
@@ -38,4 +38,4 @@
 - a criação ocorre como `ProjectTask`
 - o script usa o servidor real por SSH e cria/conclui cards no projeto 31
 - por padrão, novos cards entram como `status=planned` e `stage=inbox`
-- validação ponta a ponta executada em produção em `2026-04-16` com criação e conclusão real do card `AA.J.31.1431`
+- validação ponta a ponta executada em produção em `2026-04-16` com criação e conclusão real do card `AA.J.1.1431`

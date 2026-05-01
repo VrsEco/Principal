@@ -9,10 +9,20 @@
   const metaEl = document.getElementById('bpmnDiagramMeta');
   const loadingEl = document.getElementById('bpmnLoading');
   const importInput = document.getElementById('bpmnImportInput');
+  const canvasEl = document.getElementById('bpmnCanvas');
+  const canvasCardEl = canvasEl ? canvasEl.closest('.bpmn-canvas-card') : root.querySelector('.bpmn-canvas-card');
+  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 140;
+  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 196;
+  const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
+  const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 130;
+  const OPERATIONAL_ACTIVITY_MIN_WIDTH = 120;
+  const OPERATIONAL_ACTIVITY_MIN_HEIGHT = 72;
   let modeler = null;
   let currentDiagram = null;
   let currentZoom = 1;
   let popCandidatesByElementId = new Map();
+  let manualResizeHandleEl = null;
+  let manualResizeState = null;
 
   function setStatus(text, detail, isError) {
     if (statusEl) {
@@ -61,6 +71,8 @@
           bindTo: document
         }
       });
+      installOperationalActivityAutoSizing();
+      installOperationalActivityManualResize();
 
       currentDiagram = await fetchDiagram();
       await importXml(currentDiagram.bpmn_xml);
@@ -130,6 +142,152 @@
       console.error('[APP32 BPMN] save error', err);
       setStatus('Erro ao salvar', err.message, true);
     }
+  }
+
+  function installOperationalActivityAutoSizing() {
+    if (!modeler) return;
+    const eventBus = modeler.get('eventBus');
+    if (!eventBus || installOperationalActivityAutoSizing._installed) return;
+
+    const resizeContextShape = (event) => {
+      const shape = event && event.context && (event.context.newShape || event.context.shape);
+      ensureOperationalActivityShapeSize(shape);
+    };
+
+    eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
+    eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);
+    installOperationalActivityAutoSizing._installed = true;
+  }
+
+  function installOperationalActivityManualResize() {
+    if (!modeler || installOperationalActivityManualResize._installed) return;
+    ensureManualResizeHandle();
+
+    const eventBus = modeler.get('eventBus');
+    eventBus.on('selection.changed', (event) => {
+      const shape = getSingleOperationalActivity(event && event.newSelection);
+      attachManualResizeHandle(shape);
+    });
+    eventBus.on('elements.changed', () => {
+      syncManualResizeHandlePosition();
+    });
+    eventBus.on('canvas.viewbox.changed', () => {
+      syncManualResizeHandlePosition();
+    });
+    eventBus.on('shape.remove', () => {
+      syncManualResizeHandlePosition();
+    });
+
+    installOperationalActivityManualResize._installed = true;
+  }
+
+  function ensureManualResizeHandle() {
+    if (manualResizeHandleEl || !canvasCardEl) return;
+
+    manualResizeHandleEl = document.createElement('button');
+    manualResizeHandleEl.type = 'button';
+    manualResizeHandleEl.className = 'bpmn-manual-resize-handle';
+    manualResizeHandleEl.title = 'Arraste para redimensionar a atividade';
+    manualResizeHandleEl.setAttribute('aria-label', 'Arraste para redimensionar a atividade BPMN');
+    manualResizeHandleEl.hidden = true;
+    manualResizeHandleEl.addEventListener('mousedown', startManualResizeDrag);
+    canvasCardEl.appendChild(manualResizeHandleEl);
+  }
+
+  function getSingleOperationalActivity(selection) {
+    if (!Array.isArray(selection) || selection.length !== 1) return null;
+    const [shape] = selection;
+    return isOperationalActivityType(shape && shape.businessObject && shape.businessObject.$type) ? shape : null;
+  }
+
+  function attachManualResizeHandle(shape) {
+    ensureManualResizeHandle();
+    manualResizeState = shape ? { shape } : null;
+    syncManualResizeHandlePosition();
+  }
+
+  function syncManualResizeHandlePosition() {
+    if (!manualResizeHandleEl || !canvasCardEl || !manualResizeState || !manualResizeState.shape) {
+      hideManualResizeHandle();
+      return;
+    }
+
+    const shape = manualResizeState.shape;
+    const elementRegistry = modeler && modeler.get('elementRegistry');
+    const gfx = elementRegistry && elementRegistry.getGraphics(shape);
+    if (!gfx || typeof gfx.getBoundingClientRect !== 'function') {
+      hideManualResizeHandle();
+      return;
+    }
+
+    const shapeRect = gfx.getBoundingClientRect();
+    const canvasRect = canvasCardEl.getBoundingClientRect();
+    if (!shapeRect.width || !shapeRect.height || !canvasRect.width || !canvasRect.height) {
+      hideManualResizeHandle();
+      return;
+    }
+
+    manualResizeHandleEl.hidden = false;
+    manualResizeHandleEl.style.left = `${shapeRect.right - canvasRect.left - 8}px`;
+    manualResizeHandleEl.style.top = `${shapeRect.bottom - canvasRect.top - 8}px`;
+  }
+
+  function hideManualResizeHandle() {
+    if (!manualResizeHandleEl) return;
+    manualResizeHandleEl.hidden = true;
+  }
+
+  function startManualResizeDrag(event) {
+    if (!manualResizeState || !manualResizeState.shape || !modeler) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const shape = manualResizeState.shape;
+    const canvas = modeler.get('canvas');
+    const viewbox = canvas && canvas.viewbox ? canvas.viewbox() : null;
+    const scale = viewbox && Number.isFinite(viewbox.scale) ? viewbox.scale : 1;
+
+    manualResizeHandleEl.classList.add('is-dragging');
+
+    const dragState = {
+      shape,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startWidth: Number.isFinite(shape.width) ? shape.width : OPERATIONAL_ACTIVITY_MIN_WIDTH,
+      startHeight: Number.isFinite(shape.height) ? shape.height : OPERATIONAL_ACTIVITY_MIN_HEIGHT,
+      scale
+    };
+
+    const onMouseMove = (moveEvent) => {
+      moveEvent.preventDefault();
+      const bounds = calculateManualResizeBounds(dragState, moveEvent);
+      resizeOperationalActivityShape(shape, bounds);
+      if (manualResizeState) manualResizeState.shape = shape;
+      syncManualResizeHandlePosition();
+    };
+
+    const finishDrag = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', finishDrag);
+      manualResizeHandleEl.classList.remove('is-dragging');
+      syncManualResizeHandlePosition();
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', finishDrag);
+  }
+
+  function calculateManualResizeBounds(dragState, moveEvent) {
+    const deltaX = (moveEvent.clientX - dragState.startClientX) / dragState.scale;
+    const deltaY = (moveEvent.clientY - dragState.startClientY) / dragState.scale;
+    const width = Math.max(OPERATIONAL_ACTIVITY_MIN_WIDTH, Math.round(dragState.startWidth + deltaX));
+    const height = Math.max(OPERATIONAL_ACTIVITY_MIN_HEIGHT, Math.round(dragState.startHeight + deltaY));
+    return {
+      x: dragState.shape.x,
+      y: dragState.shape.y,
+      width,
+      height
+    };
   }
 
   async function exportBpmn() {
@@ -264,36 +422,47 @@
     }
 
     const activities = getOperationalActivities().sort(compareElementsByCanvasPosition);
-    const usedNumbers = new Set();
+    const usedNumbers = collectUsedActivityNumbers(activities);
     const assignments = [];
 
     for (const element of activities) {
       const currentCode = getSemanticActivityCode(element);
-      if (currentCode) {
-        usedNumbers.add(currentCode.number);
-        continue;
+      let targetCode = currentCode && currentCode.code;
+      if (!currentCode) {
+        const nextNumber = nextActivityNumber(usedNumbers);
+        usedNumbers.add(nextNumber);
+        targetCode = `${processCode}.${String(nextNumber).padStart(2, '0')}`;
       }
-      const nextNumber = nextActivityNumber(usedNumbers);
-      usedNumbers.add(nextNumber);
+
+      const currentName = element.businessObject.name || '';
+      const nextName = buildActivityLabel(targetCode, currentName, element.id);
+      const shouldUpdateId = element.id !== targetCode;
+      const shouldUpdateName = String(currentName || '').trim() !== nextName;
+
+      if (!shouldUpdateId && !shouldUpdateName) continue;
+
       assignments.push({
         element,
-        oldId: element.id,
-        newCode: `${processCode}.${String(nextNumber).padStart(2, '0')}`
+        targetCode,
+        nextName
       });
     }
 
     if (!assignments.length) {
-      if (!opts.silent) setStatus('Atividades já codificadas', `Todas as atividades já seguem o padrão ${processCode}.NN.`);
+      if (!opts.silent) {
+        setStatus(
+          'Atividades já codificadas',
+          `Todas as atividades já seguem o padrão ${processCode}.NN e já exibem o código no rótulo.`
+        );
+      }
       return { changed: 0 };
     }
 
     const modeling = modeler.get('modeling');
     for (const assignment of assignments) {
-      const currentName = assignment.element.businessObject.name || '';
-      const nextName = buildActivityLabel(assignment.newCode, currentName, assignment.oldId);
       modeling.updateProperties(assignment.element, {
-        id: assignment.newCode,
-        name: nextName
+        id: assignment.targetCode,
+        name: assignment.nextName
       });
     }
 
@@ -315,10 +484,104 @@
     return { code: id, number: Number(match[1]) };
   }
 
+  function collectUsedActivityNumbers(activities) {
+    const usedNumbers = new Set();
+    for (const element of activities || []) {
+      const currentCode = getSemanticActivityCode(element);
+      if (currentCode) usedNumbers.add(currentCode.number);
+    }
+    return usedNumbers;
+  }
+
   function nextActivityNumber(usedNumbers) {
     let number = 1;
     while (usedNumbers.has(number)) number += 1;
     return number;
+  }
+
+  function ensureOperationalActivityShapeSize(element) {
+    if (!modeler || !element || !isOperationalActivityType(element.businessObject && element.businessObject.$type)) {
+      return false;
+    }
+
+    const targetSize = getOperationalActivityTargetSize(element);
+    if (!targetSize) return false;
+
+    const currentWidth = Number.isFinite(element.width) ? element.width : 0;
+    const currentHeight = Number.isFinite(element.height) ? element.height : 0;
+    const targetWidth = Math.max(currentWidth, targetSize.width);
+    const targetHeight = Math.max(currentHeight, targetSize.height);
+
+    if (currentWidth >= targetWidth && currentHeight >= targetHeight) return false;
+
+    resizeOperationalActivityShape(element, {
+      x: element.x,
+      y: element.y,
+      width: targetWidth,
+      height: targetHeight
+    });
+    return true;
+  }
+
+  function resizeOperationalActivityShape(element, bounds) {
+    if (!modeler || !element || !bounds) return false;
+
+    const nextBounds = {
+      x: Number.isFinite(bounds.x) ? bounds.x : element.x,
+      y: Number.isFinite(bounds.y) ? bounds.y : element.y,
+      width: Math.max(OPERATIONAL_ACTIVITY_MIN_WIDTH, Math.round(bounds.width || element.width || OPERATIONAL_ACTIVITY_MIN_WIDTH)),
+      height: Math.max(OPERATIONAL_ACTIVITY_MIN_HEIGHT, Math.round(bounds.height || element.height || OPERATIONAL_ACTIVITY_MIN_HEIGHT))
+    };
+
+    element.x = nextBounds.x;
+    element.y = nextBounds.y;
+    element.width = nextBounds.width;
+    element.height = nextBounds.height;
+
+    const di = element.di || (element.businessObject && element.businessObject.di);
+    if (di && di.bounds) {
+      di.bounds.x = nextBounds.x;
+      di.bounds.y = nextBounds.y;
+      di.bounds.width = nextBounds.width;
+      di.bounds.height = nextBounds.height;
+    }
+
+    const elementRegistry = modeler.get('elementRegistry');
+    const graphicsFactory = modeler.get('graphicsFactory');
+    const eventBus = modeler.get('eventBus');
+    const gfx = elementRegistry && elementRegistry.getGraphics(element);
+
+    if (gfx && graphicsFactory) {
+      graphicsFactory.update('shape', element, gfx);
+    }
+    if (eventBus) {
+      eventBus.fire('elements.changed', { elements: [element] });
+    }
+
+    return true;
+  }
+
+  function getOperationalActivityTargetSize(element) {
+    const label = getOperationalActivityDisplayLabel(element);
+    const width = Math.max(
+      OPERATIONAL_ACTIVITY_BASE_WIDTH,
+      Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, 120 + Math.ceil(label.length * 1.4))
+    );
+    const height = label.length > 72 ? OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT : OPERATIONAL_ACTIVITY_BASE_HEIGHT;
+    return { width, height };
+  }
+
+  function getOperationalActivityDisplayLabel(element) {
+    const businessObject = element && element.businessObject;
+    if (!businessObject) return '';
+
+    const currentName = String(businessObject.name || '').trim();
+    const currentCode = getSemanticActivityCode(element);
+    if (currentCode) {
+      return buildActivityLabel(currentCode.code, currentName, element.id);
+    }
+
+    return currentName || processCode || 'Atividade';
   }
 
   function compareElementsByCanvasPosition(left, right) {
@@ -335,8 +598,10 @@
 
   function buildActivityLabel(code, currentName, oldId) {
     const cleanName = String(currentName || '').trim();
-    if (!cleanName || cleanName === oldId || isGeneratedBpmnId(cleanName)) return defaultActivityNameFromCode(code);
-    return stripActivityCodePrefix(cleanName, code) || defaultActivityNameFromCode(code);
+    const baseName = (!cleanName || cleanName === oldId || isGeneratedBpmnId(cleanName))
+      ? defaultActivityNameFromCode(code)
+      : (stripActivityCodePrefix(cleanName, code) || defaultActivityNameFromCode(code));
+    return `${code} - ${baseName}`;
   }
 
   function isGeneratedBpmnId(value) {

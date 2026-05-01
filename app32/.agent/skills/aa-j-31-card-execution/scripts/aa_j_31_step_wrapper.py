@@ -80,7 +80,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description='Wrapper operacional para materializar e concluir passos em AA.J.31.'
+        description='Wrapper operacional para materializar e concluir passos em AA.J.1.'
     )
     sub = parser.add_subparsers(dest='command', required=True)
 
