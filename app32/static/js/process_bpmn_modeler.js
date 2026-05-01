@@ -61,12 +61,6 @@
 
       modeler = new Modeler({
         container: '#bpmnCanvas',
-        additionalModules: [
-          {
-            __init__: ['app32OperationalActivityResizeRules'],
-            app32OperationalActivityResizeRules: ['type', App32OperationalActivityResizeRules]
-          }
-        ],
         keyboard: {
           bindTo: document
         }
@@ -142,26 +136,6 @@
       setStatus('Erro ao salvar', err.message, true);
     }
   }
-
-  function App32OperationalActivityResizeRules(eventBus, rules) {
-    const allowOperationalResize = (context) => {
-      const shape = context && context.shape;
-      if (!shape || !isOperationalActivityType(shape.businessObject && shape.businessObject.$type)) {
-        return undefined;
-      }
-      return true;
-    };
-
-    rules.addRule('shape.resize', 1500, allowOperationalResize);
-    rules.addRule('shape.create', 1500, (context) => {
-      const shape = context && context.shape;
-      if (!shape || !isOperationalActivityType(shape.businessObject && shape.businessObject.$type)) {
-        return undefined;
-      }
-      return true;
-    });
-  }
-  App32OperationalActivityResizeRules.$inject = ['eventBus', 'rules'];
 
   function installOperationalActivityAutoSizing() {
     if (!modeler) return;
