@@ -134,10 +134,13 @@ def test_bpmn_modeler_keeps_saved_layout_on_import():
 
     assert 'const result = await modeler.importXML(xml);' in content
     assert 'resizeAllOperationalActivities();' not in content
-    assert 'svg_snapshot: svg,' in content
-    assert "downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');" in content
+    assert 'svg_snapshot: enhanceOperationalActivitySvgSnapshot(svg),' in content
+    assert "downloadText(`${safeFileName(processName)}.svg`, enhanceOperationalActivitySvgSnapshot(svg), 'image/svg+xml');" in content
     assert "eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);" in content
     assert "eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);" in content
+    assert 'const OPERATIONAL_ACTIVITY_LABEL_FONT_SCALE = 1.5;' in content
+    assert 'scheduleOperationalActivityLabelRefresh();' in content
+    assert 'scaleSvgFontNode(labelNode, OPERATIONAL_ACTIVITY_LABEL_FONT_SCALE);' in content
 
 
 def test_occurrences_loader_sends_company_scope_and_falls_back_gracefully():
@@ -190,7 +193,7 @@ def test_process_details_template_uses_app32_visual_pattern():
     assert 'indicator-process-card' not in content
 
 
-def test_process_details_template_prefers_svg_snapshot_and_keeps_xml_fallback_for_published_flow():
+def test_process_details_template_retunes_bpmn_task_fonts_in_published_flow():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:
         content = handle.read()
@@ -203,6 +206,10 @@ def test_process_details_template_prefers_svg_snapshot_and_keeps_xml_fallback_fo
     assert 'renderPublishedBpmnViewer(viewerId, bpmnFlow)' in content
     assert 'getPublishedDiagramUsefulBounds(publishedBpmnViewer)' in content
     assert 'canvas.viewbox({' in content
+    assert 'const PUBLISHED_BPMN_TASK_FONT_SCALE = 1.5;' in content
+    assert 'requestAnimationFrame(() => enhancePublishedBpmnTaskLabels(flowContainer));' in content
+    assert 'function enhancePublishedBpmnTaskLabels(host)' in content
+    assert 'growPublishedTaskShapeIfNeeded(group);' in content
     assert 'tightenPublishedSvgViewport(host)' not in content
     assert 'svg.setAttribute(\'viewBox\'' not in content
     assert 'window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler' in content
