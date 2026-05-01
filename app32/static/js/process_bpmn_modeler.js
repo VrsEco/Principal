@@ -11,11 +11,11 @@
   const importInput = document.getElementById('bpmnImportInput');
   const canvasEl = document.getElementById('bpmnCanvas');
   const canvasCardEl = canvasEl ? canvasEl.closest('.bpmn-canvas-card') : root.querySelector('.bpmn-canvas-card');
-  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 140;
-  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 196;
+  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 280;
+  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 392;
   const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
   const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 130;
-  const OPERATIONAL_ACTIVITY_MIN_WIDTH = 120;
+  const OPERATIONAL_ACTIVITY_MIN_WIDTH = 240;
   const OPERATIONAL_ACTIVITY_MIN_HEIGHT = 72;
   let modeler = null;
   let currentDiagram = null;
@@ -51,6 +51,7 @@
 
   async function importXml(xml) {
     const result = await modeler.importXML(xml);
+    resizeAllOperationalActivities();
     const canvas = modeler.get('canvas');
     canvas.zoom('fit-viewport', 'auto');
     currentZoom = 1;
@@ -103,12 +104,13 @@
         modeler.saveXML({ format: true }),
         modeler.saveSVG()
       ]);
+      const enhancedSvg = enhanceOperationalActivitySvgSnapshot(svg);
       const payload = {
         id: currentDiagram && currentDiagram.id,
         name: processName,
         status: status || 'draft',
         bpmn_xml: xml,
-        svg_snapshot: svg,
+        svg_snapshot: enhancedSvg,
         metadata_json: {
           source: 'app32_bpmn_modeler',
           saved_at_client: new Date().toISOString(),
@@ -157,6 +159,11 @@
     eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
     eventBus.on('commandStack.shape.replace.postExecute', resizeContextShape);
     installOperationalActivityAutoSizing._installed = true;
+  }
+
+  function resizeAllOperationalActivities() {
+    const activities = getOperationalActivities();
+    activities.forEach((element) => ensureOperationalActivityShapeSize(element));
   }
 
   function installOperationalActivityManualResize() {
@@ -299,7 +306,7 @@
   async function exportSvg() {
     if (!modeler) return;
     const { svg } = await modeler.saveSVG();
-    downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');
+    downloadText(`${safeFileName(processName)}.svg`, enhanceOperationalActivitySvgSnapshot(svg), 'image/svg+xml');
   }
 
   function downloadText(filename, content, type) {
@@ -563,12 +570,66 @@
 
   function getOperationalActivityTargetSize(element) {
     const label = getOperationalActivityDisplayLabel(element);
+    const baseMeasuredWidth = Math.max(140, Math.min(196, 120 + Math.ceil(label.length * 1.4)));
     const width = Math.max(
       OPERATIONAL_ACTIVITY_BASE_WIDTH,
-      Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, 120 + Math.ceil(label.length * 1.4))
+      Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, baseMeasuredWidth * 2)
     );
     const height = label.length > 72 ? OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT : OPERATIONAL_ACTIVITY_BASE_HEIGHT;
     return { width, height };
+  }
+
+  function enhanceOperationalActivitySvgSnapshot(svgMarkup) {
+    if (!svgMarkup || typeof DOMParser === 'undefined' || typeof XMLSerializer === 'undefined') {
+      return svgMarkup;
+    }
+
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgMarkup, 'image/svg+xml');
+      const taskGroups = Array.from(doc.querySelectorAll('.djs-element.djs-shape[data-element-id]')).filter((node) => {
+        const elementId = String(node.getAttribute('data-element-id') || '').trim();
+        return /\.\d{2}$/.test(elementId);
+      });
+
+      taskGroups.forEach((group) => {
+        const visualRect = group.querySelector('.djs-visual > rect');
+        if (visualRect) {
+          const width = parseFloat(visualRect.getAttribute('width') || '');
+          const x = parseFloat(visualRect.getAttribute('x') || '0');
+          if (Number.isFinite(width) && width > 0) {
+            const targetWidth = Math.max(width, width * 2);
+            const delta = (targetWidth - width) / 2;
+            visualRect.setAttribute('width', String(targetWidth));
+            visualRect.setAttribute('x', String(x - delta));
+
+            group.querySelectorAll('rect.djs-hit').forEach((hitRect) => {
+              hitRect.setAttribute('width', String(targetWidth));
+              hitRect.setAttribute('x', String(x - delta));
+            });
+          }
+        }
+
+        group.querySelectorAll('text.djs-label').forEach((label) => {
+          const style = label.getAttribute('style') || '';
+          const match = style.match(/font-size:\s*([0-9.]+)px/i);
+          if (match) {
+            const nextFontSize = Math.round(parseFloat(match[1]) * 1.5 * 100) / 100;
+            label.setAttribute('style', style.replace(/font-size:\s*[0-9.]+px/i, `font-size: ${nextFontSize}px`));
+          } else {
+            const attrSize = parseFloat(label.getAttribute('font-size') || '');
+            if (Number.isFinite(attrSize) && attrSize > 0) {
+              label.setAttribute('font-size', String(Math.round(attrSize * 1.5 * 100) / 100));
+            }
+          }
+        });
+      });
+
+      return new XMLSerializer().serializeToString(doc);
+    } catch (error) {
+      console.warn('[APP32 BPMN] snapshot enhancement failed', error);
+      return svgMarkup;
+    }
   }
 
   function getOperationalActivityDisplayLabel(element) {

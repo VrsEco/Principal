@@ -290,34 +290,12 @@
       padding: 4px;
     }
 
-    .flow-frame .bpmn-svg.flow-segment-svg {
-      min-height: 520px;
-    }
-
-    .flow-frame .bpmn-svg.flow-segment-svg svg .djs-label,
-    .flow-frame .bpmn-svg.flow-segment-svg svg text.djs-label,
-    .flow-frame .bpmn-svg.flow-segment-svg svg .djs-label text {
-      font-size: 18px !important;
-      font-weight: 650 !important;
-    }
-
-    .flow-frame .bpmn-svg.flow-segment-svg svg .djs-label tspan {
-      font-size: inherit !important;
-      font-weight: inherit !important;
-    }
-
     .flow-frame .bpmn-svg svg {
       display: block;
       width: 100%;
       height: auto;
       min-height: 430px;
       text-rendering: geometricPrecision;
-    }
-
-    .flow-segment-hint {
-      margin-top: 8px;
-      font-size: 11px;
-      color: var(--muted);
     }
 
     .flow-frame .bpmn-svg svg text,
@@ -751,9 +729,6 @@
               <div class="bpmn-svg">
                 {{ first_page.bpmn_svg|safe }}
               </div>
-              <div class="flow-segment-hint">
-                Visão geral do fluxo. Para fluxos extensos, o Book detalha automaticamente ampliações nas páginas seguintes.
-              </div>
             {% elif first_page.flow_is_image and first_page.flow_url %}
               <img src="{{ first_page.flow_url }}" alt="Fluxo do processo">
             {% elif first_page.flow_is_pdf and first_page.flow_url %}
@@ -768,7 +743,6 @@
         </div>
       </div>
     </section>
-    <div id="flowSegmentPages"></div>
 
     <section class="page section-page pop-section">
       <div class="page-inner">
@@ -907,6 +881,8 @@
   </div>
   <script>
     (function () {
+      const BOOK_TASK_ID_PATTERN = /\.\d{2}$/;
+
       function getBpmnTarget(svg) {
         return (
           svg.querySelector('.viewport') ||
@@ -923,37 +899,57 @@
         return box;
       }
 
-      function getBpmnDetailBounds(svg) {
-        const elements = Array.from(svg.querySelectorAll('.djs-element[data-element-id]')).filter((node) => {
-          const elementId = String(node.getAttribute('data-element-id') || '');
-          return !/^Participant_/i.test(elementId) && !/^Lane_/i.test(elementId);
+      function getOperationalTaskGroups(svg) {
+        return Array.from(svg.querySelectorAll('.djs-element.djs-shape[data-element-id]')).filter((node) => {
+          const elementId = String(node.getAttribute('data-element-id') || '').trim();
+          return BOOK_TASK_ID_PATTERN.test(elementId);
         });
+      }
 
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        elements.forEach((node) => {
-          if (typeof node.getBBox !== 'function') return;
-          const box = node.getBBox();
-          if (!box || box.width <= 0 || box.height <= 0) return;
-          minX = Math.min(minX, box.x);
-          minY = Math.min(minY, box.y);
-          maxX = Math.max(maxX, box.x + box.width);
-          maxY = Math.max(maxY, box.y + box.height);
-        });
-
-        if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
-          return null;
+      function scaleInlineFontSize(node, factor) {
+        if (!node) return;
+        const style = node.getAttribute('style') || '';
+        const match = style.match(/font-size:\s*([0-9.]+)px/i);
+        if (match) {
+          const next = Math.round(parseFloat(match[1]) * factor * 100) / 100;
+          node.setAttribute('style', style.replace(/font-size:\s*[0-9.]+px/i, `font-size: ${next}px`));
+          return;
         }
 
-        return {
-          x: minX,
-          y: minY,
-          width: Math.max(1, maxX - minX),
-          height: Math.max(1, maxY - minY)
-        };
+        const attrSize = parseFloat(node.getAttribute('font-size') || '');
+        if (Number.isFinite(attrSize) && attrSize > 0) {
+          node.setAttribute('font-size', String(Math.round(attrSize * factor * 100) / 100));
+        }
+      }
+
+      function retuneBookOperationalTasks(svg) {
+        getOperationalTaskGroups(svg).forEach((group) => {
+          if (group.dataset.bookTaskRetuned === 'done') return;
+
+          const visualRect = group.querySelector('.djs-visual > rect');
+          if (visualRect) {
+            const width = parseFloat(visualRect.getAttribute('width') || '');
+            const x = parseFloat(visualRect.getAttribute('x') || '0');
+            if (Number.isFinite(width) && width > 0) {
+              const nextWidth = width * 2;
+              const delta = (nextWidth - width) / 2;
+              visualRect.setAttribute('width', String(nextWidth));
+              visualRect.setAttribute('x', String(x - delta));
+
+              group.querySelectorAll('rect.djs-hit').forEach((hitRect) => {
+                hitRect.setAttribute('width', String(nextWidth));
+                hitRect.setAttribute('x', String(x - delta));
+              });
+            }
+          }
+
+          group.querySelectorAll('text.djs-label').forEach((label) => {
+            scaleInlineFontSize(label, 1.5);
+            label.style.fontWeight = '650';
+          });
+
+          group.dataset.bookTaskRetuned = 'done';
+        });
       }
 
       function applyOverviewFit(svg, box) {
@@ -971,90 +967,6 @@
         svg.dataset.bookAutoFit = 'done';
       }
 
-      function buildFlowSegmentPages(svg, box) {
-        const host = document.getElementById('flowSegmentPages');
-        if (!host) return [];
-
-        host.innerHTML = '';
-
-        const frame = document.querySelector('.section-flow .flow-frame');
-        const frameWidth = frame ? Math.max(frame.clientWidth || 0, 900) : 900;
-        const frameHeight = frame ? Math.max(frame.clientHeight || 0, 520) : 520;
-        const targetAspect = frameWidth / Math.max(1, frameHeight);
-        const segmentZoomFactor = 0.58;
-        const paddingX = Math.max(24, box.width * 0.03);
-        const paddingY = Math.max(18, box.height * 0.04);
-        const totalHeight = box.height + paddingY * 2;
-        const segmentWidth = totalHeight * targetAspect * segmentZoomFactor;
-        const effectiveWidth = box.width + paddingX * 2;
-
-        if (!Number.isFinite(segmentWidth) || segmentWidth <= 0) return [];
-        if (segmentWidth >= effectiveWidth * 0.96) return [];
-
-        const overlap = Math.max(40, segmentWidth * 0.14);
-        const step = Math.max(120, segmentWidth - overlap);
-        const minX = box.x - paddingX;
-        const maxX = box.x + box.width + paddingX;
-
-        const slices = [];
-        let currentX = minX;
-        let guard = 0;
-        while (currentX < maxX && guard < 12) {
-          let width = Math.min(segmentWidth, maxX - currentX);
-          if (width < segmentWidth && slices.length > 0) {
-            currentX = Math.max(minX, maxX - segmentWidth);
-            width = Math.min(segmentWidth, maxX - currentX);
-          }
-
-          slices.push({
-            x: currentX,
-            y: box.y - paddingY,
-            width: Math.max(1, width),
-            height: Math.max(1, totalHeight)
-          });
-
-          if (currentX + width >= maxX) break;
-          currentX += step;
-          guard += 1;
-        }
-
-        if (slices.length <= 1) return slices;
-
-        slices.slice(1).forEach((slice, index) => {
-          const section = document.createElement('section');
-          section.className = 'page section-flow';
-          section.innerHTML = `
-            <div class="page-inner">
-              <div class="panel flow-panel">
-                <div class="section-header" style="border-bottom:0; padding-bottom:0; margin-bottom:10px;">
-                  <div class="section-title-wrap">
-                    <h2>Fluxo do processo - detalhe ${index + 2}/${slices.length}</h2>
-                    <p>Ampliação automática do diagrama para preservar a legibilidade das atividades.</p>
-                  </div>
-                </div>
-                <div class="flow-frame">
-                  <div class="bpmn-svg flow-segment-svg"></div>
-                </div>
-              </div>
-            </div>
-          `;
-
-          const segmentSvgHost = section.querySelector('.flow-segment-svg');
-          const segmentSvg = svg.cloneNode(true);
-          segmentSvg.removeAttribute('data-book-auto-fit');
-          segmentSvg.setAttribute(
-            'viewBox',
-            [slice.x, slice.y, slice.width, slice.height].join(' ')
-          );
-          segmentSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          segmentSvg.dataset.bookSegment = String(index + 1);
-          segmentSvgHost.appendChild(segmentSvg);
-          host.appendChild(section);
-        });
-
-        return slices;
-      }
-
       function prepareBpmnBookFlow() {
         const overviewWrapper = document.querySelector('.section-flow .bpmn-svg');
         if (!overviewWrapper) return;
@@ -1062,29 +974,11 @@
         if (!svg) return;
 
         try {
-          const overviewBox = getBpmnBounds(svg);
-          if (!overviewBox) return;
-          const detailBox = getBpmnDetailBounds(svg) || overviewBox;
-          const slices = buildFlowSegmentPages(svg, detailBox);
-          const title = document.querySelector('.section-flow .section-title-wrap h2');
-          const subtitle = document.querySelector('.section-flow .section-title-wrap p');
-
-          if (Array.isArray(slices) && slices.length > 1) {
-            const firstSlice = slices[0];
-            overviewWrapper.classList.add('flow-segment-svg');
-            svg.setAttribute(
-              'viewBox',
-              [firstSlice.x, firstSlice.y, firstSlice.width, firstSlice.height].join(' ')
-            );
-            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            svg.dataset.bookAutoFit = 'done';
-
-            if (title) title.textContent = `Fluxo do processo - detalhe 1/${slices.length}`;
-            if (subtitle) {
-              subtitle.textContent = 'Ampliação automática do diagrama para preservar a legibilidade das atividades.';
-            }
-          } else if (svg.dataset.bookAutoFit !== 'done') {
-            applyOverviewFit(svg, overviewBox);
+          retuneBookOperationalTasks(svg);
+          const box = getBpmnBounds(svg);
+          if (!box) return;
+          if (svg.dataset.bookAutoFit !== 'done') {
+            applyOverviewFit(svg, box);
           }
         } catch (error) {
           console.warn('Falha ao preparar fluxo BPMN do Book:', error);
