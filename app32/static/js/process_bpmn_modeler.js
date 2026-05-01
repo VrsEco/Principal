@@ -269,31 +269,46 @@
 
     for (const element of activities) {
       const currentCode = getSemanticActivityCode(element);
+      let targetCode = currentCode && currentCode.code;
       if (currentCode) {
         usedNumbers.add(currentCode.number);
+      } else {
+        const nextNumber = nextActivityNumber(usedNumbers);
+        usedNumbers.add(nextNumber);
+        targetCode = `${processCode}.${String(nextNumber).padStart(2, '0')}`;
+      }
+
+      const currentName = element.businessObject.name || '';
+      const nextName = buildActivityLabel(targetCode, currentName, element.id);
+      const shouldUpdateId = element.id !== targetCode;
+      const shouldUpdateName = String(currentName || '').trim() !== nextName;
+
+      if (!shouldUpdateId && !shouldUpdateName) {
         continue;
       }
-      const nextNumber = nextActivityNumber(usedNumbers);
-      usedNumbers.add(nextNumber);
+
       assignments.push({
         element,
-        oldId: element.id,
-        newCode: `${processCode}.${String(nextNumber).padStart(2, '0')}`
+        targetCode,
+        nextName
       });
     }
 
     if (!assignments.length) {
-      if (!opts.silent) setStatus('Atividades já codificadas', `Todas as atividades já seguem o padrão ${processCode}.NN.`);
+      if (!opts.silent) {
+        setStatus(
+          'Atividades já codificadas',
+          `Todas as atividades já seguem o padrão ${processCode}.NN e já exibem o código no rótulo.`
+        );
+      }
       return { changed: 0 };
     }
 
     const modeling = modeler.get('modeling');
     for (const assignment of assignments) {
-      const currentName = assignment.element.businessObject.name || '';
-      const nextName = buildActivityLabel(assignment.newCode, currentName, assignment.oldId);
       modeling.updateProperties(assignment.element, {
-        id: assignment.newCode,
-        name: nextName
+        id: assignment.targetCode,
+        name: assignment.nextName
       });
     }
 
@@ -335,8 +350,10 @@
 
   function buildActivityLabel(code, currentName, oldId) {
     const cleanName = String(currentName || '').trim();
-    if (!cleanName || cleanName === oldId || isGeneratedBpmnId(cleanName)) return defaultActivityNameFromCode(code);
-    return stripActivityCodePrefix(cleanName, code) || defaultActivityNameFromCode(code);
+    const baseName = (!cleanName || cleanName === oldId || isGeneratedBpmnId(cleanName))
+      ? defaultActivityNameFromCode(code)
+      : (stripActivityCodePrefix(cleanName, code) || defaultActivityNameFromCode(code));
+    return `${code} - ${baseName}`;
   }
 
   function isGeneratedBpmnId(value) {
