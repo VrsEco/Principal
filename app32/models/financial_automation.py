@@ -221,6 +221,7 @@ class FinancialAutomationRecord(db.Model):
     amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
     competence_date = db.Column(db.Date, index=True)
     due_date = db.Column(db.Date, index=True)
+    settlement_date = db.Column(db.Date, index=True)
     confidence_score = db.Column(db.Numeric(5, 4))
     validation_notes = db.Column(db.Text)
     extracted_fields_json = db.Column(JSONB, nullable=False, default=dict)
@@ -267,6 +268,7 @@ class FinancialAutomationRecord(db.Model):
             "amount": float(self.amount or 0),
             "competence_date": self.competence_date.isoformat() if self.competence_date else None,
             "due_date": self.due_date.isoformat() if self.due_date else None,
+            "settlement_date": self.settlement_date.isoformat() if self.settlement_date else None,
             "confidence_score": float(self.confidence_score) if self.confidence_score is not None else None,
             "validation_notes": self.validation_notes,
             "extracted_fields_json": self.extracted_fields_json or {},

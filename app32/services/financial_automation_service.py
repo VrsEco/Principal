@@ -2200,6 +2200,12 @@ class FinancialAutomationService:
         merged = data.model_dump(exclude_unset=True)
         if merged.get("status") == "generated":
             return None, "Status Gerada só pode ser definido pelo processamento oficial da Central."
+        next_settlement_state = merged.get("settlement_state", item.settlement_state)
+        next_settlement_date = merged.get("settlement_date", item.settlement_date)
+        if next_settlement_state == "open":
+            merged["settlement_date"] = None
+        elif next_settlement_state == "settled" and next_settlement_date is None:
+            merged["settlement_date"] = item.due_date or item.competence_date or item.issue_date or datetime.utcnow().date()
         reference_error = FinancialAutomationService._validate_catalog_links(
             company_id=company_id,
             bank_account_id=merged.get("bank_account_id", item.bank_account_id),
@@ -2278,6 +2284,11 @@ class FinancialAutomationService:
                 if data.status == "validated":
                     item.validated_by_user_id = performed_by_user_id
                     item.validated_at = datetime.utcnow()
+                    if item.settlement_state == "settled" and not item.settlement_date:
+                        item.settlement_date = item.due_date or item.competence_date or item.issue_date or datetime.utcnow().date()
+                elif data.status != "generated":
+                    item.generated_by_user_id = None
+                    item.generated_at = None
                 FinancialAutomationService._append_history(
                     company_id=data.company_id,
                     record_id=item.id,
@@ -2383,7 +2394,7 @@ class FinancialAutomationService:
                 "financial_entry_id": entry.id,
                 "settlement_type": "manual",
                 "settlement_status": "posted",
-                "settlement_date": record.due_date or record.competence_date or datetime.utcnow().date(),
+                "settlement_date": record.settlement_date or record.due_date or record.competence_date or datetime.utcnow().date(),
                 "bank_account_id": record.bank_account_id,
                 "principal_amount": Decimal(str(record.amount or 0)),
                 "interest_amount": Decimal("0"),

@@ -120,6 +120,7 @@ class FinancialAutomationRecordCreateInput(BaseModel):
     amount: Decimal = Field(..., ge=0)
     competence_date: Optional[date] = None
     due_date: Optional[date] = None
+    settlement_date: Optional[date] = None
     confidence_score: Optional[Decimal] = Field(None, ge=0, le=1)
     validation_notes: Optional[str] = None
     extracted_fields_json: Dict[str, Any] = Field(default_factory=dict)
@@ -170,6 +171,7 @@ class FinancialAutomationRecordUpdateInput(BaseModel):
     amount: Optional[Decimal] = Field(None, ge=0)
     competence_date: Optional[date] = None
     due_date: Optional[date] = None
+    settlement_date: Optional[date] = None
     confidence_score: Optional[Decimal] = Field(None, ge=0, le=1)
     validation_notes: Optional[str] = None
     extracted_fields_json: Optional[Dict[str, Any]] = None
