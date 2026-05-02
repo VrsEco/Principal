@@ -701,8 +701,9 @@
                 })).filter(p => p.name)
             };
         });
+        const sanitizedProducts = products.map(({ id, ...product }) => product);
         const resp = await fetch('/api/plans/{{ plan.id }}/implantation/model?company_id={{ company.id }}', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments, products })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments, products: sanitizedProducts })
         });
         if (resp.ok) alert('Salvo com sucesso!'); else alert('Erro ao salvar: Verifique os campos.');
     }
