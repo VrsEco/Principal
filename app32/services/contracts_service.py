@@ -30,6 +30,7 @@ from models.financial import (
     FinancialCounterparty,
     FinancialPaymentMethod,
 )
+from services.contracts_catalog_service import ContractsCatalogService
 
 
 class ContractService:
@@ -533,10 +534,11 @@ class ContractService:
                 ContractCatalogItem.id == catalog_item_id,
                 ContractCatalogItem.company_id == contract.company_id,
                 ContractCatalogItem.deleted_at.is_(None),
-                ContractCatalogItem.accepts_contracting.is_(True),
             ).first()
             if not catalog_item:
                 raise ValueError("Item mestre não encontrado para este contrato.")
+            if not ContractsCatalogService._is_selectable_level(catalog_item):
+                raise ValueError("Somente itens do catálogo podem ser utilizados no contrato.")
 
         description = ContractService._normalize_text(payload.get("description")) or (catalog_item.name if catalog_item else "Item contratual")
         item_code = ContractService._normalize_text(payload.get("item_code")) or (catalog_item.code if catalog_item else None)

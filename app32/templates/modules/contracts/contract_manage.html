@@ -110,7 +110,7 @@
                                 <option value="{{ item.id }}">{{ item.code }} · {{ item.name }} · {{ 'Serviço' if item.item_kind == 'service' else 'Produto' }}</option>
                                 {% endfor %}
                             </select>
-                            <small class="field-hint">Use o catálogo mestre para reaproveitar serviços e produtos em contratos, propostas, fiscal e futuras integrações.</small>
+                            <small class="field-hint">A lista exibe apenas itens folha do catálogo mestre. Grupos e sub-grupos são estruturais e não entram no contrato.</small>
                         </label>
                         <label><span>Código</span><input type="text" name="item_code"></label>
                         <label><span>Tipo</span><input type="text" name="item_type"></label>

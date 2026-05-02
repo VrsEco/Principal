@@ -8,6 +8,8 @@ from schemas.contracts import ContractCatalogItemInput, ContractCatalogItemUpdat
 
 
 class ContractsCatalogService:
+    MAX_DEPTH = 2
+
     @staticmethod
     def _normalize_bool(value: object) -> bool:
         if isinstance(value, bool):
@@ -58,6 +60,73 @@ class ContractsCatalogService:
         ).first()
 
     @staticmethod
+    def _get_depth(item: Optional[ContractCatalogItem]) -> int:
+        depth = 0
+        current = item
+        while current and current.parent_id:
+            depth += 1
+            current = ContractsCatalogService._resolve_parent(current.company_id, current.parent_id)
+        return depth
+
+    @staticmethod
+    def _get_level_key(item: Optional[ContractCatalogItem]) -> str:
+        depth = ContractsCatalogService._get_depth(item)
+        if depth <= 0:
+            return "group"
+        if depth == 1:
+            return "subgroup"
+        return "item"
+
+    @staticmethod
+    def get_level_label(item: Optional[ContractCatalogItem]) -> str:
+        labels = {
+            "group": "Grupo",
+            "subgroup": "Sub-Grupo",
+            "item": "Item",
+        }
+        return labels[ContractsCatalogService._get_level_key(item)]
+
+    @staticmethod
+    def _count_descendant_levels(item: Optional[ContractCatalogItem]) -> int:
+        if not item:
+            return 0
+        children = ContractCatalogItem.query.filter(
+            ContractCatalogItem.parent_id == item.id,
+            ContractCatalogItem.company_id == item.company_id,
+            ContractCatalogItem.deleted_at.is_(None),
+        ).all()
+        if not children:
+            return 0
+        return 1 + max(ContractsCatalogService._count_descendant_levels(child) for child in children)
+
+    @staticmethod
+    def _is_selectable_level(item: Optional[ContractCatalogItem]) -> bool:
+        return ContractsCatalogService._get_level_key(item) == "item"
+
+    @staticmethod
+    def _validate_hierarchy(company_id: int, parent: Optional[ContractCatalogItem], item: Optional[ContractCatalogItem] = None) -> int:
+        parent_depth = ContractsCatalogService._get_depth(parent) if parent else -1
+        new_depth = parent_depth + 1
+        if new_depth > ContractsCatalogService.MAX_DEPTH:
+            raise ValueError("A estrutura permite somente Grupo, Sub-Grupo e Item.")
+        subtree_depth = ContractsCatalogService._count_descendant_levels(item) if item else 0
+        if new_depth + subtree_depth > ContractsCatalogService.MAX_DEPTH:
+            raise ValueError("A movimentação excede a hierarquia permitida de Grupo, Sub-Grupo e Item.")
+        return new_depth
+
+    @staticmethod
+    def list_parent_candidates(company_id: int, selected_item_id: Optional[int] = None):
+        candidates = ContractsCatalogService.list_items(company_id)
+        filtered = []
+        for item in candidates:
+            if selected_item_id and item.id == selected_item_id:
+                continue
+            if ContractsCatalogService._get_level_key(item) == "item":
+                continue
+            filtered.append(item)
+        return filtered
+
+    @staticmethod
     def _would_create_cycle(company_id: int, item_id: Optional[int], parent_id: Optional[int]) -> bool:
         if not item_id or not parent_id:
             return False
@@ -86,16 +155,16 @@ class ContractsCatalogService:
 
     @staticmethod
     def list_selectable_items(company_id: int):
-        return (
+        items = (
             ContractCatalogItem.query.filter(
                 ContractCatalogItem.company_id == company_id,
                 ContractCatalogItem.deleted_at.is_(None),
                 ContractCatalogItem.is_active.is_(True),
-                ContractCatalogItem.accepts_contracting.is_(True),
             )
             .order_by(ContractCatalogItem.code.asc(), ContractCatalogItem.name.asc())
             .all()
         )
+        return [item for item in items if ContractsCatalogService._is_selectable_level(item)]
 
     @staticmethod
     def get_item(company_id: int, item_id: int) -> Optional[ContractCatalogItem]:
@@ -120,6 +189,8 @@ class ContractsCatalogService:
             children = sorted(children_map.get(item.id, []), key=lambda entry: (entry.code or "", entry.name or ""))
             return {
                 "item": item,
+                "level_label": ContractsCatalogService.get_level_label(item),
+                "is_selectable": ContractsCatalogService._is_selectable_level(item),
                 "children": [build_node(child) for child in children],
                 "child_count": len(children),
             }
@@ -136,6 +207,7 @@ class ContractsCatalogService:
         parent = ContractsCatalogService._resolve_parent(data["company_id"], data.get("parent_id"))
         if data.get("parent_id") and not parent:
             raise ValueError("Item pai não encontrado na empresa.")
+        ContractsCatalogService._validate_hierarchy(data["company_id"], parent)
 
         suffix = data.get("code_suffix") or (ContractsCatalogService._next_root_suffix(data["company_id"]) if parent is None else None)
         if parent is not None and not suffix:
@@ -158,10 +230,11 @@ class ContractsCatalogService:
             item_kind=data["item_kind"],
             description=data.get("description"),
             unit_code=data.get("unit_code"),
-            accepts_contracting=data["accepts_contracting"],
+            accepts_contracting=False,
             is_active=data["is_active"],
             metadata_json=dict(data.get("metadata_json") or {}),
         )
+        record.accepts_contracting = ContractsCatalogService._is_selectable_level(record)
         db.session.add(record)
         db.session.commit()
         return record
@@ -178,6 +251,7 @@ class ContractsCatalogService:
         parent = ContractsCatalogService._resolve_parent(item.company_id, new_parent_id)
         if new_parent_id and not parent:
             raise ValueError("Item pai não encontrado na empresa.")
+        ContractsCatalogService._validate_hierarchy(item.company_id, parent, item)
 
         if "code_suffix" in data:
             suffix = data.get("code_suffix") or None
@@ -205,12 +279,11 @@ class ContractsCatalogService:
             item.description = data["description"]
         if "unit_code" in data:
             item.unit_code = data["unit_code"]
-        if "accepts_contracting" in data and data["accepts_contracting"] is not None:
-            item.accepts_contracting = data["accepts_contracting"]
         if "is_active" in data and data["is_active"] is not None:
             item.is_active = data["is_active"]
         if "metadata_json" in data and data["metadata_json"] is not None:
             item.metadata_json = dict(data["metadata_json"] or {})
+        item.accepts_contracting = ContractsCatalogService._is_selectable_level(item)
         db.session.commit()
         return item
 

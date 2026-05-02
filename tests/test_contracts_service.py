@@ -160,15 +160,79 @@ def test_contracts_catalog_compose_code_supports_root_and_child():
     assert ContractsCatalogService._compose_code("001", "010") == "001.010"
 
 
+def test_contracts_catalog_level_labels_follow_group_subgroup_item():
+    group = SimpleNamespace(company_id=9, parent_id=None)
+    subgroup = SimpleNamespace(company_id=9, parent_id=10)
+    item = SimpleNamespace(company_id=9, parent_id=11)
+
+    lookup = {10: group, 11: subgroup}
+    original = ContractsCatalogService._resolve_parent
+    ContractsCatalogService._resolve_parent = staticmethod(lambda company_id, parent_id: lookup.get(parent_id))
+    try:
+        assert ContractsCatalogService.get_level_label(group) == "Grupo"
+        assert ContractsCatalogService.get_level_label(subgroup) == "Sub-Grupo"
+        assert ContractsCatalogService.get_level_label(item) == "Item"
+        assert ContractsCatalogService._is_selectable_level(group) is False
+        assert ContractsCatalogService._is_selectable_level(subgroup) is False
+        assert ContractsCatalogService._is_selectable_level(item) is True
+    finally:
+        ContractsCatalogService._resolve_parent = original
+
+
+def test_contracts_catalog_validate_hierarchy_blocks_fourth_level(monkeypatch):
+    group = SimpleNamespace(id=1, company_id=9, parent_id=None)
+    subgroup = SimpleNamespace(id=2, company_id=9, parent_id=1)
+    item = SimpleNamespace(id=3, company_id=9, parent_id=2)
+
+    lookup = {1: group, 2: subgroup, 3: item}
+    monkeypatch.setattr(ContractsCatalogService, "_resolve_parent", staticmethod(lambda company_id, parent_id: lookup.get(parent_id)))
+    monkeypatch.setattr(ContractsCatalogService, "_count_descendant_levels", staticmethod(lambda *_args, **_kwargs: 0))
+
+    with pytest.raises(ValueError):
+        ContractsCatalogService._validate_hierarchy(9, item)
+
+
+def test_list_selectable_items_returns_only_item_level(monkeypatch):
+    group = SimpleNamespace(id=1, company_id=9, parent_id=None, code="001", name="Grupo", is_active=True)
+    subgroup = SimpleNamespace(id=2, company_id=9, parent_id=1, code="001.001", name="Sub", is_active=True)
+    item = SimpleNamespace(id=3, company_id=9, parent_id=2, code="001.001.001", name="Item", is_active=True)
+    lookup = {1: group, 2: subgroup}
+
+    class _Query:
+        def filter(self, *_args, **_kwargs):
+            return self
+
+        def order_by(self, *_args, **_kwargs):
+            return self
+
+        def all(self):
+            return [group, subgroup, item]
+
+    class _Model:
+        query = _Query()
+        company_id = object()
+        deleted_at = SimpleNamespace(is_=lambda *_args, **_kwargs: None)
+        is_active = SimpleNamespace(is_=lambda *_args, **_kwargs: None)
+        code = SimpleNamespace(asc=lambda: None)
+        name = SimpleNamespace(asc=lambda: None)
+
+    monkeypatch.setattr("services.contracts_catalog_service.ContractCatalogItem", _Model)
+    monkeypatch.setattr(ContractsCatalogService, "_resolve_parent", staticmethod(lambda company_id, parent_id: lookup.get(parent_id)))
+
+    items = ContractsCatalogService.list_selectable_items(9)
+    assert [entry.id for entry in items] == [3]
+
+
 def test_add_contract_item_uses_catalog_defaults(monkeypatch):
     catalog_item = SimpleNamespace(
         id=55,
         company_id=9,
-        code="001.010",
+        code="001.010.003",
         name="Consultoria Estratégica",
         item_kind="service",
         unit_code="H",
         accepts_contracting=True,
+        parent_id=10,
     )
 
     class _Query:
@@ -186,6 +250,7 @@ def test_add_contract_item_uses_catalog_defaults(monkeypatch):
         accepts_contracting = SimpleNamespace(is_=lambda *_args, **_kwargs: None)
 
     monkeypatch.setattr("services.contracts_service.ContractCatalogItem", _CatalogModel)
+    monkeypatch.setattr("services.contracts_service.ContractsCatalogService._is_selectable_level", staticmethod(lambda item: True))
     monkeypatch.setattr("services.contracts_service.db.session.add", lambda *_args, **_kwargs: None)
     monkeypatch.setattr("services.contracts_service.db.session.commit", lambda *_args, **_kwargs: None)
 
@@ -196,7 +261,42 @@ def test_add_contract_item_uses_catalog_defaults(monkeypatch):
     )
 
     assert item.contract_catalog_item_id == 55
-    assert item.item_code == "001.010"
+    assert item.item_code == "001.010.003"
     assert item.item_type == "service"
     assert item.description == "Consultoria Estratégica"
     assert item.unit_code == "H"
+
+
+def test_add_contract_item_blocks_group_or_subgroup_catalog(monkeypatch):
+    catalog_item = SimpleNamespace(
+        id=56,
+        company_id=9,
+        code="001.010",
+        name="Estrutura",
+        item_kind="service",
+        unit_code=None,
+        parent_id=1,
+    )
+
+    class _Query:
+        def filter(self, *_args, **_kwargs):
+            return self
+
+        def first(self):
+            return catalog_item
+
+    class _CatalogModel:
+        query = _Query()
+        id = object()
+        company_id = object()
+        deleted_at = SimpleNamespace(is_=lambda *_args, **_kwargs: None)
+
+    monkeypatch.setattr("services.contracts_service.ContractCatalogItem", _CatalogModel)
+    monkeypatch.setattr("services.contracts_service.ContractsCatalogService._is_selectable_level", staticmethod(lambda item: False))
+
+    contract = SimpleNamespace(company_id=9, id=77)
+    with pytest.raises(ValueError):
+        ContractService.add_contract_item(
+            contract=contract,
+            payload={"contract_catalog_item_id": "56", "quantity": "1", "unit_price": "10,00"},
+        )

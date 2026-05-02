@@ -112,7 +112,6 @@ def contracts_items_catalog():
                     "item_kind": request.form.get("item_kind"),
                     "description": request.form.get("description"),
                     "unit_code": request.form.get("unit_code"),
-                    "accepts_contracting": bool(request.form.get("accepts_contracting")),
                     "is_active": bool(request.form.get("is_active")),
                     "metadata_json": {
                         "sku": request.form.get("sku") or None,
@@ -163,8 +162,10 @@ def contracts_items_catalog():
         company_id=company.id,
         catalog_tree=ContractsCatalogService.build_tree(company.id),
         items=items,
+        parent_candidates=ContractsCatalogService.list_parent_candidates(company.id, selected_item.id if selected_item else None),
         selected_item=selected_item,
         selected_parent=selected_parent,
+        level_label=ContractsCatalogService.get_level_label,
     )
 
 

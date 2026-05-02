@@ -11,16 +11,18 @@
 {% endblock %}
 
 {% block workspace_content %}
+{% set current_parent = selected_item.parent if selected_item and selected_item.parent else selected_parent %}
+{% set form_level = level_label(selected_item) if selected_item else ('Item' if current_parent and current_parent.parent_id else ('Sub-Grupo' if current_parent else 'Grupo')) %}
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
             <p class="eyebrow">Catálogo mestre</p>
-            <h1>Itens e subitens contratuais</h1>
-            <p class="subtitle">Base única para serviços e produtos reutilizados em contratos, propostas, fiscal e futuras integrações com estoque.</p>
+            <h1>Grupos, sub-grupos e itens contratuais</h1>
+            <p class="subtitle">Estrutura hierárquica no padrão do plano de contas. Apenas o nível Item pode ser utilizado em contratos e demais fluxos operacionais.</p>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Voltar</a>
-            <a class="btn btn-primary" href="/contracts/catalogs/items?company_id={{ company_id }}">Novo item raiz</a>
+            <a class="btn btn-primary" href="/contracts/catalogs/items?company_id={{ company_id }}">Novo grupo</a>
         </div>
     </header>
 
@@ -40,7 +42,7 @@
                                href="/contracts/catalogs/items?company_id={{ company_id }}&item_id={{ node.item.id }}">
                                 <div>
                                     <strong>{{ node.item.code }} · {{ node.item.name }}</strong>
-                                    <small>{{ 'Serviço' if node.item.item_kind == 'service' else 'Produto' }} · {{ 'Contratável' if node.item.accepts_contracting else 'Estrutural' }}</small>
+                                    <small>{{ node.level_label }} · {{ 'Serviço' if node.item.item_kind == 'service' else 'Produto' }}{% if node.is_selectable %} · Utilizável em contrato{% endif %}</small>
                                 </div>
                             </a>
                         </summary>
@@ -69,34 +71,36 @@
                 <input type="hidden" name="item_id" value="{{ selected_item.id if selected_item else '' }}">
                 <div class="panel-header">
                     <div>
-                        <h2>{{ selected_item.code ~ ' · ' ~ selected_item.name if selected_item else 'Novo item mestre' }}</h2>
-                        <small class="field-hint">Cadastre serviços e produtos em árvore, no mesmo conceito de item e subitem do plano de contas.</small>
+                        <h2>{{ selected_item.code ~ ' · ' ~ selected_item.name if selected_item else ('Novo ' ~ form_level) }}</h2>
+                        <small class="field-hint">Hierarquia fixa: Grupo → Sub-Grupo → Item. Somente itens folha podem ser usados em contrato.</small>
                     </div>
                     {% if selected_item %}
                     <div class="page-actions">
-                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&parent_id={{ selected_item.id }}">Novo subitem</a>
+                        {% if level_label(selected_item) == 'Grupo' %}
+                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&parent_id={{ selected_item.id }}">Novo sub-grupo</a>
+                        {% elif level_label(selected_item) == 'Sub-Grupo' %}
+                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&parent_id={{ selected_item.id }}">Novo item</a>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
                 <div class="panel-body form-grid">
                     <label>
-                        <span>Item pai</span>
+                        <span>Nível pai</span>
                         <select name="parent_id">
-                            <option value="">Raiz</option>
-                            {% for item in items %}
-                                {% if not selected_item or item.id != selected_item.id %}
-                                <option value="{{ item.id }}" {% if (selected_item and selected_item.parent_id == item.id) or (not selected_item and selected_parent and selected_parent.id == item.id) %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
-                                {% endif %}
+                            <option value="">Sem pai (Grupo)</option>
+                            {% for item in parent_candidates %}
+                                <option value="{{ item.id }}" {% if (selected_item and selected_item.parent_id == item.id) or (not selected_item and selected_parent and selected_parent.id == item.id) %}selected{% endif %}>{{ item.code }} · {{ item.name }} · {{ level_label(item) }}</option>
                             {% endfor %}
                         </select>
                     </label>
                     <label>
                         <span>Complemento do código</span>
                         <input type="text" name="code_suffix" placeholder="001 ou 010" value="{{ selected_item.code.split('.')[-1] if selected_item else '' }}">
-                        <small class="field-hint">Para raiz, se vazio, o sistema gera a próxima sequência. Para subitem, informe o complemento.</small>
+                        <small class="field-hint">Para Grupo, se vazio, o sistema gera a próxima sequência. Para Sub-Grupo e Item, informe o complemento.</small>
                     </label>
                     <label class="full-width">
-                        <span>Nome do item</span>
+                        <span>Nome do {{ form_level|lower }}</span>
                         <input type="text" name="name" value="{{ selected_item.name if selected_item else '' }}" required>
                     </label>
                     <label>
@@ -135,11 +139,6 @@
                         <input type="text" name="cfop" value="{{ (selected_item.metadata_json or {}).get('cfop', '') if selected_item else '' }}">
                     </label>
                     <label class="checkbox-card">
-                        <strong>Selecionável em contrato</strong>
-                        <span class="field-hint">Desmarque para itens estruturais/pais.</span>
-                        <input type="checkbox" name="accepts_contracting" {% if not selected_item or selected_item.accepts_contracting %}checked{% endif %}>
-                    </label>
-                    <label class="checkbox-card">
                         <strong>Ativo</strong>
                         <span class="field-hint">Permite reutilização operacional.</span>
                         <input type="checkbox" name="is_active" {% if not selected_item or selected_item.is_active %}checked{% endif %}>
@@ -153,6 +152,14 @@
                         <span>Notas fiscais / governança</span>
                         <textarea name="fiscal_notes" rows="3">{{ (selected_item.metadata_json or {}).get('fiscal_notes', '') if selected_item else '' }}</textarea>
                     </label>
+                    <div class="info-card full-width">
+                        <strong>Regra operacional</strong>
+                        <div class="info-grid">
+                            <span><strong>Grupo:</strong> nível macro de oferta.</span>
+                            <span><strong>Sub-Grupo:</strong> organização intermediária.</span>
+                            <span><strong>Item:</strong> único nível permitido para uso em contratos, faturamento, propostas e integrações futuras.</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="panel-footer">
                     <div class="page-actions">
