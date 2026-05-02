@@ -12,7 +12,9 @@
 
 {% block workspace_content %}
 {% set current_parent = selected_item.parent if selected_item and selected_item.parent else selected_parent %}
-{% set form_level = level_label(selected_item) if selected_item else ('Item' if current_parent and current_parent.parent_id else ('Sub-Grupo' if current_parent else 'Grupo')) %}
+{% set form_level = level_label(selected_item) if selected_item else level_label_by_parent(current_parent) %}
+{% set current_kind = selected_item.item_kind if selected_item else 'service' %}
+{% set metadata = (selected_item.metadata_json or {}) if selected_item else {} %}
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
@@ -103,11 +105,12 @@
                         <span>Nome do {{ form_level|lower }}</span>
                         <input type="text" name="name" value="{{ selected_item.name if selected_item else '' }}" required>
                     </label>
+                    {% if form_level == 'Item' %}
                     <label>
                         <span>Natureza</span>
-                        <select name="item_kind">
-                            <option value="service" {% if not selected_item or selected_item.item_kind == 'service' %}selected{% endif %}>Serviço</option>
-                            <option value="product" {% if selected_item and selected_item.item_kind == 'product' %}selected{% endif %}>Produto</option>
+                        <select name="item_kind" data-item-kind-selector>
+                            <option value="service" {% if current_kind == 'service' %}selected{% endif %}>Serviço</option>
+                            <option value="product" {% if current_kind == 'product' %}selected{% endif %}>Produto</option>
                         </select>
                     </label>
                     <label>
@@ -118,48 +121,142 @@
                         <span>Descrição operacional</span>
                         <textarea name="description" rows="3">{{ selected_item.description if selected_item else '' }}</textarea>
                     </label>
+
+                    <div class="info-card full-width">
+                        <strong>Fiscal da Reforma Tributária</strong>
+                        <div class="info-grid">
+                            <span><strong>CST IBS/CBS:</strong> código de situação tributária.</span>
+                            <span><strong>cClassTrib:</strong> classificação tributária oficial do IBS/CBS.</span>
+                            <span><strong>cPres:</strong> código de crédito presumido, quando aplicável.</span>
+                            <span><strong>IS:</strong> sinalize incidência e a classificação do Imposto Seletivo quando o item estiver sujeito.</span>
+                        </div>
+                    </div>
                     <label>
-                        <span>SKU / referência</span>
-                        <input type="text" name="sku" value="{{ (selected_item.metadata_json or {}).get('sku', '') if selected_item else '' }}">
+                        <span>CST IBS/CBS</span>
+                        <input type="text" name="cst_ibs_cbs" value="{{ metadata.get('cst_ibs_cbs', '') }}" placeholder="Ex.: 000">
                     </label>
                     <label>
-                        <span>Código de serviço</span>
-                        <input type="text" name="service_code" value="{{ (selected_item.metadata_json or {}).get('service_code', '') if selected_item else '' }}">
+                        <span>cClassTrib IBS/CBS</span>
+                        <input type="text" name="cclasstrib" value="{{ metadata.get('cclasstrib', '') }}" placeholder="Código oficial">
                     </label>
                     <label>
-                        <span>NCM</span>
-                        <input type="text" name="ncm" value="{{ (selected_item.metadata_json or {}).get('ncm', '') if selected_item else '' }}">
+                        <span>cPres</span>
+                        <input type="text" name="cpres" value="{{ metadata.get('cpres', '') }}" placeholder="Crédito presumido">
                     </label>
                     <label>
-                        <span>CEST</span>
-                        <input type="text" name="cest" value="{{ (selected_item.metadata_json or {}).get('cest', '') if selected_item else '' }}">
+                        <span>Alíquota CBS (%)</span>
+                        <input type="text" name="aliq_cbs" value="{{ metadata.get('aliq_cbs', '') }}" placeholder="0,00">
                     </label>
                     <label>
-                        <span>CFOP padrão</span>
-                        <input type="text" name="cfop" value="{{ (selected_item.metadata_json or {}).get('cfop', '') if selected_item else '' }}">
+                        <span>Alíquota IBS UF (%)</span>
+                        <input type="text" name="aliq_ibs_uf" value="{{ metadata.get('aliq_ibs_uf', '') }}" placeholder="0,00">
                     </label>
+                    <label>
+                        <span>Alíquota IBS Município (%)</span>
+                        <input type="text" name="aliq_ibs_mun" value="{{ metadata.get('aliq_ibs_mun', '') }}" placeholder="0,00">
+                    </label>
+                    <label class="checkbox-card">
+                        <strong>Sujeito a Imposto Seletivo (IS)</strong>
+                        <span class="field-hint">Use quando houver incidência do IS no item.</span>
+                        <input type="checkbox" name="is_subject" {% if metadata.get('is_subject') %}checked{% endif %}>
+                    </label>
+                    <label>
+                        <span>CST do IS</span>
+                        <input type="text" name="cst_is" value="{{ metadata.get('cst_is', '') }}" placeholder="Código do IS">
+                    </label>
+                    <label>
+                        <span>cClassTrib do IS</span>
+                        <input type="text" name="cclasstrib_is" value="{{ metadata.get('cclasstrib_is', '') }}" placeholder="Classificação do IS">
+                    </label>
+
+                    <div class="full-width" data-item-kind-panel="service" {% if current_kind != 'service' %}hidden{% endif %}>
+                        <div class="info-card">
+                            <strong>Campos de serviço</strong>
+                            <div class="info-grid">
+                                <span><strong>NBS:</strong> nomenclatura de serviços.</span>
+                                <span><strong>LC 116:</strong> item/subitem da lista de serviços.</span>
+                                <span><strong>cIndOp:</strong> indicador da operação de consumo associado ao serviço.</span>
+                            </div>
+                        </div>
+                        <div class="form-grid" style="padding-top: 1rem;">
+                            <label>
+                                <span>Código interno do serviço</span>
+                                <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}">
+                            </label>
+                            <label>
+                                <span>Item/Subitem LC 116</span>
+                                <input type="text" name="service_list_code" value="{{ metadata.get('service_list_code', '') }}" placeholder="Ex.: 1.07">
+                            </label>
+                            <label>
+                                <span>NBS</span>
+                                <input type="text" name="nbs" value="{{ metadata.get('nbs', '') }}" placeholder="Nomenclatura Brasileira de Serviços">
+                            </label>
+                            <label>
+                                <span>cIndOp</span>
+                                <input type="text" name="cindop" value="{{ metadata.get('cindop', '') }}" placeholder="Indicador da operação">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="full-width" data-item-kind-panel="product" {% if current_kind != 'product' %}hidden{% endif %}>
+                        <div class="info-card">
+                            <strong>Campos de produto</strong>
+                            <div class="info-grid">
+                                <span><strong>NCM/SH:</strong> classificação fiscal de mercadoria.</span>
+                                <span><strong>CEST:</strong> segmento sujeito à substituição tributária, quando aplicável.</span>
+                                <span><strong>CFOP:</strong> código fiscal padrão de circulação.</span>
+                            </div>
+                        </div>
+                        <div class="form-grid" style="padding-top: 1rem;">
+                            <label>
+                                <span>SKU / referência</span>
+                                <input type="text" name="sku" value="{{ metadata.get('sku', '') }}">
+                            </label>
+                            <label>
+                                <span>NCM</span>
+                                <input type="text" name="ncm" value="{{ metadata.get('ncm', '') }}">
+                            </label>
+                            <label>
+                                <span>CEST</span>
+                                <input type="text" name="cest" value="{{ metadata.get('cest', '') }}">
+                            </label>
+                            <label>
+                                <span>CFOP padrão</span>
+                                <input type="text" name="cfop" value="{{ metadata.get('cfop', '') }}">
+                            </label>
+                            <label class="checkbox-card">
+                                <strong>Controle de estoque</strong>
+                                <span class="field-hint">Reserva flag para integração com estoque.</span>
+                                <input type="checkbox" name="stock_control" {% if metadata.get('stock_control') %}checked{% endif %}>
+                            </label>
+                        </div>
+                    </div>
+
                     <label class="checkbox-card">
                         <strong>Ativo</strong>
                         <span class="field-hint">Permite reutilização operacional.</span>
                         <input type="checkbox" name="is_active" {% if not selected_item or selected_item.is_active %}checked{% endif %}>
                     </label>
-                    <label class="checkbox-card">
-                        <strong>Controle de estoque</strong>
-                        <span class="field-hint">Reserva flag para futura integração com estoque.</span>
-                        <input type="checkbox" name="stock_control" {% if selected_item and (selected_item.metadata_json or {}).get('stock_control') %}checked{% endif %}>
-                    </label>
                     <label class="full-width">
                         <span>Notas fiscais / governança</span>
-                        <textarea name="fiscal_notes" rows="3">{{ (selected_item.metadata_json or {}).get('fiscal_notes', '') if selected_item else '' }}</textarea>
+                        <textarea name="fiscal_notes" rows="3">{{ metadata.get('fiscal_notes', '') }}</textarea>
                     </label>
+                    {% else %}
+                    <input type="hidden" name="item_kind" value="service">
                     <div class="info-card full-width">
-                        <strong>Regra operacional</strong>
+                        <strong>Cadastro estrutural simplificado</strong>
                         <div class="info-grid">
-                            <span><strong>Grupo:</strong> nível macro de oferta.</span>
-                            <span><strong>Sub-Grupo:</strong> organização intermediária.</span>
-                            <span><strong>Item:</strong> único nível permitido para uso em contratos, faturamento, propostas e integrações futuras.</span>
+                            <span><strong>Grupo:</strong> organiza a oferta macro.</span>
+                            <span><strong>Sub-Grupo:</strong> detalha a organização intermediária.</span>
+                            <span><strong>Campos fiscais e operacionais completos:</strong> aparecem somente no nível Item.</span>
                         </div>
                     </div>
+                    <label class="checkbox-card">
+                        <strong>Ativo</strong>
+                        <span class="field-hint">Permite reutilização estrutural.</span>
+                        <input type="checkbox" name="is_active" {% if not selected_item or selected_item.is_active %}checked{% endif %}>
+                    </label>
+                    {% endif %}
                 </div>
                 <div class="panel-footer">
                     <div class="page-actions">
@@ -193,4 +290,19 @@
 </div>
 
 {% include "modules/contracts/_styles.html" %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selector = document.querySelector('[data-item-kind-selector]');
+    const panels = document.querySelectorAll('[data-item-kind-panel]');
+    if (!selector || !panels.length) return;
+    const syncPanels = () => {
+        const selected = selector.value;
+        panels.forEach((panel) => {
+            panel.hidden = panel.getAttribute('data-item-kind-panel') !== selected;
+        });
+    };
+    selector.addEventListener('change', syncPanels);
+    syncPanels();
+});
+</script>
 {% endblock %}

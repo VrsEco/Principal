@@ -223,6 +223,69 @@ def test_list_selectable_items_returns_only_item_level(monkeypatch):
     assert [entry.id for entry in items] == [3]
 
 
+def test_contracts_catalog_structural_levels_discard_item_fields():
+    item_kind, description, unit_code, metadata = ContractsCatalogService._normalize_item_payload(
+        level_depth=0,
+        item_kind="product",
+        description="Grupo fiscal",
+        unit_code="UN",
+        metadata_json={"ncm": "1234.56.78", "cclasstrib": "000001"},
+    )
+    assert item_kind == "service"
+    assert description is None
+    assert unit_code is None
+    assert metadata == {}
+
+
+def test_contracts_catalog_service_payload_removes_product_only_fields():
+    item_kind, description, unit_code, metadata = ContractsCatalogService._normalize_item_payload(
+        level_depth=2,
+        item_kind="service",
+        description="Consultoria",
+        unit_code="H",
+        metadata_json={
+            "service_list_code": "1.07",
+            "nbs": "123456789",
+            "cclasstrib": "123456",
+            "ncm": "9999",
+            "cest": "111",
+            "stock_control": True,
+        },
+    )
+    assert item_kind == "service"
+    assert description == "Consultoria"
+    assert unit_code == "H"
+    assert metadata["service_list_code"] == "1.07"
+    assert metadata["nbs"] == "123456789"
+    assert metadata["cclasstrib"] == "123456"
+    assert metadata["stock_control"] is False
+    assert "ncm" not in metadata
+    assert "cest" not in metadata
+
+
+def test_contracts_catalog_product_payload_removes_service_only_fields():
+    item_kind, description, unit_code, metadata = ContractsCatalogService._normalize_item_payload(
+        level_depth=2,
+        item_kind="product",
+        description="Licença appliance",
+        unit_code="UN",
+        metadata_json={
+            "sku": "ABC",
+            "ncm": "1234",
+            "service_code": "SVC01",
+            "nbs": "888",
+            "cst_ibs_cbs": "000",
+        },
+    )
+    assert item_kind == "product"
+    assert metadata["sku"] == "ABC"
+    assert metadata["ncm"] == "1234"
+    assert metadata["cst_ibs_cbs"] == "000"
+    assert metadata["stock_control"] is False
+    assert "service_code" not in metadata
+    assert "nbs" not in metadata
+
+
 def test_add_contract_item_uses_catalog_defaults(monkeypatch):
     catalog_item = SimpleNamespace(
         id=55,

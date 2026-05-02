@@ -9,6 +9,31 @@ from schemas.contracts import ContractCatalogItemInput, ContractCatalogItemUpdat
 
 class ContractsCatalogService:
     MAX_DEPTH = 2
+    PRODUCT_METADATA_FIELDS = {
+        "sku",
+        "ncm",
+        "cest",
+        "cfop",
+        "stock_control",
+    }
+    SERVICE_METADATA_FIELDS = {
+        "service_code",
+        "service_list_code",
+        "nbs",
+        "cindop",
+    }
+    RTC_COMMON_METADATA_FIELDS = {
+        "cst_ibs_cbs",
+        "cclasstrib",
+        "cpres",
+        "aliq_cbs",
+        "aliq_ibs_uf",
+        "aliq_ibs_mun",
+        "is_subject",
+        "cst_is",
+        "cclasstrib_is",
+        "fiscal_notes",
+    }
 
     @staticmethod
     def _normalize_bool(value: object) -> bool:
@@ -87,6 +112,16 @@ class ContractsCatalogService:
         return labels[ContractsCatalogService._get_level_key(item)]
 
     @staticmethod
+    def get_level_label_by_parent(parent: Optional[ContractCatalogItem]) -> str:
+        parent_depth = ContractsCatalogService._get_depth(parent) if parent else -1
+        labels = {
+            0: "Grupo",
+            1: "Sub-Grupo",
+            2: "Item",
+        }
+        return labels[parent_depth + 1]
+
+    @staticmethod
     def _count_descendant_levels(item: Optional[ContractCatalogItem]) -> int:
         if not item:
             return 0
@@ -113,6 +148,44 @@ class ContractsCatalogService:
         if new_depth + subtree_depth > ContractsCatalogService.MAX_DEPTH:
             raise ValueError("A movimentação excede a hierarquia permitida de Grupo, Sub-Grupo e Item.")
         return new_depth
+
+    @staticmethod
+    def _clean_metadata_dict(metadata: dict) -> dict:
+        cleaned = {}
+        for key, value in (metadata or {}).items():
+            if isinstance(value, bool):
+                cleaned[key] = value
+                continue
+            text = str(value or "").strip()
+            if text:
+                cleaned[key] = text
+        return cleaned
+
+    @staticmethod
+    def _normalize_item_payload(*, level_depth: int, item_kind: Optional[str], description: Optional[str], unit_code: Optional[str], metadata_json: Optional[dict]) -> tuple[str, Optional[str], Optional[str], dict]:
+        is_item_level = level_depth == ContractsCatalogService.MAX_DEPTH
+        normalized_kind = item_kind if item_kind in {"service", "product"} else "service"
+        if not is_item_level:
+            return "service", None, None, {}
+
+        metadata = ContractsCatalogService._clean_metadata_dict(metadata_json or {})
+        allowed_fields = set(ContractsCatalogService.RTC_COMMON_METADATA_FIELDS)
+        if normalized_kind == "service":
+            allowed_fields.update(ContractsCatalogService.SERVICE_METADATA_FIELDS)
+            metadata["stock_control"] = False
+        else:
+            allowed_fields.update(ContractsCatalogService.PRODUCT_METADATA_FIELDS)
+        sanitized_metadata = {key: metadata[key] for key in allowed_fields if key in metadata}
+        if normalized_kind == "product" and "stock_control" not in sanitized_metadata:
+            sanitized_metadata["stock_control"] = False
+        if normalized_kind == "service":
+            sanitized_metadata["stock_control"] = False
+        return (
+            normalized_kind,
+            ContractsCatalogService._normalize_text(description) or None,
+            ContractsCatalogService._normalize_text(unit_code) or None,
+            sanitized_metadata,
+        )
 
     @staticmethod
     def list_parent_candidates(company_id: int, selected_item_id: Optional[int] = None):
@@ -207,7 +280,7 @@ class ContractsCatalogService:
         parent = ContractsCatalogService._resolve_parent(data["company_id"], data.get("parent_id"))
         if data.get("parent_id") and not parent:
             raise ValueError("Item pai não encontrado na empresa.")
-        ContractsCatalogService._validate_hierarchy(data["company_id"], parent)
+        new_depth = ContractsCatalogService._validate_hierarchy(data["company_id"], parent)
 
         suffix = data.get("code_suffix") or (ContractsCatalogService._next_root_suffix(data["company_id"]) if parent is None else None)
         if parent is not None and not suffix:
@@ -222,17 +295,25 @@ class ContractsCatalogService:
         if existing:
             raise ValueError("Já existe item mestre com este código na empresa.")
 
+        item_kind, description, unit_code, metadata_json = ContractsCatalogService._normalize_item_payload(
+            level_depth=new_depth,
+            item_kind=data["item_kind"],
+            description=data.get("description"),
+            unit_code=data.get("unit_code"),
+            metadata_json=data.get("metadata_json") or {},
+        )
+
         record = ContractCatalogItem(
             company_id=data["company_id"],
             parent_id=parent.id if parent else None,
             code=code,
             name=data["name"],
-            item_kind=data["item_kind"],
-            description=data.get("description"),
-            unit_code=data.get("unit_code"),
+            item_kind=item_kind,
+            description=description,
+            unit_code=unit_code,
             accepts_contracting=False,
             is_active=data["is_active"],
-            metadata_json=dict(data.get("metadata_json") or {}),
+            metadata_json=metadata_json,
         )
         record.accepts_contracting = ContractsCatalogService._is_selectable_level(record)
         db.session.add(record)
@@ -251,7 +332,7 @@ class ContractsCatalogService:
         parent = ContractsCatalogService._resolve_parent(item.company_id, new_parent_id)
         if new_parent_id and not parent:
             raise ValueError("Item pai não encontrado na empresa.")
-        ContractsCatalogService._validate_hierarchy(item.company_id, parent, item)
+        new_depth = ContractsCatalogService._validate_hierarchy(item.company_id, parent, item)
 
         if "code_suffix" in data:
             suffix = data.get("code_suffix") or None
@@ -273,16 +354,19 @@ class ContractsCatalogService:
         item.parent_id = parent.id if parent else None
         if "name" in data and data["name"] is not None:
             item.name = data["name"]
-        if "item_kind" in data and data["item_kind"] is not None:
-            item.item_kind = data["item_kind"]
-        if "description" in data:
-            item.description = data["description"]
-        if "unit_code" in data:
-            item.unit_code = data["unit_code"]
+        item_kind, description, unit_code, metadata_json = ContractsCatalogService._normalize_item_payload(
+            level_depth=new_depth,
+            item_kind=data.get("item_kind", item.item_kind),
+            description=data.get("description", item.description),
+            unit_code=data.get("unit_code", item.unit_code),
+            metadata_json=data.get("metadata_json", item.metadata_json) or {},
+        )
+        item.item_kind = item_kind
+        item.description = description
+        item.unit_code = unit_code
         if "is_active" in data and data["is_active"] is not None:
             item.is_active = data["is_active"]
-        if "metadata_json" in data and data["metadata_json"] is not None:
-            item.metadata_json = dict(data["metadata_json"] or {})
+        item.metadata_json = metadata_json
         item.accepts_contracting = ContractsCatalogService._is_selectable_level(item)
         db.session.commit()
         return item

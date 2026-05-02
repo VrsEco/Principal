@@ -116,9 +116,21 @@ def contracts_items_catalog():
                     "metadata_json": {
                         "sku": request.form.get("sku") or None,
                         "service_code": request.form.get("service_code") or None,
+                        "service_list_code": request.form.get("service_list_code") or None,
+                        "nbs": request.form.get("nbs") or None,
+                        "cindop": request.form.get("cindop") or None,
                         "ncm": request.form.get("ncm") or None,
                         "cest": request.form.get("cest") or None,
                         "cfop": request.form.get("cfop") or None,
+                        "cst_ibs_cbs": request.form.get("cst_ibs_cbs") or None,
+                        "cclasstrib": request.form.get("cclasstrib") or None,
+                        "cpres": request.form.get("cpres") or None,
+                        "aliq_cbs": request.form.get("aliq_cbs") or None,
+                        "aliq_ibs_uf": request.form.get("aliq_ibs_uf") or None,
+                        "aliq_ibs_mun": request.form.get("aliq_ibs_mun") or None,
+                        "is_subject": bool(request.form.get("is_subject")),
+                        "cst_is": request.form.get("cst_is") or None,
+                        "cclasstrib_is": request.form.get("cclasstrib_is") or None,
                         "stock_control": bool(request.form.get("stock_control")),
                         "fiscal_notes": request.form.get("fiscal_notes") or None,
                     },
@@ -166,6 +178,7 @@ def contracts_items_catalog():
         selected_item=selected_item,
         selected_parent=selected_parent,
         level_label=ContractsCatalogService.get_level_label,
+        level_label_by_parent=ContractsCatalogService.get_level_label_by_parent,
     )
 
 
