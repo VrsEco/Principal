@@ -1,6 +1,6 @@
-{% extends "layouts/base.html" %}
+{% extends "modules/plans/base_planning.html" %}
 
-{% block content %}
+{% block planning_content %}
 {% set alignment = implantation_data.alignment|default({}) %}
 {% set model = implantation_data.model|default({}) %}
 {% set execution = implantation_data.execution|default({}) %}
