@@ -127,20 +127,9 @@ class FinancialCatalogService:
 
     @staticmethod
     def _generate_counterparty_code(company_id: int) -> str:
-        last_number = 0
-        codes = (
-            FinancialCounterparty.query.with_entities(FinancialCounterparty.code)
-            .filter(
-                FinancialCounterparty.company_id == company_id,
-                FinancialCounterparty.deleted_at.is_(None),
-            )
-            .all()
-        )
-        for (code,) in codes:
-            text = str(code or "").strip()
-            if text.isdigit():
-                last_number = max(last_number, int(text))
-        return f"{last_number + 1:03d}"
+        from services.contracts_service import ContractService
+
+        return ContractService._next_structured_code(FinancialCounterparty, company_id, "F")
 
     @staticmethod
     def _generate_bank_account_code(company_id: int) -> str:
@@ -286,7 +275,7 @@ class FinancialCatalogService:
         if party is None:
             party = ContractParty(
                 company_id=counterparty.company_id,
-                code=ContractService._next_code(ContractParty, counterparty.company_id, "PART"),
+                code=ContractService._next_structured_code(ContractParty, counterparty.company_id, "F"),
             )
             ContractService.update_party(party=party, payload=payload, user_id=None, is_new=True)
             db.session.add(party)

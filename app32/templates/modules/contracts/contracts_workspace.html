@@ -16,10 +16,9 @@
         <div>
             <p class="eyebrow">Workspace contratual</p>
             <h1>Contratos por cliente</h1>
-            <p class="subtitle">Cada cliente centraliza seus contratos em árvore operacional, no padrão visual do plano de contas.</p>
+            <p class="subtitle">Workspace único para seleção do cliente, navegação colapsável dos contratos e resumo operacional antes do shell completo.</p>
         </div>
         <div class="page-actions">
-            <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Lista plana</a>
             {% if selected_party %}
             <a class="btn btn-primary" href="/contracts/new?company_id={{ company_id }}&party_id={{ selected_party.id }}">Novo contrato para {{ selected_party.name }}</a>
             {% else %}
@@ -39,14 +38,16 @@
                 {% if contract_tree %}
                 <div class="contract-tree">
                     {% for node in contract_tree %}
-                    <div class="contract-tree-node">
-                        <a class="contract-party-card {{ 'active' if selected_party and selected_party.id == node.party.id and not selected_contract }}{{ ' active' if selected_contract and selected_contract.party_id == node.party.id else '' }}"
-                           href="/contracts/new?company_id={{ company_id }}&party_id={{ node.party.id }}">
-                            <div>
-                                <strong>{{ node.party.code }} · {{ node.party.name }}</strong>
-                                <small>{{ node.contract_count }} contrato(s) · {{ node.active_count }} ativo(s)</small>
-                            </div>
-                        </a>
+                    <details class="contract-tree-node" {% if (selected_party and selected_party.id == node.party.id) or (selected_contract and selected_contract.party_id == node.party.id) %}open{% endif %}>
+                        <summary class="contract-tree-summary">
+                            <a class="contract-party-card {{ 'active' if selected_party and selected_party.id == node.party.id and not selected_contract }}{{ ' active' if selected_contract and selected_contract.party_id == node.party.id else '' }}"
+                               href="/contracts/new?company_id={{ company_id }}&party_id={{ node.party.id }}">
+                                <div>
+                                    <strong>{{ node.party.code }} · {{ node.party.name }}</strong>
+                                    <small>{{ node.contract_count }} contrato(s) · {{ node.active_count }} ativo(s)</small>
+                                </div>
+                            </a>
+                        </summary>
                         <div class="contract-tree-children">
                             {% if node.contracts %}
                                 {% for contract in node.contracts %}
@@ -68,7 +69,7 @@
                                 <div class="contract-tree-empty">Nenhum contrato ainda.</div>
                             {% endif %}
                         </div>
-                    </div>
+                    </details>
                     {% endfor %}
                 </div>
                 {% else %}
@@ -88,6 +89,48 @@
                         <small class="field-hint">Resumo operacional do contrato selecionado.</small>
                     </div>
                     <a class="btn btn-secondary" href="/contracts/{{ selected_contract.id }}?company_id={{ company_id }}">Abrir shell completo</a>
+                </div>
+                <div class="panel-body contract-summary-stack">
+                    <section class="summary-kpis">
+                        <article class="stat-card">
+                            <span class="stat-label">Status</span>
+                            <strong>{{ selected_contract_summary.status_label }}</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span class="stat-label">Itens do contrato</span>
+                            <strong>{{ selected_contract_summary.contract_item_count }}</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span class="stat-label">Itens de faturamento</span>
+                            <strong>{{ selected_contract_summary.billing_item_count }}</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span class="stat-label">Último faturamento</span>
+                            <strong>{{ selected_contract.last_billing_at.strftime('%d/%m/%Y') if selected_contract.last_billing_at else '-' }}</strong>
+                        </article>
+                    </section>
+                    <section class="summary-grid">
+                        <article class="info-card">
+                            <h3>Dados cadastrais</h3>
+                            <div class="info-grid summary-info-grid">
+                                <div><span class="stat-label">Cliente</span><strong>{{ selected_contract.party.name if selected_contract.party else '-' }}</strong></div>
+                                <div><span class="stat-label">Código</span><strong>{{ selected_contract.code }}</strong></div>
+                                <div><span class="stat-label">Tipo</span><strong>{{ selected_contract.contract_type or '-' }}</strong></div>
+                                <div><span class="stat-label">Periodicidade</span><strong>{{ selected_contract.periodicity or '-' }}</strong></div>
+                                <div><span class="stat-label">Início</span><strong>{{ selected_contract_summary.start_date.strftime('%d/%m/%Y') if selected_contract_summary.start_date else '-' }}</strong></div>
+                                <div><span class="stat-label">Vencimento</span><strong>{{ selected_contract.due_rule or '-' }}</strong></div>
+                            </div>
+                        </article>
+                        <article class="info-card">
+                            <h3>Valores e operação</h3>
+                            <div class="info-grid summary-info-grid">
+                                <div><span class="stat-label">Moeda</span><strong>{{ selected_contract.currency_code or 'BRL' }}</strong></div>
+                                <div><span class="stat-label">Valor contratual</span><strong>{{ "R$ {:,.2f}".format(selected_contract_summary.total_contract_value or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></div>
+                                <div><span class="stat-label">Valor de faturamento</span><strong>{{ "R$ {:,.2f}".format(selected_contract_summary.total_billing_value or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></div>
+                                <div><span class="stat-label">Atualizado em</span><strong>{{ selected_contract_summary.updated_at.strftime('%d/%m/%Y %H:%M') if selected_contract_summary.updated_at else '-' }}</strong></div>
+                            </div>
+                        </article>
+                    </section>
                 </div>
                 <div class="panel-body form-grid">
                     <label class="full-width">
@@ -144,7 +187,7 @@
                     </label>
                 </div>
                 <div class="panel-footer">
-                    <span class="field-hint">Resumo enxuto para operação rápida; itens, faturamento, fiscal e anexos continuam no shell completo.</span>
+                    <span class="field-hint">Resumo operacional centralizado neste workspace; o detalhamento por abas segue no shell completo.</span>
                     <button class="btn btn-primary" type="submit">Salvar resumo</button>
                 </div>
             </form>
@@ -154,7 +197,18 @@
                 <div class="panel-header">
                     <div>
                         <h2>Novo contrato para {{ selected_party.name }}</h2>
-                        <small class="field-hint">Criação rápida no mesmo padrão visual da árvore contratual.</small>
+                        <small class="field-hint">Cliente selecionado na lateral. Preencha o núcleo cadastral para abrir o contrato.</small>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="info-card">
+                        <h3>Cliente selecionado</h3>
+                        <div class="info-grid summary-info-grid">
+                            <div><span class="stat-label">Código</span><strong>{{ selected_party.code }}</strong></div>
+                            <div><span class="stat-label">Documento</span><strong>{{ selected_party.document_number or '-' }}</strong></div>
+                            <div><span class="stat-label">E-mail</span><strong>{{ selected_party.email or '-' }}</strong></div>
+                            <div><span class="stat-label">Telefone</span><strong>{{ selected_party.phone or '-' }}</strong></div>
+                        </div>
                     </div>
                 </div>
                 <div class="panel-body form-grid">
@@ -220,39 +274,27 @@
             </form>
             {% else %}
             <div class="panel-body">
-                <p class="empty-state">Selecione um cliente na lateral para iniciar o contrato. Se o favorecido ainda não aparecer aqui, edite o cadastro financeiro e marque o flag <strong>Cliente</strong>.</p>
+                <div class="info-card">
+                    <h3>Workspace único de contratos</h3>
+                    <p class="empty-state">Selecione um cliente na lateral para iniciar ou revisar um contrato. Se o favorecido ainda não aparecer aqui, edite o cadastro financeiro e marque o flag <strong>Cliente</strong>.</p>
+                </div>
                 <a class="btn btn-secondary" href="/financial/catalogs/counterparties?company_id={{ company_id }}">Cadastrar ou editar favorecido</a>
             </div>
             {% endif %}
         </main>
-
-        <aside class="panel contract-info-rail">
-            <div class="panel-header"><h2>Seções</h2></div>
-            <div class="panel-body info-rail-stack">
-                <div class="review-card ok">
-                    <strong>Resumo</strong>
-                    <span>Status, início e último faturamento no mesmo painel.</span>
-                </div>
-                <div class="review-card pending">
-                    <strong>Shell completo</strong>
-                    <span>Itens, faturamento, fiscal, cobrança, gatilhos e anexos continuam detalhados por contrato.</span>
-                </div>
-                {% if selected_contract %}
-                <a class="btn btn-secondary" href="/contracts/{{ selected_contract.id }}?company_id={{ company_id }}">Abrir abas do contrato</a>
-                {% endif %}
-            </div>
-        </aside>
     </section>
 </div>
 
 <style>
     .contracts-catalog-page { padding:0 2rem 2rem; }
     .contracts-catalog-header { margin-bottom:1rem; }
-    .contract-catalog-shell { display:grid; grid-template-columns:340px minmax(0,1fr) 260px; gap:1rem; align-items:start; }
-    .contract-tree-rail, .contract-info-rail { position:sticky; top:1rem; }
-    .contract-tree-body, .info-rail-stack { display:flex; flex-direction:column; gap:.75rem; }
+    .contract-catalog-shell { display:grid; grid-template-columns:340px minmax(0,1fr); gap:1rem; align-items:start; }
+    .contract-tree-rail { position:sticky; top:1rem; }
+    .contract-tree-body { display:flex; flex-direction:column; gap:.75rem; }
     .contract-tree { display:flex; flex-direction:column; gap:.75rem; }
     .contract-tree-node { display:flex; flex-direction:column; gap:.4rem; }
+    .contract-tree-summary { list-style:none; cursor:pointer; }
+    .contract-tree-summary::-webkit-details-marker { display:none; }
     .contract-party-card, .contract-leaf-card {
         display:flex;
         flex-direction:column;
@@ -294,16 +336,22 @@
     .contract-leaf-card span { font-weight:700; color:var(--text-primary); }
     .contract-leaf-card small, .contract-party-card small { color:var(--text-secondary); }
     .contract-workspace-form { display:flex; flex-direction:column; min-width:0; }
+    .contract-summary-stack { display:flex; flex-direction:column; gap:1rem; padding-bottom:0; }
+    .summary-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; }
+    .summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .summary-info-grid strong { display:block; color:var(--text-primary); }
+    .info-card h3 { margin:0 0 .75rem; }
     .badge-active { background:#dcfce7; color:#166534; }
     .badge-inactive { background:#fee2e2; color:#b91c1c; }
     @media (max-width: 1180px) {
         .contract-catalog-shell { grid-template-columns:300px minmax(0,1fr); }
-        .contract-info-rail { display:none; }
+        .summary-kpis, .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
     @media (max-width: 960px) {
         .contracts-catalog-page { padding:0 1rem 1.5rem; }
         .contract-catalog-shell { grid-template-columns:1fr; }
-        .contract-tree-rail, .contract-info-rail { position:static; }
+        .contract-tree-rail { position:static; }
+        .summary-kpis, .summary-grid { grid-template-columns:1fr; }
     }
 </style>
 

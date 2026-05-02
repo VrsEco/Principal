@@ -15,27 +15,12 @@
 {% block workspace_content %}
 {% set validation_status = (contract.metadata_json or {}).get('validation_status', 'pending') %}
 {% set validation_notes = (contract.metadata_json or {}).get('validation_notes', '') %}
-{% set review_flags = {
-    'cliente': contract.party_id,
-    'itens': contract.items.count(),
-    'faturamento': contract.billing_items.count(),
-    'periodicidade': contract.periodicity or contract.billing_start_at or contract.signed_at,
-    'fiscal': fiscal_terms or contract.retentions.count(),
-    'cobranca': financial_terms,
-    'pdf': pdf_documents|length,
-    'assinado': signed_documents|length
-} %}
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
             <p class="eyebrow">Contrato</p>
             <h1>{{ contract.code }} · {{ contract.title }}</h1>
             <p class="subtitle">{{ contract.party.name if contract.party else 'Sem cliente vinculado' }} · status {{ contract.status }}</p>
-            <div class="context-badges">
-                <span class="mini-badge active">core</span>
-                <span class="mini-badge active">capability</span>
-                <span class="mini-badge">{{ contract.currency_code or 'BRL' }}</span>
-            </div>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Voltar</a>
@@ -44,36 +29,24 @@
 
     <section class="contract-shell-grid">
         <aside class="panel shell-sidebar">
-            <div class="panel-header"><h2>Mapa de abas</h2></div>
+            <div class="panel-header"><h2>Abas do contrato</h2></div>
             <div class="panel-body shell-tab-stack">
                 {% for tab in tabs %}
                 <a href="/contracts/{{ contract.id }}?company_id={{ company_id }}&tab={{ tab.key }}" class="shell-tab-card {{ 'active' if active_tab == tab.key else '' }}">
                     <div class="shell-tab-head">
                         <strong>{{ tab.label }}</strong>
-                        <span class="scope-pill scope-{{ tab.scope }}">{{ tab.scope }}</span>
                     </div>
-                    <small>{{ tab.description }}</small>
                 </a>
                 {% endfor %}
             </div>
         </aside>
 
         <div class="shell-main">
-            <nav class="tab-nav">
-                {% for tab in tabs %}
-                <a href="/contracts/{{ contract.id }}?company_id={{ company_id }}&tab={{ tab.key }}" class="tab-link {{ 'active' if active_tab == tab.key else '' }}">
-                    {{ tab.label }}
-                    <span class="scope-dot scope-{{ tab.scope }}"></span>
-                </a>
-                {% endfor %}
-            </nav>
-
             {% if active_tab == 'resumo' %}
             <form method="post" class="panel form-panel">
                 <input type="hidden" name="section" value="resumo">
                 <div class="panel-header">
                     <h2>Resumo</h2>
-                    <span class="scope-pill scope-core">core</span>
                 </div>
                 <div class="panel-body form-grid">
                     <label class="full-width"><span>Título</span><input type="text" name="title" value="{{ contract.title }}" required></label>
@@ -97,7 +70,6 @@
                 <input type="hidden" name="section" value="cliente">
                 <div class="panel-header">
                     <h2>Cliente</h2>
-                    <span class="scope-pill scope-core">core</span>
                 </div>
                 <div class="panel-body form-grid">
                     <label class="full-width"><span>Favorecido cliente</span>
@@ -126,11 +98,23 @@
             <div class="grid-two">
                 <form method="post" class="panel form-panel">
                     <input type="hidden" name="section" value="itens">
-                    <div class="panel-header"><h2>Novo item contratual</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-header">
+                        <h2>Novo item contratual</h2>
+                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}">Abrir cadastro mestre</a>
+                    </div>
                     <div class="panel-body form-grid">
+                        <label class="full-width"><span>Item mestre</span>
+                            <select name="contract_catalog_item_id">
+                                <option value="">Seleção manual</option>
+                                {% for item in contract_catalog_items %}
+                                <option value="{{ item.id }}">{{ item.code }} · {{ item.name }} · {{ 'Serviço' if item.item_kind == 'service' else 'Produto' }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="field-hint">Use o catálogo mestre para reaproveitar serviços e produtos em contratos, propostas, fiscal e futuras integrações.</small>
+                        </label>
                         <label><span>Código</span><input type="text" name="item_code"></label>
                         <label><span>Tipo</span><input type="text" name="item_type"></label>
-                        <label class="full-width"><span>Descrição</span><textarea name="description" rows="3" required></textarea></label>
+                        <label class="full-width"><span>Descrição</span><textarea name="description" rows="3"></textarea></label>
                         <label><span>Quantidade</span><input type="number" step="0.01" name="quantity" value="1"></label>
                         <label><span>Unidade</span><input type="text" name="unit_code"></label>
                         <label><span>Preço unitário</span><input type="text" name="unit_price" value="0,00"></label>
@@ -146,7 +130,15 @@
                             <form method="post" class="list-item list-item-form">
                                 <input type="hidden" name="section" value="itens">
                                 <input type="hidden" name="delete_item_id" value="{{ item.id }}">
-                                <div><strong>{{ item.item_code or '-' }} · {{ item.description }}</strong><small>{{ item.quantity }} x {{ item.unit_price }}</small></div>
+                                <div>
+                                    <strong>{{ item.item_code or '-' }} · {{ item.description }}</strong>
+                                    <small>
+                                        {{ item.quantity }} x {{ item.unit_price }}
+                                        {% if item.contract_catalog_item %}
+                                        · catálogo {{ item.contract_catalog_item.code }}
+                                        {% endif %}
+                                    </small>
+                                </div>
                                 <button class="btn btn-danger" type="submit">Remover</button>
                             </form>
                             {% endfor %}
@@ -160,7 +152,7 @@
             <div class="grid-two">
                 <form method="post" class="panel form-panel">
                     <input type="hidden" name="section" value="faturamento">
-                    <div class="panel-header"><h2>Novo item de faturamento</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-header"><h2>Novo faturamento</h2></div>
                     <div class="panel-body form-grid">
                         <label><span>Código</span><input type="text" name="billing_code"></label>
                         <label><span>Item do contrato</span>
@@ -182,7 +174,7 @@
                     <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar faturamento</button></div>
                 </form>
                 <div class="panel">
-                    <div class="panel-header"><h2>Itens de faturamento</h2></div>
+                    <div class="panel-header"><h2>Faturamento</h2></div>
                     <div class="panel-body">
                         {% if contract.billing_items.count() %}
                         <div class="list-stack">
@@ -204,7 +196,7 @@
             <div class="grid-two">
                 <form method="post" class="panel form-panel">
                     <input type="hidden" name="section" value="periodicidade">
-                    <div class="panel-header"><h2>Periodicidade e datas-base</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-header"><h2>Datas Base</h2></div>
                     <div class="panel-body form-grid">
                         <label><span>Data de assinatura</span><input type="date" name="signed_at" value="{{ contract.signed_at.isoformat() if contract.signed_at else '' }}"></label>
                         <label><span>Início dos serviços</span><input type="date" name="service_start_at" value="{{ contract.service_start_at.isoformat() if contract.service_start_at else '' }}"></label>
@@ -216,7 +208,7 @@
                         <label><span>Regra de vencimento</span><input type="text" name="due_rule" value="{{ contract.due_rule or '' }}"></label>
                         <label class="full-width"><span>Regra de renovação</span><input type="text" name="renewal_rule" value="{{ contract.renewal_rule or '' }}"></label>
                     </div>
-                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar periodicidade</button></div>
+                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar datas base</button></div>
                 </form>
                 <div class="panel form-panel">
                     <form method="post">
@@ -253,7 +245,7 @@
             <div class="grid-two">
                 <form method="post" class="panel form-panel">
                     <input type="hidden" name="section" value="fiscal">
-                    <div class="panel-header"><h2>Fiscal</h2><span class="scope-pill scope-core">core</span></div>
+                    <div class="panel-header"><h2>Fiscal</h2></div>
                     <div class="panel-body form-grid">
                         <label><span>Perfil fiscal</span><input type="text" name="fiscal_profile_code" value="{{ fiscal_terms.fiscal_profile_code if fiscal_terms else '' }}"></label>
                         <label><span>Cidade do serviço</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else '' }}"></label>
@@ -298,7 +290,6 @@
                 <input type="hidden" name="section" value="cobranca">
                 <div class="panel-header">
                     <h2>Cobrança</h2>
-                    <span class="scope-pill scope-core">core</span>
                 </div>
                 <div class="panel-body form-grid">
                     <label><span>Tipo do prazo</span><input type="text" name="payment_term_type" value="{{ financial_terms.payment_term_type if financial_terms else '' }}"></label>
@@ -336,11 +327,10 @@
             </form>
 
             {% elif active_tab == 'observacoes' %}
-            <form method="post" class="panel form-panel">
-                <input type="hidden" name="section" value="observacoes">
+                <form method="post" class="panel form-panel">
+                    <input type="hidden" name="section" value="observacoes">
                 <div class="panel-header">
                     <h2>Observações</h2>
-                    <span class="scope-pill scope-core">core</span>
                 </div>
                 <div class="panel-body form-grid">
                     <label class="full-width">
@@ -356,7 +346,6 @@
             <div class="panel">
                 <div class="panel-header">
                     <h2>Revisão</h2>
-                    <span class="scope-pill scope-core">core</span>
                 </div>
                 <div class="panel-body">
                     <div class="review-grid">
@@ -401,7 +390,6 @@
                 <input type="hidden" name="section" value="validar">
                 <div class="panel-header">
                     <h2>Validar / Editar Contrato</h2>
-                    <span class="scope-pill scope-capability">capability</span>
                 </div>
                 <div class="panel-body form-grid">
                     <label><span>Status de validação</span>
@@ -421,11 +409,11 @@
             <div class="grid-two">
                 <form method="post" enctype="multipart/form-data" class="panel form-panel">
                     <input type="hidden" name="section" value="gerar_pdf">
-                    <div class="panel-header"><h2>Gerar PDF</h2><span class="scope-pill scope-capability">capability</span></div>
+                    <div class="panel-header"><h2>Gerar / Editar Contrato</h2></div>
                     <div class="panel-body form-grid">
                         <label><span>Versão</span><input type="text" name="document_version" placeholder="v1, final..."></label>
                         <label class="full-width"><span>Arquivo PDF</span><input type="file" name="file" accept=".pdf" required></label>
-                        <label class="full-width"><span>Observação</span><textarea rows="4" disabled>Capability preparada para registrar o PDF do contrato enquanto a automação de geração ainda não foi acoplada.</textarea></label>
+                        <label class="full-width"><span>Observação</span><textarea rows="4" disabled>Fluxo preparado para registrar o PDF do contrato enquanto a automação de geração ainda não foi acoplada.</textarea></label>
                     </div>
                     <div class="panel-footer"><button class="btn btn-primary" type="submit">Registrar PDF</button></div>
                 </form>
@@ -452,7 +440,7 @@
             <div class="grid-two">
                 <form method="post" enctype="multipart/form-data" class="panel form-panel">
                     <input type="hidden" name="section" value="contrato_assinado">
-                    <div class="panel-header"><h2>Contrato Assinado</h2><span class="scope-pill scope-capability">capability</span></div>
+                    <div class="panel-header"><h2>Contrato Assinado</h2></div>
                     <div class="panel-body form-grid">
                         <label><span>Versão</span><input type="text" name="document_version" placeholder="assinada, final..."></label>
                         <label class="full-width"><span>Arquivo assinado escaneado</span><input type="file" name="file" required></label>
@@ -482,7 +470,7 @@
             <div class="grid-two">
                 <form method="post" enctype="multipart/form-data" class="panel form-panel">
                     <input type="hidden" name="section" value="documentos">
-                    <div class="panel-header"><h2>Documentos / Anexos</h2><span class="scope-pill scope-capability">capability</span></div>
+                    <div class="panel-header"><h2>Documentos / Anexos</h2></div>
                     <div class="panel-body form-grid">
                         <label><span>Tipo do documento</span>
                             <select name="document_type">

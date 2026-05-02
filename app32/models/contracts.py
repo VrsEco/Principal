@@ -56,6 +56,47 @@ class ContractParty(db.Model):
         }
 
 
+class ContractCatalogItem(db.Model):
+    __tablename__ = "contract_catalog_items"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "code", name="uq_contract_catalog_items_company_code"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("contract_catalog_items.id"), index=True)
+    code = db.Column(db.String(30), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    item_kind = db.Column(db.String(30), nullable=False, default="service", index=True)
+    description = db.Column(db.Text)
+    unit_code = db.Column(db.String(20))
+    accepts_contracting = db.Column(db.Boolean, nullable=False, default=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    parent = db.relationship("ContractCatalogItem", remote_side=[id], foreign_keys=[parent_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "parent_id": self.parent_id,
+            "code": self.code,
+            "name": self.name,
+            "item_kind": self.item_kind,
+            "description": self.description,
+            "unit_code": self.unit_code,
+            "accepts_contracting": bool(self.accepts_contracting),
+            "is_active": bool(self.is_active),
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class Contract(db.Model):
     __tablename__ = "contracts"
     __table_args__ = (
@@ -130,6 +171,7 @@ class ContractItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
     contract_id = db.Column(db.Integer, db.ForeignKey("contracts.id"), nullable=False, index=True)
+    contract_catalog_item_id = db.Column(db.Integer, db.ForeignKey("contract_catalog_items.id"), index=True)
     item_code = db.Column(db.String(30))
     item_type = db.Column(db.String(40))
     description = db.Column(db.Text, nullable=False)
@@ -143,11 +185,14 @@ class ContractItem(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+    contract_catalog_item = db.relationship("ContractCatalogItem", foreign_keys=[contract_catalog_item_id])
+
     def to_dict(self):
         return {
             "id": self.id,
             "company_id": self.company_id,
             "contract_id": self.contract_id,
+            "contract_catalog_item_id": self.contract_catalog_item_id,
             "item_code": self.item_code,
             "item_type": self.item_type,
             "description": self.description,

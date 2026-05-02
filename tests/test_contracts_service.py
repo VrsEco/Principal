@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app32"))
 
 from services.contracts_service import ContractService
+from services.contracts_catalog_service import ContractsCatalogService
 
 
 def test_calculate_total_price_handles_brazilian_number_formats():
@@ -117,3 +118,85 @@ def test_infer_document_type_detects_cpf_and_cnpj():
     assert ContractService.infer_document_type("123.456.789-01") == "cpf"
     assert ContractService.infer_document_type("12.345.678/0001-99") == "cnpj"
     assert ContractService.infer_document_type("ABC") is None
+
+
+def test_resolve_company_code_uses_first_two_chars_of_client_code(monkeypatch):
+    monkeypatch.setattr(
+        ContractService,
+        "get_company",
+        staticmethod(lambda company_id: SimpleNamespace(id=company_id, client_code="vt001", name="Versus Tech")),
+    )
+    assert ContractService._resolve_company_code(9) == "VT"
+
+
+def test_next_structured_code_scopes_sequence_by_marker(monkeypatch):
+    monkeypatch.setattr(
+        ContractService,
+        "get_company",
+        staticmethod(lambda company_id: SimpleNamespace(id=company_id, client_code="AA", name="Alpha")),
+    )
+
+    class _Query:
+        def with_entities(self, *_args, **_kwargs):
+            return self
+
+        def filter(self, *_args, **_kwargs):
+            return self
+
+        def all(self):
+            return [("AA.F.001",), ("AA.F.009",), ("AA.N.002",), ("BB.F.111",), (None,)]
+
+    class _Model:
+        query = _Query()
+        code = object()
+        company_id = object()
+
+    assert ContractService._next_structured_code(_Model, 9, "F") == "AA.F.010"
+    assert ContractService._next_structured_code(_Model, 9, "N") == "AA.N.003"
+
+
+def test_contracts_catalog_compose_code_supports_root_and_child():
+    assert ContractsCatalogService._compose_code(None, "001") == "001"
+    assert ContractsCatalogService._compose_code("001", "010") == "001.010"
+
+
+def test_add_contract_item_uses_catalog_defaults(monkeypatch):
+    catalog_item = SimpleNamespace(
+        id=55,
+        company_id=9,
+        code="001.010",
+        name="Consultoria Estratégica",
+        item_kind="service",
+        unit_code="H",
+        accepts_contracting=True,
+    )
+
+    class _Query:
+        def filter(self, *_args, **_kwargs):
+            return self
+
+        def first(self):
+            return catalog_item
+
+    class _CatalogModel:
+        query = _Query()
+        id = object()
+        company_id = object()
+        deleted_at = SimpleNamespace(is_=lambda *_args, **_kwargs: None)
+        accepts_contracting = SimpleNamespace(is_=lambda *_args, **_kwargs: None)
+
+    monkeypatch.setattr("services.contracts_service.ContractCatalogItem", _CatalogModel)
+    monkeypatch.setattr("services.contracts_service.db.session.add", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("services.contracts_service.db.session.commit", lambda *_args, **_kwargs: None)
+
+    contract = SimpleNamespace(company_id=9, id=77)
+    item = ContractService.add_contract_item(
+        contract=contract,
+        payload={"contract_catalog_item_id": "55", "quantity": "2", "unit_price": "10,00"},
+    )
+
+    assert item.contract_catalog_item_id == 55
+    assert item.item_code == "001.010"
+    assert item.item_type == "service"
+    assert item.description == "Consultoria Estratégica"
+    assert item.unit_code == "H"

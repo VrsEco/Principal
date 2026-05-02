@@ -5,6 +5,7 @@ from flask_login import current_user
 
 from models import Company, Employee
 from models.contracts import ContractDocument, ContractFinancialTerm, ContractFiscalTerm
+from services.contracts_catalog_service import ContractsCatalogService
 from services.contracts_service import ContractService
 from utils.permissions import get_default_company_id, has_permission, permission_required
 
@@ -33,9 +34,14 @@ def get_active_company():
 @permission_required("contracts", "view")
 def contracts_dashboard():
     company = get_active_company()
-    company_id = company.id if company else None
-    dashboard = ContractService.get_dashboard(company_id) if company_id else {"counts": {}, "latest_contracts": [], "latest_parties": []}
-    return render_template("modules/contracts/dashboard.html", company=company, company_id=company_id, dashboard=dashboard)
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+    query_args = {"company_id": company.id}
+    if request.args.get("party_id", type=int):
+        query_args["party_id"] = request.args.get("party_id", type=int)
+    if request.args.get("contract_id", type=int):
+        query_args["contract_id"] = request.args.get("contract_id", type=int)
+    return redirect(url_for("contracts.contracts_create", **query_args))
 
 
 @contracts_bp.route("/contracts/parties")
@@ -74,8 +80,92 @@ def contracts_party_manage(party_id: int | None = None):
 @permission_required("contracts", "view")
 def contracts_list():
     company = get_active_company()
-    contracts = ContractService.list_contracts(company.id) if company else []
-    return render_template("modules/contracts/contracts_list.html", company=company, company_id=company.id if company else None, contracts=contracts)
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+    query_args = {"company_id": company.id}
+    if request.args.get("party_id", type=int):
+        query_args["party_id"] = request.args.get("party_id", type=int)
+    if request.args.get("contract_id", type=int):
+        query_args["contract_id"] = request.args.get("contract_id", type=int)
+    return redirect(url_for("contracts.contracts_create", **query_args))
+
+
+@contracts_bp.route("/contracts/catalogs/items", methods=["GET", "POST"])
+@permission_required("contracts", "view")
+def contracts_items_catalog():
+    company = get_active_company()
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+
+    selected_item_id = request.args.get("item_id", type=int)
+    selected_parent_id = request.args.get("parent_id", type=int)
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "save").strip().lower()
+        try:
+            if action == "save":
+                payload = {
+                    "company_id": company.id,
+                    "parent_id": request.form.get("parent_id", type=int),
+                    "code_suffix": request.form.get("code_suffix"),
+                    "name": request.form.get("name"),
+                    "item_kind": request.form.get("item_kind"),
+                    "description": request.form.get("description"),
+                    "unit_code": request.form.get("unit_code"),
+                    "accepts_contracting": bool(request.form.get("accepts_contracting")),
+                    "is_active": bool(request.form.get("is_active")),
+                    "metadata_json": {
+                        "sku": request.form.get("sku") or None,
+                        "service_code": request.form.get("service_code") or None,
+                        "ncm": request.form.get("ncm") or None,
+                        "cest": request.form.get("cest") or None,
+                        "cfop": request.form.get("cfop") or None,
+                        "stock_control": bool(request.form.get("stock_control")),
+                        "fiscal_notes": request.form.get("fiscal_notes") or None,
+                    },
+                }
+                item_id = request.form.get("item_id", type=int)
+                if item_id:
+                    item = ContractsCatalogService.get_item(company.id, item_id)
+                    if not item:
+                        abort(404)
+                    ContractsCatalogService.update_item(item=item, payload=payload)
+                    flash("Item mestre atualizado com sucesso.", "success")
+                    selected_item_id = item.id
+                else:
+                    item = ContractsCatalogService.create_item(payload=payload)
+                    flash("Item mestre criado com sucesso.", "success")
+                    selected_item_id = item.id
+                return redirect(url_for("contracts.contracts_items_catalog", company_id=company.id, item_id=selected_item_id))
+
+            target_item_id = request.form.get("item_id", type=int)
+            item = ContractsCatalogService.get_item(company.id, target_item_id) if target_item_id else None
+            if not item:
+                abort(404)
+            if action == "toggle":
+                ContractsCatalogService.toggle_item(item=item, is_active=not item.is_active)
+                flash("Status do item mestre atualizado.", "success")
+            elif action == "delete":
+                ContractsCatalogService.delete_item(item=item)
+                flash("Item mestre excluído.", "success")
+                return redirect(url_for("contracts.contracts_items_catalog", company_id=company.id))
+        except Exception as exc:
+            flash(f"Falha ao processar catálogo de itens: {exc}", "error")
+
+    items = ContractsCatalogService.list_items(company.id)
+    selected_item = ContractsCatalogService.get_item(company.id, selected_item_id) if selected_item_id else None
+    if selected_item and selected_item.parent_id:
+        selected_parent_id = selected_item.parent_id
+    selected_parent = ContractsCatalogService.get_item(company.id, selected_parent_id) if selected_parent_id else None
+    return render_template(
+        "modules/contracts/contracts_items_catalog.html",
+        company=company,
+        company_id=company.id,
+        catalog_tree=ContractsCatalogService.build_tree(company.id),
+        items=items,
+        selected_item=selected_item,
+        selected_parent=selected_parent,
+    )
 
 
 @contracts_bp.route("/contracts/new", methods=["GET", "POST"])
@@ -130,6 +220,7 @@ def contracts_create():
         company_id=company.id,
         parties=parties,
         selected_contract=selected_contract,
+        selected_contract_summary=ContractService.get_contract_workspace_summary(selected_contract),
         selected_party=selected_party,
         contract_tree=ContractService.list_customer_contract_tree(company.id),
         tabs=ContractService.get_tab_registry(),
@@ -150,12 +241,13 @@ def contracts_manage(contract_id: int):
         abort(404)
 
     tab_aliases = {
-        "geral": "resumo",
-        "financeiro": "cobranca",
+        "geral": "cliente",
+        "resumo": "cliente",
+        "financeiro": "fiscal",
         "gatilhos": "periodicidade",
         "anexos": "documentos",
     }
-    active_tab = tab_aliases.get((request.args.get("tab") or "resumo").strip().lower(), (request.args.get("tab") or "resumo").strip().lower())
+    active_tab = tab_aliases.get((request.args.get("tab") or "cliente").strip().lower(), (request.args.get("tab") or "cliente").strip().lower())
 
     if request.method == "POST":
         if not has_permission(company.id, "contracts", "edit"):
@@ -265,6 +357,7 @@ def contracts_manage(contract_id: int):
     fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
     references = ContractService.list_financial_references(company.id)
     parties = ContractService.list_customer_parties(company.id)
+    contract_catalog_items = ContractsCatalogService.list_selectable_items(company.id)
     if contract.party and not any(item.id == contract.party.id for item in parties):
         parties = [contract.party, *parties]
     documents = ContractDocument.query.filter_by(contract_id=contract.id, company_id=company.id).order_by(ContractDocument.uploaded_at.desc()).all()
@@ -277,6 +370,7 @@ def contracts_manage(contract_id: int):
         company_id=company.id,
         contract=contract,
         parties=parties,
+        contract_catalog_items=contract_catalog_items,
         financial_terms=financial_terms,
         fiscal_terms=fiscal_terms,
         references=references,

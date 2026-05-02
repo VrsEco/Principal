@@ -15,6 +15,7 @@ from models import Company, db
 from models.contracts import (
     Contract,
     ContractBillingItem,
+    ContractCatalogItem,
     ContractDocument,
     ContractFinancialTerm,
     ContractFiscalTerm,
@@ -35,17 +36,13 @@ class ContractService:
     ACTIVE_STATUSES = {"active", "signed", "implanting"}
     INACTIVE_STATUSES = {"inactive", "closed", "draft"}
     TAB_REGISTRY = (
-        {"key": "resumo", "label": "Resumo", "scope": "core", "description": "Dados centrais do contrato."},
         {"key": "cliente", "label": "Cliente", "scope": "core", "description": "Favorecido cliente vinculado ao contrato."},
         {"key": "itens", "label": "Itens do Contrato", "scope": "core", "description": "Escopo, serviços e itens negociados."},
-        {"key": "faturamento", "label": "Itens de Faturamento", "scope": "core", "description": "Itens e regras de faturamento."},
-        {"key": "periodicidade", "label": "Periodicidade", "scope": "core", "description": "Datas-base, competência, vencimento e gatilhos."},
+        {"key": "faturamento", "label": "Faturamento", "scope": "core", "description": "Itens e regras de faturamento."},
+        {"key": "periodicidade", "label": "Datas Base", "scope": "core", "description": "Datas-base, competência, vencimento e gatilhos."},
         {"key": "fiscal", "label": "Fiscal", "scope": "core", "description": "Perfil fiscal e retenções."},
-        {"key": "cobranca", "label": "Cobrança", "scope": "core", "description": "Condições financeiras e de cobrança."},
         {"key": "observacoes", "label": "Observações", "scope": "core", "description": "Contexto operacional e observações livres."},
-        {"key": "revisao", "label": "Revisão", "scope": "core", "description": "Checklist de consistência do cadastro."},
-        {"key": "validar", "label": "Validar / Editar Contrato", "scope": "capability", "description": "Aprovação operacional e ajustes finais."},
-        {"key": "gerar_pdf", "label": "Gerar PDF", "scope": "capability", "description": "Upload/controle da versão em PDF."},
+        {"key": "gerar_pdf", "label": "Gerar / Editar Contrato", "scope": "capability", "description": "Upload/controle da versão em PDF do contrato."},
         {"key": "contrato_assinado", "label": "Contrato Assinado", "scope": "capability", "description": "Upload da via assinada escaneada."},
         {"key": "documentos", "label": "Documentos / Anexos", "scope": "capability", "description": "Artefatos gerais vinculados ao contrato."},
     )
@@ -106,14 +103,36 @@ class ContractService:
         return (qty * price).quantize(Decimal("0.01"))
 
     @staticmethod
-    def _next_code(model, company_id: int, prefix: str) -> str:
+    def _resolve_company_code(company_id: int) -> str:
+        company = ContractService.get_company(company_id)
+        raw_code = ContractService._normalize_text(getattr(company, "client_code", ""))
+        raw_name = ContractService._normalize_text(getattr(company, "name", ""))
+
+        sanitized = re.sub(r"[^A-Z0-9]", "", raw_code.upper())
+        if not sanitized and raw_name:
+            tokens = [token[0] for token in re.findall(r"[A-Za-z0-9]+", raw_name.upper()) if token]
+            sanitized = "".join(tokens)
+        if not sanitized:
+            sanitized = str(company_id or "XX")
+
+        sanitized = (sanitized[:2] if len(sanitized) >= 2 else sanitized.ljust(2, "X")).upper()
+        return sanitized
+
+    @staticmethod
+    def _next_structured_code(model, company_id: int, marker: str) -> str:
+        company_code = ContractService._resolve_company_code(company_id)
+        normalized_marker = re.sub(r"[^A-Z0-9]", "", str(marker or "").upper())[:1] or "X"
+        code_prefix = f"{company_code}.{normalized_marker}."
         last_number = 0
         rows = model.query.with_entities(model.code).filter(model.company_id == company_id).all()
         for (code,) in rows:
-            match = re.search(r"(\d+)$", str(code or ""))
+            normalized_code = str(code or "").strip().upper()
+            if not normalized_code.startswith(code_prefix):
+                continue
+            match = re.search(r"(\d+)$", normalized_code)
             if match:
                 last_number = max(last_number, int(match.group(1)))
-        return f"{prefix}-{last_number + 1:04d}"
+        return f"{code_prefix}{last_number + 1:03d}"
 
     @staticmethod
     def get_company(company_id: int) -> Optional[Company]:
@@ -201,7 +220,7 @@ class ContractService:
             if party is None:
                 party = ContractParty(
                     company_id=company_id,
-                    code=ContractService._next_code(ContractParty, company_id, "PART"),
+                    code=ContractService._next_structured_code(ContractParty, company_id, "F"),
                 )
                 ContractService.update_party(party=party, payload=payload, user_id=None, is_new=True)
                 db.session.add(party)
@@ -251,6 +270,28 @@ class ContractService:
     @staticmethod
     def get_contract_status_label(contract: Contract) -> str:
         return "Ativo" if ContractService.get_contract_status_group(contract) == "active" else "Inativo"
+
+    @staticmethod
+    def get_contract_workspace_summary(contract: Optional[Contract]) -> dict:
+        if contract is None:
+            return {}
+
+        contract_items = contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()
+        billing_items = contract.billing_items.order_by(ContractBillingItem.order_index.asc(), ContractBillingItem.id.asc()).all()
+        total_contract_value = sum((item.total_price or Decimal("0")) for item in contract_items)
+        total_billing_value = sum((item.amount or Decimal("0")) for item in billing_items)
+
+        return {
+            "status_group": ContractService.get_contract_status_group(contract),
+            "status_label": ContractService.get_contract_status_label(contract),
+            "start_date": ContractService.get_contract_start_date(contract),
+            "contract_item_count": len(contract_items),
+            "billing_item_count": len(billing_items),
+            "total_contract_value": total_contract_value.quantize(Decimal("0.01")) if contract_items else Decimal("0.00"),
+            "total_billing_value": total_billing_value.quantize(Decimal("0.01")) if billing_items else Decimal("0.00"),
+            "updated_at": contract.updated_at,
+            "created_at": contract.created_at,
+        }
 
     @staticmethod
     def list_customer_contract_tree(company_id: int) -> list[dict]:
@@ -344,7 +385,7 @@ class ContractService:
     def create_party(*, company_id: int, payload: dict, user_id: Optional[int]):
         party = ContractParty(
             company_id=company_id,
-            code=ContractService._next_code(ContractParty, company_id, "PART"),
+            code=ContractService._next_structured_code(ContractParty, company_id, "F"),
             created_by_user_id=user_id,
         )
         ContractService.update_party(party=party, payload=payload, user_id=user_id, is_new=True)
@@ -378,7 +419,7 @@ class ContractService:
     def create_contract(*, company_id: int, payload: dict, user_id: Optional[int]) -> Contract:
         contract = Contract(
             company_id=company_id,
-            code=ContractService._next_code(Contract, company_id, "CTR"),
+            code=ContractService._next_structured_code(Contract, company_id, "N"),
             created_by_user_id=user_id,
             version=1,
         )
@@ -485,18 +526,46 @@ class ContractService:
 
     @staticmethod
     def add_contract_item(*, contract: Contract, payload: dict):
+        catalog_item_id = ContractService._normalize_int(payload.get("contract_catalog_item_id"))
+        catalog_item = None
+        if catalog_item_id:
+            catalog_item = ContractCatalogItem.query.filter(
+                ContractCatalogItem.id == catalog_item_id,
+                ContractCatalogItem.company_id == contract.company_id,
+                ContractCatalogItem.deleted_at.is_(None),
+                ContractCatalogItem.accepts_contracting.is_(True),
+            ).first()
+            if not catalog_item:
+                raise ValueError("Item mestre não encontrado para este contrato.")
+
+        description = ContractService._normalize_text(payload.get("description")) or (catalog_item.name if catalog_item else "Item contratual")
+        item_code = ContractService._normalize_text(payload.get("item_code")) or (catalog_item.code if catalog_item else None)
+        item_type = ContractService._normalize_text(payload.get("item_type")) or (catalog_item.item_kind if catalog_item else None)
+        unit_code = ContractService._normalize_text(payload.get("unit_code")) or (catalog_item.unit_code if catalog_item else None)
+        metadata = dict(payload.get("metadata_json") or {})
+        if catalog_item:
+            metadata["contract_catalog_item_id"] = catalog_item.id
+            metadata["catalog_snapshot"] = {
+                "code": catalog_item.code,
+                "name": catalog_item.name,
+                "item_kind": catalog_item.item_kind,
+                "unit_code": catalog_item.unit_code,
+            }
+
         item = ContractItem(
             company_id=contract.company_id,
             contract_id=contract.id,
-            item_code=ContractService._normalize_text(payload.get("item_code")) or None,
-            item_type=ContractService._normalize_text(payload.get("item_type")) or None,
-            description=ContractService._normalize_text(payload.get("description")) or "Item contratual",
+            contract_catalog_item_id=catalog_item.id if catalog_item else None,
+            item_code=item_code,
+            item_type=item_type,
+            description=description,
             quantity=ContractService._normalize_decimal(payload.get("quantity"), default="1"),
-            unit_code=ContractService._normalize_text(payload.get("unit_code")) or None,
+            unit_code=unit_code,
             unit_price=ContractService._normalize_decimal(payload.get("unit_price")),
             total_price=ContractService.calculate_total_price(payload.get("quantity"), payload.get("unit_price")),
             order_index=ContractService._normalize_int(payload.get("order_index")) or 0,
             notes=ContractService._normalize_text(payload.get("notes")) or None,
+            metadata_json=metadata,
         )
         db.session.add(item)
         db.session.commit()
