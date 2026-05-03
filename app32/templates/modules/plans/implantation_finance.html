@@ -229,33 +229,6 @@
             <!-- Imobilizado & Investimento Total -->
             <div class="planning-card" style="grid-column: span 2;">
                 <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Investimentos Consolidados</h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
-                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 16px; padding: 20px;">
-                        <div style="font-size: 11px; font-weight: 800; color: #1e40af; text-transform: uppercase; margin-bottom: 8px;">
-                            Capital de Giro / Ativo Circulante
-                        </div>
-                        <div style="font-size: 24px; font-weight: 800; color: #1e40af;">
-                            R$ {{ consolidated.summary.total_working_capital | default(0) | format_currency_br }}
-                        </div>
-                    </div>
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px;">
-                        <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
-                            Imobilizado / Ativo Não Circulante
-                        </div>
-                        <div style="font-size: 24px; font-weight: 800; color: #0f172a;">
-                            R$ {{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}
-                        </div>
-                    </div>
-                    <div style="background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 16px; padding: 20px;">
-                        <div style="font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; margin-bottom: 8px;">
-                            Investimento Total
-                        </div>
-                        <div style="font-size: 24px; font-weight: 800; color: #15803d;">
-                            R$ {{ consolidated.summary.total_investment | default(0) | format_currency_br }}
-                        </div>
-                    </div>
-                </div>
-
                 <h4 style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">Investimento em Imobilizado / Ativo Não Circulante</h4>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
@@ -293,6 +266,36 @@
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+
+                <div style="margin-top: 24px;">
+                    <h4 style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">Resumo dos Investimentos Consolidados</h4>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 16px; padding: 20px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #1e40af; text-transform: uppercase; margin-bottom: 8px;">
+                                Capital de Giro / Ativo Circulante
+                            </div>
+                            <div style="font-size: 24px; font-weight: 800; color: #1e40af;">
+                                R$ {{ consolidated.summary.total_working_capital | default(0) | format_currency_br }}
+                            </div>
+                        </div>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
+                                Imobilizado / Ativo Não Circulante
+                            </div>
+                            <div style="font-size: 24px; font-weight: 800; color: #0f172a;">
+                                R$ {{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}
+                            </div>
+                        </div>
+                        <div style="background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 16px; padding: 20px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; margin-bottom: 8px;">
+                                Investimento Total
+                            </div>
+                            <div style="font-size: 24px; font-weight: 800; color: #15803d;">
+                                R$ {{ consolidated.summary.total_investment | default(0) | format_currency_br }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
