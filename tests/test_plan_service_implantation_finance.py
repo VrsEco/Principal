@@ -55,6 +55,11 @@ def test_get_consolidated_finance_expands_indefinite_monthly_contract_to_flow(mo
     assert [row["fixed_costs"] for row in consolidated["timeline"]] == [0, 1000, 1000]
 
 
+def test_normalize_period_supports_brazilian_full_date():
+    assert PlanService._normalize_period("01/07/2026") == "2026-07"
+    assert PlanService._normalize_period("2026-07-01") == "2026-07"
+
+
 def test_get_consolidated_finance_limits_defined_monthly_contract_to_end_date(monkeypatch):
     execution_content = {
         "areas": {
@@ -94,6 +99,48 @@ def test_get_consolidated_finance_limits_defined_monthly_contract_to_end_date(mo
     consolidated = PlanService.get_consolidated_finance(12, 9)
 
     assert [row["fixed_expenses"] for row in consolidated["timeline"]] == [0, 500, 500, 0]
+
+
+def test_get_consolidated_finance_monthly_contract_accepts_brazilian_date_format(monkeypatch):
+    execution_content = {
+        "areas": {
+            "operacional": {
+                "items": [
+                    {
+                        "description": "Suporte",
+                        "classification": "contratação",
+                        "payments": [],
+                        "payment_plan": {
+                            "mode": "monthly_contract",
+                            "start_date": "01/07/2026",
+                            "end_date": "01/08/2026",
+                            "monthly_amount": 700,
+                        },
+                    }
+                ]
+            }
+        }
+    }
+    finance_content = {
+        "analysis_params": {
+            "period_months": 3,
+            "start_date": "2026.07",
+        }
+    }
+
+    sections = {
+        "model": _build_section({"products": []}),
+        "execution": _build_section(execution_content),
+        "finance": _build_section(finance_content),
+    }
+
+    monkeypatch.setattr(PlanService, "get_plan", staticmethod(lambda *_args, **_kwargs: SimpleNamespace(mode="implantation")))
+    monkeypatch.setattr(PlanService, "get_implantation_data", staticmethod(lambda _plan_id, _company_id, section_key: sections.get(section_key)))
+
+    consolidated = PlanService.get_consolidated_finance(12, 9)
+
+    assert [row["period"] for row in consolidated["timeline"]] == ["2026-07", "2026-08", "2026-09"]
+    assert [row["fixed_costs"] for row in consolidated["timeline"]] == [700, 700, 0]
 
 
 def test_get_consolidated_finance_keeps_investment_with_explicit_payments(monkeypatch):

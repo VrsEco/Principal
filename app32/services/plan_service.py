@@ -16,9 +16,17 @@ class PlanService:
 
         normalized = str(value).strip().replace('.', '-').replace('/', '-')
         if len(normalized) >= 7:
-            parts = normalized.split('-')
-            if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
-                return f"{int(parts[0]):04d}-{int(parts[1]):02d}"
+            parts = [part for part in normalized.split('-') if part]
+            if len(parts) >= 2 and all(part.isdigit() for part in parts[:3]):
+                if len(parts[0]) == 4:
+                    year, month = int(parts[0]), int(parts[1])
+                elif len(parts) >= 3 and len(parts[2]) == 4:
+                    year, month = int(parts[2]), int(parts[1])
+                else:
+                    year, month = int(parts[0]), int(parts[1])
+
+                if 1 <= month <= 12:
+                    return f"{year:04d}-{month:02d}"
         return ""
 
     @staticmethod
