@@ -61,7 +61,7 @@
                                 style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
                                 <div
                                     style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                                    <input type="number" class="wc-value" value="{{ item.value }}"
+                                    <input type="text" class="wc-value currency-br" value="{{ item.value | default(0) | format_currency_br }}"
                                         placeholder="Valor R$"
                                         style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                                     <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
@@ -105,7 +105,7 @@
                                 style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
                                 <div
                                     style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                                    <input type="number" class="wc-value" value="{{ item.value }}"
+                                    <input type="text" class="wc-value currency-br" value="{{ item.value | default(0) | format_currency_br }}"
                                         placeholder="Valor R$"
                                         style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                                     <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
@@ -149,7 +149,7 @@
                                 style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
                                 <div
                                     style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                                    <input type="number" class="wc-value" value="{{ item.value }}"
+                                    <input type="text" class="wc-value currency-br" value="{{ item.value | default(0) | format_currency_br }}"
                                         placeholder="Valor R$"
                                         style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                                     <input type="text" class="wc-contrib-date" value="{{ item.contribution_date }}"
@@ -200,8 +200,8 @@
                         style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 12px; padding: 16px; background: #f8fafc; border-radius: 12px;">
                         <div>
                             <label class="field-label" style="font-size: 10px;">Reserva Mínima (R$)</label>
-                            <input type="number" id="cash_reserve"
-                                value="{{ section_content.working_capital.cash_reserve|default(0) }}"
+                            <input type="text" id="cash_reserve" class="currency-br"
+                                value="{{ section_content.working_capital.cash_reserve|default(0)|format_currency_br }}"
                                 style="width:100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 12px;">
                         </div>
                         <div>
@@ -677,7 +677,7 @@
                         </div>
                         <div>
                             <label class="field-label">Valor (R$)</label>
-                            <input type="number" class="source-value" value="{{ s.amount }}"
+                            <input type="text" class="source-value currency-br" value="{{ s.amount | default(0) | format_currency_br }}"
                                 style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
                         </div>
                         <div>
@@ -713,7 +713,7 @@
                         </div>
                         <div>
                             <label class="field-label">Valor (R$)</label>
-                            <input type="number" class="source-value" value="{{ val }}"
+                            <input type="text" class="source-value currency-br" value="{{ val | default(0) | format_currency_br }}"
                                 style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
                         </div>
                         <div>
@@ -883,6 +883,54 @@
 </div>
 
 <script>
+    function parseBrCurrency(value) {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return value;
+        const cleaned = String(value)
+            .replace(/R\$\s?/g, '')
+            .replace(/\./g, '')
+            .replace(',', '.')
+            .trim();
+        return parseFloat(cleaned) || 0;
+    }
+
+    function formatCurrencyBR(value) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(parseBrCurrency(value));
+    }
+
+    function applyCurrencyMask(input) {
+        if (!input) return;
+        const numericValue = parseBrCurrency(input.value);
+        input.dataset.numericValue = numericValue;
+        input.value = formatCurrencyBR(numericValue);
+    }
+
+    function bindCurrencyInputs(scope = document) {
+        scope.querySelectorAll('.currency-br').forEach(input => {
+            if (input.dataset.currencyBound === '1') return;
+            input.dataset.currencyBound = '1';
+
+            input.addEventListener('focus', () => {
+                const numericValue = parseBrCurrency(input.value);
+                input.value = numericValue
+                    ? numericValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : '';
+            });
+
+            input.addEventListener('blur', () => {
+                applyCurrencyMask(input);
+                if (input.classList.contains('wc-value')) {
+                    updateWCTotals();
+                }
+            });
+
+            applyCurrencyMask(input);
+        });
+    }
+
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -894,7 +942,7 @@
         document.getElementById('sourcesContainer').insertAdjacentHTML('beforeend', `
             <div class="source-row" style="display: grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr auto; gap: 12px; align-items: end;">
                 <div><input type="text" class="source-name" placeholder="Descrição" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
-                <div><input type="number" class="source-value" placeholder="Valor" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <div><input type="text" class="source-value currency-br" placeholder="Valor" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;"></div>
                 <div>
                     <select class="source-type" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
                         <option value="propria">Própria (Sócios)</option>
@@ -906,6 +954,7 @@
                 <button onclick="this.parentElement.remove()" style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i class="fa-solid fa-trash"></i></button>
             </div>
         `);
+        bindCurrencyInputs(document.getElementById('sourcesContainer'));
     }
 
     function addDestination() {
@@ -931,7 +980,7 @@
         ['cash', 'receivables', 'inventory'].forEach(cat => {
             let catTotal = 0;
             document.querySelectorAll(`.${cat}-row .wc-value`).forEach(input => {
-                catTotal += parseFloat(input.value) || 0;
+                catTotal += parseBrCurrency(input.value) || 0;
             });
             const subtotalEl = document.getElementById(`subtotal-${cat}`);
             if (subtotalEl) subtotalEl.innerText = fmt.format(catTotal);
@@ -946,7 +995,7 @@
         const html = `
             <div class="wc-row ${category}-row" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                    <input type="number" class="wc-value" onchange="updateWCTotals()" placeholder="Valor R$" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                    <input type="text" class="wc-value currency-br" onchange="updateWCTotals()" placeholder="Valor R$" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                     <input type="text" class="wc-contrib-date" placeholder="Aporte (YYYY.MM)" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
                 </div>
                 <input type="text" class="wc-desc" placeholder="Descrição" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; margin-bottom: 4px;">
@@ -957,11 +1006,13 @@
             </div>
         `;
         container.insertAdjacentHTML('beforeend', html);
+        bindCurrencyInputs(container);
         updateWCTotals();
     }
 
     // Initialize totals
     document.addEventListener('DOMContentLoaded', () => {
+        bindCurrencyInputs();
         updateWCTotals();
         // Add event listeners to existing inputs
         document.querySelectorAll('.wc-value').forEach(input => {
@@ -1061,14 +1112,14 @@
     async function saveFinance() {
         const sources_v2 = Array.from(document.querySelectorAll('.source-row')).map(row => ({
             name: row.querySelector('.source-name').value,
-            amount: parseFloat(row.querySelector('.source-value').value) || 0,
+            amount: parseBrCurrency(row.querySelector('.source-value').value) || 0,
             type: row.querySelector('.source-type').value,
             date: row.querySelector('.source-date').value
         })).filter(s => s.name);
 
         const collectWCItems = (category) => {
             return Array.from(document.querySelectorAll(`.${category}-row`)).map(row => ({
-                value: parseFloat(row.querySelector('.wc-value').value) || 0,
+                value: parseBrCurrency(row.querySelector('.wc-value').value) || 0,
                 contribution_date: row.querySelector('.wc-contrib-date').value,
                 availability_date: row.querySelector('.wc-avail-date').value,
                 description: row.querySelector('.wc-desc').value
@@ -1089,7 +1140,7 @@
                 opportunity_cost_annual: parseFloat(document.getElementById('opportunity_cost_annual').value) || 12
             },
             working_capital: {
-                cash_reserve: parseFloat(document.getElementById('cash_reserve').value) || 0,
+                cash_reserve: parseBrCurrency(document.getElementById('cash_reserve').value) || 0,
                 receivables_days: parseInt(document.getElementById('receivables_days').value) || 30,
                 inventory_days: parseInt(document.getElementById('inventory_days').value) || 30,
                 payable_days: parseInt(document.getElementById('payable_days').value) || 30,
