@@ -52,7 +52,7 @@
                         <th style="padding: 0 12px; width: 12%;">Classificação</th>
                         <th style="padding: 0 12px; width: 18%;">Datas (Início / Dispon.)</th>
                         <th style="padding: 0 12px; width: 12%;">Capac. Op. (Fat)</th>
-                        <th style="padding: 0 12px; width: 15%;">Investimento Total</th>
+                        <th style="padding: 0 12px; width: 15%;">Valor Planejado</th>
                         <th style="padding: 0 12px; text-align: right;">Ações</th>
                     </tr>
                 </thead>
@@ -112,11 +112,13 @@
                                     style="width: 100%; background: transparent; border: none; font-weight: 700; text-align: right; font-size: 14px; color: #1e293b;">
                                 <button onclick="openPaymentsModal(this)" class="btn-link"
                                     style="font-size: 10px; color: #2563eb; cursor: pointer; border: none; background: none; text-decoration: underline; padding: 0;">
-                                    Planejar Pagamentos (<span class="payment-count">{{ item.payments|length if
+                                    <span class="payment-plan-label">Planejar Pagamentos</span> (<span class="payment-count">{{ item.payments|length if
                                         item.payments else 0 }}</span>)
                                 </button>
                                 <input type="hidden" class="item-payments-json"
                                     value='{{ item.payments|tojson if item.payments else "[]" }}'>
+                                <input type="hidden" class="item-payment-plan-json"
+                                    value='{{ item.payment_plan|tojson if item.payment_plan else "{\"mode\":\"multiple\",\"start_date\":null,\"end_date\":null,\"monthly_amount\":0}" }}'>
                             </div>
                         </td>
                         <td style="padding: 12px; text-align: right;">
@@ -149,7 +151,19 @@
                 style="border: none; background: none; color: #94a3b8; cursor: pointer; font-size: 20px;">&times;</button>
         </div>
         <div style="padding: 24px;">
-            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 24px;">
+            <div id="contractModeWrapper" style="display: none; margin-bottom: 16px;">
+                <label style="display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">
+                    Formato da Contratação
+                </label>
+                <select id="modalPaymentMode" onchange="handleModalModeChange()"
+                    style="width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 13px;">
+                    <option value="single">Pagamento Único</option>
+                    <option value="multiple">Alguns Pagamentos</option>
+                    <option value="monthly_contract">Contrato Mensal</option>
+                </select>
+            </div>
+
+            <div id="explicitPaymentsSection" style="max-height: 300px; overflow-y: auto; margin-bottom: 24px;">
                 <table style="width: 100%;">
                     <thead style="text-align: left; font-size: 11px; color: #94a3b8; text-transform: uppercase;">
                         <tr>
@@ -166,6 +180,36 @@
                     style="width: 100%; margin-top: 12px; background: #f1f5f9; border: 1px dashed #cbd5e1; color: #64748b;">
                     <i class="fa-solid fa-plus"></i> Adicionar Parcela
                 </button>
+            </div>
+
+            <div id="monthlyContractSection" style="display: none; margin-bottom: 24px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">
+                            Início
+                        </label>
+                        <input type="month" id="modalContractStart" onchange="updateModalTotal()"
+                            style="width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 13px;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">
+                            Fim
+                        </label>
+                        <input type="month" id="modalContractEnd" onchange="updateModalTotal()"
+                            style="width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 13px;">
+                    </div>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">
+                        Valor Mensal (R$)
+                    </label>
+                    <input type="text" id="modalContractMonthlyAmount" onchange="updateModalTotal()"
+                        placeholder="0,00"
+                        style="width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 13px; text-align: right;">
+                </div>
+                <p style="margin: 12px 0 0; font-size: 12px; color: #64748b;">
+                    Se o fim ficar vazio, o contrato mensal será considerado até o último mês do fluxo financeiro.
+                </p>
             </div>
 
             <div
@@ -189,6 +233,86 @@
     }
 
     let currentEditingRow = null;
+
+    function getDefaultPaymentPlan(classification = 'aquisição') {
+        return {
+            mode: classification === 'contratação' ? 'single' : 'multiple',
+            start_date: null,
+            end_date: null,
+            monthly_amount: 0
+        };
+    }
+
+    function getRowClassification(row) {
+        return row.querySelector('.item-classification').value;
+    }
+
+    function getRowPaymentPlan(row) {
+        const rawValue = row.querySelector('.item-payment-plan-json')?.value;
+        let paymentPlan = getDefaultPaymentPlan(getRowClassification(row));
+        if (!rawValue) return paymentPlan;
+
+        try {
+            paymentPlan = { ...paymentPlan, ...JSON.parse(rawValue) };
+        } catch (error) {
+            console.warn('Falha ao ler payment_plan do item.', error);
+        }
+
+        if (!paymentPlan.mode) {
+            paymentPlan.mode = getRowClassification(row) === 'contratação' ? 'single' : 'multiple';
+        }
+        paymentPlan.monthly_amount = parseBrFloat(paymentPlan.monthly_amount);
+        return paymentPlan;
+    }
+
+    function getMonthDiffInclusive(startValue, endValue) {
+        if (!startValue || !endValue) return 0;
+        const [startYear, startMonth] = startValue.split('-').map(Number);
+        const [endYear, endMonth] = endValue.split('-').map(Number);
+        return ((endYear - startYear) * 12) + (endMonth - startMonth) + 1;
+    }
+
+    function calculateRowDisplayValue(classification, payments, paymentPlan, fallbackValue = 0) {
+        if (classification === 'contratação' && paymentPlan.mode === 'monthly_contract') {
+            const monthlyAmount = parseBrFloat(paymentPlan.monthly_amount);
+            const months = getMonthDiffInclusive(paymentPlan.start_date, paymentPlan.end_date);
+            return months > 0 ? (monthlyAmount * months) : monthlyAmount;
+        }
+
+        if (!(payments || []).length) {
+            return fallbackValue || 0;
+        }
+
+        return (payments || []).reduce((total, payment) => total + (parseBrFloat(payment.amount) || 0), 0);
+    }
+
+    function buildPaymentSummary(classification, payments, paymentPlan) {
+        if (classification === 'contratação' && paymentPlan.mode === 'monthly_contract') {
+            const hasEnd = !!paymentPlan.end_date;
+            return {
+                label: 'Contrato Mensal',
+                count: hasEnd ? `${getMonthDiffInclusive(paymentPlan.start_date, paymentPlan.end_date)} meses` : 'fluxo'
+            };
+        }
+
+        return {
+            label: 'Planejar Pagamentos',
+            count: `${(payments || []).length}`
+        };
+    }
+
+    function refreshRowPaymentSummary(row) {
+        const payments = JSON.parse(row.querySelector('.item-payments-json').value || '[]');
+        const paymentPlan = getRowPaymentPlan(row);
+        const classification = getRowClassification(row);
+        const summary = buildPaymentSummary(classification, payments, paymentPlan);
+        const fallbackValue = parseBrFloat(row.querySelector('.item-value').value);
+        const total = calculateRowDisplayValue(classification, payments, paymentPlan, fallbackValue);
+
+        row.querySelector('.payment-plan-label').innerText = summary.label;
+        row.querySelector('.payment-count').innerText = summary.count;
+        row.querySelector('.item-value').value = total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
     function addItem(areaId) {
         const container = document.getElementById(`container-${areaId}`);
@@ -240,9 +364,10 @@
                     <input type="text" class="item-value" value="0.00" readonly
                         style="width: 100%; background: transparent; border: none; font-weight: 700; text-align: right; font-size: 14px;">
                     <button onclick="openPaymentsModal(this)" class="btn-link" style="font-size: 10px; color: #2563eb; cursor: pointer; border: none; background: none; text-decoration: underline; padding: 0;">
-                        Planejar Pagamentos (<span class="payment-count">0</span>)
+                        <span class="payment-plan-label">Planejar Pagamentos</span> (<span class="payment-count">0</span>)
                     </button>
                     <input type="hidden" class="item-payments-json" value="[]">
+                    <input type="hidden" class="item-payment-plan-json" value='{"mode":"multiple","start_date":null,"end_date":null,"monthly_amount":0}'>
                 </div>
             </td>
             <td style="padding: 12px; text-align: right;">
@@ -252,22 +377,49 @@
             </td>
         `;
         container.appendChild(tr);
+        refreshRowPaymentSummary(tr);
     }
 
     function openPaymentsModal(btn) {
         currentEditingRow = btn.closest('tr');
         const desc = currentEditingRow.querySelector('.item-desc').value || "Novo Item";
-        const payments = JSON.parse(currentEditingRow.querySelector('.item-payments-json').value);
+        const payments = JSON.parse(currentEditingRow.querySelector('.item-payments-json').value || '[]');
+        const classification = getRowClassification(currentEditingRow);
+        const paymentPlan = getRowPaymentPlan(currentEditingRow);
 
         document.getElementById('modalItemName').innerText = desc;
         const list = document.getElementById('paymentsList');
         list.innerHTML = '';
 
+        document.getElementById('contractModeWrapper').style.display = classification === 'contratação' ? 'block' : 'none';
+        document.getElementById('modalPaymentMode').value = classification === 'contratação'
+            ? paymentPlan.mode || 'single'
+            : 'multiple';
+        document.getElementById('modalContractStart').value = paymentPlan.start_date || '';
+        document.getElementById('modalContractEnd').value = paymentPlan.end_date || '';
+        document.getElementById('modalContractMonthlyAmount').value = paymentPlan.monthly_amount
+            ? Number(paymentPlan.monthly_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : '';
+
         payments.forEach(p => addPaymentRow(p.date, p.amount));
         if (payments.length === 0) addPaymentRow();
 
+        handleModalModeChange();
         updateModalTotal();
         document.getElementById('paymentsModal').style.display = 'flex';
+    }
+
+    function handleModalModeChange() {
+        if (!currentEditingRow) return;
+
+        const classification = getRowClassification(currentEditingRow);
+        const selectedMode = document.getElementById('modalPaymentMode').value;
+        const explicitSection = document.getElementById('explicitPaymentsSection');
+        const monthlySection = document.getElementById('monthlyContractSection');
+
+        const isMonthlyContract = classification === 'contratação' && selectedMode === 'monthly_contract';
+        explicitSection.style.display = isMonthlyContract ? 'none' : 'block';
+        monthlySection.style.display = isMonthlyContract ? 'block' : 'none';
     }
 
     function addPaymentRow(date = '', amount = '') {
@@ -282,9 +434,23 @@
 
     function updateModalTotal() {
         let total = 0;
-        document.querySelectorAll('.modal-pay-amount').forEach(input => {
-            total += parseBrFloat(input.value) || 0;
-        });
+        const classification = currentEditingRow ? getRowClassification(currentEditingRow) : 'aquisição';
+        const selectedMode = document.getElementById('modalPaymentMode').value;
+
+        if (classification === 'contratação' && selectedMode === 'monthly_contract') {
+            const paymentPlan = {
+                mode: 'monthly_contract',
+                start_date: document.getElementById('modalContractStart').value || null,
+                end_date: document.getElementById('modalContractEnd').value || null,
+                monthly_amount: parseBrFloat(document.getElementById('modalContractMonthlyAmount').value) || 0
+            };
+            total = calculateRowDisplayValue(classification, [], paymentPlan);
+        } else {
+            document.querySelectorAll('.modal-pay-amount').forEach(input => {
+                total += parseBrFloat(input.value) || 0;
+            });
+        }
+
         document.getElementById('modalTotalValue').innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
     }
 
@@ -294,21 +460,48 @@
     }
 
     function applyPayments() {
-        const payments = [];
-        let total = 0;
+        const classification = getRowClassification(currentEditingRow);
+        const selectedMode = document.getElementById('modalPaymentMode').value;
+        const paymentPlan = getDefaultPaymentPlan(classification);
+        let payments = [];
 
-        document.querySelectorAll('#paymentsList tr').forEach(row => {
-            const date = row.querySelector('.modal-pay-date').value;
-            const amount = parseBrFloat(row.querySelector('.modal-pay-amount').value) || 0;
-            if (date || amount > 0) {
-                payments.push({ date, amount });
-                total += amount;
+        if (classification === 'contratação' && selectedMode === 'monthly_contract') {
+            paymentPlan.mode = 'monthly_contract';
+            paymentPlan.start_date = document.getElementById('modalContractStart').value || null;
+            paymentPlan.end_date = document.getElementById('modalContractEnd').value || null;
+            paymentPlan.monthly_amount = parseBrFloat(document.getElementById('modalContractMonthlyAmount').value) || 0;
+
+            if (!paymentPlan.start_date) {
+                alert('Informe o início do contrato mensal.');
+                return;
             }
-        });
+
+            if (paymentPlan.end_date && paymentPlan.end_date < paymentPlan.start_date) {
+                alert('O fim do contrato não pode ser anterior ao início.');
+                return;
+            }
+        } else {
+            paymentPlan.mode = classification === 'contratação'
+                ? selectedMode || 'single'
+                : 'multiple';
+
+            document.querySelectorAll('#paymentsList tr').forEach(row => {
+                const date = row.querySelector('.modal-pay-date').value;
+                const amount = parseBrFloat(row.querySelector('.modal-pay-amount').value) || 0;
+                if (date || amount > 0) {
+                    payments.push({ date, amount });
+                }
+            });
+
+            if (classification === 'contratação' && paymentPlan.mode === 'single' && payments.length > 1) {
+                payments = payments.slice(0, 1);
+            }
+        }
 
         currentEditingRow.querySelector('.item-payments-json').value = JSON.stringify(payments);
-        currentEditingRow.querySelector('.item-value').value = total.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        currentEditingRow.querySelector('.payment-count').innerText = payments.length;
+        currentEditingRow.querySelector('.item-payment-plan-json').value = JSON.stringify(paymentPlan);
+        currentEditingRow.querySelector('.item-value').value = '0,00';
+        refreshRowPaymentSummary(currentEditingRow);
 
         closePaymentsModal();
     }
@@ -325,8 +518,9 @@
                 availability_date: row.querySelector('.item-avail-date').value || null,
                 operational_capacity_revenue: parseBrFloat(row.querySelector('.item-capacity').value) || 0,
                 value: parseBrFloat(row.querySelector('.item-value').value) || 0,
-                payments: JSON.parse(row.querySelector('.item-payments-json').value),
-                repetition: "unica",
+                payments: JSON.parse(row.querySelector('.item-payments-json').value || '[]'),
+                payment_plan: getRowPaymentPlan(row),
+                repetition: getRowPaymentPlan(row).mode === 'monthly_contract' ? "mensal" : "unica",
                 supplier: "",
                 notes: ""
             })).filter(i => i.description);
@@ -356,6 +550,8 @@
             alert('Erro de conexão.');
         }
     }
+
+    document.querySelectorAll('.item-row').forEach(refreshRowPaymentSummary);
 
     async function completeSection() {
         await saveExecution();

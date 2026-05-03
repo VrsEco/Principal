@@ -9,6 +9,90 @@ logger = logging.getLogger(__name__)
 
 class PlanService:
     @staticmethod
+    def _normalize_period(value: Optional[str]) -> str:
+        """Normaliza datas YYYY-MM, YYYY.MM e YYYY-MM-DD para YYYY-MM."""
+        if not value:
+            return ""
+
+        normalized = str(value).strip().replace('.', '-').replace('/', '-')
+        if len(normalized) >= 7:
+            parts = normalized.split('-')
+            if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+                return f"{int(parts[0]):04d}-{int(parts[1]):02d}"
+        return ""
+
+    @staticmethod
+    def _expand_execution_item_payments(item: Dict[str, Any], normalized_periods: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Expande o planejamento financeiro do item em fluxos mensais."""
+        payments = item.get('payments') or []
+        classification = item.get('classification') or 'aquisição'
+        payment_plan = item.get('payment_plan') or {}
+        plan_mode = payment_plan.get('mode') or 'multiple'
+
+        if classification == 'contratação' and plan_mode == 'monthly_contract':
+            start_period = PlanService._normalize_period(
+                payment_plan.get('start_date')
+                or item.get('acquisition_date')
+                or item.get('availability_date')
+            )
+            end_period = PlanService._normalize_period(payment_plan.get('end_date'))
+            monthly_amount = float(payment_plan.get('monthly_amount') or 0)
+
+            if not normalized_periods or not start_period or monthly_amount <= 0:
+                return []
+
+            return [
+                {"date": period, "amount": monthly_amount}
+                for period in normalized_periods
+                if period >= start_period and (not end_period or period <= end_period)
+            ]
+
+        expanded = []
+        if payments:
+            for pay in payments:
+                period = PlanService._normalize_period(pay.get('date'))
+                if period:
+                    expanded.append({
+                        "date": period,
+                        "amount": float(pay.get('amount') or 0),
+                    })
+            return expanded
+
+        fallback_period = PlanService._normalize_period(
+            item.get('acquisition_date') or item.get('availability_date')
+        )
+        fallback_amount = float(item.get('value') or 0)
+        if fallback_period and fallback_amount > 0:
+            return [{"date": fallback_period, "amount": fallback_amount}]
+        return []
+
+    @staticmethod
+    def _collect_execution_item_dates(item: Dict[str, Any]) -> List[str]:
+        """Retorna datas relevantes do item para definir o início da análise."""
+        relevant_dates = []
+        payment_plan = item.get('payment_plan') or {}
+
+        for pay in item.get('payments', []):
+            period = PlanService._normalize_period(pay.get('date'))
+            if period:
+                relevant_dates.append(period)
+
+        for key in ('acquisition_date', 'availability_date'):
+            period = PlanService._normalize_period(item.get(key))
+            if period:
+                relevant_dates.append(period)
+
+        if item.get('classification') == 'contratação' and payment_plan.get('mode') == 'monthly_contract':
+            start_period = PlanService._normalize_period(payment_plan.get('start_date'))
+            end_period = PlanService._normalize_period(payment_plan.get('end_date'))
+            if start_period:
+                relevant_dates.append(start_period)
+            if end_period:
+                relevant_dates.append(end_period)
+
+        return relevant_dates
+
+    @staticmethod
     def get_sections_config(mode: str) -> List[Dict[str, Any]]:
         """Returns the centralized configuration for plan sections."""
         if mode == 'growth':
@@ -397,14 +481,14 @@ class PlanService:
         fixed_asset_rows = []
         fixed_assets_total = 0.0
         for item in investment_items:
-            payments = item.get('payments') or []
+            payments = PlanService._expand_execution_item_payments(item)
             if payments:
                 for pay in payments:
                     amount = float(pay.get('amount') or 0)
                     fixed_asset_rows.append({
                         "description": item.get('description') or "Investimento",
                         "item_type": item.get('item_type') or "",
-                        "date": pay.get('date') or item.get('acquisition_date') or item.get('availability_date') or "",
+                        "date": pay.get('date') or PlanService._normalize_period(item.get('acquisition_date')) or PlanService._normalize_period(item.get('availability_date')) or "",
                         "amount": amount,
                     })
                     fixed_assets_total += amount
@@ -413,7 +497,7 @@ class PlanService:
                 fixed_asset_rows.append({
                     "description": item.get('description') or "Investimento",
                     "item_type": item.get('item_type') or "",
-                    "date": item.get('acquisition_date') or item.get('availability_date') or "",
+                    "date": PlanService._normalize_period(item.get('acquisition_date')) or PlanService._normalize_period(item.get('availability_date')) or "",
                     "amount": amount,
                 })
                 fixed_assets_total += amount
@@ -426,8 +510,7 @@ class PlanService:
         else:
             all_dates = list(ramp_up_dates) # Start with ramp-up dates
             for item in investment_items + fixed_cost_items + fixed_expense_items:
-                for pay in item.get('payments', []):
-                    all_dates.append(pay.get('date'))
+                all_dates.extend(PlanService._collect_execution_item_dates(item))
             
             for cat in ['cash_items', 'receivables_items', 'inventory_items']:
                 for item in wc_data.get(cat, []):
@@ -452,6 +535,19 @@ class PlanService:
             if curr_m > 12:
                 curr_m = 1
                 curr_y += 1
+
+        investment_payment_flows = [
+            PlanService._expand_execution_item_payments(item, normalized_periods)
+            for item in investment_items
+        ]
+        fixed_cost_payment_flows = [
+            PlanService._expand_execution_item_payments(item, normalized_periods)
+            for item in fixed_cost_items
+        ]
+        fixed_expense_payment_flows = [
+            PlanService._expand_execution_item_payments(item, normalized_periods)
+            for item in fixed_expense_items
+        ]
         
         # Identify last month of ramp-up
         ramp_up_end_index = period_months - 1
@@ -516,20 +612,20 @@ class PlanService:
                     period_variable_expenses += units * p.get('variable_expenses_value', 0)
             
             # Match Fixed Costs
-            for item in fixed_cost_items:
-                for pay in item.get('payments', []):
+            for item_payments in fixed_cost_payment_flows:
+                for pay in item_payments:
                     if pay.get('date', '').replace('.','-').startswith(period):
                         period_fixed_costs += float(pay.get('amount') or 0)
             
             # Match Fixed Expenses
-            for item in fixed_expense_items:
-                for pay in item.get('payments', []):
+            for item_payments in fixed_expense_payment_flows:
+                for pay in item_payments:
                     if pay.get('date', '').replace('.','-').startswith(period):
                         period_fixed_expenses += float(pay.get('amount') or 0)
 
             # Match Investments
-            for item in investment_items:
-                for pay in item.get('payments', []):
+            for item_payments in investment_payment_flows:
+                for pay in item_payments:
                     if pay.get('date', '').replace('.','-').startswith(period):
                         period_investment += float(pay.get('amount') or 0)
             

@@ -99,6 +99,12 @@ class PaymentItem(BaseSchema):
     date: str
     amount: float
 
+class ExecutionPaymentPlan(BaseSchema):
+    mode: str = "multiple" # single, multiple, monthly_contract
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    monthly_amount: float = 0.0
+
 class ExecutionItem(BaseSchema):
     description: str
     item_type: Optional[str] = None # pessoas, imoveis, maquinas, ti, outros
@@ -107,6 +113,7 @@ class ExecutionItem(BaseSchema):
     acquisition_date: Optional[str] = None
     availability_date: Optional[str] = None
     payments: List[PaymentItem] = Field(default_factory=list)
+    payment_plan: ExecutionPaymentPlan = Field(default_factory=ExecutionPaymentPlan)
     operational_capacity_revenue: float = 0.0
     repetition: str = "unica" # unica, mensal
     supplier: Optional[str] = None
