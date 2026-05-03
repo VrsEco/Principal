@@ -226,10 +226,37 @@
                 </details>
             </div>
 
-            <!-- Imobilizado & Capex (Automated from Execution) -->
+            <!-- Imobilizado & Investimento Total -->
             <div class="planning-card" style="grid-column: span 2;">
-                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Investimento em
-                    Ativos (Imobilizado)</h3>
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 20px;">Investimentos Consolidados</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 16px; padding: 20px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #1e40af; text-transform: uppercase; margin-bottom: 8px;">
+                            Capital de Giro / Ativo Circulante
+                        </div>
+                        <div style="font-size: 24px; font-weight: 800; color: #1e40af;">
+                            R$ {{ consolidated.summary.total_working_capital | default(0) | format_currency_br }}
+                        </div>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
+                            Imobilizado / Ativo Não Circulante
+                        </div>
+                        <div style="font-size: 24px; font-weight: 800; color: #0f172a;">
+                            R$ {{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}
+                        </div>
+                    </div>
+                    <div style="background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 16px; padding: 20px;">
+                        <div style="font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; margin-bottom: 8px;">
+                            Investimento Total
+                        </div>
+                        <div style="font-size: 24px; font-weight: 800; color: #15803d;">
+                            R$ {{ consolidated.summary.total_investment | default(0) | format_currency_br }}
+                        </div>
+                    </div>
+                </div>
+
+                <h4 style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">Investimento em Imobilizado / Ativo Não Circulante</h4>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -246,24 +273,23 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% set total_capex = 0 %}
-                            {% for period in consolidated.timeline %}
-                            {% if period.investment > 0 %}
+                            {% for inv in consolidated.investments.fixed_asset_rows | default([]) %}
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 12px; font-size: 13px; font-weight: 600;">Investimentos do Mês {{
-                                    period.period }}</td>
-                                <td style="padding: 12px; font-size: 12px; color: #64748b;">CAPEX Consolidado</td>
-                                <td style="padding: 12px; font-size: 12px; color: #64748b;">{{ period.period }}</td>
-                                <td style="padding: 12px; font-size: 13px; font-weight: 700; text-align: right;">{{ period.investment | format_currency_br }}</td>
+                                <td style="padding: 12px; font-size: 13px; font-weight: 600;">{{ inv.description }}</td>
+                                <td style="padding: 12px; font-size: 12px; color: #64748b;">{{ inv.item_type or 'imobilizado' }}</td>
+                                <td style="padding: 12px; font-size: 12px; color: #64748b;">{{ inv.date or '-' }}</td>
+                                <td style="padding: 12px; font-size: 13px; font-weight: 700; text-align: right;">R$ {{ inv.amount | format_currency_br }}</td>
                             </tr>
-                            {% endif %}
+                            {% else %}
+                            <tr>
+                                <td colspan="4" style="padding: 16px; text-align: center; color: #64748b;">Nenhum investimento em imobilizado foi definido na página de execução.</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
                             <tr style="background: #f8fafc;">
-                                <td colspan="3" style="padding: 12px; font-weight: 800; text-align: right;">Total Capex
-                                    Projetado</td>
-                                <td style="padding: 12px; font-weight: 800; text-align: right; color: #2563eb;">R$ {{ consolidated.summary.total_investment | format_currency_br }}</td>
+                                <td colspan="3" style="padding: 12px; font-weight: 800; text-align: right;">Total Imobilizado / Ativo Não Circulante</td>
+                                <td style="padding: 12px; font-weight: 800; text-align: right; color: #2563eb;">R$ {{ consolidated.summary.total_fixed_assets | default(0) | format_currency_br }}</td>
                             </tr>
                         </tfoot>
                     </table>

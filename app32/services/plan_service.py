@@ -381,6 +381,42 @@ class PlanService:
                     ramp_up_dates.append(val.replace('.','-'))
 
         wc_data = fin_content.get('working_capital', {})
+        working_capital_lines = []
+        for cat in ['cash_items', 'receivables_items', 'inventory_items']:
+            for item in wc_data.get(cat, []):
+                working_capital_lines.append({
+                    "category": cat,
+                    "description": item.get('description') or "",
+                    "value": float(item.get('value') or 0),
+                    "contribution_date": item.get('contribution_date') or "",
+                    "availability_date": item.get('availability_date') or "",
+                })
+
+        working_capital_total = sum(item["value"] for item in working_capital_lines)
+
+        fixed_asset_rows = []
+        fixed_assets_total = 0.0
+        for item in investment_items:
+            payments = item.get('payments') or []
+            if payments:
+                for pay in payments:
+                    amount = float(pay.get('amount') or 0)
+                    fixed_asset_rows.append({
+                        "description": item.get('description') or "Investimento",
+                        "item_type": item.get('item_type') or "",
+                        "date": pay.get('date') or item.get('acquisition_date') or item.get('availability_date') or "",
+                        "amount": amount,
+                    })
+                    fixed_assets_total += amount
+            else:
+                amount = float(item.get('value') or 0)
+                fixed_asset_rows.append({
+                    "description": item.get('description') or "Investimento",
+                    "item_type": item.get('item_type') or "",
+                    "date": item.get('acquisition_date') or item.get('availability_date') or "",
+                    "amount": amount,
+                })
+                fixed_assets_total += amount
 
         params_start_date = params.get('start_date')
         if params_start_date:
@@ -599,6 +635,8 @@ class PlanService:
                 payback = i + 1
                 break
 
+        total_investment = working_capital_total + fixed_assets_total
+
         return {
             "metrics": {
                 "payback": payback,
@@ -607,11 +645,18 @@ class PlanService:
                 "vpl": vpl
             },
             "summary": {
-                "total_investment": total_investment_capex,
+                "total_investment": total_investment,
+                "total_working_capital": working_capital_total,
+                "total_fixed_assets": fixed_assets_total,
                 "total_equity": total_equity,
                 "total_loans": sum(t['loans'] for t in timeline),
                 "total_revenue": sum(t['revenue'] for t in timeline),
                 "total_operating_result": sum(t['operating_result'] for t in timeline)
+            },
+            "investments": {
+                "working_capital_lines": working_capital_lines,
+                "fixed_asset_rows": fixed_asset_rows,
+                "timeline_total_investment": total_investment_capex,
             },
             "timeline": timeline,
             "params": params,
