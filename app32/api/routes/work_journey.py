@@ -6,8 +6,10 @@ from flask import Blueprint, abort, jsonify, render_template, request, session
 from flask_login import current_user
 from pydantic import ValidationError
 
-from models import Company, Employee, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
+from models import Company, Employee, WorkCalendarEvent, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
 from schemas.work_journey import (
+    WorkCalendarEventCreateSchema,
+    WorkCalendarEventUpdateSchema,
     WorkJourneyAbsenceApprovalSchema,
     WorkJourneyAbsenceRequestCreateSchema,
     WorkJourneyBlockCreateSchema,
@@ -18,6 +20,13 @@ from schemas.work_journey import (
     WorkJourneyRuleUpdateSchema,
     WorkJourneyTransferApprovalSchema,
     WorkJourneyTransferRequestCreateSchema,
+)
+from services.work_calendar_event_service import (
+    create_calendar_event,
+    delete_calendar_event,
+    list_calendar_events,
+    suggest_employee_for_source,
+    update_calendar_event,
 )
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from services.routine_journey_binding_service import (
@@ -67,6 +76,7 @@ def _format_validation_error(exc: ValidationError) -> str:
 
 
 @work_journey_bp.route('/work-journey')
+@work_journey_bp.route('/calendar')
 @permission_required('processes', 'view')
 def work_journey_redirect():
     company_id = session.get('active_company_id') or get_default_company_id()
@@ -77,6 +87,7 @@ def work_journey_redirect():
 
 
 @work_journey_bp.route('/companies/<int:company_id>/work-journey')
+@work_journey_bp.route('/companies/<int:company_id>/calendar')
 @permission_required('processes', 'view')
 def work_journey_page(company_id: int):
     session['active_company_id'] = company_id
@@ -294,6 +305,95 @@ def api_delete_item(company_id: int, item_id: int):
         return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
 
 
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/calendar/events', methods=['GET'])
+@permission_required('processes', 'view')
+def api_list_calendar_events(company_id: int):
+    try:
+        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        if not employee_id or not _can_access_employee(company_id, employee_id):
+            return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
+        start_date = _parse_date(request.args.get('start_date'))
+        end_date = _parse_date(request.args.get('end_date'))
+        source_type = request.args.get('source_type')
+        source_id = request.args.get('source_id', type=int)
+        events = list_calendar_events(
+            company_id,
+            employee_id,
+            start_date=start_date,
+            end_date=end_date,
+            source_type=source_type,
+            source_id=source_id,
+        )
+        return jsonify({'success': True, 'data': events})
+    except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/calendar/events', methods=['POST'])
+@permission_required('processes', 'view')
+def api_create_calendar_event(company_id: int):
+    try:
+        payload = WorkCalendarEventCreateSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        if not _can_manage_employee(company_id, payload['employee_id']):
+            return jsonify({'success': False, 'message': 'Você não pode criar eventos para este colaborador.'}), 403
+        payload['start_time'] = _parse_time(payload.get('start_time'))
+        payload['end_time'] = _parse_time(payload.get('end_time'))
+        event = create_calendar_event(company_id, payload, getattr(current_user, 'id', None))
+        return jsonify({'success': True, 'event': event}), 201
+    except ValidationError as exc:
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
+    except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/calendar/events/<int:event_id>', methods=['PATCH'])
+@permission_required('processes', 'view')
+def api_update_calendar_event(company_id: int, event_id: int):
+    try:
+        event_row = WorkCalendarEvent.query.filter_by(company_id=company_id, id=event_id).first()
+        if not event_row:
+            return jsonify({'success': False, 'message': 'Evento de calendário não encontrado.'}), 404
+        if not _can_manage_employee(company_id, event_row.employee_id):
+            return jsonify({'success': False, 'message': 'Você não pode editar este evento.'}), 403
+        payload = WorkCalendarEventUpdateSchema.model_validate(request.get_json(silent=True) or {}).model_dump(exclude_unset=True)
+        target_employee_id = payload.get('employee_id')
+        if target_employee_id and not _can_manage_employee(company_id, target_employee_id):
+            return jsonify({'success': False, 'message': 'Você não pode mover eventos para este colaborador.'}), 403
+        if 'start_time' in payload:
+            payload['start_time'] = _parse_time(payload.get('start_time'))
+        if 'end_time' in payload:
+            payload['end_time'] = _parse_time(payload.get('end_time'))
+        event = update_calendar_event(company_id, event_id, payload, getattr(current_user, 'id', None))
+        return jsonify({'success': True, 'event': event})
+    except ValidationError as exc:
+        return jsonify({'success': False, 'message': _format_validation_error(exc), 'details': exc.errors()}), 400
+    except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@work_journey_bp.route('/api/companies/<int:company_id>/work-journey/calendar/events/<int:event_id>', methods=['DELETE'])
+@permission_required('processes', 'view')
+def api_delete_calendar_event(company_id: int, event_id: int):
+    try:
+        event_row = WorkCalendarEvent.query.filter_by(company_id=company_id, id=event_id).first()
+        if not event_row:
+            return jsonify({'success': False, 'message': 'Evento de calendário não encontrado.'}), 404
+        if not _can_manage_employee(company_id, event_row.employee_id):
+            return jsonify({'success': False, 'message': 'Você não pode excluir este evento.'}), 403
+        delete_calendar_event(company_id, event_id)
+        return jsonify({'success': True})
+    except WorkJourneyError as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': PUBLIC_ERROR_MESSAGE}), 500
+
+
 @work_journey_bp.route('/api/companies/<int:company_id>/work-journey/items/<int:item_id>/transfer', methods=['POST'])
 @permission_required('processes', 'view')
 def api_create_transfer_request(company_id: int, item_id: int):
@@ -395,6 +495,10 @@ def _render_work_journey_page(company_id: int):
     employees = Employee.query.filter_by(company_id=company_id, status='active').order_by(Employee.name.asc()).all()
     current_employee_id = _current_employee_id(company_id)
     selected_employee_id = request.args.get('employee_id', type=int) or current_employee_id or (employees[0].id if employees else None)
+    source_type = str(request.args.get('source_type') or 'manual').strip().lower()
+    source_id = request.args.get('source_id', type=int)
+    if source_type in {'project_task', 'process_instance'} and source_id and not selected_employee_id:
+        selected_employee_id = suggest_employee_for_source(company_id, source_type, source_id)
     if selected_employee_id and not _can_access_employee(company_id, selected_employee_id):
         abort(403)
     return render_template(
@@ -405,6 +509,8 @@ def _render_work_journey_page(company_id: int):
         selected_employee_id=selected_employee_id,
         can_manage_all=has_company_full_access(company_id),
         today=date.today().isoformat(),
+        source_type=source_type,
+        source_id=source_id,
     )
 
 
@@ -450,6 +556,15 @@ def _parse_date(raw_value: str | None) -> date | None:
         return datetime.strptime(raw_value, '%Y-%m-%d').date()
     except ValueError:
         return None
+
+
+def _parse_time(raw_value: str | None):
+    if raw_value in {None, ''}:
+        return None
+    try:
+        return datetime.strptime(str(raw_value), '%H:%M').time()
+    except ValueError as exc:
+        raise WorkJourneyError('Horário inválido. Use HH:MM.') from exc
 
 
 

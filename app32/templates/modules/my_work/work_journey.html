@@ -1,6 +1,6 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Agendas da Jornada | Versus{% endblock %}
+{% block title %}Calendário | Versus{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey.css') }}">
@@ -12,8 +12,8 @@
     <section class="journey-hero">
         <div class="journey-hero__content">
             <div>
-                <h1 class="journey-hero__title">Agendas da Jornada</h1>
-                <p class="journey-hero__subtitle">Visão semanal padronizada, com filtros contextuais no menu lateral direito e busca livre sobre tarefas e blocos.</p>
+                <h1 class="journey-hero__title">Calendário</h1>
+                <p class="journey-hero__subtitle">Agenda operacional do colaborador, com eventos livres e vinculados a processos, projetos e tarefas do dia a dia.</p>
             </div>
             <div class="journey-hero__actions">
                 <a class="btn btn-secondary" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id, employee_id=selected_employee_id) }}">Relatório gerencial</a>
@@ -24,7 +24,7 @@
 
     <section class="surface-card journey-panel journey-tabs-shell">
         <div class="journey-tabs__header">
-            <button class="journey-tab is-active" data-tab="agendas">Agendas</button>
+            <button class="journey-tab is-active" data-tab="agendas">Calendário</button>
             <button class="journey-tab" data-tab="blocks">Blocos</button>
             <button class="journey-tab" data-tab="manual-tasks">Tarefas Avulsas</button>
             <button class="journey-tab" data-tab="absences">Ausências</button>
@@ -277,12 +277,15 @@
         canManageAll: {{ can_manage_all|tojson }},
         today: '{{ today }}',
         employees: {{ employees_payload|tojson }},
+        sourceType: {{ source_type|tojson }},
+        sourceId: {{ source_id|tojson }},
     };
 </script>
 <script src="{{ url_for('static', filename='js/work-journey-utils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-agendas-render.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-agendas.js') }}"></script>
+<script src="{{ url_for('static', filename='js/work-calendar-events.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-routines.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-manual-tasks.js') }}"></script>
 {% endblock %}

@@ -113,6 +113,7 @@ from .work_journey import (
     WorkJourneyBlock,
     WorkJourneyAgenda,
     WorkJourneyAgendaItem,
+    WorkCalendarEvent,
     WorkJourneyRule,
     WorkJourneyItem,
     WorkJourneyAbsenceRequest,
@@ -146,7 +147,7 @@ __all__ = [
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog', 'IntegrationRequest',
     'AICapability', 'AICapabilityGrant', 'AICapabilityCompanySetting', 'AICapabilityAuditLog',
-    'WorkJourneyBlock', 'WorkJourneyAgenda', 'WorkJourneyAgendaItem', 'WorkJourneyRule', 'WorkJourneyItem', 'WorkJourneyAbsenceRequest', 'WorkJourneyTransferRequest',
+    'WorkJourneyBlock', 'WorkJourneyAgenda', 'WorkJourneyAgendaItem', 'WorkCalendarEvent', 'WorkJourneyRule', 'WorkJourneyItem', 'WorkJourneyAbsenceRequest', 'WorkJourneyTransferRequest',
     'IncentiveRuleSet', 'IncentiveRule',
     'IncentiveGovernabilityMatrix', 'IncentiveCalculation',
     'IncentiveParticipant'

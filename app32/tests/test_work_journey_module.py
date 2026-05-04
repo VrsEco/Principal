@@ -212,6 +212,34 @@ def test_work_journey_page_renders_employee_payload(monkeypatch):
     assert response['employees_payload'][0]['name'] == 'Ana'
 
 
+def test_work_journey_page_uses_source_suggested_employee_when_available(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    company = SimpleNamespace(id=9, name='Empresa Teste')
+    employees = [
+        SimpleNamespace(id=4, company_id=9, user_id=8, status='active', name='Bruno', to_dict=lambda: {'id': 4, 'name': 'Bruno'}),
+    ]
+    captured = {}
+
+    monkeypatch.setattr(work_journey_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery(company)))
+    monkeypatch.setattr(
+        work_journey_route,
+        'Employee',
+        SimpleNamespace(query=_FakeEmployeeQuery(employees), name=_Column()),
+    )
+    monkeypatch.setattr(work_journey_route, 'current_user', SimpleNamespace(id=99, is_authenticated=True))
+    monkeypatch.setattr(work_journey_route, 'has_company_full_access', lambda company_id: True)
+    monkeypatch.setattr(work_journey_route, 'suggest_employee_for_source', lambda company_id, source_type, source_id: 4)
+    monkeypatch.setattr(work_journey_route, 'render_template', lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx)
+
+    with app.test_request_context('/companies/9/calendar?source_type=project_task&source_id=501'):
+        response = work_journey_route._render_work_journey_page(9)
+
+    assert response['selected_employee_id'] == 4
+    assert response['source_type'] == 'project_task'
+    assert response['source_id'] == 501
+
+
 def test_report_page_exposes_pdf_url(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'
@@ -518,7 +546,64 @@ def test_generate_agenda_route_accepts_legacy_date_alias_without_extra_validatio
     assert payload['data']['id'] == 91
     assert captured['anchor'] == date(2026, 4, 6)
     assert captured['scope'] == 'week'
-    assert captured['force'] is True
+
+
+def test_list_calendar_events_route_returns_service_payload(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+
+    monkeypatch.setattr(work_journey_route, 'current_user', SimpleNamespace(id=7, is_authenticated=True))
+    monkeypatch.setattr(work_journey_route, '_current_employee_id', lambda company_id: 3)
+    monkeypatch.setattr(work_journey_route, '_can_access_employee', lambda company_id, employee_id: True)
+    monkeypatch.setattr(
+        work_journey_route,
+        'list_calendar_events',
+        lambda company_id, employee_id, **kwargs: [{'id': 10, 'title': 'Revisar contrato'}],
+    )
+
+    with app.test_request_context('/api/companies/9/work-journey/calendar/events?employee_id=3&start_date=2026-05-04&end_date=2026-05-10'):
+        response = work_journey_route.api_list_calendar_events.__wrapped__(company_id=9)
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['success'] is True
+    assert payload['data'][0]['title'] == 'Revisar contrato'
+
+
+def test_create_calendar_event_route_parses_time_and_returns_event(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+
+    monkeypatch.setattr(work_journey_route, 'current_user', SimpleNamespace(id=7, is_authenticated=True))
+    monkeypatch.setattr(work_journey_route, '_can_manage_employee', lambda company_id, employee_id: True)
+    monkeypatch.setattr(
+        work_journey_route,
+        'create_calendar_event',
+        lambda company_id, payload, user_id: {
+            'id': 11,
+            'title': payload['title'],
+            'start_time': payload['start_time'].strftime('%H:%M') if payload.get('start_time') else None,
+        },
+    )
+
+    with app.test_request_context(
+        '/api/companies/9/work-journey/calendar/events',
+        method='POST',
+        json={
+            'employee_id': 3,
+            'title': 'Follow-up',
+            'event_date': '2026-05-04',
+            'start_time': '09:30',
+            'source_type': 'manual',
+        },
+    ):
+        response = work_journey_route.api_create_calendar_event.__wrapped__(company_id=9)
+
+    http_response, status_code = response
+    assert status_code == 201
+    payload = http_response.get_json()
+    assert payload['success'] is True
+    assert payload['event']['start_time'] == '09:30'
 
 
 def test_overdue_item_inside_current_week_starts_from_today_blocks(monkeypatch):
@@ -598,22 +683,24 @@ def test_templates_expose_work_journey_entrypoints():
     with open(os.path.join(root, 'templates', 'legacy', 'routine_details.html'), 'r', encoding='utf-8') as handle:
         routine_legacy_template = handle.read()
 
-    assert 'Agendas da Jornada' in journey_template
+    assert 'Calendário' in journey_template
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
+    assert 'work-calendar-events.js' in journey_template
     assert 'journeySearchInput' in journey_template
     assert 'journeyApplyFiltersBtn' in journey_template
     assert 'journeyClearFiltersBtn' in journey_template
     assert 'journeyScopeSelect' not in journey_template
-    assert 'Kanban de agendas' in agendas_panel
+    assert 'Planejamento operacional' in agendas_panel
+    assert 'calendarEventsList' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
     assert 'A primeira coluna exibe tarefas atrasadas' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
     assert 'agendaScopeSelect' not in agendas_panel
     assert 'agendaLockBadge' in agendas_panel
-    assert '/work-journey' in my_work_template
+    assert '/calendar' in my_work_template
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_legacy_template

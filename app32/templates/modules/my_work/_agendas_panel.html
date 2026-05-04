@@ -1,9 +1,10 @@
 <div class="journey-panel journey-agendas-shell surface-card">
     <div class="journey-panel__header journey-panel__header--tab">
         <div>
-            <h2 class="journey-section-title">Agendas</h2>
+            <h2 class="journey-section-title">Calendário</h2>
         </div>
         <div class="agenda-actions">
+            <button id="calendarEventStartBtn" class="btn btn-secondary">📅 Novo evento</button>
             <button id="manualTaskStartBtn" class="btn btn-secondary">➕ Tarefa Avulsa</button>
             <button id="agendaRefreshBtn" class="btn btn-secondary">Atualizar agenda</button>
             <button id="agendaGenerateBtn" class="btn btn-primary">Gerar sugestão</button>
@@ -15,11 +16,84 @@
 
     <div class="agenda-layout">
         <div class="agenda-main">
+            <div class="journey-list-card" style="margin-bottom: 1rem;">
+                <div class="journey-list-card__header">
+                    <div>
+                        <h3>Eventos do calendário</h3>
+                        <p>Compromissos livres e execuções vinculadas. Use este espaço para organizar análises, follow-ups e compromissos do dia.</p>
+                    </div>
+                    <div id="calendarEventsSummary" class="journey-badges"></div>
+                </div>
+                <form id="calendarEventForm" class="journey-form-card journey-form-card--inline" style="display:none; margin-bottom: 1rem;">
+                    <input type="hidden" id="calendarEventIdInput">
+                    <div class="journey-card-heading">
+                        <div>
+                            <h3>Evento de calendário</h3>
+                            <p id="calendarEventSourceHint">Crie um evento livre ou vinculado para organizar a execução.</p>
+                        </div>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Título</label>
+                            <input id="calendarEventTitleInput" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data</label>
+                            <input id="calendarEventDateInput" type="date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Início</label>
+                            <input id="calendarEventStartTimeInput" type="time" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fim</label>
+                            <input id="calendarEventEndTimeInput" type="time" class="form-control">
+                        </div>
+                    </div>
+                    <div class="journey-inline-grid">
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select id="calendarEventStatusInput" class="form-control">
+                                <option value="planned" selected>Planejado</option>
+                                <option value="confirmed">Confirmado</option>
+                                <option value="in_progress">Em execução</option>
+                                <option value="done">Concluído</option>
+                                <option value="postponed">Adiado</option>
+                                <option value="cancelled">Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prioridade</label>
+                            <select id="calendarEventPriorityInput" class="form-control">
+                                <option value="low">Baixa</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">Alta</option>
+                                <option value="urgent">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição</label>
+                        <textarea id="calendarEventDescriptionInput" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notas de execução</label>
+                        <textarea id="calendarEventExecutionNotesInput" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="journey-form-actions">
+                        <button type="button" class="btn btn-secondary" id="calendarEventCancelBtn">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar evento</button>
+                    </div>
+                </form>
+                <div id="calendarEventsList"></div>
+            </div>
             <div class="agenda-board-wrap">
                 <div class="agenda-board-header">
                     <div>
-                        <h3 class="journey-section-title">Kanban de agendas</h3>
-                        <p class="journey-section-subtitle">A primeira coluna exibe tarefas atrasadas e, em seguida, a semana inicia no domingo. Cada coluna e bloco pode ser recolhido para otimizar a leitura.</p>
+                        <h3 class="journey-section-title">Planejamento operacional</h3>
+                        <p class="journey-section-subtitle">A primeira coluna exibe tarefas atrasadas e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
                     </div>
                     <div class="agenda-board-header__actions">
                         <span id="agendaLockBadge" class="agenda-status-pill agenda-status-pill--draft">Agenda não travada</span>

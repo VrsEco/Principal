@@ -11,6 +11,8 @@ _ALLOWED_PRIORITIES = {'low', 'normal', 'high', 'urgent'}
 _ALLOWED_ITEM_STATUSES = {'pending', 'in_progress', 'completed', 'postponed', 'suspended'}
 _ALLOWED_ABSENCE_TYPES = {'vacation', 'absence', 'medical_leave'}
 _ALLOWED_AGENDA_SCOPES = {'day', 'week'}
+_ALLOWED_EVENT_SOURCE_TYPES = {'manual', 'project_task', 'process_instance'}
+_ALLOWED_EVENT_STATUSES = {'planned', 'confirmed', 'in_progress', 'done', 'cancelled', 'postponed'}
 
 
 class _StrictModel(BaseModel):
@@ -161,3 +163,39 @@ class WorkJourneyAgendaMoveSchema(_StrictModel):
     source_scope: Literal['overdue', 'block', 'unassigned'] | None = None
     confirm_date_change: bool = False
     notes: str | None = None
+
+
+class WorkCalendarEventCreateSchema(_StrictModel):
+    employee_id: int
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = None
+    event_date: date
+    start_time: str | None = None
+    end_time: str | None = None
+    source_type: Literal['manual', 'project_task', 'process_instance'] = 'manual'
+    source_id: int | None = None
+    status: Literal['planned', 'confirmed', 'in_progress', 'done', 'cancelled', 'postponed'] = 'planned'
+    priority: Literal['low', 'normal', 'high', 'urgent'] = 'normal'
+    execution_notes: str | None = None
+    metadata_json: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode='after')
+    def validate_source(self):
+        if self.source_type != 'manual' and not self.source_id:
+            raise ValueError('source_id é obrigatório para eventos vinculados.')
+        return self
+
+
+class WorkCalendarEventUpdateSchema(_StrictModel):
+    employee_id: int | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    event_date: date | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    source_type: Literal['manual', 'project_task', 'process_instance'] | None = None
+    source_id: int | None = None
+    status: Literal['planned', 'confirmed', 'in_progress', 'done', 'cancelled', 'postponed'] | None = None
+    priority: Literal['low', 'normal', 'high', 'urgent'] | None = None
+    execution_notes: str | None = None
+    metadata_json: dict[str, Any] | None = None

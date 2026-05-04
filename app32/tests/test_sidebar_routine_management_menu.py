@@ -36,6 +36,10 @@ def _build_app():
     def process_instances_redirect():
         return "ok"
 
+    @processes_bp.route("/bpms-analysis")
+    def bpms_analysis_redirect():
+        return "ok"
+
     @processes_bp.route("/process-occurrences")
     def process_occurrences_redirect():
         return "ok"
@@ -99,8 +103,8 @@ def test_routine_menu_structure_matches_sidebar_tree():
     assert "Análise de Projetos" in html
     assert "Gestão de Reuniões" in html
     assert "Gestão de Ocorrências" in html
-    assert "Jornada dos Colaboradores" in html
-    assert "Jornada do Colaborador" in html
+    assert "Calendário e Jornadas" in html
+    assert "Calendário" in html
     assert "Análise das Jornadas" in html
     assert "Análise da Eficiência" in html
 
@@ -137,8 +141,8 @@ def test_work_journey_page_opens_journey_group():
         session["active_company_id"] = 9
         html = render_template_string("{% include 'partials/sidebar/_routine_management.html' %}")
 
-    assert "Jornada dos Colaboradores" in html
-    assert "Jornada do Colaborador" in html
+    assert "Calendário e Jornadas" in html
+    assert "Calendário" in html
     assert "Análise das Jornadas" in html
     assert "Análise da Eficiência" in html
     assert "sidebar-group open" in html
