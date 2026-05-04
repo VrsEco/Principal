@@ -494,6 +494,7 @@ def _render_work_journey_page(company_id: int):
     company = Company.query.get_or_404(company_id)
     employees = Employee.query.filter_by(company_id=company_id, status='active').order_by(Employee.name.asc()).all()
     current_employee_id = _current_employee_id(company_id)
+    anchor_date = _parse_date(request.args.get('date')) or date.today()
     selected_employee_id = request.args.get('employee_id', type=int) or current_employee_id or (employees[0].id if employees else None)
     source_type = str(request.args.get('source_type') or 'manual').strip().lower()
     source_id = request.args.get('source_id', type=int)
@@ -508,7 +509,7 @@ def _render_work_journey_page(company_id: int):
         employees_payload=[employee.to_dict() for employee in employees],
         selected_employee_id=selected_employee_id,
         can_manage_all=has_company_full_access(company_id),
-        today=date.today().isoformat(),
+        today=anchor_date.isoformat(),
         source_type=source_type,
         source_id=source_id,
     )

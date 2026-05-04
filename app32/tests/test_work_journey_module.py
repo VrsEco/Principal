@@ -240,6 +240,31 @@ def test_work_journey_page_uses_source_suggested_employee_when_available(monkeyp
     assert response['source_id'] == 501
 
 
+def test_work_journey_page_respects_requested_anchor_date(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    company = SimpleNamespace(id=9, name='Empresa Teste')
+    employees = [
+        SimpleNamespace(id=3, company_id=9, user_id=7, status='active', name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'}),
+    ]
+    captured = {}
+
+    monkeypatch.setattr(work_journey_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery(company)))
+    monkeypatch.setattr(
+        work_journey_route,
+        'Employee',
+        SimpleNamespace(query=_FakeEmployeeQuery(employees), name=_Column()),
+    )
+    monkeypatch.setattr(work_journey_route, 'current_user', SimpleNamespace(id=7, is_authenticated=True))
+    monkeypatch.setattr(work_journey_route, 'has_company_full_access', lambda company_id: True)
+    monkeypatch.setattr(work_journey_route, 'render_template', lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx)
+
+    with app.test_request_context('/companies/9/calendar?date=2026-05-12'):
+        response = work_journey_route._render_work_journey_page(9)
+
+    assert response['today'] == '2026-05-12'
+
+
 def test_report_page_exposes_pdf_url(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'
