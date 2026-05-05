@@ -14,6 +14,7 @@ from api.routes import work_journey_report as work_journey_report_route
 from services import work_journey_agenda_engine
 from services import work_journey_agenda_presenter
 from services import work_journey_agenda_service
+from services import work_calendar_event_service
 from services import work_journey_report_service
 from services import work_journey_service
 from services import work_journey_sync
@@ -177,6 +178,71 @@ def test_report_service_event_minutes_uses_window_or_metadata():
 
     assert work_journey_report_service._event_minutes(timed_event) == 75
     assert work_journey_report_service._event_minutes(metadata_event) == 45
+
+
+def test_calendar_event_serialization_exposes_owner_creator_and_executor(monkeypatch):
+    monkeypatch.setattr(
+        work_calendar_event_service,
+        '_resolve_source_context',
+        lambda company_id, source_type, source_id: {
+            'source_label': 'Instância de processo',
+            'source_code': 'IP.501',
+            'source_title': 'Fechamento mensal',
+            'source_url': '/companies/9/process-instances?instance_id=501',
+            'source_owner_employee_id': 8,
+            'source_owner_employee_name': 'Bruno',
+        },
+    )
+    monkeypatch.setattr(
+        work_calendar_event_service,
+        '_employee_name',
+        lambda company_id, employee_id: {3: 'Ana', 8: 'Bruno', 11: 'Carla'}.get(employee_id),
+    )
+
+    event = SimpleNamespace(
+        id=91,
+        company_id=9,
+        employee_id=3,
+        employee=SimpleNamespace(name='Ana'),
+        block=None,
+        source_type='process_instance',
+        source_id=501,
+        title='Revisar instância',
+        description='Acompanhamento operacional',
+        event_date=date(2026, 5, 4),
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+        status='confirmed',
+        priority='high',
+        execution_notes='Registrar Horas/Info depois',
+        metadata_json={'responsible_employee_id': 11, 'responsible_employee_name': 'Carla'},
+        created_by_user=SimpleNamespace(name='Fabiano'),
+        to_dict=lambda: {
+            'id': 91,
+            'company_id': 9,
+            'employee_id': 3,
+            'source_type': 'process_instance',
+            'source_id': 501,
+            'title': 'Revisar instância',
+            'event_date': '2026-05-04',
+            'start_time': '09:00',
+            'end_time': '10:00',
+            'status': 'confirmed',
+            'priority': 'high',
+            'metadata_json': {'responsible_employee_id': 11, 'responsible_employee_name': 'Carla'},
+        },
+    )
+
+    payload = work_calendar_event_service.serialize_calendar_event(event)
+
+    assert payload['owner_employee_id'] == 3
+    assert payload['owner_employee_name'] == 'Ana'
+    assert payload['created_by_user_name'] == 'Fabiano'
+    assert payload['responsible_employee_id'] == 11
+    assert payload['responsible_employee_name'] == 'Carla'
+    assert payload['executor_employee_id'] == 11
+    assert payload['source_owner_employee_id'] == 8
+    assert payload['source_owner_employee_name'] == 'Bruno'
 
 
 def test_block_chronology_key_prioritizes_weekday_then_time():

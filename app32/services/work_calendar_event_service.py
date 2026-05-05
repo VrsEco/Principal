@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from models import ProcessInstance, ProjectTask, WorkCalendarEvent, WorkJourneyBlock, db
+from models import Employee, ProcessInstance, ProjectTask, WorkCalendarEvent, WorkJourneyBlock, db
 from services.work_journey_base import WorkJourneyError, ensure_employee
 from services.work_journey_sync import build_process_instance_source_url, build_project_task_source_url
 
@@ -128,11 +128,18 @@ def delete_calendar_event(company_id: int, event_id: int) -> None:
 def serialize_calendar_event(event: WorkCalendarEvent) -> dict[str, Any]:
     payload = event.to_dict()
     source = _resolve_source_context(event.company_id, event.source_type, event.source_id)
+    responsibility = _resolve_responsibility_context(event, source)
     payload["employee_name"] = getattr(event.employee, "name", None)
     payload["block_name"] = getattr(getattr(event, "block", None), "name", None)
     payload["block_mode"] = getattr(getattr(event, "block", None), "block_mode", None)
     payload["duration_minutes"] = _event_duration_minutes(event)
     payload["duration_label"] = _format_minutes_label(payload["duration_minutes"])
+    payload["created_by_user_name"] = (
+        getattr(getattr(event, "created_by_user", None), "name", None)
+        or getattr(getattr(event, "created_by_user", None), "full_name", None)
+        or getattr(getattr(event, "created_by_user", None), "username", None)
+        or getattr(getattr(event, "created_by_user", None), "email", None)
+    )
     payload["status_label"] = {
         "planned": "Planejado",
         "confirmed": "Confirmado",
@@ -148,6 +155,7 @@ def serialize_calendar_event(event: WorkCalendarEvent) -> dict[str, Any]:
         "urgent": "Urgente",
     }.get(event.priority, event.priority)
     payload.update(source)
+    payload.update(responsibility)
     return payload
 
 
@@ -226,26 +234,38 @@ def _resolve_source_context(company_id: int, source_type: str, source_id: int | 
             .first()
         )
         if task:
+            source_owner_employee_id = getattr(task, "employee_id", None)
             return {
                 "source_label": "Atividade de projeto",
                 "source_code": getattr(task, "code", None) or f"J.{task.id}",
                 "source_title": getattr(task, "what", None),
                 "source_url": build_project_task_source_url(task.project_id, task.id),
+                "source_owner_employee_id": source_owner_employee_id,
+                "source_owner_employee_name": _employee_name(company_id, source_owner_employee_id),
             }
     if source_type == "process_instance" and source_id:
         instance = ProcessInstance.query.filter_by(company_id=company_id, id=source_id).first()
         if instance:
+            source_owner_employee_id = (
+                getattr(instance, "executor_id", None)
+                or getattr(instance, "responsible_id", None)
+                or getattr(instance, "owner_employee_id", None)
+            )
             return {
                 "source_label": "Instância de processo",
                 "source_code": getattr(instance, "instance_code", None) or f"IP.{instance.id}",
                 "source_title": getattr(instance, "title", None),
                 "source_url": build_process_instance_source_url(company_id, instance.id),
+                "source_owner_employee_id": source_owner_employee_id,
+                "source_owner_employee_name": _employee_name(company_id, source_owner_employee_id),
             }
     return {
         "source_label": "Evento livre" if source_type == "manual" else source_type,
         "source_code": None,
         "source_title": None,
         "source_url": None,
+        "source_owner_employee_id": None,
+        "source_owner_employee_name": None,
     }
 
 
@@ -289,7 +309,36 @@ def _format_minutes_label(minutes: int) -> str:
 
 def _build_event_metadata(metadata: dict[str, Any] | None, source_context: dict[str, Any]) -> dict[str, Any]:
     payload = dict(metadata or {})
-    for key in ("source_url", "source_code", "source_title", "source_label"):
+    for key in ("source_url", "source_code", "source_title", "source_label", "source_owner_employee_id", "source_owner_employee_name"):
         if source_context.get(key) is not None:
             payload[key] = source_context.get(key)
     return payload
+
+
+def _resolve_responsibility_context(event: WorkCalendarEvent, source_context: dict[str, Any]) -> dict[str, Any]:
+    metadata = dict(getattr(event, "metadata_json", None) or {})
+    owner_employee_id = getattr(event, "employee_id", None)
+    owner_employee_name = getattr(getattr(event, "employee", None), "name", None) or _employee_name(event.company_id, owner_employee_id)
+    responsible_employee_id = metadata.get("responsible_employee_id") or owner_employee_id
+    responsible_employee_name = metadata.get("responsible_employee_name") or _employee_name(event.company_id, responsible_employee_id) or owner_employee_name
+    source_owner_employee_id = source_context.get("source_owner_employee_id")
+    source_owner_employee_name = source_context.get("source_owner_employee_name")
+    return {
+        "owner_employee_id": owner_employee_id,
+        "owner_employee_name": owner_employee_name,
+        "calendar_owner_employee_id": owner_employee_id,
+        "calendar_owner_employee_name": owner_employee_name,
+        "responsible_employee_id": responsible_employee_id,
+        "responsible_employee_name": responsible_employee_name,
+        "executor_employee_id": responsible_employee_id,
+        "executor_employee_name": responsible_employee_name,
+        "source_owner_employee_id": source_owner_employee_id,
+        "source_owner_employee_name": source_owner_employee_name,
+    }
+
+
+def _employee_name(company_id: int, employee_id: int | None) -> str | None:
+    if not employee_id:
+        return None
+    employee = Employee.query.filter_by(company_id=company_id, id=employee_id).first()
+    return getattr(employee, "name", None) if employee else None
