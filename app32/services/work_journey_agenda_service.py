@@ -16,6 +16,7 @@ from models import (
     WorkJourneyBlock,
     db,
 )
+from services.process_execution_projection_service import build_operational_projection, resolve_execution_due, select_current_execution
 from services.work_journey_agenda_engine import (
     allocate_item,
     apply_date_change_to_source,
@@ -348,20 +349,6 @@ EXECUTION_MODE_LABELS = {
     'external_mcp': 'Integração MCP',
 }
 
-ACTIVE_EXECUTION_PRIORITY = {
-    'in_progress': 0,
-    'ready': 1,
-    'waiting_external': 2,
-    'paused': 3,
-    'pending': 4,
-    'completed': 9,
-    'failed': 10,
-    'skipped': 11,
-}
-
-ACTIVE_HUMAN_EXECUTION_MODES = {'human_task', 'manual_external'}
-
-
 def _build_process_instance_cards(
     agenda: WorkJourneyAgenda,
     entries: list[WorkJourneyAgendaItem],
@@ -446,10 +433,12 @@ def _serialize_process_instance_card(
     agenda_entry_count: int,
     linked_event_count: int,
 ) -> dict[str, Any]:
-    current_execution = _select_current_execution(executions, instance.current_bpmn_element_id)
+    projection = build_operational_projection(instance, executions)
+    current_execution = projection.get('current_execution')
     current_activity = _serialize_current_activity(current_execution, instance)
     source_metadata = dict((related_items[0].metadata_json or {}) if related_items else {})
     instance_due_label = _format_date_label(instance.due_date)
+    linked_item = related_items[0] if related_items else None
     return {
         'id': f'instance-{instance.id}',
         'instance_id': int(instance.id),
@@ -472,44 +461,19 @@ def _serialize_process_instance_card(
         'source_url': source_metadata.get('source_url') or f'/companies/{instance.company_id}/process-instances?instance_id={instance.id}&from=work-journey',
         'agenda_entry_count': int(agenda_entry_count or 0),
         'linked_event_count': int(linked_event_count or 0),
+        'linked_operational_task': {
+            'title': getattr(linked_item, 'title', None) if linked_item else projection.get('operational_title'),
+            'due_date': (
+                getattr(linked_item, 'due_date', None).isoformat()
+                if linked_item and getattr(linked_item, 'due_date', None)
+                else (projection.get('operational_due_date').isoformat() if projection.get('operational_due_date') else None)
+            ),
+            'due_label': source_metadata.get('operational_due_label') or projection.get('operational_due_label'),
+            'status': getattr(linked_item, 'status', None) if linked_item else projection.get('status'),
+            'current_execution_id': source_metadata.get('current_execution_id'),
+        },
         'current_activity': current_activity,
     }
-
-
-def _select_current_execution(
-    executions: list[ProcessInstanceExecution],
-    current_bpmn_element_id: str | None,
-) -> ProcessInstanceExecution | None:
-    if not executions:
-        return None
-    active_executions = [
-        execution
-        for execution in executions
-        if str(getattr(execution, 'status', '') or '').strip().lower() not in {'completed', 'failed', 'skipped'}
-    ]
-    if not active_executions:
-        return None
-
-    prioritized = [
-        execution
-        for execution in active_executions
-        if str(getattr(execution, 'execution_mode', '') or '').strip().lower() in ACTIVE_HUMAN_EXECUTION_MODES
-    ] or active_executions
-
-    matching_current = [
-        execution
-        for execution in prioritized
-        if current_bpmn_element_id and str(getattr(execution, 'bpmn_element_id', '') or '').strip() == str(current_bpmn_element_id).strip()
-    ]
-    pool = matching_current or prioritized
-    return min(
-        pool,
-        key=lambda execution: (
-            ACTIVE_EXECUTION_PRIORITY.get(str(getattr(execution, 'status', '') or '').strip().lower(), 99),
-            0 if str(getattr(execution, 'execution_mode', '') or '').strip().lower() in ACTIVE_HUMAN_EXECUTION_MODES else 1,
-            -(getattr(execution, 'id', 0) or 0),
-        ),
-    )
 
 
 def _serialize_current_activity(
@@ -532,7 +496,7 @@ def _serialize_current_activity(
             'execution_id': None,
         }
 
-    due_payload = _resolve_execution_due(execution)
+    due_payload = resolve_execution_due(execution)
     execution_mode = str(getattr(execution, 'execution_mode', '') or '').strip().lower()
     status = str(getattr(execution, 'status', '') or '').strip().lower()
     return {
@@ -549,88 +513,5 @@ def _serialize_current_activity(
         'is_activity_overdue': bool(due_payload.get('is_activity_overdue')),
         'execution_id': int(execution.id),
     }
-
-
-def _resolve_execution_due(execution: ProcessInstanceExecution) -> dict[str, Any]:
-    metadata = dict(getattr(execution, 'metadata_json', None) or {})
-    datetime_keys = ('due_at', 'deadline_at', 'target_at', 'scheduled_at')
-    date_keys = ('due_date', 'deadline_date', 'target_date')
-
-    for key in datetime_keys:
-        parsed = _parse_datetime_value(metadata.get(key))
-        if parsed:
-            return {
-                'activity_due_at': parsed.isoformat(),
-                'activity_due_date': parsed.date().isoformat(),
-                'activity_due_label': parsed.strftime('%d/%m/%Y %H:%M'),
-                'is_activity_overdue': parsed < datetime.utcnow(),
-            }
-
-    for key in date_keys:
-        parsed_date = _parse_date_value(metadata.get(key))
-        if parsed_date:
-            return {
-                'activity_due_at': None,
-                'activity_due_date': parsed_date.isoformat(),
-                'activity_due_label': parsed_date.strftime('%d/%m/%Y'),
-                'is_activity_overdue': parsed_date < date.today(),
-            }
-
-    sla_minutes = metadata.get('sla_minutes')
-    anchor = execution.waiting_since or execution.started_at or execution.created_at
-    if anchor and sla_minutes not in (None, ''):
-        try:
-            due_at = anchor + timedelta(minutes=int(sla_minutes))
-        except (TypeError, ValueError):
-            due_at = None
-        if due_at:
-            return {
-                'activity_due_at': due_at.isoformat(),
-                'activity_due_date': due_at.date().isoformat(),
-                'activity_due_label': due_at.strftime('%d/%m/%Y %H:%M'),
-                'is_activity_overdue': due_at < datetime.utcnow(),
-            }
-
-    return {
-        'activity_due_at': None,
-        'activity_due_date': None,
-        'activity_due_label': None,
-        'is_activity_overdue': False,
-    }
-
-
-def _parse_datetime_value(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        return value
-    if not value:
-        return None
-    raw = str(value).strip()
-    if not raw:
-        return None
-    normalized = raw.replace('Z', '+00:00')
-    try:
-        parsed = datetime.fromisoformat(normalized)
-    except ValueError:
-        return None
-    return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
-
-
-def _parse_date_value(value: Any) -> date | None:
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return value
-    parsed = _parse_datetime_value(value)
-    if parsed:
-        return parsed.date()
-    if not value:
-        return None
-    raw = str(value).strip()
-    if not raw:
-        return None
-    try:
-        return date.fromisoformat(raw)
-    except ValueError:
-        return None
-
-
 def _format_date_label(value: date | None) -> str | None:
     return value.strftime('%d/%m/%Y') if value else None

@@ -12,11 +12,13 @@ from models import (
     Meeting,
     ProcessInstance,
     ProcessInstanceCollaborator,
+    ProcessInstanceExecution,
     ProjectTask,
     WorkJourneyAbsenceRequest,
     WorkJourneyItem,
     WorkJourneyRule,
 )
+from services.process_execution_projection_service import build_operational_projection
 from services.routine_journey_binding_service import get_bound_block_id
 from services.work_journey_base import ACTIVE_ITEM_STATUSES, ensure_employee
 from services.work_journey_helpers import PRIORITY_ORDER, date_range, rule_matches_date
@@ -120,16 +122,52 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
         )
         .all()
     )
+    instance_ids = [int(instance.id) for instance in query]
+    executions_by_instance: dict[int, list[ProcessInstanceExecution]] = {}
+    if instance_ids:
+        execution_rows = (
+            ProcessInstanceExecution.query
+            .filter(ProcessInstanceExecution.company_id == company_id)
+            .filter(ProcessInstanceExecution.process_instance_id.in_(instance_ids))
+            .order_by(
+                ProcessInstanceExecution.process_instance_id.asc(),
+                ProcessInstanceExecution.updated_at.desc(),
+                ProcessInstanceExecution.id.desc(),
+            )
+            .all()
+        )
+        executions_by_instance = {}
+        for execution in execution_rows:
+            executions_by_instance.setdefault(int(execution.process_instance_id), []).append(execution)
+
     for instance in query:
+        projection = build_operational_projection(instance, executions_by_instance.get(int(instance.id), []))
+        current_execution = projection.get('current_execution')
         metadata = {
             'source_label': 'Instância de processo',
             'source_code': instance.instance_code,
+            'source_title': instance.title,
             'process_id': instance.process_id,
             'routine_id': instance.routine_id,
             'process_name': instance.process_rel.name if instance.process_rel else None,
             'process_code': instance.process_rel.code if instance.process_rel else None,
             'manual_assignment': current_manual_assignment(company_id, 'process_instance', instance.id),
             'source_url': build_process_instance_source_url(company_id, instance.id),
+            'instance_title': instance.title,
+            'instance_due_date': instance.due_date.isoformat() if instance.due_date else None,
+            'instance_status': instance.status,
+            'operational_task_title': projection.get('operational_title'),
+            'operational_due_date': projection.get('operational_due_date').isoformat() if projection.get('operational_due_date') else None,
+            'operational_due_label': projection.get('operational_due_label'),
+            'current_execution_id': int(current_execution.id) if current_execution else None,
+            'current_execution_bpmn_element_id': getattr(current_execution, 'bpmn_element_id', None) if current_execution else None,
+            'current_execution_name': getattr(current_execution, 'bpmn_element_name', None) if current_execution else None,
+            'current_execution_type': getattr(current_execution, 'bpmn_element_type', None) if current_execution else None,
+            'current_execution_mode': getattr(current_execution, 'execution_mode', None) if current_execution else None,
+            'current_execution_status': getattr(current_execution, 'status', None) if current_execution else None,
+            'current_execution_due_at': projection.get('activity_due_at'),
+            'current_execution_due_date': projection.get('activity_due_date'),
+            'current_execution_is_overdue': projection.get('is_activity_overdue'),
         }
         recurrence_type = getattr(instance.routine, 'schedule_type', None) if instance.routine else None
         bound_block_id = get_bound_block_id(company_id, instance.routine_id, employee_id)
@@ -138,13 +176,13 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
             employee_id=employee_id,
             item_type='process_instance',
             source_id=instance.id,
-            title=instance.title,
-            description=instance.description,
-            due_date=instance.due_date,
-            estimated_minutes=int(float(instance.estimated_hours or 0) * 60),
-            worked_minutes=int(float(instance.actual_hours or instance.worked_hours or 0) * 60),
+            title=projection.get('operational_title') or instance.title,
+            description=projection.get('operational_description') or instance.description,
+            due_date=projection.get('operational_due_date') or instance.due_date,
+            estimated_minutes=int(projection.get('estimated_minutes') or 0),
+            worked_minutes=int(projection.get('worked_minutes') or 0),
             priority=str(instance.priority or 'normal'),
-            status=normalize_source_status(instance.status),
+            status=normalize_source_status(projection.get('status') or instance.status),
             recurrence_type=recurrence_type,
             bound_block_id=bound_block_id,
             metadata=metadata,

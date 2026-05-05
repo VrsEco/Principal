@@ -316,6 +316,7 @@
 
     return cards.map((card) => {
       const currentActivity = card.current_activity || {};
+      const linkedTask = card.linked_operational_task || {};
       const instanceDueClass = card.is_instance_overdue ? 'agenda-instance-card__metric-value agenda-instance-card__metric-value--danger' : 'agenda-instance-card__metric-value';
       const activityDueClass = currentActivity.is_activity_overdue ? 'agenda-instance-card__metric-value agenda-instance-card__metric-value--danger' : 'agenda-instance-card__metric-value';
       const cardClass = card.is_instance_overdue ? 'agenda-instance-card agenda-instance-card--overdue' : 'agenda-instance-card';
@@ -354,6 +355,13 @@
               ${card.agenda_entry_count ? `<span class="badge-pill">${card.agenda_entry_count} alocação(ões)</span>` : ''}
               ${card.linked_event_count ? `<span class="badge-pill">${card.linked_event_count} evento(s)</span>` : ''}
             </div>
+            ${linkedTask.title ? `
+              <div class="agenda-instance-card__task-link">
+                <span class="agenda-instance-card__metric-label">Tarefa operacional derivada</span>
+                <strong>${escapeHtml(linkedTask.title)}</strong>
+                <span class="text-secondary">${escapeHtml(linkedTask.due_label || 'Sem prazo operacional definido')}</span>
+              </div>
+            ` : ''}
           </div>
           <div class="agenda-instance-card__footer">
             <span class="text-secondary">${escapeHtml(card.routine_name || 'Sem rotina vinculada')}</span>

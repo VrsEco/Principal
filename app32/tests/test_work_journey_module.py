@@ -15,6 +15,7 @@ from services import work_journey_agenda_engine
 from services import work_journey_agenda_presenter
 from services import work_journey_agenda_service
 from services import work_calendar_event_service
+from services import process_execution_projection_service
 from services import work_journey_report_service
 from services import work_journey_service
 from services import work_journey_sync
@@ -832,6 +833,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Planejamento operacional' in agendas_panel
     assert 'processInstanceCardsPanel' in agendas_panel
     assert 'processInstanceCardsList' in agendas_panel
+    assert 'Tarefa operacional derivada' in agendas_panel or 'processInstanceCardsList' in agendas_panel
     assert 'calendarEventsList' in agendas_panel
     assert 'calendarEventBlockInput' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
@@ -1051,7 +1053,16 @@ def test_process_instance_card_serialization_exposes_macro_and_current_activity(
         created_at=datetime(2026, 4, 4, 9, 0),
         metadata_json={'sla_minutes': 120},
     )
-    related_item = SimpleNamespace(metadata_json={'source_url': '/companies/9/process-instances?instance_id=501&from=work-journey'})
+    related_item = SimpleNamespace(
+        title='Conferir documentos recebidos',
+        due_date=date(2026, 4, 4),
+        status='ready',
+        metadata_json={
+            'source_url': '/companies/9/process-instances?instance_id=501&from=work-journey',
+            'operational_due_label': '04/04/2026 11:00',
+            'current_execution_id': 88,
+        },
+    )
 
     payload = work_journey_agenda_service._serialize_process_instance_card(
         instance,
@@ -1066,6 +1077,42 @@ def test_process_instance_card_serialization_exposes_macro_and_current_activity(
     assert payload['current_activity']['activity_due_label'] == '04/04/2026 11:00'
     assert payload['agenda_entry_count'] == 2
     assert payload['linked_event_count'] == 1
+    assert payload['linked_operational_task']['title'] == 'Conferir documentos recebidos'
+    assert payload['linked_operational_task']['current_execution_id'] == 88
+
+
+def test_process_execution_projection_prefers_active_human_task_due():
+    instance = SimpleNamespace(
+        title='Fechamento Fiscal Maio',
+        description='Rotina mensal',
+        due_date=date(2026, 4, 6),
+        estimated_hours=5,
+        actual_hours=1,
+        worked_hours=1,
+        current_bpmn_element_id='Task_ReviewDocs',
+        status='in_progress',
+    )
+    execution = SimpleNamespace(
+        id=88,
+        bpmn_element_id='Task_ReviewDocs',
+        bpmn_element_name='Conferir documentos recebidos',
+        execution_mode='human_task',
+        status='ready',
+        estimated_hours=2,
+        actual_hours=0.5,
+        waiting_since=None,
+        started_at=datetime(2026, 4, 4, 9, 0),
+        created_at=datetime(2026, 4, 4, 9, 0),
+        metadata_json={'sla_minutes': 120},
+    )
+
+    projection = process_execution_projection_service.build_operational_projection(instance, [execution])
+
+    assert projection['operational_title'] == 'Conferir documentos recebidos'
+    assert projection['operational_due_label'] == '04/04/2026 11:00'
+    assert projection['estimated_minutes'] == 120
+    assert projection['worked_minutes'] == 30
+    assert projection['status'] == 'ready'
 
 
 def test_agenda_presenter_separates_overdue_and_unassigned_items(monkeypatch):

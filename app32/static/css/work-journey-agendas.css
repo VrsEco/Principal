@@ -158,6 +158,13 @@
   gap: 0.45rem;
 }
 
+.journey-tabpanel[data-panel="agendas"] .agenda-instance-card__task-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding-top: 0.2rem;
+}
+
 .journey-tabpanel[data-panel="agendas"] .agenda-sidecard {
   padding: 1rem;
 }
