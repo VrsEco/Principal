@@ -613,10 +613,9 @@
 
     const dateLabel = item.agenda_date || item.due_date || item.occurrence_date || '';
     const metaChips = [
-      item.source_label || '',
-      item.estimated_minutes ? formatMinutes(item.estimated_minutes) : '',
-      item.planned_window_label || '',
-      dateLabel,
+      item.source_label ? { value: item.source_label, kind: 'source' } : null,
+      item.estimated_minutes ? { value: formatMinutes(item.estimated_minutes), kind: 'effort' } : null,
+      item.planned_window_label ? { value: item.planned_window_label, kind: 'window' } : null,
     ].filter(Boolean);
 
     return `
@@ -631,8 +630,9 @@
       >
         <div class="agenda-card__top">
           <div class="agenda-card__title-wrap">
-            <span class="agenda-card__code">${item.display_code || item.source_label || item.item_type_label || item.item_type}</span>
+            ${dateLabel ? `<span class="agenda-card__date">${dateLabel}</span>` : ''}
             <h4 class="agenda-card__title">${item.display_title || item.title}</h4>
+            <span class="agenda-card__code">${item.display_code || item.source_label || item.item_type_label || item.item_type}</span>
           </div>
           <div class="agenda-card__badges">
             <span class="agenda-card__type">${item.item_type_label || item.item_type}</span>
@@ -640,7 +640,7 @@
           </div>
         </div>
         <div class="agenda-card__meta">
-          ${metaChips.map((chip) => `<span class="agenda-card__meta-chip">${chip}</span>`).join('')}
+          ${metaChips.map((chip) => `<span class="agenda-card__meta-chip agenda-card__meta-chip--${chip.kind}">${chip.value}</span>`).join('')}
         </div>
         ${item.description ? `<p class="agenda-card__desc">${item.description}</p>` : ''}
         ${warnings.length ? `<div class="agenda-card__warning">${warnings.join(' · ')}</div>` : ''}

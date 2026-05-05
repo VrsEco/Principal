@@ -1106,13 +1106,22 @@
 
 .agenda-card__code {
   display: inline-flex;
-  margin-bottom: 0.35rem;
+  margin-top: 0.35rem;
   padding: 0.2rem 0.5rem;
   border-radius: 8px;
   background: rgba(226, 232, 240, 0.9);
   color: var(--text-secondary);
   font-size: 0.68rem;
   font-weight: 800;
+}
+
+.agenda-card__date {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .agenda-card__title {
