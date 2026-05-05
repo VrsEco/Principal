@@ -62,6 +62,30 @@
   gap: 1rem;
 }
 
+.journey-tabpanel[data-panel="agendas"] .agenda-collapse-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-collapse-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-collapse-panel__body.is-hidden,
+.journey-tabpanel[data-panel="agendas"] .agenda-collapse-panel.is-collapsed .agenda-collapse-panel__body {
+  display: none;
+}
+
+.journey-tabpanel[data-panel="agendas"] .agenda-collapse-panel.is-collapsed .agenda-sidecard__toggle {
+  transform: rotate(-90deg);
+}
+
 .journey-tabpanel[data-panel="agendas"] .agenda-instance-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

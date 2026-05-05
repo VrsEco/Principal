@@ -17,108 +17,121 @@
 
     <div class="agenda-layout">
         <div class="agenda-main">
-            <div id="processInstanceCardsPanel" class="journey-list-card agenda-section-card" style="display:none;">
-                <div class="journey-list-card__header">
+            <section id="processInstanceCardsPanel" class="journey-list-card agenda-section-card agenda-collapse-panel" data-collapse-panel="process-instances" data-collapse-label="Instâncias em destaque" style="display:none;">
+                <div class="journey-list-card__header agenda-collapse-panel__header">
                     <div>
                         <h3>Instâncias em destaque</h3>
                         <p>Veja o prazo macro da instância e a atividade atual para reduzir ambiguidade entre o caso e a execução do momento.</p>
                     </div>
-                    <div id="processInstanceCardsSummary" class="journey-badges"></div>
+                    <div class="agenda-collapse-panel__actions">
+                        <div id="processInstanceCardsSummary" class="journey-badges"></div>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="process-instances" aria-expanded="true" aria-label="Colapsar Instâncias em destaque">▾</button>
+                    </div>
                 </div>
-                <div id="processInstanceCardsList" class="agenda-instance-card-grid"></div>
-            </div>
-            <div class="journey-list-card agenda-section-card">
-                <div class="journey-list-card__header">
+                <div class="agenda-collapse-panel__body" data-collapse-body>
+                    <div id="processInstanceCardsList" class="agenda-instance-card-grid"></div>
+                </div>
+            </section>
+            <section class="journey-list-card agenda-section-card agenda-collapse-panel" data-collapse-panel="calendar-events" data-collapse-label="Eventos do calendário">
+                <div class="journey-list-card__header agenda-collapse-panel__header">
                     <div>
                         <h3>Eventos do calendário</h3>
                         <p>Compromissos livres e execuções vinculadas. Use este espaço para organizar análises, follow-ups e compromissos do dia.</p>
                     </div>
-                    <div id="calendarEventsSummary" class="journey-badges"></div>
+                    <div class="agenda-collapse-panel__actions">
+                        <div id="calendarEventsSummary" class="journey-badges"></div>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="calendar-events" aria-expanded="true" aria-label="Colapsar Eventos do calendário">▾</button>
+                    </div>
                 </div>
-                <form id="calendarEventForm" class="journey-form-card journey-form-card--inline agenda-inline-form" style="display:none;">
-                    <input type="hidden" id="calendarEventIdInput">
-                    <div class="journey-card-heading">
-                        <div>
-                            <h3>Evento de calendário</h3>
-                            <p id="calendarEventSourceHint">Crie um evento livre ou vinculado para organizar a execução.</p>
+                <div class="agenda-collapse-panel__body" data-collapse-body>
+                    <form id="calendarEventForm" class="journey-form-card journey-form-card--inline agenda-inline-form" style="display:none;">
+                        <input type="hidden" id="calendarEventIdInput">
+                        <div class="journey-card-heading">
+                            <div>
+                                <h3>Evento de calendário</h3>
+                                <p id="calendarEventSourceHint">Crie um evento livre ou vinculado para organizar a execução.</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="journey-inline-grid">
-                        <div class="form-group">
-                            <label class="form-label">Título</label>
-                            <input id="calendarEventTitleInput" class="form-control" required>
+                        <div class="journey-inline-grid">
+                            <div class="form-group">
+                                <label class="form-label">Título</label>
+                                <input id="calendarEventTitleInput" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Data</label>
+                                <input id="calendarEventDateInput" type="date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="journey-inline-grid">
+                            <div class="form-group">
+                                <label class="form-label">Início</label>
+                                <input id="calendarEventStartTimeInput" type="time" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fim</label>
+                                <input id="calendarEventEndTimeInput" type="time" class="form-control">
+                            </div>
+                        </div>
+                        <div class="journey-inline-grid">
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <select id="calendarEventStatusInput" class="form-control">
+                                    <option value="planned" selected>Planejado</option>
+                                    <option value="confirmed">Confirmado</option>
+                                    <option value="in_progress">Em execução</option>
+                                    <option value="done">Concluído</option>
+                                    <option value="postponed">Adiado</option>
+                                    <option value="cancelled">Cancelado</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Prioridade</label>
+                                <select id="calendarEventPriorityInput" class="form-control">
+                                    <option value="low">Baixa</option>
+                                    <option value="normal" selected>Normal</option>
+                                    <option value="high">Alta</option>
+                                    <option value="urgent">Urgente</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Data</label>
-                            <input id="calendarEventDateInput" type="date" class="form-control" required>
-                        </div>
-                    </div>
-                    <div class="journey-inline-grid">
-                        <div class="form-group">
-                            <label class="form-label">Início</label>
-                            <input id="calendarEventStartTimeInput" type="time" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Fim</label>
-                            <input id="calendarEventEndTimeInput" type="time" class="form-control">
-                        </div>
-                    </div>
-                    <div class="journey-inline-grid">
-                        <div class="form-group">
-                            <label class="form-label">Status</label>
-                            <select id="calendarEventStatusInput" class="form-control">
-                                <option value="planned" selected>Planejado</option>
-                                <option value="confirmed">Confirmado</option>
-                                <option value="in_progress">Em execução</option>
-                                <option value="done">Concluído</option>
-                                <option value="postponed">Adiado</option>
-                                <option value="cancelled">Cancelado</option>
+                            <label class="form-label">Bloco</label>
+                            <select id="calendarEventBlockInput" class="form-control">
+                                <option value="">Sem bloco</option>
                             </select>
+                            <small class="journey-sidebar-hint">Quando vinculado a um bloco, o evento também reforça a ocupação operacional do período.</small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Prioridade</label>
-                            <select id="calendarEventPriorityInput" class="form-control">
-                                <option value="low">Baixa</option>
-                                <option value="normal" selected>Normal</option>
-                                <option value="high">Alta</option>
-                                <option value="urgent">Urgente</option>
-                            </select>
+                            <label class="form-label">Descrição</label>
+                            <textarea id="calendarEventDescriptionInput" class="form-control" rows="3"></textarea>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Bloco</label>
-                        <select id="calendarEventBlockInput" class="form-control">
-                            <option value="">Sem bloco</option>
-                        </select>
-                        <small class="journey-sidebar-hint">Quando vinculado a um bloco, o evento também reforça a ocupação operacional do período.</small>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Descrição</label>
-                        <textarea id="calendarEventDescriptionInput" class="form-control" rows="3"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Notas de execução</label>
-                        <textarea id="calendarEventExecutionNotesInput" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="journey-form-actions">
-                        <button type="button" class="btn btn-secondary" id="calendarEventCancelBtn">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar evento</button>
-                    </div>
-                </form>
-                <div id="calendarEventsList"></div>
-            </div>
-            <div class="agenda-board-wrap">
-                <div class="agenda-board-header">
+                        <div class="form-group">
+                            <label class="form-label">Notas de execução</label>
+                            <textarea id="calendarEventExecutionNotesInput" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="journey-form-actions">
+                            <button type="button" class="btn btn-secondary" id="calendarEventCancelBtn">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Salvar evento</button>
+                        </div>
+                    </form>
+                    <div id="calendarEventsList"></div>
+                </div>
+            </section>
+            <section class="agenda-board-wrap agenda-collapse-panel" data-collapse-panel="operational-planning" data-collapse-label="Planejamento operacional">
+                <div class="agenda-board-header agenda-collapse-panel__header">
                     <div>
                         <h3 class="journey-section-title">Planejamento operacional</h3>
                         <p class="journey-section-subtitle">A primeira coluna exibe eventos operacionais atrasados e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
                     </div>
-                    <div class="agenda-board-header__actions">
+                    <div class="agenda-board-header__actions agenda-collapse-panel__actions">
                         <span id="agendaLockBadge" class="agenda-status-pill agenda-status-pill--draft">Agenda não travada</span>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="operational-planning" aria-expanded="true" aria-label="Colapsar Planejamento operacional">▾</button>
                     </div>
                 </div>
-                <div id="agendaBoardContainer" class="agenda-board no-scrollbar"></div>
-            </div>
+                <div class="agenda-collapse-panel__body" data-collapse-body>
+                    <div id="agendaBoardContainer" class="agenda-board no-scrollbar"></div>
+                </div>
+            </section>
         </div>
 
     </div>
