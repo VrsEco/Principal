@@ -290,6 +290,37 @@ def test_work_journey_page_renders_employee_payload(monkeypatch):
     assert response['selected_employee_name'] == 'Ana'
 
 
+def test_work_journey_page_supports_calendar_02_template(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    company = SimpleNamespace(id=9, name='Empresa Teste')
+    employees = [
+        SimpleNamespace(id=3, company_id=9, user_id=7, status='active', name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'}),
+    ]
+    captured = {}
+
+    monkeypatch.setattr(work_journey_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery(company)))
+    monkeypatch.setattr(
+        work_journey_route,
+        'Employee',
+        SimpleNamespace(query=_FakeEmployeeQuery(employees), name=_Column()),
+    )
+    monkeypatch.setattr(work_journey_route, 'current_user', SimpleNamespace(id=7, is_authenticated=True))
+    monkeypatch.setattr(work_journey_route, 'has_company_full_access', lambda company_id: True)
+    monkeypatch.setattr(work_journey_route, 'render_template', lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx)
+
+    with app.test_request_context('/companies/9/calendar-02'):
+        response = work_journey_route._render_work_journey_page(
+            9,
+            template_name='modules/my_work/work_journey_02.html',
+            calendar_variant='calendar_02',
+        )
+
+    assert captured['template'] == 'modules/my_work/work_journey_02.html'
+    assert response['calendar_variant'] == 'calendar_02'
+    assert response['selected_employee_name'] == 'Ana'
+
+
 def test_work_journey_page_uses_source_suggested_employee_when_available(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'
@@ -809,6 +840,8 @@ def test_templates_expose_work_journey_entrypoints():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey.html'), 'r', encoding='utf-8') as handle:
         journey_template = handle.read()
+    with open(os.path.join(root, 'templates', 'modules', 'my_work', 'work_journey_02.html'), 'r', encoding='utf-8') as handle:
+        journey_template_02 = handle.read()
     with open(os.path.join(root, 'templates', 'modules', 'my_work', '_agendas_panel.html'), 'r', encoding='utf-8') as handle:
         agendas_panel = handle.read()
     with open(os.path.join(root, 'templates', 'modules', 'my_work', 'my_work_v2.html'), 'r', encoding='utf-8') as handle:
@@ -823,7 +856,14 @@ def test_templates_expose_work_journey_entrypoints():
         process_instance_template = handle.read()
 
     assert 'Calendário Operacional do Colaborador' in journey_template
+    assert 'Calendário 02' in journey_template
+    assert 'work_journey_page_v2' in journey_template
     assert 'Calendário de:' in journey_template
+    assert 'Calendário 02' in journey_template_02
+    assert 'work-journey-calendar-02.css' in journey_template_02
+    assert 'journey-app--calendar02' in journey_template_02
+    assert 'Calendário original' in journey_template_02
+    assert 'calendarVariant' in journey_template_02
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
