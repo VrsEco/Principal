@@ -339,6 +339,7 @@ class WorkCalendarEvent(db.Model):
     __table_args__ = (
         db.Index('ix_work_calendar_events_company_employee_date', 'company_id', 'employee_id', 'event_date'),
         db.Index('ix_work_calendar_events_company_source', 'company_id', 'source_type', 'source_id'),
+        db.Index('ix_work_calendar_events_company_block_date', 'company_id', 'block_id', 'event_date'),
         {'extend_existing': True},
     )
 
@@ -347,6 +348,7 @@ class WorkCalendarEvent(db.Model):
     employee_id = db.Column(db.Integer, db.ForeignKey('employees.id', ondelete='CASCADE'), nullable=False, index=True)
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     updated_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    block_id = db.Column(db.Integer, db.ForeignKey('work_journey_blocks.id', ondelete='SET NULL'), nullable=True, index=True)
     source_type = db.Column(db.String(40), nullable=False, default='manual', index=True)
     source_id = db.Column(db.Integer, nullable=True, index=True)
     title = db.Column(db.String(200), nullable=False)
@@ -364,6 +366,7 @@ class WorkCalendarEvent(db.Model):
     employee = db.relationship('Employee', foreign_keys=[employee_id])
     created_by_user = db.relationship('User', foreign_keys=[created_by_user_id])
     updated_by_user = db.relationship('User', foreign_keys=[updated_by_user_id])
+    block = db.relationship('WorkJourneyBlock', foreign_keys=[block_id])
 
     def to_dict(self):
         return {
@@ -372,6 +375,7 @@ class WorkCalendarEvent(db.Model):
             'employee_id': self.employee_id,
             'created_by_user_id': self.created_by_user_id,
             'updated_by_user_id': self.updated_by_user_id,
+            'block_id': self.block_id,
             'source_type': self.source_type,
             'source_id': self.source_id,
             'title': self.title,

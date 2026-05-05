@@ -167,6 +167,7 @@ class WorkJourneyAgendaMoveSchema(_StrictModel):
 
 class WorkCalendarEventCreateSchema(_StrictModel):
     employee_id: int
+    block_id: int | None = None
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
     event_date: date
@@ -188,6 +189,7 @@ class WorkCalendarEventCreateSchema(_StrictModel):
 
 class WorkCalendarEventUpdateSchema(_StrictModel):
     employee_id: int | None = None
+    block_id: int | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
     event_date: date | None = None

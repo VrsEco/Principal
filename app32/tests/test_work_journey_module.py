@@ -608,6 +608,7 @@ def test_create_calendar_event_route_parses_time_and_returns_event(monkeypatch):
             'id': 11,
             'title': payload['title'],
             'start_time': payload['start_time'].strftime('%H:%M') if payload.get('start_time') else None,
+            'block_id': payload.get('block_id'),
         },
     )
 
@@ -619,6 +620,7 @@ def test_create_calendar_event_route_parses_time_and_returns_event(monkeypatch):
             'title': 'Follow-up',
             'event_date': '2026-05-04',
             'start_time': '09:30',
+            'block_id': 41,
             'source_type': 'manual',
         },
     ):
@@ -629,6 +631,7 @@ def test_create_calendar_event_route_parses_time_and_returns_event(monkeypatch):
     payload = http_response.get_json()
     assert payload['success'] is True
     assert payload['event']['start_time'] == '09:30'
+    assert payload['event']['block_id'] == 41
 
 
 def test_overdue_item_inside_current_week_starts_from_today_blocks(monkeypatch):
@@ -1213,6 +1216,109 @@ def test_agenda_presenter_hides_manually_reprogrammed_overdue_item_from_side_lan
     assert payload['overdue_items'] == []
     assert monday_day['blocks'][0]['items'][0]['journey_item_id'] == 51
     assert monday_day['blocks'][0]['items'][0]['is_overdue'] is True
+
+
+def test_agenda_presenter_includes_calendar_events_inside_blocks(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: f'AA.T.{item.id}')
+
+    agenda = SimpleNamespace(
+        id=5,
+        company_id=9,
+        employee_id=3,
+        anchor_date=date(2026, 4, 6),
+        scope='week',
+        status='suggested',
+        engine_version='agendas-v1',
+        summary_json={},
+    )
+    employee = SimpleNamespace(name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'})
+    block = SimpleNamespace(
+        id=10,
+        name='Operacional',
+        description='Bloco operacional',
+        start_time=time(8, 0),
+        end_time=time(10, 0),
+        block_mode='operational',
+        weekdays_json=[0],
+    )
+    task_item = SimpleNamespace(
+        id=61,
+        company_id=9,
+        item_type='manual',
+        source_id=None,
+        title='Tarefa ativa',
+        description='',
+        status='pending',
+        priority='normal',
+        due_date=date(2026, 4, 6),
+        occurrence_date=date(2026, 4, 6),
+        worked_minutes=30,
+        estimated_minutes=30,
+        metadata_json={},
+        block=None,
+    )
+    task_entry = SimpleNamespace(
+        id=8,
+        agenda_id=5,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=61,
+        block_id=10,
+        planned_date=date(2026, 4, 6),
+        position_index=0,
+        allocated_minutes=30,
+        planned_start_minutes=480,
+        planned_end_minutes=510,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=False,
+        metadata_json={},
+        block=block,
+        journey_item=task_item,
+    )
+    calendar_event = SimpleNamespace(
+        id=99,
+        company_id=9,
+        employee_id=3,
+        block_id=10,
+        source_type='process_instance',
+        source_id=501,
+        title='Revisar instância',
+        description='Follow-up operacional',
+        event_date=date(2026, 4, 6),
+        start_time=time(9, 0),
+        end_time=time(9, 30),
+        status='confirmed',
+        priority='high',
+        execution_notes='Lembrar de lançar horas',
+        metadata_json={
+            'source_url': '/companies/9/process-instances?instance_id=501',
+            'source_code': 'IP.501',
+            'source_title': 'Fechamento mensal',
+        },
+        block=block,
+        employee=SimpleNamespace(name='Ana'),
+    )
+
+    payload = work_journey_agenda_presenter.serialize_agenda_payload(
+        agenda,
+        employee,
+        [block],
+        [task_entry],
+        [calendar_event],
+    )
+
+    monday_day = next(day for day in payload['days'] if day['date'] == '2026-04-06')
+    monday_block = monday_day['blocks'][0]
+
+    assert monday_block['planned_task_minutes'] == 30
+    assert monday_block['planned_event_minutes'] == 30
+    assert monday_block['planned_minutes'] == 60
+    assert monday_block['events'][0]['event_id'] == 99
+    assert monday_block['events'][0]['item_kind'] == 'calendar_event'
+    assert payload['summary']['event_count'] == 1
+    assert payload['summary']['linked_event_count'] == 1
 
 
 def test_work_journey_report_page_renders_management_report(monkeypatch):

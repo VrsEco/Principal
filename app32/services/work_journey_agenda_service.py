@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy.orm import joinedload
 
-from models import Employee, WorkJourneyAgenda, WorkJourneyAgendaItem, WorkJourneyBlock, db
+from models import Employee, WorkCalendarEvent, WorkJourneyAgenda, WorkJourneyAgendaItem, WorkJourneyBlock, db
 from services.work_journey_agenda_engine import (
     allocate_item,
     apply_date_change_to_source,
@@ -263,7 +263,16 @@ def _serialize(agenda: WorkJourneyAgenda, employee: Employee) -> dict[str, Any]:
         .order_by(WorkJourneyAgendaItem.planned_date.asc(), WorkJourneyAgendaItem.position_index.asc(), WorkJourneyAgendaItem.id.asc())
         .all()
     )
-    payload = serialize_agenda_payload(agenda, employee, blocks, entries)
+    calendar_events = (
+        WorkCalendarEvent.query.options(joinedload(WorkCalendarEvent.block), joinedload(WorkCalendarEvent.employee))
+        .filter(WorkCalendarEvent.company_id == agenda.company_id)
+        .filter(WorkCalendarEvent.employee_id == agenda.employee_id)
+        .filter(WorkCalendarEvent.event_date >= period_start)
+        .filter(WorkCalendarEvent.event_date <= period_end)
+        .order_by(WorkCalendarEvent.event_date.asc(), WorkCalendarEvent.start_time.asc().nullsfirst(), WorkCalendarEvent.id.asc())
+        .all()
+    )
+    payload = serialize_agenda_payload(agenda, employee, blocks, entries, calendar_events)
     payload['agenda'] = agenda.to_dict()
     payload['agenda']['locked_by_name'] = payload['agenda'].get('locked_by_name') or payload.get('locked_by_name')
     payload['agenda']['locked'] = agenda.status == 'locked'
