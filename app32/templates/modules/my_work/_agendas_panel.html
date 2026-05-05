@@ -5,7 +5,7 @@
         </div>
         <div class="agenda-actions">
             <button id="calendarEventStartBtn" class="btn btn-secondary">📅 Novo evento</button>
-            <button id="manualTaskStartBtn" class="btn btn-secondary">➕ Tarefa Avulsa</button>
+            <button id="manualTaskStartBtn" class="btn btn-secondary">➕ Evento Avulso</button>
             <button id="agendaRefreshBtn" class="btn btn-secondary">Atualizar agenda</button>
             <button id="agendaGenerateBtn" class="btn btn-primary">Gerar sugestão</button>
             <button id="agendaLockBtn" class="btn btn-primary">Travar agenda</button>
@@ -110,7 +110,7 @@
                 <div class="agenda-board-header">
                     <div>
                         <h3 class="journey-section-title">Planejamento operacional</h3>
-                        <p class="journey-section-subtitle">A primeira coluna exibe tarefas atrasadas e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
+                <p class="journey-section-subtitle">A primeira coluna exibe eventos operacionais atrasados e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
                     </div>
                     <div class="agenda-board-header__actions">
                         <span id="agendaLockBadge" class="agenda-status-pill agenda-status-pill--draft">Agenda não travada</span>
@@ -126,7 +126,7 @@
             <input type="hidden" id="manualTaskIdInput">
             <div class="journey-card-heading">
                 <div>
-                    <h3>Tarefa Avulsa no Bloco</h3>
+                    <h3>Evento Avulso no Bloco</h3>
                     <p>Registre urgências, apoios pontuais ou qualquer trabalho fora de processos, projetos e reuniões.</p>
                 </div>
             </div>
@@ -179,7 +179,7 @@
             </div>
             <div class="journey-form-actions">
                 <button type="button" class="btn btn-secondary" id="manualTaskCancelBtn">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Salvar tarefa avulsa</button>
+                <button type="submit" class="btn btn-primary">Salvar evento avulso</button>
             </div>
     </form>
 
@@ -198,7 +198,7 @@
                 </div>
                 <div class="journey-sidecard">
                     <div class="journey-sidecard__header">
-                        <h3>Tarefas do período</h3>
+                        <h3>Eventos do período</h3>
                     </div>
                     <div id="journeyPeriodContainer" class="journey-sidecard__content"></div>
                 </div>

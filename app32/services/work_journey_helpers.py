@@ -14,7 +14,7 @@ WEEKDAY_LABELS = {
 }
 
 ITEM_TYPE_LABELS = {
-    'manual': 'Tarefa Avulsa',
+    'manual': 'Evento Avulso',
     'process_instance': 'Instância de Processo',
     'project_task': 'Atividade de Projeto',
     'meeting': 'Reunião',

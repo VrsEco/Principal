@@ -835,11 +835,11 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Planejamento operacional' in agendas_panel
     assert 'processInstanceCardsPanel' in agendas_panel
     assert 'processInstanceCardsList' in agendas_panel
-    assert 'Tarefa operacional derivada' in agendas_panel or 'processInstanceCardsList' in agendas_panel
+    assert 'Evento operacional derivado' in agendas_panel or 'processInstanceCardsList' in agendas_panel
     assert 'calendarEventsList' in agendas_panel
     assert 'calendarEventBlockInput' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
-    assert 'A primeira coluna exibe tarefas atrasadas' in agendas_panel
+    assert 'A primeira coluna exibe eventos operacionais atrasados' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
     assert 'agendaScopeSelect' not in agendas_panel
@@ -1725,6 +1725,114 @@ def test_sync_meeting_item_materializes_operational_task(monkeypatch):
     assert captured['title'] == 'Reunião de alinhamento'
     assert captured['estimated_minutes'] == 45
     assert captured['metadata']['source_label'] == 'Reunião'
+
+
+def test_propagate_item_status_updates_human_process_execution(monkeypatch):
+    now = datetime(2026, 5, 5, 12, 0, 0)
+    instance = SimpleNamespace(id=501, current_bpmn_element_id=None, actual_hours=0, worked_hours=0, completed_at=None, status='pending')
+    execution = SimpleNamespace(
+        id=88,
+        company_id=9,
+        execution_mode='human_task',
+        status='ready',
+        started_at=None,
+        completed_at=None,
+        paused_at=None,
+        waiting_since=None,
+        duration_seconds=None,
+        actual_hours=0,
+        bpmn_element_id='Task_1',
+    )
+
+    class _FakeInstanceQuery:
+        @staticmethod
+        def get(source_id):
+            return instance if source_id == 501 else None
+
+    class _FakeExecutionQuery:
+        @staticmethod
+        def get(execution_id):
+            return execution if execution_id == 88 else None
+
+    added = []
+
+    monkeypatch.setattr(work_journey_sync, 'ProcessInstance', SimpleNamespace(query=_FakeInstanceQuery()))
+    monkeypatch.setattr(work_journey_sync, 'ProcessInstanceExecution', SimpleNamespace(query=_FakeExecutionQuery()))
+    monkeypatch.setattr(work_journey_sync, 'datetime', SimpleNamespace(utcnow=lambda: now))
+    monkeypatch.setattr(work_journey_sync.db, 'session', SimpleNamespace(add=lambda obj: added.append(obj)))
+
+    item = SimpleNamespace(
+        item_type='process_instance',
+        source_id=501,
+        company_id=9,
+        status='completed',
+        worked_minutes=90,
+        metadata_json={'current_execution_id': 88},
+    )
+
+    work_journey_sync.propagate_item_status(item)
+
+    assert instance.status == 'completed'
+    assert instance.actual_hours == 1.5
+    assert instance.completed_at == now
+    assert instance.current_bpmn_element_id == 'Task_1'
+    assert execution.status == 'completed'
+    assert execution.started_at == now
+    assert execution.completed_at == now
+    assert execution.duration_seconds == 0
+    assert execution.actual_hours == 1.5
+    assert added == [instance, execution]
+
+
+def test_update_work_item_resyncs_process_instance_projection(monkeypatch):
+    item = SimpleNamespace(
+        id=91,
+        company_id=9,
+        employee_id=3,
+        item_type='process_instance',
+        source_id=501,
+        status='pending',
+        completed_at=None,
+        updated_at=None,
+        worked_minutes=0,
+        metadata_json={},
+    )
+    synced_item = SimpleNamespace(id=92)
+    captured = {}
+
+    class _FakeItemQuery:
+        def filter_by(self, **kwargs):
+            self.kwargs = kwargs
+            return self
+        def first(self):
+            return item if self.kwargs.get('id') == 91 else None
+
+    monkeypatch.setattr(work_journey_service, 'WorkJourneyItem', SimpleNamespace(query=_FakeItemQuery()))
+    monkeypatch.setattr(work_journey_service, 'serialize_item', lambda current: {'id': current.id})
+    monkeypatch.setattr(work_journey_service, 'propagate_item_status', lambda current: captured.setdefault('propagated_status', current.status))
+    monkeypatch.setattr(
+        work_journey_service,
+        'sync_process_instance_item',
+        lambda company_id, source_id, preferred_employee_id=None: captured.update(
+            {'company_id': company_id, 'source_id': source_id, 'preferred_employee_id': preferred_employee_id}
+        ) or synced_item,
+    )
+    monkeypatch.setattr(work_journey_service, 'sync_meeting_item', lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        work_journey_service.db,
+        'session',
+        SimpleNamespace(add=lambda *_args, **_kwargs: None, commit=lambda: captured.setdefault('commit_count', 0) or captured.update({'commit_count': captured.get('commit_count', 0) + 1})),
+    )
+    monkeypatch.setattr(work_journey_service, 'datetime', SimpleNamespace(utcnow=lambda: datetime(2026, 5, 5, 12, 0, 0)))
+
+    payload = {'status': 'completed', 'worked_minutes': 60}
+    response = work_journey_service.update_work_item(9, 91, payload)
+
+    assert response == {'id': 92}
+    assert captured['propagated_status'] == 'completed'
+    assert captured['company_id'] == 9
+    assert captured['source_id'] == 501
+    assert captured['preferred_employee_id'] == 3
 
 
 def test_process_resource_sync_helper_prefers_current_user_employee(monkeypatch):

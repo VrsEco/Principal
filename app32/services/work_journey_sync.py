@@ -641,6 +641,7 @@ def propagate_item_status(item: WorkJourneyItem) -> None:
         instance.worked_hours = round((item.worked_minutes or 0) / 60, 2)
         instance.completed_at = datetime.utcnow() if item.status == 'completed' else None
         db.session.add(instance)
+        _propagate_process_execution_status(item, instance)
         return
 
     if item.item_type == 'meeting' and item.source_id:
@@ -650,3 +651,57 @@ def propagate_item_status(item: WorkJourneyItem) -> None:
         meeting.status = 'done' if item.status == 'completed' else 'scheduled'
         meeting.actual_duration_minutes = item.worked_minutes or meeting.actual_duration_minutes
         db.session.add(meeting)
+
+
+def _propagate_process_execution_status(item: WorkJourneyItem, instance: ProcessInstance) -> None:
+    metadata = dict(item.metadata_json or {})
+    execution_id = metadata.get('current_execution_id')
+    if not execution_id:
+        return
+
+    execution = ProcessInstanceExecution.query.get(execution_id)
+    if not execution or int(getattr(execution, 'company_id', 0) or 0) != int(item.company_id):
+        return
+
+    execution_mode = str(getattr(execution, 'execution_mode', '') or '').strip().lower()
+    if execution_mode not in {'human_task', 'manual_external'}:
+        return
+
+    now = datetime.utcnow()
+    status_mapping = {
+        'completed': 'completed',
+        'in_progress': 'in_progress',
+        'pending': 'ready',
+        'postponed': 'waiting_external',
+        'suspended': 'paused',
+    }
+    execution.status = status_mapping.get(str(item.status or '').strip().lower(), 'ready')
+
+    if execution.status == 'completed':
+        if not execution.started_at:
+            execution.started_at = now
+        execution.completed_at = now
+        execution.paused_at = None
+        execution.waiting_since = None
+        if execution.started_at and execution.duration_seconds in (None, 0):
+            execution.duration_seconds = max(int((execution.completed_at - execution.started_at).total_seconds()), 0)
+    elif execution.status == 'in_progress':
+        execution.started_at = execution.started_at or now
+        execution.completed_at = None
+        execution.paused_at = None
+        execution.waiting_since = None
+    elif execution.status == 'paused':
+        execution.completed_at = None
+        execution.paused_at = now
+    elif execution.status == 'waiting_external':
+        execution.completed_at = None
+        execution.waiting_since = now
+    else:
+        execution.completed_at = None
+        execution.paused_at = None
+        execution.waiting_since = None
+
+    execution.actual_hours = round((item.worked_minutes or 0) / 60, 2)
+    if getattr(execution, 'bpmn_element_id', None):
+        instance.current_bpmn_element_id = execution.bpmn_element_id
+    db.session.add(execution)

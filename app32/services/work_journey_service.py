@@ -18,6 +18,8 @@ from services.work_journey_sync import (
     load_period_items,
     prune_missing_source_items,
     propagate_item_status,
+    sync_meeting_item,
+    sync_process_instance_item,
     sync_meetings,
     sync_process_instances,
     sync_project_tasks,
@@ -212,18 +214,18 @@ def sync_work_journey_items(company_id: int, employee_id: int, period_start: dat
 def update_work_item(company_id: int, item_id: int, payload: dict[str, Any]) -> dict[str, Any]:
     item = WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first()
     if not item:
-        raise WorkJourneyError('Tarefa não encontrada.')
+        raise WorkJourneyError('Evento não encontrado.')
 
     if 'block_id' in payload:
         block_id = payload.get('block_id')
         if block_id:
             block = WorkJourneyBlock.query.filter_by(company_id=company_id, id=block_id, employee_id=item.employee_id).first()
             if not block:
-                raise WorkJourneyError('Bloco inválido para o colaborador da tarefa.')
+                raise WorkJourneyError('Bloco inválido para o colaborador do evento.')
             if block.block_mode == 'reserved_full':
-                raise WorkJourneyError('Blocos com capacidade ocupada não aceitam tarefas.')
+                raise WorkJourneyError('Blocos com capacidade ocupada não aceitam eventos.')
             if item.item_type not in (block.accepted_item_types or []):
-                raise WorkJourneyError('O bloco informado não aceita este tipo de tarefa.')
+                raise WorkJourneyError('O bloco informado não aceita este tipo de evento.')
             item.block_id = block.id
         else:
             item.block_id = None
@@ -260,6 +262,16 @@ def update_work_item(company_id: int, item_id: int, payload: dict[str, Any]) -> 
     item.updated_at = datetime.utcnow()
     db.session.add(item)
     db.session.commit()
+    if item.item_type == 'process_instance' and item.source_id:
+        synced_item = sync_process_instance_item(company_id, item.source_id, preferred_employee_id=item.employee_id)
+        if synced_item:
+            db.session.commit()
+            item = synced_item
+    elif item.item_type == 'meeting' and item.source_id:
+        synced_item = sync_meeting_item(company_id, item.source_id, preferred_employee_id=item.employee_id)
+        if synced_item:
+            db.session.commit()
+            item = synced_item
     return serialize_item(item)
 
 
@@ -272,9 +284,9 @@ def create_manual_task(company_id: int, payload: dict[str, Any]) -> dict[str, An
         if not block:
             raise WorkJourneyError('Bloco inválido para o colaborador informado.')
         if block.block_mode == 'reserved_full':
-            raise WorkJourneyError('Blocos com capacidade ocupada não aceitam tarefas.')
+            raise WorkJourneyError('Blocos com capacidade ocupada não aceitam eventos.')
         if 'manual' not in (block.accepted_item_types or []):
-            raise WorkJourneyError('O bloco informado não aceita tarefa avulsa.')
+            raise WorkJourneyError('O bloco informado não aceita evento avulso.')
 
     due_date = payload['due_date']
     item = WorkJourneyItem(
@@ -290,7 +302,7 @@ def create_manual_task(company_id: int, payload: dict[str, Any]) -> dict[str, An
         worked_minutes=int(payload.get('worked_minutes') or 0),
         priority=payload['priority'],
         status=payload.get('status') or 'pending',
-        metadata_json={'source_label': 'Tarefa Avulsa'},
+        metadata_json={'source_label': 'Evento Avulso'},
     )
     if item.status == 'completed':
         item.completed_at = datetime.utcnow()
@@ -303,9 +315,9 @@ def create_manual_task(company_id: int, payload: dict[str, Any]) -> dict[str, An
 def delete_work_item(company_id: int, item_id: int) -> None:
     item = WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first()
     if not item:
-        raise WorkJourneyError('Tarefa não encontrada.')
+        raise WorkJourneyError('Evento não encontrado.')
     if item.item_type != 'manual' or item.source_id or item.rule_id:
-        raise WorkJourneyError('Somente tarefas avulsas podem ser excluídas diretamente na jornada.')
+        raise WorkJourneyError('Somente eventos avulsos podem ser excluídos diretamente na jornada.')
     db.session.delete(item)
     db.session.commit()
 

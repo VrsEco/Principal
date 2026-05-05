@@ -13,7 +13,7 @@
         <div class="journey-hero__content">
             <div>
                 <h1 class="journey-hero__title">Calendário Operacional do Colaborador</h1>
-                <p class="journey-hero__subtitle">Calendário de: <strong>{{ selected_employee_name or 'Colaborador não definido' }}</strong> — agenda operacional com eventos livres e vinculados a processos, projetos e tarefas do dia a dia.</p>
+                <p class="journey-hero__subtitle">Calendário de: <strong>{{ selected_employee_name or 'Colaborador não definido' }}</strong> — agenda operacional com eventos livres e vinculados a processos, projetos, reuniões e execuções do dia a dia.</p>
             </div>
             <div class="journey-hero__actions">
                 <a class="btn btn-secondary" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id, employee_id=selected_employee_id) }}">Relatório gerencial</a>
@@ -26,7 +26,7 @@
         <div class="journey-tabs__header">
             <button class="journey-tab is-active" data-tab="agendas">Calendário</button>
             <button class="journey-tab" data-tab="blocks">Blocos</button>
-            <button class="journey-tab" data-tab="manual-tasks">Tarefas Avulsas</button>
+            <button class="journey-tab" data-tab="manual-tasks">Eventos Avulsos</button>
             <button class="journey-tab" data-tab="absences">Ausências</button>
             <button class="journey-tab" data-tab="transfers">Transferências</button>
         </div>
@@ -70,7 +70,7 @@
                     <div class="form-group">
                         <label class="form-label">Comportamento do bloco</label>
                         <select id="blockModeInput" class="form-control">
-                            <option value="operational">Operacional · recebe tarefas automaticamente</option>
+                            <option value="operational">Operacional · recebe eventos automaticamente</option>
                             <option value="reserved_full">Capacidade ocupada · bloqueia o período</option>
                             <option value="buffer">Vazio / Buffer · mantém janela livre para urgências</option>
                         </select>
@@ -183,16 +183,16 @@
         <div class="journey-tabpanel" data-panel="manual-tasks">
             <div class="journey-panel__header journey-panel__header--tab">
                 <div>
-                    <h2 class="journey-section-title">Tarefas Avulsas</h2>
-                    <p class="journey-section-subtitle">Acompanhe todas as tarefas avulsas cadastradas para o colaborador, com histórico de execução e impacto na capacidade planejada/realizada.</p>
+                    <h2 class="journey-section-title">Eventos Avulsos</h2>
+                    <p class="journey-section-subtitle">Acompanhe todos os eventos avulsos cadastrados para o colaborador, com histórico de execução e impacto na capacidade planejada/realizada.</p>
                 </div>
-                <button id="manualTaskTabStartBtn" class="btn btn-primary">➕ Nova tarefa avulsa</button>
+                <button id="manualTaskTabStartBtn" class="btn btn-primary">➕ Novo evento avulso</button>
             </div>
             <div class="journey-list-card">
                 <div class="journey-list-card__header">
                     <div>
                         <h3>Cadastro consolidado</h3>
-                        <p>As tarefas avulsas abaixo entram na capacidade operacional do colaborador conforme sua data e esforço realizado.</p>
+                        <p>Os eventos avulsos abaixo entram na capacidade operacional do colaborador conforme sua data e esforço realizado.</p>
                     </div>
                     <div id="manualTasksSummary" class="journey-badges"></div>
                 </div>
@@ -211,7 +211,7 @@
         <div class="journey-sidebar-card__headline">
             <div>
                 <h2 class="journey-section-title">Filtros</h2>
-                <p class="journey-section-subtitle">Contexto operacional da semana e busca global sobre tarefas e blocos.</p>
+                <p class="journey-section-subtitle">Contexto operacional da semana e busca global sobre eventos e blocos.</p>
             </div>
             <span id="journeyFiltersCount" class="badge-pill badge-pill--success">0 ativos</span>
         </div>
@@ -255,7 +255,7 @@
             <div class="form-group">
                 <label class="form-label">Busca livre</label>
                 <textarea id="journeySearchInput" class="form-control" rows="4" placeholder="Buscar por código, título, descrição, bloco, status, origem, datas ou qualquer outro campo..."></textarea>
-                <small class="journey-sidebar-hint">A busca percorre todos os campos textuais das tarefas e dos blocos carregados na tela.</small>
+                <small class="journey-sidebar-hint">A busca percorre todos os campos textuais dos eventos e dos blocos carregados na tela.</small>
             </div>
         </div>
 
@@ -268,7 +268,7 @@
     <section class="journey-sidebar-card journey-sidebar-card--muted">
         <h3 class="journey-section-title">Escopo da busca</h3>
         <ul class="journey-sidebar-checklist">
-            <li>Títulos, descrições e códigos das tarefas</li>
+            <li>Títulos, descrições e códigos dos eventos</li>
             <li>Nome, descrição e janela horária dos blocos</li>
             <li>Status, origem, datas e metadados visíveis</li>
         </ul>
