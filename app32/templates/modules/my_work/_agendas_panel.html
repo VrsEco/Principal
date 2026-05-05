@@ -2,6 +2,7 @@
     <div class="journey-panel__header journey-panel__header--tab">
         <div>
             <h2 class="journey-section-title">Calendário</h2>
+            <p class="journey-section-subtitle">Painel visual da semana operacional, com visão rápida de capacidade, status da agenda e eventos relevantes.</p>
         </div>
         <div class="agenda-actions">
             <button id="calendarEventStartBtn" class="btn btn-secondary">📅 Novo evento</button>
@@ -14,9 +15,39 @@
         </div>
     </div>
 
+    <div class="agenda-overview-grid">
+        <section class="agenda-overview-card agenda-overview-card--summary">
+            <div class="agenda-overview-card__header">
+                <div>
+                    <span class="agenda-overview-card__eyebrow">Semana operacional</span>
+                    <h3>Resumo visual do período</h3>
+                    <p id="agendaMetaLine" class="agenda-overview-card__meta">Sem agenda materializada ainda.</p>
+                </div>
+                <span id="agendaStatusLabel" class="agenda-status-pill agenda-status-pill--draft">Rascunho</span>
+            </div>
+            <div id="agendaSummaryCards" class="agenda-summary-grid"></div>
+        </section>
+
+        <section class="agenda-overview-card agenda-overview-card--search">
+            <div class="agenda-overview-card__header">
+                <div>
+                    <span class="agenda-overview-card__eyebrow">Busca e contexto</span>
+                    <h3>Leitura rápida</h3>
+                    <p class="agenda-overview-card__meta">Acompanhe o estado da busca e use a agenda como quadro central da semana.</p>
+                </div>
+            </div>
+            <div id="agendaSearchStatus" class="agenda-toolbar__search-status" hidden></div>
+            <ul class="agenda-overview-list">
+                <li>Colunas mostram atrasos, dias da semana e backlog não alocado.</li>
+                <li>Cards destacam origem, esforço, janela planejada e alertas operacionais.</li>
+                <li>Instâncias em destaque separam prazo macro do caso e prazo da atividade atual.</li>
+            </ul>
+        </section>
+    </div>
+
     <div class="agenda-layout">
         <div class="agenda-main">
-            <div id="processInstanceCardsPanel" class="journey-list-card" style="display:none; margin-bottom: 1rem;">
+            <div id="processInstanceCardsPanel" class="journey-list-card agenda-section-card" style="display:none;">
                 <div class="journey-list-card__header">
                     <div>
                         <h3>Instâncias em destaque</h3>
@@ -26,7 +57,7 @@
                 </div>
                 <div id="processInstanceCardsList" class="agenda-instance-card-grid"></div>
             </div>
-            <div class="journey-list-card" style="margin-bottom: 1rem;">
+            <div class="journey-list-card agenda-section-card">
                 <div class="journey-list-card__header">
                     <div>
                         <h3>Eventos do calendário</h3>
@@ -34,7 +65,7 @@
                     </div>
                     <div id="calendarEventsSummary" class="journey-badges"></div>
                 </div>
-                <form id="calendarEventForm" class="journey-form-card journey-form-card--inline" style="display:none; margin-bottom: 1rem;">
+                <form id="calendarEventForm" class="journey-form-card journey-form-card--inline agenda-inline-form" style="display:none;">
                     <input type="hidden" id="calendarEventIdInput">
                     <div class="journey-card-heading">
                         <div>
@@ -110,7 +141,7 @@
                 <div class="agenda-board-header">
                     <div>
                         <h3 class="journey-section-title">Planejamento operacional</h3>
-                <p class="journey-section-subtitle">A primeira coluna exibe eventos operacionais atrasados e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
+                        <p class="journey-section-subtitle">A primeira coluna exibe eventos operacionais atrasados e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
                     </div>
                     <div class="agenda-board-header__actions">
                         <span id="agendaLockBadge" class="agenda-status-pill agenda-status-pill--draft">Agenda não travada</span>
@@ -122,7 +153,7 @@
 
     </div>
 
-    <form id="journeyManualTaskForm" class="journey-form-card journey-form-card--inline" style="display:none;">
+    <form id="journeyManualTaskForm" class="journey-form-card journey-form-card--inline agenda-inline-form" style="display:none;">
             <input type="hidden" id="manualTaskIdInput">
             <div class="journey-card-heading">
                 <div>

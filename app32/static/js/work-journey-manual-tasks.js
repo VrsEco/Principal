@@ -48,25 +48,25 @@
 
   function renderTasks(items = []) {
     if (!items.length) {
-      listContainer.innerHTML = `<div class="journey-item-empty">${currentSearchTerm() ? 'Nenhuma tarefa avulsa corresponde à busca aplicada.' : 'Nenhuma tarefa avulsa cadastrada para este colaborador.'}</div>`;
+      listContainer.innerHTML = `<div class="journey-item-empty">${currentSearchTerm() ? 'Nenhum evento avulso corresponde à busca aplicada.' : 'Nenhum evento avulso cadastrado para este colaborador.'}</div>`;
       return;
     }
 
     listContainer.innerHTML = items.map((item) => `
-      <article class="journey-list-item">
+      <article class="journey-list-item agenda-feed-card agenda-feed-card--manual">
         <div class="journey-list-item__top">
-          <div>
-            <strong>${item.display_title || item.title}</strong>
+          <div class="agenda-feed-card__main">
+            <strong class="agenda-feed-card__title">${item.display_title || item.title}</strong>
             <div class="journey-manual-task-meta">Prazo ${item.due_date || '-'} · ${item.block_name || 'Sem bloco'} · Previsto ${formatMinutes(item.estimated_minutes || 0)} · Realizado ${formatMinutes(item.worked_minutes || 0)}</div>
           </div>
-          <div class="journey-item-card__actions">
+          <div class="agenda-feed-card__actions">
             <button class="btn btn-secondary btn-sm" data-action="edit-manual-task" data-id="${item.id}">Editar</button>
             <button class="btn btn-secondary btn-sm" data-action="delete-manual-task" data-id="${item.id}">Excluir</button>
           </div>
         </div>
-        <div class="journey-item-card__desc">${item.description || 'Sem descrição adicional.'}</div>
+        <div class="agenda-feed-card__description">${item.description || 'Sem descrição adicional.'}</div>
         <div class="journey-badges">
-          <span class="badge-pill">${item.item_type_label || 'Tarefa Avulsa'}</span>
+          <span class="badge-pill">${item.item_type_label || 'Evento Avulso'}</span>
           <span class="badge-pill ${item.status === 'completed' ? 'badge-pill--success' : item.is_overdue ? 'badge-pill--danger' : 'badge-pill--warning'}">${item.status_label || item.status}</span>
           ${item.priority ? `<span class="badge-pill">${item.priority}</span>` : ''}
         </div>
@@ -95,7 +95,7 @@
       renderSummary(currentSearchTerm() ? buildSummary(filteredItems()) : state.summary);
       renderTasks(filteredItems());
     } catch (error) {
-      toast(error.message || 'Não foi possível carregar as tarefas avulsas.');
+      toast(error.message || 'Não foi possível carregar os eventos avulsos.');
     }
   }
 

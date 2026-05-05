@@ -611,6 +611,14 @@
     if (item.is_overdue) warnings.push(item.item_kind === 'calendar_event' ? 'Evento vencido' : 'Evento operacional atrasado');
     if (item.item_kind === 'calendar_event' && item.execution_notes) warnings.push(item.execution_notes);
 
+    const dateLabel = item.agenda_date || item.due_date || item.occurrence_date || '';
+    const metaChips = [
+      item.source_label || '',
+      item.estimated_minutes ? formatMinutes(item.estimated_minutes) : '',
+      item.planned_window_label || '',
+      dateLabel,
+    ].filter(Boolean);
+
     return `
       <article
         class="agenda-card ${agendaTypeClass(item)} ${listScope === 'overdue' ? 'agenda-card--side agenda-card--side-overdue' : ''} ${listScope === 'unassigned' ? 'agenda-card--side agenda-card--side-unassigned' : ''}"
@@ -632,10 +640,7 @@
           </div>
         </div>
         <div class="agenda-card__meta">
-          ${item.source_label ? `<span>${item.source_label}</span>` : ''}
-          ${item.estimated_minutes ? `<span>${formatMinutes(item.estimated_minutes)}</span>` : ''}
-          ${item.planned_window_label ? `<span>${item.planned_window_label}</span>` : ''}
-          ${(item.agenda_date || item.due_date || item.occurrence_date) ? `<span>${item.agenda_date || item.due_date || item.occurrence_date}</span>` : ''}
+          ${metaChips.map((chip) => `<span class="agenda-card__meta-chip">${chip}</span>`).join('')}
         </div>
         ${item.description ? `<p class="agenda-card__desc">${item.description}</p>` : ''}
         ${warnings.length ? `<div class="agenda-card__warning">${warnings.join(' · ')}</div>` : ''}

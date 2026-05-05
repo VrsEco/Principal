@@ -90,7 +90,7 @@
   }
 
   function agendaTitle(item) {
-    return item.display_title || item.title || `Tarefa ${item.id}`;
+    return item.display_title || item.title || `Evento ${item.id}`;
   }
 
   function findItem(itemId) {
@@ -187,7 +187,7 @@
     }
 
     if (!agenda.days?.length && !(agenda.overdue_items || []).length && !(agenda.unassigned_items || []).length) {
-      boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhum bloco ou tarefa corresponde à busca aplicada.</div>';
+      boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhum bloco ou evento corresponde à busca aplicada.</div>';
       applyPanelCollapseState();
       return;
     }
@@ -438,7 +438,7 @@
         });
       }
       await loadAgenda(true);
-      toast('Tarefa reposicionada com sucesso.');
+      toast('Evento reposicionado com sucesso.');
     } catch (error) {
       toast(error.message);
     }

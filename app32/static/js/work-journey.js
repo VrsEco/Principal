@@ -197,9 +197,9 @@
   }
 
   function emptyBlockMessage(block) {
-    if (block.block_mode === 'reserved_full') return 'Bloco reservado integralmente. O período fica protegido e não recebe tarefas.';
+    if (block.block_mode === 'reserved_full') return 'Bloco reservado integralmente. O período fica protegido e não recebe eventos.';
     if (block.block_mode === 'buffer') return 'Janela livre para urgências, encaixes manuais e reorganização do dia.';
-    return 'Nenhuma tarefa sugerida para este bloco.';
+    return 'Nenhum evento sugerido para este bloco.';
   }
 
   function renderBoard() {
@@ -234,9 +234,9 @@
         </div>
         <div class="journey-block__items">${(block.items || []).length ? block.items.map(itemCard).join('') : `<div class="journey-item-empty">${emptyBlockMessage(block)}</div>`}</div>
       </section>
-    `).join('') : `<div class="journey-item-empty">${searchTerm ? 'Nenhum bloco ou tarefa corresponde à busca aplicada.' : 'Nenhum bloco ativo para o dia selecionado.'}</div>`;
+    `).join('') : `<div class="journey-item-empty">${searchTerm ? 'Nenhum bloco ou evento corresponde à busca aplicada.' : 'Nenhum bloco ativo para o dia selecionado.'}</div>`;
 
-    unassignedContainer.innerHTML = unassigned.length ? unassigned.map(itemCard).join('') : '<div class="journey-item-empty">Sem tarefas fora dos blocos.</div>';
+    unassignedContainer.innerHTML = unassigned.length ? unassigned.map(itemCard).join('') : '<div class="journey-item-empty">Sem eventos fora dos blocos.</div>';
 
     const periodItems = searchTerm
       ? (state.board?.period_items || []).filter((item) => itemMatchesSearch(item))
@@ -249,7 +249,7 @@
         </div>
         <div class="journey-badges">${itemBadges(item)}</div>
       </div>
-    `).join('') : '<div class="journey-item-empty">Sem tarefas no período.</div>';
+    `).join('') : '<div class="journey-item-empty">Sem eventos no período.</div>';
 
     bindItemActions();
   }
@@ -323,7 +323,7 @@
       <div class="journey-list-item">
         <div class="journey-list-item__top">
           <div>
-            <strong>${transfer.item?.title || 'Tarefa'}</strong>
+            <strong>${transfer.item?.title || 'Evento'}</strong>
             <div class="text-secondary small">${transfer.from_employee_name || '-'} → ${transfer.to_employee_name || '-'}</div>
           </div>
           <div class="journey-item-card__actions">
@@ -441,19 +441,19 @@
       resetManualTaskForm();
       await Promise.all([loadBoard(), loadTransfers()]);
       document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
-      toast('Tarefa avulsa salva com sucesso.');
+      toast('Evento avulso salvo com sucesso.');
     } catch (error) {
       toast(error.message);
     }
   }
 
   async function deleteManualTask(itemId) {
-    if (!window.confirm('Excluir esta tarefa avulsa?')) return;
+    if (!window.confirm('Excluir este evento avulso?')) return;
     try {
       await api(`/api/companies/${companyId}/work-journey/items/${itemId}`, { method: 'DELETE' });
       await Promise.all([loadBoard(), loadTransfers()]);
       document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
-      toast('Tarefa avulsa excluída.');
+      toast('Evento avulso excluído.');
     } catch (error) {
       toast(error.message);
     }

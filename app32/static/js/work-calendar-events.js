@@ -40,7 +40,7 @@
         const listEl = document.getElementById('calendarEventsList');
         if (!listEl || !companyId || !selectedEmployeeId()) return;
         const range = weekRange(anchorDate());
-        listEl.innerHTML = '<div class="text-tertiary p-3">Carregando eventos...</div>';
+        listEl.innerHTML = '<div class="journey-item-empty">Carregando eventos...</div>';
         const params = new URLSearchParams({
             employee_id: String(selectedEmployeeId()),
             start_date: range.start,
@@ -55,7 +55,7 @@
         const response = await fetch(`/api/companies/${companyId}/work-journey/calendar/events?${params.toString()}`);
         const payload = await response.json();
         if (!response.ok || !payload.success) {
-            listEl.innerHTML = `<div class="text-danger p-3">${payload.message || 'Erro ao carregar eventos.'}</div>`;
+            listEl.innerHTML = `<div class="journey-item-empty">${payload.message || 'Erro ao carregar eventos.'}</div>`;
             return;
         }
         renderEvents(payload.data || []);
@@ -72,34 +72,34 @@
             `;
         }
         if (!events.length) {
-            listEl.innerHTML = '<div class="text-tertiary p-3">Nenhum evento neste período.</div>';
+            listEl.innerHTML = '<div class="journey-item-empty">Nenhum evento neste período.</div>';
             return;
         }
         listEl.innerHTML = events.map((event) => `
-            <article class="journey-item-card" style="margin-bottom:0.75rem;">
-                <div class="journey-item-card__header">
-                    <div>
-                        <strong>${escapeHtml(event.title || '')}</strong>
-                        <div class="text-secondary" style="font-size:0.85rem;">
+            <article class="journey-list-item agenda-feed-card">
+                <div class="journey-list-item__top">
+                    <div class="agenda-feed-card__main">
+                        <strong class="agenda-feed-card__title">${escapeHtml(event.title || '')}</strong>
+                        <div class="agenda-feed-card__meta">
                             ${formatDate(event.event_date)}${event.start_time ? ` • ${event.start_time}` : ''}${event.end_time ? ` → ${event.end_time}` : ''}
                         </div>
                     </div>
-                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                    <div class="agenda-feed-card__badges">
                         <span class="badge-pill">${escapeHtml(event.status_label || event.status || '')}</span>
                         <span class="badge-pill">${escapeHtml(event.priority_label || event.priority || '')}</span>
                     </div>
                 </div>
-                <div class="text-secondary" style="margin-top:0.5rem;">
+                <div class="agenda-feed-card__description">
                     ${event.description ? escapeHtml(event.description) : 'Sem descrição.'}
                 </div>
-                <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap; margin-top:0.75rem;">
-                    <div class="text-secondary" style="font-size:0.82rem;">
+                <div class="agenda-feed-card__footer">
+                    <div class="agenda-feed-card__origin">
                         Origem: ${escapeHtml(event.source_label || 'Evento livre')}
                         ${event.source_code ? ` • ${escapeHtml(event.source_code)}` : ''}
                         ${event.source_title ? ` • ${escapeHtml(event.source_title)}` : ''}
                         ${event.block_name ? ` • Bloco: ${escapeHtml(event.block_name)}` : ''}
                     </div>
-                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <div class="agenda-feed-card__actions">
                         ${event.source_url ? `<a class="btn btn-secondary btn-sm" href="${event.source_url}">Abrir origem</a>` : ''}
                         <button type="button" class="btn btn-secondary btn-sm" data-calendar-edit="${event.id}">Editar</button>
                         <button type="button" class="btn btn-outline btn-sm" data-calendar-delete="${event.id}">Excluir</button>
