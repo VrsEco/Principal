@@ -225,6 +225,13 @@
   color: #64748b;
 }
 
+.journey-app--calendar01 .agenda-day-column .agenda-empty-state:not(.agenda-empty-state--compact) {
+  color: #7c3aed;
+  background: linear-gradient(180deg, rgba(243, 232, 255, 0.92), rgba(250, 245, 255, 0.98));
+  border-color: rgba(168, 85, 247, 0.3);
+  font-weight: 700;
+}
+
 .journey-app--calendar01 .agenda-empty-state--compact {
   color: #1d4ed8;
   background: linear-gradient(180deg, rgba(219, 234, 254, 0.92), rgba(239, 246, 255, 0.98));
