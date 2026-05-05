@@ -1,7 +1,7 @@
 from collections import defaultdict
 import os
 import sys
-from datetime import date, time
+from datetime import date, datetime, time
 from types import SimpleNamespace
 
 from flask import Flask
@@ -830,6 +830,8 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'journeyClearFiltersBtn' in journey_template
     assert 'journeyScopeSelect' not in journey_template
     assert 'Planejamento operacional' in agendas_panel
+    assert 'processInstanceCardsPanel' in agendas_panel
+    assert 'processInstanceCardsList' in agendas_panel
     assert 'calendarEventsList' in agendas_panel
     assert 'calendarEventBlockInput' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
@@ -982,6 +984,88 @@ def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypat
     assert monday_day['blocks'][1]['items'][0]['is_overdue'] is True
     assert payload['overdue_items'][0]['id'] == 2
     assert payload['unassigned_items'] == []
+
+
+def test_agenda_presenter_includes_process_instance_cards(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: 'AA.IP.1')
+
+    agenda = SimpleNamespace(
+        id=7,
+        company_id=9,
+        employee_id=3,
+        anchor_date=date(2026, 4, 6),
+        scope='week',
+        status='suggested',
+        engine_version='agendas-v1',
+        summary_json={},
+    )
+    employee = SimpleNamespace(name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'})
+
+    payload = work_journey_agenda_presenter.serialize_agenda_payload(
+        agenda,
+        employee,
+        [],
+        [],
+        process_instance_cards=[
+            {
+                'instance_id': 501,
+                'instance_title': 'Fechamento Fiscal Maio',
+                'instance_due_label': '06/05/2026',
+                'current_activity': {'activity_name': 'Conferir documentos'},
+            }
+        ],
+    )
+
+    assert payload['process_instance_cards'][0]['instance_id'] == 501
+    assert payload['process_instance_cards'][0]['current_activity']['activity_name'] == 'Conferir documentos'
+
+
+def test_process_instance_card_serialization_exposes_macro_and_current_activity(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_service, 'date', _FixedDate)
+
+    instance = SimpleNamespace(
+        id=501,
+        company_id=9,
+        process_id=77,
+        routine_id=44,
+        instance_code='AA.IP.501',
+        title='Fechamento Fiscal Maio',
+        description='Rotina mensal do cliente',
+        due_date=date(2026, 4, 6),
+        status='in_progress',
+        priority='high',
+        current_bpmn_element_id='Task_ReviewDocs',
+        process_rel=SimpleNamespace(name='Fiscal', code='PROC.FISCAL'),
+        routine=SimpleNamespace(name='Fechamento mensal'),
+    )
+    execution = SimpleNamespace(
+        id=88,
+        process_instance_id=501,
+        bpmn_element_id='Task_ReviewDocs',
+        bpmn_element_name='Conferir documentos recebidos',
+        bpmn_element_type='userTask',
+        execution_mode='human_task',
+        status='in_progress',
+        waiting_since=None,
+        started_at=datetime(2026, 4, 4, 9, 0),
+        created_at=datetime(2026, 4, 4, 9, 0),
+        metadata_json={'sla_minutes': 120},
+    )
+    related_item = SimpleNamespace(metadata_json={'source_url': '/companies/9/process-instances?instance_id=501&from=work-journey'})
+
+    payload = work_journey_agenda_service._serialize_process_instance_card(
+        instance,
+        [execution],
+        [related_item],
+        agenda_entry_count=2,
+        linked_event_count=1,
+    )
+
+    assert payload['instance_due_label'] == '06/04/2026'
+    assert payload['current_activity']['activity_name'] == 'Conferir documentos recebidos'
+    assert payload['current_activity']['activity_due_label'] == '04/04/2026 11:00'
+    assert payload['agenda_entry_count'] == 2
+    assert payload['linked_event_count'] == 1
 
 
 def test_agenda_presenter_separates_overdue_and_unassigned_items(monkeypatch):

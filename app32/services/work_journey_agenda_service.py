@@ -6,7 +6,16 @@ from typing import Any
 
 from sqlalchemy.orm import joinedload
 
-from models import Employee, WorkCalendarEvent, WorkJourneyAgenda, WorkJourneyAgendaItem, WorkJourneyBlock, db
+from models import (
+    Employee,
+    ProcessInstance,
+    ProcessInstanceExecution,
+    WorkCalendarEvent,
+    WorkJourneyAgenda,
+    WorkJourneyAgendaItem,
+    WorkJourneyBlock,
+    db,
+)
 from services.work_journey_agenda_engine import (
     allocate_item,
     apply_date_change_to_source,
@@ -272,7 +281,8 @@ def _serialize(agenda: WorkJourneyAgenda, employee: Employee) -> dict[str, Any]:
         .order_by(WorkCalendarEvent.event_date.asc(), WorkCalendarEvent.start_time.asc().nullsfirst(), WorkCalendarEvent.id.asc())
         .all()
     )
-    payload = serialize_agenda_payload(agenda, employee, blocks, entries, calendar_events)
+    process_instance_cards = _build_process_instance_cards(agenda, entries, calendar_events)
+    payload = serialize_agenda_payload(agenda, employee, blocks, entries, calendar_events, process_instance_cards)
     payload['agenda'] = agenda.to_dict()
     payload['agenda']['locked_by_name'] = payload['agenda'].get('locked_by_name') or payload.get('locked_by_name')
     payload['agenda']['locked'] = agenda.status == 'locked'
@@ -299,3 +309,328 @@ def _updated_entry_metadata(current_metadata: Any, source_scope: str | None) -> 
     if source_scope == 'overdue':
         metadata['hide_from_overdue_lane'] = True
     return metadata
+
+
+INSTANCE_STATUS_LABELS = {
+    'pending': 'Pendente',
+    'in_progress': 'Em andamento',
+    'paused': 'Pausada',
+    'waiting_external': 'Aguardando externo',
+    'completed': 'Concluída',
+    'failed': 'Falhou',
+    'cancelled': 'Cancelada',
+    'overdue': 'Atrasada',
+}
+
+INSTANCE_PRIORITY_LABELS = {
+    'low': 'Baixa',
+    'normal': 'Normal',
+    'high': 'Alta',
+    'urgent': 'Urgente',
+}
+
+EXECUTION_STATUS_LABELS = {
+    'pending': 'Pendente',
+    'ready': 'Pronta',
+    'in_progress': 'Em execução',
+    'paused': 'Pausada',
+    'waiting_external': 'Aguardando externo',
+    'completed': 'Concluída',
+    'failed': 'Falhou',
+    'skipped': 'Ignorada',
+}
+
+EXECUTION_MODE_LABELS = {
+    'human_task': 'Humana',
+    'manual_external': 'Humana externa',
+    'automatic': 'Automática',
+    'external_rest': 'Integração REST',
+    'external_mcp': 'Integração MCP',
+}
+
+ACTIVE_EXECUTION_PRIORITY = {
+    'in_progress': 0,
+    'ready': 1,
+    'waiting_external': 2,
+    'paused': 3,
+    'pending': 4,
+    'completed': 9,
+    'failed': 10,
+    'skipped': 11,
+}
+
+ACTIVE_HUMAN_EXECUTION_MODES = {'human_task', 'manual_external'}
+
+
+def _build_process_instance_cards(
+    agenda: WorkJourneyAgenda,
+    entries: list[WorkJourneyAgendaItem],
+    calendar_events: list[WorkCalendarEvent],
+) -> list[dict[str, Any]]:
+    instance_ids = {
+        int(entry.journey_item.source_id)
+        for entry in entries
+        if getattr(entry, 'journey_item', None)
+        and getattr(entry.journey_item, 'item_type', None) == 'process_instance'
+        and getattr(entry.journey_item, 'source_id', None)
+    }
+    instance_ids.update(
+        int(event.source_id)
+        for event in calendar_events
+        if str(getattr(event, 'source_type', '') or '').strip().lower() == 'process_instance'
+        and getattr(event, 'source_id', None)
+    )
+    if not instance_ids:
+        return []
+
+    items_by_instance: dict[int, list[Any]] = defaultdict(list)
+    entry_counts_by_instance: dict[int, int] = defaultdict(int)
+    event_counts_by_instance: dict[int, int] = defaultdict(int)
+    for entry in entries:
+        item = getattr(entry, 'journey_item', None)
+        if not item or getattr(item, 'item_type', None) != 'process_instance' or not getattr(item, 'source_id', None):
+            continue
+        source_id = int(item.source_id)
+        items_by_instance[source_id].append(item)
+        entry_counts_by_instance[source_id] += 1
+    for event in calendar_events:
+        if str(getattr(event, 'source_type', '') or '').strip().lower() != 'process_instance' or not getattr(event, 'source_id', None):
+            continue
+        event_counts_by_instance[int(event.source_id)] += 1
+
+    instances = (
+        ProcessInstance.query.options(joinedload(ProcessInstance.process_rel), joinedload(ProcessInstance.routine))
+        .filter(ProcessInstance.company_id == agenda.company_id)
+        .filter(ProcessInstance.id.in_(list(instance_ids)))
+        .all()
+    )
+    executions = (
+        ProcessInstanceExecution.query
+        .filter(ProcessInstanceExecution.company_id == agenda.company_id)
+        .filter(ProcessInstanceExecution.process_instance_id.in_(list(instance_ids)))
+        .order_by(
+            ProcessInstanceExecution.process_instance_id.asc(),
+            ProcessInstanceExecution.updated_at.desc(),
+            ProcessInstanceExecution.id.desc(),
+        )
+        .all()
+    )
+    executions_by_instance: dict[int, list[ProcessInstanceExecution]] = defaultdict(list)
+    for execution in executions:
+        executions_by_instance[int(execution.process_instance_id)].append(execution)
+
+    cards = [
+        _serialize_process_instance_card(
+            instance,
+            executions_by_instance.get(int(instance.id), []),
+            items_by_instance.get(int(instance.id), []),
+            entry_counts_by_instance.get(int(instance.id), 0),
+            event_counts_by_instance.get(int(instance.id), 0),
+        )
+        for instance in instances
+    ]
+    cards.sort(
+        key=lambda card: (
+            0 if card.get('is_instance_overdue') else 1,
+            card.get('instance_due_date') or '9999-12-31',
+            str(card.get('instance_title') or '').lower(),
+        )
+    )
+    return cards
+
+
+def _serialize_process_instance_card(
+    instance: ProcessInstance,
+    executions: list[ProcessInstanceExecution],
+    related_items: list[Any],
+    agenda_entry_count: int,
+    linked_event_count: int,
+) -> dict[str, Any]:
+    current_execution = _select_current_execution(executions, instance.current_bpmn_element_id)
+    current_activity = _serialize_current_activity(current_execution, instance)
+    source_metadata = dict((related_items[0].metadata_json or {}) if related_items else {})
+    instance_due_label = _format_date_label(instance.due_date)
+    return {
+        'id': f'instance-{instance.id}',
+        'instance_id': int(instance.id),
+        'instance_code': instance.instance_code or f'IP.{instance.id}',
+        'instance_title': instance.title,
+        'instance_description': instance.description,
+        'instance_status': instance.status,
+        'instance_status_label': INSTANCE_STATUS_LABELS.get(instance.status, instance.status),
+        'instance_priority': instance.priority,
+        'instance_priority_label': INSTANCE_PRIORITY_LABELS.get(instance.priority, instance.priority),
+        'instance_due_date': instance.due_date.isoformat() if instance.due_date else None,
+        'instance_due_label': instance_due_label,
+        'is_instance_overdue': bool(instance.due_date and instance.due_date < date.today() and instance.status != 'completed'),
+        'is_instance_due_today': bool(instance.due_date and instance.due_date == date.today()),
+        'process_id': instance.process_id,
+        'process_name': instance.process_rel.name if instance.process_rel else None,
+        'process_code': instance.process_rel.code if instance.process_rel else None,
+        'routine_id': instance.routine_id,
+        'routine_name': getattr(instance.routine, 'name', None) if getattr(instance, 'routine', None) else None,
+        'source_url': source_metadata.get('source_url') or f'/companies/{instance.company_id}/process-instances?instance_id={instance.id}&from=work-journey',
+        'agenda_entry_count': int(agenda_entry_count or 0),
+        'linked_event_count': int(linked_event_count or 0),
+        'current_activity': current_activity,
+    }
+
+
+def _select_current_execution(
+    executions: list[ProcessInstanceExecution],
+    current_bpmn_element_id: str | None,
+) -> ProcessInstanceExecution | None:
+    if not executions:
+        return None
+    active_executions = [
+        execution
+        for execution in executions
+        if str(getattr(execution, 'status', '') or '').strip().lower() not in {'completed', 'failed', 'skipped'}
+    ]
+    if not active_executions:
+        return None
+
+    prioritized = [
+        execution
+        for execution in active_executions
+        if str(getattr(execution, 'execution_mode', '') or '').strip().lower() in ACTIVE_HUMAN_EXECUTION_MODES
+    ] or active_executions
+
+    matching_current = [
+        execution
+        for execution in prioritized
+        if current_bpmn_element_id and str(getattr(execution, 'bpmn_element_id', '') or '').strip() == str(current_bpmn_element_id).strip()
+    ]
+    pool = matching_current or prioritized
+    return min(
+        pool,
+        key=lambda execution: (
+            ACTIVE_EXECUTION_PRIORITY.get(str(getattr(execution, 'status', '') or '').strip().lower(), 99),
+            0 if str(getattr(execution, 'execution_mode', '') or '').strip().lower() in ACTIVE_HUMAN_EXECUTION_MODES else 1,
+            -(getattr(execution, 'id', 0) or 0),
+        ),
+    )
+
+
+def _serialize_current_activity(
+    execution: ProcessInstanceExecution | None,
+    instance: ProcessInstance,
+) -> dict[str, Any]:
+    if not execution:
+        fallback_label = str(instance.current_bpmn_element_id or 'Sem atividade ativa').strip()
+        return {
+            'activity_name': fallback_label,
+            'activity_code': instance.current_bpmn_element_id,
+            'activity_status': 'pending',
+            'activity_status_label': 'Aguardando ativação',
+            'activity_due_at': None,
+            'activity_due_date': None,
+            'activity_due_label': 'Sem prazo definido',
+            'activity_execution_mode': None,
+            'activity_execution_mode_label': 'Sem execução ativa',
+            'is_activity_overdue': False,
+            'execution_id': None,
+        }
+
+    due_payload = _resolve_execution_due(execution)
+    execution_mode = str(getattr(execution, 'execution_mode', '') or '').strip().lower()
+    status = str(getattr(execution, 'status', '') or '').strip().lower()
+    return {
+        'activity_name': execution.bpmn_element_name or execution.bpmn_element_id,
+        'activity_code': execution.bpmn_element_id,
+        'activity_type': execution.bpmn_element_type,
+        'activity_status': status,
+        'activity_status_label': EXECUTION_STATUS_LABELS.get(status, status),
+        'activity_due_at': due_payload.get('activity_due_at'),
+        'activity_due_date': due_payload.get('activity_due_date'),
+        'activity_due_label': due_payload.get('activity_due_label') or 'Sem prazo definido',
+        'activity_execution_mode': execution_mode or None,
+        'activity_execution_mode_label': EXECUTION_MODE_LABELS.get(execution_mode, execution_mode or 'Execução'),
+        'is_activity_overdue': bool(due_payload.get('is_activity_overdue')),
+        'execution_id': int(execution.id),
+    }
+
+
+def _resolve_execution_due(execution: ProcessInstanceExecution) -> dict[str, Any]:
+    metadata = dict(getattr(execution, 'metadata_json', None) or {})
+    datetime_keys = ('due_at', 'deadline_at', 'target_at', 'scheduled_at')
+    date_keys = ('due_date', 'deadline_date', 'target_date')
+
+    for key in datetime_keys:
+        parsed = _parse_datetime_value(metadata.get(key))
+        if parsed:
+            return {
+                'activity_due_at': parsed.isoformat(),
+                'activity_due_date': parsed.date().isoformat(),
+                'activity_due_label': parsed.strftime('%d/%m/%Y %H:%M'),
+                'is_activity_overdue': parsed < datetime.utcnow(),
+            }
+
+    for key in date_keys:
+        parsed_date = _parse_date_value(metadata.get(key))
+        if parsed_date:
+            return {
+                'activity_due_at': None,
+                'activity_due_date': parsed_date.isoformat(),
+                'activity_due_label': parsed_date.strftime('%d/%m/%Y'),
+                'is_activity_overdue': parsed_date < date.today(),
+            }
+
+    sla_minutes = metadata.get('sla_minutes')
+    anchor = execution.waiting_since or execution.started_at or execution.created_at
+    if anchor and sla_minutes not in (None, ''):
+        try:
+            due_at = anchor + timedelta(minutes=int(sla_minutes))
+        except (TypeError, ValueError):
+            due_at = None
+        if due_at:
+            return {
+                'activity_due_at': due_at.isoformat(),
+                'activity_due_date': due_at.date().isoformat(),
+                'activity_due_label': due_at.strftime('%d/%m/%Y %H:%M'),
+                'is_activity_overdue': due_at < datetime.utcnow(),
+            }
+
+    return {
+        'activity_due_at': None,
+        'activity_due_date': None,
+        'activity_due_label': None,
+        'is_activity_overdue': False,
+    }
+
+
+def _parse_datetime_value(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    normalized = raw.replace('Z', '+00:00')
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+
+
+def _parse_date_value(value: Any) -> date | None:
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    parsed = _parse_datetime_value(value)
+    if parsed:
+        return parsed.date()
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+def _format_date_label(value: date | None) -> str | None:
+    return value.strftime('%d/%m/%Y') if value else None

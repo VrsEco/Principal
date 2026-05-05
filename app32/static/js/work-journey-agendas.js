@@ -13,6 +13,9 @@
   const unlockBtn = document.getElementById('agendaUnlockBtn');
   const pdfBtn = document.getElementById('agendaPdfBtn');
   const boardContainer = document.getElementById('agendaBoardContainer');
+  const processInstanceCardsPanel = document.getElementById('processInstanceCardsPanel');
+  const processInstanceCardsList = document.getElementById('processInstanceCardsList');
+  const processInstanceCardsSummary = document.getElementById('processInstanceCardsSummary');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
   const statusBadge = document.getElementById('agendaLockBadge');
@@ -168,6 +171,8 @@
       summaryContainer.innerHTML = renderer.renderSummaryCards(summary);
     }
 
+    renderProcessInstanceCards(agenda, searchTerm);
+
     if (searchStatus) {
       searchStatus.hidden = !searchTerm;
       searchStatus.textContent = searchTerm ? `Busca ativa: "${searchTerm}"` : '';
@@ -190,6 +195,25 @@
     const html = renderer.renderAgendaHTML(agenda, state, agenda.locked);
     boardContainer.innerHTML = html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>';
     applyPanelCollapseState();
+  }
+
+  function renderProcessInstanceCards(agenda, searchTerm) {
+    if (!processInstanceCardsPanel || !processInstanceCardsList) return;
+    const cards = Array.isArray(agenda?.process_instance_cards) ? agenda.process_instance_cards : [];
+    const filteredCards = searchTerm
+      ? cards.filter((card) => utils.searchIncludes({
+        ...card,
+        ...(card.current_activity || {}),
+      }, searchTerm))
+      : cards;
+
+    processInstanceCardsPanel.style.display = filteredCards.length ? '' : 'none';
+    processInstanceCardsList.innerHTML = renderer.renderProcessInstanceCards(filteredCards);
+    if (processInstanceCardsSummary) {
+      processInstanceCardsSummary.innerHTML = filteredCards.length
+        ? `<span class="badge-pill">${filteredCards.length} instância(s)</span>`
+        : '';
+    }
   }
 
   function filterAgendaBySearch(agenda, searchTerm) {

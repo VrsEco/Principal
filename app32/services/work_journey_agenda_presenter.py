@@ -30,6 +30,7 @@ def serialize_agenda_payload(
     blocks: list[WorkJourneyBlock],
     entries: list[WorkJourneyAgendaItem],
     calendar_events: list[WorkCalendarEvent] | None = None,
+    process_instance_cards: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     period_start, period_end = clamp_period(agenda.scope, agenda.anchor_date)
     entries = [entry for entry in entries if not entry.journey_item or is_actionable_status(entry.journey_item.status)]
@@ -170,6 +171,7 @@ def serialize_agenda_payload(
         'unassigned_items': [serialized_entries[entry.id] for entry in unassigned_entries],
         'calendar_events': sorted(serialized_events.values(), key=_calendar_sort_key),
         'unassigned_events': unassigned_events,
+        'process_instance_cards': list(process_instance_cards or []),
     }
 
 

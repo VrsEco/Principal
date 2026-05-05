@@ -281,6 +281,7 @@
       unassigned_events: sortAgendaItems(rawUnassignedEvents),
       overdue_items: sortAgendaItems(rawOverdue),
       calendar_events: Array.isArray(agenda.calendar_events) ? agenda.calendar_events.map(normalizeItem) : [],
+      process_instance_cards: Array.isArray(agenda.process_instance_cards) ? agenda.process_instance_cards : [],
       notes: agenda.notes || null,
     };
   }
@@ -306,6 +307,70 @@
         <strong class="${label === 'Sobrecarga' && Number(summary.overload_minutes || 0) > 0 ? 'journey-overload' : ''}">${value}</strong>
       </div>
     `).join('');
+  }
+
+  function renderProcessInstanceCards(cards) {
+    if (!Array.isArray(cards) || !cards.length) {
+      return '<div class="agenda-empty-state">Nenhuma instância relevante no período atual.</div>';
+    }
+
+    return cards.map((card) => {
+      const currentActivity = card.current_activity || {};
+      const instanceDueClass = card.is_instance_overdue ? 'agenda-instance-card__metric-value agenda-instance-card__metric-value--danger' : 'agenda-instance-card__metric-value';
+      const activityDueClass = currentActivity.is_activity_overdue ? 'agenda-instance-card__metric-value agenda-instance-card__metric-value--danger' : 'agenda-instance-card__metric-value';
+      const cardClass = card.is_instance_overdue ? 'agenda-instance-card agenda-instance-card--overdue' : 'agenda-instance-card';
+      const activityDueLabel = currentActivity.activity_due_label || 'Sem prazo definido';
+      const instanceDueLabel = card.instance_due_label || 'Sem prazo definido';
+      return `
+        <article class="${cardClass}">
+          <div class="agenda-instance-card__header">
+            <div>
+              <span class="agenda-instance-card__eyebrow">Instância de processo</span>
+              <h3 class="agenda-instance-card__title">${escapeHtml(card.instance_title || 'Instância sem título')}</h3>
+              <div class="agenda-instance-card__code">${escapeHtml(card.instance_code || '')}</div>
+              <div class="agenda-instance-card__process">${escapeHtml(card.process_name || 'Processo não identificado')}</div>
+            </div>
+            <div class="agenda-instance-card__badges">
+              <span class="badge-pill">${escapeHtml(card.instance_status_label || card.instance_status || 'Status')}</span>
+              <span class="badge-pill">${escapeHtml(card.instance_priority_label || card.instance_priority || 'Prioridade')}</span>
+            </div>
+          </div>
+          <div class="agenda-instance-card__meta">
+            <div class="agenda-instance-card__metric">
+              <span class="agenda-instance-card__metric-label">Prazo da instância</span>
+              <span class="${instanceDueClass}">${escapeHtml(instanceDueLabel)}</span>
+            </div>
+            <div class="agenda-instance-card__metric">
+              <span class="agenda-instance-card__metric-label">Prazo da atividade atual</span>
+              <span class="${activityDueClass}">${escapeHtml(activityDueLabel)}</span>
+            </div>
+          </div>
+          <div class="agenda-instance-card__activity">
+            <span class="agenda-instance-card__eyebrow">Atividade atual</span>
+            <h4 class="agenda-instance-card__activity-title">${escapeHtml(currentActivity.activity_name || 'Sem atividade ativa')}</h4>
+            <div class="agenda-instance-card__activity-meta">
+              <span class="badge-pill">${escapeHtml(currentActivity.activity_status_label || 'Aguardando ativação')}</span>
+              <span class="badge-pill">${escapeHtml(currentActivity.activity_execution_mode_label || 'Sem execução ativa')}</span>
+              ${card.agenda_entry_count ? `<span class="badge-pill">${card.agenda_entry_count} alocação(ões)</span>` : ''}
+              ${card.linked_event_count ? `<span class="badge-pill">${card.linked_event_count} evento(s)</span>` : ''}
+            </div>
+          </div>
+          <div class="agenda-instance-card__footer">
+            <span class="text-secondary">${escapeHtml(card.routine_name || 'Sem rotina vinculada')}</span>
+            ${card.source_url ? `<a class="btn btn-secondary" href="${card.source_url}">Abrir instância</a>` : ''}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   function renderAgendaHTML(agenda, collapsedState, locked) {
@@ -580,6 +645,7 @@
     normalizeBlock,
     buildSummaryFromDays,
     renderSummaryCards,
+    renderProcessInstanceCards,
     renderAgendaHTML,
     renderDayColumn,
     renderBlock,
