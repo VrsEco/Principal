@@ -5,10 +5,11 @@
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey-agendas.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work-journey-calendar-01.css') }}">
 {% endblock %}
 
 {% block workspace_content %}
-<div class="journey-app fade-in" data-company-id="{{ company.id }}" data-selected-employee-id="{{ selected_employee_id or '' }}" data-can-manage-all="{{ can_manage_all|tojson }}" data-today="{{ today }}">
+<div class="journey-app journey-app--calendar01 fade-in" data-company-id="{{ company.id }}" data-selected-employee-id="{{ selected_employee_id or '' }}" data-can-manage-all="{{ can_manage_all|tojson }}" data-today="{{ today }}">
     <section class="journey-hero">
         <div class="journey-hero__content">
             <div>

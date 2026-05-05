@@ -858,6 +858,8 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Calendário Operacional do Colaborador' in journey_template
     assert 'Calendário 02' in journey_template
     assert 'work_journey_page_v2' in journey_template
+    assert 'work-journey-calendar-01.css' in journey_template
+    assert 'journey-app--calendar01' in journey_template
     assert 'Calendário de:' in journey_template
     assert 'Calendário 02' in journey_template_02
     assert 'work-journey-calendar-02.css' in journey_template_02
