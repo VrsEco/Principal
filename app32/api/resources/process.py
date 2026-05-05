@@ -70,6 +70,7 @@ from services.process_execution_contract_service import (
     normalize_execution_mode,
     resolve_activity_execution_contract,
 )
+from services.work_journey_sync import sync_process_instance_item
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 PROCESS_SOURCE_MODULES = ("processo", "process")
@@ -102,6 +103,20 @@ def _normalize_macro_owner_from_employee(data: dict, company_id: int | None, *, 
 
     data['owner'] = employee.name
     return None
+
+
+def _sync_process_instance_work_journey_item(instance) -> None:
+    employee = (
+        Employee.query
+        .filter_by(company_id=instance.company_id, user_id=getattr(current_user, 'id', None), status='active')
+        .first()
+    )
+    sync_process_instance_item(
+        instance.company_id,
+        int(instance.id),
+        preferred_employee_id=getattr(employee, 'id', None),
+    )
+    db.session.commit()
 
 
 def _append_process_instance_put_debug(message: str):
@@ -1097,6 +1112,15 @@ class ProcessInstanceExecutionListResource(Resource):
                 if not instance.started_at:
                     instance.started_at = datetime.utcnow()
             db.session.commit()
+            try:
+                _sync_process_instance_work_journey_item(instance)
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception(
+                    "Falha ao materializar tarefa operacional da instância %s após criar execution %s",
+                    instance.id,
+                    execution.id,
+                )
             return process_instance_execution_schema.dump(execution), 201
         except ValidationError as err:
             db.session.rollback()
@@ -1152,6 +1176,15 @@ class ProcessInstanceExecutionResource(Resource):
                 instance.status = 'in_progress'
 
             db.session.commit()
+            try:
+                _sync_process_instance_work_journey_item(instance)
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception(
+                    "Falha ao materializar tarefa operacional da instância %s após atualizar execution %s",
+                    instance.id,
+                    execution.id,
+                )
             return process_instance_execution_schema.dump(execution), 200
         except ValidationError as err:
             db.session.rollback()

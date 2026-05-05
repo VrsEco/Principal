@@ -266,6 +266,123 @@ def sync_meetings(company_id: int, employee_id: int, period_start: date, period_
         )
 
 
+def sync_process_instance_item(company_id: int, instance_id: int, preferred_employee_id: int | None = None) -> WorkJourneyItem | None:
+    instance = (
+        ProcessInstance.query.options(joinedload(ProcessInstance.process_rel), joinedload(ProcessInstance.routine))
+        .filter(ProcessInstance.company_id == company_id, ProcessInstance.id == instance_id)
+        .first()
+    )
+    if not instance:
+        return None
+
+    executions = (
+        ProcessInstanceExecution.query
+        .filter(ProcessInstanceExecution.company_id == company_id, ProcessInstanceExecution.process_instance_id == instance.id)
+        .order_by(ProcessInstanceExecution.updated_at.desc(), ProcessInstanceExecution.id.desc())
+        .all()
+    )
+    projection = build_operational_projection(instance, executions)
+    current_execution = projection.get('current_execution')
+    employee_id = _resolve_process_instance_employee_id(
+        company_id,
+        instance,
+        current_execution=current_execution,
+        preferred_employee_id=preferred_employee_id,
+    )
+    if not employee_id:
+        return None
+
+    metadata = {
+        'source_label': 'Instância de processo',
+        'source_code': instance.instance_code,
+        'source_title': instance.title,
+        'process_id': instance.process_id,
+        'routine_id': instance.routine_id,
+        'process_name': instance.process_rel.name if instance.process_rel else None,
+        'process_code': instance.process_rel.code if instance.process_rel else None,
+        'manual_assignment': current_manual_assignment(company_id, 'process_instance', instance.id),
+        'source_url': build_process_instance_source_url(company_id, instance.id),
+        'instance_title': instance.title,
+        'instance_due_date': instance.due_date.isoformat() if instance.due_date else None,
+        'instance_status': instance.status,
+        'operational_task_title': projection.get('operational_title'),
+        'operational_due_date': projection.get('operational_due_date').isoformat() if projection.get('operational_due_date') else None,
+        'operational_due_label': projection.get('operational_due_label'),
+        'current_execution_id': int(current_execution.id) if current_execution else None,
+        'current_execution_bpmn_element_id': getattr(current_execution, 'bpmn_element_id', None) if current_execution else None,
+        'current_execution_name': getattr(current_execution, 'bpmn_element_name', None) if current_execution else None,
+        'current_execution_type': getattr(current_execution, 'bpmn_element_type', None) if current_execution else None,
+        'current_execution_mode': getattr(current_execution, 'execution_mode', None) if current_execution else None,
+        'current_execution_status': getattr(current_execution, 'status', None) if current_execution else None,
+        'current_execution_due_at': projection.get('activity_due_at'),
+        'current_execution_due_date': projection.get('activity_due_date'),
+        'current_execution_is_overdue': projection.get('is_activity_overdue'),
+    }
+    recurrence_type = getattr(instance.routine, 'schedule_type', None) if instance.routine else None
+    bound_block_id = get_bound_block_id(company_id, instance.routine_id, employee_id)
+    upsert_source_item(
+        company_id=company_id,
+        employee_id=employee_id,
+        item_type='process_instance',
+        source_id=instance.id,
+        title=projection.get('operational_title') or instance.title,
+        description=projection.get('operational_description') or instance.description,
+        due_date=projection.get('operational_due_date') or instance.due_date,
+        estimated_minutes=int(projection.get('estimated_minutes') or 0),
+        worked_minutes=int(projection.get('worked_minutes') or 0),
+        priority=str(instance.priority or 'normal'),
+        status=normalize_source_status(projection.get('status') or instance.status),
+        recurrence_type=recurrence_type,
+        bound_block_id=bound_block_id,
+        metadata=metadata,
+    )
+    return WorkJourneyItem.query.filter_by(company_id=company_id, item_type='process_instance', source_id=instance.id).first()
+
+
+def sync_meeting_item(company_id: int, meeting_id: int, preferred_employee_id: int | None = None) -> WorkJourneyItem | None:
+    meeting = Meeting.query.filter_by(company_id=company_id, id=meeting_id).first()
+    if not meeting:
+        return None
+
+    employee_id = _resolve_meeting_employee_id(company_id, meeting, preferred_employee_id=preferred_employee_id)
+    if not employee_id and not current_manual_assignment(company_id, 'meeting', meeting.id):
+        return None
+
+    employee_id = employee_id or getattr(
+        WorkJourneyItem.query.filter_by(company_id=company_id, item_type='meeting', source_id=meeting.id).first(),
+        'employee_id',
+        None,
+    )
+    if not employee_id:
+        return None
+
+    metadata = {
+        'source_label': 'Reunião',
+        'source_code': f'{meeting.company.client_code if meeting.company and meeting.company.client_code else "AA"}.R.{meeting.id}',
+        'project_id': meeting.project_id,
+        'scheduled_time': meeting.scheduled_time,
+        'planned_duration_minutes': int(meeting.planned_duration_minutes or 0),
+        'manual_assignment': current_manual_assignment(company_id, 'meeting', meeting.id),
+        'source_url': build_meeting_source_url(company_id, meeting.id),
+    }
+    upsert_source_item(
+        company_id=company_id,
+        employee_id=employee_id,
+        item_type='meeting',
+        source_id=meeting.id,
+        title=meeting.title,
+        description=meeting.invite_notes or meeting.meeting_notes,
+        due_date=meeting.scheduled_date,
+        estimated_minutes=int(meeting.planned_duration_minutes or 60),
+        worked_minutes=int(meeting.actual_duration_minutes or 0),
+        priority='normal',
+        status='completed' if str(meeting.status or '').lower() in {'done', 'completed'} else 'pending',
+        recurrence_type='sporadic',
+        metadata=metadata,
+    )
+    return WorkJourneyItem.query.filter_by(company_id=company_id, item_type='meeting', source_id=meeting.id).first()
+
+
 def prune_missing_source_items(company_id: int, employee_id: int) -> int:
     items = (
         WorkJourneyItem.query.filter(
@@ -366,6 +483,77 @@ def upsert_source_item(**kwargs) -> None:
 def current_manual_assignment(company_id: int, item_type: str, source_id: int) -> bool:
     item = WorkJourneyItem.query.filter_by(company_id=company_id, item_type=item_type, source_id=source_id).first()
     return bool(item and (item.metadata_json or {}).get('manual_assignment'))
+
+
+def _resolve_process_instance_employee_id(
+    company_id: int,
+    instance: ProcessInstance,
+    *,
+    current_execution: ProcessInstanceExecution | None = None,
+    preferred_employee_id: int | None = None,
+) -> int | None:
+    existing_item = WorkJourneyItem.query.filter_by(
+        company_id=company_id,
+        item_type='process_instance',
+        source_id=instance.id,
+    ).first()
+    if existing_item and _employee_belongs_to_company(company_id, existing_item.employee_id):
+        return int(existing_item.employee_id)
+
+    candidates: list[int | None] = [preferred_employee_id]
+    metadata = dict(getattr(current_execution, 'metadata_json', None) or {})
+    candidates.extend(
+        [
+            metadata.get('responsible_employee_id'),
+            metadata.get('executor_employee_id'),
+            metadata.get('owner_employee_id'),
+            metadata.get('employee_id'),
+            getattr(instance, 'executor_id', None),
+            getattr(instance, 'responsible_id', None),
+            getattr(instance, 'owner_employee_id', None),
+        ]
+    )
+    for candidate in candidates:
+        normalized = _normalize_company_employee_id(company_id, candidate)
+        if normalized:
+            return normalized
+    return None
+
+
+def _resolve_meeting_employee_id(company_id: int, meeting: Meeting, *, preferred_employee_id: int | None = None) -> int | None:
+    existing_item = WorkJourneyItem.query.filter_by(
+        company_id=company_id,
+        item_type='meeting',
+        source_id=meeting.id,
+    ).first()
+    if existing_item and _employee_belongs_to_company(company_id, existing_item.employee_id):
+        return int(existing_item.employee_id)
+
+    preferred = _normalize_company_employee_id(company_id, preferred_employee_id)
+    if preferred:
+        preferred_employee = Employee.query.filter_by(company_id=company_id, id=preferred, status='active').first()
+        if preferred_employee and meeting_matches_employee(meeting, preferred_employee):
+            return preferred
+
+    for employee in (
+        Employee.query.filter_by(company_id=company_id, status='active')
+        .order_by(Employee.name.asc())
+        .all()
+    ):
+        if meeting_matches_employee(meeting, employee):
+            return int(employee.id)
+    return preferred
+
+
+def _employee_belongs_to_company(company_id: int, employee_id: int | None) -> bool:
+    return _normalize_company_employee_id(company_id, employee_id) is not None
+
+
+def _normalize_company_employee_id(company_id: int, employee_id: int | None) -> int | None:
+    if not employee_id:
+        return None
+    employee = Employee.query.filter_by(company_id=company_id, id=employee_id, status='active').first()
+    return int(employee.id) if employee else None
 
 
 def meeting_matches_employee(meeting: Meeting, employee: Employee) -> bool:

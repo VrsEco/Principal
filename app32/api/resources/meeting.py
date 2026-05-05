@@ -8,10 +8,25 @@ import json
 import logging
 import re
 from services.email_service import email_service
+from services.work_journey_sync import sync_meeting_item
 from services.whatsapp_service import whatsapp_service
 
 logger = logging.getLogger(__name__)
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
+
+def _sync_meeting_work_journey_item(meeting) -> None:
+    employee = (
+        Employee.query
+        .filter_by(company_id=meeting.company_id, user_id=getattr(current_user, 'id', None), status='active')
+        .first()
+    )
+    sync_meeting_item(
+        meeting.company_id,
+        int(meeting.id),
+        preferred_employee_id=getattr(employee, 'id', None),
+    )
+    db.session.commit()
 
 
 def _parse_optional_int(value):
@@ -526,6 +541,11 @@ class MeetingListResource(Resource):
             )
             db.session.add(meeting)
             db.session.commit()
+            try:
+                _sync_meeting_work_journey_item(meeting)
+            except Exception as sync_exc:
+                db.session.rollback()
+                logger.exception("Falha ao materializar tarefa operacional da reunião %s: %s", meeting.id, sync_exc)
             
             return {
                 "success": True, 
@@ -566,6 +586,11 @@ class MeetingResource(Resource):
             if 'agenda' in data: meeting.agenda_json = json.dumps(data['agenda'])
             
             db.session.commit()
+            try:
+                _sync_meeting_work_journey_item(meeting)
+            except Exception as sync_exc:
+                db.session.rollback()
+                logger.exception("Falha ao sincronizar tarefa operacional da reunião %s: %s", meeting.id, sync_exc)
             return {
                 "success": True,
                 "message": "Dados atualizados!",
@@ -611,6 +636,11 @@ class MeetingExecutionResource(Resource):
             if 'activities' in data: meeting.activities_json = json.dumps(data['activities'])
             
             db.session.commit()
+            try:
+                _sync_meeting_work_journey_item(meeting)
+            except Exception as sync_exc:
+                db.session.rollback()
+                logger.exception("Falha ao sincronizar execução da reunião %s na jornada: %s", meeting.id, sync_exc)
             return {
                 "success": True,
                 "message": "Execução salva!",
@@ -666,6 +696,11 @@ class MeetingStartResource(Resource):
                     meeting.project_id = new_project.id
             
             db.session.commit()
+            try:
+                _sync_meeting_work_journey_item(meeting)
+            except Exception as sync_exc:
+                db.session.rollback()
+                logger.exception("Falha ao sincronizar início da reunião %s na jornada: %s", meeting.id, sync_exc)
             
             project = Project.query.get(meeting.project_id) if meeting.project_id else None
             
@@ -720,6 +755,11 @@ class MeetingFinishResource(Resource):
                     logger.error(f"Erro ao criar tarefa resumo: {ex}")
             
             db.session.commit()
+            try:
+                _sync_meeting_work_journey_item(meeting)
+            except Exception as sync_exc:
+                db.session.rollback()
+                logger.exception("Falha ao sincronizar finalização da reunião %s na jornada: %s", meeting.id, sync_exc)
             return {
                 "success": True,
                 "message": "Reunião finalizada e resumida no projeto!",

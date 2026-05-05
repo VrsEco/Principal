@@ -8,6 +8,8 @@ from flask import Flask
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from api.resources import meeting as meeting_resource
+from api.resources import process as process_resource
 from api.routes import work_journey_agendas as work_journey_agendas_route
 from api.routes import work_journey as work_journey_route
 from api.routes import work_journey_report as work_journey_report_route
@@ -1594,4 +1596,179 @@ def test_work_journey_template_exposes_report_link():
         template = handle.read()
     assert 'Relatório gerencial' in template
     assert 'work_journey_report.work_journey_report_page' in template
+
+
+def test_sync_process_instance_item_materializes_operational_task(monkeypatch):
+    instance = SimpleNamespace(
+        id=501,
+        company_id=9,
+        process_id=41,
+        routine_id=12,
+        instance_code='IP.501',
+        title='Fechamento Fiscal Maio',
+        description='Rotina mensal',
+        due_date=date(2026, 5, 5),
+        priority='high',
+        status='in_progress',
+        process_rel=SimpleNamespace(name='Fechamento Fiscal', code='AA.P.1'),
+        routine=SimpleNamespace(schedule_type='monthly'),
+    )
+    execution = SimpleNamespace(id=88, bpmn_element_id='Task_1', bpmn_element_name='Conferir documentos')
+    captured = {}
+
+    class _FakeProcessInstanceSingleQuery:
+        def options(self, *_args, **_kwargs):
+            return self
+        def filter(self, *_args, **_kwargs):
+            return self
+        def first(self):
+            return instance
+
+    class _FakeExecutionSingleQuery:
+        def filter(self, *_args, **_kwargs):
+            return self
+        def order_by(self, *_args, **_kwargs):
+            return self
+        def all(self):
+            return [execution]
+
+    class _FakeJourneyItemLookup:
+        def filter_by(self, **kwargs):
+            self.kwargs = kwargs
+            return self
+        def first(self):
+            return SimpleNamespace(id=901, employee_id=3) if self.kwargs.get('source_id') == 501 else None
+
+    monkeypatch.setattr(work_journey_sync, 'ProcessInstance', SimpleNamespace(query=_FakeProcessInstanceSingleQuery(), process_rel=None, routine=None, company_id=None, id=None))
+    sort_column = SimpleNamespace(desc=lambda: sort_column)
+    monkeypatch.setattr(
+        work_journey_sync,
+        'ProcessInstanceExecution',
+        SimpleNamespace(query=_FakeExecutionSingleQuery(), company_id=None, process_instance_id=None, updated_at=sort_column, id=sort_column),
+    )
+    monkeypatch.setattr(work_journey_sync, 'WorkJourneyItem', SimpleNamespace(query=_FakeJourneyItemLookup()))
+    monkeypatch.setattr(work_journey_sync, 'joinedload', lambda attr: attr)
+    monkeypatch.setattr(
+        work_journey_sync,
+        'build_operational_projection',
+        lambda *_args, **_kwargs: {
+            'current_execution': execution,
+            'operational_title': 'Conferir documentos',
+            'operational_description': 'Fechamento Fiscal Maio',
+            'operational_due_date': date(2026, 5, 5),
+            'operational_due_label': '05/05/2026',
+            'estimated_minutes': 90,
+            'worked_minutes': 15,
+            'status': 'ready',
+            'activity_due_at': '2026-05-05T10:00:00',
+            'activity_due_date': '2026-05-05',
+            'is_activity_overdue': False,
+        },
+    )
+    monkeypatch.setattr(work_journey_sync, '_resolve_process_instance_employee_id', lambda *_args, **_kwargs: 3)
+    monkeypatch.setattr(work_journey_sync, 'get_bound_block_id', lambda *_args, **_kwargs: 21)
+    monkeypatch.setattr(work_journey_sync, 'current_manual_assignment', lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(work_journey_sync, 'upsert_source_item', lambda **kwargs: captured.update(kwargs))
+
+    item = work_journey_sync.sync_process_instance_item(9, 501, preferred_employee_id=3)
+
+    assert item.id == 901
+    assert captured['employee_id'] == 3
+    assert captured['item_type'] == 'process_instance'
+    assert captured['title'] == 'Conferir documentos'
+    assert captured['estimated_minutes'] == 90
+    assert captured['bound_block_id'] == 21
+    assert captured['metadata']['current_execution_id'] == 88
+
+
+def test_sync_meeting_item_materializes_operational_task(monkeypatch):
+    meeting = SimpleNamespace(
+        id=77,
+        company_id=9,
+        project_id=15,
+        title='Reunião de alinhamento',
+        invite_notes='Alinhar pendências',
+        meeting_notes='Notas finais',
+        scheduled_date=date(2026, 5, 5),
+        scheduled_time='09:00',
+        planned_duration_minutes=45,
+        actual_duration_minutes=30,
+        status='draft',
+        company=SimpleNamespace(client_code='AA'),
+    )
+    captured = {}
+
+    class _FakeMeetingQuery:
+        def filter_by(self, **_kwargs):
+            return self
+        def first(self):
+            return meeting
+
+    class _FakeJourneyItemLookup:
+        def filter_by(self, **kwargs):
+            self.kwargs = kwargs
+            return self
+        def first(self):
+            return SimpleNamespace(id=902, employee_id=3) if self.kwargs.get('source_id') == 77 else None
+
+    monkeypatch.setattr(work_journey_sync, 'Meeting', SimpleNamespace(query=_FakeMeetingQuery()))
+    monkeypatch.setattr(work_journey_sync, 'WorkJourneyItem', SimpleNamespace(query=_FakeJourneyItemLookup()))
+    monkeypatch.setattr(work_journey_sync, '_resolve_meeting_employee_id', lambda *_args, **_kwargs: 3)
+    monkeypatch.setattr(work_journey_sync, 'current_manual_assignment', lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(work_journey_sync, 'upsert_source_item', lambda **kwargs: captured.update(kwargs))
+
+    item = work_journey_sync.sync_meeting_item(9, 77, preferred_employee_id=3)
+
+    assert item.id == 902
+    assert captured['employee_id'] == 3
+    assert captured['item_type'] == 'meeting'
+    assert captured['title'] == 'Reunião de alinhamento'
+    assert captured['estimated_minutes'] == 45
+    assert captured['metadata']['source_label'] == 'Reunião'
+
+
+def test_process_resource_sync_helper_prefers_current_user_employee(monkeypatch):
+    captured = {}
+
+    monkeypatch.setattr(
+        process_resource,
+        'Employee',
+        SimpleNamespace(query=SimpleNamespace(filter_by=lambda **_kwargs: SimpleNamespace(first=lambda: SimpleNamespace(id=31)))),
+    )
+    monkeypatch.setattr(process_resource, 'current_user', SimpleNamespace(id=7))
+    monkeypatch.setattr(
+        process_resource,
+        'sync_process_instance_item',
+        lambda company_id, instance_id, preferred_employee_id=None: captured.update(
+            {'company_id': company_id, 'instance_id': instance_id, 'preferred_employee_id': preferred_employee_id}
+        ),
+    )
+    monkeypatch.setattr(process_resource.db, 'session', SimpleNamespace(commit=lambda: captured.update({'committed': True})))
+
+    process_resource._sync_process_instance_work_journey_item(SimpleNamespace(id=501, company_id=9))
+
+    assert captured == {'company_id': 9, 'instance_id': 501, 'preferred_employee_id': 31, 'committed': True}
+
+
+def test_meeting_resource_sync_helper_prefers_current_user_employee(monkeypatch):
+    captured = {}
+
+    monkeypatch.setattr(
+        meeting_resource,
+        'Employee',
+        SimpleNamespace(query=SimpleNamespace(filter_by=lambda **_kwargs: SimpleNamespace(first=lambda: SimpleNamespace(id=44)))),
+    )
+    monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(id=9))
+    monkeypatch.setattr(
+        meeting_resource,
+        'sync_meeting_item',
+        lambda company_id, meeting_id, preferred_employee_id=None: captured.update(
+            {'company_id': company_id, 'meeting_id': meeting_id, 'preferred_employee_id': preferred_employee_id}
+        ),
+    )
+    monkeypatch.setattr(meeting_resource.db, 'session', SimpleNamespace(commit=lambda: captured.update({'committed': True})))
+
+    meeting_resource._sync_meeting_work_journey_item(SimpleNamespace(id=77, company_id=9))
+
+    assert captured == {'company_id': 9, 'meeting_id': 77, 'preferred_employee_id': 44, 'committed': True}
 
