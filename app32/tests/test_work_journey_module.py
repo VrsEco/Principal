@@ -840,10 +840,10 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'calendarEventBlockInput' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
     assert 'A primeira coluna exibe eventos operacionais atrasados' in agendas_panel
-    assert 'agendaSummaryCards' in agendas_panel
-    assert 'agendaMetaLine' in agendas_panel
-    assert 'agendaSearchStatus' in agendas_panel
-    assert 'Resumo visual do período' in agendas_panel
+    assert 'agendaSummaryCards' not in agendas_panel
+    assert 'agendaMetaLine' not in agendas_panel
+    assert 'agendaSearchStatus' not in agendas_panel
+    assert 'Resumo visual do período' not in agendas_panel
     assert 'agendaLockBtn' in agendas_panel
     assert 'agendaPdfBtn' in agendas_panel
     assert 'agendaScopeSelect' not in agendas_panel
