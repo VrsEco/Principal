@@ -32,7 +32,7 @@
   };
 
   function selectedEmployeeId() {
-    return parseInt(employeeSelect.value, 10) || null;
+    return parseInt(employeeSelect?.value || bootstrap.selectedEmployeeId || '', 10) || null;
   }
 
   function selectedDate() {
@@ -71,7 +71,7 @@
   }
 
   function renderFilterContext() {
-    const selectedEmployee = employeeSelect?.options?.[employeeSelect.selectedIndex]?.text || 'Colaborador não definido';
+    const selectedEmployee = employeeSelect?.options?.[employeeSelect.selectedIndex]?.text || bootstrap.selectedEmployeeName || 'Colaborador não definido';
     const searchTerm = currentSearchTerm();
     const activeCount = [
       employeeSelect?.value && employeeSelect.value !== defaultEmployeeId,

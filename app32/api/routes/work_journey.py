@@ -492,6 +492,7 @@ def api_approve_absence(company_id: int, request_id: int):
 
 def _render_work_journey_page(company_id: int):
     company = Company.query.get_or_404(company_id)
+    can_manage_all = has_company_full_access(company_id)
     employees = Employee.query.filter_by(company_id=company_id, status='active').order_by(Employee.name.asc()).all()
     current_employee_id = _current_employee_id(company_id)
     anchor_date = _parse_date(request.args.get('date')) or date.today()
@@ -500,15 +501,21 @@ def _render_work_journey_page(company_id: int):
     source_id = request.args.get('source_id', type=int)
     if source_type in {'project_task', 'process_instance'} and source_id and not selected_employee_id:
         selected_employee_id = suggest_employee_for_source(company_id, source_type, source_id)
+    if not can_manage_all and current_employee_id:
+        selected_employee_id = current_employee_id
     if selected_employee_id and not _can_access_employee(company_id, selected_employee_id):
         abort(403)
+    if not can_manage_all and current_employee_id:
+        employees = [employee for employee in employees if employee.id == current_employee_id]
+    selected_employee = next((employee for employee in employees if employee.id == selected_employee_id), None)
     return render_template(
         'modules/my_work/work_journey.html',
         company=company,
         employees=employees,
         employees_payload=[employee.to_dict() for employee in employees],
         selected_employee_id=selected_employee_id,
-        can_manage_all=has_company_full_access(company_id),
+        selected_employee_name=getattr(selected_employee, 'name', None),
+        can_manage_all=can_manage_all,
         today=anchor_date.isoformat(),
         source_type=source_type,
         source_id=source_id,

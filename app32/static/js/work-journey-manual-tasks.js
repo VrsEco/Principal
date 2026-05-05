@@ -13,7 +13,7 @@
   };
 
   function selectedEmployeeId() {
-    return parseInt(employeeSelect?.value || '', 10) || null;
+    return parseInt(employeeSelect?.value || bootstrap.selectedEmployeeId || '', 10) || null;
   }
 
   function renderSummary(summary = {}) {

@@ -12,8 +12,8 @@
     <section class="journey-hero">
         <div class="journey-hero__content">
             <div>
-                <h1 class="journey-hero__title">Calendário</h1>
-                <p class="journey-hero__subtitle">Agenda operacional do colaborador, com eventos livres e vinculados a processos, projetos e tarefas do dia a dia.</p>
+                <h1 class="journey-hero__title">Calendário Operacional do Colaborador</h1>
+                <p class="journey-hero__subtitle">Calendário de: <strong>{{ selected_employee_name or 'Colaborador não definido' }}</strong> — agenda operacional com eventos livres e vinculados a processos, projetos e tarefas do dia a dia.</p>
             </div>
             <div class="journey-hero__actions">
                 <a class="btn btn-secondary" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id, employee_id=selected_employee_id) }}">Relatório gerencial</a>
@@ -229,6 +229,7 @@
         </div>
 
         <div class="journey-filters-sidebar__body">
+            {% if can_manage_all %}
             <div class="form-group">
                 <label class="form-label">Colaborador</label>
                 <select id="journeyEmployeeSelect" class="form-control">
@@ -237,6 +238,13 @@
                     {% endfor %}
                 </select>
             </div>
+            {% else %}
+            <div class="form-group">
+                <label class="form-label">Colaborador</label>
+                <div class="form-control" style="display:flex; align-items:center; min-height:44px;">{{ selected_employee_name or 'Colaborador não definido' }}</div>
+                <small class="journey-sidebar-hint">Este calendário está fixado no seu próprio colaborador.</small>
+            </div>
+            {% endif %}
 
             <div class="form-group">
                 <label class="form-label">Data âncora</label>
@@ -274,6 +282,7 @@
     window.workJourneyBootstrap = {
         companyId: {{ company.id }},
         selectedEmployeeId: {{ selected_employee_id or 'null' }},
+        selectedEmployeeName: {{ selected_employee_name|tojson }},
         canManageAll: {{ can_manage_all|tojson }},
         today: '{{ today }}',
         employees: {{ employees_payload|tojson }},

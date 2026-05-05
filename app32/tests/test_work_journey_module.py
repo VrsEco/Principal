@@ -218,6 +218,7 @@ def test_work_journey_page_renders_employee_payload(monkeypatch):
     assert captured['template'] == 'modules/my_work/work_journey.html'
     assert response['selected_employee_id'] == 3
     assert response['employees_payload'][0]['name'] == 'Ana'
+    assert response['selected_employee_name'] == 'Ana'
 
 
 def test_work_journey_page_uses_source_suggested_employee_when_available(monkeypatch):
@@ -246,6 +247,35 @@ def test_work_journey_page_uses_source_suggested_employee_when_available(monkeyp
     assert response['selected_employee_id'] == 4
     assert response['source_type'] == 'project_task'
     assert response['source_id'] == 501
+
+
+def test_work_journey_page_hides_selector_for_non_manager(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    company = SimpleNamespace(id=9, name='Empresa Teste')
+    employees = [
+        SimpleNamespace(id=3, company_id=9, user_id=7, status='active', name='Ana', to_dict=lambda: {'id': 3, 'name': 'Ana'}),
+        SimpleNamespace(id=4, company_id=9, user_id=8, status='active', name='Bruno', to_dict=lambda: {'id': 4, 'name': 'Bruno'}),
+    ]
+    captured = {}
+
+    monkeypatch.setattr(work_journey_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery(company)))
+    monkeypatch.setattr(
+        work_journey_route,
+        'Employee',
+        SimpleNamespace(query=_FakeEmployeeQuery(employees), name=_Column()),
+    )
+    monkeypatch.setattr(work_journey_route, 'current_user', SimpleNamespace(id=7, is_authenticated=True))
+    monkeypatch.setattr(work_journey_route, 'has_company_full_access', lambda company_id: False)
+    monkeypatch.setattr(work_journey_route, 'render_template', lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx)
+
+    with app.test_request_context('/companies/9/calendar?employee_id=4'):
+        response = work_journey_route._render_work_journey_page(9)
+
+    assert response['selected_employee_id'] == 3
+    assert response['selected_employee_name'] == 'Ana'
+    assert response['employees_payload'] == [{'id': 3, 'name': 'Ana'}]
+    assert response['can_manage_all'] is False
 
 
 def test_work_journey_page_respects_requested_anchor_date(monkeypatch):
@@ -723,7 +753,8 @@ def test_templates_expose_work_journey_entrypoints():
     with open(os.path.join(root, 'templates', 'modules', 'processes', 'process_instance_v2.html'), 'r', encoding='utf-8') as handle:
         process_instance_template = handle.read()
 
-    assert 'Calendário' in journey_template
+    assert 'Calendário Operacional do Colaborador' in journey_template
+    assert 'Calendário de:' in journey_template
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
