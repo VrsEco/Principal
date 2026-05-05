@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import or_
 
-from models import Employee, Process, Project, ProjectActivityCollaborator, ProjectTask, Routine, RoutineCollaborator, RoutineJourneyBinding, WorkJourneyBlock, WorkJourneyItem
+from models import Employee, Process, Project, ProjectActivityCollaborator, ProjectTask, Routine, RoutineCollaborator, RoutineJourneyBinding, WorkCalendarEvent, WorkJourneyBlock, WorkJourneyItem
 from services.work_journey_helpers import BLOCK_MODE_LABELS, ITEM_TYPE_LABELS, block_chronology_key, clamp_period, duration_minutes
 from services.work_journey_service import build_item_display_code
 
@@ -42,6 +42,11 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
     process_ids = sorted({int(r.routine_rel.process_id) for r in routine_rows if getattr(r.routine_rel, 'process_id', None)})
     process_map = {int(p.id): p for p in Process.query.filter(Process.company_id == company_id, Process.id.in_(process_ids)).all()} if process_ids else {}
     items = WorkJourneyItem.query.filter(WorkJourneyItem.company_id == company_id, WorkJourneyItem.employee_id.in_(ids), or_(WorkJourneyItem.occurrence_date.between(month_start, month_end), WorkJourneyItem.due_date.between(month_start, month_end))).all()
+    calendar_events = WorkCalendarEvent.query.filter(
+        WorkCalendarEvent.company_id == company_id,
+        WorkCalendarEvent.employee_id.in_(ids),
+        WorkCalendarEvent.event_date.between(month_start, month_end),
+    ).all()
     project_items = {int(i.source_id): i for i in items if i.item_type == 'project_task' and i.source_id is not None}
     direct_tasks = ProjectTask.query.join(Project, Project.id == ProjectTask.project_id).filter(Project.company_id == company_id, ProjectTask.employee_id.in_(ids)).all()
     collab_rows = ProjectActivityCollaborator.query.join(ProjectTask, ProjectTask.id == ProjectActivityCollaborator.activity_id).join(Project, Project.id == ProjectTask.project_id).filter(Project.company_id == company_id, ProjectActivityCollaborator.employee_id.in_(ids), ProjectActivityCollaborator.is_deleted.isnot(True)).all()
@@ -74,6 +79,7 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
 
         mix = defaultdict(int)
         unassigned_week = unassigned_month = 0
+        event_week = event_month = event_week_count = 0
         for item in emp_items:
             target = item.occurrence_date or item.due_date
             if not target:
@@ -100,6 +106,34 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
                 if in_month:
                     unassigned_month += mins
 
+        for event in [row for row in calendar_events if int(row.employee_id) == emp_id]:
+            target = event.event_date
+            if not target:
+                continue
+            mins = _event_minutes(event)
+            in_week = week_start <= target <= week_end
+            in_month = month_start <= target <= month_end
+            if not in_week and not in_month:
+                continue
+            if in_week:
+                mix['calendar_event'] += mins
+                event_week += mins
+                event_week_count += 1
+            if in_month:
+                event_month += mins
+            if event.block_id and int(event.block_id) in block_stats:
+                if in_week:
+                    block_stats[int(event.block_id)]['occupied_week'] += mins
+                    block_stats[int(event.block_id)]['events_week'] += 1
+                if in_month:
+                    block_stats[int(event.block_id)]['occupied_month'] += mins
+                    block_stats[int(event.block_id)]['events_month'] += 1
+            else:
+                if in_week:
+                    unassigned_week += mins
+                if in_month:
+                    unassigned_month += mins
+
         block_rows = _finalize_blocks(block_stats)
         agreed_week = int(round(float(emp.weekly_hours or 0) * 60)) or sum(b['week_capacity'] for b in block_rows)
         agreed_month = int(round((agreed_week / max(week_days, 1)) * month_days))
@@ -113,10 +147,10 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
         free_month = max(eff_month - occ_month, 0)
         over_week = max(occ_week - eff_week, 0)
         over_month = max(occ_month - eff_month, 0)
-        employees_payload.append({'employee': {'id': emp_id, 'name': emp.name, 'department': emp.department or 'Sem departamento', 'weekly_hours': float(emp.weekly_hours or 0)}, 'summary': {'agreed_weekly_minutes': agreed_week, 'effective_weekly_minutes': eff_week, 'occupied_weekly_minutes': occ_week, 'free_weekly_minutes': free_week, 'overload_weekly_minutes': over_week, 'agreed_monthly_minutes': agreed_month, 'effective_monthly_minutes': eff_month, 'occupied_monthly_minutes': occ_month, 'free_monthly_minutes': free_month, 'overload_monthly_minutes': over_month, 'blocks_weekly_capacity_minutes': block_week_cap, 'blocks_monthly_capacity_minutes': block_month_cap, 'routine_weekly_minutes': routine_week, 'routine_monthly_minutes': routine_month, 'project_weekly_minutes': mix['project_task'], 'process_weekly_minutes': mix['process_instance'], 'meeting_weekly_minutes': mix['meeting'], 'manual_weekly_minutes': mix['manual'], 'unassigned_weekly_minutes': unassigned_week, 'occupation_percent_week': _pct(occ_week, eff_week), 'occupation_percent_month': _pct(occ_month, eff_month)}, 'blocks': block_rows, 'routines': groups, 'projects': projects_by_emp.get(emp_id, []), 'unassigned': {'weekly_minutes': unassigned_week, 'monthly_minutes': unassigned_month}})
+        employees_payload.append({'employee': {'id': emp_id, 'name': emp.name, 'department': emp.department or 'Sem departamento', 'weekly_hours': float(emp.weekly_hours or 0)}, 'summary': {'agreed_weekly_minutes': agreed_week, 'effective_weekly_minutes': eff_week, 'occupied_weekly_minutes': occ_week, 'free_weekly_minutes': free_week, 'overload_weekly_minutes': over_week, 'agreed_monthly_minutes': agreed_month, 'effective_monthly_minutes': eff_month, 'occupied_monthly_minutes': occ_month, 'free_monthly_minutes': free_month, 'overload_monthly_minutes': over_month, 'blocks_weekly_capacity_minutes': block_week_cap, 'blocks_monthly_capacity_minutes': block_month_cap, 'routine_weekly_minutes': routine_week, 'routine_monthly_minutes': routine_month, 'project_weekly_minutes': mix['project_task'], 'process_weekly_minutes': mix['process_instance'], 'meeting_weekly_minutes': mix['meeting'], 'manual_weekly_minutes': mix['manual'], 'event_weekly_minutes': event_week, 'event_monthly_minutes': event_month, 'event_weekly_count': event_week_count, 'unassigned_weekly_minutes': unassigned_week, 'occupation_percent_week': _pct(occ_week, eff_week), 'occupation_percent_month': _pct(occ_month, eff_month)}, 'blocks': block_rows, 'routines': groups, 'projects': projects_by_emp.get(emp_id, []), 'unassigned': {'weekly_minutes': unassigned_week, 'monthly_minutes': unassigned_month}})
         totals['agreed_weekly_minutes'] += agreed_week; totals['effective_weekly_minutes'] += eff_week; totals['occupied_weekly_minutes'] += occ_week; totals['free_weekly_minutes'] += free_week; totals['overload_weekly_minutes'] += over_week
         totals['agreed_monthly_minutes'] += agreed_month; totals['effective_monthly_minutes'] += eff_month; totals['occupied_monthly_minutes'] += occ_month; totals['free_monthly_minutes'] += free_month; totals['overload_monthly_minutes'] += over_month
-        totals['routine_weekly_minutes'] += routine_week; totals['reserved_weekly_minutes'] += sum(b['reserved_week'] for b in block_rows); totals['project_weekly_minutes'] += mix['project_task']; totals['process_weekly_minutes'] += mix['process_instance']; totals['meeting_weekly_minutes'] += mix['meeting']; totals['manual_weekly_minutes'] += mix['manual']; totals['unassigned_weekly_minutes'] += unassigned_week
+        totals['routine_weekly_minutes'] += routine_week; totals['reserved_weekly_minutes'] += sum(b['reserved_week'] for b in block_rows); totals['project_weekly_minutes'] += mix['project_task']; totals['process_weekly_minutes'] += mix['process_instance']; totals['meeting_weekly_minutes'] += mix['meeting']; totals['manual_weekly_minutes'] += mix['manual']; totals['event_weekly_minutes'] += event_week; totals['event_weekly_count'] += event_week_count; totals['unassigned_weekly_minutes'] += unassigned_week
         emp_labels.append(emp.name); emp_occ.append(round(occ_week / 60, 2)); emp_free.append(round(free_week / 60, 2))
         for b in block_rows:
             blk_labels.append(f"{emp.name} • {b['name']}"); blk_occ.append(round(b['occupied_week'] / 60, 2)); blk_free.append(round(b['free_week'] / 60, 2))
@@ -124,7 +158,7 @@ def build_work_journey_management_report(company_id: int, anchor: date, *, depar
     top_blocks = sorted(zip(blk_labels, blk_occ, blk_free), key=lambda x: x[1], reverse=True)[:8]
     summary = dict(totals)
     summary.update({'employee_count': len(employees_payload), 'scope_label': _scope(employees_payload, department, employee_id), 'occupation_percent_week': _pct(summary['occupied_weekly_minutes'], summary['effective_weekly_minutes']), 'occupation_percent_month': _pct(summary['occupied_monthly_minutes'], summary['effective_monthly_minutes'])})
-    return {'generated_at': anchor.strftime('%d/%m/%Y'), 'anchor_date': anchor.isoformat(), 'period': _period_payload(anchor, week_start, week_end, month_start, month_end), 'filters': _filters_payload(all_employees, departments, department, employee_id), 'summary': summary, 'employees': employees_payload, 'charts': {'scope_capacity': {'labels': ['Ocupado', 'Livre'], 'values': [round(summary['occupied_weekly_minutes'] / 60, 2), round(summary['free_weekly_minutes'] / 60, 2)]}, 'scope_mix': {'labels': ['Rotinas', 'Projetos', 'Processos', 'Reuniões', 'Avulsas', 'Reservas', 'Sem bloco'], 'values': [round(summary['routine_weekly_minutes'] / 60, 2), round(summary['project_weekly_minutes'] / 60, 2), round(summary['process_weekly_minutes'] / 60, 2), round(summary['meeting_weekly_minutes'] / 60, 2), round(summary['manual_weekly_minutes'] / 60, 2), round(summary['reserved_weekly_minutes'] / 60, 2), round(summary['unassigned_weekly_minutes'] / 60, 2)]}, 'employees_capacity': {'labels': emp_labels, 'occupied': emp_occ, 'free': emp_free}, 'blocks_capacity': {'labels': [r[0] for r in top_blocks], 'occupied': [r[1] for r in top_blocks], 'free': [r[2] for r in top_blocks]}}}
+    return {'generated_at': anchor.strftime('%d/%m/%Y'), 'anchor_date': anchor.isoformat(), 'period': _period_payload(anchor, week_start, week_end, month_start, month_end), 'filters': _filters_payload(all_employees, departments, department, employee_id), 'summary': summary, 'employees': employees_payload, 'charts': {'scope_capacity': {'labels': ['Ocupado', 'Livre'], 'values': [round(summary['occupied_weekly_minutes'] / 60, 2), round(summary['free_weekly_minutes'] / 60, 2)]}, 'scope_mix': {'labels': ['Rotinas', 'Projetos', 'Processos', 'Reuniões', 'Avulsas', 'Eventos', 'Reservas', 'Sem bloco'], 'values': [round(summary['routine_weekly_minutes'] / 60, 2), round(summary['project_weekly_minutes'] / 60, 2), round(summary['process_weekly_minutes'] / 60, 2), round(summary['meeting_weekly_minutes'] / 60, 2), round(summary['manual_weekly_minutes'] / 60, 2), round(summary['event_weekly_minutes'] / 60, 2), round(summary['reserved_weekly_minutes'] / 60, 2), round(summary['unassigned_weekly_minutes'] / 60, 2)]}, 'employees_capacity': {'labels': emp_labels, 'occupied': emp_occ, 'free': emp_free}, 'blocks_capacity': {'labels': [r[0] for r in top_blocks], 'occupied': [r[1] for r in top_blocks], 'free': [r[2] for r in top_blocks]}}}
 
 def _build_projects(employees, direct_tasks, collab_rows, project_items, blocks_by_id):
     emp_ids = {int(e.id) for e in employees}
@@ -206,7 +240,7 @@ def _init_blocks(blocks, week_start, week_end, month_start, month_end):
         week_cap, month_cap = base * week_count, base * month_count
         reserved_week = week_cap if b.block_mode == 'reserved_full' else 0
         reserved_month = month_cap if b.block_mode == 'reserved_full' else 0
-        out[int(b.id)] = {'id': int(b.id), 'name': b.name, 'description': b.description, 'mode': b.block_mode, 'mode_label': BLOCK_MODE_LABELS.get(b.block_mode, b.block_mode), 'window_label': _block_window(b), 'weekdays_label': _weekdays(b.weekdays_json or []), 'accepted_types': [ITEM_TYPE_LABELS.get(t, t) for t in (b.accepted_item_types or [])], 'week_capacity': week_cap, 'month_capacity': month_cap, 'reserved_week': reserved_week, 'reserved_month': reserved_month, 'occupied_week': reserved_week, 'occupied_month': reserved_month, 'routine_week': 0, 'worked_week': 0, 'worked_month': 0, 'items_week': 0, 'items_month': 0}
+        out[int(b.id)] = {'id': int(b.id), 'name': b.name, 'description': b.description, 'mode': b.block_mode, 'mode_label': BLOCK_MODE_LABELS.get(b.block_mode, b.block_mode), 'window_label': _block_window(b), 'weekdays_label': _weekdays(b.weekdays_json or []), 'accepted_types': [ITEM_TYPE_LABELS.get(t, t) for t in (b.accepted_item_types or [])], 'week_capacity': week_cap, 'month_capacity': month_cap, 'reserved_week': reserved_week, 'reserved_month': reserved_month, 'occupied_week': reserved_week, 'occupied_month': reserved_month, 'routine_week': 0, 'worked_week': 0, 'worked_month': 0, 'items_week': 0, 'items_month': 0, 'events_week': 0, 'events_month': 0}
     return out
 
 
@@ -317,3 +351,12 @@ def _format_iso_date(raw):
         return f'{day}/{month}/{year}'
     except ValueError:
         return str(raw)
+
+
+def _event_minutes(event):
+    if getattr(event, 'start_time', None) and getattr(event, 'end_time', None):
+        start = (event.start_time.hour * 60) + event.start_time.minute
+        end = (event.end_time.hour * 60) + event.end_time.minute
+        return max(end - start, 0)
+    metadata = dict(getattr(event, 'metadata_json', None) or {})
+    return max(int(metadata.get('duration_minutes') or 0), 0)

@@ -56,11 +56,13 @@
                     <div>
                         <strong>${escapeHtml(event.title)}</strong>
                         <div class="text-secondary" style="font-size:0.82rem;">${escapeHtml(event.event_date || '')}${event.start_time ? ` • ${escapeHtml(event.start_time)}` : ''}</div>
-                        <div class="text-secondary" style="font-size:0.82rem;">${escapeHtml(event.status_label || event.status || '')} • ${escapeHtml(event.priority_label || event.priority || '')}</div>
+                        <div class="text-secondary" style="font-size:0.82rem;">${escapeHtml(event.status_label || event.status || '')} • ${escapeHtml(event.priority_label || event.priority || '')}${event.duration_label ? ` • ${escapeHtml(event.duration_label)}` : ''}</div>
+                        <div class="text-secondary" style="font-size:0.82rem;">${event.block_name ? `Bloco: ${escapeHtml(event.block_name)} • ` : ''}${event.source_label ? `Origem: ${escapeHtml(event.source_label)}` : 'Origem vinculada'}</div>
                         ${event.description ? `<div style="margin-top:0.35rem;">${escapeHtml(event.description)}</div>` : ''}
                     </div>
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                         <a class="btn btn-secondary btn-sm" href="/calendar?employee_id=${employeeId}&source_type=${sourceType}&source_id=${sourceId}&date=${encodeURIComponent(event.event_date || '')}">Calendário</a>
+                        <a class="btn btn-secondary btn-sm" href="/my-work?focus=hours-info">Horas/Info</a>
                     </div>
                 </div>
             `).join('');

@@ -171,6 +171,14 @@ def test_project_summary_aggregates_hours_counts_and_next_due():
     assert summary['blocks_label'] == 'Bloco A, Bloco B'
 
 
+def test_report_service_event_minutes_uses_window_or_metadata():
+    timed_event = SimpleNamespace(start_time=time(9, 0), end_time=time(10, 15), metadata_json={})
+    metadata_event = SimpleNamespace(start_time=None, end_time=None, metadata_json={'duration_minutes': 45})
+
+    assert work_journey_report_service._event_minutes(timed_event) == 75
+    assert work_journey_report_service._event_minutes(metadata_event) == 45
+
+
 def test_block_chronology_key_prioritizes_weekday_then_time():
     blocks = [
         SimpleNamespace(id=3, name='Treinamento', weekdays_json=[4], start_time=SimpleNamespace(hour=9, minute=0), end_time=SimpleNamespace(hour=12, minute=0)),
@@ -710,6 +718,10 @@ def test_templates_expose_work_journey_entrypoints():
         routine_app32_template = handle.read()
     with open(os.path.join(root, 'templates', 'legacy', 'routine_details.html'), 'r', encoding='utf-8') as handle:
         routine_legacy_template = handle.read()
+    with open(os.path.join(root, 'templates', 'modules', 'projects', 'project_task_v2.html'), 'r', encoding='utf-8') as handle:
+        project_task_template = handle.read()
+    with open(os.path.join(root, 'templates', 'modules', 'processes', 'process_instance_v2.html'), 'r', encoding='utf-8') as handle:
+        process_instance_template = handle.read()
 
     assert 'Calendário' in journey_template
     assert 'data-tab="agendas"' in journey_template
@@ -733,6 +745,8 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_legacy_template
+    assert 'Horas/Info' in project_task_template
+    assert 'Horas/Info' in process_instance_template
 
 
 def test_agendas_script_supports_legacy_fallback_drag_and_drop():
