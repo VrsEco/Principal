@@ -722,6 +722,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'journeyScopeSelect' not in journey_template
     assert 'Planejamento operacional' in agendas_panel
     assert 'calendarEventsList' in agendas_panel
+    assert 'calendarEventBlockInput' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
     assert 'A primeira coluna exibe tarefas atrasadas' in agendas_panel
     assert 'agendaLockBtn' in agendas_panel

@@ -12,6 +12,10 @@
         return (el && el.value) || bootstrap.today;
     }
 
+    function blockInput() {
+        return document.getElementById('calendarEventBlockInput');
+    }
+
     function weekRange(dateText) {
         const current = new Date(`${dateText}T00:00:00`);
         const start = new Date(current);
@@ -93,6 +97,7 @@
                         Origem: ${escapeHtml(event.source_label || 'Evento livre')}
                         ${event.source_code ? ` • ${escapeHtml(event.source_code)}` : ''}
                         ${event.source_title ? ` • ${escapeHtml(event.source_title)}` : ''}
+                        ${event.block_name ? ` • Bloco: ${escapeHtml(event.block_name)}` : ''}
                     </div>
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                         ${event.source_url ? `<a class="btn btn-secondary btn-sm" href="${event.source_url}">Abrir origem</a>` : ''}
@@ -121,6 +126,7 @@
         document.getElementById('calendarEventEndTimeInput').value = event.end_time || '';
         document.getElementById('calendarEventStatusInput').value = event.status || 'planned';
         document.getElementById('calendarEventPriorityInput').value = event.priority || 'normal';
+        if (blockInput()) blockInput().value = event.block_id || '';
         document.getElementById('calendarEventDescriptionInput').value = event.description || '';
         document.getElementById('calendarEventExecutionNotesInput').value = event.execution_notes || '';
     }
@@ -133,6 +139,7 @@
         document.getElementById('calendarEventEndTimeInput').value = '';
         document.getElementById('calendarEventStatusInput').value = 'planned';
         document.getElementById('calendarEventPriorityInput').value = 'normal';
+        if (blockInput()) blockInput().value = '';
         document.getElementById('calendarEventDescriptionInput').value = '';
         document.getElementById('calendarEventExecutionNotesInput').value = '';
     }
@@ -155,6 +162,7 @@
             end_time: document.getElementById('calendarEventEndTimeInput').value || null,
             status: document.getElementById('calendarEventStatusInput').value,
             priority: document.getElementById('calendarEventPriorityInput').value,
+            block_id: blockInput()?.value ? Number(blockInput().value) : null,
             description: document.getElementById('calendarEventDescriptionInput').value.trim() || null,
             execution_notes: document.getElementById('calendarEventExecutionNotesInput').value.trim() || null,
             source_type: (bootstrap.sourceType && bootstrap.sourceId) ? bootstrap.sourceType : 'manual',
@@ -181,6 +189,7 @@
         toggleForm(false);
         showMessage('Evento salvo com sucesso.');
         await fetchEvents();
+        window.WorkJourneyAgendas?.refresh?.();
     }
 
     async function removeEvent(eventId) {
@@ -195,6 +204,35 @@
         }
         showMessage('Evento removido.');
         await fetchEvents();
+        window.WorkJourneyAgendas?.refresh?.();
+    }
+
+    function weekdayOfDate(dateText) {
+        if (!dateText) return null;
+        const current = new Date(`${dateText}T00:00:00`);
+        return Number.isNaN(current.getTime()) ? null : current.getDay();
+    }
+
+    async function loadBlockOptions() {
+        const select = blockInput();
+        if (!select || !companyId || !selectedEmployeeId()) return;
+        const response = await fetch(`/api/companies/${companyId}/work-journey/blocks?employee_id=${selectedEmployeeId()}`);
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+            return;
+        }
+        const weekday = weekdayOfDate(document.getElementById('calendarEventDateInput')?.value || anchorDate());
+        const currentValue = select.value;
+        const options = (payload.blocks || []).filter((block) => {
+            const weekdays = Array.isArray(block.weekdays) ? block.weekdays : [];
+            return weekday === null || !weekdays.length || weekdays.includes(weekday);
+        });
+        select.innerHTML = '<option value="">Sem bloco</option>' + options.map((block) => (
+            `<option value="${block.id}">${escapeHtml(block.name)} · ${escapeHtml(block.start_time || '--:--')} às ${escapeHtml(block.end_time || '--:--')}</option>`
+        )).join('');
+        if (currentValue && options.some((block) => String(block.id) === String(currentValue))) {
+            select.value = currentValue;
+        }
     }
 
     function formatDate(value) {
@@ -222,13 +260,23 @@
         document.getElementById('calendarEventStartBtn')?.addEventListener('click', () => {
             resetForm();
             toggleForm(true);
+            loadBlockOptions();
         });
         document.getElementById('calendarEventCancelBtn')?.addEventListener('click', () => toggleForm(false));
         form.addEventListener('submit', saveEvent);
         document.getElementById('journeyApplyFiltersBtn')?.addEventListener('click', () => setTimeout(fetchEvents, 0));
         document.getElementById('journeyRefreshBtn')?.addEventListener('click', () => setTimeout(fetchEvents, 0));
-        document.getElementById('journeyDateInput')?.addEventListener('change', fetchEvents);
-        document.getElementById('journeyEmployeeSelect')?.addEventListener('change', fetchEvents);
+        document.getElementById('journeyDateInput')?.addEventListener('change', () => {
+            fetchEvents();
+            loadBlockOptions();
+        });
+        document.getElementById('journeyEmployeeSelect')?.addEventListener('change', () => {
+            fetchEvents();
+            loadBlockOptions();
+        });
+        document.getElementById('calendarEventDateInput')?.addEventListener('change', loadBlockOptions);
+        document.addEventListener('workJourney:refreshed', loadBlockOptions);
+        loadBlockOptions();
         fetchEvents();
     });
 })();
