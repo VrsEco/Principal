@@ -594,9 +594,10 @@
 
 .agenda-overview-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.95fr);
   gap: 1rem;
   margin-bottom: 1rem;
+  align-items: stretch;
 }
 
 .agenda-overview-card {
@@ -655,13 +656,18 @@
 
 .agenda-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
   gap: 0.75rem;
+  align-items: stretch;
 }
 
 .agenda-summary-grid .journey-summary-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   min-height: 92px;
   padding: 0.9rem 1rem;
+  min-width: 0;
 }
 
 .agenda-summary-grid .journey-summary-card strong {
