@@ -152,10 +152,12 @@
 
 .journey-app--calendar01 .agenda-card__code {
   margin-top: 0.32rem;
-  font-size: 0.74rem;
-  background: rgba(124, 58, 237, 0.12);
-  color: #6d28d9;
-  border: 1px solid rgba(124, 58, 237, 0.16);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(124, 58, 237, 0.08);
+  color: #7c3aed;
+  border: 1px solid rgba(124, 58, 237, 0.12);
 }
 
 .journey-app--calendar01 .agenda-card__date {
@@ -165,9 +167,9 @@
 }
 
 .journey-app--calendar01 .agenda-card__title {
-  font-size: 0.98rem;
-  font-weight: 800;
-  line-height: 1.34;
+  font-size: 1.06rem;
+  font-weight: 900;
+  line-height: 1.28;
   color: var(--calendar01-ink-strong);
 }
 

@@ -86,29 +86,12 @@ def work_journey_redirect():
     return _render_work_journey_page(company_id)
 
 
-@work_journey_bp.route('/calendar-02')
-@permission_required('processes', 'view')
-def work_journey_redirect_v2():
-    company_id = session.get('active_company_id') or get_default_company_id()
-    if not company_id:
-        abort(404)
-    session['active_company_id'] = company_id
-    return _render_work_journey_page(company_id, template_name='modules/my_work/work_journey_02.html', calendar_variant='calendar_02')
-
-
 @work_journey_bp.route('/companies/<int:company_id>/work-journey')
 @work_journey_bp.route('/companies/<int:company_id>/calendar')
 @permission_required('processes', 'view')
 def work_journey_page(company_id: int):
     session['active_company_id'] = company_id
     return _render_work_journey_page(company_id)
-
-
-@work_journey_bp.route('/companies/<int:company_id>/calendar-02')
-@permission_required('processes', 'view')
-def work_journey_page_v2(company_id: int):
-    session['active_company_id'] = company_id
-    return _render_work_journey_page(company_id, template_name='modules/my_work/work_journey_02.html', calendar_variant='calendar_02')
 
 
 @work_journey_bp.route('/api/companies/<int:company_id>/work-journey/board')
@@ -507,11 +490,7 @@ def api_approve_absence(company_id: int, request_id: int):
 
 
 
-def _render_work_journey_page(
-    company_id: int,
-    template_name: str = 'modules/my_work/work_journey.html',
-    calendar_variant: str = 'calendar_01',
-):
+def _render_work_journey_page(company_id: int, template_name: str = 'modules/my_work/work_journey.html'):
     company = Company.query.get_or_404(company_id)
     can_manage_all = has_company_full_access(company_id)
     employees = Employee.query.filter_by(company_id=company_id, status='active').order_by(Employee.name.asc()).all()
@@ -540,7 +519,6 @@ def _render_work_journey_page(
         today=anchor_date.isoformat(),
         source_type=source_type,
         source_id=source_id,
-        calendar_variant=calendar_variant,
     )
 
 
