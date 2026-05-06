@@ -10,6 +10,7 @@ if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
 from services.process_execution_runtime_service import (
+    _build_current_activity_action,
     _build_diagram_navigation,
     _format_runtime_url_template,
     apply_runtime_defaults,
@@ -107,3 +108,40 @@ def test_format_runtime_url_template_replaces_context():
         "/contracts/{contract_id}?company_id={company_id}&tab=cliente",
         {"contract_id": 17, "company_id": 9},
     ) == "/contracts/17?company_id=9&tab=cliente"
+
+
+def test_build_current_activity_action_exposes_ai_summary():
+    instance = SimpleNamespace(
+        id=55,
+        company_id=9,
+        process_id=3,
+        current_bpmn_element_id="Gateway_Review",
+        runtime_context_json={"contract_id": 17},
+    )
+    contract = SimpleNamespace(
+        execution_mode="ai_decision",
+        capability_key="finance.route_document",
+        route_name=None,
+        interaction_mode="shell",
+        auto_service_key="process.ai.route",
+        requires_human_gate=True,
+        allows_pause=True,
+        allows_retry=True,
+        sla_minutes=15,
+        ui_schema_json={},
+        rest_config_json={},
+        mcp_config_json={},
+        ai_config_json={
+            "instruction": "Escolha entre archive ou finance.",
+            "allowed_decisions": ["archive", "finance"],
+            "tool_source": "mcp",
+            "allowed_tools": ["finance.insert_prelaunch"],
+        },
+    )
+
+    action = _build_current_activity_action(instance, contract, execution=None, element_id="Gateway_Review")
+
+    assert action["execution_mode"] == "ai_decision"
+    assert action["ai_enabled"] is True
+    assert action["ai_summary"]["allowed_decisions"] == ["archive", "finance"]
+    assert action["action_label"] == "Executar decisão com IA"

@@ -5,6 +5,7 @@ from typing import Any
 from xml.etree import ElementTree as ET
 
 from models import ProcessBpmnDiagram, ProcessInstance, ProcessInstanceExecution, ProcessRoutine, db
+from services.process_ai_execution_service import normalize_ai_contract_config, summarize_ai_contract_config
 from services.process_execution_contract_service import resolve_activity_execution_contract
 
 
@@ -36,6 +37,8 @@ EXECUTION_MODE_LABELS = {
     "automatic": "Execução automática",
     "external_rest": "Integração REST",
     "external_mcp": "Integração MCP",
+    "ai_task": "Atividade executada por IA",
+    "ai_decision": "Decisão assistida por IA",
 }
 
 CONTRACT_CAPABILITY_TAB_MAP = {
@@ -340,6 +343,10 @@ def _build_current_activity_action(
     ui_schema = dict(getattr(contract, "ui_schema_json", None) or {})
     rest_config = dict(getattr(contract, "rest_config_json", None) or {})
     mcp_config = dict(getattr(contract, "mcp_config_json", None) or {})
+    ai_config = normalize_ai_contract_config(
+        getattr(contract, "ai_config_json", None),
+        execution_mode=execution_mode,
+    )
     internal_url = _resolve_internal_action_url(instance, contract, execution, ui_schema)
     external_url = _resolve_external_action_url(instance, contract, ui_schema, rest_config, mcp_config)
 
@@ -349,6 +356,8 @@ def _build_current_activity_action(
         "automatic": "Executar automaticamente",
         "external_rest": "Executar integração REST",
         "external_mcp": "Executar integração MCP",
+        "ai_task": "Executar atividade com IA",
+        "ai_decision": "Executar decisão com IA",
     }.get(execution_mode, "Executar atividade")
 
     instruction = {
@@ -357,6 +366,8 @@ def _build_current_activity_action(
         "automatic": "A atividade está preparada para automação interna conforme o contrato BPMS.",
         "external_rest": "A atividade usa uma integração REST configurada no contrato da activity.",
         "external_mcp": "A atividade usa uma integração MCP configurada no contrato da activity.",
+        "ai_task": "A atividade usa a esteira de IA do APP32 com instrução estruturada, contexto runtime e fallback governado.",
+        "ai_decision": "A decisão usa a esteira de IA do APP32 com opções fechadas, confiança mínima e fallback governado.",
     }.get(execution_mode, "Controle a execução desta atividade pela shell.")
 
     return {
@@ -370,6 +381,9 @@ def _build_current_activity_action(
         "allows_pause": bool(getattr(contract, "allows_pause", True)) if contract else True,
         "allows_retry": bool(getattr(contract, "allows_retry", True)) if contract else True,
         "sla_minutes": getattr(contract, "sla_minutes", None),
+        "ai_config": ai_config,
+        "ai_summary": summarize_ai_contract_config(ai_config) if ai_config else {},
+        "ai_enabled": execution_mode in {"ai_task", "ai_decision"},
         "internal_url": internal_url,
         "external_url": external_url,
         "action_label": action_label,

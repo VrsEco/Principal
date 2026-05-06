@@ -70,6 +70,12 @@ from services.process_execution_contract_service import (
     normalize_execution_mode,
     resolve_activity_execution_contract,
 )
+from services.process_ai_execution_service import normalize_ai_contract_config
+from services.process_ai_modeler_assistant_service import ProcessAIModelerAssistantService
+from services.process_ai_runtime_service import (
+    execute_ai_contract,
+    should_auto_run_ai_execution,
+)
 from services.work_journey_sync import sync_process_instance_item
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
@@ -1105,12 +1111,23 @@ class ProcessInstanceExecutionListResource(Resource):
                 execution.waiting_since = datetime.utcnow()
 
             db.session.add(execution)
+            db.session.flush()
             if execution.bpmn_element_id:
                 instance.current_bpmn_element_id = execution.bpmn_element_id
             if instance.status == 'pending':
                 instance.status = 'in_progress'
                 if not instance.started_at:
                     instance.started_at = datetime.utcnow()
+            if should_auto_run_ai_execution(
+                execution_mode=execution.execution_mode,
+                status=execution.status,
+            ):
+                execute_ai_contract(
+                    instance=instance,
+                    execution=execution,
+                    contract=contract,
+                    user_id=getattr(current_user, 'id', None),
+                )
             db.session.commit()
             try:
                 _sync_process_instance_work_journey_item(instance)
@@ -1151,6 +1168,7 @@ class ProcessInstanceExecutionResource(Resource):
             return {"error": "Permission denied: edit on processes"}, 403
         try:
             payload = request.get_json(silent=True) or {}
+            run_now = bool(payload.pop('run_now', False))
             if payload.get('status') is not None:
                 payload['status'] = validate_execution_status(payload.get('status'))
             if payload.get('execution_mode') is not None:
@@ -1174,6 +1192,23 @@ class ProcessInstanceExecutionResource(Resource):
                 instance.current_bpmn_element_id = execution.bpmn_element_id
             if execution.status == 'completed':
                 instance.status = 'in_progress'
+            if should_auto_run_ai_execution(
+                execution_mode=execution.execution_mode,
+                status=execution.status,
+                trigger_on_update=True,
+                run_now=run_now,
+            ):
+                contract = resolve_activity_execution_contract(
+                    company_id=instance.company_id,
+                    process_id=instance.process_id,
+                    bpmn_element_id=execution.bpmn_element_id,
+                )
+                execute_ai_contract(
+                    instance=instance,
+                    execution=execution,
+                    contract=contract,
+                    user_id=getattr(current_user, 'id', None),
+                )
 
             db.session.commit()
             try:
@@ -1792,6 +1827,10 @@ class ProcessActivityExecutionContractListResource(Resource):
             payload['company_id'] = process.company_id
             payload['process_id'] = process.id
             payload['execution_mode'] = normalize_execution_mode(payload.get('execution_mode'))
+            payload['ai_config_json'] = normalize_ai_contract_config(
+                payload.get('ai_config_json'),
+                execution_mode=payload.get('execution_mode'),
+            )
 
             contract = process_activity_execution_contract_schema.load(payload)
             db.session.add(contract)
@@ -1832,6 +1871,12 @@ class ProcessActivityExecutionContractResource(Resource):
             payload = request.get_json(silent=True) or {}
             if payload.get('execution_mode') is not None:
                 payload['execution_mode'] = normalize_execution_mode(payload.get('execution_mode'))
+            execution_mode = payload.get('execution_mode') or contract.execution_mode
+            if payload.get('ai_config_json') is not None or execution_mode in {'ai_task', 'ai_decision'}:
+                payload['ai_config_json'] = normalize_ai_contract_config(
+                    payload.get('ai_config_json') if 'ai_config_json' in payload else contract.ai_config_json,
+                    execution_mode=execution_mode,
+                )
 
             contract = process_activity_execution_contract_schema.load(payload, instance=contract, partial=True)
             contract.execution_mode = normalize_execution_mode(contract.execution_mode)
@@ -1861,6 +1906,38 @@ class ProcessActivityExecutionContractResource(Resource):
         contract.is_active = False
         db.session.commit()
         return {"message": "Contrato de execução desativado com sucesso."}, 200
+
+
+class ProcessBpmnAiAssistantResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+        return {
+            "ok": True,
+            "catalog": ProcessAIModelerAssistantService.build_catalog(),
+        }, 200
+
+    @permission_required('processes', 'edit')
+    def post(self, process_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = request.get_json(silent=True) or {}
+            payload["process_id"] = process.id
+            payload["company_id"] = process.company_id
+            return ProcessAIModelerAssistantService.suggest(payload), 200
+        except ValueError as exc:
+            return {"error": str(exc)}, 400
+        except Exception:
+            current_app.logger.exception(
+                "Erro ao sugerir configuração IA BPMN process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class ProcessRoutineListResource(Resource):

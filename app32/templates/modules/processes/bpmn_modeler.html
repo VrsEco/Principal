@@ -74,7 +74,7 @@
       <button type="button" class="bpmn-tool-btn" data-action="inspect-elements">Preparar vínculo com POP</button>
     </div>
     <div class="bpmn-ribbon-hint">
-      Elementos BPMN disponíveis na paleta lateral: eventos, tarefas, gateways, subprocessos, conexões e anotações.
+      Elementos BPMN disponíveis na paleta lateral: eventos, tarefas, gateways, subprocessos, conexões e anotações. O APP32 adiciona AI Task e AI Gateway no Change Element e no painel assistido pelo Sapiens.
     </div>
   </section>
 
@@ -83,6 +83,19 @@
       <div id="bpmnCanvas" class="bpmn-canvas"></div>
       <div id="bpmnLoading" class="bpmn-loading">Carregando modeler BPMN...</div>
     </div>
+    <aside class="bpmn-ai-sidebar surface-card" id="bpmnAiSidebar">
+      <div class="bpmn-ai-sidebar__header">
+        <span class="bpmn-eyebrow">AI Task / AI Gateway</span>
+        <h2>Configuração fluida com Sapiens</h2>
+        <p>Selecione uma task ou gateway para configurar IA, visualizar o contrato e pedir apoio do Sapiens.</p>
+      </div>
+      <div id="bpmnAiInspector" class="bpmn-ai-inspector">
+        <div class="bpmn-ai-empty">
+          <strong>Nenhum elemento selecionado</strong>
+          <p>Selecione uma task ou gateway no diagrama para abrir o formulário assistido.</p>
+        </div>
+      </div>
+    </aside>
   </section>
 
   <section class="bpmn-pop-binding-panel" id="bpmnPopBindingPanel" hidden>

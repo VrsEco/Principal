@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from models import ProcessActivityExecutionContract
+from services.process_ai_execution_service import normalize_ai_contract_config
 
 
 ALLOWED_EXECUTION_MODES = {
@@ -11,6 +12,8 @@ ALLOWED_EXECUTION_MODES = {
     "automatic",
     "external_rest",
     "external_mcp",
+    "ai_task",
+    "ai_decision",
 }
 
 
@@ -56,6 +59,7 @@ def apply_contract_defaults(payload: dict[str, Any], contract: ProcessActivityEx
         payload.setdefault("interaction_mode", contract.interaction_mode)
         payload.setdefault("capability_key", contract.capability_key)
         payload.setdefault("handler_key", contract.auto_service_key)
+        payload.setdefault("ai_config_json", contract.ai_config_json or {})
         payload.setdefault("metadata_json", {})
         payload["metadata_json"] = {
             **(payload.get("metadata_json") or {}),
@@ -68,8 +72,13 @@ def apply_contract_defaults(payload: dict[str, Any], contract: ProcessActivityEx
             "ui_schema_json": contract.ui_schema_json or {},
             "rest_config_json": contract.rest_config_json or {},
             "mcp_config_json": contract.mcp_config_json or {},
+            "ai_config_json": contract.ai_config_json or {},
             "completion_rules_json": contract.completion_rules_json or {},
         }
 
     payload["execution_mode"] = normalize_execution_mode(payload.get("execution_mode"))
+    payload["ai_config_json"] = normalize_ai_contract_config(
+        payload.get("ai_config_json"),
+        execution_mode=payload.get("execution_mode"),
+    )
     return payload

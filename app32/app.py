@@ -628,6 +628,7 @@ def register_api_resources(api):
         ProcessListResource, ProcessResource,
         ProcessBpmnDiagramResource, ProcessBpmnDiagramExportResource, ProcessBpmnPopBindingResource,
         ProcessActivityExecutionContractListResource, ProcessActivityExecutionContractResource,
+        ProcessBpmnAiAssistantResource,
         ProcessRoutineListResource, ProcessRoutineResource,
         ProcessScheduleListResource,
         ProcessStepListResource, ProcessStepResource,
@@ -797,6 +798,7 @@ def register_api_resources(api):
     api.add_resource(ProcessBpmnDiagramResource, '/api/processes/<int:process_id>/bpmn-diagram')
     api.add_resource(ProcessBpmnDiagramExportResource, '/api/processes/<int:process_id>/bpmn-diagram/export')
     api.add_resource(ProcessBpmnPopBindingResource, '/api/processes/<int:process_id>/bpmn-pop-bindings')
+    api.add_resource(ProcessBpmnAiAssistantResource, '/api/processes/<int:process_id>/bpmn-ai-assistant')
     api.add_resource(ProcessActivityExecutionContractListResource, '/api/processes/<int:process_id>/activity-execution-contracts')
     api.add_resource(ProcessActivityExecutionContractResource, '/api/process-activity-execution-contracts/<int:contract_id>')
     api.add_resource(ProcessRoutineListResource, '/api/process-routines')

@@ -21,6 +21,18 @@
   let currentDiagram = null;
   let currentZoom = 1;
   let popCandidatesByElementId = new Map();
+  let executionContractsByElementId = new Map();
+  let aiInspectorDraftByElementId = new Map();
+  let aiAssistantCatalog = {
+    task_operation_options: ['extract', 'classify', 'summarize', 'validate', 'enrich', 'act'],
+    gateway_operation_options: ['route', 'triage', 'qualify'],
+    fallback_actions: ['human_review', 'fail', 'continue_with_warning'],
+    tool_sources: ['none', 'mcp', 'api'],
+    model_roles: ['expert', 'router']
+  };
+  let toolCatalog = [];
+  let currentSelection = null;
+  let inspectorBusy = false;
   let manualResizeHandleEl = null;
   let manualResizeState = null;
 
@@ -41,11 +53,65 @@
     return window.BpmnJS || window.BpmnModeler;
   }
 
+  function buildAiReplaceModule() {
+    function App32AiReplaceMenuProvider(popupMenu) {
+      popupMenu.registerProvider('bpmn-replace', this);
+    }
+
+    App32AiReplaceMenuProvider.$inject = ['popupMenu'];
+
+    App32AiReplaceMenuProvider.prototype.getPopupMenuEntries = function (element) {
+      return function (entries) {
+        const type = element && element.businessObject && element.businessObject.$type;
+        if (isOperationalActivityType(type)) {
+          entries['app32-ai-task'] = {
+            label: 'AI Task',
+            className: 'bpmn-icon-service-task',
+            action: function () {
+              applySemanticPreset(element, 'ai_task');
+            }
+          };
+        }
+        if (isGatewayType(type)) {
+          entries['app32-ai-gateway'] = {
+            label: 'AI Gateway',
+            className: 'bpmn-icon-gateway-xor',
+            action: function () {
+              applySemanticPreset(element, 'ai_gateway');
+            }
+          };
+        }
+        return entries;
+      };
+    };
+
+    return {
+      __init__: ['app32AiReplaceMenuProvider'],
+      app32AiReplaceMenuProvider: ['type', App32AiReplaceMenuProvider]
+    };
+  }
+
   async function fetchDiagram() {
     const res = await fetch(`/api/processes/${processId}/bpmn-diagram`, {
       headers: { Accept: 'application/json' }
     });
     if (!res.ok) throw new Error(`Falha ao carregar BPMN (${res.status})`);
+    return res.json();
+  }
+
+  async function fetchExecutionContracts() {
+    const res = await fetch(`/api/processes/${processId}/activity-execution-contracts`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) throw new Error(`Falha ao carregar contratos BPMS (${res.status})`);
+    return res.json();
+  }
+
+  async function fetchAiAssistantCatalog() {
+    const res = await fetch(`/api/processes/${processId}/bpmn-ai-assistant`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) throw new Error(`Falha ao carregar catálogo IA (${res.status})`);
     return res.json();
   }
 
@@ -67,6 +133,7 @@
 
       modeler = new Modeler({
         container: '#bpmnCanvas',
+        additionalModules: [buildAiReplaceModule()],
         keyboard: {
           bindTo: document
         },
@@ -87,7 +154,20 @@
       installOperationalActivityManualResize();
 
       currentDiagram = await fetchDiagram();
+      const [contracts, catalogPayload] = await Promise.all([
+        fetchExecutionContracts(),
+        fetchAiAssistantCatalog()
+      ]);
+      executionContractsByElementId = new Map((contracts || [])
+        .filter((item) => item && item.is_active !== false && item.bpmn_element_id)
+        .map((item) => [item.bpmn_element_id, item]));
+      aiAssistantCatalog = {
+        ...aiAssistantCatalog,
+        ...(((catalogPayload || {}).catalog || {}))
+      };
+      toolCatalog = (aiAssistantCatalog.tool_items || []);
       await importXml(currentDiagram.bpmn_xml);
+      installAiInspector();
       updateMeta();
       setStatus('Pronto para modelar', 'Use a paleta BPMN no canvas.');
     } catch (err) {
@@ -378,6 +458,516 @@
     if (!modeler) return;
     modeler.get('canvas').zoom('fit-viewport', 'auto');
     currentZoom = 1;
+  }
+
+  function installAiInspector() {
+    if (!modeler) return;
+    const eventBus = modeler.get('eventBus');
+    if (!eventBus || installAiInspector._installed) return;
+
+    eventBus.on('selection.changed', (event) => {
+      currentSelection = (event && event.newSelection && event.newSelection[0]) || null;
+      renderAiInspector(currentSelection);
+    });
+    eventBus.on('elements.changed', () => {
+      if (currentSelection) {
+        const registry = modeler.get('elementRegistry');
+        currentSelection = registry.get(currentSelection.id) || currentSelection;
+      }
+      renderAiInspector(currentSelection);
+    });
+    renderAiInspector(null);
+    installAiInspector._installed = true;
+  }
+
+  function renderAiInspector(element) {
+    const inspector = document.getElementById('bpmnAiInspector');
+    if (!inspector) return;
+
+    if (!element) {
+      inspector.innerHTML = `
+        <div class="bpmn-ai-empty">
+          <strong>Nenhum elemento selecionado</strong>
+          <p>Selecione uma task ou gateway para configurar AI Task ou AI Gateway com apoio do Sapiens.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const type = element.businessObject && element.businessObject.$type;
+    if (!isOperationalActivityType(type) && !isGatewayType(type)) {
+      inspector.innerHTML = `
+        <div class="bpmn-ai-empty">
+          <strong>Elemento sem configuração de IA</strong>
+          <p>O assistente do APP32 atua apenas sobre tasks e gateways.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const contract = executionContractsByElementId.get(element.id) || null;
+    const draft = aiInspectorDraftByElementId.get(element.id) || null;
+    const semanticType = getSemanticType(element, contract, draft);
+    const nextCandidates = getNextCandidates(element);
+    const decisionRows = semanticType === 'ai_gateway'
+      ? renderDecisionRows(contract, draft, nextCandidates)
+      : '';
+    const toolsMarkup = renderToolOptions(contract, draft);
+    inspector.innerHTML = `
+      <div class="bpmn-ai-card">
+        <div class="bpmn-ai-badges">
+          <span class="bpmn-ai-badge">${escapeHtml(getSemanticLabel(semanticType))}</span>
+          <span class="bpmn-ai-badge bpmn-ai-badge--neutral">${escapeHtml(formatElementType(type))}</span>
+        </div>
+        <div class="bpmn-ai-grid-2">
+          <div>
+            <span class="bpmn-ai-label">Elemento</span>
+            <span class="bpmn-ai-readonly">${escapeHtml(element.businessObject.name || '(sem nome)')}</span>
+          </div>
+          <div>
+            <span class="bpmn-ai-label">ID BPMN</span>
+            <span class="bpmn-ai-readonly">${escapeHtml(element.id)}</span>
+          </div>
+        </div>
+        <div class="bpmn-ai-actions">
+          ${isOperationalActivityType(type) ? '<button type="button" class="bpmn-ai-btn bpmn-ai-btn--ghost" data-ai-preset="ai_task">Converter em AI Task</button>' : ''}
+          ${isGatewayType(type) ? '<button type="button" class="bpmn-ai-btn bpmn-ai-btn--ghost" data-ai-preset="ai_gateway">Converter em AI Gateway</button>' : ''}
+          ${contract ? '<button type="button" class="bpmn-ai-btn bpmn-ai-btn--danger" data-ai-remove="1">Remover contrato IA</button>' : ''}
+        </div>
+      </div>
+      <div class="bpmn-ai-card">
+        <div class="bpmn-ai-grid-2">
+          <div>
+            <label class="bpmn-ai-label" for="aiObjective">Objetivo da IA</label>
+            <textarea id="aiObjective" class="bpmn-ai-textarea" placeholder="Ex.: Leia o documento e extraia valor, data, fornecedor e histórico.">${escapeHtml(getCurrentObjective(contract, draft, semanticType, element))}</textarea>
+          </div>
+          <div class="bpmn-ai-sapiens-note">
+            <strong>Sapiens como copiloto</strong>
+            <p class="bpmn-ai-help">Use o botão abaixo para gerar instrução, schema, tools e decisões sugeridas de forma assistida.</p>
+            <div class="bpmn-ai-actions" style="margin-top:0.75rem;">
+              <button type="button" class="bpmn-ai-btn bpmn-ai-btn--primary" data-ai-suggest="1">Preencher com Sapiens</button>
+            </div>
+          </div>
+        </div>
+        <div class="bpmn-ai-grid-3">
+          <div>
+            <label class="bpmn-ai-label" for="aiOperationType">Tipo de operação</label>
+            <select id="aiOperationType" class="bpmn-ai-select">${buildOperationOptions(semanticType, contract, draft)}</select>
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="aiModelRole">Modelo</label>
+            <select id="aiModelRole" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.model_roles || ['expert', 'router'], getAiFieldValue(contract, draft, 'model_role') || 'expert')}</select>
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="aiToolSource">Origem das tools</label>
+            <select id="aiToolSource" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.tool_sources || ['none', 'mcp', 'api'], getAiFieldValue(contract, draft, 'tool_source') || 'none')}</select>
+          </div>
+        </div>
+        <div class="bpmn-ai-grid-3">
+          <div>
+            <label class="bpmn-ai-label" for="aiMinConfidence">Confiança mínima</label>
+            <input id="aiMinConfidence" class="bpmn-ai-input" type="number" min="0" max="1" step="0.01" value="${escapeHtml(String(getAiFieldValue(contract, draft, 'min_confidence') ?? (semanticType === 'ai_gateway' ? 0.8 : 0.85)))}">
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="aiFallbackAction">Fallback</label>
+            <select id="aiFallbackAction" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.fallback_actions || ['human_review', 'fail', 'continue_with_warning'], getAiFieldValue(contract, draft, 'fallback_action') || 'human_review')}</select>
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="aiRequiresHumanGate">Gate humano</label>
+            <select id="aiRequiresHumanGate" class="bpmn-ai-select">${buildSelectOptions(['yes', 'no'], getRequiresHumanGateValue(contract, draft))}</select>
+          </div>
+        </div>
+        <div>
+          <label class="bpmn-ai-label" for="aiAllowedTools">Tools permitidas</label>
+          <div id="aiAllowedTools" class="bpmn-ai-tools">${toolsMarkup}</div>
+        </div>
+        ${decisionRows}
+        <div>
+          <label class="bpmn-ai-label" for="aiOutputSchema">Schema / saída esperada</label>
+          <textarea id="aiOutputSchema" class="bpmn-ai-textarea" placeholder='{"type":"object","properties":{"data":{"type":"object"}}}'>${escapeHtml(formatJson(getAiFieldValue(contract, draft, 'output_schema') || {}))}</textarea>
+        </div>
+        <div class="bpmn-ai-actions">
+          <button type="button" class="bpmn-ai-btn bpmn-ai-btn--primary" data-ai-save="1">Salvar contrato IA</button>
+        </div>
+        <div id="bpmnAiStatus" class="bpmn-ai-status" hidden></div>
+      </div>
+    `;
+  }
+
+  function renderDecisionRows(contract, draft, nextCandidates) {
+    const decisions = getAiFieldValue(contract, draft, 'allowed_decisions')
+      || nextCandidates.map((candidate) => slugifyDecision(candidate.element_name || candidate.element_id));
+    const routeMap = getAiMetadataValue(contract, draft, 'decision_routes') || {};
+    const rows = (decisions || []).map((decision) => `
+      <div class="bpmn-ai-choice">
+        <label class="bpmn-ai-label">Decisão</label>
+        <input class="bpmn-ai-input" data-decision-name value="${escapeHtml(decision)}">
+        <label class="bpmn-ai-label" style="margin-top:0.65rem;">Rota BPMN</label>
+        <select class="bpmn-ai-select" data-decision-route>
+          <option value="">Selecione a saída</option>
+            ${nextCandidates.map((candidate) => `
+              <option value="${escapeHtml(candidate.element_id)}" ${routeMap[decision] === candidate.element_id ? 'selected' : ''}>
+                ${escapeHtml(candidate.element_name || candidate.element_id)}
+              </option>
+            `).join('')}
+          </select>
+          <button type="button" class="bpmn-ai-link-btn" data-ai-remove-decision="${escapeHtml(decision)}">Remover decisão</button>
+        </div>
+      `).join('');
+    return `
+      <div>
+        <div class="bpmn-ai-actions bpmn-ai-actions--spread">
+          <span class="bpmn-ai-label">Decisões fechadas do gateway</span>
+          <button type="button" class="bpmn-ai-link-btn" data-ai-add-decision="1">Adicionar decisão</button>
+        </div>
+        <div class="bpmn-ai-choice-row" id="aiDecisionRows">${rows || '<div class="bpmn-ai-muted">Conecte saídas ao gateway para habilitar rotas sugeridas.</div>'}</div>
+      </div>
+    `;
+  }
+
+  function renderToolOptions(contract, draft) {
+    const selected = new Set(getAiFieldValue(contract, draft, 'allowed_tools') || []);
+    return toolCatalog.map((tool) => `
+      <label class="bpmn-ai-tool-option">
+        <input type="checkbox" value="${escapeHtml(tool.name)}" ${selected.has(tool.name) ? 'checked' : ''}>
+        <span>
+          <strong>${escapeHtml(tool.name)}</strong>
+          <small>${escapeHtml(tool.description || 'Tool operacional do APP32.')}</small>
+        </span>
+      </label>
+    `).join('') || '<div class="bpmn-ai-muted">Nenhuma tool catalogada para seleção.</div>';
+  }
+
+  function buildOperationOptions(semanticType, contract, draft) {
+    const current = getUiSchemaValue(contract, 'operation_type')
+      || (draft && draft.operation_type)
+      || (semanticType === 'ai_gateway' ? 'route' : 'extract');
+    const options = semanticType === 'ai_gateway'
+      ? (aiAssistantCatalog.gateway_operation_options || ['route', 'triage', 'qualify'])
+      : (aiAssistantCatalog.task_operation_options || ['extract', 'classify', 'summarize', 'validate', 'enrich', 'act']);
+    return buildSelectOptions(options, current);
+  }
+
+  function buildSelectOptions(options, currentValue) {
+    return (options || []).map((value) => `
+      <option value="${escapeHtml(value)}" ${String(currentValue) === String(value) ? 'selected' : ''}>${escapeHtml(value)}</option>
+    `).join('');
+  }
+
+  function getSemanticType(element, contract, draft) {
+    const type = element && element.businessObject && element.businessObject.$type;
+    if (draft && draft.semantic_type === 'ai_task') return 'ai_task';
+    if (draft && draft.semantic_type === 'ai_gateway') return 'ai_gateway';
+    if (contract && contract.execution_mode === 'ai_task') return 'ai_task';
+    if (contract && contract.execution_mode === 'ai_decision') return 'ai_gateway';
+    if (isGatewayType(type)) return 'gateway';
+    return 'task';
+  }
+
+  function getSemanticLabel(semanticType) {
+    return {
+      ai_task: 'AI Task',
+      ai_gateway: 'AI Gateway',
+      gateway: 'Gateway BPMN',
+      task: 'Task BPMN'
+    }[semanticType] || 'Elemento BPMN';
+  }
+
+  function formatElementType(type) {
+    return String(type || '').replace('bpmn:', '');
+  }
+
+  function getCurrentObjective(contract, draft, semanticType, element) {
+    return getAiFieldValue(contract, draft, 'instruction')
+      || (semanticType === 'ai_gateway'
+        ? `Classifique a rota do gateway ${element.id} entre as saídas conectadas.`
+        : `Descreva o que a IA deve fazer na task ${element.id}.`);
+  }
+
+  function getContractAiValue(contract, key) {
+    return contract && contract.ai_config_json ? contract.ai_config_json[key] : null;
+  }
+
+  function getAiFieldValue(contract, draft, key) {
+    if (draft && draft[key] !== undefined && draft[key] !== null) return draft[key];
+    return getContractAiValue(contract, key);
+  }
+
+  function getAiMetadataValue(contract, draft, key) {
+    if (draft && draft.metadata && draft.metadata[key] !== undefined) return draft.metadata[key];
+    const metadata = getContractAiValue(contract, 'metadata') || {};
+    return metadata[key];
+  }
+
+  function getRequiresHumanGateValue(contract, draft) {
+    if (draft && typeof draft.requires_human_gate === 'boolean') {
+      return draft.requires_human_gate ? 'yes' : 'no';
+    }
+    return contract && contract.requires_human_gate ? 'yes' : 'no';
+  }
+
+  function addGatewayDecisionRow() {
+    const container = document.getElementById('aiDecisionRows');
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'bpmn-ai-choice';
+    row.innerHTML = `
+      <label class="bpmn-ai-label">Decisão</label>
+      <input class="bpmn-ai-input" data-decision-name placeholder="ex.: human_review">
+      <label class="bpmn-ai-label" style="margin-top:0.65rem;">Rota BPMN</label>
+      <select class="bpmn-ai-select" data-decision-route>
+        <option value="">Selecione a saída</option>
+        ${getNextCandidates(currentSelection).map((candidate) => `
+          <option value="${escapeHtml(candidate.element_id)}">${escapeHtml(candidate.element_name || candidate.element_id)}</option>
+        `).join('')}
+      </select>
+      <button type="button" class="bpmn-ai-link-btn" data-ai-remove-decision="__new__">Remover decisão</button>
+    `;
+    const muted = container.querySelector('.bpmn-ai-muted');
+    if (muted) muted.remove();
+    container.appendChild(row);
+  }
+
+  function getUiSchemaValue(contract, key) {
+    return contract && contract.ui_schema_json ? contract.ui_schema_json[key] : null;
+  }
+
+  function getNextCandidates(element) {
+    return (element.outgoing || [])
+      .map((flow) => flow && flow.target)
+      .filter((target) => target && target.id)
+      .map((target) => ({
+        element_id: target.id,
+        element_name: target.businessObject && target.businessObject.name,
+        element_type: target.businessObject && target.businessObject.$type
+      }));
+  }
+
+  function isGatewayType(type) {
+    return Boolean(type && type.includes('Gateway'));
+  }
+
+  function slugifyDecision(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'route';
+  }
+
+  function formatJson(value) {
+    try {
+      return JSON.stringify(value || {}, null, 2);
+    } catch (error) {
+      return '{}';
+    }
+  }
+
+  function showAiStatus(message, isError) {
+    const status = document.getElementById('bpmnAiStatus');
+    if (!status) return;
+    status.hidden = false;
+    status.classList.toggle('is-error', Boolean(isError));
+    status.textContent = message;
+  }
+
+  function setInspectorBusy(value) {
+    inspectorBusy = Boolean(value);
+    const inspector = document.getElementById('bpmnAiInspector');
+    if (!inspector) return;
+    inspector.querySelectorAll('button, input, select, textarea').forEach((field) => {
+      field.disabled = inspectorBusy;
+    });
+  }
+
+  function collectAiFormPayload(element) {
+    const semanticType = getSemanticType(element, executionContractsByElementId.get(element.id));
+    const outputSchemaValue = document.getElementById('aiOutputSchema')?.value || '{}';
+    let outputSchema = {};
+    try {
+      outputSchema = outputSchemaValue.trim() ? JSON.parse(outputSchemaValue) : {};
+    } catch (error) {
+      throw new Error('O schema/saída esperada precisa ser um JSON válido.');
+    }
+
+    const selectedTools = Array.from(document.querySelectorAll('#aiAllowedTools input[type="checkbox"]:checked'))
+      .map((input) => input.value);
+    const decisionRows = Array.from(document.querySelectorAll('#aiDecisionRows .bpmn-ai-choice'));
+    const decisionRoutes = {};
+    const allowedDecisions = [];
+    decisionRows.forEach((row) => {
+      const decision = row.querySelector('[data-decision-name]')?.value?.trim();
+      const route = row.querySelector('[data-decision-route]')?.value?.trim();
+      if (decision) {
+        allowedDecisions.push(decision);
+        if (route) decisionRoutes[decision] = route;
+      }
+    });
+
+    const minConfidence = Number(document.getElementById('aiMinConfidence')?.value || 0);
+    if (Number.isNaN(minConfidence) || minConfidence < 0 || minConfidence > 1) {
+      throw new Error('Confiança mínima deve ficar entre 0 e 1.');
+    }
+
+    return {
+      semantic_type: semanticType,
+      execution_mode: semanticType === 'ai_gateway' ? 'ai_decision' : 'ai_task',
+      objective: document.getElementById('aiObjective')?.value?.trim() || '',
+      operation_type: document.getElementById('aiOperationType')?.value || (semanticType === 'ai_gateway' ? 'route' : 'extract'),
+      model_role: document.getElementById('aiModelRole')?.value || 'expert',
+      tool_source: document.getElementById('aiToolSource')?.value || 'none',
+      min_confidence: minConfidence,
+      fallback_action: document.getElementById('aiFallbackAction')?.value || 'human_review',
+      requires_human_gate: (document.getElementById('aiRequiresHumanGate')?.value || 'no') === 'yes',
+      allowed_tools: selectedTools,
+      allowed_decisions: allowedDecisions,
+      decision_routes: decisionRoutes,
+      output_schema: outputSchema
+    };
+  }
+
+  function buildContractPayload(element, formPayload) {
+    return {
+      bpmn_element_id: element.id,
+      bpmn_element_type: element.businessObject && element.businessObject.$type,
+      execution_mode: formPayload.execution_mode,
+      interaction_mode: 'drawer',
+      capability_key: formPayload.execution_mode === 'ai_decision' ? 'process.ai_gateway' : 'process.ai_task',
+      auto_service_key: formPayload.execution_mode === 'ai_decision' ? 'process.ai.route' : 'process.ai.execute',
+      requires_human_gate: formPayload.requires_human_gate,
+      allows_pause: true,
+      allows_retry: true,
+      ui_schema_json: {
+        semantic_type: formPayload.semantic_type,
+        operation_type: formPayload.operation_type
+      },
+      ai_config_json: {
+        instruction: formPayload.objective,
+        model_role: formPayload.model_role,
+        tool_source: formPayload.tool_source,
+        allowed_tools: formPayload.allowed_tools,
+        min_confidence: formPayload.min_confidence,
+        fallback_action: formPayload.fallback_action,
+        allowed_decisions: formPayload.allowed_decisions,
+        output_schema: formPayload.output_schema,
+        metadata: {
+          operation_type: formPayload.operation_type,
+          decision_routes: formPayload.decision_routes
+        }
+      }
+    };
+  }
+
+  async function saveAiContract(element) {
+    const existing = executionContractsByElementId.get(element.id);
+    const formPayload = collectAiFormPayload(element);
+    if (!formPayload.objective) {
+      throw new Error('Descreva o objetivo da IA antes de salvar.');
+    }
+
+    const payload = buildContractPayload(element, formPayload);
+    const url = existing
+      ? `/api/process-activity-execution-contracts/${existing.id}`
+      : `/api/processes/${processId}/activity-execution-contracts`;
+    const method = existing ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao salvar contrato IA.');
+    aiInspectorDraftByElementId.delete(element.id);
+    executionContractsByElementId.set(element.id, data);
+    renderAiInspector(element);
+    showAiStatus('Contrato IA salvo com sucesso.');
+  }
+
+  async function removeAiContract(element) {
+    const existing = executionContractsByElementId.get(element.id);
+    if (!existing) return;
+    const res = await fetch(`/api/process-activity-execution-contracts/${existing.id}`, {
+      method: 'DELETE',
+      headers: { Accept: 'application/json' }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao remover contrato IA.');
+    aiInspectorDraftByElementId.delete(element.id);
+    executionContractsByElementId.delete(element.id);
+    renderAiInspector(element);
+    showAiStatus('Contrato IA removido. O elemento voltou ao comportamento BPMN padrão.');
+  }
+
+  async function suggestAiConfiguration(element) {
+    const existing = executionContractsByElementId.get(element.id);
+    const draft = collectAiFormPayload(element);
+    const res = await fetch(`/api/processes/${processId}/bpmn-ai-assistant`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({
+        semantic_type: draft.semantic_type,
+        element_id: element.id,
+        element_name: element.businessObject && element.businessObject.name,
+        element_type: element.businessObject && element.businessObject.$type,
+        objective: draft.objective,
+        next_candidates: getNextCandidates(element),
+        current_config: existing && existing.ai_config_json ? existing.ai_config_json : draft
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao consultar o Sapiens.');
+    hydrateAiFormFromSuggestion(element, data.suggestion || {});
+    showAiStatus('Sugestão do Sapiens aplicada ao formulário.');
+  }
+
+  function hydrateAiFormFromSuggestion(element, suggestion) {
+    const existingDraft = aiInspectorDraftByElementId.get(element.id) || collectAiFormPayload(element);
+    aiInspectorDraftByElementId.set(element.id, {
+      ...existingDraft,
+      semantic_type: suggestion.execution_mode === 'ai_decision' ? 'ai_gateway' : existingDraft.semantic_type,
+      instruction: suggestion.instruction || suggestion.objective || existingDraft.objective,
+      objective: suggestion.instruction || suggestion.objective || existingDraft.objective,
+      operation_type: suggestion.operation_type || existingDraft.operation_type,
+      model_role: suggestion.model_role || existingDraft.model_role,
+      tool_source: suggestion.tool_source || existingDraft.tool_source,
+      min_confidence: suggestion.min_confidence ?? existingDraft.min_confidence,
+      fallback_action: suggestion.fallback_action || existingDraft.fallback_action,
+      allowed_tools: suggestion.allowed_tools || existingDraft.allowed_tools || [],
+      allowed_decisions: suggestion.allowed_decisions || existingDraft.allowed_decisions || [],
+      output_schema: suggestion.output_schema || existingDraft.output_schema || {},
+      requires_human_gate: (suggestion.fallback_action || existingDraft.fallback_action) === 'human_review',
+      metadata: {
+        decision_routes: suggestion.decision_routes || existingDraft.decision_routes || {}
+      }
+    });
+    renderAiInspector(element);
+  }
+
+  function applySemanticPreset(element, preset) {
+    if (!modeler || !element) return;
+    const bpmnReplace = modeler.get('bpmnReplace');
+    let target = element;
+    const type = element.businessObject && element.businessObject.$type;
+    if (preset === 'ai_task' && type !== 'bpmn:ServiceTask') {
+      target = bpmnReplace.replaceElement(element, { type: 'bpmn:ServiceTask' });
+    }
+    if (preset === 'ai_gateway' && type !== 'bpmn:ExclusiveGateway') {
+      target = bpmnReplace.replaceElement(element, { type: 'bpmn:ExclusiveGateway' });
+    }
+    currentSelection = target;
+    modeler.get('selection').select(target);
+    renderAiInspector(target);
+    showAiStatus(preset === 'ai_gateway'
+      ? 'Gateway convertido para AI Gateway. Revise decisões, rotas e fallback.'
+      : 'Task convertida para AI Task. Revise objetivo, tools e schema.');
   }
 
   function inspectElementsForPopBinding() {
@@ -837,6 +1427,70 @@
   }
 
   root.addEventListener('click', async (event) => {
+    const aiPresetButton = event.target.closest('[data-ai-preset]');
+    if (aiPresetButton && currentSelection) {
+      applySemanticPreset(currentSelection, aiPresetButton.dataset.aiPreset);
+      return;
+    }
+
+    const aiAddDecisionButton = event.target.closest('[data-ai-add-decision]');
+    if (aiAddDecisionButton && currentSelection) {
+      addGatewayDecisionRow();
+      return;
+    }
+
+    const aiRemoveDecisionButton = event.target.closest('[data-ai-remove-decision]');
+    if (aiRemoveDecisionButton) {
+      aiRemoveDecisionButton.closest('.bpmn-ai-choice')?.remove();
+      const rows = document.querySelectorAll('#aiDecisionRows .bpmn-ai-choice');
+      if (!rows.length) {
+        const container = document.getElementById('aiDecisionRows');
+        if (container) {
+          container.innerHTML = '<div class="bpmn-ai-muted">Adicione pelo menos uma decisão fechada para o gateway.</div>';
+        }
+      }
+      return;
+    }
+
+    const aiRemoveButton = event.target.closest('[data-ai-remove]');
+    if (aiRemoveButton && currentSelection) {
+      try {
+        setInspectorBusy(true);
+        await removeAiContract(currentSelection);
+      } catch (error) {
+        showAiStatus(error.message || 'Erro ao remover contrato IA.', true);
+      } finally {
+        setInspectorBusy(false);
+      }
+      return;
+    }
+
+    const aiSuggestButton = event.target.closest('[data-ai-suggest]');
+    if (aiSuggestButton && currentSelection) {
+      try {
+        setInspectorBusy(true);
+        await suggestAiConfiguration(currentSelection);
+      } catch (error) {
+        showAiStatus(error.message || 'Erro ao consultar o Sapiens.', true);
+      } finally {
+        setInspectorBusy(false);
+      }
+      return;
+    }
+
+    const aiSaveButton = event.target.closest('[data-ai-save]');
+    if (aiSaveButton && currentSelection) {
+      try {
+        setInspectorBusy(true);
+        await saveAiContract(currentSelection);
+      } catch (error) {
+        showAiStatus(error.message || 'Erro ao salvar contrato IA.', true);
+      } finally {
+        setInspectorBusy(false);
+      }
+      return;
+    }
+
     const popBindButton = event.target.closest('[data-pop-bind]');
     if (popBindButton) {
       await openOrCreatePopBinding(popBindButton.dataset.popBind, popBindButton);
