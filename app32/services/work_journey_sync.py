@@ -27,7 +27,7 @@ from services.work_journey_helpers import PRIORITY_ORDER, date_range, rule_match
 def build_process_instance_source_url(company_id: int, instance_id: int | None) -> str | None:
     if not company_id or not instance_id:
         return None
-    return f'/companies/{company_id}/process-instances?instance_id={instance_id}&from=work-journey'
+    return f'/my-work/process-instance/{instance_id}?company_id={company_id}&from=work-journey'
 
 
 def build_project_task_source_url(project_id: int | None, task_id: int | None) -> str | None:

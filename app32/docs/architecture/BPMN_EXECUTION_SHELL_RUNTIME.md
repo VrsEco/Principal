@@ -218,6 +218,13 @@ A instância deve abrir em uma **shell única de processo** contendo:
 - ações de pausar, retomar, cancelar e concluir;
 - mapa BPMN renderizado;
 - painel lateral ou inferior com detalhes da atividade atual;
+- painel BPMS da activity corrente com:
+  - modo de execução;
+  - capability atual;
+  - SLA;
+  - contrato da atividade;
+  - CTA para abrir tela interna, link externo ou indicar execução automática/REST/MCP;
+- indicação das próximas etapas possíveis inferidas do BPMN;
 - histórico de execução;
 - horas opcionais;
 - logs técnicos/operacionais.
@@ -226,6 +233,41 @@ Definição de produto:
 
 > O shell não é “mais um módulo”.  
 > Ele é uma camada transversal de trabalho que reúne tudo o que o usuário precisa para executar, controlar e retomar a atividade, mesmo quando os dados e capacidades vêm de módulos diferentes.
+
+### Regra adicional de experiência
+
+Quando a activity possuir contrato BPMS:
+
+- o shell deve abrir a capability correta sem obrigar o usuário a navegar manualmente por outro menu;
+- o contrato pode resolver:
+  - URL interna parametrizada;
+  - aba/capability interna;
+  - URL externa;
+  - integração REST;
+  - integração MCP;
+  - execução automática.
+
+Quando não houver contrato:
+
+- o shell continua operacional;
+- o APP32 trata a etapa como controle manual/externo, sem bloquear a instância.
+
+## 4.1.1. Compatibilização obrigatória com Calendário
+
+O Calendário Operacional não substitui a shell BPMS.
+
+Ele deve funcionar como **porta de entrada temporal**:
+
+```text
+Evento do calendário
+→ abre a instância correta
+→ posiciona o usuário na shell BPMS
+→ destaca a activity atual e o próximo passo
+```
+
+Guardrail:
+
+> Deep links originados do Calendário devem apontar para `/my-work/process-instance/<id>` e não para telas intermediárias de listagem.
 
 ## 4.2. Estados visuais do fluxo
 

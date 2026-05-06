@@ -10,6 +10,8 @@ if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
 from services.process_execution_runtime_service import (
+    _build_diagram_navigation,
+    _format_runtime_url_template,
     apply_runtime_defaults,
     pause_instance,
     resume_instance,
@@ -77,3 +79,31 @@ def test_pause_and_resume_instance_updates_runtime_fields(monkeypatch):
     assert instance.started_at is not None
     assert instance.paused_at is None
     assert instance.pause_reason is None
+
+
+def test_build_diagram_navigation_returns_next_candidates():
+    bpmn_xml = """
+    <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+      <bpmn:process id="Process_1">
+        <bpmn:startEvent id="StartEvent_1" name="Início" />
+        <bpmn:userTask id="Task_1" name="Cadastrar contrato" />
+        <bpmn:serviceTask id="Task_2" name="Gerar PDF" />
+        <bpmn:sequenceFlow id="Flow_1" sourceRef="Task_1" targetRef="Task_2" />
+      </bpmn:process>
+    </bpmn:definitions>
+    """
+
+    navigation = _build_diagram_navigation(bpmn_xml, "Task_1")
+
+    assert navigation["next_candidates"] == [{
+        "element_id": "Task_2",
+        "element_name": "Gerar PDF",
+        "element_type": "serviceTask",
+    }]
+
+
+def test_format_runtime_url_template_replaces_context():
+    assert _format_runtime_url_template(
+        "/contracts/{contract_id}?company_id={company_id}&tab=cliente",
+        {"contract_id": 17, "company_id": 9},
+    ) == "/contracts/17?company_id=9&tab=cliente"

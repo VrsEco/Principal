@@ -477,6 +477,12 @@ def process_instances_redirect():
 @permission_required('processes', 'view')
 def process_instances_page(company_id):
     """Render the process instances management page."""
+    instance_id = request.args.get('instance_id', type=int)
+    if instance_id:
+        instance = ProcessInstance.query.filter_by(company_id=company_id, id=instance_id).first()
+        if instance:
+            session['active_company_id'] = company_id
+            return redirect(url_for('my_work.process_instance_view', instance_id=instance.id, company_id=company_id, from_='work-journey'))
     company = Company.query.get_or_404(company_id)
     is_collaborator = is_collaborator_in_company(company_id)
     return render_template('modules/processes/process_instances_list.html', company=company, is_collaborator=is_collaborator)

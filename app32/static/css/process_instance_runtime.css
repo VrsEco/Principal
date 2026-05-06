@@ -157,6 +157,70 @@
   line-height: 1.5;
 }
 
+.runtime-activity-callout {
+  margin-top: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.07);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+}
+
+.runtime-activity-callout strong,
+.runtime-next-stack h4 {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.runtime-activity-callout p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.runtime-contract-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.runtime-contract-grid div,
+.runtime-next-item {
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
+}
+
+.runtime-contract-grid span,
+.runtime-next-item span {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  margin-bottom: 0.25rem;
+}
+
+.runtime-action-row,
+.runtime-next-stack {
+  margin-top: 0.9rem;
+}
+
+.runtime-action-row {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.runtime-next-stack {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.runtime-next-item--empty {
+  background: rgba(148, 163, 184, 0.08);
+}
+
 .runtime-timeline-list {
   display: grid;
   gap: 0.65rem;
@@ -231,7 +295,8 @@
 @media (max-width: 1100px) {
   .runtime-shell-hero,
   .runtime-grid,
-  .runtime-meta-grid {
+  .runtime-meta-grid,
+  .runtime-contract-grid {
     grid-template-columns: 1fr;
   }
 }
