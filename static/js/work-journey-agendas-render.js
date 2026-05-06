@@ -18,6 +18,8 @@
   function normalizeItem(item) {
     return {
       id: item.id,
+      event_id: item.event_id || null,
+      item_kind: item.item_kind || 'journey_item',
       title: item.title,
       display_title: item.display_title || item.title,
       description: item.description || '',
@@ -43,11 +45,13 @@
       planned_start_time: item.planned_start_time || null,
       planned_end_time: item.planned_end_time || null,
       planned_window_label: item.planned_window_label || null,
+      execution_notes: item.execution_notes || '',
     };
   }
 
   function normalizeBlock(block) {
     const items = Array.isArray(block.items) ? block.items.map(normalizeItem) : [];
+    const events = Array.isArray(block.events) ? block.events.map(normalizeItem) : [];
     const capacity = Number(block.operational_capacity_minutes || block.capacity_minutes || 0);
     const planned = Number(block.planned_minutes || 0);
 
@@ -63,9 +67,12 @@
       operational_capacity_minutes: capacity,
       fixed_reserved_minutes: Number(block.fixed_reserved_minutes || 0),
       planned_minutes: planned,
+      planned_task_minutes: Number(block.planned_task_minutes || 0),
+      planned_event_minutes: Number(block.planned_event_minutes || 0),
       worked_minutes: Number(block.worked_minutes || 0),
       overload_minutes: Number(block.overload_minutes || Math.max(0, planned - capacity)),
       items,
+      events,
     };
   }
 
@@ -104,8 +111,18 @@
           seen.add(item.id);
           items.push(item);
         });
+        (block.events || []).forEach((item) => {
+          if (seen.has(item.id)) return;
+          seen.add(item.id);
+          items.push(item);
+        });
       });
       (day.unassigned_items || []).forEach((item) => {
+        if (seen.has(item.id)) return;
+        seen.add(item.id);
+        items.push(item);
+      });
+      (day.unassigned_events || []).forEach((item) => {
         if (seen.has(item.id)) return;
         seen.add(item.id);
         items.push(item);
@@ -144,8 +161,10 @@
       overload_minutes: blocks.reduce((sum, block) => sum + Number(block.overload_minutes || 0), 0),
       pending_count: items.filter((item) => item.status !== 'completed').length,
       completed_count: items.filter((item) => item.status === 'completed').length,
-      unassigned_count: days.reduce((sum, day) => sum + (day.unassigned_items || []).length, 0),
+      unassigned_count: days.reduce((sum, day) => sum + (day.unassigned_items || []).length + (day.unassigned_events || []).length, 0),
       overdue_count: items.filter((item) => item.is_overdue).length,
+      event_count: items.filter((item) => item.item_kind === 'calendar_event').length,
+      linked_event_count: items.filter((item) => item.item_kind === 'calendar_event' && item.item_type !== 'manual').length,
       locked: false,
     };
   }
@@ -201,6 +220,8 @@
         weekday_sort_key: weekdaySortKey,
         blocks: (Array.isArray(day.blocks) ? day.blocks : []).map(normalizeBlock),
         unassigned_items: Array.isArray(day.unassigned_items) ? day.unassigned_items.map(normalizeItem) : [],
+        unassigned_events: Array.isArray(day.unassigned_events) ? day.unassigned_events.map(normalizeItem) : [],
+        events: Array.isArray(day.events) ? day.events.map(normalizeItem) : [],
         is_today: Boolean(day.is_today),
       };
     });
@@ -224,6 +245,8 @@
         weekday_sort_key: new Date(`${selectedDate}T00:00:00`).getDay(),
         blocks: (agenda.blocks || []).map(normalizeBlock),
         unassigned_items: (agenda.unassigned_items || []).map(normalizeItem),
+        unassigned_events: (agenda.unassigned_events || []).map(normalizeItem),
+        events: (agenda.events || []).map(normalizeItem),
         is_today: true,
       });
     }
@@ -235,6 +258,9 @@
     const rawUnassigned = Array.isArray(agenda.unassigned_items) && agenda.unassigned_items.length
       ? agenda.unassigned_items.map(normalizeItem)
       : normalizedDays.flatMap((day) => day.unassigned_items || []);
+    const rawUnassignedEvents = Array.isArray(agenda.unassigned_events) && agenda.unassigned_events.length
+      ? agenda.unassigned_events.map(normalizeItem)
+      : normalizedDays.flatMap((day) => day.unassigned_events || []);
 
     const summary = agenda.summary || buildSummaryFromDays(normalizedDays);
 
@@ -252,7 +278,10 @@
       summary,
       days: normalizedDays,
       unassigned_items: sortAgendaItems(rawUnassigned.filter((item) => !item.is_overdue)),
+      unassigned_events: sortAgendaItems(rawUnassignedEvents),
       overdue_items: sortAgendaItems(rawOverdue),
+      calendar_events: Array.isArray(agenda.calendar_events) ? agenda.calendar_events.map(normalizeItem) : [],
+      process_instance_cards: Array.isArray(agenda.process_instance_cards) ? agenda.process_instance_cards : [],
       notes: agenda.notes || null,
     };
   }
@@ -266,6 +295,7 @@
       ['Carga prevista', formatMinutes(summary.planned_minutes)],
       ['Carga realizada', formatMinutes(summary.worked_minutes)],
       ['Sobrecarga', formatMinutes(summary.overload_minutes)],
+      ['Eventos', summary.event_count || 0],
       ['Não alocadas', summary.unassigned_count || 0],
       ['Concluídas', summary.completed_count || 0],
       ['Pendentes', summary.pending_count || 0],
@@ -279,17 +309,90 @@
     `).join('');
   }
 
+  function renderProcessInstanceCards(cards) {
+    if (!Array.isArray(cards) || !cards.length) {
+      return '<div class="agenda-empty-state">Nenhuma instância relevante no período atual.</div>';
+    }
+
+    return cards.map((card) => {
+      const currentActivity = card.current_activity || {};
+      const linkedTask = card.linked_operational_task || {};
+      const instanceDueClass = card.is_instance_overdue ? 'agenda-instance-card__metric-value agenda-instance-card__metric-value--danger' : 'agenda-instance-card__metric-value';
+      const activityDueClass = currentActivity.is_activity_overdue ? 'agenda-instance-card__metric-value agenda-instance-card__metric-value--danger' : 'agenda-instance-card__metric-value';
+      const cardClass = card.is_instance_overdue ? 'agenda-instance-card agenda-instance-card--overdue' : 'agenda-instance-card';
+      const activityDueLabel = currentActivity.activity_due_label || 'Sem prazo definido';
+      const instanceDueLabel = card.instance_due_label || 'Sem prazo definido';
+      return `
+        <article class="${cardClass}">
+          <div class="agenda-instance-card__header">
+            <div>
+              <span class="agenda-instance-card__eyebrow">Instância de processo</span>
+              <h3 class="agenda-instance-card__title">${escapeHtml(card.instance_title || 'Instância sem título')}</h3>
+              <div class="agenda-instance-card__code">${escapeHtml(card.instance_code || '')}</div>
+              <div class="agenda-instance-card__process">${escapeHtml(card.process_name || 'Processo não identificado')}</div>
+            </div>
+            <div class="agenda-instance-card__badges">
+              <span class="badge-pill">${escapeHtml(card.instance_status_label || card.instance_status || 'Status')}</span>
+              <span class="badge-pill">${escapeHtml(card.instance_priority_label || card.instance_priority || 'Prioridade')}</span>
+            </div>
+          </div>
+          <div class="agenda-instance-card__meta">
+            <div class="agenda-instance-card__metric">
+              <span class="agenda-instance-card__metric-label">Prazo da instância</span>
+              <span class="${instanceDueClass}">${escapeHtml(instanceDueLabel)}</span>
+            </div>
+            <div class="agenda-instance-card__metric">
+              <span class="agenda-instance-card__metric-label">Prazo da atividade atual</span>
+              <span class="${activityDueClass}">${escapeHtml(activityDueLabel)}</span>
+            </div>
+          </div>
+          <div class="agenda-instance-card__activity">
+            <span class="agenda-instance-card__eyebrow">Atividade atual</span>
+            <h4 class="agenda-instance-card__activity-title">${escapeHtml(currentActivity.activity_name || 'Sem atividade ativa')}</h4>
+            <div class="agenda-instance-card__activity-meta">
+              <span class="badge-pill">${escapeHtml(currentActivity.activity_status_label || 'Aguardando ativação')}</span>
+              <span class="badge-pill">${escapeHtml(currentActivity.activity_execution_mode_label || 'Sem execução ativa')}</span>
+              ${card.agenda_entry_count ? `<span class="badge-pill">${card.agenda_entry_count} alocação(ões)</span>` : ''}
+              ${card.linked_event_count ? `<span class="badge-pill">${card.linked_event_count} evento(s)</span>` : ''}
+            </div>
+            ${linkedTask.title ? `
+              <div class="agenda-instance-card__task-link">
+                <span class="agenda-instance-card__metric-label">Evento operacional derivado</span>
+                <strong>${escapeHtml(linkedTask.title)}</strong>
+                <span class="text-secondary">${escapeHtml(linkedTask.due_label || 'Sem prazo operacional definido')}</span>
+              </div>
+            ` : ''}
+          </div>
+          <div class="agenda-instance-card__footer">
+            <span class="text-secondary">${escapeHtml(card.routine_name || 'Sem rotina vinculada')}</span>
+            ${card.source_url ? `<a class="btn btn-secondary" href="${card.source_url}">Abrir instância</a>` : ''}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
   function renderAgendaHTML(agenda, collapsedState, locked) {
     const days = agenda?.days || [];
     const overdueItems = agenda?.overdue_items || [];
     const unassignedItems = agenda?.unassigned_items || [];
+    const unassignedEvents = agenda?.unassigned_events || [];
     const boardColumns = [];
 
     if (agenda?.scope === 'week') {
       boardColumns.push(renderOverdueColumn(overdueItems, locked, collapsedState));
     }
     boardColumns.push(...days.map((day) => renderDayColumn(day, locked, collapsedState)));
-    boardColumns.push(renderUnassignedColumn(unassignedItems, locked, collapsedState));
+    boardColumns.push(renderUnassignedColumn(unassignedItems, unassignedEvents, locked, collapsedState));
 
     return {
       boardHTML: boardColumns.join(''),
@@ -308,7 +411,7 @@
         <header class="agenda-day-column__header">
           <div class="agenda-day-column__heading">
             <span class="agenda-day-column__eyebrow">Prioridade</span>
-            <h3 class="agenda-day-column__title">Tarefas atrasadas</h3>
+            <h3 class="agenda-day-column__title">Eventos operacionais atrasados</h3>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -319,7 +422,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} tarefas</span>
+            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} eventos</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -334,17 +437,17 @@
         <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" aria-hidden="${collapsed ? 'true' : 'false'}">
           ${activityCount
             ? overdueItems.map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: item.block_id || null }, locked, false, 'overdue')).join('')
-            : '<div class="agenda-empty-state">Nenhuma tarefa atrasada no contexto selecionado.</div>'}
+            : '<div class="agenda-empty-state">Nenhum evento operacional atrasado no contexto selecionado.</div>'}
         </div>
       </section>
     `;
   }
 
-  function renderUnassignedColumn(unassignedItems, locked, collapsedState) {
+  function renderUnassignedColumn(unassignedItems, unassignedEvents, locked, collapsedState) {
     const columnKey = 'unassigned';
     const collapsed = collapsedState?.days?.has(columnKey);
     const blockCount = 0;
-    const activityCount = unassignedItems.length;
+    const activityCount = unassignedItems.length + unassignedEvents.length;
     const collapsedLabel = 'N. aloc.';
 
     return `
@@ -364,7 +467,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} eventos</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -378,8 +481,10 @@
         </header>
         <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" data-dropzone="unassigned" aria-hidden="${collapsed ? 'true' : 'false'}">
           ${activityCount
-            ? unassignedItems.map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: null }, locked, true, 'unassigned')).join('')
-            : '<div class="agenda-empty-state">Nenhuma tarefa fora dos blocos.</div>'}
+            ? [...unassignedItems, ...unassignedEvents]
+              .sort((left, right) => String(left.planned_start_time || '').localeCompare(String(right.planned_start_time || '')) || String(left.display_title || '').localeCompare(String(right.display_title || '')))
+              .map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: null }, locked, true, 'unassigned')).join('')
+            : '<div class="agenda-empty-state">Nenhum evento fora dos blocos.</div>'}
         </div>
       </section>
     `;
@@ -390,7 +495,7 @@
     const dayKey = day.key || day.date;
     const collapsed = collapsedState?.days?.has(dayKey);
     const blockCount = blocks.length;
-    const activityCount = blocks.reduce((sum, block) => sum + ((block.items || []).length), 0);
+    const activityCount = blocks.reduce((sum, block) => sum + ((block.items || []).length) + ((block.events || []).length), 0);
     const collapsedLabel = day.subtitle || 'Dia';
     const daySummary = buildDaySummary(day);
     const dayMeta = [
@@ -416,7 +521,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} eventos</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -449,12 +554,14 @@
     const fill = progressBase > 0 ? Math.min(100, Math.round((planned / progressBase) * 100)) : 0;
     const rangeLabel = `${block.start_time || '--:--'} às ${block.end_time || '--:--'}`;
     const occupancyLabel = capacity > 0 ? 'Cap. Ocup./Oper.' : 'Cap. Ocup./Bloco';
-    const occupancyValue = `${formatMinutes(worked)} / ${formatMinutes(progressBase)}`;
+    const occupancyValue = `${formatMinutes(planned)} / ${formatMinutes(progressBase)}`;
     const blockStatus = block.block_mode === 'reserved_full'
       ? 'Capacidade bloqueada'
       : overload > 0
         ? `Sobrec.: +${formatMinutes(overload)}`
         : 'Dentro cap.';
+    const cards = [...(block.items || []), ...(block.events || [])]
+      .sort((left, right) => String(left.planned_start_time || '').localeCompare(String(right.planned_start_time || '')) || String(left.display_title || '').localeCompare(String(right.display_title || '')));
 
     return `
       <article class="agenda-block ${collapsed ? 'is-collapsed' : ''} agenda-block--${block.block_mode || 'operational'}" data-agenda-block="${blockId}" data-agenda-day="${day.date}">
@@ -479,8 +586,8 @@
                 <span class="agenda-block__detail-item">${occupancyLabel}: ${occupancyValue}</span>
               </div>
               <div class="agenda-block__detail-line">
-                <span class="agenda-block__detail-item">Cap. Plan.: ${formatMinutes(planned)}</span>
-                <span class="agenda-block__detail-item">Ocup: ${formatMinutes(worked)}</span>
+                <span class="agenda-block__detail-item">Ativ.: ${formatMinutes(block.planned_task_minutes || 0)}</span>
+                <span class="agenda-block__detail-item">Eventos: ${formatMinutes(block.planned_event_minutes || 0)}</span>
                 <span class="agenda-block__detail-item ${overload > 0 ? 'is-overload' : ''}">${blockStatus}</span>
               </div>
             </div>
@@ -490,7 +597,7 @@
           <span class="agenda-block__progress-fill ${overload > 0 ? 'is-overload' : ''}" style="width:${fill}%"></span>
         </div>
         <div class="agenda-block__content ${collapsed ? 'is-hidden' : ''}" data-dropzone="block" data-agenda-day="${day.date}" data-block-id="${blockId}" aria-hidden="${collapsed ? 'true' : 'false'}">
-          ${block.items && block.items.length ? block.items.map((item) => renderAgendaCard(item, { day: day.date, blockId }, locked, false, 'block')).join('') : '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa neste bloco.</div>'}
+          ${cards.length ? cards.map((item) => renderAgendaCard(item, { day: day.date, blockId }, locked, false, 'block')).join('') : '<div class="agenda-empty-state agenda-empty-state--compact">Nenhum evento neste bloco.</div>'}
         </div>
       </article>
     `;
@@ -501,7 +608,15 @@
     if (item.item_type === 'meeting') warnings.push('Alterar no módulo de reuniões');
     if (locked && listScope === 'block') warnings.push('Agenda travada');
     if (item.source_warning) warnings.push(item.source_warning);
-    if (item.is_overdue) warnings.push('Tarefa atrasada');
+    if (item.is_overdue) warnings.push(item.item_kind === 'calendar_event' ? 'Evento vencido' : 'Evento operacional atrasado');
+    if (item.item_kind === 'calendar_event' && item.execution_notes) warnings.push(item.execution_notes);
+
+    const dateLabel = item.agenda_date || item.due_date || item.occurrence_date || '';
+    const metaChips = [
+      item.source_label ? { value: item.source_label, kind: 'source' } : null,
+      item.estimated_minutes ? { value: formatMinutes(item.estimated_minutes), kind: 'effort' } : null,
+      item.planned_window_label ? { value: item.planned_window_label, kind: 'window' } : null,
+    ].filter(Boolean);
 
     return `
       <article
@@ -511,12 +626,13 @@
         data-list-scope="${listScope}"
         data-source-day="${location.day || item.agenda_date || item.due_date || ''}"
         data-source-block="${location.blockId || item.block_id || ''}"
-        draggable="${!locked && item.item_type !== 'meeting' ? 'true' : 'false'}"
+        draggable="${!locked && item.item_type !== 'meeting' && item.item_kind !== 'calendar_event' ? 'true' : 'false'}"
       >
         <div class="agenda-card__top">
           <div class="agenda-card__title-wrap">
-            <span class="agenda-card__code">${item.display_code || item.source_label || item.item_type_label || item.item_type}</span>
+            ${dateLabel ? `<span class="agenda-card__date">${dateLabel}</span>` : ''}
             <h4 class="agenda-card__title">${item.display_title || item.title}</h4>
+            <span class="agenda-card__code">${item.display_code || item.source_label || item.item_type_label || item.item_type}</span>
           </div>
           <div class="agenda-card__badges">
             <span class="agenda-card__type">${item.item_type_label || item.item_type}</span>
@@ -524,9 +640,7 @@
           </div>
         </div>
         <div class="agenda-card__meta">
-          ${item.source_label ? `<span>${item.source_label}</span>` : ''}
-          ${item.estimated_minutes ? `<span>${formatMinutes(item.estimated_minutes)}</span>` : ''}
-          ${(item.agenda_date || item.due_date || item.occurrence_date) ? `<span>${item.agenda_date || item.due_date || item.occurrence_date}</span>` : ''}
+          ${metaChips.map((chip) => `<span class="agenda-card__meta-chip agenda-card__meta-chip--${chip.kind}">${chip.value}</span>`).join('')}
         </div>
         ${item.description ? `<p class="agenda-card__desc">${item.description}</p>` : ''}
         ${warnings.length ? `<div class="agenda-card__warning">${warnings.join(' · ')}</div>` : ''}
@@ -544,6 +658,7 @@
     normalizeBlock,
     buildSummaryFromDays,
     renderSummaryCards,
+    renderProcessInstanceCards,
     renderAgendaHTML,
     renderDayColumn,
     renderBlock,

@@ -5,10 +5,10 @@
   const employeeSelect = document.getElementById('journeyEmployeeSelect');
   const container = document.getElementById('journeyRoutineBindingsList');
 
-  if (!companyId || !employeeSelect || !container) return;
+  if (!companyId || !container) return;
 
   function selectedEmployeeId() {
-    return parseInt(employeeSelect.value, 10) || null;
+    return parseInt(employeeSelect?.value || bootstrap.selectedEmployeeId || '', 10) || null;
   }
 
   function renderOptions(blocks, selectedId) {
@@ -85,6 +85,7 @@
     }
   }
 
+  employeeSelect?.addEventListener('change', load);
   document.addEventListener('workJourney:refreshed', load);
   load();
 })();

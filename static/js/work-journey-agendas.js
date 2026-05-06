@@ -13,6 +13,9 @@
   const unlockBtn = document.getElementById('agendaUnlockBtn');
   const pdfBtn = document.getElementById('agendaPdfBtn');
   const boardContainer = document.getElementById('agendaBoardContainer');
+  const processInstanceCardsPanel = document.getElementById('processInstanceCardsPanel');
+  const processInstanceCardsList = document.getElementById('processInstanceCardsList');
+  const processInstanceCardsSummary = document.getElementById('processInstanceCardsSummary');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
   const statusBadge = document.getElementById('agendaLockBadge');
@@ -34,7 +37,7 @@
   if (!renderer || !api) return;
 
   function selectedEmployeeId() {
-    return parseInt(employeeSelect?.value, 10) || null;
+    return parseInt(employeeSelect?.value || bootstrap.selectedEmployeeId || '', 10) || null;
   }
 
   function selectedDate() {
@@ -87,7 +90,7 @@
   }
 
   function agendaTitle(item) {
-    return item.display_title || item.title || `Tarefa ${item.id}`;
+    return item.display_title || item.title || `Evento ${item.id}`;
   }
 
   function findItem(itemId) {
@@ -168,6 +171,8 @@
       summaryContainer.innerHTML = renderer.renderSummaryCards(summary);
     }
 
+    renderProcessInstanceCards(agenda, searchTerm);
+
     if (searchStatus) {
       searchStatus.hidden = !searchTerm;
       searchStatus.textContent = searchTerm ? `Busca ativa: "${searchTerm}"` : '';
@@ -182,7 +187,7 @@
     }
 
     if (!agenda.days?.length && !(agenda.overdue_items || []).length && !(agenda.unassigned_items || []).length) {
-      boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhum bloco ou tarefa corresponde à busca aplicada.</div>';
+      boardContainer.innerHTML = '<div class="agenda-empty-state">Nenhum bloco ou evento corresponde à busca aplicada.</div>';
       applyPanelCollapseState();
       return;
     }
@@ -190,6 +195,25 @@
     const html = renderer.renderAgendaHTML(agenda, state, agenda.locked);
     boardContainer.innerHTML = html.boardHTML || '<div class="agenda-empty-state">Sem dias na agenda.</div>';
     applyPanelCollapseState();
+  }
+
+  function renderProcessInstanceCards(agenda, searchTerm) {
+    if (!processInstanceCardsPanel || !processInstanceCardsList) return;
+    const cards = Array.isArray(agenda?.process_instance_cards) ? agenda.process_instance_cards : [];
+    const filteredCards = searchTerm
+      ? cards.filter((card) => utils.searchIncludes({
+        ...card,
+        ...(card.current_activity || {}),
+      }, searchTerm))
+      : cards;
+
+    processInstanceCardsPanel.style.display = filteredCards.length ? '' : 'none';
+    processInstanceCardsList.innerHTML = renderer.renderProcessInstanceCards(filteredCards);
+    if (processInstanceCardsSummary) {
+      processInstanceCardsSummary.innerHTML = filteredCards.length
+        ? `<span class="badge-pill">${filteredCards.length} instância(s)</span>`
+        : '';
+    }
   }
 
   function filterAgendaBySearch(agenda, searchTerm) {
@@ -414,7 +438,7 @@
         });
       }
       await loadAgenda(true);
-      toast('Tarefa reposicionada com sucesso.');
+      toast('Evento reposicionado com sucesso.');
     } catch (error) {
       toast(error.message);
     }
