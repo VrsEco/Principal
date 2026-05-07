@@ -158,3 +158,41 @@ def test_get_consolidated_finance_defaults_start_date_to_first_equity_execution_
 
     assert consolidated["params"]["start_date"] == "2025-12"
     assert consolidated["timeline"][0]["period"] == "2025-12"
+
+
+
+def test_get_consolidated_finance_business_flow_includes_equity_sources(monkeypatch):
+    sections = _build_sections()
+    sections["finance"]["analysis_params"]["start_date"] = "2026.01"
+    sections["finance"]["sources_v2"] = [
+        {
+            "name": "Capital próprio",
+            "amount": 1000.0,
+            "type": "propria",
+            "date": "2026.01",
+        }
+    ]
+    sections["finance"]["profit_distribution"] = []
+    sections["execution"]["areas"] = {
+        "operacional": {"items": []},
+        "comercial": {"items": []},
+        "admin": {"items": []},
+    }
+    sections["model"]["products"] = []
+
+    monkeypatch.setattr(
+        PlanService,
+        "get_plan",
+        staticmethod(lambda plan_id, company_id: SimpleNamespace(id=plan_id, mode="implantation")),
+    )
+    monkeypatch.setattr(
+        PlanService,
+        "get_implantation_data",
+        staticmethod(lambda plan_id, company_id, section_key: SimpleNamespace(content=sections.get(section_key, {}))),
+    )
+
+    consolidated = PlanService.get_consolidated_finance(12, 31)
+
+    assert consolidated["timeline"][0]["investment_flow"] == 1000.0
+    assert consolidated["timeline"][0]["business_net_flow"] == 1000.0
+    assert consolidated["timeline"][0]["cumulative_business"] == 1000.0

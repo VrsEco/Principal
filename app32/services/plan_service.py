@@ -725,8 +725,10 @@ class PlanService:
             period_investment_flow = period_sources_equity + period_loans - period_investment
             cumulative_investment_flow += period_investment_flow
 
-            # Business Net Flow = Result - Capex + Loans - All destinations (Geral)
-            business_net_flow = operating_result - period_investment + period_loans - total_period_destinations
+            # Business Net Flow = Net Operating Result + Full Funding Flow (Equity + Loans - Capex)
+            # Mantém a visão completa do caixa do negócio no período, incluindo aportes próprios
+            # e financiamentos, sem perder a separação analítica do fluxo do investidor.
+            business_net_flow = period_net_operating + period_investment_flow
             cumulative_business_flow += business_net_flow
 
             timeline.append({
