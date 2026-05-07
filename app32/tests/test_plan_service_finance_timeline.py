@@ -119,6 +119,9 @@ def test_get_implantation_report_context_uses_full_finance_timeline(monkeypatch)
 
     assert len(context["timeline_focus"]) == 60
     assert context["timeline_focus"][-1]["period"] == "2030-12"
+    assert len(context["ramp_up_timeline"]) == 2
+    assert context["working_capital_settings"]["receivables_days"] == 30
+    assert context["finance_executive_summary"] == ""
 
 
 def test_get_consolidated_finance_defaults_start_date_to_first_equity_execution_or_revenue(monkeypatch):

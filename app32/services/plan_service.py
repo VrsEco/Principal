@@ -1031,6 +1031,15 @@ class PlanService:
         if timeline and isinstance(ramp_up_end_index, int) and 0 <= ramp_up_end_index < len(timeline):
             ramp_up_end_period = timeline[ramp_up_end_index].get('period') or ""
 
+        ramp_up_timeline = timeline[:ramp_up_end_index + 1] if timeline else []
+        working_capital_settings = {
+            "cash_reserve": float(working_capital.get('cash_reserve') or 0),
+            "receivables_days": int(working_capital.get('receivables_days') or 30),
+            "inventory_days": int(working_capital.get('inventory_days') or 30),
+            "payable_days": int(working_capital.get('payable_days') or 30),
+        }
+        fixed_asset_rows = (consolidated.get('investments', {}) or {}).get('fixed_asset_rows', []) if isinstance(consolidated, dict) else []
+
         return {
             "alignment": alignment,
             "model": model,
@@ -1042,9 +1051,13 @@ class PlanService:
             "segments": segments,
             "execution_areas": PlanService._build_implantation_execution_area_report(execution),
             "working_capital_groups": working_capital_groups,
+            "working_capital_settings": working_capital_settings,
+            "fixed_asset_rows": fixed_asset_rows,
             "funding_sources": sources,
             "profit_distribution": finance.get('profit_distribution', []) if isinstance(finance, dict) else [],
             "timeline_focus": timeline_focus,
+            "ramp_up_timeline": ramp_up_timeline,
+            "finance_executive_summary": finance.get('executive_summary', "") if isinstance(finance, dict) else "",
             "report_summary": {
                 "partners_count": len(alignment.get('partners', [])) if isinstance(alignment, dict) else 0,
                 "participants_count": len(participant_rows),
