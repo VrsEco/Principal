@@ -119,3 +119,42 @@ def test_get_implantation_report_context_uses_full_finance_timeline(monkeypatch)
 
     assert len(context["timeline_focus"]) == 60
     assert context["timeline_focus"][-1]["period"] == "2030-12"
+
+
+def test_get_consolidated_finance_defaults_start_date_to_first_equity_execution_or_revenue(monkeypatch):
+    sections = _build_sections()
+    sections["finance"]["analysis_params"]["start_date"] = ""
+    sections["finance"]["sources_v2"] = [
+        {
+            "name": "Capital próprio",
+            "amount": 1000.0,
+            "type": "propria",
+            "date": "2025.12",
+        },
+        {
+            "name": "Financiamento bancário",
+            "amount": 5000.0,
+            "type": "financiamento",
+            "date": "2025.11",
+        },
+    ]
+    sections["execution"]["areas"]["operacional"]["items"][0]["payment_plan"]["start_date"] = "2026.02"
+    sections["model"]["products"][0]["ramp_up_entries"] = [
+        {"month_period": "2026.03", "percentage": 100},
+    ]
+
+    monkeypatch.setattr(
+        PlanService,
+        "get_plan",
+        staticmethod(lambda plan_id, company_id: SimpleNamespace(id=plan_id, mode="implantation")),
+    )
+    monkeypatch.setattr(
+        PlanService,
+        "get_implantation_data",
+        staticmethod(lambda plan_id, company_id, section_key: SimpleNamespace(content=sections.get(section_key, {}))),
+    )
+
+    consolidated = PlanService.get_consolidated_finance(12, 31)
+
+    assert consolidated["params"]["start_date"] == "2025-12"
+    assert consolidated["timeline"][0]["period"] == "2025-12"

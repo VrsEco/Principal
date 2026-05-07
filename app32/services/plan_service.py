@@ -541,27 +541,27 @@ class PlanService:
                 fixed_assets_total += amount
 
         params_start_date = params.get('start_date')
-        if params_start_date:
-            start_date_str = params_start_date.replace('.', '-')
-            if len(start_date_str.split('-')) < 2:
-                start_date_str = datetime.now().strftime('%Y-%m')
+        normalized_params_start_date = PlanService._normalize_period(params_start_date)
+        if normalized_params_start_date:
+            start_date_str = normalized_params_start_date
         else:
-            all_dates = list(ramp_up_dates) # Start with ramp-up dates
+            candidate_dates = list(ramp_up_dates)
+
+            for source in PlanService._normalize_finance_sources(fin_content):
+                if source.get('type') == 'propria':
+                    candidate_dates.append(source.get('date'))
+
             for item in investment_items + fixed_cost_items + fixed_expense_items:
-                all_dates.extend(PlanService._collect_execution_item_dates(item))
-            
-            for cat in ['cash_items', 'receivables_items', 'inventory_items']:
-                for item in wc_data.get(cat, []):
-                    if item.get('contribution_date'):
-                        all_dates.append(item.get('contribution_date'))
-            
-            valid_dates = [d for d in all_dates if d]
+                candidate_dates.extend(PlanService._collect_execution_item_dates(item))
+
+            valid_dates = sorted(date for date in candidate_dates if PlanService._normalize_period(date))
             if not valid_dates:
                 start_date_str = datetime.now().strftime('%Y-%m')
             else:
-                start_date_str = sorted([d.replace('.','-') for d in valid_dates])[0]
+                start_date_str = PlanService._normalize_period(valid_dates[0])
 
         start_year, start_month = map(int, start_date_str.split('-')[:2])
+        params = {**params, 'start_date': start_date_str}
 
         # 6. Generate Timeline (normalized YYYY-MM)
         timeline = []
