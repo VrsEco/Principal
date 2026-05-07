@@ -3,25 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from models import ProcessActivityExecutionContract
-from services.process_ai_execution_service import normalize_ai_contract_config
-
-
-ALLOWED_EXECUTION_MODES = {
-    "manual_external",
-    "human_task",
-    "automatic",
-    "external_rest",
-    "external_mcp",
-    "ai_task",
-    "ai_decision",
-}
-
-
-def normalize_execution_mode(value: str | None, *, default: str = "manual_external") -> str:
-    normalized = str(value or default).strip().lower()
-    if normalized not in ALLOWED_EXECUTION_MODES:
-        raise ValueError("Modo de execução inválido para a atividade.")
-    return normalized
+from services.process_execution_mode_service import normalize_contract_configs, normalize_execution_mode
 
 
 def resolve_activity_execution_contract(
@@ -76,9 +58,4 @@ def apply_contract_defaults(payload: dict[str, Any], contract: ProcessActivityEx
             "completion_rules_json": contract.completion_rules_json or {},
         }
 
-    payload["execution_mode"] = normalize_execution_mode(payload.get("execution_mode"))
-    payload["ai_config_json"] = normalize_ai_contract_config(
-        payload.get("ai_config_json"),
-        execution_mode=payload.get("execution_mode"),
-    )
-    return payload
+    return normalize_contract_configs(payload)

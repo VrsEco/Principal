@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.intelligence.llm import llm_expert
 from src.intelligence.tool_catalog import catalog
+from services.process_execution_mode_service import get_execution_mode_catalog
 
 
 class BPMNAIAssistantSuggestion(BaseModel):
@@ -48,6 +49,7 @@ class ProcessAIModelerAssistantService:
             "tool_sources": ["none", "mcp", "api"],
             "model_roles": ["expert", "router"],
             "tool_items": tool_items,
+            "execution_modes": get_execution_mode_catalog(),
         }
 
     @classmethod

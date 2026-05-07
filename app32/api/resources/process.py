@@ -67,10 +67,13 @@ from services.process_execution_runtime_service import (
 )
 from services.process_execution_contract_service import (
     apply_contract_defaults,
-    normalize_execution_mode,
     resolve_activity_execution_contract,
 )
-from services.process_ai_execution_service import normalize_ai_contract_config
+from services.process_execution_mode_service import (
+    get_execution_mode_catalog,
+    normalize_contract_configs,
+    normalize_execution_mode,
+)
 from services.process_ai_modeler_assistant_service import ProcessAIModelerAssistantService
 from services.process_ai_runtime_service import (
     execute_ai_contract,
@@ -1826,11 +1829,7 @@ class ProcessActivityExecutionContractListResource(Resource):
             payload = request.get_json(silent=True) or {}
             payload['company_id'] = process.company_id
             payload['process_id'] = process.id
-            payload['execution_mode'] = normalize_execution_mode(payload.get('execution_mode'))
-            payload['ai_config_json'] = normalize_ai_contract_config(
-                payload.get('ai_config_json'),
-                execution_mode=payload.get('execution_mode'),
-            )
+            payload = normalize_contract_configs(payload)
 
             contract = process_activity_execution_contract_schema.load(payload)
             db.session.add(contract)
@@ -1869,14 +1868,19 @@ class ProcessActivityExecutionContractResource(Resource):
             return {"error": "Permission denied: edit on processes"}, 403
         try:
             payload = request.get_json(silent=True) or {}
-            if payload.get('execution_mode') is not None:
-                payload['execution_mode'] = normalize_execution_mode(payload.get('execution_mode'))
-            execution_mode = payload.get('execution_mode') or contract.execution_mode
-            if payload.get('ai_config_json') is not None or execution_mode in {'ai_task', 'ai_decision'}:
-                payload['ai_config_json'] = normalize_ai_contract_config(
-                    payload.get('ai_config_json') if 'ai_config_json' in payload else contract.ai_config_json,
-                    execution_mode=execution_mode,
-                )
+            baseline = {
+                "execution_mode": payload.get("execution_mode") or contract.execution_mode,
+                "interaction_mode": payload.get("interaction_mode") or contract.interaction_mode,
+                "ui_schema_json": payload.get("ui_schema_json") if "ui_schema_json" in payload else contract.ui_schema_json,
+                "rest_config_json": payload.get("rest_config_json") if "rest_config_json" in payload else contract.rest_config_json,
+                "mcp_config_json": payload.get("mcp_config_json") if "mcp_config_json" in payload else contract.mcp_config_json,
+                "ai_config_json": payload.get("ai_config_json") if "ai_config_json" in payload else contract.ai_config_json,
+                "auto_service_key": payload.get("auto_service_key") or contract.auto_service_key,
+            }
+            payload = {
+                **payload,
+                **normalize_contract_configs(baseline),
+            }
 
             contract = process_activity_execution_contract_schema.load(payload, instance=contract, partial=True)
             contract.execution_mode = normalize_execution_mode(contract.execution_mode)
@@ -1917,6 +1921,7 @@ class ProcessBpmnAiAssistantResource(Resource):
         return {
             "ok": True,
             "catalog": ProcessAIModelerAssistantService.build_catalog(),
+            "execution_modes": get_execution_mode_catalog(),
         }, 200
 
     @permission_required('processes', 'edit')

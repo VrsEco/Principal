@@ -508,6 +508,7 @@
     const contract = executionContractsByElementId.get(element.id) || null;
     const draft = aiInspectorDraftByElementId.get(element.id) || null;
     const semanticType = getSemanticType(element, contract, draft);
+    const executionMode = getCurrentExecutionMode(element, contract, draft, semanticType);
     const nextCandidates = getNextCandidates(element);
     const decisionRows = semanticType === 'ai_gateway'
       ? renderDecisionRows(contract, draft, nextCandidates)
@@ -538,6 +539,16 @@
       <div class="bpmn-ai-card">
         <div class="bpmn-ai-grid-2">
           <div>
+            <label class="bpmn-ai-label" for="executionModeSelect">Executor da atividade</label>
+            <select id="executionModeSelect" class="bpmn-ai-select">${buildExecutionModeOptions(element, executionMode)}</select>
+          </div>
+          <div class="bpmn-ai-sapiens-note">
+            <strong>Modo operacional</strong>
+            <p class="bpmn-ai-help">Escolha se a task abre formulário, tela do APP32, API, MCP ou IA. Gateways usam AI Gateway para roteamento assistido.</p>
+          </div>
+        </div>
+        <div class="bpmn-ai-grid-2">
+          <div>
             <label class="bpmn-ai-label" for="aiObjective">Objetivo da IA</label>
             <textarea id="aiObjective" class="bpmn-ai-textarea" placeholder="Ex.: Leia o documento e extraia valor, data, fornecedor e histórico.">${escapeHtml(getCurrentObjective(contract, draft, semanticType, element))}</textarea>
           </div>
@@ -549,7 +560,7 @@
             </div>
           </div>
         </div>
-        <div class="bpmn-ai-grid-3">
+        <div class="bpmn-ai-grid-3" data-execution-section="ai">
           <div>
             <label class="bpmn-ai-label" for="aiOperationType">Tipo de operação</label>
             <select id="aiOperationType" class="bpmn-ai-select">${buildOperationOptions(semanticType, contract, draft)}</select>
@@ -563,7 +574,7 @@
             <select id="aiToolSource" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.tool_sources || ['none', 'mcp', 'api'], getAiFieldValue(contract, draft, 'tool_source') || 'none')}</select>
           </div>
         </div>
-        <div class="bpmn-ai-grid-3">
+        <div class="bpmn-ai-grid-3" data-execution-section="ai">
           <div>
             <label class="bpmn-ai-label" for="aiMinConfidence">Confiança mínima</label>
             <input id="aiMinConfidence" class="bpmn-ai-input" type="number" min="0" max="1" step="0.01" value="${escapeHtml(String(getAiFieldValue(contract, draft, 'min_confidence') ?? (semanticType === 'ai_gateway' ? 0.8 : 0.85)))}">
@@ -577,14 +588,100 @@
             <select id="aiRequiresHumanGate" class="bpmn-ai-select">${buildSelectOptions(['yes', 'no'], getRequiresHumanGateValue(contract, draft))}</select>
           </div>
         </div>
-        <div>
+        <div data-execution-section="ai">
           <label class="bpmn-ai-label" for="aiAllowedTools">Tools permitidas</label>
           <div id="aiAllowedTools" class="bpmn-ai-tools">${toolsMarkup}</div>
         </div>
-        ${decisionRows}
-        <div>
+        <div data-execution-section="ai">${decisionRows}</div>
+        <div data-execution-section="ai">
           <label class="bpmn-ai-label" for="aiOutputSchema">Schema / saída esperada</label>
           <textarea id="aiOutputSchema" class="bpmn-ai-textarea" placeholder='{"type":"object","properties":{"data":{"type":"object"}}}'>${escapeHtml(formatJson(getAiFieldValue(contract, draft, 'output_schema') || {}))}</textarea>
+        </div>
+        <div class="bpmn-ai-grid-3" data-execution-section="open_form">
+          <div>
+            <label class="bpmn-ai-label" for="formCode">Formulário</label>
+            <input id="formCode" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, 'form_code'))}" placeholder="ex.: financial_document_review">
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="formTarget">Abrir em</label>
+            <select id="formTarget" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.form_targets || ['drawer', 'modal', 'page'], getUiConfigValue(contract, 'open_in') || 'drawer')}</select>
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="formSubmitAction">Ao enviar</label>
+            <select id="formSubmitAction" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.submit_actions || ['complete_task', 'stay_open', 'trigger_next_step'], getUiConfigValue(contract, 'submit_action') || 'complete_task')}</select>
+          </div>
+        </div>
+        <div data-execution-section="open_form">
+          <label class="bpmn-ai-label" for="formPrefillMapping">Pré-preenchimento (JSON)</label>
+          <textarea id="formPrefillMapping" class="bpmn-ai-textarea" placeholder='{"document_id":"{{process.document_id}}"}'>${escapeHtml(formatJson(getUiConfigValue(contract, 'prefill_mapping') || {}))}</textarea>
+        </div>
+        <div class="bpmn-ai-grid-3" data-execution-section="open_app32_page">
+          <div>
+            <label class="bpmn-ai-label" for="pageCode">Page code</label>
+            <input id="pageCode" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, 'page_code'))}" placeholder="ex.: finance_prelaunch_editor">
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="pageTarget">Abrir em</label>
+            <select id="pageTarget" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.page_targets || ['page', 'drawer', 'modal'], getUiConfigValue(contract, 'open_in') || 'page')}</select>
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="pageInternalUrl">URL interna opcional</label>
+            <input id="pageInternalUrl" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, 'internal_url'))}" placeholder="/financial/prelaunch">
+          </div>
+        </div>
+        <div data-execution-section="open_app32_page">
+          <label class="bpmn-ai-label" for="pageParamsMapping">Parâmetros da página (JSON)</label>
+          <textarea id="pageParamsMapping" class="bpmn-ai-textarea" placeholder='{"document_id":"{{process.document_id}}"}'>${escapeHtml(formatJson(getUiConfigValue(contract, 'params_mapping') || {}))}</textarea>
+        </div>
+        <div class="bpmn-ai-grid-3" data-execution-section="api_task">
+          <div>
+            <label class="bpmn-ai-label" for="apiConnectionKey">Conexão API</label>
+            <input id="apiConnectionKey" class="bpmn-ai-input" value="${escapeHtml(getRestConfigValue(contract, 'connection_key'))}" placeholder="ex.: erp_financeiro">
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="apiMethod">Método</label>
+            <select id="apiMethod" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.api_methods || ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], getRestConfigValue(contract, 'method') || 'POST')}</select>
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="apiTimeout">Timeout (s)</label>
+            <input id="apiTimeout" class="bpmn-ai-input" type="number" min="1" step="1" value="${escapeHtml(String(getRestConfigValue(contract, 'timeout_seconds') || 20))}">
+          </div>
+        </div>
+        <div class="bpmn-ai-grid-2" data-execution-section="api_task">
+          <div>
+            <label class="bpmn-ai-label" for="apiPath">Path / URL</label>
+            <input id="apiPath" class="bpmn-ai-input" value="${escapeHtml(getRestConfigValue(contract, 'path') || getRestConfigValue(contract, 'url'))}" placeholder="/documents/prelaunch">
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="apiRetryPolicy">Retry</label>
+            <select id="apiRetryPolicy" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.retry_policies || ['none', 'default', 'aggressive'], getRestConfigValue(contract, 'retry_policy') || 'default')}</select>
+          </div>
+        </div>
+        <div data-execution-section="api_task">
+          <label class="bpmn-ai-label" for="apiRequestMapping">Request mapping (JSON)</label>
+          <textarea id="apiRequestMapping" class="bpmn-ai-textarea" placeholder='{"amount":"{{process.document_data.amount}}"}'>${escapeHtml(formatJson(getRestConfigValue(contract, 'request_mapping') || {}))}</textarea>
+        </div>
+        <div data-execution-section="api_task">
+          <label class="bpmn-ai-label" for="apiResponseSchema">Schema de resposta (JSON)</label>
+          <textarea id="apiResponseSchema" class="bpmn-ai-textarea" placeholder='{"type":"object"}'>${escapeHtml(formatJson(getRestConfigValue(contract, 'response_schema') || {}))}</textarea>
+        </div>
+        <div class="bpmn-ai-grid-3" data-execution-section="mcp_task">
+          <div>
+            <label class="bpmn-ai-label" for="mcpToolName">Tool MCP</label>
+            <input id="mcpToolName" class="bpmn-ai-input" value="${escapeHtml(getMcpConfigValue(contract, 'tool_name'))}" placeholder="ex.: finance.insert_prelaunch">
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="mcpSurface">Surface</label>
+            <select id="mcpSurface" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.mcp_surfaces || ['user', 'admin', 'analytics'], getMcpConfigValue(contract, 'surface') || 'admin')}</select>
+          </div>
+          <div>
+            <label class="bpmn-ai-label" for="mcpConfirmationMode">Confirmação</label>
+            <select id="mcpConfirmationMode" class="bpmn-ai-select">${buildSelectOptions(['auto', 'confirm_before_run'], getMcpConfigValue(contract, 'confirmation_mode') || 'auto')}</select>
+          </div>
+        </div>
+        <div data-execution-section="mcp_task">
+          <label class="bpmn-ai-label" for="mcpInputMapping">Input mapping (JSON)</label>
+          <textarea id="mcpInputMapping" class="bpmn-ai-textarea" placeholder='{"company_id":"{{process.company_id}}"}'>${escapeHtml(formatJson(getMcpConfigValue(contract, 'input_mapping') || {}))}</textarea>
         </div>
         <div class="bpmn-ai-actions">
           <button type="button" class="bpmn-ai-btn bpmn-ai-btn--primary" data-ai-save="1">Salvar contrato IA</button>
@@ -592,6 +689,7 @@
         <div id="bpmnAiStatus" class="bpmn-ai-status" hidden></div>
       </div>
     `;
+    toggleExecutionSections();
   }
 
   function renderDecisionRows(contract, draft, nextCandidates) {
@@ -664,6 +762,22 @@
     return 'task';
   }
 
+  function getCurrentExecutionMode(element, contract, draft, semanticType) {
+    if (draft && draft.execution_mode) return draft.execution_mode;
+    if (contract && contract.execution_mode) return contract.execution_mode;
+    return semanticType === 'ai_gateway' ? 'ai_decision' : 'human_task';
+  }
+
+  function buildExecutionModeOptions(element, currentValue) {
+    const type = element && element.businessObject && element.businessObject.$type;
+    const catalog = isGatewayType(type)
+      ? (aiAssistantCatalog.execution_modes?.gateway_modes || [])
+      : (aiAssistantCatalog.execution_modes?.task_modes || []);
+    return (catalog || []).map((item) => `
+      <option value="${escapeHtml(item.key)}" ${String(currentValue) === String(item.key) ? 'selected' : ''}>${escapeHtml(item.label || item.key)}</option>
+    `).join('');
+  }
+
   function getSemanticLabel(semanticType) {
     return {
       ai_task: 'AI Task',
@@ -732,6 +846,18 @@
     return contract && contract.ui_schema_json ? contract.ui_schema_json[key] : null;
   }
 
+  function getUiConfigValue(contract, key) {
+    return getUiSchemaValue(contract, key) || '';
+  }
+
+  function getRestConfigValue(contract, key) {
+    return contract && contract.rest_config_json ? contract.rest_config_json[key] : '';
+  }
+
+  function getMcpConfigValue(contract, key) {
+    return contract && contract.mcp_config_json ? contract.mcp_config_json[key] : '';
+  }
+
   function getNextCandidates(element) {
     return (element.outgoing || [])
       .map((flow) => flow && flow.target)
@@ -783,7 +909,9 @@
   }
 
   function collectAiFormPayload(element) {
-    const semanticType = getSemanticType(element, executionContractsByElementId.get(element.id));
+    const contract = executionContractsByElementId.get(element.id);
+    const semanticType = getSemanticType(element, contract, aiInspectorDraftByElementId.get(element.id));
+    const executionMode = document.getElementById('executionModeSelect')?.value || (semanticType === 'ai_gateway' ? 'ai_decision' : 'human_task');
     const outputSchemaValue = document.getElementById('aiOutputSchema')?.value || '{}';
     let outputSchema = {};
     try {
@@ -811,9 +939,15 @@
       throw new Error('Confiança mínima deve ficar entre 0 e 1.');
     }
 
+    const formPrefillMapping = parseJsonField('formPrefillMapping');
+    const pageParamsMapping = parseJsonField('pageParamsMapping');
+    const apiRequestMapping = parseJsonField('apiRequestMapping');
+    const apiResponseSchema = parseJsonField('apiResponseSchema');
+    const mcpInputMapping = parseJsonField('mcpInputMapping');
+
     return {
       semantic_type: semanticType,
-      execution_mode: semanticType === 'ai_gateway' ? 'ai_decision' : 'ai_task',
+      execution_mode: executionMode,
       objective: document.getElementById('aiObjective')?.value?.trim() || '',
       operation_type: document.getElementById('aiOperationType')?.value || (semanticType === 'ai_gateway' ? 'route' : 'extract'),
       model_role: document.getElementById('aiModelRole')?.value || 'expert',
@@ -824,26 +958,85 @@
       allowed_tools: selectedTools,
       allowed_decisions: allowedDecisions,
       decision_routes: decisionRoutes,
-      output_schema: outputSchema
+      output_schema: outputSchema,
+      ui_schema_json: {
+        form_code: document.getElementById('formCode')?.value?.trim() || null,
+        open_in: document.getElementById('formTarget')?.value || document.getElementById('pageTarget')?.value || null,
+        submit_action: document.getElementById('formSubmitAction')?.value || null,
+        prefill_mapping: formPrefillMapping,
+        page_code: document.getElementById('pageCode')?.value?.trim() || null,
+        internal_url: document.getElementById('pageInternalUrl')?.value?.trim() || null,
+        params_mapping: pageParamsMapping
+      },
+      rest_config_json: {
+        connection_key: document.getElementById('apiConnectionKey')?.value?.trim() || null,
+        method: document.getElementById('apiMethod')?.value || 'POST',
+        timeout_seconds: Number(document.getElementById('apiTimeout')?.value || 20),
+        path: document.getElementById('apiPath')?.value?.trim() || null,
+        retry_policy: document.getElementById('apiRetryPolicy')?.value || 'default',
+        request_mapping: apiRequestMapping,
+        response_schema: apiResponseSchema
+      },
+      mcp_config_json: {
+        tool_name: document.getElementById('mcpToolName')?.value?.trim() || null,
+        surface: document.getElementById('mcpSurface')?.value || 'admin',
+        confirmation_mode: document.getElementById('mcpConfirmationMode')?.value || 'auto',
+        input_mapping: mcpInputMapping
+      }
     };
   }
 
+  function parseJsonField(fieldId) {
+    const rawValue = document.getElementById(fieldId)?.value || '{}';
+    try {
+      return rawValue.trim() ? JSON.parse(rawValue) : {};
+    } catch (error) {
+      throw new Error(`O campo ${fieldId} precisa ser um JSON válido.`);
+    }
+  }
+
+  function sanitizeConfig(config) {
+    return Object.fromEntries(Object.entries(config || {}).filter(([, value]) => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === 'string' && !value.trim()) return false;
+      if (typeof value === 'object' && !Array.isArray(value) && !Object.keys(value).length) return false;
+      return true;
+    }));
+  }
+
   function buildContractPayload(element, formPayload) {
+    const interactionMode = formPayload.execution_mode === 'open_form'
+      ? (formPayload.ui_schema_json.open_in || 'drawer')
+      : formPayload.execution_mode === 'open_app32_page'
+        ? (formPayload.ui_schema_json.open_in || 'page')
+        : ['api_task', 'mcp_task', 'automatic'].includes(formPayload.execution_mode)
+          ? 'headless'
+          : formPayload.execution_mode === 'manual_external'
+            ? 'shell'
+            : 'drawer';
+    const autoServiceKey = formPayload.execution_mode === 'ai_decision'
+      ? 'process.ai.route'
+      : formPayload.execution_mode === 'ai_task'
+        ? 'process.ai.execute'
+        : `process.${formPayload.execution_mode}`;
     return {
       bpmn_element_id: element.id,
       bpmn_element_type: element.businessObject && element.businessObject.$type,
       execution_mode: formPayload.execution_mode,
-      interaction_mode: 'drawer',
-      capability_key: formPayload.execution_mode === 'ai_decision' ? 'process.ai_gateway' : 'process.ai_task',
-      auto_service_key: formPayload.execution_mode === 'ai_decision' ? 'process.ai.route' : 'process.ai.execute',
+      interaction_mode: interactionMode,
+      capability_key: formPayload.execution_mode === 'ai_decision' ? 'process.ai_gateway' : `process.${formPayload.execution_mode}`,
+      auto_service_key: autoServiceKey,
       requires_human_gate: formPayload.requires_human_gate,
       allows_pause: true,
       allows_retry: true,
       ui_schema_json: {
         semantic_type: formPayload.semantic_type,
-        operation_type: formPayload.operation_type
+        operation_type: formPayload.operation_type,
+        ...sanitizeConfig(formPayload.ui_schema_json)
       },
-      ai_config_json: {
+      rest_config_json: sanitizeConfig(formPayload.rest_config_json),
+      mcp_config_json: sanitizeConfig(formPayload.mcp_config_json),
+      ai_config_json: formPayload.execution_mode.startsWith('ai_') ? {
         instruction: formPayload.objective,
         model_role: formPayload.model_role,
         tool_source: formPayload.tool_source,
@@ -856,7 +1049,7 @@
           operation_type: formPayload.operation_type,
           decision_routes: formPayload.decision_routes
         }
-      }
+      } : {}
     };
   }
 
@@ -968,6 +1161,20 @@
     showAiStatus(preset === 'ai_gateway'
       ? 'Gateway convertido para AI Gateway. Revise decisões, rotas e fallback.'
       : 'Task convertida para AI Task. Revise objetivo, tools e schema.');
+  }
+
+  function toggleExecutionSections() {
+    const currentMode = document.getElementById('executionModeSelect')?.value || 'human_task';
+    const aiVisible = currentMode === 'ai_task' || currentMode === 'ai_decision';
+    document.querySelectorAll('[data-execution-section]').forEach((section) => {
+      const sectionMode = section.dataset.executionSection;
+      const shouldShow = (sectionMode === 'ai' && aiVisible) || sectionMode === currentMode;
+      section.hidden = !shouldShow;
+    });
+    const objectiveLabel = document.querySelector('label[for="aiObjective"]');
+    if (objectiveLabel) {
+      objectiveLabel.textContent = aiVisible ? 'Objetivo da IA' : 'Objetivo / instrução operacional';
+    }
   }
 
   function inspectElementsForPopBinding() {
@@ -1514,6 +1721,19 @@
 
   importInput.addEventListener('change', (event) => {
     importFile(event.target.files && event.target.files[0]);
+  });
+
+  root.addEventListener('change', (event) => {
+    if (event.target && event.target.id === 'executionModeSelect') {
+      const draft = aiInspectorDraftByElementId.get(currentSelection?.id) || {};
+      if (currentSelection) {
+        aiInspectorDraftByElementId.set(currentSelection.id, {
+          ...draft,
+          execution_mode: event.target.value
+        });
+      }
+      toggleExecutionSections();
+    }
   });
 
   init();

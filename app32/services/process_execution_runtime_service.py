@@ -7,6 +7,8 @@ from xml.etree import ElementTree as ET
 from models import ProcessBpmnDiagram, ProcessInstance, ProcessInstanceExecution, ProcessRoutine, db
 from services.process_ai_execution_service import normalize_ai_contract_config, summarize_ai_contract_config
 from services.process_execution_contract_service import resolve_activity_execution_contract
+from services.process_executor_factory_service import build_executor_descriptor
+from services.process_execution_mode_service import normalize_execution_mode, summarize_execution_mode_config
 
 
 INSTANCE_ALLOWED_STATUSES = {
@@ -35,8 +37,10 @@ EXECUTION_MODE_LABELS = {
     "manual_external": "Controle manual externo",
     "human_task": "Tarefa humana no APP",
     "automatic": "Execução automática",
-    "external_rest": "Integração REST",
-    "external_mcp": "Integração MCP",
+    "open_form": "Abrir formulário",
+    "open_app32_page": "Abrir página do APP32",
+    "api_task": "Integração API",
+    "mcp_task": "Integração MCP",
     "ai_task": "Atividade executada por IA",
     "ai_decision": "Decisão assistida por IA",
 }
@@ -338,6 +342,7 @@ def _build_current_activity_action(
         or getattr(contract, "execution_mode", None)
         or "human_task"
     )
+    execution_mode = normalize_execution_mode(execution_mode)
     capability_key = getattr(execution, "capability_key", None) or getattr(contract, "capability_key", None)
     route_name = getattr(contract, "route_name", None)
     ui_schema = dict(getattr(contract, "ui_schema_json", None) or {})
@@ -354,8 +359,10 @@ def _build_current_activity_action(
         "human_task": "Abrir tela operacional",
         "manual_external": "Registrar execução externa",
         "automatic": "Executar automaticamente",
-        "external_rest": "Executar integração REST",
-        "external_mcp": "Executar integração MCP",
+        "open_form": "Abrir formulário operacional",
+        "open_app32_page": "Abrir tela contextual",
+        "api_task": "Executar integração API",
+        "mcp_task": "Executar MCP Tool",
         "ai_task": "Executar atividade com IA",
         "ai_decision": "Executar decisão com IA",
     }.get(execution_mode, "Executar atividade")
@@ -364,11 +371,28 @@ def _build_current_activity_action(
         "human_task": "Abra a tela operacional, registre a execução e conclua a atividade na shell.",
         "manual_external": "Use esta shell para controlar a etapa feita fora do APP, com início, conclusão e observações.",
         "automatic": "A atividade está preparada para automação interna conforme o contrato BPMS.",
-        "external_rest": "A atividade usa uma integração REST configurada no contrato da activity.",
-        "external_mcp": "A atividade usa uma integração MCP configurada no contrato da activity.",
+        "open_form": "Abra o formulário configurado, complete os dados necessários e conclua a atividade.",
+        "open_app32_page": "Abra a tela do APP32 com os parâmetros configurados para seguir a execução.",
+        "api_task": "A atividade usa uma integração API configurada no contrato da activity.",
+        "mcp_task": "A atividade usa uma tool MCP configurada no contrato da activity.",
         "ai_task": "A atividade usa a esteira de IA do APP32 com instrução estruturada, contexto runtime e fallback governado.",
         "ai_decision": "A decisão usa a esteira de IA do APP32 com opções fechadas, confiança mínima e fallback governado.",
     }.get(execution_mode, "Controle a execução desta atividade pela shell.")
+
+    executor_summary = summarize_execution_mode_config(
+        execution_mode,
+        ui_schema_json=ui_schema,
+        rest_config_json=rest_config,
+        mcp_config_json=mcp_config,
+        ai_config_json=ai_config,
+    )
+    executor_descriptor = build_executor_descriptor(
+        execution_mode=execution_mode,
+        ui_schema_json=ui_schema,
+        rest_config_json=rest_config,
+        mcp_config_json=mcp_config,
+        ai_config_json=ai_config,
+    )
 
     return {
         "execution_mode": execution_mode,
@@ -384,6 +408,13 @@ def _build_current_activity_action(
         "ai_config": ai_config,
         "ai_summary": summarize_ai_contract_config(ai_config) if ai_config else {},
         "ai_enabled": execution_mode in {"ai_task", "ai_decision"},
+        "executor_summary": executor_summary,
+        "executor_descriptor": executor_descriptor,
+        "executor_payload": {
+            "ui_schema_json": ui_schema,
+            "rest_config_json": rest_config,
+            "mcp_config_json": mcp_config,
+        },
         "internal_url": internal_url,
         "external_url": external_url,
         "action_label": action_label,
@@ -411,6 +442,13 @@ def _resolve_internal_action_url(
     if direct_template and str(direct_template).strip().startswith("/"):
         return _format_runtime_url_template(str(direct_template), context)
 
+    if ui_schema.get("page_code"):
+        params = _format_runtime_mapping(ui_schema.get("params_mapping") or {}, context)
+        return f"/app32/page/{ui_schema.get('page_code')}{_build_querystring(params)}"
+    if ui_schema.get("form_code"):
+        params = _format_runtime_mapping(ui_schema.get("prefill_mapping") or {}, context)
+        return f"/app32/forms/{ui_schema.get('form_code')}{_build_querystring(params)}"
+
     contract_business_id = context.get("contract_id")
     tab_key = ui_schema.get("tab") or CONTRACT_CAPABILITY_TAB_MAP.get(str(getattr(contract, "capability_key", "") or "").strip())
     if company_id and contract_business_id and tab_key:
@@ -437,6 +475,21 @@ def _resolve_external_action_url(
         if text.startswith("http://") or text.startswith("https://"):
             return _format_runtime_url_template(text, context)
     return None
+
+
+def _format_runtime_mapping(mapping: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    for key, value in dict(mapping or {}).items():
+        payload[str(key)] = _format_runtime_url_template(value, context) if isinstance(value, str) else value
+    return payload
+
+
+def _build_querystring(params: dict[str, Any]) -> str:
+    pairs = [(str(key), str(value)) for key, value in dict(params or {}).items() if value not in (None, "", {})]
+    if not pairs:
+        return ""
+    from urllib.parse import urlencode
+    return f"?{urlencode(pairs)}"
 
 
 def _build_runtime_context(instance: ProcessInstance, execution: ProcessInstanceExecution | None) -> dict[str, Any]:

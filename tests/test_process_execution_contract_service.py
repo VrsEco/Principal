@@ -20,6 +20,9 @@ def test_normalize_execution_mode_supports_manual_external():
     assert normalize_execution_mode(None) == "manual_external"
     assert normalize_execution_mode("ai_task") == "ai_task"
     assert normalize_execution_mode("ai_decision") == "ai_decision"
+    assert normalize_execution_mode("external_rest") == "api_task"
+    assert normalize_execution_mode("external_mcp") == "mcp_task"
+    assert normalize_execution_mode("open_form") == "open_form"
 
 
 def test_normalize_execution_mode_rejects_invalid_mode():

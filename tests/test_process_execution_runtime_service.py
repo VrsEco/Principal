@@ -145,3 +145,51 @@ def test_build_current_activity_action_exposes_ai_summary():
     assert action["ai_enabled"] is True
     assert action["ai_summary"]["allowed_decisions"] == ["archive", "finance"]
     assert action["action_label"] == "Executar decisão com IA"
+
+
+def test_build_current_activity_action_exposes_form_and_page_routes():
+    instance = SimpleNamespace(
+        id=77,
+        company_id=9,
+        process_id=3,
+        current_bpmn_element_id="Task_Form",
+        runtime_context_json={"document_id": 51},
+    )
+    form_contract = SimpleNamespace(
+        execution_mode="open_form",
+        capability_key="process.open_form",
+        route_name=None,
+        interaction_mode="drawer",
+        auto_service_key="process.open_form",
+        requires_human_gate=False,
+        allows_pause=True,
+        allows_retry=True,
+        sla_minutes=None,
+        ui_schema_json={"form_code": "financial_review", "prefill_mapping": {"document_id": "{document_id}"}},
+        rest_config_json={},
+        mcp_config_json={},
+        ai_config_json={},
+    )
+    page_contract = SimpleNamespace(
+        execution_mode="open_app32_page",
+        capability_key="process.open_app32_page",
+        route_name=None,
+        interaction_mode="page",
+        auto_service_key="process.open_app32_page",
+        requires_human_gate=False,
+        allows_pause=True,
+        allows_retry=True,
+        sla_minutes=None,
+        ui_schema_json={"page_code": "finance_prelaunch_editor", "params_mapping": {"document_id": "{document_id}"}},
+        rest_config_json={},
+        mcp_config_json={},
+        ai_config_json={},
+    )
+
+    form_action = _build_current_activity_action(instance, form_contract, execution=None, element_id="Task_Form")
+    page_action = _build_current_activity_action(instance, page_contract, execution=None, element_id="Task_Page")
+
+    assert form_action["internal_url"] == "/app32/forms/financial_review?document_id=51"
+    assert form_action["executor_summary"]["open_form"] is True
+    assert page_action["internal_url"] == "/app32/page/finance_prelaunch_editor?document_id=51"
+    assert page_action["executor_summary"]["open_app32_page"] is True
