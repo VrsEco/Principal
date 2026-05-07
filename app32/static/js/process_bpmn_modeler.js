@@ -28,7 +28,8 @@
     gateway_operation_options: ['route', 'triage', 'qualify'],
     fallback_actions: ['human_review', 'fail', 'continue_with_warning'],
     tool_sources: ['none', 'mcp', 'api'],
-    model_roles: ['expert', 'router']
+    model_roles: ['expert', 'router'],
+    templates: []
   };
   let toolCatalog = [];
   let currentSelection = null;
@@ -549,6 +550,15 @@
         </div>
         <div class="bpmn-ai-grid-2">
           <div>
+            <label class="bpmn-ai-label" for="executionTemplateSelect">Template pronto</label>
+            <select id="executionTemplateSelect" class="bpmn-ai-select">${buildTemplateOptions(element)}</select>
+          </div>
+          <div class="bpmn-ai-actions bpmn-ai-actions--end">
+            <button type="button" class="bpmn-ai-btn bpmn-ai-btn--ghost" data-apply-template="1">Aplicar template</button>
+          </div>
+        </div>
+        <div class="bpmn-ai-grid-2">
+          <div>
             <label class="bpmn-ai-label" for="aiObjective">Objetivo da IA</label>
             <textarea id="aiObjective" class="bpmn-ai-textarea" placeholder="Ex.: Leia o documento e extraia valor, data, fornecedor e histórico.">${escapeHtml(getCurrentObjective(contract, draft, semanticType, element))}</textarea>
           </div>
@@ -600,88 +610,88 @@
         <div class="bpmn-ai-grid-3" data-execution-section="open_form">
           <div>
             <label class="bpmn-ai-label" for="formCode">Formulário</label>
-            <input id="formCode" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, 'form_code'))}" placeholder="ex.: financial_document_review">
+            <input id="formCode" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, draft, 'form_code'))}" placeholder="ex.: financial_document_review">
           </div>
           <div>
             <label class="bpmn-ai-label" for="formTarget">Abrir em</label>
-            <select id="formTarget" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.form_targets || ['drawer', 'modal', 'page'], getUiConfigValue(contract, 'open_in') || 'drawer')}</select>
+            <select id="formTarget" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.form_targets || ['drawer', 'modal', 'page'], getUiConfigValue(contract, draft, 'open_in') || 'drawer')}</select>
           </div>
           <div>
             <label class="bpmn-ai-label" for="formSubmitAction">Ao enviar</label>
-            <select id="formSubmitAction" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.submit_actions || ['complete_task', 'stay_open', 'trigger_next_step'], getUiConfigValue(contract, 'submit_action') || 'complete_task')}</select>
+            <select id="formSubmitAction" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.submit_actions || ['complete_task', 'stay_open', 'trigger_next_step'], getUiConfigValue(contract, draft, 'submit_action') || 'complete_task')}</select>
           </div>
         </div>
         <div data-execution-section="open_form">
           <label class="bpmn-ai-label" for="formPrefillMapping">Pré-preenchimento (JSON)</label>
-          <textarea id="formPrefillMapping" class="bpmn-ai-textarea" placeholder='{"document_id":"{{process.document_id}}"}'>${escapeHtml(formatJson(getUiConfigValue(contract, 'prefill_mapping') || {}))}</textarea>
+          <textarea id="formPrefillMapping" class="bpmn-ai-textarea" placeholder='{"document_id":"{{process.document_id}}"}'>${escapeHtml(formatJson(getUiConfigValue(contract, draft, 'prefill_mapping') || {}))}</textarea>
         </div>
         <div class="bpmn-ai-grid-3" data-execution-section="open_app32_page">
           <div>
             <label class="bpmn-ai-label" for="pageCode">Page code</label>
-            <input id="pageCode" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, 'page_code'))}" placeholder="ex.: finance_prelaunch_editor">
+            <input id="pageCode" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, draft, 'page_code'))}" placeholder="ex.: finance_prelaunch_editor">
           </div>
           <div>
             <label class="bpmn-ai-label" for="pageTarget">Abrir em</label>
-            <select id="pageTarget" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.page_targets || ['page', 'drawer', 'modal'], getUiConfigValue(contract, 'open_in') || 'page')}</select>
+            <select id="pageTarget" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.page_targets || ['page', 'drawer', 'modal'], getUiConfigValue(contract, draft, 'open_in') || 'page')}</select>
           </div>
           <div>
             <label class="bpmn-ai-label" for="pageInternalUrl">URL interna opcional</label>
-            <input id="pageInternalUrl" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, 'internal_url'))}" placeholder="/financial/prelaunch">
+            <input id="pageInternalUrl" class="bpmn-ai-input" value="${escapeHtml(getUiConfigValue(contract, draft, 'internal_url'))}" placeholder="/financial/prelaunch">
           </div>
         </div>
         <div data-execution-section="open_app32_page">
           <label class="bpmn-ai-label" for="pageParamsMapping">Parâmetros da página (JSON)</label>
-          <textarea id="pageParamsMapping" class="bpmn-ai-textarea" placeholder='{"document_id":"{{process.document_id}}"}'>${escapeHtml(formatJson(getUiConfigValue(contract, 'params_mapping') || {}))}</textarea>
+          <textarea id="pageParamsMapping" class="bpmn-ai-textarea" placeholder='{"document_id":"{{process.document_id}}"}'>${escapeHtml(formatJson(getUiConfigValue(contract, draft, 'params_mapping') || {}))}</textarea>
         </div>
         <div class="bpmn-ai-grid-3" data-execution-section="api_task">
           <div>
             <label class="bpmn-ai-label" for="apiConnectionKey">Conexão API</label>
-            <input id="apiConnectionKey" class="bpmn-ai-input" value="${escapeHtml(getRestConfigValue(contract, 'connection_key'))}" placeholder="ex.: erp_financeiro">
+            <input id="apiConnectionKey" class="bpmn-ai-input" value="${escapeHtml(getRestConfigValue(contract, draft, 'connection_key'))}" placeholder="ex.: erp_financeiro">
           </div>
           <div>
             <label class="bpmn-ai-label" for="apiMethod">Método</label>
-            <select id="apiMethod" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.api_methods || ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], getRestConfigValue(contract, 'method') || 'POST')}</select>
+            <select id="apiMethod" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.api_methods || ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], getRestConfigValue(contract, draft, 'method') || 'POST')}</select>
           </div>
           <div>
             <label class="bpmn-ai-label" for="apiTimeout">Timeout (s)</label>
-            <input id="apiTimeout" class="bpmn-ai-input" type="number" min="1" step="1" value="${escapeHtml(String(getRestConfigValue(contract, 'timeout_seconds') || 20))}">
+            <input id="apiTimeout" class="bpmn-ai-input" type="number" min="1" step="1" value="${escapeHtml(String(getRestConfigValue(contract, draft, 'timeout_seconds') || 20))}">
           </div>
         </div>
         <div class="bpmn-ai-grid-2" data-execution-section="api_task">
           <div>
             <label class="bpmn-ai-label" for="apiPath">Path / URL</label>
-            <input id="apiPath" class="bpmn-ai-input" value="${escapeHtml(getRestConfigValue(contract, 'path') || getRestConfigValue(contract, 'url'))}" placeholder="/documents/prelaunch">
+            <input id="apiPath" class="bpmn-ai-input" value="${escapeHtml(getRestConfigValue(contract, draft, 'path') || getRestConfigValue(contract, draft, 'url'))}" placeholder="/documents/prelaunch">
           </div>
           <div>
             <label class="bpmn-ai-label" for="apiRetryPolicy">Retry</label>
-            <select id="apiRetryPolicy" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.retry_policies || ['none', 'default', 'aggressive'], getRestConfigValue(contract, 'retry_policy') || 'default')}</select>
+            <select id="apiRetryPolicy" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.retry_policies || ['none', 'default', 'aggressive'], getRestConfigValue(contract, draft, 'retry_policy') || 'default')}</select>
           </div>
         </div>
         <div data-execution-section="api_task">
           <label class="bpmn-ai-label" for="apiRequestMapping">Request mapping (JSON)</label>
-          <textarea id="apiRequestMapping" class="bpmn-ai-textarea" placeholder='{"amount":"{{process.document_data.amount}}"}'>${escapeHtml(formatJson(getRestConfigValue(contract, 'request_mapping') || {}))}</textarea>
+          <textarea id="apiRequestMapping" class="bpmn-ai-textarea" placeholder='{"amount":"{{process.document_data.amount}}"}'>${escapeHtml(formatJson(getRestConfigValue(contract, draft, 'request_mapping') || {}))}</textarea>
         </div>
         <div data-execution-section="api_task">
           <label class="bpmn-ai-label" for="apiResponseSchema">Schema de resposta (JSON)</label>
-          <textarea id="apiResponseSchema" class="bpmn-ai-textarea" placeholder='{"type":"object"}'>${escapeHtml(formatJson(getRestConfigValue(contract, 'response_schema') || {}))}</textarea>
+          <textarea id="apiResponseSchema" class="bpmn-ai-textarea" placeholder='{"type":"object"}'>${escapeHtml(formatJson(getRestConfigValue(contract, draft, 'response_schema') || {}))}</textarea>
         </div>
         <div class="bpmn-ai-grid-3" data-execution-section="mcp_task">
           <div>
             <label class="bpmn-ai-label" for="mcpToolName">Tool MCP</label>
-            <input id="mcpToolName" class="bpmn-ai-input" value="${escapeHtml(getMcpConfigValue(contract, 'tool_name'))}" placeholder="ex.: finance.insert_prelaunch">
+            <input id="mcpToolName" class="bpmn-ai-input" value="${escapeHtml(getMcpConfigValue(contract, draft, 'tool_name'))}" placeholder="ex.: finance.insert_prelaunch">
           </div>
           <div>
             <label class="bpmn-ai-label" for="mcpSurface">Surface</label>
-            <select id="mcpSurface" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.mcp_surfaces || ['user', 'admin', 'analytics'], getMcpConfigValue(contract, 'surface') || 'admin')}</select>
+            <select id="mcpSurface" class="bpmn-ai-select">${buildSelectOptions(aiAssistantCatalog.execution_modes?.mcp_surfaces || ['user', 'admin', 'analytics'], getMcpConfigValue(contract, draft, 'surface') || 'admin')}</select>
           </div>
           <div>
             <label class="bpmn-ai-label" for="mcpConfirmationMode">Confirmação</label>
-            <select id="mcpConfirmationMode" class="bpmn-ai-select">${buildSelectOptions(['auto', 'confirm_before_run'], getMcpConfigValue(contract, 'confirmation_mode') || 'auto')}</select>
+            <select id="mcpConfirmationMode" class="bpmn-ai-select">${buildSelectOptions(['auto', 'confirm_before_run'], getMcpConfigValue(contract, draft, 'confirmation_mode') || 'auto')}</select>
           </div>
         </div>
         <div data-execution-section="mcp_task">
           <label class="bpmn-ai-label" for="mcpInputMapping">Input mapping (JSON)</label>
-          <textarea id="mcpInputMapping" class="bpmn-ai-textarea" placeholder='{"company_id":"{{process.company_id}}"}'>${escapeHtml(formatJson(getMcpConfigValue(contract, 'input_mapping') || {}))}</textarea>
+          <textarea id="mcpInputMapping" class="bpmn-ai-textarea" placeholder='{"company_id":"{{process.company_id}}"}'>${escapeHtml(formatJson(getMcpConfigValue(contract, draft, 'input_mapping') || {}))}</textarea>
         </div>
         <div class="bpmn-ai-actions">
           <button type="button" class="bpmn-ai-btn bpmn-ai-btn--primary" data-ai-save="1">Salvar contrato IA</button>
@@ -778,6 +788,21 @@
     `).join('');
   }
 
+  function buildTemplateOptions(element) {
+    const type = element && element.businessObject && element.businessObject.$type;
+    const scope = isGatewayType(type) ? 'gateway' : 'task';
+    const templates = (aiAssistantCatalog.templates || []).filter((item) => item.scope === scope);
+    const options = ['<option value="">Selecione um template</option>'];
+    templates.forEach((item) => {
+      options.push(`<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`);
+    });
+    return options.join('');
+  }
+
+  function getTemplateByKey(templateKey) {
+    return (aiAssistantCatalog.templates || []).find((item) => item.key === templateKey) || null;
+  }
+
   function getSemanticLabel(semanticType) {
     return {
       ai_task: 'AI Task',
@@ -846,15 +871,18 @@
     return contract && contract.ui_schema_json ? contract.ui_schema_json[key] : null;
   }
 
-  function getUiConfigValue(contract, key) {
+  function getUiConfigValue(contract, draft, key) {
+    if (draft && draft.ui_schema_json && draft.ui_schema_json[key] !== undefined) return draft.ui_schema_json[key];
     return getUiSchemaValue(contract, key) || '';
   }
 
-  function getRestConfigValue(contract, key) {
+  function getRestConfigValue(contract, draft, key) {
+    if (draft && draft.rest_config_json && draft.rest_config_json[key] !== undefined) return draft.rest_config_json[key];
     return contract && contract.rest_config_json ? contract.rest_config_json[key] : '';
   }
 
-  function getMcpConfigValue(contract, key) {
+  function getMcpConfigValue(contract, draft, key) {
+    if (draft && draft.mcp_config_json && draft.mcp_config_json[key] !== undefined) return draft.mcp_config_json[key];
     return contract && contract.mcp_config_json ? contract.mcp_config_json[key] : '';
   }
 
@@ -1002,6 +1030,35 @@
       if (typeof value === 'object' && !Array.isArray(value) && !Object.keys(value).length) return false;
       return true;
     }));
+  }
+
+  function applyExecutionTemplate(element, template) {
+    if (!element || !template) return;
+    const currentDraft = aiInspectorDraftByElementId.get(element.id) || {};
+    const executionMode = template.execution_mode || currentDraft.execution_mode || 'human_task';
+    aiInspectorDraftByElementId.set(element.id, {
+      ...currentDraft,
+      execution_mode: executionMode,
+      semantic_type: executionMode === 'ai_decision' ? 'ai_gateway' : (currentDraft.semantic_type || 'task'),
+      objective: template.objective || currentDraft.objective || '',
+      instruction: template.ai_config_json?.instruction || template.objective || currentDraft.instruction || '',
+      model_role: template.ai_config_json?.model_role || currentDraft.model_role,
+      tool_source: template.ai_config_json?.tool_source || currentDraft.tool_source,
+      min_confidence: template.ai_config_json?.min_confidence ?? currentDraft.min_confidence,
+      fallback_action: template.ai_config_json?.fallback_action || currentDraft.fallback_action,
+      allowed_tools: template.ai_config_json?.allowed_tools || currentDraft.allowed_tools || [],
+      allowed_decisions: template.ai_config_json?.allowed_decisions || currentDraft.allowed_decisions || [],
+      output_schema: template.ai_config_json?.output_schema || currentDraft.output_schema || {},
+      ui_schema_json: template.ui_schema_json || currentDraft.ui_schema_json || {},
+      rest_config_json: template.rest_config_json || currentDraft.rest_config_json || {},
+      mcp_config_json: template.mcp_config_json || currentDraft.mcp_config_json || {},
+      metadata: {
+        ...(currentDraft.metadata || {}),
+        decision_routes: template.ai_config_json?.metadata?.decision_routes || currentDraft.metadata?.decision_routes || {},
+      },
+    });
+    renderAiInspector(element);
+    showAiStatus(`Template aplicado: ${template.label}.`);
   }
 
   function buildContractPayload(element, formPayload) {
@@ -1643,6 +1700,18 @@
     const aiAddDecisionButton = event.target.closest('[data-ai-add-decision]');
     if (aiAddDecisionButton && currentSelection) {
       addGatewayDecisionRow();
+      return;
+    }
+
+    const aiApplyTemplateButton = event.target.closest('[data-apply-template]');
+    if (aiApplyTemplateButton && currentSelection) {
+      const templateKey = document.getElementById('executionTemplateSelect')?.value;
+      const template = getTemplateByKey(templateKey);
+      if (!template) {
+        showAiStatus('Selecione um template antes de aplicar.', true);
+        return;
+      }
+      applyExecutionTemplate(currentSelection, template);
       return;
     }
 

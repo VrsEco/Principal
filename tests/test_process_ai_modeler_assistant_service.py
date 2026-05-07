@@ -16,6 +16,7 @@ def test_build_catalog_exposes_expected_defaults():
     assert "gateway_operation_options" in catalog
     assert "human_review" in catalog["fallback_actions"]
     assert isinstance(catalog["tool_items"], list)
+    assert any(template["key"] == "ai_extract_document" for template in catalog["templates"])
 
 
 def test_suggest_gateway_uses_closed_routes_when_llm_fails(monkeypatch):

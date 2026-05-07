@@ -76,6 +76,119 @@ EXECUTION_MODE_CATALOG: dict[str, dict[str, Any]] = {
     },
 }
 
+EXECUTION_TEMPLATES: list[dict[str, Any]] = [
+    {
+        "key": "approval_form_drawer",
+        "label": "Abrir formulário de aprovação",
+        "execution_mode": "open_form",
+        "scope": "task",
+        "summary": "Abre formulário APP32 em drawer com submit concluindo a activity.",
+        "objective": "Abrir formulário de aprovação com dados do processo pré-preenchidos.",
+        "ui_schema_json": {
+            "form_code": "approval_review",
+            "open_in": "drawer",
+            "submit_action": "complete_task",
+            "prefill_mapping": {
+                "process_instance_id": "{instance_id}",
+                "company_id": "{company_id}",
+            },
+        },
+    },
+    {
+        "key": "finance_page_editor",
+        "label": "Abrir tela financeira do APP32",
+        "execution_mode": "open_app32_page",
+        "scope": "task",
+        "summary": "Abre editor de pré-lançamento financeiro com parâmetros do runtime.",
+        "objective": "Abrir a tela financeira contextual do APP32 para continuidade operacional.",
+        "ui_schema_json": {
+            "page_code": "finance_prelaunch_editor",
+            "open_in": "page",
+            "params_mapping": {
+                "document_id": "{document_id}",
+                "company_id": "{company_id}",
+            },
+        },
+    },
+    {
+        "key": "erp_api_post",
+        "label": "Chamar API do ERP",
+        "execution_mode": "api_task",
+        "scope": "task",
+        "summary": "Executa integração REST/HTTP para ERP com request mapping e retry padrão.",
+        "objective": "Enviar dados operacionais para o ERP e registrar o retorno estruturado.",
+        "rest_config_json": {
+            "connection_key": "erp_financeiro",
+            "method": "POST",
+            "path": "/documents/prelaunch",
+            "timeout_seconds": 20,
+            "retry_policy": "default",
+            "request_mapping": {
+                "company_id": "{company_id}",
+                "document_id": "{document_id}",
+            },
+            "response_schema": {"type": "object"},
+        },
+    },
+    {
+        "key": "mcp_register_document",
+        "label": "Executar tool MCP de registro",
+        "execution_mode": "mcp_task",
+        "scope": "task",
+        "summary": "Executa tool MCP do APP32 com input mapping governado.",
+        "objective": "Executar tool MCP operacional para registrar ou movimentar o documento no APP32.",
+        "mcp_config_json": {
+            "tool_name": "finance.insert_prelaunch",
+            "surface": "admin",
+            "confirmation_mode": "auto",
+            "input_mapping": {
+                "company_id": "{company_id}",
+                "document_id": "{document_id}",
+            },
+        },
+    },
+    {
+        "key": "ai_extract_document",
+        "label": "Extrair documento com IA",
+        "execution_mode": "ai_task",
+        "scope": "task",
+        "summary": "Configura AI Task para leitura e extração estruturada de documentos.",
+        "objective": "Leia o documento e extraia valor, data, fornecedor e histórico em JSON.",
+        "ai_config_json": {
+            "instruction": "Leia o documento e extraia valor, data, fornecedor e histórico em JSON válido.",
+            "model_role": "expert",
+            "tool_source": "mcp",
+            "allowed_tools": ["documents.read"],
+            "min_confidence": 0.85,
+            "fallback_action": "human_review",
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "amount": {"type": "number"},
+                    "issue_date": {"type": "string"},
+                    "supplier_name": {"type": "string"},
+                    "history": {"type": "string"},
+                },
+            },
+        },
+    },
+    {
+        "key": "ai_route_gateway",
+        "label": "Roteamento com AI Gateway",
+        "execution_mode": "ai_decision",
+        "scope": "gateway",
+        "summary": "Configura gateway com decisões fechadas e fallback humano.",
+        "objective": "Classifique a rota do gateway entre as saídas permitidas com confiança mínima.",
+        "ai_config_json": {
+            "instruction": "Escolha exatamente uma rota entre as decisões permitidas.",
+            "model_role": "expert",
+            "tool_source": "none",
+            "min_confidence": 0.8,
+            "fallback_action": "human_review",
+        },
+    },
+]
+
 
 def normalize_execution_mode(value: str | None, *, default: str = "manual_external") -> str:
     normalized = str(value or default).strip().lower()
@@ -108,7 +221,15 @@ def get_execution_mode_catalog() -> dict[str, Any]:
         "submit_actions": ["complete_task", "stay_open", "trigger_next_step"],
         "retry_policies": ["none", "default", "aggressive"],
         "mcp_surfaces": ["user", "admin", "analytics"],
+        "templates": get_execution_templates(),
     }
+
+
+def get_execution_templates(*, scope: str | None = None) -> list[dict[str, Any]]:
+    if not scope:
+        return [dict(item) for item in EXECUTION_TEMPLATES]
+    normalized_scope = str(scope).strip().lower()
+    return [dict(item) for item in EXECUTION_TEMPLATES if item.get("scope") == normalized_scope]
 
 
 def normalize_contract_configs(payload: dict[str, Any]) -> dict[str, Any]:

@@ -20,6 +20,7 @@ def test_execution_mode_catalog_exposes_new_modes():
 
     task_modes = {item["key"] for item in catalog["task_modes"]}
     assert {"open_form", "open_app32_page", "api_task", "mcp_task", "ai_task"}.issubset(task_modes)
+    assert any(template["key"] == "approval_form_drawer" for template in catalog["templates"])
 
 
 def test_normalize_contract_configs_for_open_form():
