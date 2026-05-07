@@ -768,6 +768,266 @@ class PlanService:
         }
 
     @staticmethod
+    def _normalize_finance_sources(fin_content: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Normaliza fontes financeiras legadas e v2 em uma única estrutura."""
+        sources_data = fin_content.get('sources_v2', [])
+        normalized_sources: List[Dict[str, Any]] = []
+
+        if sources_data:
+            for source in sources_data:
+                if not isinstance(source, dict):
+                    continue
+                normalized_sources.append({
+                    "name": source.get('name') or "Fonte",
+                    "type": source.get('type') or "propria",
+                    "date": PlanService._normalize_period(source.get('date')),
+                    "amount": float(source.get('amount') or 0),
+                })
+            return normalized_sources
+
+        legacy_sources = fin_content.get('sources', {})
+        legacy_dates = fin_content.get('source_dates', {})
+        if isinstance(legacy_sources, dict):
+            for name, value in legacy_sources.items():
+                normalized_sources.append({
+                    "name": name or "Fonte",
+                    "type": "propria",
+                    "date": PlanService._normalize_period(legacy_dates.get(name)),
+                    "amount": float(value or 0),
+                })
+        elif isinstance(legacy_sources, list):
+            for item in legacy_sources:
+                if not isinstance(item, dict):
+                    continue
+                normalized_sources.append({
+                    "name": item.get('description') or item.get('category') or "Fonte",
+                    "type": item.get('type') or "propria",
+                    "date": PlanService._normalize_period(item.get('availability') or item.get('date')),
+                    "amount": float(item.get('amount') or 0),
+                })
+
+        return normalized_sources
+
+    @staticmethod
+    def _build_implantation_execution_area_report(execution_content: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Consolida áreas de execução para exibição no relatório."""
+        area_catalog = {
+            "comercial": "Estruturação Comercial",
+            "operacional": "Estruturação Operacional",
+            "admin": "Estruturação Adm/Fin",
+        }
+        execution_areas = []
+        raw_areas = execution_content.get('areas', {}) if isinstance(execution_content, dict) else {}
+
+        for area_id, area_title in area_catalog.items():
+            raw_area = raw_areas.get(area_id, {}) if isinstance(raw_areas, dict) else {}
+            raw_items = raw_area.get('items', []) if isinstance(raw_area, dict) else []
+            normalized_items = []
+
+            total_value = 0.0
+            total_capacity = 0.0
+            acquisition_total = 0.0
+            hiring_total = 0.0
+
+            for item in raw_items:
+                if not isinstance(item, dict):
+                    continue
+
+                planned_value = float(item.get('value') or 0)
+                capacity_value = float(item.get('operational_capacity_revenue') or 0)
+                payment_entries = PlanService._expand_execution_item_payments(item)
+                payment_plan = item.get('payment_plan') or {}
+                payment_mode = payment_plan.get('mode') or ('multiple' if item.get('classification') == 'aquisição' else 'single')
+
+                normalized_items.append({
+                    "description": item.get('description') or "Item sem descrição",
+                    "item_type": item.get('item_type') or "-",
+                    "classification": item.get('classification') or "-",
+                    "acquisition_date": PlanService._normalize_period(item.get('acquisition_date')),
+                    "availability_date": PlanService._normalize_period(item.get('availability_date')),
+                    "capacity_revenue": capacity_value,
+                    "planned_value": planned_value,
+                    "payment_count": len(payment_entries),
+                    "payment_mode": payment_mode,
+                    "payments": payment_entries,
+                })
+
+                total_value += planned_value
+                total_capacity += capacity_value
+                if item.get('classification') == 'aquisição':
+                    acquisition_total += planned_value
+                else:
+                    hiring_total += planned_value
+
+            execution_areas.append({
+                "id": area_id,
+                "title": area_title,
+                "items": normalized_items,
+                "item_count": len(normalized_items),
+                "total_value": total_value,
+                "total_capacity": total_capacity,
+                "acquisition_total": acquisition_total,
+                "hiring_total": hiring_total,
+            })
+
+        return execution_areas
+
+    @staticmethod
+    def get_implantation_report_context(plan_id: int, company_id: int) -> Dict[str, Any]:
+        """Monta um contexto detalhado e estável para o relatório final de implantação."""
+        plan = PlanService.get_plan(plan_id, company_id)
+        if not plan or plan.mode != 'implantation':
+            return {}
+
+        alignment_data = PlanService.get_implantation_data(plan_id, company_id, 'alignment')
+        model_data = PlanService.get_implantation_data(plan_id, company_id, 'model')
+        execution_data = PlanService.get_implantation_data(plan_id, company_id, 'execution')
+        finance_data = PlanService.get_implantation_data(plan_id, company_id, 'finance')
+
+        alignment = alignment_data.content if alignment_data else {}
+        model = model_data.content if model_data else {}
+        execution = execution_data.content if execution_data else {}
+        finance = finance_data.content if finance_data else {}
+        consolidated = PlanService.get_consolidated_finance(plan_id, company_id)
+
+        participants = PlanParticipant.query.filter_by(plan_id=plan_id).all()
+        participant_rows = []
+        for participant in participants:
+            display_name = None
+            if getattr(participant, 'employee', None):
+                display_name = getattr(participant.employee, 'name', None)
+            if not display_name and getattr(participant, 'user', None):
+                display_name = getattr(participant.user, 'name', None) or getattr(participant.user, 'email', None)
+
+            participant_rows.append({
+                "name": display_name or f"Participante #{participant.id}",
+                "role": participant.role or "viewer",
+            })
+
+        products = []
+        for product in model.get('products', []) if isinstance(model, dict) else []:
+            if not isinstance(product, dict):
+                continue
+            sale_price = float(product.get('sale_price') or 0)
+            variable_costs = float(product.get('variable_costs_value') or 0)
+            variable_expenses = float(product.get('variable_expenses_value') or 0)
+            contribution_value = sale_price - variable_costs - variable_expenses
+            ramp_entries = product.get('ramp_up_entries') or []
+            normalized_ramp = [
+                {
+                    "period": PlanService._normalize_period(entry.get('month_period')),
+                    "percentage": float(entry.get('percentage') or 0),
+                }
+                for entry in ramp_entries
+                if isinstance(entry, dict)
+            ]
+            ramp_periods = [entry["period"] for entry in normalized_ramp if entry.get("period")]
+
+            products.append({
+                **product,
+                "sale_price": sale_price,
+                "variable_costs_value": variable_costs,
+                "variable_expenses_value": variable_expenses,
+                "contribution_margin_value": contribution_value,
+                "contribution_margin_percent": ((contribution_value / sale_price) * 100) if sale_price > 0 else 0,
+                "expected_monthly_revenue": sale_price * float(product.get('market_share_goal_monthly_units') or 0),
+                "ramp_up_entries": normalized_ramp,
+                "ramp_up_start": ramp_periods[0] if ramp_periods else "",
+                "ramp_up_end": ramp_periods[-1] if ramp_periods else "",
+                "ramp_up_months": len(ramp_periods),
+            })
+
+        segments = []
+        for segment in model.get('segments', []) if isinstance(model, dict) else []:
+            if not isinstance(segment, dict):
+                continue
+            personas = segment.get('personas') or []
+            differentials = segment.get('differential_matrix') or []
+            segments.append({
+                **segment,
+                "persona_count": len(personas),
+                "audience_count": len(segment.get('audiences') or []),
+                "problem_count": len(segment.get('problems') or []),
+                "differential_count": len(differentials),
+            })
+
+        working_capital = finance.get('working_capital') or {}
+        working_capital_groups = [
+            {
+                "key": "cash_items",
+                "title": "Caixa",
+                "items": working_capital.get('cash_items', []),
+            },
+            {
+                "key": "receivables_items",
+                "title": "Contas a Receber",
+                "items": working_capital.get('receivables_items', []),
+            },
+            {
+                "key": "inventory_items",
+                "title": "Estoques",
+                "items": working_capital.get('inventory_items', []),
+            },
+        ]
+        for group in working_capital_groups:
+            group["subtotal"] = sum(float(item.get('value') or 0) for item in group["items"] if isinstance(item, dict))
+
+        sources = PlanService._normalize_finance_sources(finance)
+        timeline = consolidated.get('timeline', []) if isinstance(consolidated, dict) else []
+        active_timeline = [
+            row for row in timeline
+            if any(
+                float(row.get(metric) or 0) != 0
+                for metric in (
+                    'revenue', 'investment', 'sources_equity', 'loans',
+                    'operating_result', 'distributions', 'fixed_costs', 'fixed_expenses'
+                )
+            )
+        ]
+        timeline_focus = active_timeline[:18] if active_timeline else timeline[:12]
+
+        payback_month = ""
+        for row in timeline:
+            if float(row.get('cumulative_investor') or 0) >= 0:
+                payback_month = row.get('period') or ""
+                break
+
+        peak_revenue = max(timeline, key=lambda row: float(row.get('revenue') or 0), default={})
+        peak_investment = max(timeline, key=lambda row: float(row.get('investment') or 0), default={})
+        ramp_up_end_index = consolidated.get('ramp_up_end_index', 0) if isinstance(consolidated, dict) else 0
+        ramp_up_end_period = ""
+        if timeline and isinstance(ramp_up_end_index, int) and 0 <= ramp_up_end_index < len(timeline):
+            ramp_up_end_period = timeline[ramp_up_end_index].get('period') or ""
+
+        return {
+            "alignment": alignment,
+            "model": model,
+            "execution": execution,
+            "finance": finance,
+            "consolidated": consolidated,
+            "participants": participant_rows,
+            "products": products,
+            "segments": segments,
+            "execution_areas": PlanService._build_implantation_execution_area_report(execution),
+            "working_capital_groups": working_capital_groups,
+            "funding_sources": sources,
+            "profit_distribution": finance.get('profit_distribution', []) if isinstance(finance, dict) else [],
+            "timeline_focus": timeline_focus,
+            "report_summary": {
+                "partners_count": len(alignment.get('partners', [])) if isinstance(alignment, dict) else 0,
+                "participants_count": len(participant_rows),
+                "products_count": len(products),
+                "segments_count": len(segments),
+                "execution_items_count": sum(area["item_count"] for area in PlanService._build_implantation_execution_area_report(execution)),
+                "active_timeline_months": len(active_timeline),
+                "payback_period": payback_month,
+                "ramp_up_end_period": ramp_up_end_period,
+                "peak_revenue_period": peak_revenue.get('period') or "",
+                "peak_investment_period": peak_investment.get('period') or "",
+            }
+        }
+
+    @staticmethod
     def _calculate_vpl(cash_flows: List[float], annual_rate: float) -> float:
         """Calculates NPV (VPL)"""
         if not cash_flows: return 0

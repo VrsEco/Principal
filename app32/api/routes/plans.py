@@ -230,18 +230,7 @@ def implantation_section(plan_id, section):
             section_content['source_dates'] = {}
 
     if section == 'final_report':
-        alignment_data = PlanService.get_implantation_data(plan_id, company.id, 'alignment')
-        model_data = PlanService.get_implantation_data(plan_id, company.id, 'model')
-        execution_data = PlanService.get_implantation_data(plan_id, company.id, 'execution')
-        finance_data = PlanService.get_implantation_data(plan_id, company.id, 'finance')
-
-        extra_data['implantation_data'] = {
-            'alignment': alignment_data.content if alignment_data else {},
-            'model': model_data.content if model_data else {},
-            'execution': execution_data.content if execution_data else {},
-            'finance': finance_data.content if finance_data else {},
-        }
-        extra_data['consolidated'] = PlanService.get_consolidated_finance(plan_id, company.id)
+        extra_data['report_context'] = PlanService.get_implantation_report_context(plan_id, company.id)
 
     # Pass values specifically to avoid dict method collision
     alignment_values = section_content.get('values', [])
