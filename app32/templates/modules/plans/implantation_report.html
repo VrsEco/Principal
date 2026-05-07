@@ -690,9 +690,20 @@ R$ {{ (value|default(0))|format_currency_br }}
             </div>
         </div>
 
-        <div class="content-card mt-24">
+    </section>
+
+    <section class="report-page landscape-page">
+        <div class="section-header">
+            <span class="section-index">06A</span>
+            <div>
+                <h3>Fluxo de caixa do negócio</h3>
+                <p>Quadro analítico completo isolado em página paisagem para melhorar legibilidade e impressão.</p>
+            </div>
+        </div>
+
+        <div class="content-card landscape-card">
             <label class="field-label">1. Fluxo de caixa do negócio</label>
-            <table class="report-table compact-table">
+            <table class="report-table compact-table wide-finance-table">
                 <thead>
                     <tr>
                         <th>Período</th>
@@ -735,6 +746,16 @@ R$ {{ (value|default(0))|format_currency_br }}
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </section>
+
+    <section class="report-page">
+        <div class="section-header">
+            <span class="section-index">06B</span>
+            <div>
+                <h3>Fluxos complementares de investimento e investidor</h3>
+                <p>Continuidade da análise financeira com os quadros de CAPEX e ROI após o fluxo principal do negócio.</p>
+            </div>
         </div>
 
         <div class="content-card mt-24">
@@ -806,6 +827,9 @@ R$ {{ (value|default(0))|format_currency_br }}
     .report-toolbar p { margin: 4px 0 0; font-size: 13px; opacity: .75; }
     .print-btn { border: none; background: #2563eb; color: #fff; padding: 12px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; }
     .report-page { background: #fff; color: #0f172a; padding: 48px; margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 24px; }
+    .landscape-page { max-width: 100%; }
+    .landscape-card { overflow-x: auto; }
+    .wide-finance-table { min-width: 1400px; }
     .cover-page { min-height: 1180px; display: flex; flex-direction: column; justify-content: space-between; }
     .cover-topline { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: #64748b; }
     .cover-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; margin-top: 28px; }
@@ -897,6 +921,8 @@ R$ {{ (value|default(0))|format_currency_br }}
             display: none !important;
         }
         @page { margin: 1.2cm; size: A4; }
+        @page landscape-page { margin: 1.2cm; size: A4 landscape; }
+        .landscape-page { page: landscape-page; break-before: page; break-after: page; }
     }
 </style>
 
