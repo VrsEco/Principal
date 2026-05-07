@@ -725,7 +725,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                     {% set variables_total = (row.variable_costs|default(0)) + (row.variable_expenses|default(0)) %}
                     {% set fixed_total = (row.fixed_costs|default(0)) + (row.fixed_expenses|default(0)) %}
                     {% set res_periodo = (row.operating_result|default(0)) - (row.total_destinations|default(0)) %}
-                    <tr>
+                    <tr class="{% if row.is_aggregated_year %}aggregated-flow-row{% endif %}">
                         <td>{{ row.period_label if row.is_aggregated_year else period_label(row.period) }}</td>
                         <td>{{ money(row.revenue) }}</td>
                         <td>{{ money(variables_total) }}</td>
@@ -750,7 +750,7 @@ R$ {{ (value|default(0))|format_currency_br }}
         </div>
     </section>
 
-    <section class="report-page">
+    <section class="report-page compact-print-flow-page">
         <div class="section-header">
             <span class="section-index">08B</span>
             <div>
@@ -759,9 +759,9 @@ R$ {{ (value|default(0))|format_currency_br }}
             </div>
         </div>
 
-        <div class="content-card mt-24">
+        <div class="content-card mt-24 flow-compact-card">
             <label class="field-label">2. Fluxo de caixa do investimento (CAPEX)</label>
-            <table class="report-table compact-table">
+            <table class="report-table compact-table vertical-flow-table">
                 <thead>
                     <tr>
                         <th>Período</th>
@@ -773,7 +773,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                 </thead>
                 <tbody>
                     {% for row in flow_timeline %}
-                    <tr>
+                    <tr class="{% if row.is_aggregated_year %}aggregated-flow-row{% endif %}">
                         <td>{{ row.period_label if row.is_aggregated_year else period_label(row.period) }}</td>
                         <td>{{ money(row.investment) }}</td>
                         <td>{{ money((row.sources_equity|default(0)) + (row.loans|default(0))) }}</td>
@@ -789,9 +789,9 @@ R$ {{ (value|default(0))|format_currency_br }}
             </table>
         </div>
 
-        <div class="content-card mt-24">
+        <div class="content-card mt-24 flow-compact-card">
             <label class="field-label">3. Fluxo de caixa do investidor (ROI)</label>
-            <table class="report-table compact-table">
+            <table class="report-table compact-table vertical-flow-table">
                 <thead>
                     <tr>
                         <th>Período</th>
@@ -803,7 +803,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                 </thead>
                 <tbody>
                     {% for row in flow_timeline %}
-                    <tr>
+                    <tr class="{% if row.is_aggregated_year %}aggregated-flow-row{% endif %}">
                         <td>{{ row.period_label if row.is_aggregated_year else period_label(row.period) }}</td>
                         <td>{{ money(row.sources_equity) }}</td>
                         <td>{{ money(row.distributions) }}</td>
@@ -820,7 +820,7 @@ R$ {{ (value|default(0))|format_currency_br }}
         </div>
     </section>
 
-    <section class="report-page">
+    <section class="report-page analysis-print-page">
         <div class="section-header">
             <span class="section-index">09</span>
             <div>
@@ -892,6 +892,10 @@ R$ {{ (value|default(0))|format_currency_br }}
     .landscape-visual-page { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
     .landscape-card { overflow-x: auto; }
     .wide-finance-table { min-width: 1480px; }
+    .vertical-flow-table { table-layout: fixed; }
+    .vertical-flow-table th:first-child,
+    .vertical-flow-table td:first-child { width: 110px; }
+    .aggregated-flow-row td { background: #f8fafc; font-weight: 700; }
     .cover-page { min-height: 1180px; display: flex; flex-direction: column; justify-content: space-between; }
     .cover-topline { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: #64748b; }
     .cover-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; margin-top: 28px; }
@@ -969,6 +973,72 @@ R$ {{ (value|default(0))|format_currency_br }}
         .report-page { border: none; border-radius: 0; margin: 0; padding: 0; page-break-after: always; }
         .report-page:last-child { page-break-after: auto; }
         .landscape-page:last-child { page-break-after: auto; }
+        .compact-print-flow-page { page-break-after: auto; break-after: auto; }
+        .analysis-print-page { break-before: auto; }
+        .landscape-page {
+            width: 100% !important;
+            max-width: 100% !important;
+            left: auto !important;
+            transform: none !important;
+            position: static !important;
+            page: landscape-page;
+            break-before: page;
+            break-after: page;
+        }
+        .landscape-card {
+            overflow: visible !important;
+            padding: 14px 16px;
+        }
+        .wide-finance-table {
+            width: 100% !important;
+            min-width: 0 !important;
+            table-layout: fixed;
+            zoom: 0.68;
+        }
+        .wide-finance-table th,
+        .wide-finance-table td {
+            padding: 5px 4px;
+            font-size: 9px;
+            line-height: 1.2;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .wide-finance-table th {
+            font-size: 8px;
+            letter-spacing: .04em;
+        }
+        .wide-finance-table th:nth-child(1),
+        .wide-finance-table td:nth-child(1) { width: 7%; }
+        .wide-finance-table th:nth-child(2),
+        .wide-finance-table td:nth-child(2) { width: 9%; }
+        .wide-finance-table th:nth-child(3),
+        .wide-finance-table td:nth-child(3) { width: 9%; }
+        .wide-finance-table th:nth-child(4),
+        .wide-finance-table td:nth-child(4) { width: 9%; }
+        .wide-finance-table th:nth-child(5),
+        .wide-finance-table td:nth-child(5) { width: 7%; }
+        .wide-finance-table th:nth-child(6),
+        .wide-finance-table td:nth-child(6) { width: 6%; }
+        .wide-finance-table th:nth-child(7),
+        .wide-finance-table td:nth-child(7) { width: 8%; }
+        .wide-finance-table th:nth-child(8),
+        .wide-finance-table td:nth-child(8) { width: 8%; }
+        .wide-finance-table th:nth-child(9),
+        .wide-finance-table td:nth-child(9) { width: 8%; }
+        .wide-finance-table th:nth-child(10),
+        .wide-finance-table td:nth-child(10) { width: 8%; }
+        .wide-finance-table th:nth-child(11),
+        .wide-finance-table td:nth-child(11) { width: 8%; }
+        .wide-finance-table th:nth-child(12),
+        .wide-finance-table td:nth-child(12) { width: 6%; }
+        .wide-finance-table th:nth-child(13),
+        .wide-finance-table td:nth-child(13) { width: 9%; }
+        .flow-compact-card { padding: 18px 20px; }
+        .vertical-flow-table th,
+        .vertical-flow-table td { padding-top: 7px; padding-bottom: 7px; }
+        .vertical-flow-table th { font-size: 9px; }
+        .vertical-flow-table td { font-size: 11px; }
+        .aggregated-flow-row td { padding-top: 6px; padding-bottom: 6px; font-size: 10.5px; }
         body,
         .layout-workspace,
         .workspace-container,
@@ -984,8 +1054,7 @@ R$ {{ (value|default(0))|format_currency_br }}
             display: none !important;
         }
         @page { margin: 1.2cm; size: A4; }
-        @page landscape-page { margin: 1.2cm; size: A4 landscape; }
-        .landscape-page { page: landscape-page; break-before: page; break-after: page; }
+        @page landscape-page { margin: 0.8cm; size: A4 landscape; }
     }
 </style>
 
@@ -1028,6 +1097,9 @@ R$ {{ (value|default(0))|format_currency_br }}
                     .report-shell {
                         max-width: 100% !important;
                         margin: 0 !important;
+                    }
+                    body {
+                        padding: 0 !important;
                     }
                 </style>
             </head>
