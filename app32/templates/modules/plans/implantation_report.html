@@ -450,8 +450,8 @@ R$ {{ (value|default(0))|format_currency_br }}
         <div class="section-header">
             <span class="section-index">05</span>
             <div>
-                <h3>Composição do investimento e funding</h3>
-                <p>Estrutura de capital de giro, imobilizado, fontes de recurso e regras de distribuição previstas.</p>
+                <h3>Investimento</h3>
+                <p>Composição do capital de giro, imobilizado e parâmetros de estrutura financeira do investimento.</p>
             </div>
         </div>
 
@@ -495,49 +495,6 @@ R$ {{ (value|default(0))|format_currency_br }}
             </div>
 
             <div class="content-card">
-                <label class="field-label">Fontes de recurso</label>
-                <table class="report-table compact-table">
-                    <thead>
-                        <tr>
-                            <th>Fonte</th>
-                            <th>Tipo</th>
-                            <th>Período</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for source in funding_sources %}
-                        <tr>
-                            <td>{{ source.name }}</td>
-                            <td>{{ source.type|replace('_', ' ')|title }}</td>
-                            <td>{{ period_label(source.date) }}</td>
-                            <td>{{ money(source.amount) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="empty-cell">Nenhuma fonte de recurso cadastrada.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-
-                <label class="field-label mt-24">Regras de distribuição</label>
-                <ul class="bullet-list compact">
-                    {% for rule in profit_distribution %}
-                    <li>
-                        {{ rule.type|default('sócios')|replace('_', ' ')|title }} —
-                        {{ percent(rule.percentage|default(0), 0) }}
-                        {% if rule.start_date %} a partir de {{ period_label(rule.start_date|replace('.', '-')) }}{% endif %}
-                    </li>
-                    {% else %}
-                    <li>Nenhuma regra de distribuição cadastrada.</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-
-        <div class="two-col mt-24">
-            <div class="content-card">
                 <label class="field-label">Configurações avançadas de prazo médio</label>
                 <div class="indicator-list">
                     <div class="indicator-row"><span>Reserva mínima</span><strong>{{ money(working_capital_settings.cash_reserve|default(0)) }}</strong></div>
@@ -546,34 +503,34 @@ R$ {{ (value|default(0))|format_currency_br }}
                     <div class="indicator-row"><span>Pagamento médio</span><strong>{{ working_capital_settings.payable_days|default(30) }} dias</strong></div>
                 </div>
             </div>
+        </div>
 
-            <div class="content-card">
-                <label class="field-label">Investimento em imobilizado / ativo não circulante</label>
-                <table class="report-table compact-table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Tipo</th>
-                            <th>Data pagto.</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for inv in fixed_asset_rows %}
-                        <tr>
-                            <td>{{ inv.description|default('-') }}</td>
-                            <td>{{ inv.item_type|default('imobilizado') }}</td>
-                            <td>{{ period_label(inv.date|default('')) }}</td>
-                            <td>{{ money(inv.amount|default(0)) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="empty-cell">Nenhum investimento em imobilizado consolidado.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="content-card mt-24">
+            <label class="field-label">Investimento em imobilizado / ativo não circulante</label>
+            <table class="report-table compact-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Tipo</th>
+                        <th>Data pagto.</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in fixed_asset_rows %}
+                    <tr>
+                        <td>{{ inv.description|default('-') }}</td>
+                        <td>{{ inv.item_type|default('imobilizado') }}</td>
+                        <td>{{ period_label(inv.date|default('')) }}</td>
+                        <td>{{ money(inv.amount|default(0)) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="empty-cell">Nenhum investimento em imobilizado consolidado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </section>
 
@@ -581,62 +538,12 @@ R$ {{ (value|default(0))|format_currency_br }}
         <div class="section-header">
             <span class="section-index">06</span>
             <div>
-                <h3>Viabilidade financeira e dinâmica do fluxo</h3>
-                <p>Análise consolidada de retorno, geração operacional e leitura da evolução mensal do plano.</p>
+                <h3>Resultados Operacionais</h3>
+                <p>Leitura do desempenho operacional projetado até o fim do ramp-up, com foco em margens e resultado.</p>
             </div>
         </div>
 
-        {% if finance_executive_summary %}
         <div class="content-card">
-            <label class="field-label">Resumo executivo da viabilidade</label>
-            <p class="field-text">{{ finance_executive_summary }}</p>
-        </div>
-        {% endif %}
-
-        <div class="metrics-grid metrics-grid-4 mt-24">
-            <div class="metric-card success">
-                <span>Payback</span>
-                <strong>{{ finance_metrics.payback|default(0) }} meses</strong>
-                <small>{{ period_label(summary.payback_period|default('')) }}</small>
-            </div>
-            <div class="metric-card">
-                <span>ROI do investidor</span>
-                <strong>{{ percent(finance_metrics.roi|default(0)) }}</strong>
-            </div>
-            <div class="metric-card">
-                <span>TIR</span>
-                <strong>{{ percent(finance_metrics.tir|default(0)) }}</strong>
-            </div>
-            <div class="metric-card">
-                <span>VPL</span>
-                <strong>{{ money(finance_metrics.vpl|default(0)) }}</strong>
-            </div>
-        </div>
-
-        <div class="two-col mt-24">
-            <div class="content-card">
-                <label class="field-label">Indicadores consolidados</label>
-                <div class="indicator-list">
-                    <div class="indicator-row"><span>Receita acumulada projetada</span><strong>{{ money(finance_summary.total_revenue|default(0)) }}</strong></div>
-                    <div class="indicator-row"><span>Resultado operacional acumulado</span><strong>{{ money(finance_summary.total_operating_result|default(0)) }}</strong></div>
-                    <div class="indicator-row"><span>Total de financiamentos</span><strong>{{ money(finance_summary.total_loans|default(0)) }}</strong></div>
-                    <div class="indicator-row"><span>Pico de receita</span><strong>{{ period_label(summary.peak_revenue_period|default('')) }}</strong></div>
-                    <div class="indicator-row"><span>Pico de investimento</span><strong>{{ period_label(summary.peak_investment_period|default('')) }}</strong></div>
-                    <div class="indicator-row"><span>Meses ativos no fluxo</span><strong>{{ summary.active_timeline_months|default(0) }}</strong></div>
-                </div>
-            </div>
-            <div class="content-card">
-                <label class="field-label">Parâmetros da análise</label>
-                <div class="indicator-list">
-                    <div class="indicator-row"><span>Horizonte analisado</span><strong>{{ consolidated.params.period_months|default(0) }} meses</strong></div>
-                    <div class="indicator-row"><span>Custo de oportunidade</span><strong>{{ percent(consolidated.params.opportunity_cost_annual|default(0)) }}</strong></div>
-                    <div class="indicator-row"><span>Início considerado</span><strong>{{ period_label(consolidated.params.start_date|default('')) }}</strong></div>
-                    <div class="indicator-row"><span>Fim do ramp-up</span><strong>{{ period_label(summary.ramp_up_end_period|default('')) }}</strong></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-card mt-24">
             <label class="field-label">Resultado operacional projetado até o fim do ramp-up</label>
             <table class="report-table compact-table">
                 <thead>
@@ -671,8 +578,73 @@ R$ {{ (value|default(0))|format_currency_br }}
                 </tbody>
             </table>
         </div>
+    </section>
 
-        <div class="metrics-grid metrics-grid-3 mt-24">
+    <section class="report-page">
+        <div class="section-header">
+            <span class="section-index">07</span>
+            <div>
+                <h3>Fontes e Distribuições</h3>
+                <p>Estrutura de funding e regras de destinação de resultados para sócios e demais compromissos.</p>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="content-card">
+                <label class="field-label">Fontes de recurso</label>
+                <table class="report-table compact-table">
+                    <thead>
+                        <tr>
+                            <th>Fonte</th>
+                            <th>Tipo</th>
+                            <th>Período</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for source in funding_sources %}
+                        <tr>
+                            <td>{{ source.name }}</td>
+                            <td>{{ source.type|replace('_', ' ')|title }}</td>
+                            <td>{{ period_label(source.date) }}</td>
+                            <td>{{ money(source.amount) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="empty-cell">Nenhuma fonte de recurso cadastrada.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="content-card">
+                <label class="field-label">Regras de distribuição</label>
+                <ul class="bullet-list compact">
+                    {% for rule in profit_distribution %}
+                    <li>
+                        {{ rule.type|default('sócios')|replace('_', ' ')|title }} —
+                        {{ percent(rule.percentage|default(0), 0) }}
+                        {% if rule.start_date %} a partir de {{ period_label(rule.start_date|replace('.', '-')) }}{% endif %}
+                    </li>
+                    {% else %}
+                    <li>Nenhuma regra de distribuição cadastrada.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="report-page">
+        <div class="section-header">
+            <span class="section-index">08</span>
+            <div>
+                <h3>Fluxos de Caixa</h3>
+                <p>Leitura consolidada dos fluxos do negócio, do investimento e do investidor.</p>
+            </div>
+        </div>
+
+        <div class="metrics-grid metrics-grid-3">
             <div class="metric-card">
                 <span>Fluxo líquido do negócio</span>
                 <strong>{{ money(timeline_focus|sum(attribute='business_net_flow')) }}</strong>
@@ -689,15 +661,14 @@ R$ {{ (value|default(0))|format_currency_br }}
                 <small>Distribuições menos aportes próprios</small>
             </div>
         </div>
-
     </section>
 
-    <section class="report-page landscape-page">
+    <section class="report-page landscape-page landscape-visual-page">
         <div class="section-header">
-            <span class="section-index">06A</span>
+            <span class="section-index">08A</span>
             <div>
                 <h3>Fluxo de caixa do negócio</h3>
-                <p>Quadro analítico completo isolado em página paisagem para melhorar legibilidade e impressão.</p>
+                <p>Quadro analítico completo isolado em paisagem, tanto na visualização quanto no PDF e impressão.</p>
             </div>
         </div>
 
@@ -751,10 +722,10 @@ R$ {{ (value|default(0))|format_currency_br }}
 
     <section class="report-page">
         <div class="section-header">
-            <span class="section-index">06B</span>
+            <span class="section-index">08B</span>
             <div>
-                <h3>Fluxos complementares de investimento e investidor</h3>
-                <p>Continuidade da análise financeira com os quadros de CAPEX e ROI após o fluxo principal do negócio.</p>
+                <h3>Fluxos complementares</h3>
+                <p>Continuidade dos quadros de CAPEX e ROI após o fluxo principal do negócio.</p>
             </div>
         </div>
 
@@ -818,18 +789,79 @@ R$ {{ (value|default(0))|format_currency_br }}
             </table>
         </div>
     </section>
+
+    <section class="report-page">
+        <div class="section-header">
+            <span class="section-index">09</span>
+            <div>
+                <h3>Análise e Viabilidade</h3>
+                <p>Parâmetros, métricas de retorno e leitura consolidada para tomada de decisão.</p>
+            </div>
+        </div>
+
+        {% if finance_executive_summary %}
+        <div class="content-card">
+            <label class="field-label">Resumo executivo da viabilidade</label>
+            <p class="field-text">{{ finance_executive_summary }}</p>
+        </div>
+        {% endif %}
+
+        <div class="metrics-grid metrics-grid-4 mt-24">
+            <div class="metric-card success">
+                <span>Payback</span>
+                <strong>{{ finance_metrics.payback|default(0) }} meses</strong>
+                <small>{{ period_label(summary.payback_period|default('')) }}</small>
+            </div>
+            <div class="metric-card">
+                <span>ROI do investidor</span>
+                <strong>{{ percent(finance_metrics.roi|default(0)) }}</strong>
+            </div>
+            <div class="metric-card">
+                <span>TIR</span>
+                <strong>{{ percent(finance_metrics.tir|default(0)) }}</strong>
+            </div>
+            <div class="metric-card">
+                <span>VPL</span>
+                <strong>{{ money(finance_metrics.vpl|default(0)) }}</strong>
+            </div>
+        </div>
+
+        <div class="two-col mt-24">
+            <div class="content-card">
+                <label class="field-label">Indicadores consolidados</label>
+                <div class="indicator-list">
+                    <div class="indicator-row"><span>Receita acumulada projetada</span><strong>{{ money(finance_summary.total_revenue|default(0)) }}</strong></div>
+                    <div class="indicator-row"><span>Resultado operacional acumulado</span><strong>{{ money(finance_summary.total_operating_result|default(0)) }}</strong></div>
+                    <div class="indicator-row"><span>Total de financiamentos</span><strong>{{ money(finance_summary.total_loans|default(0)) }}</strong></div>
+                    <div class="indicator-row"><span>Pico de receita</span><strong>{{ period_label(summary.peak_revenue_period|default('')) }}</strong></div>
+                    <div class="indicator-row"><span>Pico de investimento</span><strong>{{ period_label(summary.peak_investment_period|default('')) }}</strong></div>
+                    <div class="indicator-row"><span>Meses ativos no fluxo</span><strong>{{ summary.active_timeline_months|default(0) }}</strong></div>
+                </div>
+            </div>
+            <div class="content-card">
+                <label class="field-label">Parâmetros da análise</label>
+                <div class="indicator-list">
+                    <div class="indicator-row"><span>Horizonte analisado</span><strong>{{ consolidated.params.period_months|default(0) }} meses</strong></div>
+                    <div class="indicator-row"><span>Custo de oportunidade</span><strong>{{ percent(consolidated.params.opportunity_cost_annual|default(0)) }}</strong></div>
+                    <div class="indicator-row"><span>Início considerado</span><strong>{{ period_label(consolidated.params.start_date|default('')) }}</strong></div>
+                    <div class="indicator-row"><span>Fim do ramp-up</span><strong>{{ period_label(summary.ramp_up_end_period|default('')) }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 <style id="implantation-report-styles">
-    .report-shell { max-width: 1180px; margin: 0 auto; background: #fff; }
+    .report-shell { max-width: 1180px; margin: 0 auto; background: #fff; overflow: visible; }
     .report-toolbar { display: flex; justify-content: space-between; align-items: center; background: #0f172a; color: #fff; padding: 20px 24px; border-radius: 18px; margin-bottom: 24px; }
     .report-toolbar h2 { margin: 0; font-size: 20px; font-weight: 800; }
     .report-toolbar p { margin: 4px 0 0; font-size: 13px; opacity: .75; }
     .print-btn { border: none; background: #2563eb; color: #fff; padding: 12px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; }
     .report-page { background: #fff; color: #0f172a; padding: 48px; margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 24px; }
-    .landscape-page { max-width: 100%; }
+    .landscape-page { width: min(1680px, calc(100vw - 48px)); max-width: none; position: relative; left: 50%; transform: translateX(-50%); }
+    .landscape-visual-page { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
     .landscape-card { overflow-x: auto; }
-    .wide-finance-table { min-width: 1400px; }
+    .wide-finance-table { min-width: 1480px; }
     .cover-page { min-height: 1180px; display: flex; flex-direction: column; justify-content: space-between; }
     .cover-topline { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: #64748b; }
     .cover-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; align-items: start; margin-top: 28px; }
@@ -906,6 +938,7 @@ R$ {{ (value|default(0))|format_currency_br }}
         .report-shell { max-width: 100%; }
         .report-page { border: none; border-radius: 0; margin: 0; padding: 0; page-break-after: always; }
         .report-page:last-child { page-break-after: auto; }
+        .landscape-page:last-child { page-break-after: auto; }
         body,
         .layout-workspace,
         .workspace-container,
