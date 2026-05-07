@@ -119,9 +119,45 @@ def test_get_implantation_report_context_uses_full_finance_timeline(monkeypatch)
 
     assert len(context["timeline_focus"]) == 60
     assert context["timeline_focus"][-1]["period"] == "2030-12"
+    assert len(context["flow_timeline"]) == 27
+    assert context["flow_timeline"][0]["is_aggregated_year"] is False
+    assert context["flow_timeline"][11]["is_aggregated_year"] is False
+    assert context["flow_timeline"][12]["is_aggregated_year"] is False
+    assert context["flow_timeline"][-1]["period_label"] == "2030"
+    assert context["flow_timeline"][-1]["is_aggregated_year"] is True
     assert len(context["ramp_up_timeline"]) == 2
     assert context["working_capital_settings"]["receivables_days"] == 30
     assert context["finance_executive_summary"] == ""
+
+
+def test_aggregate_flow_timeline_for_report_keeps_monthly_until_end_of_next_year_and_then_annual():
+    timeline = []
+    for year in range(2026, 2031):
+        for month in range(1, 13):
+            if year == 2030 and month > 9:
+                break
+            period = f"{year:04d}-{month:02d}"
+            timeline.append({
+                "period": period,
+                "revenue": 100.0,
+                "business_net_flow": 10.0,
+                "cumulative_business": float(len(timeline) + 1),
+            })
+
+    aggregated = PlanService._aggregate_flow_timeline_for_report(timeline, "2026.01")
+
+    assert len(aggregated) == 27
+    assert aggregated[0]["period"] == "2026-01"
+    assert aggregated[11]["period"] == "2026-12"
+    assert aggregated[12]["period"] == "2027-01"
+    assert aggregated[23]["period"] == "2027-12"
+    assert aggregated[0]["is_aggregated_year"] is False
+    assert aggregated[24]["period_label"] == "2028"
+    assert aggregated[24]["revenue"] == 1200.0
+    assert aggregated[25]["period_label"] == "2029"
+    assert aggregated[26]["period_label"] == "jan-set/2030"
+    assert aggregated[26]["revenue"] == 900.0
+    assert aggregated[26]["cumulative_business"] == float(len(timeline))
 
 
 def test_get_consolidated_finance_defaults_start_date_to_first_equity_execution_or_revenue(monkeypatch):

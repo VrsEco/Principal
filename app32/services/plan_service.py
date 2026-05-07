@@ -992,6 +992,83 @@ class PlanService:
         return execution_areas
 
     @staticmethod
+    def _aggregate_flow_timeline_for_report(timeline: List[Dict[str, Any]], start_date: str = "") -> List[Dict[str, Any]]:
+        """Agrupa fluxos: mensal até o fim do ano seguinte ao início e anual depois."""
+        if not timeline:
+            return []
+
+        normalized_start = PlanService._normalize_period(start_date) or PlanService._normalize_period(timeline[0].get('period'))
+        if not normalized_start:
+            return timeline
+
+        start_year = int(normalized_start.split('-')[0])
+        monthly_until_year = start_year + 1
+
+        numeric_fields = [
+            'revenue', 'variable_costs', 'variable_expenses', 'gmc', 'fixed_costs', 'fixed_expenses',
+            'operating_result_before_taxes', 'taxes_total', 'investment', 'operating_result',
+            'sources_equity', 'loans', 'distributions', 'destinations_others', 'total_destinations',
+            'investor_net_flow', 'investment_flow', 'business_net_flow'
+        ]
+        cumulative_fields = ['cumulative_business', 'cumulative_investor', 'cumulative_investment', 'cumulative_net_operating']
+
+        aggregated: List[Dict[str, Any]] = []
+        current_group: List[Dict[str, Any]] = []
+        current_year = None
+
+        def finalize_year_group(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+            first_period = rows[0].get('period') or ""
+            last_period = rows[-1].get('period') or ""
+            first_month = int(first_period.split('-')[1])
+            last_month = int(last_period.split('-')[1])
+            year = first_period.split('-')[0]
+
+            months_pt = {
+                1: 'jan', 2: 'fev', 3: 'mar', 4: 'abr', 5: 'mai', 6: 'jun',
+                7: 'jul', 8: 'ago', 9: 'set', 10: 'out', 11: 'nov', 12: 'dez'
+            }
+
+            if first_month == 1 and last_month == 12:
+                label = year
+            else:
+                label = f"{months_pt[first_month]}-{months_pt[last_month]}/{year}"
+
+            bucket = {
+                "period": f"{first_period}..{last_period}",
+                "period_label": label,
+                "is_aggregated_year": True,
+            }
+            for field in numeric_fields:
+                bucket[field] = sum(float(row.get(field) or 0) for row in rows)
+            for field in cumulative_fields:
+                bucket[field] = float(rows[-1].get(field) or 0)
+            return bucket
+
+        for row in timeline:
+            period = PlanService._normalize_period(row.get('period'))
+            if not period:
+                continue
+            year = int(period.split('-')[0])
+            if year <= monthly_until_year:
+                item = dict(row)
+                item["is_aggregated_year"] = False
+                aggregated.append(item)
+                continue
+
+            if current_year is None:
+                current_year = year
+            if year != current_year:
+                aggregated.append(finalize_year_group(current_group))
+                current_group = []
+                current_year = year
+            current_group.append(row)
+
+        if current_group:
+            aggregated.append(finalize_year_group(current_group))
+
+        return aggregated
+
+    @staticmethod
     def get_implantation_report_context(plan_id: int, company_id: int) -> Dict[str, Any]:
         """Monta um contexto detalhado e estável para o relatório final de implantação."""
         plan = PlanService.get_plan(plan_id, company_id)
@@ -1105,6 +1182,7 @@ class PlanService:
             )
         ]
         timeline_focus = timeline or active_timeline
+        flow_timeline = PlanService._aggregate_flow_timeline_for_report(timeline_focus, consolidated.get('params', {}).get('start_date', ''))
 
         payback_month = ""
         for row in timeline:
@@ -1145,6 +1223,7 @@ class PlanService:
             "profit_distribution": finance.get('profit_distribution', []) if isinstance(finance, dict) else [],
             "tax_rules": (consolidated.get('taxes', {}) or {}).get('rules', []) if isinstance(consolidated, dict) else [],
             "timeline_focus": timeline_focus,
+            "flow_timeline": flow_timeline,
             "ramp_up_timeline": ramp_up_timeline,
             "finance_executive_summary": finance.get('executive_summary', "") if isinstance(finance, dict) else "",
             "report_summary": {
