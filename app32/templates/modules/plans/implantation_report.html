@@ -43,7 +43,7 @@ R$ {{ (value|default(0))|format_currency_br }}
             <h2>Relatório detalhado de implantação</h2>
             <p>Versão analítica com visão estratégica, mercadológica, operacional e financeira.</p>
         </div>
-        <button onclick="window.print()" class="print-btn">
+        <button onclick="printDetailedReport()" class="print-btn">
             <i class="fa-solid fa-print"></i> Imprimir PDF
         </button>
     </div>
@@ -625,7 +625,7 @@ R$ {{ (value|default(0))|format_currency_br }}
     </section>
 </div>
 
-<style>
+<style id="implantation-report-styles">
     .report-shell { max-width: 1180px; margin: 0 auto; background: #fff; }
     .report-toolbar { display: flex; justify-content: space-between; align-items: center; background: #0f172a; color: #fff; padding: 20px 24px; border-radius: 18px; margin-bottom: 24px; }
     .report-toolbar h2 { margin: 0; font-size: 20px; font-weight: 800; }
@@ -708,7 +708,86 @@ R$ {{ (value|default(0))|format_currency_br }}
         .report-shell { max-width: 100%; }
         .report-page { border: none; border-radius: 0; margin: 0; padding: 0; page-break-after: always; }
         .report-page:last-child { page-break-after: auto; }
+        body,
+        .layout-workspace,
+        .workspace-container,
+        .workspace-main {
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        .workspace-navbar,
+        .workspace-sidebar,
+        .workspace-sidebar-right,
+        .ws-overlay {
+            display: none !important;
+        }
         @page { margin: 1.2cm; size: A4; }
     }
 </style>
+
+<script>
+    function printDetailedReport() {
+        const reportShell = document.querySelector('.report-shell');
+        const styles = document.getElementById('implantation-report-styles');
+
+        if (!reportShell || !styles) {
+            window.print();
+            return;
+        }
+
+        const printWindow = window.open('', '_blank', 'width=1280,height=900');
+        if (!printWindow) {
+            window.print();
+            return;
+        }
+
+        printWindow.document.open();
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Relatório detalhado de implantação</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                <style>
+                    body {
+                        margin: 0;
+                        padding: 24px;
+                        background: #ffffff;
+                        font-family: Inter, Arial, sans-serif;
+                    }
+                    ${styles.innerHTML}
+                    .report-shell {
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                    }
+                </style>
+            </head>
+            <body>
+                ${reportShell.outerHTML}
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+
+        const finalizePrint = () => {
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        };
+
+        if (printWindow.document.fonts && printWindow.document.fonts.ready) {
+            printWindow.document.fonts.ready.then(() => {
+                setTimeout(finalizePrint, 300);
+            });
+        } else {
+            setTimeout(finalizePrint, 700);
+        }
+    }
+</script>
 {% endblock %}
