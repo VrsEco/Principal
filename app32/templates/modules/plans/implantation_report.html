@@ -35,6 +35,7 @@ R$ {{ (value|default(0))|format_currency_br }}
 {% set working_capital_groups = report.working_capital_groups|default([]) %}
 {% set funding_sources = report.funding_sources|default([]) %}
 {% set profit_distribution = report.profit_distribution|default([]) %}
+{% set tax_rules = report.tax_rules|default([]) %}
 {% set timeline_focus = report.timeline_focus|default([]) %}
 {% set ramp_up_timeline = report.ramp_up_timeline|default([]) %}
 {% set working_capital_settings = report.working_capital_settings|default({}) %}
@@ -555,6 +556,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                         <th>Margem contribuição</th>
                         <th>Custos fixos</th>
                         <th>Despesas fixas</th>
+                        <th>Impostos</th>
                         <th>Resultado operacional</th>
                     </tr>
                 </thead>
@@ -568,16 +570,41 @@ R$ {{ (value|default(0))|format_currency_br }}
                         <td>{{ money(row.gmc) }}</td>
                         <td>{{ money(row.fixed_costs) }}</td>
                         <td>{{ money(row.fixed_expenses) }}</td>
+                        <td>{{ money(row.taxes_total|default(0)) }}</td>
                         <td>{{ money(row.operating_result) }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="empty-cell">Resultado operacional projetado ainda não consolidado.</td>
+                        <td colspan="9" class="empty-cell">Resultado operacional projetado ainda não consolidado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if tax_rules %}
+        <div class="content-card mt-24">
+            <label class="field-label">Regras de impostos configuradas</label>
+            <table class="report-table compact-table">
+                <thead>
+                    <tr>
+                        <th>Imposto</th>
+                        <th>%</th>
+                        <th>Base</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tax in tax_rules %}
+                    <tr>
+                        <td>{{ tax.description|default('-') }}</td>
+                        <td>{{ percent(tax.percentage|default(0), 2) }}</td>
+                        <td>{{ tax.base_label|default(tax.base)|default('-') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </section>
 
     <section class="report-page">
@@ -682,6 +709,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                         <th>Variáveis</th>
                         <th>Margem contr.</th>
                         <th>Fixos</th>
+                        <th>Impostos</th>
                         <th>Res. operac.</th>
                         <th>Destinação geral</th>
                         <th>Res. período</th>
@@ -702,6 +730,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                         <td>{{ money(variables_total) }}</td>
                         <td>{{ money(row.gmc) }}</td>
                         <td>{{ money(fixed_total) }}</td>
+                        <td>{{ money(row.taxes_total|default(0)) }}</td>
                         <td>{{ money(row.operating_result) }}</td>
                         <td>{{ money(row.total_destinations) }}</td>
                         <td>{{ money(res_periodo) }}</td>
@@ -712,7 +741,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="12" class="empty-cell">Fluxo financeiro ainda não consolidado.</td>
+                        <td colspan="13" class="empty-cell">Fluxo financeiro ainda não consolidado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

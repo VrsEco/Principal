@@ -157,6 +157,11 @@ class FinanceProfitDistribution(BaseSchema):
     type: str = "socio" # socio, outras
     start_date: Optional[str] = None
 
+class FinanceTaxRule(BaseSchema):
+    description: str
+    percentage: float # 0 to 100
+    base: str = "operating_result" # revenue, gross_margin, operating_result, operating_result_additional_ir
+
 class FinanceAnalysisParams(BaseSchema):
     period_months: int = 60
     opportunity_cost_annual: float = 12.0
@@ -186,6 +191,9 @@ class FinanceSchema(BaseSchema):
     
     # Profit Distribution
     profit_distribution: List[FinanceProfitDistribution] = Field(default_factory=list)
+
+    # Taxes
+    taxes: List[FinanceTaxRule] = Field(default_factory=list)
     
     # Calculations / State (to be updated by service)
     results_notes: Optional[str] = None

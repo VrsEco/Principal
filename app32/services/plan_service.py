@@ -131,6 +131,70 @@ class PlanService:
         return relevant_dates
 
     @staticmethod
+    def _normalize_finance_tax_rules(fin_content: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Normaliza regras de impostos em uma estrutura estável."""
+        normalized_rules: List[Dict[str, Any]] = []
+        for rule in fin_content.get('taxes', []) if isinstance(fin_content, dict) else []:
+            if not isinstance(rule, dict):
+                continue
+            description = (rule.get('description') or "").strip()
+            if not description:
+                continue
+            normalized_rules.append({
+                "description": description,
+                "percentage": float(rule.get('percentage') or 0),
+                "base": (rule.get('base') or 'operating_result').strip(),
+                "base_label": PlanService._tax_base_label(rule.get('base') or 'operating_result'),
+            })
+        return normalized_rules
+
+    @staticmethod
+    def _tax_base_label(base_key: str) -> str:
+        return {
+            "revenue": "Faturamento",
+            "gross_margin": "Lucro Bruto",
+            "operating_result": "Lucro Operacional",
+            "operating_result_additional_ir": "Lucro Operacional p/ Adicional IR",
+        }.get(base_key, base_key or "Base")
+
+    @staticmethod
+    def _build_tax_base_snapshot(period_revenue: float, period_variable_costs: float, period_variable_expenses: float,
+                                 period_fixed_costs: float, period_fixed_expenses: float) -> Dict[str, float]:
+        """Calcula as bases fiscais do período."""
+        gross_margin = period_revenue - period_variable_costs - period_variable_expenses
+        operating_result_before_taxes = gross_margin - period_fixed_costs - period_fixed_expenses
+        additional_ir_base = max(operating_result_before_taxes - 20000.0, 0.0)
+        return {
+            "revenue": period_revenue,
+            "gross_margin": gross_margin,
+            "operating_result": operating_result_before_taxes,
+            "operating_result_additional_ir": additional_ir_base,
+        }
+
+    @staticmethod
+    def _calculate_tax_lines(tax_rules: List[Dict[str, Any]], base_snapshot: Dict[str, float]) -> Tuple[List[Dict[str, Any]], float]:
+        """Calcula os impostos do período a partir das regras configuradas."""
+        tax_lines: List[Dict[str, Any]] = []
+        taxes_total = 0.0
+
+        for rule in tax_rules:
+            base_key = rule.get('base') or 'operating_result'
+            base_value = float(base_snapshot.get(base_key) or 0)
+            taxable_base = max(base_value, 0.0)
+            amount = taxable_base * (float(rule.get('percentage') or 0) / 100.0)
+            taxes_total += amount
+            tax_lines.append({
+                "description": rule.get('description') or "Imposto",
+                "percentage": float(rule.get('percentage') or 0),
+                "base": base_key,
+                "base_label": PlanService._tax_base_label(base_key),
+                "base_value": taxable_base,
+                "amount": amount,
+            })
+
+        return tax_lines, taxes_total
+
+    @staticmethod
     def get_sections_config(mode: str) -> List[Dict[str, Any]]:
         """Returns the centralized configuration for plan sections."""
         if mode == 'growth':
@@ -596,7 +660,8 @@ class PlanService:
                     ramp_up_end_index = i
                     break
         
-        # 7. Distributions
+        # 7. Taxes & Distributions
+        tax_rules = PlanService._normalize_finance_tax_rules(fin_content)
         profit_rules = fin_content.get('profit_distribution', [])
         
         # 8. Accumulators
@@ -686,8 +751,17 @@ class PlanService:
                         period_loans += float(s.get('amount') or 0)
 
             # Business Results
-            gmc = period_revenue - period_variable_costs - period_variable_expenses
-            operating_result = gmc - period_fixed_costs - period_fixed_expenses
+            base_snapshot = PlanService._build_tax_base_snapshot(
+                period_revenue,
+                period_variable_costs,
+                period_variable_expenses,
+                period_fixed_costs,
+                period_fixed_expenses,
+            )
+            gmc = base_snapshot["gross_margin"]
+            operating_result_before_taxes = base_snapshot["operating_result"]
+            tax_lines, taxes_total = PlanService._calculate_tax_lines(tax_rules, base_snapshot)
+            operating_result = operating_result_before_taxes - taxes_total
             
             period_distributions_partners = 0
             period_destinations_others = 0
@@ -739,6 +813,10 @@ class PlanService:
                 "gmc": gmc,
                 "fixed_costs": period_fixed_costs,
                 "fixed_expenses": period_fixed_expenses,
+                "operating_result_before_taxes": operating_result_before_taxes,
+                "tax_lines": tax_lines,
+                "taxes_total": taxes_total,
+                "tax_base_values": base_snapshot,
                 "investment": period_investment,
                 "operating_result": operating_result,
                 "sources_equity": period_sources_equity,
@@ -772,6 +850,8 @@ class PlanService:
                 break
 
         total_investment = working_capital_total + fixed_assets_total
+        tax_preview_index = min(ramp_up_end_index, len(timeline) - 1) if timeline else -1
+        tax_preview = timeline[tax_preview_index] if tax_preview_index >= 0 else {}
 
         return {
             "metrics": {
@@ -787,12 +867,19 @@ class PlanService:
                 "total_equity": total_equity,
                 "total_loans": sum(t['loans'] for t in timeline),
                 "total_revenue": sum(t['revenue'] for t in timeline),
-                "total_operating_result": sum(t['operating_result'] for t in timeline)
+                "total_operating_result": sum(t['operating_result'] for t in timeline),
+                "total_taxes": sum(t.get('taxes_total') or 0 for t in timeline),
             },
             "investments": {
                 "working_capital_lines": working_capital_lines,
                 "fixed_asset_rows": fixed_asset_rows,
                 "timeline_total_investment": total_investment_capex,
+            },
+            "taxes": {
+                "rules": tax_rules,
+                "preview_period": tax_preview.get('period') or "",
+                "preview_tax_lines": tax_preview.get('tax_lines', []) if isinstance(tax_preview, dict) else [],
+                "preview_base_values": tax_preview.get('tax_base_values', {}) if isinstance(tax_preview, dict) else {},
             },
             "timeline": timeline,
             "params": params,
@@ -1012,7 +1099,8 @@ class PlanService:
                 float(row.get(metric) or 0) != 0
                 for metric in (
                     'revenue', 'investment', 'sources_equity', 'loans',
-                    'operating_result', 'distributions', 'fixed_costs', 'fixed_expenses'
+                    'operating_result', 'distributions', 'fixed_costs', 'fixed_expenses',
+                    'taxes_total'
                 )
             )
         ]
@@ -1055,6 +1143,7 @@ class PlanService:
             "fixed_asset_rows": fixed_asset_rows,
             "funding_sources": sources,
             "profit_distribution": finance.get('profit_distribution', []) if isinstance(finance, dict) else [],
+            "tax_rules": (consolidated.get('taxes', {}) or {}).get('rules', []) if isinstance(consolidated, dict) else [],
             "timeline_focus": timeline_focus,
             "ramp_up_timeline": ramp_up_timeline,
             "finance_executive_summary": finance.get('executive_summary', "") if isinstance(finance, dict) else "",
@@ -1116,7 +1205,8 @@ class PlanService:
 def _get_empty_finance():
     return {
         "metrics": {"payback": 0, "roi": 0, "tir": 0, "vpl": 0},
-        "summary": {"total_investment": 0, "total_revenue": 0},
+        "summary": {"total_investment": 0, "total_revenue": 0, "total_taxes": 0},
+        "taxes": {"rules": [], "preview_period": "", "preview_tax_lines": [], "preview_base_values": {}},
         "timeline": [],
         "params": {}
     }

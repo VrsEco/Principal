@@ -31,9 +31,10 @@
     style="display: flex; gap: 24px; margin-bottom: 32px; border-bottom: 2px solid #f1f5f9; padding-bottom: 0;">
     <button onclick="switchTab('investments')" class="tab-btn active" data-tab="investments">1. Investimentos</button>
     <button onclick="switchTab('results')" class="tab-btn" data-tab="results">2. Resultados Operacionais</button>
-    <button onclick="switchTab('cashflow')" class="tab-btn" data-tab="cashflow">3. Fluxos de Caixa</button>
-    <button onclick="switchTab('funding')" class="tab-btn" data-tab="funding">4. Fontes & Distribuição</button>
-    <button onclick="switchTab('analysis')" class="tab-btn" data-tab="analysis">5. Análise & Viabilidade</button>
+    <button onclick="switchTab('taxes')" class="tab-btn" data-tab="taxes">3. Impostos</button>
+    <button onclick="switchTab('cashflow')" class="tab-btn" data-tab="cashflow">4. Fluxos de Caixa</button>
+    <button onclick="switchTab('funding')" class="tab-btn" data-tab="funding">5. Fontes & Distribuição</button>
+    <button onclick="switchTab('analysis')" class="tab-btn" data-tab="analysis">6. Análise & Viabilidade</button>
 </div>
 
 <div id="financeTabsContainer">
@@ -386,6 +387,29 @@
                                 ({{ t.fixed_expenses | format_currency_br }})</td>
                             {% endfor %}
                         </tr>
+                        <tr style="background: #fff7ed;">
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 800; position: sticky; left: 0; background: #fff7ed; border-bottom: 1px solid #fed7aa;">
+                                (=) Res. Antes dos Impostos</td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; font-weight: 800; color: #c2410c; border-bottom: 1px solid #fed7aa;">
+                                {{ t.operating_result_before_taxes | format_currency_br }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% for rule in consolidated.taxes.rules|default([]) %}
+                        <tr>
+                            <td
+                                style="padding: 12px; font-size: 12px; font-weight: 700; position: sticky; left: 0; background: white; border-bottom: 1px dashed #f1f5f9;">
+                                (-) {{ rule.description }} <span style="color:#64748b; font-weight:600;">({{ "{:.2f}".format(rule.percentage|default(0)).replace('.', ',') }}% • {{ rule.base_label|default(rule.base) }})</span></td>
+                            {% for t in consolidated.timeline[:consolidated.ramp_up_end_index + 1] %}
+                            {% set tax_line = (t.tax_lines|selectattr('description', 'equalto', rule.description)|list|first) %}
+                            <td
+                                style="padding: 12px; font-size: 12px; text-align: right; color: #ef4444; border-bottom: 1px dashed #f1f5f9;">
+                                ({{ (tax_line.amount if tax_line else 0) | format_currency_br }})</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
                         <tr style="background: #f0fdf4;">
                             <td
                                 style="padding: 12px; font-size: 12px; font-weight: 800; position: sticky; left: 0; background: #f0fdf4;">
@@ -402,7 +426,122 @@
         </div>
     </div>
 
-    <!-- TAB 3: FLUXOS DE CAIXA -->
+    <!-- TAB 3: IMPOSTOS -->
+    <div id="tab-taxes" class="tab-content" style="display: none;">
+        {% set tax_preview = consolidated.taxes.preview_base_values|default({}) %}
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <div class="planning-card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px;">
+                    <div>
+                        <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Impostos sobre o Resultado</h3>
+                        <p style="font-size: 13px; color: #64748b;">
+                            Nesta etapa os impostos entram antes do <strong>Resultado Operacional</strong> e reduzem o resultado do período.
+                            A prévia abaixo usa o mês de referência <strong>{{ consolidated.taxes.preview_period|default('-') }}</strong>.
+                        </p>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+                        <button onclick="addTaxRow()" class="button-text" style="color: #2563eb; font-weight: 700;">+ Adicionar Imposto</button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                            <button type="button" onclick="addTaxPreset('csll')" class="preset-btn">CSLL 9%</button>
+                            <button type="button" onclick="addTaxPreset('irpj')" class="preset-btn">IRPJ 15%</button>
+                            <button type="button" onclick="addTaxPreset('adicional_irpj')" class="preset-btn">Adic. IRPJ 10%</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px;">
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <span class="field-label">Faturamento</span>
+                        <strong style="font-size:20px; color:#0f172a;">R$ {{ tax_preview.revenue|default(0)|format_currency_br }}</strong>
+                    </div>
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <span class="field-label">Lucro Bruto</span>
+                        <strong style="font-size:20px; color:#2563eb;">R$ {{ tax_preview.gross_margin|default(0)|format_currency_br }}</strong>
+                    </div>
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <span class="field-label">Lucro Operacional</span>
+                        <strong style="font-size:20px; color:#10b981;">R$ {{ tax_preview.operating_result|default(0)|format_currency_br }}</strong>
+                    </div>
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <span class="field-label">Lucro Operacional p/ Adicional IR</span>
+                        <strong style="font-size:20px; color:#c2410c;">R$ {{ tax_preview.operating_result_additional_ir|default(0)|format_currency_br }}</strong>
+                    </div>
+                </div>
+
+                <div id="taxesContainer" style="display:flex; flex-direction:column; gap:12px;">
+                    {% for tax in section_content.taxes|default([]) %}
+                    <div class="tax-row" style="display:grid; grid-template-columns: 2fr 0.8fr 1.2fr 1fr 1fr auto; gap: 12px; align-items:end;">
+                        <div>
+                            <label class="field-label">Descrição do Imposto</label>
+                            <input type="text" class="tax-description" value="{{ tax.description }}" placeholder="Ex: CSLL" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">% Imposto</label>
+                            <input type="number" class="tax-percentage" value="{{ tax.percentage }}" step="0.01" placeholder="0,00" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label class="field-label">Base</label>
+                            <select class="tax-base" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                                <option value="operating_result" {% if tax.base=='operating_result' %}selected{% endif %}>Lucro Operacional</option>
+                                <option value="operating_result_additional_ir" {% if tax.base=='operating_result_additional_ir' %}selected{% endif %}>Lucro Operacional p/ Adicional IR</option>
+                                <option value="gross_margin" {% if tax.base=='gross_margin' %}selected{% endif %}>Lucro Bruto</option>
+                                <option value="revenue" {% if tax.base=='revenue' %}selected{% endif %}>Faturamento</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Base Atual</label>
+                            <input type="text" class="tax-base-value" value="" readonly style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
+                        </div>
+                        <div>
+                            <label class="field-label">Imposto Atual</label>
+                            <input type="text" class="tax-amount-preview" value="" readonly style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
+                        </div>
+                        <button onclick="this.parentElement.remove(); refreshTaxPreviews();" style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div style="margin-top: 20px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px dashed #e2e8f0;">
+                    <p style="font-size: 11px; color: #64748b; margin:0;">
+                        Sugestão inicial: <strong>CSLL 9%</strong> e <strong>IRPJ 15%</strong> sobre <strong>Lucro Operacional</strong>,
+                        além do <strong>Adicional de IRPJ 10%</strong> sobre o excedente mensal acima de R$ 20.000,00.
+                    </p>
+                </div>
+            </div>
+
+            <div class="planning-card">
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">Prévia Mensal dos Impostos</h3>
+                <div style="overflow-x:auto; max-height:420px; overflow-y:auto;">
+                    <table style="width:100%; border-collapse:separate; border-spacing:0; font-size:12px;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th style="padding:10px; text-align:left; border-bottom:2px solid #e2e8f0; position:sticky; top:0; left:0; background:#f8fafc; z-index:10;">Período</th>
+                                <th style="padding:10px; text-align:right; border-bottom:2px solid #e2e8f0; position:sticky; top:0; background:#f8fafc;">Res. Antes Impostos</th>
+                                <th style="padding:10px; text-align:right; border-bottom:2px solid #e2e8f0; position:sticky; top:0; background:#f8fafc;">Base Adicional IR</th>
+                                <th style="padding:10px; text-align:right; border-bottom:2px solid #e2e8f0; position:sticky; top:0; background:#f8fafc;">Impostos</th>
+                                <th style="padding:10px; text-align:right; border-bottom:2px solid #e2e8f0; position:sticky; top:0; background:#f8fafc;">Res. Operacional</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in consolidated.timeline %}
+                            {% set month_parts = t.period.split('-') %}
+                            {% set month_label = months_pt[month_parts[1]] ~ "/" ~ month_parts[0]|truncate(4, True, '') %}
+                            <tr>
+                                <td style="padding:10px; font-weight:700; position:sticky; left:0; background:white; border-bottom:1px solid #f1f5f9;">{{ month_label }}</td>
+                                <td style="padding:10px; text-align:right; border-bottom:1px solid #f1f5f9;">{{ t.operating_result_before_taxes|format_currency_br }}</td>
+                                <td style="padding:10px; text-align:right; border-bottom:1px solid #f1f5f9;">{{ t.tax_base_values.operating_result_additional_ir|default(0)|format_currency_br }}</td>
+                                <td style="padding:10px; text-align:right; color:#ef4444; border-bottom:1px solid #f1f5f9;">({{ t.taxes_total|default(0)|format_currency_br }})</td>
+                                <td style="padding:10px; text-align:right; font-weight:800; color:{% if t.operating_result >= 0 %}#10b981{% else %}#ef4444{% endif %}; border-bottom:1px solid #f1f5f9;">{{ t.operating_result|format_currency_br }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: FLUXOS DE CAIXA -->
     <div id="tab-cashflow" class="tab-content" style="display: none;">
         <div style="display: flex; flex-direction: column; gap: 32px;">
 
@@ -435,6 +574,9 @@
                                     Fixos</th>
                                 <th
                                     style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                    Impostos</th>
+                                <th
+                                    style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
                                     Res. Operac.</th>
                                 <th
                                     style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right; font-weight: 800; color: #475569; position: sticky; top: 0; background: #f8fafc; z-index: 10;">
@@ -463,7 +605,7 @@
                             %}
                             {% set variables_total = t.variable_costs + t.variable_expenses %}
                             {% set fixed_total = t.fixed_costs + t.fixed_expenses %}
-                            {% set res_periodo = t.operating_result - t.distributions %}
+                            {% set res_periodo = t.operating_result - t.total_destinations %}
                             <tr style="border-bottom: 1px solid #f1f5f9;">
                                 <td
                                     style="padding: 8px 10px; font-weight: 700; color: #0f172a; position: sticky; left: 0; background: white; border-bottom: 1px solid #f1f5f9; z-index: 5;">
@@ -472,6 +614,7 @@
                                 <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{ variables_total | format_currency_br }})</td>
                                 <td style="padding: 8px 10px; text-align: right; font-weight: 600; color: #2563eb;">{{ t.gmc | format_currency_br }}</td>
                                 <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{ fixed_total | format_currency_br }})</td>
+                                <td style="padding: 8px 10px; text-align: right; color: #ef4444;">({{ t.taxes_total | default(0) | format_currency_br }})</td>
                                 <td
                                     style="padding: 8px 10px; text-align: right; font-weight: 700; color: {% if t.operating_result >= 0 %}#10b981{% else %}#ef4444{% endif %};">
                                     {{ t.operating_result | format_currency_br }}</td>
@@ -883,6 +1026,8 @@
 </div>
 
 <script>
+    const TAX_PREVIEW_BASES = {{ consolidated.taxes.preview_base_values|default({})|tojson }};
+
     function parseBrCurrency(value) {
         if (value === null || value === undefined) return 0;
         if (typeof value === 'number') return value;
@@ -936,6 +1081,68 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-' + tabId).style.display = 'block';
         document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+    }
+
+    function refreshTaxPreviews() {
+        document.querySelectorAll('.tax-row').forEach(row => {
+            const percentage = parseFloat(row.querySelector('.tax-percentage')?.value) || 0;
+            const baseKey = row.querySelector('.tax-base')?.value || 'operating_result';
+            const baseValue = Number(TAX_PREVIEW_BASES[baseKey] || 0);
+            const amount = baseValue > 0 ? baseValue * (percentage / 100) : 0;
+            const baseEl = row.querySelector('.tax-base-value');
+            const amountEl = row.querySelector('.tax-amount-preview');
+            if (baseEl) baseEl.value = formatCurrencyBR(baseValue);
+            if (amountEl) amountEl.value = formatCurrencyBR(amount);
+        });
+    }
+
+    function addTaxRow() {
+        document.getElementById('taxesContainer').insertAdjacentHTML('beforeend', `
+            <div class="tax-row" style="display:grid; grid-template-columns: 2fr 0.8fr 1.2fr 1fr 1fr auto; gap: 12px; align-items:end;">
+                <div>
+                    <input type="text" class="tax-description" placeholder="Ex: CSLL" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                </div>
+                <div>
+                    <input type="number" class="tax-percentage" step="0.01" placeholder="0,00" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                </div>
+                <div>
+                    <select class="tax-base" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px;">
+                        <option value="operating_result">Lucro Operacional</option>
+                        <option value="operating_result_additional_ir">Lucro Operacional p/ Adicional IR</option>
+                        <option value="gross_margin">Lucro Bruto</option>
+                        <option value="revenue">Faturamento</option>
+                    </select>
+                </div>
+                <div><input type="text" class="tax-base-value" readonly style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;"></div>
+                <div><input type="text" class="tax-amount-preview" readonly style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;"></div>
+                <button onclick="this.parentElement.remove(); refreshTaxPreviews();" style="color:#ef4444; border:none; background:none; padding-bottom:10px;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `);
+        const container = document.getElementById('taxesContainer');
+        container.querySelectorAll('.tax-percentage, .tax-base').forEach(input => {
+            if (input.dataset.taxBound === '1') return;
+            input.dataset.taxBound = '1';
+            input.addEventListener('input', refreshTaxPreviews);
+            input.addEventListener('change', refreshTaxPreviews);
+        });
+        refreshTaxPreviews();
+    }
+
+    function addTaxPreset(preset) {
+        const presets = {
+            csll: { description: 'CSLL', percentage: 9, base: 'operating_result' },
+            irpj: { description: 'IRPJ', percentage: 15, base: 'operating_result' },
+            adicional_irpj: { description: 'Adicional de IRPJ', percentage: 10, base: 'operating_result_additional_ir' }
+        };
+        const config = presets[preset];
+        if (!config) return;
+        addTaxRow();
+        const rows = document.querySelectorAll('.tax-row');
+        const row = rows[rows.length - 1];
+        row.querySelector('.tax-description').value = config.description;
+        row.querySelector('.tax-percentage').value = config.percentage;
+        row.querySelector('.tax-base').value = config.base;
+        refreshTaxPreviews();
     }
 
     function addSource() {
@@ -1018,6 +1225,12 @@
         document.querySelectorAll('.wc-value').forEach(input => {
             input.addEventListener('change', updateWCTotals);
         });
+
+        document.querySelectorAll('.tax-percentage, .tax-base').forEach(input => {
+            input.addEventListener('input', refreshTaxPreviews);
+            input.addEventListener('change', refreshTaxPreviews);
+        });
+        refreshTaxPreviews();
 
         // Initialize ROI Chart
         initROIChart();
@@ -1133,6 +1346,12 @@
             start_date: row.querySelector('.dist-start-date').value
         })).filter(r => r.description);
 
+        const taxes = Array.from(document.querySelectorAll('.tax-row')).map(row => ({
+            description: row.querySelector('.tax-description').value,
+            percentage: parseFloat(row.querySelector('.tax-percentage').value) || 0,
+            base: row.querySelector('.tax-base').value
+        })).filter(t => t.description);
+
         const data = {
             analysis_params: {
                 period_months: parseInt(document.getElementById('period_months').value) || 60,
@@ -1152,7 +1371,8 @@
             sources_v2: sources_v2,
             sources: {}, // Clear legacy
             source_dates: {},
-            profit_distribution: profit_distribution
+            profit_distribution: profit_distribution,
+            taxes: taxes
         };
 
         const response = await fetch('/api/plans/{{ plan.id }}/implantation/finance?company_id={{ company.id }}', {

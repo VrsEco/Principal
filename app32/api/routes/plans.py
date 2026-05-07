@@ -225,7 +225,11 @@ def implantation_section(plan_id, section):
         if 'profit_distribution' not in section_content:
             section_content['profit_distribution'] = []
 
-        # 5. Source Dates
+        # 5. Taxes
+        if 'taxes' not in section_content:
+            section_content['taxes'] = []
+
+        # 6. Source Dates
         if 'source_dates' not in section_content:
             section_content['source_dates'] = {}
 

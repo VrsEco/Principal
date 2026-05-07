@@ -199,3 +199,69 @@ def test_get_consolidated_finance_business_flow_includes_equity_sources(monkeypa
     assert consolidated["timeline"][0]["investment_flow"] == 1000.0
     assert consolidated["timeline"][0]["business_net_flow"] == 1000.0
     assert consolidated["timeline"][0]["cumulative_business"] == 1000.0
+
+
+def test_get_consolidated_finance_applies_taxes_before_operating_result(monkeypatch):
+    sections = _build_sections()
+    sections["finance"]["profit_distribution"] = []
+    sections["finance"]["taxes"] = [
+        {"description": "CSLL", "percentage": 9.0, "base": "operating_result"},
+        {"description": "IRPJ", "percentage": 15.0, "base": "operating_result"},
+    ]
+
+    monkeypatch.setattr(
+        PlanService,
+        "get_plan",
+        staticmethod(lambda plan_id, company_id: SimpleNamespace(id=plan_id, mode="implantation")),
+    )
+    monkeypatch.setattr(
+        PlanService,
+        "get_implantation_data",
+        staticmethod(lambda plan_id, company_id, section_key: SimpleNamespace(content=sections.get(section_key, {}))),
+    )
+
+    consolidated = PlanService.get_consolidated_finance(12, 31)
+    first_month = consolidated["timeline"][0]
+
+    assert first_month["operating_result_before_taxes"] == 250.0
+    assert first_month["taxes_total"] == 60.0
+    assert first_month["operating_result"] == 190.0
+    assert consolidated["summary"]["total_taxes"] > 0
+
+
+def test_get_consolidated_finance_calculates_additional_ir_base(monkeypatch):
+    sections = _build_sections()
+    sections["finance"]["profit_distribution"] = []
+    sections["finance"]["taxes"] = [
+        {"description": "Adicional IRPJ", "percentage": 10.0, "base": "operating_result_additional_ir"},
+    ]
+    sections["model"]["products"] = [
+        {
+            "name": "Produto Premium",
+            "sale_price": 50000.0,
+            "market_share_goal_monthly_units": 1,
+            "variable_costs_value": 0.0,
+            "variable_expenses_value": 0.0,
+            "ramp_up_entries": [{"month_period": "2026.01", "percentage": 100}],
+        }
+    ]
+    sections["execution"]["areas"] = {"operacional": {"items": []}}
+
+    monkeypatch.setattr(
+        PlanService,
+        "get_plan",
+        staticmethod(lambda plan_id, company_id: SimpleNamespace(id=plan_id, mode="implantation")),
+    )
+    monkeypatch.setattr(
+        PlanService,
+        "get_implantation_data",
+        staticmethod(lambda plan_id, company_id, section_key: SimpleNamespace(content=sections.get(section_key, {}))),
+    )
+
+    consolidated = PlanService.get_consolidated_finance(12, 31)
+    first_month = consolidated["timeline"][0]
+
+    assert first_month["operating_result_before_taxes"] == 50000.0
+    assert first_month["tax_base_values"]["operating_result_additional_ir"] == 30000.0
+    assert first_month["taxes_total"] == 3000.0
+    assert first_month["operating_result"] == 47000.0
