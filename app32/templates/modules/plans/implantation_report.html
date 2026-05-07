@@ -641,66 +641,64 @@ R$ {{ (value|default(0))|format_currency_br }}
             </table>
         </div>
 
-        <div class="two-col mt-24">
-            <div class="content-card">
-                <label class="field-label">2. Fluxo de caixa do investimento (CAPEX)</label>
-                <table class="report-table compact-table">
-                    <thead>
-                        <tr>
-                            <th>Período</th>
-                            <th>Investimento</th>
-                            <th>Fontes de recursos</th>
-                            <th>Saldo do período</th>
-                            <th>Saldo acumulado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in timeline_focus %}
-                        <tr>
-                            <td>{{ period_label(row.period) }}</td>
-                            <td>{{ money(row.investment) }}</td>
-                            <td>{{ money((row.sources_equity|default(0)) + (row.loans|default(0))) }}</td>
-                            <td>{{ money(row.investment_flow) }}</td>
-                            <td>{{ money(row.cumulative_investment) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="empty-cell">Fluxo de investimento ainda não consolidado.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="content-card mt-24">
+            <label class="field-label">2. Fluxo de caixa do investimento (CAPEX)</label>
+            <table class="report-table compact-table">
+                <thead>
+                    <tr>
+                        <th>Período</th>
+                        <th>Investimento</th>
+                        <th>Fontes de recursos</th>
+                        <th>Saldo do período</th>
+                        <th>Saldo acumulado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in timeline_focus %}
+                    <tr>
+                        <td>{{ period_label(row.period) }}</td>
+                        <td>{{ money(row.investment) }}</td>
+                        <td>{{ money((row.sources_equity|default(0)) + (row.loans|default(0))) }}</td>
+                        <td>{{ money(row.investment_flow) }}</td>
+                        <td>{{ money(row.cumulative_investment) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-cell">Fluxo de investimento ainda não consolidado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-            <div class="content-card">
-                <label class="field-label">3. Fluxo de caixa do investidor (ROI)</label>
-                <table class="report-table compact-table">
-                    <thead>
-                        <tr>
-                            <th>Período</th>
-                            <th>Aporte próprio</th>
-                            <th>Distribuições</th>
-                            <th>Fluxo líquido</th>
-                            <th>Saldo acumulado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in timeline_focus %}
-                        <tr>
-                            <td>{{ period_label(row.period) }}</td>
-                            <td>{{ money(row.sources_equity) }}</td>
-                            <td>{{ money(row.distributions) }}</td>
-                            <td>{{ money(row.investor_net_flow) }}</td>
-                            <td>{{ money(row.cumulative_investor) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="empty-cell">Fluxo do investidor ainda não consolidado.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="content-card mt-24">
+            <label class="field-label">3. Fluxo de caixa do investidor (ROI)</label>
+            <table class="report-table compact-table">
+                <thead>
+                    <tr>
+                        <th>Período</th>
+                        <th>Aporte próprio</th>
+                        <th>Distribuições</th>
+                        <th>Fluxo líquido</th>
+                        <th>Saldo acumulado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in timeline_focus %}
+                    <tr>
+                        <td>{{ period_label(row.period) }}</td>
+                        <td>{{ money(row.sources_equity) }}</td>
+                        <td>{{ money(row.distributions) }}</td>
+                        <td>{{ money(row.investor_net_flow) }}</td>
+                        <td>{{ money(row.cumulative_investor) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-cell">Fluxo do investidor ainda não consolidado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </section>
 </div>
