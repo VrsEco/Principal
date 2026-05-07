@@ -75,6 +75,36 @@ class PlanService:
         return []
 
     @staticmethod
+    def _resolve_ramp_percentage(product: Dict[str, Any], period: str) -> float:
+        """
+        Resolve o percentual de ramp-up válido para o período.
+        Mantém o último percentual conhecido para meses posteriores ao último marco,
+        evitando zerar a operação após o fim do ramp-up cadastrado.
+        """
+        ramp_entries = product.get('ramp_up_entries') or []
+        normalized_entries: List[Tuple[str, float]] = []
+
+        for entry in ramp_entries:
+            if not isinstance(entry, dict):
+                continue
+            entry_period = PlanService._normalize_period(entry.get('month_period'))
+            if not entry_period:
+                continue
+            normalized_entries.append((entry_period, float(entry.get('percentage') or 0)))
+
+        if not normalized_entries:
+            return 0.0
+
+        normalized_entries.sort(key=lambda item: item[0])
+        current_percentage = 0.0
+        for entry_period, percentage in normalized_entries:
+            if entry_period > period:
+                break
+            current_percentage = percentage
+
+        return current_percentage
+
+    @staticmethod
     def _collect_execution_item_dates(item: Dict[str, Any]) -> List[str]:
         """Retorna datas relevantes do item para definir o início da análise."""
         relevant_dates = []
@@ -448,7 +478,7 @@ class PlanService:
         
         # 3. Parameters
         params = fin_content.get('analysis_params', {})
-        period_months = params.get('period_months', 60)
+        period_months = int(params.get('period_months') or 60)
         opp_cost = params.get('opportunity_cost_annual', 12.0)
         
         # 4. Extract Items from Execution
@@ -612,9 +642,9 @@ class PlanService:
             # Match Revenue/VarCosts
             term = period.replace('-','.')
             for p in products:
-                ramp = next((r for r in p.get('ramp_up_entries', []) if r.get('month_period') == term), None)
-                if ramp:
-                    units = p.get('market_share_goal_monthly_units', 0) * (ramp.get('percentage', 0) / 100)
+                ramp_percentage = PlanService._resolve_ramp_percentage(p, period)
+                if ramp_percentage > 0:
+                    units = p.get('market_share_goal_monthly_units', 0) * (ramp_percentage / 100)
                     period_revenue += units * p.get('sale_price', 0)
                     period_variable_costs += units * p.get('variable_costs_value', 0)
                     period_variable_expenses += units * p.get('variable_expenses_value', 0)
@@ -984,7 +1014,7 @@ class PlanService:
                 )
             )
         ]
-        timeline_focus = active_timeline[:18] if active_timeline else timeline[:12]
+        timeline_focus = timeline or active_timeline
 
         payback_month = ""
         for row in timeline:
