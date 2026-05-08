@@ -511,6 +511,79 @@
         </section>
 
         <section class="ai-mcp-panel" data-console-panel="onboarding" data-searchable="onboarding cadastros configs provider user admin analytics ops">
+            <article class="ai-mcp-card ai-mcp-connection-card" data-searchable="mcp conectar outro cliente prompt ia configuração técnica bearer token manual automático">
+                <header>
+                    <div>
+                        <h2>Conectar em outro cliente</h2>
+                        <p>{{ console.connection_generator.description }}</p>
+                    </div>
+                </header>
+
+                <div
+                    class="ai-mcp-connection-generator"
+                    id="aiMcpConnectionGenerator"
+                    data-endpoint="/api/configs/ai/mcp/connection-snippet"
+                >
+                    <div class="ai-mcp-connection-generator__form">
+                        <label>
+                            <span>Nome</span>
+                            <input type="text" id="aiMcpConnectionName" value="{{ console.connection_generator.defaults.name }}">
+                        </label>
+                        <label>
+                            <span>Empresa padrão</span>
+                            <input type="text" id="aiMcpConnectionCompany" value="{{ console.connection_generator.defaults.default_company }}">
+                        </label>
+                        <label class="ai-mcp-connection-generator__field--full">
+                            <span>URL MCP</span>
+                            <input type="url" id="aiMcpConnectionUrl" value="{{ console.connection_generator.defaults.url }}">
+                        </label>
+                        <label>
+                            <span>Autenticação</span>
+                            <input type="text" id="aiMcpConnectionAuthType" value="Bearer Token" disabled>
+                        </label>
+                        <label class="ai-mcp-connection-generator__field--full">
+                            <span>Token</span>
+                            <input type="password" id="aiMcpConnectionToken" placeholder="Cole aqui o token sem salvar no sistema" autocomplete="off">
+                        </label>
+                    </div>
+
+                    <div class="ai-mcp-connection-generator__actions">
+                        <button
+                            type="button"
+                            class="ai-mcp-btn ai-mcp-btn--primary"
+                            data-connection-mode="ai_prompt"
+                        >
+                            Configurar com IA
+                        </button>
+                        <button
+                            type="button"
+                            class="ai-mcp-btn ai-mcp-btn--secondary"
+                            data-connection-mode="raw_config"
+                        >
+                            Usar configuração técnica
+                        </button>
+                    </div>
+
+                    <p class="ai-mcp-connection-generator__hint">
+                        O token é usado apenas para montar o texto final e não deve ser persistido.
+                    </p>
+
+                    <div class="ai-mcp-connection-generator__feedback" id="aiMcpConnectionFeedback" hidden></div>
+
+                    <div class="ai-mcp-connection-generator__result" id="aiMcpConnectionResult" hidden>
+                        <div class="ai-mcp-connection-generator__result-header">
+                            <div>
+                                <strong id="aiMcpConnectionResultTitle">Resultado pronto para copiar</strong>
+                                <p id="aiMcpConnectionResultDescription"></p>
+                            </div>
+                            <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small" id="aiMcpConnectionCopyButton">Copiar</button>
+                        </div>
+                        <pre id="aiMcpConnectionSourceJson" class="ai-mcp-connection-generator__code ai-mcp-connection-generator__code--source" hidden></pre>
+                        <pre id="aiMcpConnectionOutput" class="ai-mcp-connection-generator__code"></pre>
+                    </div>
+                </div>
+            </article>
+
             <div class="ai-mcp-section-grid">
                 <article class="ai-mcp-card">
                     <header><h2>Onboarding de IAs externas</h2><p>Etapas, evidências e regras por surface.</p></header>

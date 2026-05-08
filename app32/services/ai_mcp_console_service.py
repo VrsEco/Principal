@@ -392,6 +392,31 @@ class AIMCPConsoleService:
             },
         ]
 
+        connection_generator = {
+            "title": "Conectar em outro cliente",
+            "description": "Cole os dados da conexão e gere o texto pronto para configurar com IA ou copiar a configuração técnica.",
+            "defaults": {
+                "name": "Sapiens User",
+                "default_company": "Sem empresa padrão",
+                "url": "https://app.gestaoversus.com.br/mcp/user",
+                "auth_type": "bearer",
+            },
+            "modes": [
+                {
+                    "key": "ai_prompt",
+                    "title": "Configurar com IA",
+                    "description": "Gera um comando para a outra IA perguntar automático ou manual e já tentar configurar.",
+                    "copy_label": "Copiar prompt",
+                },
+                {
+                    "key": "raw_config",
+                    "title": "Usar configuração técnica",
+                    "description": "Gera o JSON pronto para copiar e colar manualmente.",
+                    "copy_label": "Copiar configuração",
+                },
+            ],
+        }
+
         return {
             "active_company": {
                 "id": getattr(active_company, "id", None),
@@ -444,4 +469,5 @@ class AIMCPConsoleService:
             "guided_actions": guided_actions,
             "quick_assistant": quick_assistant,
             "contextual_help": contextual_help,
+            "connection_generator": connection_generator,
         }

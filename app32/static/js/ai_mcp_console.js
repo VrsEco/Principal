@@ -26,6 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const panelToggles = Array.from(root.querySelectorAll('[data-panel-toggle]'));
     const wizardStages = Array.from(root.querySelectorAll('[data-wizard-stage]'));
     const stageToggles = Array.from(root.querySelectorAll('[data-stage-toggle]'));
+    const connectionGenerator = document.getElementById('aiMcpConnectionGenerator');
+    const connectionModeButtons = Array.from(root.querySelectorAll('[data-connection-mode]'));
+    const connectionFeedback = document.getElementById('aiMcpConnectionFeedback');
+    const connectionResult = document.getElementById('aiMcpConnectionResult');
+    const connectionResultTitle = document.getElementById('aiMcpConnectionResultTitle');
+    const connectionResultDescription = document.getElementById('aiMcpConnectionResultDescription');
+    const connectionOutput = document.getElementById('aiMcpConnectionOutput');
+    const connectionSourceJson = document.getElementById('aiMcpConnectionSourceJson');
+    const connectionCopyButton = document.getElementById('aiMcpConnectionCopyButton');
 
     const helpTopics = {
         overview: {
@@ -109,6 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         selected: [],
         answers: [],
         pendingAction: null,
+    };
+
+    const connectionState = {
+        mode: null,
+        content: '',
     };
 
 
@@ -272,6 +286,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function setConnectionFeedback(message, tone = 'error') {
+        if (!connectionFeedback) return;
+        connectionFeedback.hidden = !message;
+        connectionFeedback.textContent = message || '';
+        connectionFeedback.dataset.tone = message ? tone : '';
+    }
+
+    function getConnectionPayload(mode) {
+        return {
+            mode,
+            name: document.getElementById('aiMcpConnectionName')?.value?.trim() || '',
+            default_company: document.getElementById('aiMcpConnectionCompany')?.value?.trim() || '',
+            url: document.getElementById('aiMcpConnectionUrl')?.value?.trim() || '',
+            auth_type: 'bearer',
+            token: document.getElementById('aiMcpConnectionToken')?.value?.trim() || '',
+        };
+    }
+
+    async function copyConnectionResult() {
+        if (!connectionState.content) return;
+        try {
+            await navigator.clipboard.writeText(connectionState.content);
+            setConnectionFeedback('Conteúdo copiado.', 'success');
+        } catch (error) {
+            setConnectionFeedback('Não foi possível copiar automaticamente. Copie manualmente abaixo.');
+        }
+    }
+
+    async function generateConnectionSnippet(mode) {
+        if (!connectionGenerator) return;
+        const endpoint = connectionGenerator.dataset.endpoint;
+        const payload = getConnectionPayload(mode);
+        const label = mode === 'raw_config' ? 'Configuração técnica pronta para copiar' : 'Prompt pronto para configurar com IA';
+
+        setConnectionFeedback('');
+        connectionModeButtons.forEach((button) => {
+            button.disabled = true;
+        });
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Falha ao gerar conteúdo de conexão.');
+            }
+
+            connectionState.mode = result.mode;
+            connectionState.content = result.content || '';
+            if (connectionResultTitle) connectionResultTitle.textContent = label;
+            if (connectionResultDescription) {
+                connectionResultDescription.textContent = mode === 'raw_config'
+                    ? 'Copie este JSON no cliente que aceita configuração MCP manual.'
+                    : 'Copie este texto na outra IA para ela perguntar automático ou manual e já tentar configurar.';
+            }
+            if (connectionSourceJson) {
+                connectionSourceJson.textContent = result.source_json || '';
+                connectionSourceJson.hidden = !result.source_json;
+            }
+            if (connectionOutput) connectionOutput.textContent = result.content || '';
+            if (connectionResult) connectionResult.hidden = false;
+            setConnectionFeedback('Conteúdo gerado com sucesso.', 'success');
+        } catch (error) {
+            if (connectionResult) connectionResult.hidden = true;
+            setConnectionFeedback(error.message || 'Falha ao gerar conteúdo.');
+        } finally {
+            connectionModeButtons.forEach((button) => {
+                button.disabled = false;
+            });
+        }
+    }
+
     function setupCollapsibleCards() {
         collapsibleCards.forEach((card) => {
             const header = card.querySelector(':scope > header');
@@ -392,6 +483,14 @@ document.addEventListener('DOMContentLoaded', () => {
             applySearch(query);
         }
     });
+
+    connectionModeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            generateConnectionSnippet(button.dataset.connectionMode || 'ai_prompt');
+        });
+    });
+
+    connectionCopyButton?.addEventListener('click', copyConnectionResult);
 
     setupCollapsibleCards();
     wizardReset?.addEventListener('click', resetWizard);

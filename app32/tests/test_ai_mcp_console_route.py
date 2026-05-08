@@ -49,7 +49,7 @@ def test_ai_tools_route_redirects_to_integrations_tools(monkeypatch):
 def test_ai_mcp_console_frontend_state_api_returns_payload(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
-    fake_console = {"summary": {"catalog_tools": 21}, "profiles": [], "surfaces": [], "domains": [], "permissions": [], "catalog": {"tools": []}, "configuration_links": [], "registration_links": [], "operational_links": [], "onboarding": {"steps": []}, "release": {"checklist": [], "smokes": []}, "freeze": {"triggers": []}, "dashboard": {"panels": []}, "readiness": {"gates": [], "opening_criteria": [], "blocking_conditions": []}, "readiness_by_phase": []}
+    fake_console = {"summary": {"catalog_tools": 21}, "profiles": [], "surfaces": [], "domains": [], "permissions": [], "catalog": {"tools": []}, "configuration_links": [], "registration_links": [], "operational_links": [], "onboarding": {"steps": []}, "release": {"checklist": [], "smokes": []}, "freeze": {"triggers": []}, "dashboard": {"panels": []}, "readiness": {"gates": [], "opening_criteria": [], "blocking_conditions": []}, "readiness_by_phase": [], "connection_generator": {"defaults": {}, "modes": []}}
 
     monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
     monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
@@ -96,3 +96,55 @@ def test_ai_mcp_tool_first_catalog_api_returns_filtered_payload(monkeypatch):
     assert captured["kwargs"]["status"] == ["canonical"]
     assert captured["kwargs"]["surface"] == ["engineering"]
     assert captured["kwargs"]["include_backlog"] is False
+
+
+def test_ai_mcp_connection_snippet_api_returns_prompt(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=31, name="Empresa MCP", client_code="MCP")
+
+    monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
+    monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
+
+    response = app.test_client().post(
+        "/api/configs/ai/mcp/connection-snippet",
+        json={
+            "mode": "ai_prompt",
+            "name": "Sapiens User",
+            "default_company": "Sem empresa padrão",
+            "url": "https://app.gestaoversus.com.br/mcp/user",
+            "auth_type": "bearer",
+            "token": "token-123",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["mode"] == "ai_prompt"
+    assert "Pergunta ao usuário: automático ou manual?" in payload["content"]
+    assert '"auth_type": "bearer"' in payload["source_json"]
+
+
+def test_ai_mcp_connection_snippet_api_validates_missing_token(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=31, name="Empresa MCP", client_code="MCP")
+
+    monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
+    monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
+
+    response = app.test_client().post(
+        "/api/configs/ai/mcp/connection-snippet",
+        json={
+            "mode": "raw_config",
+            "name": "Sapiens User",
+            "default_company": "Sem empresa padrão",
+            "url": "https://app.gestaoversus.com.br/mcp/user",
+            "auth_type": "bearer",
+            "token": "",
+        },
+    )
+
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["success"] is False
+    assert "Token Bearer" in payload["error"]
