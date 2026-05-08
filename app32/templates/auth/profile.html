@@ -483,10 +483,19 @@
     }
 
     function buildMcpTokenPayload() {
+        return buildMcpConfigPayload();
+    }
+
+    function injectLatestTokenIntoConfig(config) {
+        if (!config || !latestMcpPlaintextToken) return config;
+        const rawJson = config.json && typeof config.json === 'object'
+            ? { ...config.json, token: latestMcpPlaintextToken }
+            : config.json;
+        const rawText = String(config.text || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', latestMcpPlaintextToken);
         return {
-            company_id: null,
-            surface: 'user',
-            client_name: mcpClientNameInput ? mcpClientNameInput.value.trim() : null,
+            ...config,
+            text: rawText,
+            json: rawJson,
         };
     }
 
@@ -496,7 +505,8 @@
             mcpConfigOutput.value = '';
             return;
         }
-        mcpConfigOutput.value = `${config.text}\n\nJSON:\n${JSON.stringify(config.json, null, 2)}`;
+        const resolvedConfig = injectLatestTokenIntoConfig(config);
+        mcpConfigOutput.value = `${resolvedConfig.text}\n\nJSON:\n${JSON.stringify(resolvedConfig.json, null, 2)}`;
     }
 
     async function buildMcpConfig(showSuccessAlert = true) {
