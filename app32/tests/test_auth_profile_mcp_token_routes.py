@@ -53,7 +53,12 @@ class _FakeUserMcpTokenService:
 
     def build_client_config(self, **kwargs):
         self.calls.append(("config", kwargs))
-        return {"text": "config", "json": {"company_id": kwargs.get("company_id")}}
+        return {
+            "text": "config",
+            "json": {"company_id": kwargs.get("company_id")},
+            "technical_config_text": "config tecnica",
+            "activation_prompt": "prompt ativar sapiens",
+        }
 
 
 def _build_app():

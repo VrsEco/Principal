@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import secrets
 from contextlib import contextmanager
@@ -340,10 +341,10 @@ class UserMcpTokenService:
             display_name = selected_company["label"] if selected_company else "Sem empresa padrão"
             token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
             config_json = {
-                "name": f"Sapiens {normalized_surface.title()}",
-                "url": url,
                 "auth_type": "bearer",
+                "name": f"Sapiens {normalized_surface.title()}",
                 "token": token_value,
+                "url": url,
             }
             config_text = (
                 f"Nome: Sapiens {normalized_surface.title()}\n"
@@ -352,6 +353,50 @@ class UserMcpTokenService:
                 f"Autenticação: Bearer Token\n"
                 f"Token: {token_value}"
             )
+            technical_config_text = (
+                f"{config_text}\n\n"
+                f"JSON:\n{json.dumps(config_json, ensure_ascii=False, indent=2)}"
+            )
+            activation_prompt = "\n".join([
+                "Quero que você ative o Sapiens neste cliente usando a conexão MCP abaixo.",
+                "",
+                "Dados da conexão:",
+                f"- Nome: Sapiens {normalized_surface.title()}",
+                f"- Empresa padrão: {display_name}",
+                f"- URL: {url}",
+                "- Autenticação: Bearer Token",
+                f"- Token: {token_value}",
+                "",
+                "JSON:",
+                json.dumps(config_json, ensure_ascii=False, indent=2),
+                "",
+                "Sua tarefa:",
+                "1. Verifique se este cliente suporta configuração MCP automática.",
+                "2. Se suportar, faça a configuração.",
+                "3. Se este cliente permitir criar atalho, comando, agente ou persona, crie um atalho chamado Sapiens.",
+                "4. Ao ativar, use esta mensagem inicial:",
+                "",
+                "◆ SAPIENS · Gestão Versus ● ativo",
+                "",
+                "Olá! Sou o Sapiens, assistente virtual da Versus.",
+                "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
+                "",
+                "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu encaminho ao Squad de Engenharia.",
+                "",
+                "5. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
+                "- Este cliente não suporta ativação automática do Sapiens.",
+                "- A conexão técnica está pronta, mas precisa ser configurada manualmente.",
+                "- Se quiser, eu posso te mostrar o passo a passo manual para este cliente.",
+                "6. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa e informe ao usuário como chamar o Sapiens de forma simples na conversa.",
+                "7. Não invente valores. Use exatamente os dados fornecidos.",
+                "",
+                "Formato da resposta:",
+                "1. Diagnóstico",
+                "2. Ação executada",
+                "3. Resultado final",
+                "4. Como usar o Sapiens neste cliente",
+                "5. Se não suportar, mostrar a resposta padrão",
+            ])
             return {
                 "client_name": (client_name or "").strip() or None,
                 "surface": normalized_surface,
@@ -360,6 +405,8 @@ class UserMcpTokenService:
                 "url": url,
                 "text": config_text,
                 "json": config_json,
+                "technical_config_text": technical_config_text,
+                "activation_prompt": activation_prompt,
                 "companies": companies,
             }
 

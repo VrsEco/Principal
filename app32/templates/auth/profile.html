@@ -170,7 +170,7 @@
                     <div style="margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); display:grid; gap:1rem;">
                         <div>
                             <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Configuração do cliente remoto</h3>
-                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Depois que o token estiver ativo, escolha opcionalmente uma empresa padrão para montar a configuração pronta do cliente.</p>
+                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Depois que o token estiver ativo, escolha opcionalmente uma empresa padrão e gere um único comando para ativar o Sapiens ou, se preferir, a configuração técnica.</p>
                         </div>
 
                         <div class="filter-field">
@@ -185,14 +185,15 @@
                         </div>
 
                         <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-secondary" id="buildMcpConfigButton">Montar configuração</button>
-                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar configuração</button>
+                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Ativar Sapiens</button>
+                            <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Configuração técnica</button>
+                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar conteúdo</button>
                         </div>
 
                         <div class="filter-field" style="margin-top:-0.25rem;">
-                            <label>Configuração pronta para copiar</label>
-                            <textarea id="mcpConfigOutput" class="form-control" rows="8" readonly placeholder="Após gerar/renovar o token ou clicar em Montar configuração, o bloco completo aparecerá aqui."></textarea>
-                            <small style="color: var(--text-tertiary);">O token completo só aparece na geração ou renovação. Depois disso, você pode remontar a configuração sem trocar o token.</small>
+                            <label>Conteúdo pronto para copiar</label>
+                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Após gerar/renovar o token, use Ativar Sapiens para gerar o comando único ou Configuração técnica para copiar o JSON manual."></textarea>
+                            <small style="color: var(--text-tertiary);">Ativar Sapiens gera um comando único para o outro cliente configurar, ativar e criar atalho quando possível. Configuração técnica mostra o JSON/manual para usuários avançados.</small>
                         </div>
                     </div>
                 </div>
@@ -416,7 +417,8 @@
     const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
     const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
     const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
-    const buildMcpConfigButton = document.getElementById('buildMcpConfigButton');
+    const buildMcpActivationButton = document.getElementById('buildMcpActivationButton');
+    const buildMcpTechnicalButton = document.getElementById('buildMcpTechnicalButton');
 
     let mcpStatusCache = null;
     let latestMcpPlaintextToken = null;
@@ -488,28 +490,37 @@
 
     function injectLatestTokenIntoConfig(config) {
         if (!config || !latestMcpPlaintextToken) return config;
+        const replacePlaceholder = (value) => String(value || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', latestMcpPlaintextToken);
         const rawJson = config.json && typeof config.json === 'object'
             ? { ...config.json, token: latestMcpPlaintextToken }
             : config.json;
-        const rawText = String(config.text || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', latestMcpPlaintextToken);
         return {
             ...config,
-            text: rawText,
+            text: replacePlaceholder(config.text),
             json: rawJson,
+            technical_config_text: replacePlaceholder(config.technical_config_text),
+            activation_prompt: replacePlaceholder(config.activation_prompt),
         };
     }
 
-    function renderMcpConfig(config) {
+    function renderMcpConfig(config, mode = 'activation') {
         if (!mcpConfigOutput) return;
         if (!config) {
             mcpConfigOutput.value = '';
             return;
         }
         const resolvedConfig = injectLatestTokenIntoConfig(config);
-        mcpConfigOutput.value = `${resolvedConfig.text}\n\nJSON:\n${JSON.stringify(resolvedConfig.json, null, 2)}`;
+        if (mode === 'technical') {
+            mcpConfigOutput.value = resolvedConfig.technical_config_text || `${resolvedConfig.text}
+
+JSON:
+${JSON.stringify(resolvedConfig.json, null, 2)}`;
+            return;
+        }
+        mcpConfigOutput.value = resolvedConfig.activation_prompt || '';
     }
 
-    async function buildMcpConfig(showSuccessAlert = true) {
+    async function buildMcpConfig(mode = 'activation', showSuccessAlert = true) {
         const response = await fetch('{{ url_for('auth.profile_mcp_token_config') }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -520,10 +531,13 @@
             throw new Error(data.message || 'Falha ao montar configuração MCP.');
         }
         if (data.data) {
-            renderMcpConfig(data.data);
+            renderMcpConfig(data.data, mode);
         }
         if (showSuccessAlert) {
-            renderAlert('mcp-token-alert-container', true, 'Configuração MCP pronta para copiar.');
+            const message = mode === 'technical'
+                ? 'Configuração técnica MCP pronta para copiar.'
+                : 'Comando Ativar Sapiens pronto para copiar.';
+            renderAlert('mcp-token-alert-container', true, message);
         }
         return data.data;
     }
@@ -545,7 +559,7 @@
             renderMcpStatus(data.data);
         }
         if (data.data && data.data.config) {
-            renderMcpConfig(data.data.config);
+            renderMcpConfig(data.data.config, 'activation');
         } else {
             renderMcpConfig(null);
         }
@@ -629,10 +643,20 @@
     }
 
 
-    if (buildMcpConfigButton) {
-        buildMcpConfigButton.addEventListener('click', async () => {
+    if (buildMcpActivationButton) {
+        buildMcpActivationButton.addEventListener('click', async () => {
             try {
-                await buildMcpConfig(true);
+                await buildMcpConfig('activation', true);
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+    if (buildMcpTechnicalButton) {
+        buildMcpTechnicalButton.addEventListener('click', async () => {
+            try {
+                await buildMcpConfig('technical', true);
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }
