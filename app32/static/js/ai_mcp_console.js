@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!connectionGenerator) return;
         const endpoint = connectionGenerator.dataset.endpoint;
         const payload = getConnectionPayload(mode);
-        const label = mode === 'raw_config' ? 'Configuração técnica pronta para copiar' : 'Prompt pronto para configurar com IA';
+        const label = mode === 'raw_config' ? 'Configuração técnica pronta para copiar' : 'Comando Ativar Sapiens pronto para copiar';
 
         setConnectionFeedback('');
         connectionModeButtons.forEach((button) => {
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (connectionResultDescription) {
                 connectionResultDescription.textContent = mode === 'raw_config'
                     ? 'Copie este JSON no cliente que aceita configuração MCP manual.'
-                    : 'Copie este texto na outra IA para ela perguntar automático ou manual e já tentar configurar.';
+                    : 'Copie este comando no outro cliente para ele configurar, ativar o Sapiens e criar atalho quando possível.';
             }
             if (connectionSourceJson) {
                 connectionSourceJson.textContent = result.source_json || '';

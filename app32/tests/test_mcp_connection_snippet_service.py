@@ -3,7 +3,7 @@ import pytest
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 
 
-def test_build_prompt_includes_manual_or_automatic_question():
+def test_build_prompt_includes_activation_and_fallback_pattern():
     content = MCPConnectionSnippetService.build_prompt(
         {
             "name": "Sapiens User",
@@ -14,8 +14,9 @@ def test_build_prompt_includes_manual_or_automatic_question():
         }
     )
 
-    assert "configuração automática" in content
-    assert "configuração manual" in content
+    assert "ative o Sapiens" in content
+    assert "◆ SAPIENS · Gestão Versus ● ativo" in content
+    assert "Este cliente não suporta ativação automática do Sapiens." in content
     assert "https://app.gestaoversus.com.br/mcp/user" in content
 
 

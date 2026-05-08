@@ -18,9 +18,9 @@ def test_ai_mcp_console_template_declares_expected_sections():
         "Wizard de uso e configuração",
         "Perfis & Permissões",
         "Onboarding & Cadastros",
-        "Conectar em outro cliente",
-        "Configurar com IA",
-        "Usar configuração técnica",
+        "Ativar Sapiens em outro cliente",
+        "Ativar Sapiens",
+        "Configuração técnica",
         "Release & Freeze",
         "Dashboard & Readiness",
         "Governança",
@@ -38,6 +38,7 @@ def test_ai_mcp_console_assets_declare_interaction_contract():
     assert ".ai-mcp-panel" in css
     assert "aiMcpConsolePage" in script
     assert "aiMcpConnectionGenerator" in script
+    assert "Comando Ativar Sapiens pronto para copiar" in script
     assert "aiMcpConsoleSearch" in script
     assert "data-console-tab" in script
     assert "applySearch" in script
