@@ -5,6 +5,7 @@ db = SQLAlchemy()
 # Core Models
 from .company import Company
 from .user import User
+from .user_mcp_token import UserMcpToken
 from .role import Role
 from .team import Team
 from .employee import Employee
@@ -128,7 +129,7 @@ from .incentive import (
 )
 
 __all__ = [
-    'db', 'Company', 'User', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
+    'db', 'Company', 'User', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
     'Indicator', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',

@@ -23,10 +23,17 @@
 
     <div id="alert-container"></div>
 
+    <div class="profile-tabs" role="tablist" aria-label="Seções do perfil">
+        <button type="button" class="profile-tab is-active" data-tab-target="profile-data-panel">Dados e comunicação</button>
+        <button type="button" class="profile-tab" data-tab-target="profile-mcp-panel">Token MCP remoto</button>
+        <button type="button" class="profile-tab" data-tab-target="profile-security-panel">Segurança</button>
+    </div>
+
     {% set summary_channels = ((user.summary_delivery_channels if user and user.summary_delivery_channels else 'telegram').split(',')) %}
 
-    <div style="display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr); gap: 1.5rem; align-items: start;">
-        <div style="display: grid; gap: 1.5rem;">
+    <section id="profile-data-panel" class="profile-tab-panel is-active">
+        <div style="display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr); gap: 1.5rem; align-items: start;">
+            <div style="display: grid; gap: 1.5rem;">
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body" style="display: grid; gap: 1.5rem;">
                     <div>
@@ -106,9 +113,9 @@
                     </form>
                 </div>
             </div>
-        </div>
+            </div>
 
-        <div style="display: grid; gap: 1.5rem;">
+            <div style="display: grid; gap: 1.5rem;">
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body" style="display: grid; gap: 1rem;">
                     <div>
@@ -127,7 +134,74 @@
                     </div>
                 </div>
             </div>
+            </div>
+        </div>
+    </section>
 
+    <section id="profile-mcp-panel" class="profile-tab-panel">
+        <div style="max-width: 860px;">
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body" style="display: grid; gap: 1rem;">
+                    <div>
+                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Acesso MCP remoto</h2>
+                        <p style="color: var(--text-tertiary); margin: 0;">Gere o token mensal para conectar Claude, Antigravity ou outro cliente remoto ao Sapiens.</p>
+                    </div>
+
+                    <div id="mcp-token-alert-container"></div>
+
+                    <div style="display:grid; gap:0.75rem;">
+                        <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
+                            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Status do token</div>
+                            <div id="mcpTokenStatusText" style="font-size: 0.92rem; color: var(--text-secondary);">Carregando status...</div>
+                        </div>
+                        <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
+                            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Último uso</div>
+                            <div id="mcpTokenLastUsageText" style="font-size: 0.92rem; color: var(--text-secondary);">Aguardando leitura do token.</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-primary" id="generateMcpTokenButton">Gerar token</button>
+                        <button type="button" class="btn btn-secondary" id="renewMcpTokenButton">Renovar token</button>
+                        <button type="button" class="btn btn-danger" id="revokeMcpTokenButton">Revogar token</button>
+                    </div>
+                    <small style="color: var(--text-tertiary); margin-top:-0.25rem;">A emissão e a renovação são pessoais. O token não fica preso a uma empresa específica.</small>
+
+                    <div style="margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); display:grid; gap:1rem;">
+                        <div>
+                            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Configuração do cliente remoto</h3>
+                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Depois que o token estiver ativo, escolha opcionalmente uma empresa padrão para montar a configuração pronta do cliente.</p>
+                        </div>
+
+                        <div class="filter-field">
+                            <label>Empresa padrão da configuração (opcional)</label>
+                            <select id="mcpCompanyId" class="form-control"></select>
+                            <small style="color: var(--text-tertiary);">Se você selecionar uma empresa, a URL copiada já sai com <code>company_id</code> explícito. Se não selecionar, o token continua pessoal e você define a empresa no cliente ou no uso.</small>
+                        </div>
+
+                        <div class="filter-field">
+                            <label>Nome do cliente (opcional)</label>
+                            <input type="text" class="form-control" id="mcpClientName" placeholder="Ex.: Antigravity do notebook">
+                        </div>
+
+                        <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary" id="buildMcpConfigButton">Montar configuração</button>
+                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar configuração</button>
+                        </div>
+
+                        <div class="filter-field" style="margin-top:-0.25rem;">
+                            <label>Configuração pronta para copiar</label>
+                            <textarea id="mcpConfigOutput" class="form-control" rows="8" readonly placeholder="Após gerar/renovar o token ou clicar em Montar configuração, o bloco completo aparecerá aqui."></textarea>
+                            <small style="color: var(--text-tertiary);">O token completo só aparece na geração ou renovação. Depois disso, você pode remontar a configuração sem trocar o token.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="profile-security-panel" class="profile-tab-panel">
+        <div style="max-width: 860px;">
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body" style="display: grid; gap: 1.25rem;">
                     <div>
@@ -189,10 +263,44 @@
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
 <style>
+    .profile-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-tab {
+        border: 1px solid var(--border);
+        background: var(--card-bg, #fff);
+        color: var(--text-secondary);
+        border-radius: 999px;
+        padding: 0.8rem 1.1rem;
+        font-size: 0.92rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all .2s ease;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    }
+
+    .profile-tab.is-active {
+        color: #fff;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border-color: transparent;
+    }
+
+    .profile-tab-panel {
+        display: none;
+    }
+
+    .profile-tab-panel.is-active {
+        display: block;
+    }
+
     .password-toggle {
         position: absolute;
         top: 50%;
@@ -299,6 +407,147 @@
     const passwordStrengthFill = document.getElementById('passwordStrengthFill');
     const passwordStrengthText = document.getElementById('passwordStrengthText');
     const newPasswordInput = document.getElementById('newPassword');
+    const mcpCompanySelect = document.getElementById('mcpCompanyId');
+    const mcpStatusText = document.getElementById('mcpTokenStatusText');
+    const mcpLastUsageText = document.getElementById('mcpTokenLastUsageText');
+    const mcpConfigOutput = document.getElementById('mcpConfigOutput');
+    const mcpClientNameInput = document.getElementById('mcpClientName');
+    const generateMcpTokenButton = document.getElementById('generateMcpTokenButton');
+    const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
+    const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
+    const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
+    const buildMcpConfigButton = document.getElementById('buildMcpConfigButton');
+
+    let mcpStatusCache = null;
+    let latestMcpPlaintextToken = null;
+
+    function formatDateTime(value) {
+        if (!value) return 'Não informado';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString('pt-BR');
+    }
+
+    function setCompanyOptions(companies, selectedCompanyId) {
+        if (!mcpCompanySelect) return;
+        const items = Array.isArray(companies) ? companies : [];
+        if (!items.length) {
+            mcpCompanySelect.innerHTML = '<option value="">Nenhuma empresa disponível</option>';
+            return;
+        }
+        const emptySelected = selectedCompanyId === null || selectedCompanyId === undefined ? 'selected' : '';
+        const options = ['<option value="" ' + emptySelected + '>Sem empresa padrão</option>'];
+        items.forEach((company) => {
+            const selected = String(company.id) === String(selectedCompanyId) ? 'selected' : '';
+            options.push(`<option value="${company.id}" ${selected}>${company.label}</option>`);
+        });
+        mcpCompanySelect.innerHTML = options.join('');
+    }
+
+    function renderMcpStatus(status) {
+        mcpStatusCache = status || null;
+        if (!mcpStatusText || !mcpLastUsageText) return;
+        const active = Boolean(status && status.has_active_token);
+        const label = active
+            ? `Ativo • vence em ${formatDateTime(status.expires_at)}${status.days_to_expire !== null && status.days_to_expire !== undefined ? ` (${status.days_to_expire} dia(s))` : ''}`
+            : 'Sem token ativo. Gere ou renove para conectar um cliente remoto.';
+        mcpStatusText.textContent = label;
+        mcpLastUsageText.textContent = active
+            ? `Token ${status.token_masked || '-'} • último uso: ${formatDateTime(status.last_used_at)} • cliente: ${status.last_client_name || 'não identificado'}`
+            : 'Nenhum uso registrado.';
+        setCompanyOptions(status ? status.companies : [], status ? status.last_company_id : null);
+    }
+
+    async function loadMcpTokenStatus(showError = false) {
+        try {
+            const response = await fetch('{{ url_for('auth.profile_mcp_token_status') }}');
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Falha ao carregar status do token MCP.');
+            }
+            renderMcpStatus(data.data);
+        } catch (error) {
+            if (showError) {
+                renderAlert('mcp-token-alert-container', false, `Erro ao carregar token MCP: ${error.message}`);
+            }
+            if (mcpStatusText) mcpStatusText.textContent = 'Não foi possível carregar o status agora.';
+        }
+    }
+
+    function buildMcpConfigPayload() {
+        return {
+            company_id: mcpCompanySelect && mcpCompanySelect.value ? Number(mcpCompanySelect.value) : null,
+            surface: 'user',
+            client_name: mcpClientNameInput ? mcpClientNameInput.value.trim() : null,
+        };
+    }
+
+    function buildMcpTokenPayload() {
+        return {
+            company_id: null,
+            surface: 'user',
+            client_name: mcpClientNameInput ? mcpClientNameInput.value.trim() : null,
+        };
+    }
+
+    function renderMcpConfig(config) {
+        if (!mcpConfigOutput) return;
+        if (!config) {
+            mcpConfigOutput.value = '';
+            return;
+        }
+        mcpConfigOutput.value = `${config.text}\n\nJSON:\n${JSON.stringify(config.json, null, 2)}`;
+    }
+
+    async function buildMcpConfig(showSuccessAlert = true) {
+        const response = await fetch('{{ url_for('auth.profile_mcp_token_config') }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildMcpConfigPayload()),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Falha ao montar configuração MCP.');
+        }
+        if (data.data) {
+            renderMcpConfig(data.data);
+        }
+        if (showSuccessAlert) {
+            renderAlert('mcp-token-alert-container', true, 'Configuração MCP pronta para copiar.');
+        }
+        return data.data;
+    }
+
+    async function runMcpTokenAction(url, successMessage) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildMcpTokenPayload()),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Falha na operação do token MCP.');
+        }
+        latestMcpPlaintextToken = data.data && data.data.token ? data.data.token : latestMcpPlaintextToken;
+        if (data.data && data.data.status) {
+            renderMcpStatus(data.data.status);
+        } else if (data.data) {
+            renderMcpStatus(data.data);
+        }
+        if (data.data && data.data.config) {
+            renderMcpConfig(data.data.config);
+        } else {
+            renderMcpConfig(null);
+        }
+        if (latestMcpPlaintextToken && mcpCompanySelect && mcpCompanySelect.value) {
+            try {
+                await buildMcpConfig(false);
+            } catch (error) {
+                console.warn('Falha ao remontar configuração MCP após emissão do token:', error);
+            }
+        }
+        renderAlert('mcp-token-alert-container', true, successMessage || data.message || 'Operação concluída.');
+    }
 
     function updatePasswordStrength() {
         if (!passwordStrengthFill || !passwordStrengthText || !newPasswordInput) return;
@@ -311,6 +560,88 @@
     if (newPasswordInput) {
         newPasswordInput.addEventListener('input', updatePasswordStrength);
         updatePasswordStrength();
+    }
+
+    function activateProfileTab(targetId) {
+        document.querySelectorAll('.profile-tab').forEach((button) => {
+            button.classList.toggle('is-active', button.getAttribute('data-tab-target') === targetId);
+        });
+        document.querySelectorAll('.profile-tab-panel').forEach((panel) => {
+            panel.classList.toggle('is-active', panel.id === targetId);
+        });
+    }
+
+    document.querySelectorAll('.profile-tab').forEach((button) => {
+        button.addEventListener('click', () => {
+            const targetId = button.getAttribute('data-tab-target');
+            activateProfileTab(targetId);
+        });
+    });
+
+    if (generateMcpTokenButton) {
+        generateMcpTokenButton.addEventListener('click', async () => {
+            try {
+                activateProfileTab('profile-mcp-panel');
+                await runMcpTokenAction('{{ url_for('auth.generate_profile_mcp_token') }}', 'Token MCP gerado com sucesso. Copie a configuração agora.');
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+    if (renewMcpTokenButton) {
+        renewMcpTokenButton.addEventListener('click', async () => {
+            try {
+                activateProfileTab('profile-mcp-panel');
+                await runMcpTokenAction('{{ url_for('auth.renew_profile_mcp_token') }}', 'Token MCP renovado com sucesso. Atualize seu cliente remoto.');
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+    if (revokeMcpTokenButton) {
+        revokeMcpTokenButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('{{ url_for('auth.revoke_profile_mcp_token') }}', { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Falha ao revogar token MCP.');
+                }
+                latestMcpPlaintextToken = null;
+                renderMcpStatus(data.data);
+                renderMcpConfig(null);
+                renderAlert('mcp-token-alert-container', true, 'Token MCP revogado com sucesso.');
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+
+    if (buildMcpConfigButton) {
+        buildMcpConfigButton.addEventListener('click', async () => {
+            try {
+                await buildMcpConfig(true);
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+    if (copyMcpConfigButton) {
+        copyMcpConfigButton.addEventListener('click', async () => {
+            if (!mcpConfigOutput || !mcpConfigOutput.value.trim()) {
+                renderAlert('mcp-token-alert-container', false, 'Gere ou renove o token para copiar a configuração completa.');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(mcpConfigOutput.value);
+                renderAlert('mcp-token-alert-container', true, 'Configuração MCP copiada para a área de transferência.');
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, `Falha ao copiar configuração: ${error.message}`);
+            }
+        });
     }
 
     document.querySelectorAll('.password-toggle').forEach((button) => {
@@ -385,5 +716,13 @@
             renderAlert('password-alert-container', false, `Erro ao alterar senha: ${error.message}`);
         }
     });
+
+    if (window.location.hash === '#mcp-token') {
+        activateProfileTab('profile-mcp-panel');
+    } else if (window.location.hash === '#seguranca') {
+        activateProfileTab('profile-security-panel');
+    }
+
+    loadMcpTokenStatus();
 </script>
 {% endblock %}

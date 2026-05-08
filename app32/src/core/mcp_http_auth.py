@@ -202,12 +202,64 @@ def load_http_token_registry() -> dict[str, App32McpHttpIdentity]:
     return registry
 
 
+def _resolve_db_backed_identity(
+    request: Request | None,
+    *,
+    token: str,
+    surface: McpSurface | str,
+) -> App32McpHttpIdentity | None:
+    company_id = None
+    fallback_role_override = None
+    client_name = None
+    if request is not None:
+        company_id = _coerce_optional_int(
+            _coerce_str(request.headers.get(HTTP_CONTEXT_HEADER_MAP["company_id"]) or request.query_params.get("company_id"))
+        )
+        fallback_role_override = _coerce_str(
+            _coerce_str(request.headers.get(HTTP_CONTEXT_HEADER_MAP["fallback_role"]) or request.query_params.get("fallback_role"))
+        )
+        client_name = _coerce_str(
+            request.headers.get("x-app32-client-name")
+            or request.headers.get("x-client-name")
+            or request.headers.get("user-agent")
+        )
+
+    from services.user_mcp_token_service import user_mcp_token_service
+
+    resolved = user_mcp_token_service.resolve_for_http_request(
+        token=token,
+        surface=normalize_surface(surface),
+        company_id=company_id,
+        client_name=client_name,
+    )
+    if resolved is None:
+        return None
+    return App32McpHttpIdentity(
+        token=token,
+        user_id=resolved.user_id,
+        company_id=resolved.company_id,
+        fallback_role=fallback_role_override or resolved.fallback_role,
+        allowed_surfaces=resolved.allowed_surfaces,
+        scopes=("mcp:access",),
+        client_id="app32-mcp-user-token",
+        metadata={
+            "subject": resolved.subject,
+            "client_name": resolved.client_name,
+            "user_mcp_token_id": resolved.token_record_id,
+        },
+    )
+
+
 class App32MCPTokenVerifier(TokenVerifier):
     def __init__(self, *, surface: McpSurface | str):
         self.surface = normalize_surface(surface)
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        identity = load_http_token_registry().get(token)
+        identity = load_http_token_registry().get(token) or _resolve_db_backed_identity(
+            None,
+            token=token,
+            surface=self.surface,
+        )
         if identity is None or not identity.allows_surface(self.surface):
             return None
         return AccessToken(
@@ -247,6 +299,8 @@ def resolve_request_identity(request: Request, *, surface: McpSurface | str) -> 
     if not token:
         return None
     identity = load_http_token_registry().get(token)
+    if identity is None:
+        return _resolve_db_backed_identity(request, token=token, surface=surface)
     if identity is None or not identity.allows_surface(surface):
         return None
 

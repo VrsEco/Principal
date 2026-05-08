@@ -29,6 +29,13 @@ class User(UserMixin, db.Model):
     )
 
     notes = db.relationship("Note", back_populates="user", lazy="dynamic")
+    mcp_tokens = db.relationship(
+        "UserMcpToken",
+        foreign_keys="UserMcpToken.user_id",
+        back_populates="user",
+        lazy="dynamic",
+        order_by="desc(UserMcpToken.created_at)",
+    )
 
     def set_password(self, password):
         """Set password hash"""

@@ -83,3 +83,40 @@ def test_request_context_middleware_rejects_missing_token(monkeypatch):
     assert response.status_code == 401
     assert response.json()["error"] == "unauthorized"
 
+
+def test_request_identity_supports_db_backed_user_token(monkeypatch):
+    module = _reload_auth(monkeypatch)
+
+    class _FakeUserMcpTokenService:
+        def resolve_for_http_request(self, **kwargs):
+            assert kwargs["company_id"] == 12
+            return SimpleNamespace(
+                token_record_id=55,
+                user_id=7,
+                company_id=12,
+                fallback_role="colaborador",
+                allowed_surfaces=("user",),
+                subject="ana@empresa.com",
+                client_name="Antigravity",
+            )
+
+    from types import SimpleNamespace
+    import services.user_mcp_token_service as token_service_module
+
+    monkeypatch.setattr(token_service_module, "user_mcp_token_service", _FakeUserMcpTokenService())
+
+    async def endpoint(request: Request):
+        identity = module.resolve_request_identity(request, surface="user")
+        return JSONResponse({"user_id": identity.user_id, "company_id": identity.company_id, "client_id": identity.client_id})
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    client = TestClient(app)
+
+    response = client.get(
+        "/?company_id=12",
+        headers={"Authorization": "Bearer token-db"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"user_id": 7, "company_id": 12, "client_id": "app32-mcp-user-token"}
+

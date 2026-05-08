@@ -7,7 +7,12 @@ from pydantic import ValidationError
 from models import User, Employee, Company, ProjectTask, ProcessInstance, Project
 from datetime import date, datetime, timedelta
 from services.auth_service import auth_service
-from schemas.user_pydantic import UserProfileUpdateSchema, UserPasswordChangeSchema
+from services.user_mcp_token_service import user_mcp_token_service
+from schemas.user_pydantic import (
+    UserProfileUpdateSchema,
+    UserPasswordChangeSchema,
+    UserMcpTokenConfigSchema,
+)
 from utils.error_handling import (
     extract_validation_error_message,
     log_and_build_public_error_response,
@@ -360,6 +365,132 @@ def change_password():
             logger,
             exc,
             context='Falha ao alterar senha do usuário autenticado',
+            success=False,
+        )
+
+
+@auth_bp.route('/auth/profile/mcp-token/status', methods=['GET'])
+@auth_bp.route('/profile/mcp-token/status', methods=['GET'])
+@login_required
+def profile_mcp_token_status():
+    try:
+        status = user_mcp_token_service.get_status(current_user.id)
+        return jsonify({"success": True, "data": status})
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao consultar status do token MCP do usuário autenticado',
+            success=False,
+        )
+
+
+def _parse_mcp_config_payload():
+    payload = request.get_json(silent=True) or {}
+    return UserMcpTokenConfigSchema(**payload)
+
+
+@auth_bp.route('/auth/profile/mcp-token/generate', methods=['POST'])
+@auth_bp.route('/profile/mcp-token/generate', methods=['POST'])
+@login_required
+def generate_profile_mcp_token():
+    try:
+        validated = _parse_mcp_config_payload()
+        result = user_mcp_token_service.generate_token(
+            user_id=current_user.id,
+            created_by_user_id=current_user.id,
+            company_id=validated.company_id,
+            surface=validated.surface,
+            client_name=validated.client_name,
+        )
+        return jsonify({"success": True, "message": "Token MCP gerado com sucesso.", "data": result})
+    except ValidationError as exc:
+        message = extract_validation_error_message(
+            exc,
+            fallback_message='Dados inválidos para geração do token MCP',
+        )
+        return jsonify({"success": False, "message": message}), 400
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao gerar token MCP do usuário autenticado',
+            success=False,
+        )
+
+
+@auth_bp.route('/auth/profile/mcp-token/renew', methods=['POST'])
+@auth_bp.route('/profile/mcp-token/renew', methods=['POST'])
+@login_required
+def renew_profile_mcp_token():
+    try:
+        validated = _parse_mcp_config_payload()
+        result = user_mcp_token_service.renew_token(
+            user_id=current_user.id,
+            renewed_by_user_id=current_user.id,
+            company_id=validated.company_id,
+            surface=validated.surface,
+            client_name=validated.client_name,
+        )
+        return jsonify({"success": True, "message": "Token MCP renovado com sucesso.", "data": result})
+    except ValidationError as exc:
+        message = extract_validation_error_message(
+            exc,
+            fallback_message='Dados inválidos para renovação do token MCP',
+        )
+        return jsonify({"success": False, "message": message}), 400
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao renovar token MCP do usuário autenticado',
+            success=False,
+        )
+
+
+@auth_bp.route('/auth/profile/mcp-token/revoke', methods=['POST'])
+@auth_bp.route('/profile/mcp-token/revoke', methods=['POST'])
+@login_required
+def revoke_profile_mcp_token():
+    try:
+        status = user_mcp_token_service.revoke_token(
+            user_id=current_user.id,
+            revoked_by_user_id=current_user.id,
+        )
+        return jsonify({"success": True, "message": "Token MCP revogado com sucesso.", "data": status})
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao revogar token MCP do usuário autenticado',
+            success=False,
+        )
+
+
+@auth_bp.route('/auth/profile/mcp-token/config', methods=['POST'])
+@auth_bp.route('/profile/mcp-token/config', methods=['POST'])
+@login_required
+def profile_mcp_token_config():
+    try:
+        validated = _parse_mcp_config_payload()
+        config = user_mcp_token_service.build_client_config(
+            user_id=current_user.id,
+            company_id=validated.company_id,
+            surface=validated.surface,
+            client_name=validated.client_name,
+        )
+        return jsonify({"success": True, "data": config})
+    except ValidationError as exc:
+        message = extract_validation_error_message(
+            exc,
+            fallback_message='Dados inválidos para configuração do cliente MCP',
+        )
+        return jsonify({"success": False, "message": message}), 400
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao montar configuração MCP do usuário autenticado',
             success=False,
         )
 

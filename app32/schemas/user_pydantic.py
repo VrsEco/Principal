@@ -139,3 +139,29 @@ class UserPasswordChangeSchema(BaseModel):
     old_password: str = Field(..., min_length=1, max_length=255)
     new_password: str = Field(..., min_length=6, max_length=255)
     confirm_password: str = Field(..., min_length=6, max_length=255)
+
+
+class UserMcpTokenConfigSchema(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    company_id: Optional[int] = None
+    surface: str = Field("user", pattern="^(user)$")
+    client_name: Optional[str] = Field(None, max_length=120)
+
+    @field_validator('company_id', mode='before')
+    @classmethod
+    def normalize_company_id(cls, value):
+        if value in (None, "", 0, "0"):
+            return None
+        company_id = int(value)
+        if company_id <= 0:
+            raise ValueError("company_id deve ser positivo")
+        return company_id
+
+    @field_validator('client_name', mode='before')
+    @classmethod
+    def normalize_client_name(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
