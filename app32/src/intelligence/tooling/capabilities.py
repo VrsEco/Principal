@@ -5,6 +5,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Iterable, Mapping, Sequence
 
+
+TOOL_CONTEXT_USER = "user"
+TOOL_CONTEXT_COMPANY = "company"
+
 from src.intelligence.taxonomy import expand_tool_domain_aliases, normalize_tool_domain
 
 
@@ -40,6 +44,7 @@ class ToolCapability:
     human_gate: bool = False
     human_gate_reason: str | None = None
     tags: tuple[str, ...] = field(default_factory=tuple)
+    required_context: tuple[str, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -52,6 +57,7 @@ class ToolCapability:
             "human_gate": self.human_gate,
             "human_gate_reason": self.human_gate_reason,
             "tags": list(self.tags),
+            "required_context": list(self.required_context),
         }
 
     def matches_scope(self, scope: str | ToolScope | None) -> bool:
@@ -92,12 +98,39 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "permissions": ("support.escalate",),
         "tags": ("support", "incident"),
     },
+    "request_engineering_suggestion": {
+        "domain": "operations",
+        "scopes": (
+            ToolScope.SAPIENS.value,
+            ToolScope.MCP_USER.value,
+            ToolScope.MCP_ADMIN.value,
+            ToolScope.MCP_OPS.value,
+        ),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("engineering.suggestion.create",),
+        "tags": ("support", "backlog", "mutation"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "list_my_engineering_suggestions": {
+        "domain": "operations",
+        "scopes": (
+            ToolScope.SAPIENS.value,
+            ToolScope.MCP_USER.value,
+            ToolScope.MCP_ADMIN.value,
+            ToolScope.MCP_OPS.value,
+        ),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("engineering.suggestion.read_self",),
+        "tags": ("support", "backlog", "read"),
+        "required_context": (TOOL_CONTEXT_USER,),
+    },
     "create_process_area": {
         "domain": "processes",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("process.area.create",),
         "tags": ("crud",),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "create_macro_process": {
         "domain": "processes",
@@ -105,6 +138,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("process.macro.create",),
         "tags": ("crud",),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "create_process": {
         "domain": "processes",
@@ -114,6 +148,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "human_gate": True,
         "human_gate_reason": "Criação de processo impacta execução operacional e rastreabilidade.",
         "tags": ("crud", "mutation"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "update_company_status": {
         "domain": "governance",
@@ -130,6 +165,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("process.read",),
         "tags": ("read",),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "list_plans": {
         "domain": "strategy",
@@ -166,6 +202,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("work.read_self",),
         "tags": ("personal", "read"),
+        "required_context": (TOOL_CONTEXT_USER,),
     },
     "list_my_companies": {
         "domain": "identity_self_service",
@@ -173,6 +210,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("identity.read",),
         "tags": ("read",),
+        "required_context": (TOOL_CONTEXT_USER,),
     },
     "list_system_users": {
         "domain": "identity_admin",
@@ -202,6 +240,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("financial.results.read",),
         "tags": ("finance", "read", "executive"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "update_user_contacts": {
         "domain": "identity_self_service",
@@ -216,6 +255,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("meeting.schedule",),
         "tags": ("crud",),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "start_meeting": {
         "domain": "meetings",
@@ -223,6 +263,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("meeting.start",),
         "tags": ("workflow",),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "log_meeting_discussion": {
         "domain": "meetings",
@@ -230,6 +271,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("meeting.notes.write",),
         "tags": ("notes",),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "finish_meeting": {
         "domain": "meetings",
@@ -237,6 +279,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("meeting.finish",),
         "tags": ("workflow",),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "send_meeting_minutes": {
         "domain": "meetings",
@@ -244,6 +287,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("meeting.minutes.send",),
         "tags": ("communication",),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "get_tasks_today": {
         "domain": "routine",
@@ -333,6 +377,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("workload.read",),
         "tags": ("analytics", "read"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "get_team_workload_read_model": {
         "domain": "workload",
@@ -340,6 +385,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("workload.read",),
         "tags": ("analytics", "read_model", "whitelisted"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "get_projects_execution_risk_read_model": {
         "domain": "projects",
@@ -347,6 +393,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("projects.analytics.read",),
         "tags": ("analytics", "read_model", "whitelisted"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
 }
 
@@ -402,6 +449,7 @@ def infer_tool_capability(tool: Any) -> ToolCapability:
             human_gate=bool(preset.get("human_gate", False)),
             human_gate_reason=preset.get("human_gate_reason"),
             tags=tuple(preset.get("tags", ())),
+            required_context=tuple(preset.get("required_context", ())),
         )
 
     lowered = tool_name.lower()
@@ -441,6 +489,7 @@ def infer_tool_capability(tool: Any) -> ToolCapability:
         human_gate=risk in (ToolRiskLevel.HIGH, ToolRiskLevel.CRITICAL),
         human_gate_reason="Risco alto/administrativo inferido automaticamente." if risk in (ToolRiskLevel.HIGH, ToolRiskLevel.CRITICAL) else None,
         tags=("inferred",),
+        required_context=(TOOL_CONTEXT_COMPANY,),
     )
 
 

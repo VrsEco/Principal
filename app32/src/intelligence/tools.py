@@ -39,6 +39,7 @@ AUDITORIA DE CONFORMIDADE (@QA_AUTOMATION) - Checklist para novas tools:
 from langchain_core.tools import tool
 import logging
 from models import db
+from models.company import Company
 from src.intelligence.rag import knowledge_base
 from sqlalchemy import text
 import json
@@ -46,6 +47,7 @@ import os
 import re
 import unicodedata
 
+from services.engineering_suggestion_request_service import EngineeringSuggestionRequestService
 from src.intelligence.tool_context import (
     active_user_id_ctx, 
     active_company_id_ctx,
@@ -271,6 +273,96 @@ def escalate_technical_issue(error_description: str, context: str):
     Escalona um erro técnico ou de sistema para o Time de Engenharia.
     """
     return system_ops_domain.escalate_technical_issue(error_description=error_description, context=context)
+
+
+@tool
+def request_engineering_suggestion(
+    title: str,
+    objective: str,
+    suggestion_type: str = "improvement",
+    scope_label: str = "Operação Geral",
+    evidence_summary: str = None,
+    notes: str = None,
+    urgency: str = "medium",
+    company_id: int = None,
+    requester_name: str = None,
+):
+    """
+    Registra uma sugestão, observação ou relato de bug como card formal no backlog da Engenharia (AA.J.1).
+    Use esta tool quando o usuário pedir para encaminhar uma melhoria, observação funcional ou bug ao Squad.
+    :param title: Título curto da solicitação.
+    :param objective: Problema, impacto ou resultado esperado.
+    :param suggestion_type: bug, improvement ou observation.
+    :param scope_label: Escopo funcional da solicitação.
+    :param evidence_summary: Evidências, passos, contexto ou empresa afetada.
+    :param notes: Observações adicionais.
+    :param urgency: low, medium, high ou critical.
+    :param company_id: Opcional. Se omitido, usa a empresa ativa do contexto.
+    :param requester_name: Opcional. Se omitido, tenta usar o nome do usuário autenticado.
+    """
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+    requester_user_id = get_active_user_id()
+    requester_user = get_active_user()
+
+    if not requester_user_id:
+        return {"success": False, "error": "Nenhum usuário ativo identificado para registrar a sugestão."}
+    if not selected_company_id:
+        return {"success": False, "error": "Nenhuma empresa ativa identificada para registrar a sugestão."}
+
+    company = db.session.get(Company, int(selected_company_id))
+    resolved_requester_name = (
+        str(requester_name).strip()
+        if requester_name and str(requester_name).strip()
+        else (str(getattr(requester_user, "name", "")).strip() or None)
+    )
+
+    try:
+        record = EngineeringSuggestionRequestService.create_request(
+            {
+                "title": title,
+                "objective": objective,
+                "suggestion_type": suggestion_type,
+                "scope_label": scope_label,
+                "evidence_summary": evidence_summary,
+                "notes": notes,
+                "urgency": urgency,
+                "source_channel": "mcp",
+            },
+            company_id=int(selected_company_id),
+            company_name=getattr(company, "name", None),
+            requester_user_id=int(requester_user_id),
+            requester_name=resolved_requester_name,
+        )
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
+
+    return {"success": True, "request": record}
+
+
+@tool
+def list_my_engineering_suggestions(limit: int = 10, company_id: int = None):
+    """
+    Lista as sugestões de engenharia já registradas pelo usuário autenticado no backlog AA.J.1.
+    Use para responder perguntas como 'quais tickets eu já abri?'.
+    :param limit: Quantidade máxima de cards retornados (1 a 50).
+    :param company_id: Opcional. Se omitido, usa a empresa ativa do contexto.
+    """
+    requester_user_id = get_active_user_id()
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+
+    if not requester_user_id:
+        return {"success": False, "error": "Nenhum usuário ativo identificado para listar sugestões."}
+
+    records = EngineeringSuggestionRequestService.list_requests(
+        company_id=int(selected_company_id) if selected_company_id is not None else None,
+        requester_user_id=int(requester_user_id),
+        limit=limit,
+    )
+    return {
+        "success": True,
+        "count": len(records),
+        "requests": records,
+    }
 @tool
 def create_process_area(name: str, description: str = None, code: str = None, company_id: int = None):
     """
@@ -793,6 +885,8 @@ tools = [
     consult_rules,
     query_database,
     escalate_technical_issue,
+    request_engineering_suggestion,
+    list_my_engineering_suggestions,
     # Fase 1 — Process Management
     create_process_area,
     create_macro_process,

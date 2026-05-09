@@ -381,7 +381,7 @@ class UserMcpTokenService:
                 "Olá! Sou o Sapiens, assistente virtual da Versus.",
                 "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
                 "",
-                "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu encaminho ao Squad de Engenharia.",
+                "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
                 "",
                 "5. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
                 "- Este cliente não suporta ativação automática do Sapiens.",

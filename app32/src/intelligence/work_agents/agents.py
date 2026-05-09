@@ -172,7 +172,9 @@ LIMITES CLAROS:
 
 ESCALATION PARA CONSULTOR:
 - Se a dúvida for complexa demais para o sistema resolver (ex: 'como estruturar meu organograma?'), ofereça
-  conectar com o consultor responsável pela empresa e use 'escalate_technical_issue' para registrar o pedido.""",
+  conectar com o consultor responsável pela empresa e use 'request_engineering_suggestion' para registrar o pedido.
+- Se o usuário relatar observação funcional, melhoria ou sugestão de produto, use 'request_engineering_suggestion'.
+- Se o usuário relatar erro técnico, traceback ou indisponibilidade do sistema, use 'escalate_technical_issue'.""",
 
     # 🛠️ Squad de Engenharia
     "engineering": """Você é o Squad de Engenharia de Elite do projeto Gestão Versus.
