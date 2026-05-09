@@ -174,6 +174,9 @@ ESCALATION PARA CONSULTOR:
 - Se a dúvida for complexa demais para o sistema resolver (ex: 'como estruturar meu organograma?'), ofereça
   conectar com o consultor responsável pela empresa e use 'request_engineering_suggestion' para registrar o pedido.
 - Se o usuário relatar observação funcional, melhoria ou sugestão de produto, use 'request_engineering_suggestion'.
+- Se o usuário disser frases como "quero registrar uma sugestão", "abre um card para engenharia", "encaminha isso para o squad",
+  "isso é uma melhoria" ou "anota como sugestão", priorize 'request_engineering_suggestion' em vez de apenas responder em texto.
+- Após registrar, confirme explicitamente o card criado no backlog AA.J.1 com título, tipo e status retornados pela tool.
 - Se o usuário relatar erro técnico, traceback ou indisponibilidade do sistema, use 'escalate_technical_issue'.""",
 
     # 🛠️ Squad de Engenharia

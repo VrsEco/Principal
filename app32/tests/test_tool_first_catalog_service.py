@@ -31,6 +31,9 @@ def test_tool_first_catalog_service_filters_by_domain_status_and_surface():
     assert len(payload["domains"]) == 1
     assert payload["domains"][0]["key"] == "engineering"
     assert payload["domains"][0]["planned_tools"] == []
+    published_names = {tool["name"] for tool in payload["domains"][0]["published_tools"]}
+    assert "request_engineering_suggestion" in published_names
+    assert "list_my_engineering_suggestions" in published_names
 
 
 def test_tool_first_catalog_service_accepts_multiple_filter_values():
@@ -44,3 +47,10 @@ def test_tool_first_catalog_service_accepts_multiple_filter_values():
     keys = {domain["key"] for domain in payload["domains"]}
     assert "engineering" in keys
     assert "strategy" in keys
+
+
+def test_tool_first_catalog_service_engineering_governance_mentions_formal_backlog():
+    payload = ToolFirstCatalogService.build_catalog(None, domain="engineering")
+
+    engineering = payload["domains"][0]
+    assert any("AA.J.1" in item for item in engineering["governance"])

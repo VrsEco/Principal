@@ -39,6 +39,7 @@ class MCPConnectionSnippetService:
             "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
             "",
             "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
+            "Se você pedir para registrar, abrir card, encaminhar ao squad ou anotar uma melhoria, eu devo usar a tool request_engineering_suggestion.",
             "",
             "6. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
             "- Este cliente não suporta ativação automática do Sapiens.",

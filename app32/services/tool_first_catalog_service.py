@@ -202,11 +202,18 @@ class ToolFirstCatalogService:
             "mcp_contracts": [
                 {"name": "list_app32_capabilities", "status": "ready", "notes": "Discovery central de capacidades e segurança."},
             ],
-            "tool_names": ("consult_rules", "escalate_technical_issue", "query_database"),
+            "tool_names": (
+                "consult_rules",
+                "escalate_technical_issue",
+                "request_engineering_suggestion",
+                "list_my_engineering_suggestions",
+                "query_database",
+            ),
             "planned_tools": ("run_operational_audit", "publish_tool_contract", "review_route_surface"),
             "governance": [
                 "Uso técnico deve privilegiar MCP First e trilha de auditoria em produção.",
                 "Consultas livres e operações de risco alto devem manter human gate.",
+                "Sugestões funcionais e melhorias devem gerar card formal em AA.J.1 via request_engineering_suggestion.",
             ],
         },
     )
