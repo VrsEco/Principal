@@ -54,6 +54,14 @@ def test_list_process_hierarchy_blocks_explicit_foreign_company(monkeypatch) -> 
     assert "não pertence ao contexto" in result
 
 
+def test_create_process_area_blocks_explicit_foreign_company(monkeypatch) -> None:
+    monkeypatch.setattr(process_ops, "get_active_company_id", lambda: 12)
+
+    result = process_ops.create_process_area(name="Gestão", company_id=13)
+
+    assert "não pertence ao contexto" in result
+
+
 def test_tools_process_wrappers_delegate_to_domain(monkeypatch) -> None:
     called = {}
 
@@ -65,3 +73,46 @@ def test_tools_process_wrappers_delegate_to_domain(monkeypatch) -> None:
 
     assert tools_module.list_process_hierarchy.func(company_id=12) == "ok"
     assert called == {"company_id": 12}
+
+
+def test_tools_process_mutation_wrappers_forward_company_id(monkeypatch) -> None:
+    calls = []
+
+    monkeypatch.setattr(
+        tools_module.process_ops_domain,
+        "create_process_area",
+        lambda **kwargs: calls.append(("area", kwargs)) or "area-ok",
+    )
+    monkeypatch.setattr(
+        tools_module.process_ops_domain,
+        "create_macro_process",
+        lambda **kwargs: calls.append(("macro", kwargs)) or "macro-ok",
+    )
+    monkeypatch.setattr(
+        tools_module.process_ops_domain,
+        "create_process",
+        lambda **kwargs: calls.append(("process", kwargs)) or "process-ok",
+    )
+
+    assert tools_module.create_process_area.func("Gestão", company_id=12) == "area-ok"
+    assert tools_module.create_macro_process.func(10, "Planejamento", company_id=12) == "macro-ok"
+    assert tools_module.create_process.func(20, "Diagnóstico", company_id=12) == "process-ok"
+
+    assert calls == [
+        ("area", {"name": "Gestão", "description": None, "code": None, "company_id": 12}),
+        (
+            "macro",
+            {"area_id": 10, "name": "Planejamento", "description": None, "order_index": 1, "company_id": 12},
+        ),
+        (
+            "process",
+            {
+                "macro_id": 20,
+                "name": "Diagnóstico",
+                "description": None,
+                "responsible": None,
+                "order_index": 1,
+                "company_id": 12,
+            },
+        ),
+    ]

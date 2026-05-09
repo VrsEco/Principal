@@ -272,32 +272,54 @@ def escalate_technical_issue(error_description: str, context: str):
     """
     return system_ops_domain.escalate_technical_issue(error_description=error_description, context=context)
 @tool
-def create_process_area(name: str, description: str = None, code: str = None):
+def create_process_area(name: str, description: str = None, code: str = None, company_id: int = None):
     """
     Cria uma nova Área de Processo no sistema.
     As Áreas são o nível mais alto da hierarquia de processos.
+    :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
     """
-    return process_ops_domain.create_process_area(name=name, description=description, code=code)
+    return process_ops_domain.create_process_area(
+        name=name,
+        description=description,
+        code=code,
+        company_id=company_id,
+    )
 
 
 @tool
-def create_macro_process(area_id: int, name: str, description: str = None, order_index: int = 1):
+def create_macro_process(
+    area_id: int,
+    name: str,
+    description: str = None,
+    order_index: int = 1,
+    company_id: int = None,
+):
     """
     Cria um novo Macroprocesso vinculado a uma Área de Processo.
+    :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
     """
     return process_ops_domain.create_macro_process(
         area_id=area_id,
         name=name,
         description=description,
         order_index=order_index,
+        company_id=company_id,
     )
 
 
 @tool
-def create_process(macro_id: int, name: str, description: str = None, responsible: str = None, order_index: int = 1):
+def create_process(
+    macro_id: int,
+    name: str,
+    description: str = None,
+    responsible: str = None,
+    order_index: int = 1,
+    company_id: int = None,
+):
     """
     Cria um novo Processo vinculado a um Macroprocesso.
     Este é o nível onde as rotinas (POPs) serão penduradas.
+    :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
     """
     return process_ops_domain.create_process(
         macro_id=macro_id,
@@ -305,6 +327,7 @@ def create_process(macro_id: int, name: str, description: str = None, responsibl
         description=description,
         responsible=responsible,
         order_index=order_index,
+        company_id=company_id,
     )
 
 

@@ -256,93 +256,59 @@ def escalate_technical_issue(error_description: str, context: str):
         return f"Erro ao processar escalonamento: {str(e)}"
 
 @tool
-def create_process_area(name: str, description: str = None, code: str = None):
+def create_process_area(name: str, description: str = None, code: str = None, company_id: int = None):
     """
-    Cria uma nova Área de Processo no sistema.
-    As Áreas são o nível mais alto da hierarquia de processos.
+    Compat layer legacy.
+    Delegado para src.intelligence.tools_domains.process_ops com validação tenant-safe.
     """
-    from models.process import ProcessArea
-    from flask import session
-    
-    company_id = get_active_company_id()
-    if not company_id:
-        return "Erro: Nenhuma empresa ativa identificada (Sessão ou ACTIVE_COMPANY_ID)."
-        
-    try:
-        from api.resources.process import generate_area_code
-        new_area = ProcessArea(
-            company_id=company_id,
-            name=name,
-            description=description,
-            code=code
-        )
-        
-        # Gera o código se fornecido um sequencial simples
-        if code and '.' not in str(code):
-             new_area.code = generate_area_code(company_id, code)
-             
-        db.session.add(new_area)
-        db.session.commit()
-        return f"Área de Processo '{name}' criada com sucesso. ID: {new_area.id}, Código: {new_area.code}"
-    except Exception as e:
-        db.session.rollback()
-        return f"Erro ao criar área de processo: {str(e)}"
+    return process_ops_domain.create_process_area(
+        name=name,
+        description=description,
+        code=code,
+        company_id=company_id,
+    )
 
 @tool
-def create_macro_process(area_id: int, name: str, description: str = None, order_index: int = 1):
+def create_macro_process(
+    area_id: int,
+    name: str,
+    description: str = None,
+    order_index: int = 1,
+    company_id: int = None,
+):
     """
-    Cria um novo Macroprocesso vinculado a uma Área de Processo.
+    Compat layer legacy.
+    Delegado para src.intelligence.tools_domains.process_ops com validação tenant-safe.
     """
-    from models.process import MacroProcess
-    from flask import session
-    
-    company_id = get_active_company_id()
-    try:
-        from api.resources.process import generate_macro_code
-        macro = MacroProcess(
-            company_id=company_id,
-            area_id=area_id,
-            name=name,
-            description=description,
-            order_index=order_index
-        )
-        macro.code = generate_macro_code(area_id, order_index)
-        
-        db.session.add(macro)
-        db.session.commit()
-        return f"Macroprocesso '{name}' criado com sucesso. ID: {macro.id}, Código: {macro.code}"
-    except Exception as e:
-        db.session.rollback()
-        return f"Erro ao criar macroprocesso: {str(e)}"
+    return process_ops_domain.create_macro_process(
+        area_id=area_id,
+        name=name,
+        description=description,
+        order_index=order_index,
+        company_id=company_id,
+    )
 
 @tool
-def create_process(macro_id: int, name: str, description: str = None, responsible: str = None, order_index: int = 1):
+def create_process(
+    macro_id: int,
+    name: str,
+    description: str = None,
+    responsible: str = None,
+    order_index: int = 1,
+    company_id: int = None,
+):
     """
-    Cria um novo Processo vinculado a um Macroprocesso.
-    Este é o nível onde as rotinas (POPs) serão penduradas.
+    Compat layer legacy.
+    Delegado para src.intelligence.tools_domains.process_ops com validação tenant-safe.
     """
-    from models.process import Process
-    from flask import session
-    
-    company_id = get_active_company_id()
-    try:
-        from api.resources.process import generate_process_code
-        process = Process(
-            company_id=company_id,
-            macro_id=macro_id,
-            name=name,
-            description=description,
-            responsible=responsible,
-            order_index=order_index
-        )
-        process.code = generate_process_code(macro_id, order_index)
-        
-        db.session.add(process)
-        db.session.commit()
-        return f"Processo '{name}' criado com sucesso. ID: {process.id}, Código: {process.code}"
-    except Exception as e:
-        db.session.rollback()
-        return f"Erro ao criar processo: {str(e)}"
+    return process_ops_domain.create_process(
+        macro_id=macro_id,
+        name=name,
+        description=description,
+        responsible=responsible,
+        order_index=order_index,
+        company_id=company_id,
+    )
 
 @tool
 def update_company_status(company_id: int, is_active: bool, reason: str = None):
@@ -368,32 +334,10 @@ def update_company_status(company_id: int, is_active: bool, reason: str = None):
 @tool
 def list_process_hierarchy(company_id: int = None):
     """
-    Lista toda a hierarquia de processos da empresa (Áreas -> Macros -> Processos).
-    Use isto para entender a estrutura atual antes de criar novos itens.
-    :param company_id: Opcional ID da empresa. Se não fornecido, usa a empresa ativa da sessão.
+    Compat layer legacy.
+    Delegado para src.intelligence.tools_domains.process_ops com leitura tenant-safe.
     """
-    from models.process import ProcessArea, MacroProcess, Process
-    from flask import session
-    
-    effective_id = company_id or get_active_company_id()
-    if not effective_id:
-        return "Erro: Empresa nao selecionada e nenhum company_id fornecido."
-        
-    try:
-        areas = ProcessArea.query.filter_by(company_id=effective_id).all()
-        output = []
-        for area in areas:
-            output.append(f"Área: {area.name} (ID: {area.id}, Código: {area.code})")
-            macros = MacroProcess.query.filter_by(area_id=area.id).all()
-            for macro in macros:
-                output.append(f"  └─ Macro: {macro.name} (ID: {macro.id}, Código: {macro.code})")
-                procs = Process.query.filter_by(macro_id=macro.id).all()
-                for p in procs:
-                    output.append(f"    └─ Processo: {p.name} (ID: {p.id}, Código: {p.code})")
-        
-        return "\n".join(output) if output else "Nenhum processo mapeado ainda."
-    except Exception as e:
-        return f"Erro ao listar hierarquia: {str(e)}"
+    return process_ops_domain.list_process_hierarchy(company_id=company_id)
 
 @tool
 def list_my_companies(search_term: str = None):

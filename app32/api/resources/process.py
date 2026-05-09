@@ -153,6 +153,14 @@ def _build_linked_process_indicator_query(company_id: int, process_id: int):
         )
     )
 
+
+def _get_area_in_company(area_id: int, company_id: int):
+    return ProcessArea.query.filter_by(id=area_id, company_id=company_id).first()
+
+
+def _get_macro_in_company(macro_id: int, company_id: int):
+    return MacroProcess.query.filter_by(id=macro_id, company_id=company_id).first()
+
 def _instance_visible_to_employee(instance, employee_id):
     if not instance or not employee_id:
         return False
@@ -1417,6 +1425,10 @@ class MacroProcessListResource(Resource):
             if not data.get('company_id'):
                 return {"error": "company_id is required"}, 400
 
+            area = _get_area_in_company(data.get('area_id'), int(data.get('company_id')))
+            if not area:
+                return {"error": "Área de processo não encontrada na empresa informada."}, 400
+
             owner_error = _normalize_macro_owner_from_employee(data, data.get('company_id'), required=True)
             if owner_error:
                 return {"error": owner_error}, 400
@@ -1454,6 +1466,11 @@ class MacroProcessResource(Resource):
                 )
                 if owner_error:
                     return {"error": owner_error}, 400
+            if data and 'area_id' in data:
+                target_company_id = int(data.get('company_id') or macro.company_id)
+                area = _get_area_in_company(data.get('area_id'), target_company_id)
+                if not area:
+                    return {"error": "Área de processo não encontrada na empresa informada."}, 400
 
             macro = macro_process_schema.load(data, instance=macro, partial=True)
             
@@ -1538,6 +1555,10 @@ class ProcessListResource(Resource):
             
             if not data.get('company_id'):
                 return {"error": "company_id is required"}, 400
+
+            macro = _get_macro_in_company(data.get('macro_id'), int(data.get('company_id')))
+            if not macro:
+                return {"error": "Macroprocesso não encontrado na empresa informada."}, 400
                 
             process = process_schema.load(data)
             
@@ -1625,6 +1646,11 @@ class ProcessResource(Resource):
             else:
                 # Handle standard JSON
                 data = request.get_json()
+                if data and 'macro_id' in data:
+                    target_company_id = int(data.get('company_id') or process.company_id)
+                    macro = _get_macro_in_company(data.get('macro_id'), target_company_id)
+                    if not macro:
+                        return {"error": "Macroprocesso não encontrado na empresa informada."}, 400
                 process = process_schema.load(data, instance=process, partial=True)
                 
                 # Recalculate code if sequence or macro changed
